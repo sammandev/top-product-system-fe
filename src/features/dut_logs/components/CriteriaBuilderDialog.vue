@@ -1,0 +1,303 @@
+<template>
+  <v-dialog :model-value="modelValue" max-width="1200" persistent scrollable
+    @update:model-value="emit('update:modelValue', $event)">
+    <v-card>
+      <v-card-title class="d-flex align-center bg-primary">
+        <v-icon start>mdi-cog-outline</v-icon>
+        <span class="text-white">Criteria Builder</span>
+        <v-spacer />
+        <v-btn icon="mdi-close" variant="text" color="white" @click="handleClose" />
+      </v-card-title>
+
+      <v-card-text class="pa-4">
+        <v-row>
+          <!-- Left Panel: Rule Editor -->
+          <v-col cols="12" md="6">
+            <v-card variant="outlined">
+              <v-card-title class="text-subtitle-1 bg-grey-lighten-4">
+                <v-icon start size="small">mdi-plus-circle</v-icon>
+                Add/Edit Rule
+              </v-card-title>
+              <v-card-text>
+                <!-- Test Item Input -->
+                <v-text-field v-model="currentRule.testItem" label="Test Item Pattern"
+                  hint="Enter test item name or regex pattern (e.g., WiFi_PA1_.*)" persistent-hint clearable
+                  variant="outlined" density="comfortable" class="mt-4 mb-3" prepend-inner-icon="mdi-text-search" />
+
+                <!-- USL Input -->
+                <v-text-field v-model.number="currentRule.usl" type="number" label="USL (Upper Spec Limit)"
+                  hint="Leave empty if no upper limit" persistent-hint clearable variant="outlined"
+                  density="comfortable" class="mb-3" prepend-inner-icon="mdi-arrow-up-bold" />
+
+                <!-- LSL Input -->
+                <v-text-field v-model.number="currentRule.lsl" type="number" label="LSL (Lower Spec Limit)"
+                  hint="Leave empty if no lower limit" persistent-hint clearable variant="outlined"
+                  density="comfortable" class="mb-3" prepend-inner-icon="mdi-arrow-down-bold" />
+
+                <!-- Target Input -->
+                <v-text-field v-model.number="currentRule.target" type="number" label="Target Value"
+                  hint="Leave empty to use median or (USL+LSL)/2" persistent-hint clearable variant="outlined"
+                  density="comfortable" class="mb-4" prepend-inner-icon="mdi-target" />
+
+                <!-- Action Buttons -->
+                <v-row dense>
+                  <v-col cols="6">
+                    <v-btn block color="primary" prepend-icon="mdi-plus" :disabled="!canAddRule" @click="addRule">
+                      {{ editingIndex !== null ? 'Update' : 'Add' }} Rule
+                    </v-btn>
+                  </v-col>
+                  <v-col cols="6">
+                    <v-btn block variant="outlined" prepend-icon="mdi-cancel" @click="resetCurrentRule">
+                      Clear
+                    </v-btn>
+                  </v-col>
+                </v-row>
+              </v-card-text>
+            </v-card>
+
+            <!-- Rules List -->
+            <v-card variant="outlined" class="mt-4">
+              <v-card-title class="text-subtitle-1 bg-grey-lighten-4">
+                <v-icon start size="small">mdi-format-list-bulleted</v-icon>
+                Rules ({{ rules.length }})
+              </v-card-title>
+              <v-card-text class="pa-0">
+                <v-list v-if="rules.length > 0" density="compact" class="py-0">
+                  <v-list-item v-for="(rule, index) in rules" :key="index"
+                    :class="editingIndex === index ? 'bg-blue-lighten-5' : ''">
+                    <template #prepend>
+                      <v-icon size="small">mdi-file-document-outline</v-icon>
+                    </template>
+
+                    <v-list-item-title class="text-body-2 font-weight-medium">
+                      {{ rule.testItem }}
+                    </v-list-item-title>
+                    <v-list-item-subtitle class="text-caption">
+                      USL: {{ formatValue(rule.usl) }} | LSL: {{ formatValue(rule.lsl) }} | Target: {{
+                        formatValue(rule.target) }}
+                    </v-list-item-subtitle>
+
+                    <template #append>
+                      <v-btn icon="mdi-pencil" size="x-small" variant="text" @click="editRule(index)" />
+                      <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" @click="removeRule(index)" />
+                    </template>
+                  </v-list-item>
+                </v-list>
+
+                <v-card-text v-else class="text-center text-caption text-medium-emphasis py-4">
+                  No rules added yet. Add your first rule above.
+                </v-card-text>
+              </v-card-text>
+            </v-card>
+          </v-col>
+
+          <!-- Right Panel: Preview -->
+          <v-col cols="12" md="6">
+            <v-card variant="outlined">
+              <v-card-title class="text-subtitle-1 bg-grey-lighten-4">
+                <v-icon start size="small">mdi-eye</v-icon>
+                .INI File Preview
+              </v-card-title>
+              <v-card-text>
+                <v-textarea :model-value="iniPreview" readonly variant="outlined" rows="25" class="monospace-font mt-2"
+                  no-resize density="compact" />
+              </v-card-text>
+            </v-card>
+          </v-col>
+        </v-row>
+      </v-card-text>
+
+      <v-divider />
+
+      <v-card-actions class="pa-4">
+        <v-btn color="success" prepend-icon="mdi-download" :disabled="rules.length === 0" @click="downloadIniFile">
+          Download .INI File
+        </v-btn>
+
+        <v-btn color="primary" prepend-icon="mdi-check" :disabled="rules.length === 0" @click="saveAndUse">
+          Save & Use
+        </v-btn>
+
+        <v-spacer />
+
+        <v-btn variant="outlined" @click="handleClose">
+          Cancel
+        </v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+</template>
+
+<script setup lang="ts">
+import { ref, computed } from 'vue'
+
+const props = defineProps<{
+  modelValue: boolean
+  availableTestItems?: string[]
+}>()
+
+const emit = defineEmits<{
+  'update:modelValue': [value: boolean]
+  'criteria-created': [file: File]
+}>()
+
+interface CriteriaRule {
+  testItem: string
+  usl: number | null
+  lsl: number | null
+  target: number | null
+}
+
+// State
+const rules = ref<CriteriaRule[]>([])
+const currentRule = ref<CriteriaRule>({
+  testItem: '',
+  usl: null,
+  lsl: null,
+  target: null
+})
+const editingIndex = ref<number | null>(null)
+
+// Available test items for autocomplete
+const availableTestItems = computed(() => props.availableTestItems || [])
+
+// Computed
+const canAddRule = computed(() => {
+  return currentRule.value.testItem.trim().length > 0
+})
+
+const iniPreview = computed(() => {
+  let content = `; Criteria file for test log filtering and scoring
+; =================================================
+; Format: "PATTERN" <USL,LSL>  ===> "TargetValue"
+;
+; PATTERN - Test item pattern to match (supports simple text and regex)
+; USL     - Upper Spec Limit (leave empty if no upper limit)
+; LSL     - Lower Spec Limit (leave empty if no lower limit)
+; Target  - Target value (leave empty to use median or (USL+LSL)/2)
+;
+; =================================================
+; PATTERN MATCHING:
+; ----------------
+; 1. SIMPLE PATTERN (Auto-expands to match numbered variants):
+;    "WiFi_TX_FIXTURE_POW_6175_11AX_B20"
+;     Automatically matches: WiFi_TX_FIXTURE, WiFi_TX1_FIXTURE, WiFi_TX2_FIXTURE, etc.
+;
+; 2. REGEX PATTERN (Use for flexible matching):
+;    "WiFi_TX._FIXTURE_POW_.*_11AX_.*"
+;     Matches any character after TX and any text after POW
+;
+; Common regex symbols:
+;   .  = any single character
+;   .* = zero or more characters
+;   [0-9] = any digit
+;   [1-4] = match 1, 2, 3, or 4
+;
+; Auto-expansion for simple patterns (automatic - just use simple text):
+;   TX_  expands to match: _TX_, _TX1_, _TX2_, _TX3_, _TX4_, _TX16_, etc.
+;   RX_  expands to match: _RX_, _RX1_, _RX2_, etc.
+;   PA_  expands to match: _PA_, _PA1_, _PA2_, etc.
+;   ANT_ expands to match: _ANT_, _ANT1_, _ANT2_, etc.
+; =================================================
+
+[Test_Items]
+`
+
+  rules.value.forEach(rule => {
+    const usl = rule.usl !== null ? rule.usl.toString() : ''
+    const lsl = rule.lsl !== null ? rule.lsl.toString() : ''
+    const target = rule.target !== null ? `"${rule.target}"` : ''
+    content += `"${rule.testItem}" <${usl},${lsl}>  ===> ${target}\n`
+  })
+
+  return content
+})
+
+// Methods
+const formatValue = (value: number | null): string => {
+  return value !== null ? value.toString() : 'N/A'
+}
+
+const addRule = () => {
+  if (!canAddRule.value) return
+
+  const rule: CriteriaRule = {
+    testItem: currentRule.value.testItem.trim(),
+    usl: currentRule.value.usl,
+    lsl: currentRule.value.lsl,
+    target: currentRule.value.target
+  }
+
+  if (editingIndex.value !== null) {
+    // Update existing rule
+    rules.value[editingIndex.value] = rule
+    editingIndex.value = null
+  } else {
+    // Add new rule
+    rules.value.push(rule)
+  }
+
+  resetCurrentRule()
+}
+
+const editRule = (index: number) => {
+  const rule = rules.value[index]
+  if (!rule) return
+
+  currentRule.value = {
+    testItem: rule.testItem,
+    usl: rule.usl,
+    lsl: rule.lsl,
+    target: rule.target
+  }
+  editingIndex.value = index
+}
+
+const removeRule = (index: number) => {
+  rules.value.splice(index, 1)
+  if (editingIndex.value === index) {
+    resetCurrentRule()
+  }
+}
+
+const resetCurrentRule = () => {
+  currentRule.value = {
+    testItem: '',
+    usl: null,
+    lsl: null,
+    target: null
+  }
+  editingIndex.value = null
+}
+
+const downloadIniFile = () => {
+  const blob = new Blob([iniPreview.value], { type: 'text/plain' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'criteria_upload_log.ini'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+}
+
+const saveAndUse = () => {
+  const blob = new Blob([iniPreview.value], { type: 'text/plain' })
+  const file = new File([blob], 'criteria_upload_log.ini', { type: 'text/plain' })
+  emit('criteria-created', file)
+  handleClose()
+}
+
+const handleClose = () => {
+  resetCurrentRule()
+  emit('update:modelValue', false)
+}
+</script>
+
+<style scoped>
+.monospace-font :deep(textarea) {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+}
+</style>

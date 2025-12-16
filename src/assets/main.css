@@ -1,0 +1,176 @@
+/* Global Styles */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  height: 100%;
+  width: 100%;
+  overflow: hidden; /* Prevent double scrollbar - Vuetify handles internal scrolling */
+}
+
+#app {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+body {
+  font-family: 'Roboto', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: rgb(var(--v-theme-background, 250, 250, 250));
+}
+
+#app {
+  background-color: inherit;
+}
+
+/* Scrollbar Styles - Clean, modern, no arrows */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+  background-color: #f1f1f1;
+}
+
+::-webkit-scrollbar-track {
+  -webkit-box-shadow: inset 0 0 6px rgba(83, 83, 83, 0.07);
+  background-color: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #c1c1c1;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8 !important;
+}
+
+/* Remove scrollbar arrows (buttons) completely - ALL scrollbars */
+::-webkit-scrollbar-button {
+  display: none; /* Hide the button element */
+  width: 0;
+  height: 0;
+}
+
+::-webkit-scrollbar-button:start:decrement,
+::-webkit-scrollbar-button:end:increment {
+  display: none;
+}
+
+/* Prevent button space allocation */
+::-webkit-scrollbar-button:vertical:start:decrement,
+::-webkit-scrollbar-button:vertical:end:increment,
+::-webkit-scrollbar-button:horizontal:start:decrement,
+::-webkit-scrollbar-button:horizontal:end:increment {
+  display: none;
+  width: 0;
+  height: 0;
+}
+
+/* Firefox thin scrollbar (no arrows by default) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #c1c1c1 #f1f1f1;
+}
+
+/* Utility Classes */
+.full-height {
+  height: 100%;
+}
+
+.full-width {
+  width: 100%;
+}
+
+.text-truncate {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cursor-pointer {
+  cursor: pointer;
+}
+
+/* Responsive utilities */
+.hide-on-mobile {
+  display: none !important;
+}
+
+@media (min-width: 600px) {
+  .hide-on-mobile {
+    display: initial !important;
+  }
+}
+
+.show-on-mobile-only {
+  display: initial !important;
+}
+
+@media (min-width: 600px) {
+  .show-on-mobile-only {
+    display: none !important;
+  }
+}
+
+/* Responsive spacing utilities */
+@media (max-width: 599px) {
+  .mobile-pa-2 {
+    padding: 8px !important;
+  }
+
+  .mobile-ma-2 {
+    margin: 8px !important;
+  }
+}
+
+/* Card responsive improvements */
+.v-card {
+  overflow: hidden;
+}
+
+@media (max-width: 599px) {
+  .v-card {
+    border-radius: 8px !important;
+  }
+
+  .v-card-title {
+    font-size: 1.125rem !important;
+    padding: 12px !important;
+  }
+
+  .v-card-text {
+    padding: 12px !important;
+  }
+}
+
+/* Transitions */
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.3s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.slide-enter-active,
+.slide-leave-active {
+  transition: transform 0.3s ease;
+}
+
+.slide-enter-from {
+  transform: translateX(-100%);
+}
+
+.slide-leave-to {
+  transform: translateX(100%);
+}

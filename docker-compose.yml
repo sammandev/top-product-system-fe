@@ -1,0 +1,26 @@
+# Docker Compose for Frontend Only
+# Use this if you want to deploy frontend separately
+
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ast-tools-frontend:latest
+    container_name: ast-tools-frontend
+    restart: unless-stopped
+    ports:
+      - "9090:80"
+    environment:
+      - NODE_ENV=production
+    labels:
+      - "com.ast-tools.service=frontend"
+      - "com.ast-tools.environment=staging"
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout=10s
+      retries: 3
+      start_period: 10s

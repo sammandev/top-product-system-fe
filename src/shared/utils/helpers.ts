@@ -1,0 +1,203 @@
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
+
+// Extend dayjs with plugins
+dayjs.extend(utc)
+dayjs.extend(timezone)
+
+// Configure timezone (default to Bangkok/UTC+7)
+export const DEFAULT_TIMEZONE = 'Asia/Bangkok'
+
+/**
+ * Get timezone offset string (e.g., "UTC+7")
+ */
+export function getTimezoneOffset(tz: string = DEFAULT_TIMEZONE): string {
+  const offset = dayjs().tz(tz).utcOffset() / 60
+  const sign = offset >= 0 ? '+' : ''
+  return `UTC${sign}${offset}`
+}
+
+/**
+ * Format date to ISO string for API
+ */
+export function formatDateForAPI(date: Date | string): string {
+  return dayjs(date).format('YYYY-MM-DDTHH:mm:ss[Z]')
+}
+
+/**
+ * Format date for display with timezone
+ * @param date - Date to format
+ * @param format - Format string (default: 'DD/MM/YYYY, hh:mm:ss A')
+ * @param showTimezone - Whether to show timezone (default: true)
+ * @param tz - Timezone (default: Asia/Bangkok)
+ */
+export function formatDate(
+  date: Date | string, 
+  format = 'DD/MM/YYYY, hh:mm:ss A',
+  showTimezone = true,
+  tz: string = DEFAULT_TIMEZONE
+): string {
+  const formatted = dayjs(date).tz(tz).format(format)
+  if (showTimezone) {
+    return `${formatted} (${getTimezoneOffset(tz)})`
+  }
+  return formatted
+}
+
+/**
+ * Format date for display (simple, backward compatible)
+ */
+export function formatDateSimple(date: Date | string, format = 'YYYY-MM-DD HH:mm:ss'): string {
+  return dayjs(date).format(format)
+}
+
+/**
+ * Format file size to human readable
+ */
+export function formatFileSize(bytes: number): string {
+  if (bytes === 0) return '0 Bytes'
+
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+
+  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+}
+
+/**
+ * Debounce function
+ */
+export function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: ReturnType<typeof setTimeout> | null = null
+
+  return function (this: any, ...args: Parameters<T>) {
+    const context = this
+
+    if (timeout) clearTimeout(timeout)
+
+    timeout = setTimeout(() => {
+      func.apply(context, args)
+    }, wait)
+  }
+}
+
+/**
+ * Download file from blob
+ */
+export function downloadFile(blob: Blob, filename: string): void {
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
+}
+
+/**
+ * Copy text to clipboard
+ */
+export async function copyToClipboard(text: string): Promise<boolean> {
+  try {
+    await navigator.clipboard.writeText(text)
+    return true
+  } catch (err) {
+    console.error('Failed to copy:', err)
+    return false
+  }
+}
+
+/**
+ * Validate email format
+ */
+export function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+/**
+ * Generate random ID
+ */
+export function generateId(): string {
+  return Math.random().toString(36).substring(2, 15)
+}
+
+/**
+ * Sleep/delay utility
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms))
+}
+
+/**
+ * Truncate string with ellipsis
+ */
+export function truncate(str: string, length: number): string {
+  if (str.length <= length) return str
+  return str.substring(0, length) + '...'
+}
+
+/**
+ * Format number with thousand separators
+ */
+export function formatNumber(num: number, decimals = 0): string {
+  return num.toFixed(decimals).replace(/\B(?=(\d{3})+(?!\d))/g, ',')
+}
+
+/**
+ * Calculate percentage
+ */
+export function calculatePercentage(value: number, total: number): number {
+  if (total === 0) return 0
+  return Math.round((value / total) * 100 * 100) / 100
+}
+
+/**
+ * Group array by key
+ */
+export function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
+  return array.reduce((result, item) => {
+    const groupKey = String(item[key])
+    if (!result[groupKey]) {
+      result[groupKey] = []
+    }
+    result[groupKey].push(item)
+    return result
+  }, {} as Record<string, T[]>)
+}
+
+/**
+ * Sort array by key
+ */
+export function sortBy<T>(array: T[], key: keyof T, order: 'asc' | 'desc' = 'asc'): T[] {
+  return [...array].sort((a, b) => {
+    const aVal = a[key]
+    const bVal = b[key]
+
+    if (aVal < bVal) return order === 'asc' ? -1 : 1
+    if (aVal > bVal) return order === 'asc' ? 1 : -1
+    return 0
+  })
+}
+
+/**
+ * Check if object is empty
+ */
+export function isEmpty(obj: any): boolean {
+  if (obj === null || obj === undefined) return true
+  if (Array.isArray(obj)) return obj.length === 0
+  if (typeof obj === 'object') return Object.keys(obj).length === 0
+  return false
+}
+
+/**
+ * Deep clone object
+ */
+export function deepClone<T>(obj: T): T {
+  return JSON.parse(JSON.stringify(obj))
+}
