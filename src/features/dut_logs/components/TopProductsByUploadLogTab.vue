@@ -51,8 +51,8 @@
                                             </span>
                                         </template>
                                     </v-file-input>
-                                    <div v-if="logFiles.length > 0" class="text-caption text-medium-emphasis mt-2">
-                                        {{ logFiles.length }} {{ logFiles.length === 1 ? 'file' : 'files' }} selected
+                                    <div v-if="logFiles" class="text-caption text-medium-emphasis mt-2">
+                                        {{ Array.isArray(logFiles) ? logFiles.length : 1 }} {{ (Array.isArray(logFiles) ? logFiles.length : 1) === 1 ? 'file' : 'files' }} selected
                                     </div>
                                 </v-card-text>
                             </v-card>
@@ -152,7 +152,7 @@ import { useTestLogExport } from '@/features/dut_logs/composables/useTestLogExpo
 const mode = ref<'PARSING' | 'COMPARE'>('PARSING')
 
 // File inputs
-const logFiles = ref<File[]>([])
+const logFiles = ref<File[] | File | null>(null)
 const criteriaFile = ref<File | null>(null)
 const showOnlyCriteria = ref(false)
 
@@ -172,8 +172,13 @@ const { exportToExcel, exportToPDF, copyToClipboard } = useTestLogExport()
 
 // Computed
 const canAnalyze = computed(() => {
-    // Allow single file (including archives) for both PARSING and COMPARE modes
-    return logFiles.value.length >= 1
+    // Handle both array and single file cases
+    if (!logFiles.value) return false
+    if (Array.isArray(logFiles.value)) {
+        return logFiles.value.length >= 1
+    }
+    // Single file (File object)
+    return logFiles.value instanceof File
 })
 
 const hasResults = computed(() => {
@@ -188,16 +193,27 @@ const handleAnalyze = async () => {
 
     try {
         if (mode.value === 'PARSING') {
+            // Handle both single file and array
+            const file = Array.isArray(logFiles.value) ? logFiles.value[0] : logFiles.value
+            if (!file) {
+                throw new Error('No file selected')
+            }
             const result = await parseLog(
-                logFiles.value[0]!,
+                file,
                 criteriaFile.value,
                 showOnlyCriteria.value
             )
+            console.log('Parsing result:', result)
+            if (!result.metadata) {
+                console.error('Warning: No metadata in parsing result')
+            }
             parsingResult.value = result
             compareResult.value = null
         } else {
+            // COMPARE mode always expects array
+            const files = Array.isArray(logFiles.value) ? logFiles.value : (logFiles.value ? [logFiles.value] : [])
             const result = await compareLogs(
-                logFiles.value,
+                files,
                 criteriaFile.value,
                 showOnlyCriteria.value
             )
@@ -213,7 +229,7 @@ const handleAnalyze = async () => {
 }
 
 const handleReset = () => {
-    logFiles.value = []
+    logFiles.value = null
     criteriaFile.value = null
     showOnlyCriteria.value = false
     parsingResult.value = null

@@ -280,7 +280,7 @@ const headers = [
 const rankings = computed<RankingItem[]>(() => {
     const items: RankingItem[] = []
 
-    if (props.parseResult) {
+    if (props.parseResult && props.parseResult.metadata) {
         // Single file parsing mode
         items.push({
             isn: props.parseResult.isn,
