@@ -50,7 +50,7 @@
           </v-card-title>
           <v-card-text>
             <v-row>
-              <v-col v-for="action in quickActions" :key="action.title" cols="12" sm="6" md="3">
+              <v-col v-for="action in quickActions" :key="action.title" cols="12" sm="6" md="4">
                 <v-card :color="action.color" variant="tonal" hover class="action-card" :to="action.path">
                   <v-card-text class="text-center pa-6">
                     <v-avatar :color="action.color" size="56" class="mb-3">

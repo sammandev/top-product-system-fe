@@ -56,7 +56,7 @@
                     </v-card>
                 </v-col>
                 <v-col cols="12" sm="6" md="3">
-                    <v-card color="primary" variant="tonal">
+                    <v-card color="teal" variant="tonal">
                         <v-card-text>
                             <div class="d-flex align-center">
                                 <v-avatar color="primary" size="48" class="mr-3">
@@ -343,7 +343,7 @@
                                                     <span class="text-body-2">
                                                         <strong>Project:</strong>
                                                         <span class="ml-2">{{ selectedProduct.project_name || 'N/A'
-                                                        }}</span>
+                                                            }}</span>
                                                     </span>
                                                 </div>
                                             </v-col>
@@ -353,7 +353,7 @@
                                                     <span class="text-body-2">
                                                         <strong>Device:</strong>
                                                         <span class="ml-2">{{ selectedProduct.device_name || 'N/A'
-                                                        }}</span>
+                                                            }}</span>
                                                     </span>
                                                 </div>
                                             </v-col>
