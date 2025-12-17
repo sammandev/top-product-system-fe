@@ -151,17 +151,10 @@ export function useDashboard() {
   // Quick Actions
   const quickActions: QuickAction[] = [
     {
-      title: 'Upload Log',
-      subtitle: 'Parse test log files',
-      icon: 'mdi-file-upload',
+      title: 'Test Log Download',
+      subtitle: 'Download test logs',
+      icon: 'mdi-download',
       color: 'primary',
-      path: '/dut-logs'
-    },
-    {
-      title: 'Compare Logs',
-      subtitle: 'Compare multiple logs',
-      icon: 'mdi-compare',
-      color: 'success',
       path: '/dut-logs'
     },
     {
