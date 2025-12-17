@@ -20,5 +20,5 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
 COPY package.json pnpm-lock.yaml ./
 
 # Start Vite dev server with HMR
-# Use frozen-lockfile to prevent lock file updates
-CMD ["sh", "-c", "pnpm install --frozen-lockfile && pnpm run dev --host 0.0.0.0 --port 5173"]
+# Allow lock file updates in staging environment for flexibility
+CMD ["sh", "-c", "pnpm install && pnpm run dev --host 0.0.0.0 --port 5173"]
