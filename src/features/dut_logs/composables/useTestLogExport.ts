@@ -59,7 +59,7 @@ export function useTestLogExport() {
             item.value,
             item.is_hex ? 'Hex' : item.is_value_type ? 'Value' : 'Non-Value',
             item.score?.toFixed(2) || '',
-            item.matches_criteria ? 'Yes' : 'No',
+            item.matched_criteria ? 'Yes' : 'No',
             item.numeric_value?.toString() || '',
             item.hex_decimal?.toString() || ''
           ])
@@ -388,7 +388,7 @@ export function useTestLogExport() {
         parseData.parsed_items_enhanced.forEach(item => {
           const type = item.is_hex ? 'Hex' : item.is_value_type ? 'Value' : 'Non-Value'
           const score = item.score?.toFixed(2) || ''
-          const criteriaMatch = item.matches_criteria ? 'Yes' : 'No'
+          const criteriaMatch = item.matched_criteria ? 'Yes' : 'No'
 
           tsvContent += `${item.test_item}\t${item.usl || ''}\t${item.lsl || ''}\t${item.value}\t${type}\t${score}\t${criteriaMatch}\n`
         })

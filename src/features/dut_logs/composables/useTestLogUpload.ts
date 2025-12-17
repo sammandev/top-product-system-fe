@@ -50,7 +50,7 @@ export interface ParsedTestItemEnhanced {
   numeric_value: number | null
   is_hex: boolean
   hex_decimal: number | null
-  matches_criteria: boolean
+  matched_criteria: boolean
   target: number | null
   score: number | null
   score_breakdown: ScoreBreakdown | null
@@ -93,7 +93,7 @@ export interface CompareItemEnhanced {
   avg_deviation: number | null
   avg_score: number | null
   median_score: number | null
-  matches_criteria: boolean
+  matched_criteria: boolean
 }
 
 export interface FileSummaryEnhanced {
