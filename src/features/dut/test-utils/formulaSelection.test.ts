@@ -2,7 +2,6 @@
 // Comprehensive tests for formula selection functionality
 
 import { describe, it, expect, beforeEach } from 'vitest'
-import { mount } from '@vue/test-utils'
 import {
     sampleFormulaSelections,
     sampleMeasurements,

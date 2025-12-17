@@ -21,10 +21,9 @@
             <v-row>
                 <!-- Multiple ISNs Combobox -->
                 <v-col v-if="inputMode === 'multiple'" cols="12">
-                    <v-combobox v-model="selectedISNs" label="DUT ISNs"
-                        placeholder="Type ISN and press Enter" prepend-inner-icon="mdi-barcode-scan" 
-                        variant="outlined" chips multiple closable-chips clearable :rules="[rules.minOneISN]"
-                        hint="Type ISN and press Enter to add multiple" persistent-hint>
+                    <v-combobox v-model="selectedISNs" label="DUT ISNs" placeholder="Type ISN and press Enter"
+                        prepend-inner-icon="mdi-barcode-scan" variant="outlined" chips multiple closable-chips clearable
+                        :rules="[rules.minOneISN]" hint="Type ISN and press Enter to add multiple" persistent-hint>
                         <template #chip="{ props, item }">
                             <v-chip v-bind="props" :text="item.value" closable />
                         </template>
@@ -38,7 +37,8 @@
                         prepend-inner-icon="mdi-text-box-multiple" variant="outlined" rows="5" clearable
                         hint="Paste ISNs separated by newlines, commas, or spaces" persistent-hint>
                         <template #append>
-                            <v-btn color="primary" variant="flat" size="small" :disabled="!bulkText" @click="parseBulkISNs">
+                            <v-btn color="primary" variant="flat" size="small" :disabled="!bulkText"
+                                @click="parseBulkISNs">
                                 Parse
                             </v-btn>
                         </template>
@@ -136,13 +136,6 @@ const selectedSites = ref<string[]>(props.siteIdentifiers)
 const selectedModels = ref<string[]>(props.modelIdentifiers)
 const availableSites = ref<string[]>([])
 const availableModels = ref<string[]>([])
-
-// Recent ISNs (could be loaded from localStorage or store)
-const recentISNs = ref<string[]>([
-    '260884980003907',
-    '260884980003908',
-    '260884980003909'
-])
 
 // Validation Rules
 const rules = {
