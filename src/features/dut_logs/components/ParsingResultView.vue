@@ -431,12 +431,12 @@ const getResultColor = (result: string | null): string => {
   return 'warning'
 }
 
-const formatScore = (score: number | null): string => {
-  return score !== null ? score.toFixed(2) : 'N/A'
+const formatScore = (score: number | null | undefined): string => {
+  return (score !== null && score !== undefined) ? score.toFixed(2) : 'N/A'
 }
 
-const formatNumber = (value: number | null): string => {
-  return value !== null ? value.toString() : 'N/A'
+const formatNumber = (value: number | null | undefined): string => {
+  return (value !== null && value !== undefined) ? value.toString() : 'N/A'
 }
 
 const getTypeLabel = (item: ParsedTestItemEnhanced): string => {
