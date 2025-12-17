@@ -147,7 +147,9 @@ export function useTestLogUpload() {
       return response.data
     } catch (err) {
       const axiosError = err as AxiosError<{ detail: string }>
-      error.value = axiosError.response?.data?.detail || 'Failed to parse log file'
+      const detail = axiosError.response?.data?.detail || 'Failed to parse log file'
+      console.error('Parse log error:', detail, axiosError.response?.data)
+      error.value = detail
       throw new Error(error.value)
     } finally {
       loading.value = false
@@ -191,7 +193,9 @@ export function useTestLogUpload() {
       return response.data
     } catch (err) {
       const axiosError = err as AxiosError<{ detail: string }>
-      error.value = axiosError.response?.data?.detail || 'Failed to compare log files'
+      const detail = axiosError.response?.data?.detail || 'Failed to compare log files'
+      console.error('Compare logs error:', detail, axiosError.response?.data)
+      error.value = detail
       throw new Error(error.value)
     } finally {
       loading.value = false

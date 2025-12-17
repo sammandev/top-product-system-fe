@@ -34,33 +34,33 @@
             <!-- 8 Metadata Fields -->
             <v-col cols="12" md="3">
               <div class="text-caption text-medium-emphasis">Test Date</div>
-              <div class="text-body-2">{{ result.metadata.test_date || 'N/A' }}</div>
+              <div class="text-body-2">{{ result.metadata?.test_date || 'N/A' }}</div>
             </v-col>
             <v-col cols="12" md="3">
               <div class="text-caption text-medium-emphasis">Device</div>
-              <div class="text-body-2">{{ result.metadata.device || 'N/A' }}</div>
+              <div class="text-body-2">{{ result.metadata?.device || 'N/A' }}</div>
             </v-col>
             <v-col cols="12" md="3">
               <div class="text-caption text-medium-emphasis">Script Version</div>
-              <div class="text-body-2">{{ result.metadata.script_version || 'N/A' }}</div>
+              <div class="text-body-2">{{ result.metadata?.script_version || 'N/A' }}</div>
             </v-col>
             <v-col cols="12" md="3">
               <div class="text-caption text-medium-emphasis">Duration</div>
-              <div class="text-body-2">{{ formatDuration(result.metadata.duration_seconds) }}</div>
+              <div class="text-body-2">{{ formatDuration(result.metadata?.duration_seconds) }}</div>
             </v-col>
             <v-col cols="12" md="3">
               <div class="text-caption text-medium-emphasis">SFIS Status</div>
-              <div class="text-body-2">{{ result.metadata.sfis_status || 'N/A' }}</div>
+              <div class="text-body-2">{{ result.metadata?.sfis_status || 'N/A' }}</div>
             </v-col>
             <v-col cols="12" md="3">
               <div class="text-caption text-medium-emphasis">Result</div>
-              <v-chip :color="getResultColor(result.metadata.result)" size="x-small">
-                {{ result.metadata.result || 'N/A' }}
+              <v-chip :color="getResultColor(result.metadata?.result)" size="x-small">
+                {{ result.metadata?.result || 'N/A' }}
               </v-chip>
             </v-col>
             <v-col cols="12" md="3">
               <div class="text-caption text-medium-emphasis">Counter</div>
-              <div class="text-body-2">{{ result.metadata.counter || 'N/A' }}</div>
+              <div class="text-body-2">{{ result.metadata?.counter || 'N/A' }}</div>
             </v-col>
           </v-row>
         </v-card-text>
