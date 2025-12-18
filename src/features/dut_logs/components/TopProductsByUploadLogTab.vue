@@ -112,9 +112,9 @@
     <!-- Results Section -->
     <v-row v-if="hasResults">
         <v-col cols="12">
-            <!-- Top Product Ranking -->
-            <TopProductRankingUploadLog :parse-result="mode === 'PARSING' ? parsingResult : null"
-                :compare-result="mode === 'COMPARE' ? compareResult : null" />
+            <!-- Top Product Ranking - Only for Compare Mode -->
+            <TopProductRankingUploadLog v-if="mode === 'COMPARE' && compareResult"
+                :compare-result="compareResult" />
 
             <!-- Detailed Results -->
             <ParsingResultView v-if="mode === 'PARSING' && parsingResult" :result="parsingResult" />

@@ -60,6 +60,14 @@ export interface TopProductMeasurement {
   custom_scoring?: CustomScoringResult // NEW: Custom formula comparison data
 }
 
+export interface LatestDataItem {
+  test_item: string
+  usl: number | null
+  lsl: number | null
+  actual: number | null
+  score_breakdown: ScoreBreakdown | null
+}
+
 export interface TopProductStationResult {
   station_id: number | null
   station_name: string
@@ -76,6 +84,7 @@ export interface TopProductStationResult {
   fail_count: number
   error_item: string | null
   data: Array<Array<string | number | null | ScoreBreakdown>> // Backend uses 'data' not 'measurement' - Added ScoreBreakdown
+  latest_data?: LatestDataItem[] // New API format - array of measurement objects
   overall_data_score: number
   metadata?: Record<string, any>
   group_scores?: Record<string, any> | null

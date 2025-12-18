@@ -104,24 +104,24 @@
         </v-col>
       </v-row>
 
-      <!-- Data Table with Virtual Scrolling -->
-      <v-card variant="outlined">
+      <!-- Value Items Table (Numeric Data) -->
+      <v-card variant="outlined" class="mb-4">
         <v-card-title class="bg-info-lighten-5 d-flex align-center">
           <v-icon start>mdi-table</v-icon>
-          Test Items
-          <v-chip class="ml-2" size="small">{{ filteredItems.length }}</v-chip>
+          Value Items (Numeric Data)
+          <v-chip class="ml-2" size="small">{{ filteredValueItems.length }}</v-chip>
           <v-spacer />
-          <v-btn icon size="small" @click="fullscreen = true" class="ml-2">
+          <v-btn icon size="small" @click="fullscreenValue = true" class="ml-2">
             <v-icon>mdi-fullscreen</v-icon>
           </v-btn>
         </v-card-title>
         <v-card-text class="pa-2">
           <!-- Search Field -->
-          <v-text-field v-model="search" prepend-inner-icon="mdi-magnify" label="Search test items..."
+          <v-text-field v-model="searchValue" prepend-inner-icon="mdi-magnify" label="Search value items..."
             variant="outlined" density="compact" clearable class="mb-2" hide-details />
         </v-card-text>
         <v-card-text class="pa-0">
-          <v-data-table :headers="headers" :items="paginatedItems" :items-per-page="itemsPerPage"
+          <v-data-table :headers="valueHeaders" :items="paginatedValueItems" :items-per-page="itemsPerPageValue"
             density="compact" fixed-header height="500" hide-default-footer striped="even">
         <!-- Test Item Column -->
         <template #item.test_item="{ item }">
@@ -184,8 +184,8 @@
         </template>
 
         <!-- Criteria Match Column -->
-        <template #item.matches_criteria="{ item }">
-          <v-icon v-if="item.matches_criteria" color="success" size="small">
+        <template #item.matched_criteria="{ item }">
+          <v-icon v-if="item.matched_criteria" color="success" size="small">
             mdi-check-circle
           </v-icon>
           <v-icon v-else color="grey" size="small">
@@ -196,11 +196,90 @@
       <div class="d-flex align-center justify-space-between pa-2">
         <div class="d-flex align-center gap-2">
           <span class="text-caption text-medium-emphasis">Show</span>
-          <v-select v-model="itemsPerPage" :items="itemsPerPageOptions" variant="outlined" density="compact"
+          <v-select v-model="itemsPerPageValue" :items="itemsPerPageOptions" variant="outlined" density="compact"
             hide-details style="width: 100px;" />
           <span class="text-caption text-medium-emphasis">items</span>
         </div>
-        <v-pagination v-if="itemsPerPage !== -1 && itemsPerPage !== 0 && filteredItems.length > itemsPerPage" v-model="currentPage" :length="totalPages" :total-visible="7" size="small"
+        <v-pagination v-if="itemsPerPageValue !== -1 && itemsPerPageValue !== 0 && filteredValueItems.length > itemsPerPageValue" v-model="currentPageValue" :length="totalPagesValue" :total-visible="7" size="small"
+          density="compact" />
+        <div style="width: 150px;"></div>
+      </div>
+        </v-card-text>
+      </v-card>
+
+      <!-- Non-Value Items Table (Status/Text Data) -->
+      <v-card variant="outlined">
+        <v-card-title class="bg-secondary-lighten-5 d-flex align-center">
+          <v-icon start>mdi-table</v-icon>
+          Non-Value Items (Status/Text Data)
+          <v-chip class="ml-2" size="small">{{ filteredNonValueItems.length }}</v-chip>
+          <v-spacer />
+          <v-btn icon size="small" @click="fullscreenNonValue = true" class="ml-2">
+            <v-icon>mdi-fullscreen</v-icon>
+          </v-btn>
+        </v-card-title>
+        <v-card-text class="pa-2">
+          <!-- Search Field -->
+          <v-text-field v-model="searchNonValue" prepend-inner-icon="mdi-magnify" label="Search non-value items..."
+            variant="outlined" density="compact" clearable class="mb-2" hide-details />
+        </v-card-text>
+        <v-card-text class="pa-0">
+          <v-data-table :headers="nonValueHeaders" :items="paginatedNonValueItems" :items-per-page="itemsPerPageNonValue"
+            density="compact" fixed-header height="500" hide-default-footer striped="even">
+        <!-- Test Item Column -->
+        <template #item.test_item="{ item }">
+          <div 
+            class="text-body-2 font-weight-medium"
+            :class="{ 'text-primary font-weight-bold': item.is_calculated }"
+          >
+            {{ item.test_item }}
+            <v-chip 
+              v-if="item.is_calculated" 
+              size="x-small" 
+              color="primary" 
+              variant="tonal"
+              class="ml-1"
+            >
+              Calculated
+            </v-chip>
+          </div>
+        </template>
+
+        <!-- Value Column -->
+        <template #item.value="{ item }">
+          <div class="d-flex align-center gap-1">
+            <span class="text-body-2">{{ item.value }}</span>
+            <v-chip v-if="item.is_hex" size="x-small" color="info" variant="tonal">
+              {{ item.hex_decimal }}
+            </v-chip>
+          </div>
+        </template>
+
+        <!-- Type Column -->
+        <template #item.type="{ item }">
+          <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
+            {{ getTypeLabel(item) }}
+          </v-chip>
+        </template>
+
+        <!-- Criteria Match Column -->
+        <template #item.matched_criteria="{ item }">
+          <v-icon v-if="item.matched_criteria" color="success" size="small">
+            mdi-check-circle
+          </v-icon>
+          <v-icon v-else color="grey" size="small">
+            mdi-minus-circle
+          </v-icon>
+        </template>
+      </v-data-table>
+      <div class="d-flex align-center justify-space-between pa-2">
+        <div class="d-flex align-center gap-2">
+          <span class="text-caption text-medium-emphasis">Show</span>
+          <v-select v-model="itemsPerPageNonValue" :items="itemsPerPageOptions" variant="outlined" density="compact"
+            hide-details style="width: 100px;" />
+          <span class="text-caption text-medium-emphasis">items</span>
+        </div>
+        <v-pagination v-if="itemsPerPageNonValue !== -1 && itemsPerPageNonValue !== 0 && filteredNonValueItems.length > itemsPerPageNonValue" v-model="currentPageNonValue" :length="totalPagesNonValue" :total-visible="7" size="small"
           density="compact" />
         <div style="width: 150px;"></div>
       </div>
@@ -209,23 +288,23 @@
     </v-card-text>
   </v-card>
 
-  <!-- Fullscreen Dialog -->
-  <v-dialog v-model="fullscreen" fullscreen transition="dialog-bottom-transition">
+  <!-- Fullscreen Dialog for Value Items -->
+  <v-dialog v-model="fullscreenValue" fullscreen transition="dialog-bottom-transition">
     <v-card class="d-flex flex-column" style="height: 100vh; overflow: hidden;">
       <v-card-title class="d-flex justify-space-between align-center flex-shrink-0">
         <div>
           <v-icon class="mr-2">mdi-table</v-icon>
-          Test Items
+          Value Items (Numeric Data)
         </div>
-        <v-btn icon="mdi-close" variant="text" @click="fullscreen = false" />
+        <v-btn icon="mdi-close" variant="text" @click="fullscreenValue = false" />
       </v-card-title>
       <v-card-text class="pb-2 pt-3 flex-shrink-0">
-        <v-text-field v-model="search" prepend-inner-icon="mdi-magnify" label="Search test items..."
+        <v-text-field v-model="searchValue" prepend-inner-icon="mdi-magnify" label="Search value items..."
           variant="outlined" density="compact" clearable hide-details />
       </v-card-text>
       <v-card-text class="pa-0 flex-grow-1 d-flex flex-column" style="overflow: hidden;">
         <div class="flex-grow-1" style="overflow: auto;">
-          <v-data-table :headers="headers" :items="paginatedItems" :items-per-page="itemsPerPage"
+          <v-data-table :headers="valueHeaders" :items="paginatedValueItems" :items-per-page="itemsPerPageValue"
             :height="'calc(100vh - 200px)'" fixed-header density="compact" hide-default-footer>
           <template #item.test_item="{ item }">
             <div 
@@ -270,8 +349,8 @@
             </v-chip>
             <span v-else class="text-caption text-medium-emphasis">N/A</span>
           </template>
-          <template #item.matches_criteria="{ item }">
-            <v-icon v-if="item.matches_criteria" color="success" size="small">
+          <template #item.matched_criteria="{ item }">
+            <v-icon v-if="item.matched_criteria" color="success" size="small">
               mdi-check-circle
             </v-icon>
             <v-icon v-else color="grey" size="small">
@@ -284,12 +363,12 @@
           <div class="d-flex align-center justify-space-between">
             <div class="d-flex align-center gap-2">
               <span class="text-caption text-medium-emphasis">Show</span>
-              <v-select v-model="itemsPerPage" :items="itemsPerPageOptions" variant="outlined" density="compact"
+              <v-select v-model="itemsPerPageValue" :items="itemsPerPageOptions" variant="outlined" density="compact"
                 hide-details style="width: 100px;" />
               <span class="text-caption text-medium-emphasis">items</span>
             </div>
-            <v-pagination v-if="itemsPerPage !== -1 && itemsPerPage !== 0 && filteredItems.length > itemsPerPage" v-model="currentPage"
-              :length="totalPages" :total-visible="5" size="small" density="compact" />
+            <v-pagination v-if="itemsPerPageValue !== -1 && itemsPerPageValue !== 0 && filteredValueItems.length > itemsPerPageValue" v-model="currentPageValue"
+              :length="totalPagesValue" :total-visible="5" size="small" density="compact" />
             <div style="width: 150px;"></div>
           </div>
         </div>
@@ -297,18 +376,109 @@
     </v-card>
   </v-dialog>
 
-  <!-- Custom Items Per Page Dialog -->
-  <v-dialog v-model="showCustomInput" max-width="400">
+  <!-- Fullscreen Dialog for Non-Value Items -->
+  <v-dialog v-model="fullscreenNonValue" fullscreen transition="dialog-bottom-transition">
+    <v-card class="d-flex flex-column" style="height: 100vh; overflow: hidden;">
+      <v-card-title class="d-flex justify-space-between align-center flex-shrink-0">
+        <div>
+          <v-icon class="mr-2">mdi-table</v-icon>
+          Non-Value Items (Status/Text Data)
+        </div>
+        <v-btn icon="mdi-close" variant="text" @click="fullscreenNonValue = false" />
+      </v-card-title>
+      <v-card-text class="pb-2 pt-3 flex-shrink-0">
+        <v-text-field v-model="searchNonValue" prepend-inner-icon="mdi-magnify" label="Search non-value items..."
+          variant="outlined" density="compact" clearable hide-details />
+      </v-card-text>
+      <v-card-text class="pa-0 flex-grow-1 d-flex flex-column" style="overflow: hidden;">
+        <div class="flex-grow-1" style="overflow: auto;">
+          <v-data-table :headers="nonValueHeaders" :items="paginatedNonValueItems" :items-per-page="itemsPerPageNonValue"
+            :height="'calc(100vh - 200px)'" fixed-header density="compact" hide-default-footer>
+          <template #item.test_item="{ item }">
+            <div 
+              class="text-body-2 font-weight-medium"
+              :class="{ 'text-primary font-weight-bold': item.is_calculated }"
+            >
+              {{ item.test_item }}
+              <v-chip 
+                v-if="item.is_calculated" 
+                size="x-small" 
+                color="primary" 
+                variant="tonal"
+                class="ml-1"
+              >
+                Calculated
+              </v-chip>
+            </div>
+          </template>
+          <template #item.value="{ item }">
+            <div class="d-flex align-center gap-1">
+              <span class="text-body-2">{{ item.value }}</span>
+              <v-chip v-if="item.is_hex" size="x-small" color="info" variant="tonal">
+                {{ item.hex_decimal }}
+              </v-chip>
+            </div>
+          </template>
+          <template #item.type="{ item }">
+            <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
+              {{ getTypeLabel(item) }}
+            </v-chip>
+          </template>
+          <template #item.matched_criteria="{ item }">
+            <v-icon v-if="item.matched_criteria" color="success" size="small">
+              mdi-check-circle
+            </v-icon>
+            <v-icon v-else color="grey" size="small">
+              mdi-minus-circle
+            </v-icon>
+          </template>
+        </v-data-table>
+        </div>
+        <div class="flex-shrink-0 pa-2" style="border-top: 1px solid rgba(0,0,0,0.12);">
+          <div class="d-flex align-center justify-space-between">
+            <div class="d-flex align-center gap-2">
+              <span class="text-caption text-medium-emphasis">Show</span>
+              <v-select v-model="itemsPerPageNonValue" :items="itemsPerPageOptions" variant="outlined" density="compact"
+                hide-details style="width: 100px;" />
+              <span class="text-caption text-medium-emphasis">items</span>
+            </div>
+            <v-pagination v-if="itemsPerPageNonValue !== -1 && itemsPerPageNonValue !== 0 && filteredNonValueItems.length > itemsPerPageNonValue" v-model="currentPageNonValue"
+              :length="totalPagesNonValue" :total-visible="5" size="small" density="compact" />
+            <div style="width: 150px;"></div>
+          </div>
+        </div>
+      </v-card-text>
+    </v-card>
+  </v-dialog>
+
+  <!-- Custom Items Per Page Dialog for Value Items -->
+  <v-dialog v-model="showCustomInputValue" max-width="400">
     <v-card>
-      <v-card-title>Custom Items Per Page</v-card-title>
+      <v-card-title>Custom Items Per Page (Value Items)</v-card-title>
       <v-card-text>
-        <v-text-field v-model.number="customItemsPerPage" type="number" label="Enter number of items" 
-          variant="outlined" density="comfortable" min="1" autofocus @keyup.enter="applyCustomItemsPerPage" />
+        <v-text-field v-model.number="customItemsPerPageValue" type="number" label="Enter number of items" 
+          variant="outlined" density="comfortable" min="1" autofocus @keyup.enter="applyCustomItemsPerPageValue" />
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn text @click="cancelCustomInput">Cancel</v-btn>
-        <v-btn color="primary" variant="elevated" @click="applyCustomItemsPerPage">Apply</v-btn>
+        <v-btn text @click="cancelCustomInputValue">Cancel</v-btn>
+        <v-btn color="primary" variant="elevated" @click="applyCustomItemsPerPageValue">Apply</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
+  <!-- Custom Items Per Page Dialog for Non-Value Items -->
+  <v-dialog v-model="showCustomInputNonValue" max-width="400">
+    <v-card>
+      <v-card-title>Custom Items Per Page (Non-Value Items)</v-card-title>
+      <v-card-text>
+        <v-text-field v-model.number="customItemsPerPageNonValue" type="number" label="Enter number of items" 
+          variant="outlined" density="comfortable" min="1" autofocus @keyup.enter="applyCustomItemsPerPageNonValue" />
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn text @click="cancelCustomInputNonValue">Cancel</v-btn>
+        <v-btn color="primary" variant="elevated" @click="applyCustomItemsPerPageNonValue">Apply</v-btn>
       </v-card-actions>
     </v-card>
   </v-dialog>
@@ -329,13 +499,22 @@ const props = defineProps<{
   result: TestLogParseResponseEnhanced
 }>()
 
-// Search and fullscreen
-const search = ref('')
-const fullscreen = ref(false)
+// Search and fullscreen for Value Items
+const searchValue = ref('')
+const fullscreenValue = ref(false)
 
-// Pagination
-const itemsPerPage = ref(10)
-const currentPage = ref(1)
+// Search and fullscreen for Non-Value Items
+const searchNonValue = ref('')
+const fullscreenNonValue = ref(false)
+
+// Pagination for Value Items
+const itemsPerPageValue = ref(10)
+const currentPageValue = ref(1)
+
+// Pagination for Non-Value Items
+const itemsPerPageNonValue = ref(10)
+const currentPageNonValue = ref(1)
+
 const itemsPerPageOptions = [
   { title: '5', value: 5 },
   { title: '10', value: 10 },
@@ -345,70 +524,138 @@ const itemsPerPageOptions = [
   { title: 'All', value: -1 },
   { title: 'Custom', value: 0 }
 ]
-const showCustomInput = ref(false)
-const customItemsPerPage = ref(10)
+const showCustomInputValue = ref(false)
+const customItemsPerPageValue = ref(10)
+const showCustomInputNonValue = ref(false)
+const customItemsPerPageNonValue = ref(10)
 
-// Filtered items
-const filteredItems = computed(() => {
-  if (!search.value) return props.result.parsed_items_enhanced
-  const searchLower = search.value.toLowerCase()
-  return props.result.parsed_items_enhanced.filter(item =>
+// Separate value and non-value items
+const valueItems = computed(() => {
+  return props.result.parsed_items_enhanced.filter(item => item.is_value_type)
+})
+
+const nonValueItems = computed(() => {
+  return props.result.parsed_items_enhanced.filter(item => !item.is_value_type)
+})
+
+// Filtered value items
+const filteredValueItems = computed(() => {
+  if (!searchValue.value) return valueItems.value
+  const searchLower = searchValue.value.toLowerCase()
+  return valueItems.value.filter(item =>
     item.test_item.toLowerCase().includes(searchLower)
   )
 })
 
-// Pagination computed
-const totalPages = computed(() => {
-  const perPage = itemsPerPage.value === -1 ? filteredItems.value.length : 
-                  itemsPerPage.value === 0 ? 10 : itemsPerPage.value
-  return Math.ceil(filteredItems.value.length / perPage)
+// Filtered non-value items
+const filteredNonValueItems = computed(() => {
+  if (!searchNonValue.value) return nonValueItems.value
+  const searchLower = searchNonValue.value.toLowerCase()
+  return nonValueItems.value.filter(item =>
+    item.test_item.toLowerCase().includes(searchLower)
+  )
 })
 
-const paginatedItems = computed(() => {
-  const perPage = itemsPerPage.value === -1 ? filteredItems.value.length : 
-                  itemsPerPage.value === 0 ? 10 : itemsPerPage.value
-  const start = (currentPage.value - 1) * perPage
+// Pagination computed for Value Items
+const totalPagesValue = computed(() => {
+  const perPage = itemsPerPageValue.value === -1 ? filteredValueItems.value.length : 
+                  itemsPerPageValue.value === 0 ? 10 : itemsPerPageValue.value
+  return Math.ceil(filteredValueItems.value.length / perPage)
+})
+
+const paginatedValueItems = computed(() => {
+  const perPage = itemsPerPageValue.value === -1 ? filteredValueItems.value.length : 
+                  itemsPerPageValue.value === 0 ? 10 : itemsPerPageValue.value
+  const start = (currentPageValue.value - 1) * perPage
   const end = start + perPage
-  return filteredItems.value.slice(start, end)
+  return filteredValueItems.value.slice(start, end)
+})
+
+// Pagination computed for Non-Value Items
+const totalPagesNonValue = computed(() => {
+  const perPage = itemsPerPageNonValue.value === -1 ? filteredNonValueItems.value.length : 
+                  itemsPerPageNonValue.value === 0 ? 10 : itemsPerPageNonValue.value
+  return Math.ceil(filteredNonValueItems.value.length / perPage)
+})
+
+const paginatedNonValueItems = computed(() => {
+  const perPage = itemsPerPageNonValue.value === -1 ? filteredNonValueItems.value.length : 
+                  itemsPerPageNonValue.value === 0 ? 10 : itemsPerPageNonValue.value
+  const start = (currentPageNonValue.value - 1) * perPage
+  const end = start + perPage
+  return filteredNonValueItems.value.slice(start, end)
 })
 
 // Reset pagination when search changes
-watch(search, () => {
-  currentPage.value = 1
+watch(searchValue, () => {
+  currentPageValue.value = 1
+})
+
+watch(searchNonValue, () => {
+  currentPageNonValue.value = 1
 })
 
 // Watch for custom items per page selection
-watch(itemsPerPage, (newVal) => {
+watch(itemsPerPageValue, (newVal) => {
   if (newVal === 0) {
-    showCustomInput.value = true
+    showCustomInputValue.value = true
   } else {
-    showCustomInput.value = false
-    currentPage.value = 1
+    showCustomInputValue.value = false
+    currentPageValue.value = 1
+  }
+})
+
+watch(itemsPerPageNonValue, (newVal) => {
+  if (newVal === 0) {
+    showCustomInputNonValue.value = true
+  } else {
+    showCustomInputNonValue.value = false
+    currentPageNonValue.value = 1
   }
 })
 
 // Apply custom value
-const applyCustomItemsPerPage = () => {
-  if (customItemsPerPage.value > 0) {
-    itemsPerPage.value = customItemsPerPage.value
+const applyCustomItemsPerPageValue = () => {
+  if (customItemsPerPageValue.value > 0) {
+    itemsPerPageValue.value = customItemsPerPageValue.value
   }
-  showCustomInput.value = false
+  showCustomInputValue.value = false
 }
 
-const cancelCustomInput = () => {
-  itemsPerPage.value = 10
-  showCustomInput.value = false
+const cancelCustomInputValue = () => {
+  itemsPerPageValue.value = 10
+  showCustomInputValue.value = false
 }
 
-// Table headers
-const headers = [
+const applyCustomItemsPerPageNonValue = () => {
+  if (customItemsPerPageNonValue.value > 0) {
+    itemsPerPageNonValue.value = customItemsPerPageNonValue.value
+  }
+  showCustomInputNonValue.value = false
+}
+
+const cancelCustomInputNonValue = () => {
+  itemsPerPageNonValue.value = 10
+  showCustomInputNonValue.value = false
+}
+
+// Table headers for Value Items (with scoring)
+const valueHeaders = [
   { title: 'Test Item', key: 'test_item', sortable: true, width: '300px' },
   { title: 'USL', key: 'usl', sortable: true, align: 'end' as const },
   { title: 'LSL', key: 'lsl', sortable: true, align: 'end' as const },
   { title: 'Value', key: 'value', sortable: true },
   { title: 'Type', key: 'type', sortable: true },
   { title: 'Score', key: 'score', sortable: true, align: 'end' as const },
-  { title: 'Criteria', key: 'matches_criteria', sortable: true, align: 'center' as const }
+  { title: 'Criteria', key: 'matched_criteria', sortable: true, align: 'center' as const }
+]
+
+// Table headers for Non-Value Items (no scoring)
+const nonValueHeaders = [
+  { title: 'Test Item', key: 'test_item', sortable: true, width: '300px' },
+  { title: 'Value', key: 'value', sortable: true },
+  { title: 'Type', key: 'type', sortable: true },
+  { title: 'Criteria', key: 'matched_criteria', sortable: true, align: 'center' as const }
 ]
 
 // Score breakdown dialog

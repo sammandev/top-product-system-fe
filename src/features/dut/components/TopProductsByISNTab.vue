@@ -672,20 +672,22 @@ function handleExport() {
 }
 
 async function exportToExcelZip(ExcelJS: any, JSZip: any) {
-    // Helper function to parse measurements from data array
-    function parseMeasurements(data: Array<Array<string | number | null | any>>) {
-        if (!data || data.length === 0) return []
+    // Helper function to parse measurements from latest_data array (new API format)
+    function parseMeasurements(latest_data: Array<any>) {
+        if (!latest_data || latest_data.length === 0) return []
         const measurements = []
-        for (let i = 0; i < data.length; i++) {
-            const row = data[i]
-            if (!row || row.length < 6) continue
+        for (let i = 0; i < latest_data.length; i++) {
+            const item = latest_data[i]
+            if (!item) continue
+            // New API format: {test_item, usl, lsl, actual, score_breakdown}
+            const score = item.score_breakdown?.final_score ?? 0
             measurements.push({
-                test_item: String(row[0] || ''),
-                usl: row[1],
-                lsl: row[2],
-                actual: String(row[3] || ''),
-                target: row[4],
-                score: Number(row[5] || 0)
+                test_item: String(item.test_item || ''),
+                usl: item.usl,
+                lsl: item.lsl,
+                actual: String(item.actual || ''),
+                target: item.score_breakdown?.target_used,
+                score: Number(score)
             })
         }
         return measurements
@@ -721,7 +723,7 @@ async function exportToExcelZip(ExcelJS: any, JSZip: any) {
                 test_date: station.test_date,
                 device: station.device,
                 overall_score: station.error_item && station.error_item.trim() !== '' ? 'N/A' : station.overall_data_score.toFixed(2),
-                measurements: parseMeasurements(station.data),
+                measurements: parseMeasurements(station.latest_data || []),
                 error_item: station.error_item
             })
         })
