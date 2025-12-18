@@ -200,7 +200,7 @@
                                     </v-card-title>
                                     <v-card-text class="pa-0">
                                         <!-- Multiple records: Carousel with custom navigation -->
-                                        <div v-if="station.data.length > 1">
+                                        <div v-if="station.data.length > 1">{{ initializeCarousel(station.id, station.data.length) }}
                                             <!-- Navigation Controls -->
                                             <div
                                                 class="d-flex justify-center align-center gap-4 pa-1 bg-grey-lighten-4">
@@ -386,7 +386,7 @@
                                     </v-expansion-panel-title>
                                     <v-expansion-panel-text class="pa-0">
                                         <v-list v-if="station.data.length > 0">
-                                            <v-list-item v-for="record in station.data" :key="record.id"
+                                            <v-list-item v-for="record in getReversedData(station.data)" :key="record.id"
                                                 class="border-b"
                                                 :class="record.test_result !== 1 ? 'bg-red-lighten-5' : ''">
                                                 <template #prepend>
@@ -454,7 +454,7 @@
                                         </div>
                                     </v-expansion-panel-title>
                                     <v-expansion-panel-text class="pa-0">
-                                        <v-data-table :headers="tableHeaders" :items="station.data" density="compact"
+                                        <v-data-table :headers="tableHeaders" :items="getReversedData(station.data).map((record, idx) => ({ ...record, record_number: station.data.length - idx }))" density="compact"
                                             :items-per-page="-1" hide-default-footer>
                                             <template #item.status="{ item }">
                                                 <v-chip :color="item.test_result === 1 ? 'success' : 'error'"
@@ -627,6 +627,7 @@ const compactExpanded = ref<Record<number, number[]>>({})
 
 // Table headers for table view
 const tableHeaders = [
+    { title: 'Record', key: 'record_number', sortable: true },
     { title: 'Device', key: 'device_id__name', sortable: true },
     { title: 'DUT ISN', key: 'dut_id__isn', sortable: true },
     { title: 'Status', key: 'status', sortable: false },
@@ -819,6 +820,18 @@ const getSortedStations = (isnGroup: ISNGroupedRecords) => {
 const getLatestRecord = (station: Station): TestRecord | null => {
     if (station.data.length === 0) return null
     return station.data[station.data.length - 1] || null
+}
+
+// Helper to initialize carousel at latest record for a station
+const initializeCarousel = (stationId: number, dataLength: number) => {
+    if (!(stationId in carouselModels.value) && dataLength > 1) {
+        carouselModels.value[stationId] = dataLength - 1 // Start at last record
+    }
+}
+
+// Helper to get reversed data (latest first) for list and table views
+const getReversedData = (data: TestRecord[]) => {
+    return [...data].reverse()
 }
 
 // Expand/Collapse all panels

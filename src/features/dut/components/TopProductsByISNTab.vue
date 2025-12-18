@@ -683,12 +683,14 @@ async function exportToExcelZip(ExcelJS: any, JSZip: any) {
             if (!item) continue
             // New API format: {test_item, usl, lsl, actual, score_breakdown}
             const score = item.score_breakdown?.final_score ?? 0
+            const deviation = item.score_breakdown?.deviation
             measurements.push({
                 test_item: String(item.test_item || ''),
                 usl: item.usl,
                 lsl: item.lsl,
                 actual: String(item.actual || ''),
                 target: item.score_breakdown?.target_used,
+                deviation: deviation !== undefined && deviation !== null ? Number(deviation) : undefined,
                 score: Number(score)
             })
         }
@@ -725,7 +727,7 @@ async function exportToExcelZip(ExcelJS: any, JSZip: any) {
                 test_date: station.test_date,
                 device: station.device,
                 overall_score: station.error_item && station.error_item.trim() !== '' ? 'N/A' : station.overall_data_score.toFixed(2),
-                measurements: parseMeasurements(station.latest_data || []),
+                measurements: parseMeasurements(station.data || []),
                 error_item: station.error_item
             })
         })
@@ -790,16 +792,20 @@ async function exportToExcelZip(ExcelJS: any, JSZip: any) {
             worksheet.addRow(scoreRow)
 
             // Data table headers
-            // For single DUT: [Test_Items],[USL],[LSL],[Measured],,[Score]
-            // For multiple DUTs: [Test_Items],[USL],[LSL],[Measured],[Measured],,Score_ISN1,Score_ISN2,...
+            // For single DUT: [Test_Items],[USL],[LSL],[Measured],[Deviation],,[Score]
+            // For multiple DUTs: [Test_Items],[USL],[LSL],[Measured],[Measured],...,[Deviation],[Deviation],...,Score_ISN1,Score_ISN2,...
             let headerRow: any[]
             if (duts.length === 1) {
-                headerRow = ['[Test_Items]', '[USL]', '[LSL]', '[Measured]', '', '[Score]']
+                headerRow = ['[Test_Items]', '[USL]', '[LSL]', '[Measured]', '[Deviation]', '', '[Score]']
             } else {
                 headerRow = ['[Test_Items]', '[USL]', '[LSL]']
                 // Add [Measured] columns for each DUT
                 duts.forEach(() => {
                     headerRow.push('[Measured]')
+                })
+                // Add [Deviation] columns for each DUT
+                duts.forEach(dut => {
+                    headerRow.push(`Deviation_${dut.dut_isn}`)
                 })
                 headerRow.push('') // Empty column separator
                 // Add Score columns for each DUT
@@ -814,21 +820,23 @@ async function exportToExcelZip(ExcelJS: any, JSZip: any) {
                 const row: any[] = [testItem]
 
                 if (duts.length === 1) {
-                    // Single DUT: Test_Item, USL, LSL, Measured, empty, Score
+                    // Single DUT: Test_Item, USL, LSL, Measured, Deviation, empty, Score
                     const measurement = duts[0].measurements.find((m: any) => m.test_item === testItem)
                     if (measurement) {
+                        const deviation = (measurement as any).deviation ?? ''
                         row.push(
                             measurement.usl !== null ? measurement.usl : '',
                             measurement.lsl !== null ? measurement.lsl : '',
                             measurement.actual || '',
+                            deviation !== '' ? deviation.toFixed(2) : '',
                             '', // Empty column
                             measurement.score.toFixed(2)
                         )
                     } else {
-                        row.push('', '', '', '', '')
+                        row.push('', '', '', '', '', '')
                     }
                 } else {
-                    // Multiple DUTs: Test_Item, USL, LSL, Measured1, Measured2, ..., empty, Score1, Score2, ...
+                    // Multiple DUTs: Test_Item, USL, LSL, Measured1, Measured2, ..., Deviation1, Deviation2, ..., empty, Score1, Score2, ...
                     // Get USL and LSL from first DUT (should be same across all DUTs)
                     const firstMeasurement = duts[0].measurements.find((m: any) => m.test_item === testItem)
                     if (firstMeasurement) {
@@ -845,6 +853,16 @@ async function exportToExcelZip(ExcelJS: any, JSZip: any) {
                         const measurement = dut.measurements.find((m: any) => m.test_item === testItem)
                         if (measurement) {
                             row.push(measurement.actual || '')
+                        } else {
+                            row.push('')
+                        }
+                    })
+
+                    // Add Deviation values for all DUTs
+                    duts.forEach(dut => {
+                        const measurement = dut.measurements.find((m: any) => m.test_item === testItem)
+                        if (measurement && (measurement as any).deviation !== undefined) {
+                            row.push(((measurement as any).deviation).toFixed(2))
                         } else {
                             row.push('')
                         }
@@ -888,8 +906,14 @@ async function exportToExcelZip(ExcelJS: any, JSZip: any) {
         zip.file(fileName, excelBuffer)
     }
 
-    // Generate ZIP and download
-    const zipBlob = await zip.generateAsync({ type: 'blob' })
+    // Generate ZIP with maximum compression and download
+    const zipBlob = await zip.generateAsync({ 
+        type: 'blob',
+        compression: 'DEFLATE',
+        compressionOptions: {
+            level: 9 // Maximum compression level
+        }
+    })
     const url = URL.createObjectURL(zipBlob)
     const link = document.createElement('a')
     link.href = url

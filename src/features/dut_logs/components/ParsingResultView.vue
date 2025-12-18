@@ -235,6 +235,15 @@
               </v-chip>
             </template>
 
+            <!-- Decimal Value Column (for ADJUSTED_POW items) -->
+            <template #item.decimal_value="{ item }">
+              <span v-if="item.test_item.includes('ADJUSTED_POW') && (item.hex_decimal !== null && item.hex_decimal !== undefined)" 
+                class="text-body-2 font-weight-medium text-primary">
+                {{ item.hex_decimal }}
+              </span>
+              <span v-else class="text-caption text-medium-emphasis">—</span>
+            </template>
+
             <!-- Type Column -->
             <template #item.type="{ item }">
               <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
@@ -384,6 +393,13 @@
                 {{ item.value }}
               </v-chip>
             </template>
+            <template #item.decimal_value="{ item }">
+              <span v-if="item.test_item.includes('ADJUSTED_POW') && (item.hex_decimal !== null && item.hex_decimal !== undefined)" 
+                class="text-body-2 font-weight-medium text-primary">
+                {{ item.hex_decimal }}
+              </span>
+              <span v-else class="text-caption text-medium-emphasis">—</span>
+            </template>
             <template #item.type="{ item }">
               <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
                 {{ getTypeLabel(item) }}
@@ -494,12 +510,17 @@ const showCustomInputNonValue = ref(false)
 const customItemsPerPageNonValue = ref(10)
 
 // Separate value and non-value items
+// Note: ADJUSTED_POW items are moved to non-value items
 const valueItems = computed(() => {
-  return props.result.parsed_items_enhanced.filter(item => item.is_value_type)
+  return props.result.parsed_items_enhanced.filter(item => 
+    item.is_value_type && !item.test_item.includes('ADJUSTED_POW')
+  )
 })
 
 const nonValueItems = computed(() => {
-  return props.result.parsed_items_enhanced.filter(item => !item.is_value_type)
+  return props.result.parsed_items_enhanced.filter(item => 
+    !item.is_value_type || item.test_item.includes('ADJUSTED_POW')
+  )
 })
 
 // Filtered value items
@@ -618,6 +639,7 @@ const valueHeaders = [
 const nonValueHeaders = [
   { title: 'Test Item', key: 'test_item', sortable: true, width: '300px' },
   { title: 'Value', key: 'value', sortable: true },
+  { title: 'Decimal Value', key: 'decimal_value', sortable: true },
   { title: 'Type', key: 'type', sortable: true },
   { title: 'Criteria', key: 'matched_criteria', sortable: true, align: 'center' as const }
 ]

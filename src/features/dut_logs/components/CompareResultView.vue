@@ -439,7 +439,7 @@ const limitFilterOptions = [
 
 // Headers
 const valueHeaders = computed(() => {
-  const firstItem = props.result.comparison_value_items[0]
+  const firstItem = reclassifiedValueItems.value[0]
   if (!firstItem) return []
 
   const baseHeaders = [
@@ -468,7 +468,7 @@ const valueHeaders = computed(() => {
 })
 
 const nonValueHeaders = computed(() => {
-  const firstItem = props.result.comparison_non_value_items[0]
+  const firstItem = reclassifiedNonValueItems.value[0]
   if (!firstItem) return []
 
   const baseHeaders = [
@@ -486,9 +486,23 @@ const nonValueHeaders = computed(() => {
   return [...baseHeaders, ...isnHeaders]
 })
 
+// Reclassify items: move ADJUSTED_POW from value to non-value
+const reclassifiedValueItems = computed(() => {
+  return props.result.comparison_value_items.filter(item => 
+    !item.test_item.includes('ADJUSTED_POW')
+  )
+})
+
+const reclassifiedNonValueItems = computed(() => {
+  const adjustedPowItems = props.result.comparison_value_items.filter(item => 
+    item.test_item.includes('ADJUSTED_POW')
+  )
+  return [...props.result.comparison_non_value_items, ...adjustedPowItems]
+})
+
 // Filter items
 const filteredValueItems = computed(() => {
-  let items = sortTestItems(props.result.comparison_value_items)
+  let items = sortTestItems(reclassifiedValueItems.value)
 
   // Search filter
   if (valueSearch.value) {
@@ -529,7 +543,7 @@ const filteredValueItems = computed(() => {
 })
 
 const filteredNonValueItems = computed(() => {
-  const sorted = sortTestItems(props.result.comparison_non_value_items)
+  const sorted = sortTestItems(reclassifiedNonValueItems.value)
   if (!nonValueSearch.value) return sorted
   const searchLower = nonValueSearch.value.toLowerCase()
   return sorted.filter(item => item.test_item.toLowerCase().includes(searchLower))

@@ -46,27 +46,54 @@ export function useTestLogExport() {
         const metadataSheet = XLSX.utils.aoa_to_sheet(metadataData)
         XLSX.utils.book_append_sheet(workbook, metadataSheet, 'Metadata')
 
-        // Test Items sheet
-        const itemsData = [
-          ['Test Item', 'USL', 'LSL', 'Value', 'Type', 'Score', 'Criteria Match', 'Numeric Value', 'Hex Decimal']
-        ]
+        // Separate Value and Non-Value Items (with ADJUSTED_POW moved to Non-Value)
+        const valueItems = parseData.parsed_items_enhanced.filter(item => 
+          item.is_value_type && !item.test_item.includes('ADJUSTED_POW')
+        )
+        const nonValueItems = parseData.parsed_items_enhanced.filter(item => 
+          !item.is_value_type || item.test_item.includes('ADJUSTED_POW')
+        )
 
-        parseData.parsed_items_enhanced.forEach(item => {
-          itemsData.push([
-            item.test_item,
-            item.usl?.toString() || '',
-            item.lsl?.toString() || '',
-            item.value,
-            item.is_hex ? 'Hex' : item.is_value_type ? 'Value' : 'Non-Value',
-            item.score?.toFixed(2) || '',
-            item.matched_criteria ? 'Yes' : 'No',
-            item.numeric_value?.toString() || '',
-            item.hex_decimal?.toString() || ''
-          ])
-        })
+        // Value Items sheet
+        if (valueItems.length > 0) {
+          const valueData = [
+            ['Test Item', 'USL', 'LSL', 'Value', 'Score', 'Criteria Match']
+          ]
+          
+          valueItems.forEach(item => {
+            valueData.push([
+              item.test_item,
+              item.usl?.toString() || '',
+              item.lsl?.toString() || '',
+              item.value,
+              item.score?.toFixed(2) || '',
+              item.matched_criteria ? 'Yes' : 'No'
+            ])
+          })
 
-        const itemsSheet = XLSX.utils.aoa_to_sheet(itemsData)
-        XLSX.utils.book_append_sheet(workbook, itemsSheet, 'Test Items')
+          const valueSheet = XLSX.utils.aoa_to_sheet(valueData)
+          XLSX.utils.book_append_sheet(workbook, valueSheet, 'Value Items')
+        }
+
+        // Non-Value Items sheet (includes ADJUSTED_POW with decimal values)
+        if (nonValueItems.length > 0) {
+          const nonValueData = [
+            ['Test Item', 'Value', 'Decimal Value', 'Type', 'Criteria Match']
+          ]
+          
+          nonValueItems.forEach(item => {
+            nonValueData.push([
+              item.test_item,
+              item.value,
+              item.test_item.includes('ADJUSTED_POW') ? (item.hex_decimal?.toString() || '') : '',
+              item.is_hex ? 'Hex' : 'Non-Value',
+              item.matched_criteria ? 'Yes' : 'No'
+            ])
+          })
+
+          const nonValueSheet = XLSX.utils.aoa_to_sheet(nonValueData)
+          XLSX.utils.book_append_sheet(workbook, nonValueSheet, 'Non-Value Items')
+        }
 
       } else {
         // COMPARE mode
@@ -81,13 +108,26 @@ export function useTestLogExport() {
         const summarySheet = XLSX.utils.aoa_to_sheet(summaryData)
         XLSX.utils.book_append_sheet(workbook, summarySheet, 'Summary')
 
+        // Reclassify items: move ADJUSTED_POW from value to non-value
+        const reclassifiedValueItems = compareData.comparison_value_items.filter(item => 
+          !item.test_item.includes('ADJUSTED_POW')
+        )
+        const adjustedPowItems = compareData.comparison_value_items.filter(item => 
+          item.test_item.includes('ADJUSTED_POW')
+        )
+        // Deduplicate by test_item to prevent double ADJUSTED_POW items
+        const combinedNonValueItems = [...compareData.comparison_non_value_items, ...adjustedPowItems]
+        const reclassifiedNonValueItems = combinedNonValueItems.filter((item, index, self) =>
+          index === self.findIndex(t => t.test_item === item.test_item)
+        )
+
         // Value Items sheet
-        if (compareData.comparison_value_items.length > 0) {
-          const firstValueItem = compareData.comparison_value_items[0]
+        if (reclassifiedValueItems.length > 0) {
+          const firstValueItem = reclassifiedValueItems[0]
           if (!firstValueItem) return
 
           // Sort items using custom test item ordering
-          const sortedItems = sortTestItems(compareData.comparison_value_items)
+          const sortedItems = sortTestItems(reclassifiedValueItems)
 
           const valueHeaders = ['Test Item', 'USL', 'LSL', 'Target']
 
@@ -150,12 +190,12 @@ export function useTestLogExport() {
         }
 
         // Non-Value Items sheet
-        if (compareData.comparison_non_value_items.length > 0) {
-          const firstNonValueItem = compareData.comparison_non_value_items[0]
+        if (reclassifiedNonValueItems.length > 0) {
+          const firstNonValueItem = reclassifiedNonValueItems[0]
           if (!firstNonValueItem) return
 
           // Sort items using custom test item ordering
-          const sortedItems = sortTestItems(compareData.comparison_non_value_items)
+          const sortedItems = sortTestItems(reclassifiedNonValueItems)
 
           const nonValueHeaders = ['Test Item']
           firstNonValueItem.per_isn_data.forEach((isn) => {
@@ -250,27 +290,58 @@ export function useTestLogExport() {
           yPos += 5
         })
 
-        // Test Items Table
-        doc.addPage()
-        doc.setFontSize(12)
-        doc.text('Test Items', 14, 15)
+        // Separate Value and Non-Value Items
+        const valueItems = parseData.parsed_items_enhanced.filter(item => 
+          item.is_value_type && !item.test_item.includes('ADJUSTED_POW')
+        )
+        const nonValueItems = parseData.parsed_items_enhanced.filter(item => 
+          !item.is_value_type || item.test_item.includes('ADJUSTED_POW')
+        )
 
-        const tableData = parseData.parsed_items_enhanced.map(item => [
-          item.test_item,
-          item.usl?.toString() || '',
-          item.lsl?.toString() || '',
-          item.value,
-          item.is_hex ? 'Hex' : item.is_value_type ? 'Value' : 'Non-Value',
-          item.score?.toFixed(2) || ''
-        ])
+        // Value Items Table
+        if (valueItems.length > 0) {
+          doc.addPage()
+          doc.setFontSize(12)
+          doc.text('Value Items', 14, 15)
 
-        autoTable(doc, {
-          startY: 20,
-          head: [['Test Item', 'USL', 'LSL', 'Value', 'Type', 'Score']],
-          body: tableData,
-          styles: { fontSize: 8 },
-          headStyles: { fillColor: [66, 133, 244] }
-        })
+          const valueTableData = valueItems.map(item => [
+            item.test_item,
+            item.usl?.toString() || '',
+            item.lsl?.toString() || '',
+            item.value,
+            item.score?.toFixed(2) || ''
+          ])
+
+          autoTable(doc, {
+            startY: 20,
+            head: [['Test Item', 'USL', 'LSL', 'Value', 'Score']],
+            body: valueTableData,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [66, 133, 244] }
+          })
+        }
+
+        // Non-Value Items Table
+        if (nonValueItems.length > 0) {
+          doc.addPage()
+          doc.setFontSize(12)
+          doc.text('Non-Value Items', 14, 15)
+
+          const nonValueTableData = nonValueItems.map(item => [
+            item.test_item,
+            item.value,
+            item.test_item.includes('ADJUSTED_POW') ? (item.hex_decimal?.toString() || '') : '',
+            item.is_hex ? 'Hex' : 'Non-Value'
+          ])
+
+          autoTable(doc, {
+            startY: 20,
+            head: [['Test Item', 'Value', 'Decimal Value', 'Type']],
+            body: nonValueTableData,
+            styles: { fontSize: 8 },
+            headStyles: { fillColor: [66, 133, 244] }
+          })
+        }
 
       } else {
         // COMPARE mode
@@ -290,21 +361,30 @@ export function useTestLogExport() {
         yPos += 7
         doc.text(`Total Non-Value Items: ${compareData.total_non_value_items}`, 14, yPos)
 
+        // Reclassify items
+        const reclassifiedValueItems = compareData.comparison_value_items.filter(item => 
+          !item.test_item.includes('ADJUSTED_POW')
+        )
+        const adjustedPowItems = compareData.comparison_value_items.filter(item => 
+          item.test_item.includes('ADJUSTED_POW')
+        )
+        const reclassifiedNonValueItems = [...compareData.comparison_non_value_items, ...adjustedPowItems]
+
         // Value Items Table
-        if (compareData.comparison_value_items.length > 0) {
+        if (reclassifiedValueItems.length > 0) {
           doc.addPage()
           doc.setFontSize(12)
           doc.text('Value Items Comparison', 14, 15)
 
-          const firstItem = compareData.comparison_value_items[0]!
+          const firstItem = reclassifiedValueItems[0]!
           const headers = ['Test Item', 'Baseline']
-          firstItem.per_isn_data.forEach((isn, index) => {
+          firstItem.per_isn_data.forEach((_isn, index) => {
             headers.push(`ISN${index + 1} Val`)
             headers.push(`Dev`)
             headers.push(`Score`)
           })
 
-          const tableData = compareData.comparison_value_items.map(item => {
+          const tableData = reclassifiedValueItems.map(item => {
             const row: any[] = [
               item.test_item,
               item.baseline?.toFixed(2) || ''
@@ -329,18 +409,18 @@ export function useTestLogExport() {
         }
 
         // Non-Value Items Table
-        if (compareData.comparison_non_value_items.length > 0) {
+        if (reclassifiedNonValueItems.length > 0) {
           doc.addPage()
           doc.setFontSize(12)
           doc.text('Non-Value Items Comparison', 14, 15)
 
-          const firstItem = compareData.comparison_non_value_items[0]!
+          const firstItem = reclassifiedNonValueItems[0]!
           const headers = ['Test Item']
-          firstItem.per_isn_data.forEach((isn, index) => {
+          firstItem.per_isn_data.forEach((_isn, index) => {
             headers.push(`ISN${index + 1}`)
           })
 
-          const tableData = compareData.comparison_non_value_items.map(item => {
+          const tableData = reclassifiedNonValueItems.map(item => {
             const row: string[] = [item.test_item]
             item.per_isn_data.forEach(isn => {
               row.push(isn.value)
@@ -381,28 +461,64 @@ export function useTestLogExport() {
       if (mode === 'PARSING') {
         const parseData = data as TestLogParseResponseEnhanced
 
-        // Headers
-        tsvContent += 'Test Item\tUSL\tLSL\tValue\tType\tScore\tCriteria Match\n'
+        // Separate Value and Non-Value Items
+        const valueItems = parseData.parsed_items_enhanced.filter(item => 
+          item.is_value_type && !item.test_item.includes('ADJUSTED_POW')
+        )
+        const nonValueItems = parseData.parsed_items_enhanced.filter(item => 
+          !item.is_value_type || item.test_item.includes('ADJUSTED_POW')
+        )
 
-        // Data rows
-        parseData.parsed_items_enhanced.forEach(item => {
-          const type = item.is_hex ? 'Hex' : item.is_value_type ? 'Value' : 'Non-Value'
-          const score = item.score?.toFixed(2) || ''
-          const criteriaMatch = item.matched_criteria ? 'Yes' : 'No'
+        // Value Items section
+        if (valueItems.length > 0) {
+          tsvContent += 'Value Items:\n'
+          tsvContent += 'Test Item\tUSL\tLSL\tValue\tScore\tCriteria Match\n'
+          
+          valueItems.forEach(item => {
+            const score = item.score?.toFixed(2) || ''
+            const criteriaMatch = item.matched_criteria ? 'Yes' : 'No'
+            tsvContent += `${item.test_item}\t${item.usl || ''}\t${item.lsl || ''}\t${item.value}\t${score}\t${criteriaMatch}\n`
+          })
+          
+          tsvContent += '\n'
+        }
 
-          tsvContent += `${item.test_item}\t${item.usl || ''}\t${item.lsl || ''}\t${item.value}\t${type}\t${score}\t${criteriaMatch}\n`
-        })
+        // Non-Value Items section
+        if (nonValueItems.length > 0) {
+          tsvContent += 'Non-Value Items:\n'
+          tsvContent += 'Test Item\tValue\tDecimal Value\tType\tCriteria Match\n'
+          
+          nonValueItems.forEach(item => {
+            const type = item.is_hex ? 'Hex' : 'Non-Value'
+            const decimalValue = item.test_item.includes('ADJUSTED_POW') ? (item.hex_decimal?.toString() || '') : ''
+            const criteriaMatch = item.matched_criteria ? 'Yes' : 'No'
+            tsvContent += `${item.test_item}\t${item.value}\t${decimalValue}\t${type}\t${criteriaMatch}\n`
+          })
+        }
 
       } else {
         // COMPARE mode
         const compareData = data as CompareResponseEnhanced
 
-        if (compareData.comparison_value_items.length > 0) {
-          const firstItem = compareData.comparison_value_items[0]
+        // Reclassify items
+        const reclassifiedValueItems = compareData.comparison_value_items.filter(item => 
+          !item.test_item.includes('ADJUSTED_POW')
+        )
+        const adjustedPowItems = compareData.comparison_value_items.filter(item => 
+          item.test_item.includes('ADJUSTED_POW')
+        )
+        // Deduplicate by test_item to prevent double ADJUSTED_POW items
+        const combinedNonValueItems = [...compareData.comparison_non_value_items, ...adjustedPowItems]
+        const reclassifiedNonValueItems = combinedNonValueItems.filter((item, index, self) =>
+          index === self.findIndex(t => t.test_item === item.test_item)
+        )
+
+        if (reclassifiedValueItems.length > 0) {
+          const firstItem = reclassifiedValueItems[0]
           if (!firstItem) return
 
           // Sort items using custom test item ordering
-          const sortedItems = sortTestItems(compareData.comparison_value_items)
+          const sortedItems = sortTestItems(reclassifiedValueItems)
 
           // Headers: Test Item | USL | LSL | Target | Meas. DM... | Meas. DM... | ... | Max. Meas. | Min. Meas. | Dev. DM... | Dev. DM... | ... | Max. Deviation | Avg. Deviation | Score DM... | Score DM... | ... | Avg. Score
           tsvContent += 'Test Item\tUSL\tLSL\tTarget'
@@ -454,12 +570,12 @@ export function useTestLogExport() {
           // Add separator
           tsvContent += '\n\nNon-Value Items:\n'
         }
-        if (compareData.comparison_non_value_items.length > 0) {
-          const firstItem = compareData.comparison_non_value_items[0]
+        if (reclassifiedNonValueItems.length > 0) {
+          const firstItem = reclassifiedNonValueItems[0]
           if (!firstItem) return
 
           // Sort items using custom test item ordering
-          const sortedItems = sortTestItems(compareData.comparison_non_value_items)
+          const sortedItems = sortTestItems(reclassifiedNonValueItems)
 
           // Headers for non-value items
           tsvContent += 'Test Item'
