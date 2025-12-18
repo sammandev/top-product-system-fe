@@ -119,7 +119,13 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
 import type { PATrendStationDataSchema, PADiffStationDataSchema } from '@/types/api'
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 // Props
 const props = defineProps<{
@@ -164,14 +170,8 @@ function formatDate(dateString: string | null): string {
     if (!dateString) return 'N/A'
 
     try {
-        const date = new Date(dateString)
-        return new Intl.DateTimeFormat('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit'
-        }).format(date)
+        // Parse as UTC and convert to user's local timezone
+        return dayjs.utc(dateString).tz(dayjs.tz.guess()).format('YYYY-MM-DD HH:mm:ss')
     } catch {
         return dateString
     }

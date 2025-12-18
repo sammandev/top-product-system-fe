@@ -674,7 +674,9 @@ function handleExport() {
 async function exportToExcelZip(ExcelJS: any, JSZip: any) {
     // Helper function to parse measurements from latest_data array (new API format)
     function parseMeasurements(latest_data: Array<any>) {
-        if (!latest_data || latest_data.length === 0) return []
+        if (!latest_data || latest_data.length === 0) {
+            return []
+        }
         const measurements = []
         for (let i = 0; i < latest_data.length; i++) {
             const item = latest_data[i]

@@ -210,7 +210,13 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
 import type { TestLogParseResponseEnhanced, CompareResponseEnhanced } from '@/features/dut_logs/composables/useTestLogUpload'
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
 
 const props = defineProps<{
     parseResult?: TestLogParseResponseEnhanced | null
@@ -399,14 +405,8 @@ const formatDuration = (seconds: number | null): string => {
 const formatTestDate = (dateString: string | null): string => {
     if (!dateString) return 'N/A'
     try {
-        const date = new Date(dateString)
-        const day = String(date.getDate()).padStart(2, '0')
-        const month = String(date.getMonth() + 1).padStart(2, '0')
-        const year = date.getFullYear()
-        const hours = String(date.getHours()).padStart(2, '0')
-        const minutes = String(date.getMinutes()).padStart(2, '0')
-        const seconds = String(date.getSeconds()).padStart(2, '0')
-        return `${day}/${month}/${year}, ${hours}:${minutes}:${seconds}`
+        // Parse as UTC and convert to user's local timezone
+        return dayjs.utc(dateString).tz(dayjs.tz.guess()).format('DD/MM/YYYY, HH:mm:ss')
     } catch {
         return 'N/A'
     }

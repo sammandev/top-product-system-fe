@@ -621,7 +621,7 @@ import {
     type TopProductStats,
     type TopProductListParams
 } from '../api/topProductsApi';
-import { it } from 'node:test'
+import { formatDateTimeCompact } from '@/core/utils/dateTime'
 
 // ===== State =====
 const authStore = useAuthStore();
@@ -741,12 +741,19 @@ async function fetchProducts() {
             ...filters.value
         };
 
+        console.log('🔍 Fetching products with params:', params);
+        console.log('  - Projects filter:', filters.value.projects);
+        console.log('  - Stations filter:', filters.value.stations);
+
         const response = await getTopProductsList(params);
+        
+        console.log('✅ Received products:', response.top_products.length, 'total:', response.total);
+        
         products.value = response.top_products;
         pagination.value.total = response.total;
         pagination.value.total_pages = response.total_pages;
     } catch (error) {
-        console.error('Failed to fetch products:', error);
+        console.error('❌ Failed to fetch products:', error);
     } finally {
         loading.value = false;
     }
@@ -833,15 +840,8 @@ function debouncedFetch() {
 
 // ===== Computed & Helpers =====
 function formatDate(dateString: string | null): string {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-    });
+    // Convert UTC to user's local timezone
+    return formatDateTimeCompact(dateString);
 }
 
 function getPassRate(item: TopProductItem): string {

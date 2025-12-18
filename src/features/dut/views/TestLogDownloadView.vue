@@ -307,49 +307,49 @@
                                             </div>
                                             <div class="pa-2">
                                                 <div
-                                                    :class="station.data[0]!.test_result === 1 ? 'bg-green-lighten-5 pa-2 rounded' : 'bg-red-lighten-5 pa-2 rounded'">
+                                                    :class="getLatestRecord(station)!.test_result === 1 ? 'bg-green-lighten-5 pa-2 rounded' : 'bg-red-lighten-5 pa-2 rounded'">
                                                     <!-- Device Name -->
                                                     <div class="d-flex align-center mb-3">
                                                         <v-icon
-                                                            :color="station.data[0]!.test_result === 1 ? 'success' : 'error'"
+                                                            :color="getLatestRecord(station)!.test_result === 1 ? 'success' : 'error'"
                                                             size="large" class="mr-2">
-                                                            {{ station.data[0]!.test_result === 1 ? 'mdi-check-circle' :
+                                                            {{ getLatestRecord(station)!.test_result === 1 ? 'mdi-check-circle' :
                                                                 'mdi-alert-circle' }}
                                                         </v-icon>
-                                                        <div class="text-h6">{{ station.data[0]!.device_id__name }}
+                                                        <div class="text-h6">{{ getLatestRecord(station)!.device_id__name }}
                                                         </div>
                                                     </div>
                                                     <!-- ISN Chip (Rectangle) -->
                                                     <v-chip color="primary" variant="outlined" size="small" class="mb-3 font-weight-bold"
                                                         label>
                                                         <v-icon start size="small">mdi-barcode</v-icon>
-                                                        {{ station.data[0]!.dut_id__isn }}
+                                                        {{ getLatestRecord(station)!.dut_id__isn }}
                                                     </v-chip>
                                                     <!-- Status Chip -->
                                                     <div class="mb-3">
                                                         <v-chip
-                                                            :color="station.data[0]!.test_result === 1 ? 'success' : 'error'"
+                                                            :color="getLatestRecord(station)!.test_result === 1 ? 'success' : 'error'"
                                                             size="small" label>
-                                                            {{ station.data[0]!.test_result === 1 ? 'PASS' :
-                                                                (station.data[0]!.error_item || 'FAIL') }}
+                                                            {{ getLatestRecord(station)!.test_result === 1 ? 'PASS' :
+                                                                (getLatestRecord(station)!.error_item || 'FAIL') }}
                                                         </v-chip>
                                                     </div>
                                                     <!-- Date and Duration Chips in a row with dot separator -->
                                                     <div class="d-flex align-center gap-2 mb-3">
                                                         <v-chip size="small" label color="default">
                                                             <v-icon start size="small">mdi-calendar</v-icon>
-                                                            {{ formatDate(station.data[0]!.test_date) }}
+                                                            {{ formatDate(getLatestRecord(station)!.test_date) }}
                                                         </v-chip>
                                                         <span class="text-medium-emphasis">•</span>
                                                         <v-chip size="small" label color="default">
                                                             <v-icon start size="small">mdi-timer</v-icon>
-                                                            {{ station.data[0]!.test_duration }}s
+                                                            {{ getLatestRecord(station)!.test_duration }}s
                                                         </v-chip>
                                                     </div>
                                                     <!-- Download Button -->
                                                     <v-btn color="primary" size="small" prepend-icon="mdi-download"
-                                                        :loading="downloadingRecordId === station.data[0]!.id"
-                                                        @click="handleDownload({ station, record: station.data[0]! })"
+                                                        :loading="downloadingRecordId === getLatestRecord(station)!.id"
+                                                        @click="handleDownload({ station, record: getLatestRecord(station)! })"
                                                         block>
                                                         Download
                                                     </v-btn>
@@ -813,6 +813,12 @@ const clearAll = () => {
 // Helper to get sorted stations for an ISN group
 const getSortedStations = (isnGroup: ISNGroupedRecords) => {
     return [...isnGroup.record_data].sort((a, b) => a.order - b.order)
+}
+
+// Helper to get the latest record from a station
+const getLatestRecord = (station: Station): TestRecord | null => {
+    if (station.data.length === 0) return null
+    return station.data[station.data.length - 1] || null
 }
 
 // Expand/Collapse all panels

@@ -200,11 +200,20 @@ function clearAll() {
     validationMessage.value = null
 }
 
-// Watch for changes and emit
+// Watch for changes and emit (with sanitization)
 watch(selectedISNs, (newValue) => {
-    emit('update:modelValue', newValue)
+    // Sanitize ISNs by removing non-alphanumeric characters and trimming
+    const sanitized = newValue.map(isn => String(isn).replace(/[^A-Za-z0-9]/g, '').trim()).filter(isn => isn.length > 0)
+    
+    // If sanitization changed the ISNs, update them
+    if (JSON.stringify(sanitized) !== JSON.stringify(newValue)) {
+        selectedISNs.value = sanitized
+        return // Will trigger watch again with sanitized values
+    }
+    
+    emit('update:modelValue', sanitized)
     emit('change', {
-        isns: newValue,
+        isns: sanitized,
         sites: selectedSites.value,
         models: selectedModels.value,
         valid: isValid.value

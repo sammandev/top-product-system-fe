@@ -184,6 +184,13 @@
 </template>
 
 <script setup lang="ts">
+import dayjs from 'dayjs'
+import utc from 'dayjs/plugin/utc'
+import timezone from 'dayjs/plugin/timezone'
+
+dayjs.extend(utc)
+dayjs.extend(timezone)
+
 interface TestRecord {
     id: number
     test_date: string
@@ -223,6 +230,7 @@ defineProps<Props>()
 defineEmits<Emits>()
 
 const formatDate = (isoDate: string): string => {
-    return new Date(isoDate).toLocaleString()
+    // Parse as UTC and convert to user's local timezone
+    return dayjs.utc(isoDate).tz(dayjs.tz.guess()).format('YYYY-MM-DD HH:mm:ss')
 }
 </script>

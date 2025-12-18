@@ -6,13 +6,13 @@ import timezone from 'dayjs/plugin/timezone'
 dayjs.extend(utc)
 dayjs.extend(timezone)
 
-// Configure timezone (default to Bangkok/UTC+7)
-export const DEFAULT_TIMEZONE = 'Asia/Bangkok'
+// Get user's local timezone (detected automatically by browser)
+export const USER_TIMEZONE = dayjs.tz.guess()
 
 /**
  * Get timezone offset string (e.g., "UTC+7")
  */
-export function getTimezoneOffset(tz: string = DEFAULT_TIMEZONE): string {
+export function getTimezoneOffset(tz: string = USER_TIMEZONE): string {
   const offset = dayjs().tz(tz).utcOffset() / 60
   const sign = offset >= 0 ? '+' : ''
   return `UTC${sign}${offset}`
@@ -26,19 +26,24 @@ export function formatDateForAPI(date: Date | string): string {
 }
 
 /**
- * Format date for display with timezone
- * @param date - Date to format
- * @param format - Format string (default: 'DD/MM/YYYY, hh:mm:ss A')
- * @param showTimezone - Whether to show timezone (default: true)
- * @param tz - Timezone (default: Asia/Bangkok)
+ * Format date for display with timezone conversion
+ * Converts UTC timestamps from backend to user's local timezone
+ * @param date - UTC date from backend
+ * @param format - Format string (default: 'YYYY-MM-DD HH:mm:ss')
+ * @param showTimezone - Whether to show timezone (default: false)
+ * @param tz - Target timezone (default: user's local timezone)
  */
 export function formatDate(
-  date: Date | string, 
-  format = 'DD/MM/YYYY, hh:mm:ss A',
-  showTimezone = true,
-  tz: string = DEFAULT_TIMEZONE
+  date: Date | string | null | undefined, 
+  format = 'YYYY-MM-DD HH:mm:ss',
+  showTimezone = false,
+  tz: string = USER_TIMEZONE
 ): string {
-  const formatted = dayjs(date).tz(tz).format(format)
+  if (!date) return 'N/A'
+  
+  // Parse as UTC and convert to target timezone
+  const formatted = dayjs.utc(date).tz(tz).format(format)
+  
   if (showTimezone) {
     return `${formatted} (${getTimezoneOffset(tz)})`
   }
@@ -47,9 +52,12 @@ export function formatDate(
 
 /**
  * Format date for display (simple, backward compatible)
+ * Converts UTC to user's local timezone
  */
-export function formatDateSimple(date: Date | string, format = 'YYYY-MM-DD HH:mm:ss'): string {
-  return dayjs(date).format(format)
+export function formatDateSimple(date: Date | string | null | undefined, format = 'YYYY-MM-DD HH:mm:ss'): string {
+  if (!date) return 'N/A'
+  // Parse as UTC and convert to local timezone
+  return dayjs.utc(date).tz(USER_TIMEZONE).format(format)
 }
 
 /**

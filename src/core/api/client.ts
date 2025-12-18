@@ -25,6 +25,12 @@ function createApiClient(): AxiosInstance {
     timeout: APP_CONFIG.api.timeout,
     headers: {
       'Content-Type': 'application/json'
+    },
+    // Serialize array parameters correctly for FastAPI
+    // FastAPI expects: ?stations=value1&stations=value2
+    // Not: ?stations[0]=value1&stations[1]=value2
+    paramsSerializer: {
+      indexes: null // This tells axios to use repeated params for arrays
     }
   })
 

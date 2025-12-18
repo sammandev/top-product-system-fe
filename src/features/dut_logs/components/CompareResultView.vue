@@ -698,7 +698,7 @@ const openScoreBreakdown = (testItem: string, isnIndex: number) => {
     numeric_value: isnData.numeric_value,
     is_hex: isnData.is_hex,
     hex_decimal: isnData.hex_decimal,
-    matches_criteria: compareItem.matches_criteria,
+    matched_criteria: compareItem.matched_criteria,
     target: null,
     score: isnData.score,
     score_breakdown: isnData.score_breakdown

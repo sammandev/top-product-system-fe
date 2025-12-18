@@ -111,9 +111,10 @@
           Value Items (Numeric Data)
           <v-chip class="ml-2" size="small">{{ filteredValueItems.length }}</v-chip>
           <v-spacer />
-          <v-btn icon size="small" @click="fullscreenValue = true" class="ml-2">
+          <!-- <v-btn icon size="small" @click="fullscreenValue = true" class="ml-2">
             <v-icon>mdi-fullscreen</v-icon>
-          </v-btn>
+          </v-btn> -->
+          <v-icon color="primary" size="large" @click="fullscreenValue = true">mdi-fullscreen</v-icon>
         </v-card-title>
         <v-card-text class="pa-2">
           <!-- Search Field -->
@@ -123,87 +124,75 @@
         <v-card-text class="pa-0">
           <v-data-table :headers="valueHeaders" :items="paginatedValueItems" :items-per-page="itemsPerPageValue"
             density="compact" fixed-header height="500" hide-default-footer striped="even">
-        <!-- Test Item Column -->
-        <template #item.test_item="{ item }">
-          <div 
-            class="text-body-2 font-weight-medium"
-            :class="{ 'text-primary font-weight-bold': item.is_calculated }"
-          >
-            {{ item.test_item }}
-            <v-chip 
-              v-if="item.is_calculated" 
-              size="x-small" 
-              color="primary" 
-              variant="tonal"
-              class="ml-1"
-            >
-              Calculated
-            </v-chip>
+            <!-- Test Item Column -->
+            <template #item.test_item="{ item }">
+              <div class="text-body-2 font-weight-medium"
+                :class="{ 'text-primary font-weight-bold': item.is_calculated }">
+                {{ item.test_item }}
+                <v-chip v-if="item.is_calculated" size="x-small" color="primary" variant="tonal" class="ml-1">
+                  Calculated
+                </v-chip>
+              </div>
+            </template>
+
+            <!-- USL Column -->
+            <template #item.usl="{ item }">
+              <span class="text-body-2">{{ formatNumber(item.usl) }}</span>
+            </template>
+
+            <!-- LSL Column -->
+            <template #item.lsl="{ item }">
+              <span class="text-body-2">{{ formatNumber(item.lsl) }}</span>
+            </template>
+
+            <!-- Value Column -->
+            <template #item.value="{ item }">
+              <div class="d-flex align-center gap-1">
+                <span class="text-body-2">{{ item.value }}</span>
+                <v-chip v-if="item.is_hex" size="x-small" color="info" variant="tonal">
+                  {{ item.hex_decimal }}
+                </v-chip>
+              </div>
+            </template>
+
+            <!-- Type Column -->
+            <template #item.type="{ item }">
+              <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
+                {{ getTypeLabel(item) }}
+              </v-chip>
+            </template>
+
+            <!-- Score Column (Clickable) -->
+            <template #item.score="{ item }">
+              <v-chip v-if="item.score !== null" :color="getScoreColor(item.score)" size="small" class="cursor-pointer"
+                @click="openScoreBreakdown(item)">
+                {{ item.score.toFixed(2) }}
+              </v-chip>
+              <span v-else class="text-caption text-medium-emphasis">N/A</span>
+            </template>
+
+            <!-- Criteria Match Column -->
+            <template #item.matched_criteria="{ item }">
+              <v-icon v-if="item.matched_criteria" color="success" size="small">
+                mdi-check-circle
+              </v-icon>
+              <v-icon v-else color="grey" size="small">
+                mdi-minus-circle
+              </v-icon>
+            </template>
+          </v-data-table>
+          <div class="d-flex align-center justify-space-between pa-2">
+            <div class="d-flex align-center gap-2">
+              <span class="text-caption text-medium-emphasis">Show</span>
+              <v-select v-model="itemsPerPageValue" :items="itemsPerPageOptions" variant="outlined" density="compact"
+                hide-details style="width: 100px;" />
+              <span class="text-caption text-medium-emphasis">items</span>
+            </div>
+            <v-pagination
+              v-if="itemsPerPageValue !== -1 && itemsPerPageValue !== 0 && filteredValueItems.length > itemsPerPageValue"
+              v-model="currentPageValue" :length="totalPagesValue" :total-visible="7" size="small" density="compact" />
+            <div style="width: 150px;"></div>
           </div>
-        </template>
-
-        <!-- USL Column -->
-        <template #item.usl="{ item }">
-          <span class="text-body-2">{{ formatNumber(item.usl) }}</span>
-        </template>
-
-        <!-- LSL Column -->
-        <template #item.lsl="{ item }">
-          <span class="text-body-2">{{ formatNumber(item.lsl) }}</span>
-        </template>
-
-        <!-- Value Column -->
-        <template #item.value="{ item }">
-          <div class="d-flex align-center gap-1">
-            <span class="text-body-2">{{ item.value }}</span>
-            <v-chip v-if="item.is_hex" size="x-small" color="info" variant="tonal">
-              {{ item.hex_decimal }}
-            </v-chip>
-          </div>
-        </template>
-
-        <!-- Type Column -->
-        <template #item.type="{ item }">
-          <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
-            {{ getTypeLabel(item) }}
-          </v-chip>
-        </template>
-
-        <!-- Score Column (Clickable) -->
-        <template #item.score="{ item }">
-          <v-chip
-            v-if="item.score !== null"
-            :color="getScoreColor(item.score)"
-            size="small"
-            class="cursor-pointer"
-            @click="openScoreBreakdown(item)"
-          >
-            {{ item.score.toFixed(2) }}
-          </v-chip>
-          <span v-else class="text-caption text-medium-emphasis">N/A</span>
-        </template>
-
-        <!-- Criteria Match Column -->
-        <template #item.matched_criteria="{ item }">
-          <v-icon v-if="item.matched_criteria" color="success" size="small">
-            mdi-check-circle
-          </v-icon>
-          <v-icon v-else color="grey" size="small">
-            mdi-minus-circle
-          </v-icon>
-        </template>
-      </v-data-table>
-      <div class="d-flex align-center justify-space-between pa-2">
-        <div class="d-flex align-center gap-2">
-          <span class="text-caption text-medium-emphasis">Show</span>
-          <v-select v-model="itemsPerPageValue" :items="itemsPerPageOptions" variant="outlined" density="compact"
-            hide-details style="width: 100px;" />
-          <span class="text-caption text-medium-emphasis">items</span>
-        </div>
-        <v-pagination v-if="itemsPerPageValue !== -1 && itemsPerPageValue !== 0 && filteredValueItems.length > itemsPerPageValue" v-model="currentPageValue" :length="totalPagesValue" :total-visible="7" size="small"
-          density="compact" />
-        <div style="width: 150px;"></div>
-      </div>
         </v-card-text>
       </v-card>
 
@@ -214,9 +203,10 @@
           Non-Value Items (Status/Text Data)
           <v-chip class="ml-2" size="small">{{ filteredNonValueItems.length }}</v-chip>
           <v-spacer />
-          <v-btn icon size="small" @click="fullscreenNonValue = true" class="ml-2">
+          <!-- <v-btn icon size="small" @click="fullscreenNonValue = true" class="ml-2">
             <v-icon>mdi-fullscreen</v-icon>
-          </v-btn>
+          </v-btn> -->
+          <v-icon color="primary" size="large" @click="fullscreenNonValue = true">mdi-fullscreen</v-icon>
         </v-card-title>
         <v-card-text class="pa-2">
           <!-- Search Field -->
@@ -224,65 +214,57 @@
             variant="outlined" density="compact" clearable class="mb-2" hide-details />
         </v-card-text>
         <v-card-text class="pa-0">
-          <v-data-table :headers="nonValueHeaders" :items="paginatedNonValueItems" :items-per-page="itemsPerPageNonValue"
-            density="compact" fixed-header height="500" hide-default-footer striped="even">
-        <!-- Test Item Column -->
-        <template #item.test_item="{ item }">
-          <div 
-            class="text-body-2 font-weight-medium"
-            :class="{ 'text-primary font-weight-bold': item.is_calculated }"
-          >
-            {{ item.test_item }}
-            <v-chip 
-              v-if="item.is_calculated" 
-              size="x-small" 
-              color="primary" 
-              variant="tonal"
-              class="ml-1"
-            >
-              Calculated
-            </v-chip>
+          <v-data-table :headers="nonValueHeaders" :items="paginatedNonValueItems"
+            :items-per-page="itemsPerPageNonValue" density="compact" fixed-header height="500" hide-default-footer
+            striped="even">
+            <!-- Test Item Column -->
+            <template #item.test_item="{ item }">
+              <div class="text-body-2 font-weight-medium"
+                :class="{ 'text-primary font-weight-bold': item.is_calculated }">
+                {{ item.test_item }}
+              </div>
+            </template>
+
+            <!-- Value Column -->
+            <template #item.value="{ item }">
+              <v-chip 
+                size="small" 
+                :color="item.is_calculated ? 'primary' : getStatusColor(item.value)"
+                :class="{ 'font-weight-bold': item.is_calculated }">
+                {{ item.value }}
+              </v-chip>
+            </template>
+
+            <!-- Type Column -->
+            <template #item.type="{ item }">
+              <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
+                {{ getTypeLabel(item) }}
+              </v-chip>
+            </template>
+
+            <!-- Criteria Match Column -->
+            <template #item.matched_criteria="{ item }">
+              <v-icon v-if="item.matched_criteria" color="success" size="small">
+                mdi-check-circle
+              </v-icon>
+              <v-icon v-else color="grey" size="small">
+                mdi-minus-circle
+              </v-icon>
+            </template>
+          </v-data-table>
+          <div class="d-flex align-center justify-space-between pa-2">
+            <div class="d-flex align-center gap-2">
+              <span class="text-caption text-medium-emphasis">Show</span>
+              <v-select v-model="itemsPerPageNonValue" :items="itemsPerPageOptions" variant="outlined" density="compact"
+                hide-details style="width: 100px;" />
+              <span class="text-caption text-medium-emphasis">items</span>
+            </div>
+            <v-pagination
+              v-if="itemsPerPageNonValue !== -1 && itemsPerPageNonValue !== 0 && filteredNonValueItems.length > itemsPerPageNonValue"
+              v-model="currentPageNonValue" :length="totalPagesNonValue" :total-visible="7" size="small"
+              density="compact" />
+            <div style="width: 150px;"></div>
           </div>
-        </template>
-
-        <!-- Value Column -->
-        <template #item.value="{ item }">
-          <div class="d-flex align-center gap-1">
-            <span class="text-body-2">{{ item.value }}</span>
-            <v-chip v-if="item.is_hex" size="x-small" color="info" variant="tonal">
-              {{ item.hex_decimal }}
-            </v-chip>
-          </div>
-        </template>
-
-        <!-- Type Column -->
-        <template #item.type="{ item }">
-          <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
-            {{ getTypeLabel(item) }}
-          </v-chip>
-        </template>
-
-        <!-- Criteria Match Column -->
-        <template #item.matched_criteria="{ item }">
-          <v-icon v-if="item.matched_criteria" color="success" size="small">
-            mdi-check-circle
-          </v-icon>
-          <v-icon v-else color="grey" size="small">
-            mdi-minus-circle
-          </v-icon>
-        </template>
-      </v-data-table>
-      <div class="d-flex align-center justify-space-between pa-2">
-        <div class="d-flex align-center gap-2">
-          <span class="text-caption text-medium-emphasis">Show</span>
-          <v-select v-model="itemsPerPageNonValue" :items="itemsPerPageOptions" variant="outlined" density="compact"
-            hide-details style="width: 100px;" />
-          <span class="text-caption text-medium-emphasis">items</span>
-        </div>
-        <v-pagination v-if="itemsPerPageNonValue !== -1 && itemsPerPageNonValue !== 0 && filteredNonValueItems.length > itemsPerPageNonValue" v-model="currentPageNonValue" :length="totalPagesNonValue" :total-visible="7" size="small"
-          density="compact" />
-        <div style="width: 150px;"></div>
-      </div>
         </v-card-text>
       </v-card>
     </v-card-text>
@@ -306,58 +288,50 @@
         <div class="flex-grow-1" style="overflow: auto;">
           <v-data-table :headers="valueHeaders" :items="paginatedValueItems" :items-per-page="itemsPerPageValue"
             :height="'calc(100vh - 200px)'" fixed-header density="compact" hide-default-footer>
-          <template #item.test_item="{ item }">
-            <div 
-              class="text-body-2 font-weight-medium"
-              :class="{ 'text-primary font-weight-bold': item.is_calculated }"
-            >
-              {{ item.test_item }}
-              <v-chip 
-                v-if="item.is_calculated" 
-                size="x-small" 
-                color="primary" 
-                variant="tonal"
-                class="ml-1"
-              >
-                Calculated
+            <template #item.test_item="{ item }">
+              <div class="text-body-2 font-weight-medium"
+                :class="{ 'text-primary font-weight-bold': item.is_calculated }">
+                {{ item.test_item }}
+                <v-chip v-if="item.is_calculated" size="x-small" color="primary" variant="tonal" class="ml-1">
+                  Calculated
+                </v-chip>
+              </div>
+            </template>
+            <template #item.usl="{ item }">
+              <span class="text-body-2">{{ formatNumber(item.usl) }}</span>
+            </template>
+            <template #item.lsl="{ item }">
+              <span class="text-body-2">{{ formatNumber(item.lsl) }}</span>
+            </template>
+            <template #item.value="{ item }">
+              <div class="d-flex align-center gap-1">
+                <span class="text-body-2">{{ item.value }}</span>
+                <v-chip v-if="item.is_hex" size="x-small" color="info" variant="tonal">
+                  {{ item.hex_decimal }}
+                </v-chip>
+              </div>
+            </template>
+            <template #item.type="{ item }">
+              <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
+                {{ getTypeLabel(item) }}
               </v-chip>
-            </div>
-          </template>
-          <template #item.usl="{ item }">
-            <span class="text-body-2">{{ formatNumber(item.usl) }}</span>
-          </template>
-          <template #item.lsl="{ item }">
-            <span class="text-body-2">{{ formatNumber(item.lsl) }}</span>
-          </template>
-          <template #item.value="{ item }">
-            <div class="d-flex align-center gap-1">
-              <span class="text-body-2">{{ item.value }}</span>
-              <v-chip v-if="item.is_hex" size="x-small" color="info" variant="tonal">
-                {{ item.hex_decimal }}
+            </template>
+            <template #item.score="{ item }">
+              <v-chip v-if="item.score !== null" :color="getScoreColor(item.score)" size="small" class="cursor-pointer"
+                @click="openScoreBreakdown(item)">
+                {{ item.score.toFixed(2) }}
               </v-chip>
-            </div>
-          </template>
-          <template #item.type="{ item }">
-            <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
-              {{ getTypeLabel(item) }}
-            </v-chip>
-          </template>
-          <template #item.score="{ item }">
-            <v-chip v-if="item.score !== null" :color="getScoreColor(item.score)" size="small"
-              class="cursor-pointer" @click="openScoreBreakdown(item)">
-              {{ item.score.toFixed(2) }}
-            </v-chip>
-            <span v-else class="text-caption text-medium-emphasis">N/A</span>
-          </template>
-          <template #item.matched_criteria="{ item }">
-            <v-icon v-if="item.matched_criteria" color="success" size="small">
-              mdi-check-circle
-            </v-icon>
-            <v-icon v-else color="grey" size="small">
-              mdi-minus-circle
-            </v-icon>
-          </template>
-        </v-data-table>
+              <span v-else class="text-caption text-medium-emphasis">N/A</span>
+            </template>
+            <template #item.matched_criteria="{ item }">
+              <v-icon v-if="item.matched_criteria" color="success" size="small">
+                mdi-check-circle
+              </v-icon>
+              <v-icon v-else color="grey" size="small">
+                mdi-minus-circle
+              </v-icon>
+            </template>
+          </v-data-table>
         </div>
         <div class="flex-shrink-0 pa-2" style="border-top: 1px solid rgba(0,0,0,0.12);">
           <div class="d-flex align-center justify-space-between">
@@ -367,8 +341,9 @@
                 hide-details style="width: 100px;" />
               <span class="text-caption text-medium-emphasis">items</span>
             </div>
-            <v-pagination v-if="itemsPerPageValue !== -1 && itemsPerPageValue !== 0 && filteredValueItems.length > itemsPerPageValue" v-model="currentPageValue"
-              :length="totalPagesValue" :total-visible="5" size="small" density="compact" />
+            <v-pagination
+              v-if="itemsPerPageValue !== -1 && itemsPerPageValue !== 0 && filteredValueItems.length > itemsPerPageValue"
+              v-model="currentPageValue" :length="totalPagesValue" :total-visible="5" size="small" density="compact" />
             <div style="width: 150px;"></div>
           </div>
         </div>
@@ -392,47 +367,37 @@
       </v-card-text>
       <v-card-text class="pa-0 flex-grow-1 d-flex flex-column" style="overflow: hidden;">
         <div class="flex-grow-1" style="overflow: auto;">
-          <v-data-table :headers="nonValueHeaders" :items="paginatedNonValueItems" :items-per-page="itemsPerPageNonValue"
-            :height="'calc(100vh - 200px)'" fixed-header density="compact" hide-default-footer>
-          <template #item.test_item="{ item }">
-            <div 
-              class="text-body-2 font-weight-medium"
-              :class="{ 'text-primary font-weight-bold': item.is_calculated }"
-            >
-              {{ item.test_item }}
+          <v-data-table :headers="nonValueHeaders" :items="paginatedNonValueItems"
+            :items-per-page="itemsPerPageNonValue" :height="'calc(100vh - 200px)'" fixed-header density="compact"
+            hide-default-footer>
+            <template #item.test_item="{ item }">
+              <div class="text-body-2 font-weight-medium"
+                :class="{ 'text-primary font-weight-bold': item.is_calculated }">
+                {{ item.test_item }}
+              </div>
+            </template>
+            <template #item.value="{ item }">
               <v-chip 
-                v-if="item.is_calculated" 
-                size="x-small" 
-                color="primary" 
-                variant="tonal"
-                class="ml-1"
-              >
-                Calculated
+                size="small" 
+                :color="item.is_calculated ? 'primary' : getStatusColor(item.value)"
+                :class="{ 'font-weight-bold': item.is_calculated }">
+                {{ item.value }}
               </v-chip>
-            </div>
-          </template>
-          <template #item.value="{ item }">
-            <div class="d-flex align-center gap-1">
-              <span class="text-body-2">{{ item.value }}</span>
-              <v-chip v-if="item.is_hex" size="x-small" color="info" variant="tonal">
-                {{ item.hex_decimal }}
+            </template>
+            <template #item.type="{ item }">
+              <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
+                {{ getTypeLabel(item) }}
               </v-chip>
-            </div>
-          </template>
-          <template #item.type="{ item }">
-            <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
-              {{ getTypeLabel(item) }}
-            </v-chip>
-          </template>
-          <template #item.matched_criteria="{ item }">
-            <v-icon v-if="item.matched_criteria" color="success" size="small">
-              mdi-check-circle
-            </v-icon>
-            <v-icon v-else color="grey" size="small">
-              mdi-minus-circle
-            </v-icon>
-          </template>
-        </v-data-table>
+            </template>
+            <template #item.matched_criteria="{ item }">
+              <v-icon v-if="item.matched_criteria" color="success" size="small">
+                mdi-check-circle
+              </v-icon>
+              <v-icon v-else color="grey" size="small">
+                mdi-minus-circle
+              </v-icon>
+            </template>
+          </v-data-table>
         </div>
         <div class="flex-shrink-0 pa-2" style="border-top: 1px solid rgba(0,0,0,0.12);">
           <div class="d-flex align-center justify-space-between">
@@ -442,8 +407,10 @@
                 hide-details style="width: 100px;" />
               <span class="text-caption text-medium-emphasis">items</span>
             </div>
-            <v-pagination v-if="itemsPerPageNonValue !== -1 && itemsPerPageNonValue !== 0 && filteredNonValueItems.length > itemsPerPageNonValue" v-model="currentPageNonValue"
-              :length="totalPagesNonValue" :total-visible="5" size="small" density="compact" />
+            <v-pagination
+              v-if="itemsPerPageNonValue !== -1 && itemsPerPageNonValue !== 0 && filteredNonValueItems.length > itemsPerPageNonValue"
+              v-model="currentPageNonValue" :length="totalPagesNonValue" :total-visible="5" size="small"
+              density="compact" />
             <div style="width: 150px;"></div>
           </div>
         </div>
@@ -456,7 +423,7 @@
     <v-card>
       <v-card-title>Custom Items Per Page (Value Items)</v-card-title>
       <v-card-text>
-        <v-text-field v-model.number="customItemsPerPageValue" type="number" label="Enter number of items" 
+        <v-text-field v-model.number="customItemsPerPageValue" type="number" label="Enter number of items"
           variant="outlined" density="comfortable" min="1" autofocus @keyup.enter="applyCustomItemsPerPageValue" />
       </v-card-text>
       <v-card-actions>
@@ -472,7 +439,7 @@
     <v-card>
       <v-card-title>Custom Items Per Page (Non-Value Items)</v-card-title>
       <v-card-text>
-        <v-text-field v-model.number="customItemsPerPageNonValue" type="number" label="Enter number of items" 
+        <v-text-field v-model.number="customItemsPerPageNonValue" type="number" label="Enter number of items"
           variant="outlined" density="comfortable" min="1" autofocus @keyup.enter="applyCustomItemsPerPageNonValue" />
       </v-card-text>
       <v-card-actions>
@@ -484,10 +451,7 @@
   </v-dialog>
 
   <!-- Score Breakdown Dialog -->
-  <ScoreBreakdownDialog
-    v-model="scoreDialogOpen"
-    :item="selectedItem"
-  />
+  <ScoreBreakdownDialog v-model="scoreDialogOpen" :item="selectedItem" />
 </template>
 
 <script setup lang="ts">
@@ -558,14 +522,14 @@ const filteredNonValueItems = computed(() => {
 
 // Pagination computed for Value Items
 const totalPagesValue = computed(() => {
-  const perPage = itemsPerPageValue.value === -1 ? filteredValueItems.value.length : 
-                  itemsPerPageValue.value === 0 ? 10 : itemsPerPageValue.value
+  const perPage = itemsPerPageValue.value === -1 ? filteredValueItems.value.length :
+    itemsPerPageValue.value === 0 ? 10 : itemsPerPageValue.value
   return Math.ceil(filteredValueItems.value.length / perPage)
 })
 
 const paginatedValueItems = computed(() => {
-  const perPage = itemsPerPageValue.value === -1 ? filteredValueItems.value.length : 
-                  itemsPerPageValue.value === 0 ? 10 : itemsPerPageValue.value
+  const perPage = itemsPerPageValue.value === -1 ? filteredValueItems.value.length :
+    itemsPerPageValue.value === 0 ? 10 : itemsPerPageValue.value
   const start = (currentPageValue.value - 1) * perPage
   const end = start + perPage
   return filteredValueItems.value.slice(start, end)
@@ -573,14 +537,14 @@ const paginatedValueItems = computed(() => {
 
 // Pagination computed for Non-Value Items
 const totalPagesNonValue = computed(() => {
-  const perPage = itemsPerPageNonValue.value === -1 ? filteredNonValueItems.value.length : 
-                  itemsPerPageNonValue.value === 0 ? 10 : itemsPerPageNonValue.value
+  const perPage = itemsPerPageNonValue.value === -1 ? filteredNonValueItems.value.length :
+    itemsPerPageNonValue.value === 0 ? 10 : itemsPerPageNonValue.value
   return Math.ceil(filteredNonValueItems.value.length / perPage)
 })
 
 const paginatedNonValueItems = computed(() => {
-  const perPage = itemsPerPageNonValue.value === -1 ? filteredNonValueItems.value.length : 
-                  itemsPerPageNonValue.value === 0 ? 10 : itemsPerPageNonValue.value
+  const perPage = itemsPerPageNonValue.value === -1 ? filteredNonValueItems.value.length :
+    itemsPerPageNonValue.value === 0 ? 10 : itemsPerPageNonValue.value
   const start = (currentPageNonValue.value - 1) * perPage
   const end = start + perPage
   return filteredNonValueItems.value.slice(start, end)
@@ -642,8 +606,8 @@ const cancelCustomInputNonValue = () => {
 // Table headers for Value Items (with scoring)
 const valueHeaders = [
   { title: 'Test Item', key: 'test_item', sortable: true, width: '300px' },
-  { title: 'USL', key: 'usl', sortable: true, align: 'end' as const },
-  { title: 'LSL', key: 'lsl', sortable: true, align: 'end' as const },
+  { title: 'USL', key: 'usl', sortable: true, align: 'center' as const },
+  { title: 'LSL', key: 'lsl', sortable: true, align: 'center' as const },
   { title: 'Value', key: 'value', sortable: true },
   { title: 'Type', key: 'type', sortable: true },
   { title: 'Score', key: 'score', sortable: true, align: 'end' as const },
@@ -699,9 +663,16 @@ const getTypeColor = (item: ParsedTestItemEnhanced): string => {
 }
 
 const getScoreColor = (score: number): string => {
-  if (score >= 90) return 'success'
-  if (score >= 70) return 'warning'
+  if (score >= 9) return 'success'
+  if (score >= 7) return 'warning'
   return 'error'
+}
+
+const getStatusColor = (value: string): string => {
+  const upper = value.toUpperCase()
+  if (upper === 'PASS' || upper === 'OK') return 'success'
+  if (upper === 'FAIL' || upper === 'ERROR') return 'error'
+  return 'grey'
 }
 
 const openScoreBreakdown = (item: ParsedTestItemEnhanced) => {
