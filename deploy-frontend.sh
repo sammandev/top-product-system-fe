@@ -29,6 +29,8 @@ echo "🚀 Starting new container..."
 docker run -d \
   --name ast-tools-frontend \
   --restart unless-stopped \
+  --log-opt max-size=10m \
+  --log-opt max-file=3 \
   -p 9090:80 \
   ast-tools-frontend:latest
 

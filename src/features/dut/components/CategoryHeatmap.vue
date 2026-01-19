@@ -70,13 +70,13 @@ const heatmapData = computed<HeatmapData | null>(() => {
 
     // Collect all antennas and categories
     Object.keys(groupData).forEach(subgroupKey => {
-        if (subgroupKey === 'group_score') return
+        if (subgroupKey === 'final_group_score' || subgroupKey === 'group_avg_score') return
 
         const subgroupData = groupData[subgroupKey]
         if (typeof subgroupData !== 'object') return
 
         Object.keys(subgroupData).forEach(antennaKey => {
-            if (antennaKey.includes('_group_score')) return
+            if (antennaKey.endsWith('_group_score') || antennaKey.endsWith('_avg_score')) return
 
             const antennaData = subgroupData[antennaKey]
             if (typeof antennaData !== 'object') return
@@ -89,8 +89,12 @@ const heatmapData = computed<HeatmapData | null>(() => {
 
             // Collect categories
             Object.keys(antennaData).forEach(categoryKey => {
-                if (!categoryKey.includes('_score') && typeof antennaData[categoryKey] === 'number') {
-                    categorySet.add(categoryKey)
+                if (!categoryKey.endsWith('_score') && !categoryKey.endsWith('_group_score') && !categoryKey.endsWith('_avg_score')) {
+                    const categoryValue = antennaData[categoryKey]
+                    // Category is now an object with category_bayes_score and category_avg_score
+                    if (typeof categoryValue === 'object' || typeof categoryValue === 'number') {
+                        categorySet.add(categoryKey)
+                    }
                 }
             })
         })
@@ -115,7 +119,16 @@ const heatmapData = computed<HeatmapData | null>(() => {
         if (!antennaData || typeof antennaData !== 'object') return
 
         categoryNames.forEach((category, categoryIndex) => {
-            const score = (antennaData as any)[category]
+            const categoryData = (antennaData as any)[category]
+            let score: number | undefined
+            
+            // Handle both old format (number) and new format (object with bayes/avg scores)
+            if (typeof categoryData === 'number') {
+                score = categoryData
+            } else if (typeof categoryData === 'object' && categoryData.category_bayes_score !== undefined) {
+                score = categoryData.category_bayes_score
+            }
+            
             if (typeof score === 'number') {
                 data.push([categoryIndex, antennaIndex, score])
             }

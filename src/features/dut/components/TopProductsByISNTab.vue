@@ -143,8 +143,8 @@
         <v-col cols="12">
             <v-card>
                 <v-card-text>
-                    <v-row>
-                        <v-col cols="12" md="4">
+                    <v-row class="align-stretch">
+                        <v-col cols="12" sm="6" lg="3">
                             <v-btn color="primary" size="large" block :loading="loading" :disabled="!canAnalyze"
                                 @click="handleAnalyze">
                                 <v-icon class="mr-2">mdi-chart-line</v-icon>
@@ -152,7 +152,7 @@
                             </v-btn>
                         </v-col>
 
-                        <v-col cols="12" md="4">
+                        <v-col cols="12" sm="6" lg="3">
                             <v-btn color="secondary" size="large" block variant="tonal" :loading="loading"
                                 :disabled="!canAnalyze" @click="handleAnalyzeWithPATrends">
                                 <v-icon class="mr-2">mdi-chart-timeline-variant</v-icon>
@@ -160,7 +160,15 @@
                             </v-btn>
                         </v-col>
 
-                        <v-col cols="12" md="4">
+                        <v-col cols="12" sm="6" lg="3">
+                            <v-btn color="info" size="large" block variant="tonal" :loading="loading"
+                                :disabled="!canAnalyze" @click="handleAnalyzeHierarchical">
+                                <v-icon class="mr-2">mdi-sitemap</v-icon>
+                                Hierarchical Scoring
+                            </v-btn>
+                        </v-col>
+
+                        <v-col cols="12" sm="6" lg="3">
                             <FormulaSelectorDialog v-model="showFormulaSelectorDialog"
                                 v-model:universal-formula="universalFormula"
                                 v-model:category-formulas="categoryFormulas" @reset="handleResetFormulas"
@@ -614,6 +622,53 @@ async function handleAnalyzeWithPATrends() {
     } catch (err: any) {
         console.error('PA trends analysis failed:', err)
         error.value = err.response?.data?.detail || err.message || 'Failed to analyze DUT performance with PA trends'
+    } finally {
+        loading.value = false
+    }
+}
+
+async function handleAnalyzeHierarchical() {
+    attemptedAnalysis.value = true
+
+    if (!canAnalyze.value) return
+
+    loading.value = true
+    error.value = null
+
+    try {
+        // Build station filters map (only include stations with actual filters configured)
+        const stationFilters: Record<string, StationFilterConfigType> = {}
+        Object.entries(stationFilterConfigs.value).forEach(([station, config]) => {
+            if (!config) return
+
+            if (
+                config.device_identifiers?.length ||
+                config.test_item_filters?.length ||
+                config.exclude_test_item_filters?.length
+            ) {
+                stationFilters[station] = config
+            }
+        })
+
+        const response = await dutTopProductApi.analyzeHierarchical({
+            dut_isns: dutISNs.value,
+            stations: selectedStations.value.length > 0 ? selectedStations.value : undefined,
+            site_identifier: siteIdentifierValue.value,
+            model_identifier: modelIdentifierValue.value,
+            device_identifiers: deviceIdentifiers.value.length > 0 ? deviceIdentifiers.value : undefined,
+            test_item_filters: testItemFilters.value.length > 0 ? testItemFilters.value : undefined,
+            exclude_test_item_filters: excludeTestItemFilters.value.length > 0 ? excludeTestItemFilters.value : undefined,
+            station_filters: Object.keys(stationFilters).length > 0 ? stationFilters : undefined,
+            criteria_file: criteriaFileActual.value
+        })
+
+        results.value = response
+
+        // Auto-scroll to results after successful analysis
+        await scrollToResults()
+    } catch (err: any) {
+        console.error('Hierarchical analysis failed:', err)
+        error.value = err.response?.data?.detail || err.message || 'Failed to analyze DUT performance with hierarchical scoring'
     } finally {
         loading.value = false
     }

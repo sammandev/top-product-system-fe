@@ -36,6 +36,8 @@ export interface User {
   permissions: string[]
   is_active?: boolean
   is_admin?: boolean
+  is_ptb_admin?: boolean
+  worker_id?: string | null
   created_at?: string
   updated_at?: string
 }

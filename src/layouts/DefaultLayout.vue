@@ -8,7 +8,7 @@
 
             <!-- <v-toolbar-title class="d-flex align-center">
                 <v-icon class="mr-2" color="white">mdi-test-tube</v-icon>
-                <span class="font-weight-bold">AST Tools</span>
+                <span class="font-weight-bold">{{ appName }}</span>
             </v-toolbar-title> -->
 
             <v-spacer />
@@ -89,8 +89,8 @@
                         <v-icon>mdi-test-tube</v-icon>
                     </v-avatar>
                 </template>
-                <v-list-item-title class="font-weight-bold">AST Tools</v-list-item-title>
-                <v-list-item-subtitle>v1.0.0</v-list-item-subtitle>
+                <v-list-item-title class="font-weight-bold">{{ appName }}</v-list-item-title>
+                <v-list-item-subtitle>v{{ appVersion }}</v-list-item-subtitle>
             </v-list-item>
 
             <v-divider />
@@ -196,7 +196,7 @@
             <v-container fluid class="default-layout__footer-container">
                 <v-row align="center" justify="space-between" no-gutters>
                     <v-col cols="12" sm="auto" class="text-center text-sm-left">
-                        <span class="text-caption">&copy; {{ currentYear }} AST Tools. All rights
+                        <span class="text-caption">&copy; {{ currentYear }} {{ appName }}. All rights
                             reserved.</span>
                     </v-col>
                     <v-col cols="12" sm="auto" class="text-center text-sm-right">
@@ -210,11 +210,12 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/features/auth/store'
 import { useTheme } from 'vuetify'
 import { useDrawerState, useThemeState } from '@/shared/composables'
-import { APP_CONFIG } from '@/core/config'
+import { useAppConfigStore } from '@/core/stores/appConfig.store'
 
 const router = useRouter()
 const route = useRoute()
@@ -303,7 +304,7 @@ const systemItems: MenuItem[] = [
         ]
     },
     { title: 'System Cleanup', icon: 'mdi-delete-sweep', path: '/admin/cleanup' },
-    // { title: 'System Settings', icon: 'mdi-cog', path: '/admin/settings' },
+    { title: 'App Configuration', icon: 'mdi-cog', path: '/admin/app-config' },
     // { title: 'Audit Logs', icon: 'mdi-file-document-outline', path: '/admin/logs' }
 ]
 
@@ -349,7 +350,8 @@ function handleLogout() {
 }
 
 const currentYear = new Date().getFullYear()
-const appVersion = APP_CONFIG.version || '1.0.0'
+const appConfigStore = useAppConfigStore()
+const { appName, appVersion } = storeToRefs(appConfigStore)
 </script>
 
 <style scoped>

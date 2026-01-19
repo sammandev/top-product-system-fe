@@ -30,5 +30,15 @@ export const adminRoutes: RouteRecordRaw[] = [
       requiresAdmin: true,
       title: 'System Cleanup'
     }
+  },
+  {
+    path: '/admin/app-config',
+    name: 'AppConfig',
+    component: () => import('../views/AppConfigView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'App Configuration'
+    }
   }
 ];

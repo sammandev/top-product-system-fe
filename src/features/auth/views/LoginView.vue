@@ -7,88 +7,60 @@
                         <v-card elevation="12" rounded="lg">
                             <v-card-title class="text-h4 text-center pa-6">
                                 <v-icon size="large" color="primary" class="mr-2">mdi-test-tube</v-icon>
-                                AST Tools Login
+                                {{ appName }} Login
                             </v-card-title>
 
                             <v-card-text>
-                                <!-- Login Type Tabs -->
-                                <v-tabs v-model="loginTab" bg-color="transparent" color="primary" grow class="mb-4">
-                                    <v-tab value="local">
-                                        <v-icon start>mdi-account</v-icon>
-                                        Local Login
-                                    </v-tab>
-                                    <v-tab value="external">
-                                        <v-icon start>mdi-cloud-sync</v-icon>
-                                        External Login
-                                    </v-tab>
-                                </v-tabs>
+                                <!-- Login Type Badge -->
+                                <div class="d-flex flex-column align-center mb-4">
+                                    <div class="text-caption text-medium-emphasis mb-2">Select Login Mode</div>
+                                    <v-chip-group v-model="loginMode" mandatory>
+                                        <v-chip value="local" color="primary" variant="tonal">
+                                            <v-icon start>mdi-account</v-icon>
+                                            Local Login
+                                        </v-chip>
+                                        <v-chip value="external" color="secondary" variant="tonal">
+                                            <v-icon start>mdi-cloud-sync</v-icon>
+                                            External Login
+                                        </v-chip>
+                                    </v-chip-group>
+                                </div>
 
-                                <v-window v-model="loginTab">
-                                    <!-- Local Login Form -->
-                                    <v-window-item value="local">
-                                        <v-form ref="localFormRef" v-model="localValid"
-                                            @submit.prevent="handleLocalLogin">
-                                            <v-alert type="info" density="compact" class="mb-3">
-                                                <small>Local login only provides access to file parsing and comparison
-                                                    features.</small>
-                                            </v-alert>
+                                <v-form ref="loginFormRef" v-model="loginValid" @submit.prevent="handleLogin">
+                                    <v-alert type="info" density="compact" class="mb-3">
+                                        <small v-if="loginMode === 'local'">
+                                            Local login only provides access to file parsing and comparison features.
+                                        </small>
+                                        <small v-else>
+                                            <strong>External login</strong> provides full access including DUT Management API features.
+                                        </small>
+                                    </v-alert>
 
-                                            <v-text-field v-model="username" :rules="[rules.required]" label="Username"
-                                                prepend-inner-icon="mdi-account" variant="outlined" class="mb-3" />
+                                    <v-text-field v-model="username" :rules="[rules.required]" label="Username"
+                                        prepend-inner-icon="mdi-account" variant="outlined" class="mb-3" />
 
-                                            <v-text-field v-model="password" :rules="[rules.required]"
-                                                :type="showPassword ? 'text' : 'password'" label="Password"
-                                                prepend-inner-icon="mdi-lock"
-                                                :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
-                                                variant="outlined" class="mb-3"
-                                                @click:append-inner="showPassword = !showPassword" />
+                                    <v-text-field v-model="password" :rules="[rules.required]"
+                                        :type="showPassword ? 'text' : 'password'" label="Password"
+                                        prepend-inner-icon="mdi-lock"
+                                        :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
+                                        variant="outlined" class="mb-3"
+                                        @click:append-inner="showPassword = !showPassword" />
 
-                                            <v-alert v-if="error" type="error" class="mb-3" closable
-                                                @click:close="authStore.error = null">
-                                                {{ error }}
-                                            </v-alert>
+                                    <div class="d-flex align-center justify-space-between mb-3">
+                                        <v-checkbox v-model="rememberMe" label="Remember Me" density="compact" hide-details />
+                                    </div>
 
-                                            <v-btn :loading="loading" :disabled="!localValid" block color="primary"
-                                                size="large" type="submit">
-                                                <v-icon start>mdi-login</v-icon>
-                                                Login
-                                            </v-btn>
-                                        </v-form>
-                                    </v-window-item>
+                                    <v-alert v-if="error" type="error" class="mb-3" closable
+                                        @click:close="authStore.error = null">
+                                        {{ error }}
+                                    </v-alert>
 
-                                    <!-- External Login Form -->
-                                    <v-window-item value="external">
-                                        <v-form ref="externalFormRef" v-model="externalValid"
-                                            @submit.prevent="handleExternalLogin">
-                                            <v-alert type="info" density="compact" class="mb-4">
-                                                <small><strong>External login</strong> provides full access including
-                                                    DUT Management API
-                                                    features.</small>
-                                            </v-alert>
-
-                                            <v-text-field v-model="username" :rules="[rules.required]" label="Username"
-                                                prepend-inner-icon="mdi-account" variant="outlined" class="mb-3" />
-
-                                            <v-text-field v-model="password" :rules="[rules.required]"
-                                                :type="showPassword ? 'text' : 'password'" label="Password"
-                                                prepend-inner-icon="mdi-lock"
-                                                :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
-                                                variant="outlined" class="mb-3"
-                                                @click:append-inner="showPassword = !showPassword" />
-
-                                            <v-alert v-if="error" type="error" class="mb-3" closable
-                                                @click:close="authStore.error = null">
-                                                {{ error }}
-                                            </v-alert>
-
-                                            <v-btn :loading="loading" :disabled="!externalValid" block color="primary"
-                                                size="large" type="submit">
-                                                <v-icon start>mdi-cloud-sync</v-icon>
-                                                Login with External Access
-                                            </v-btn>
-                                        </v-form>
-                                    </v-window-item>
-                                </v-window>
+                                    <v-btn :loading="loading" :disabled="!loginValid" block color="primary"
+                                        size="large" type="submit">
+                                        <v-icon start>{{ loginMode === 'local' ? 'mdi-login' : 'mdi-cloud-sync' }}</v-icon>
+                                        {{ loginMode === 'local' ? 'Login' : 'Login with External Access' }}
+                                    </v-btn>
+                                </v-form>
                             </v-card-text>
                         </v-card>
                     </v-col>
@@ -100,69 +72,77 @@
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { storeToRefs } from 'pinia'
 import { useAuth } from '../composables'
 import { useAuthStore } from '../store'
+import { useAppConfigStore } from '@/core/stores/appConfig.store'
 
 // Use auth composable with router integration
 const { login, externalLogin, loading, error } = useAuth()
 const authStore = useAuthStore()
+const appConfigStore = useAppConfigStore()
+const { appName } = storeToRefs(appConfigStore)
 
 // Form refs
-const localFormRef = ref()
-const externalFormRef = ref()
+const loginFormRef = ref()
 
 // Form validity
-const localValid = ref(false)
-const externalValid = ref(false)
+const loginValid = ref(false)
 
 // Tab state
-const loginTab = ref('local')
+const loginMode = ref<'local' | 'external'>(
+    (localStorage.getItem('login_mode') as 'local' | 'external') || 'local'
+)
 
 // Shared credentials
 const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
+const rememberMe = ref(localStorage.getItem('remember_me') === 'true')
 
 const rules = {
     required: (value: string) => !!value || 'Required field'
 }
 
 // Clear error when switching tabs
-watch(loginTab, () => {
+watch(loginMode, () => {
     authStore.error = null
+    localStorage.setItem('login_mode', loginMode.value)
 })
 
-async function handleLocalLogin() {
-    if (!localValid.value) return
-
-    try {
-        await login({
-            username: username.value,
-            password: password.value
-        })
-        // Navigation handled by useAuth composable
-        // On success, credentials will be cleared by redirect
-    } catch (err) {
-        console.error('Local login failed:', err)
-        // Error displayed via computed error from store
-        // Credentials preserved so user can verify input
+if (rememberMe.value) {
+    const rememberedUsername = localStorage.getItem('remember_username')
+    if (rememberedUsername) {
+        username.value = rememberedUsername
     }
 }
 
-async function handleExternalLogin() {
-    if (!externalValid.value) return
+async function handleLogin() {
+    if (!loginValid.value) return
 
     try {
-        await externalLogin({
-            username: username.value,
-            password: password.value
-        })
-        // Navigation handled by useAuth composable
-        // On success, credentials will be cleared by redirect
+        if (loginMode.value === 'local') {
+            await login({
+                username: username.value,
+                password: password.value
+            })
+        } else {
+            await externalLogin({
+                username: username.value,
+                password: password.value
+            })
+        }
+
+        if (rememberMe.value) {
+            localStorage.setItem('remember_me', 'true')
+            localStorage.setItem('remember_username', username.value)
+        } else {
+            localStorage.removeItem('remember_me')
+            localStorage.removeItem('remember_username')
+        }
+        localStorage.setItem('login_mode', loginMode.value)
     } catch (err) {
-        console.error('External login failed:', err)
-        // Error displayed via computed error from store
-        // Credentials preserved so user can verify input
+        console.error('Login failed:', err)
     }
 }
 </script>

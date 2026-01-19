@@ -103,16 +103,28 @@ export interface DUTStoreState {
 // ============================================
 
 /**
+ * Category score object with both Bayesian and average scores
+ * Example: { "category_bayes_score": 94.5, "category_avg_score": 92.3 }
+ */
+export interface CategoryScore {
+  category_bayes_score: number
+  category_avg_score: number
+}
+
+/**
  * Category scores within an antenna group
- * Example: { "POW": 94.5, "EVM": 92.3, "tx1_score": 93.2 }
+ * Keys are category names (e.g., "POW", "EVM")
+ * Values are CategoryScore objects with bayes and avg scores
+ * Example: { "POW": { category_bayes_score: 94.5, category_avg_score: 92.3 }, "tx1_group_score": 93.2, "tx1_avg_score": 91.5 }
  */
 export interface CategoryScores {
-  [key: string]: number
+  [key: string]: CategoryScore | number
 }
 
 /**
  * Antenna group scores within a subgroup
- * Example: { "TX1": {...}, "TX2": {...}, "tx_group_score": 92.5 }
+ * Contains antenna category scores plus antenna-level aggregate scores
+ * Example: { "TX1": {...}, "TX2": {...}, "tx_group_score": 92.5, "tx_avg_score": 91.0 }
  */
 export interface AntennaGroup {
   [key: string]: CategoryScores | number
@@ -120,7 +132,8 @@ export interface AntennaGroup {
 
 /**
  * Subgroup scores within a measurement group
- * Example: { "TX": {...}, "RX": {...}, "group_score": 93.0 }
+ * Contains antenna groups plus subgroup-level aggregate scores
+ * Example: { "TX": {...}, "RX": {...}, "tx_group_score": 93.0, "tx_avg_score": 91.5, "rx_group_score": 94.0, "rx_avg_score": 92.0 }
  */
 export interface SubgroupScores {
   [key: string]: AntennaGroup | number
@@ -129,10 +142,14 @@ export interface SubgroupScores {
 /**
  * Complete hierarchical group scores
  * Key = group identifier (e.g., "6185_11AX_MCS11_B160")
- * Value = subgroup scores
+ * Value = subgroup scores with final_group_score (Bayesian) and group_avg_score
+ * Example: { "6185_11AX_MCS11_B160": { ...subgroups, "final_group_score": 92.5, "group_avg_score": 90.0 } }
  */
 export interface GroupScores {
-  [groupKey: string]: SubgroupScores
+  [groupKey: string]: SubgroupScores & {
+    final_group_score?: number  // Bayesian aggregate score for the entire group
+    group_avg_score?: number    // Arithmetic mean score for the entire group
+  }
 }
 
 /**

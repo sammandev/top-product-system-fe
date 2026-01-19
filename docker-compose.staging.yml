@@ -2,8 +2,6 @@
 # Frontend with Vite dev server (HMR) + Nginx reverse proxy
 # Connects to backend API (must be running separately)
 
-version: '3.8'
-
 services:
   frontend:
     build:
@@ -41,6 +39,11 @@ services:
       - "com.ast-tools.service=frontend"
       - "com.ast-tools.environment=staging"
       - "com.ast-tools.hot-reload=enabled"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   nginx:
     image: nginx:alpine
@@ -66,6 +69,11 @@ services:
     labels:
       - "com.ast-tools.service=nginx"
       - "com.ast-tools.environment=staging"
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     extra_hosts:
       # Allow nginx to access backend on host network
       - "host.docker.internal:host-gateway"

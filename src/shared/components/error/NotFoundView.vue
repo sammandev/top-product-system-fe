@@ -14,13 +14,19 @@
     </v-main>
 
     <v-footer height="56" class="not-found-footer">
-      <span>&copy; {{ currentYear }} AST Tools. All rights reserved.</span>
+      <span>&copy; {{ currentYear }} {{ appName }}. All rights reserved.</span>
     </v-footer>
   </div>
 </template>
 
 <script setup lang="ts">
+import { computed } from 'vue'
+import { storeToRefs } from 'pinia'
+import { useAppConfigStore } from '@/core/stores/appConfig.store'
+
 const currentYear = new Date().getFullYear()
+const appConfigStore = useAppConfigStore()
+const { appName } = storeToRefs(appConfigStore)
 </script>
 
 <style scoped>

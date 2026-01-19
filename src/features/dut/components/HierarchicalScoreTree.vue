@@ -46,7 +46,10 @@
                         <span class="node-label">{{ groupKey }}</span>
                         <v-spacer />
                         <v-chip :color="getScoreColor(getGroupScore(groupData))" size="small" class="ml-2">
-                            Group Score: {{ getGroupScore(groupData).toFixed(2) }}
+                            Bayesian: {{ getGroupScore(groupData).toFixed(2) }}
+                        </v-chip>
+                        <v-chip v-if="getGroupAvgScore(groupData) > 0" color="info" size="small" variant="outlined" class="ml-1">
+                            Avg: {{ getGroupAvgScore(groupData).toFixed(2) }}
                         </v-chip>
                     </div>
 
@@ -64,7 +67,10 @@
                                     <v-spacer />
                                     <v-chip :color="getScoreColor(getSubgroupScore(subgroupData))" size="x-small"
                                         class="ml-2">
-                                        {{ subgroupKey }} Score: {{ getSubgroupScore(subgroupData).toFixed(2) }}
+                                        Bayes: {{ getSubgroupScore(subgroupData).toFixed(2) }}
+                                    </v-chip>
+                                    <v-chip v-if="getSubgroupAvgScore(subgroupData) > 0" color="info" size="x-small" variant="outlined" class="ml-1">
+                                        Avg: {{ getSubgroupAvgScore(subgroupData).toFixed(2) }}
                                     </v-chip>
                                 </div>
 
@@ -84,8 +90,10 @@
                                                 <v-spacer />
                                                 <v-chip :color="getScoreColor(getAntennaScore(antennaData))"
                                                     size="x-small" variant="tonal" class="ml-2">
-                                                    {{ antennaKey }} Score: {{ getAntennaScore(antennaData).toFixed(2)
-                                                    }}
+                                                    Bayes: {{ getAntennaScore(antennaData).toFixed(2) }}
+                                                </v-chip>
+                                                <v-chip v-if="getAntennaAvgScore(antennaData) > 0" color="info" size="x-small" variant="outlined" class="ml-1">
+                                                    Avg: {{ getAntennaAvgScore(antennaData).toFixed(2) }}
                                                 </v-chip>
                                             </div>
 
@@ -93,7 +101,7 @@
                                             <v-expand-transition>
                                                 <div v-if="expandedAntennas.has(`${groupKey}.${subgroupKey}.${antennaKey}`)"
                                                     class="tree-children">
-                                                    <div v-for="(score, categoryKey) in getCategories(antennaData)"
+                                                    <div v-for="(scoreData, categoryKey) in getCategories(antennaData)"
                                                         :key="categoryKey" class="tree-node category-node">
                                                         <div class="node-header leaf-node">
                                                             <v-icon size="small" class="mr-2 text-medium-emphasis">
@@ -101,9 +109,12 @@
                                                             </v-icon>
                                                             <span class="node-label">{{ categoryKey }}</span>
                                                             <v-spacer />
-                                                            <v-chip :color="getScoreColor(score)" size="x-small"
+                                                            <v-chip :color="getScoreColor(getCategoryBayesScore(scoreData))" size="x-small"
                                                                 variant="flat">
-                                                                {{ score.toFixed(2) }}
+                                                                Bayes: {{ getCategoryBayesScore(scoreData).toFixed(2) }}
+                                                            </v-chip>
+                                                            <v-chip v-if="getCategoryAvgScore(scoreData) > 0" color="info" size="x-small" variant="outlined" class="ml-1">
+                                                                Avg: {{ getCategoryAvgScore(scoreData).toFixed(2) }}
                                                             </v-chip>
                                                         </div>
                                                     </div>
@@ -205,13 +216,17 @@ function getScoreColor(score: number): string {
 }
 
 function getGroupScore(groupData: any): number {
-    return typeof groupData.group_score === 'number' ? groupData.group_score : 0
+    return typeof groupData.final_group_score === 'number' ? groupData.final_group_score : 0
+}
+
+function getGroupAvgScore(groupData: any): number {
+    return typeof groupData.group_avg_score === 'number' ? groupData.group_avg_score : 0
 }
 
 function getSubgroups(groupData: any): Record<string, any> {
     const subgroups: Record<string, any> = {}
     Object.keys(groupData).forEach(key => {
-        if (key !== 'group_score' && typeof groupData[key] === 'object') {
+        if (key !== 'final_group_score' && key !== 'group_avg_score' && typeof groupData[key] === 'object') {
             subgroups[key] = groupData[key]
         }
     })
@@ -219,15 +234,21 @@ function getSubgroups(groupData: any): Record<string, any> {
 }
 
 function getSubgroupScore(subgroupData: any): number {
-    // Find the score key (e.g., "tx_group_score", "rx_group_score")
-    const scoreKey = Object.keys(subgroupData).find(key => key.includes('_group_score'))
+    // Find the Bayesian score key (e.g., "tx_group_score", "rx_group_score")
+    const scoreKey = Object.keys(subgroupData).find(key => key.endsWith('_group_score'))
+    return scoreKey && typeof subgroupData[scoreKey] === 'number' ? subgroupData[scoreKey] : 0
+}
+
+function getSubgroupAvgScore(subgroupData: any): number {
+    // Find the average score key (e.g., "tx_avg_score", "rx_avg_score")
+    const scoreKey = Object.keys(subgroupData).find(key => key.endsWith('_avg_score'))
     return scoreKey && typeof subgroupData[scoreKey] === 'number' ? subgroupData[scoreKey] : 0
 }
 
 function getAntennas(subgroupData: any): Record<string, any> {
     const antennas: Record<string, any> = {}
     Object.keys(subgroupData).forEach(key => {
-        if (!key.includes('_group_score') && typeof subgroupData[key] === 'object') {
+        if (!key.endsWith('_group_score') && !key.endsWith('_avg_score') && typeof subgroupData[key] === 'object') {
             antennas[key] = subgroupData[key]
         }
     })
@@ -235,19 +256,35 @@ function getAntennas(subgroupData: any): Record<string, any> {
 }
 
 function getAntennaScore(antennaData: any): number {
-    // Find the antenna score key (e.g., "tx1_score", "rx2_score")
-    const scoreKey = Object.keys(antennaData).find(key => key.includes('_score'))
+    // Find the antenna Bayesian score key (e.g., "tx1_group_score", "rx2_group_score")
+    const scoreKey = Object.keys(antennaData).find(key => key.endsWith('_group_score'))
     return scoreKey && typeof antennaData[scoreKey] === 'number' ? antennaData[scoreKey] : 0
 }
 
-function getCategories(antennaData: any): Record<string, number> {
-    const categories: Record<string, number> = {}
+function getAntennaAvgScore(antennaData: any): number {
+    // Find the antenna average score key (e.g., "tx1_avg_score", "rx2_avg_score")
+    const scoreKey = Object.keys(antennaData).find(key => key.endsWith('_avg_score'))
+    return scoreKey && typeof antennaData[scoreKey] === 'number' ? antennaData[scoreKey] : 0
+}
+
+function getCategories(antennaData: any): Record<string, any> {
+    const categories: Record<string, any> = {}
     Object.keys(antennaData).forEach(key => {
-        if (!key.includes('_score') && typeof antennaData[key] === 'number') {
+        if (!key.endsWith('_score') && !key.endsWith('_group_score') && !key.endsWith('_avg_score') && typeof antennaData[key] === 'object') {
             categories[key] = antennaData[key]
         }
     })
     return categories
+}
+
+function getCategoryBayesScore(scoreData: any): number {
+    if (typeof scoreData === 'number') return scoreData
+    return typeof scoreData.category_bayes_score === 'number' ? scoreData.category_bayes_score : 0
+}
+
+function getCategoryAvgScore(scoreData: any): number {
+    if (typeof scoreData === 'number') return 0
+    return typeof scoreData.category_avg_score === 'number' ? scoreData.category_avg_score : 0
 }
 </script>
 

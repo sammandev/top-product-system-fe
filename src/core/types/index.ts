@@ -6,6 +6,9 @@
 // Auth types
 export * from './auth.types'
 
+// App config types
+export * from './app-config.types'
+
 // DUT types
 export * from './dut.types'
 

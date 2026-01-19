@@ -366,8 +366,8 @@ function exportJSON() {
 function exportCSV() {
   const rows: string[] = []
 
-  // Header
-  rows.push('DUT_ISN,Station,Group,Subgroup,Antenna,Category,Score')
+  // Header with both Bayesian and Average scores
+  rows.push('DUT_ISN,Station,Group,Subgroup,Antenna,Category,Bayesian_Score,Average_Score')
 
   // Data rows
   results.value.forEach(result => {
@@ -379,15 +379,33 @@ function exportCSV() {
         if (typeof subgroupsData !== 'object' || !subgroupsData) return
 
         Object.entries(subgroupsData).forEach(([subgroupKey, antennasData]) => {
+          // Skip score fields at subgroup level
+          if (subgroupKey === 'final_group_score' || subgroupKey === 'group_avg_score') return
           if (typeof antennasData !== 'object' || !antennasData) return
 
           Object.entries(antennasData).forEach(([antennaKey, categoriesData]) => {
+            // Skip score fields at antenna level
+            if (antennaKey.endsWith('_group_score') || antennaKey.endsWith('_avg_score')) return
             if (typeof categoriesData !== 'object' || !categoriesData) return
 
-            Object.entries(categoriesData).forEach(([categoryKey, score]) => {
-              if (typeof score === 'number') {
+            Object.entries(categoriesData).forEach(([categoryKey, scoreData]) => {
+              // Skip score fields at category level
+              if (categoryKey.endsWith('_score') || categoryKey.endsWith('_group_score') || categoryKey.endsWith('_avg_score')) return
+              
+              // Handle both old format (number) and new format (object)
+              let bayesScore = ''
+              let avgScore = ''
+              
+              if (typeof scoreData === 'number') {
+                bayesScore = scoreData.toString()
+              } else if (typeof scoreData === 'object') {
+                bayesScore = scoreData.category_bayes_score?.toString() || ''
+                avgScore = scoreData.category_avg_score?.toString() || ''
+              }
+              
+              if (bayesScore) {
                 rows.push(
-                  `${result.dut_isn},${station.station_name},${groupKey},${subgroupKey},${antennaKey},${categoryKey},${score}`
+                  `${result.dut_isn},${station.station_name},${groupKey},${subgroupKey},${antennaKey},${categoryKey},${bayesScore},${avgScore}`
                 )
               }
             })
