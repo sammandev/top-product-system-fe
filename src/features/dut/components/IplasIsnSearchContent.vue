@@ -127,8 +127,11 @@
                     <v-tab v-for="(isnGroup, index) in groupedByISN" :key="isnGroup.isn" :value="index">
                         <v-icon start>mdi-barcode</v-icon>
                         {{ isnGroup.isn }}
-                        <v-chip size="x-small" :color="isnGroup.hasError ? 'error' : 'success'" class="ml-2">
-                            {{ isnGroup.records.length }}
+                        <v-chip v-if="isnGroup.hasError" size="x-small" color="error" class="ml-2">
+                            {{ isnGroup.errorCount }} Error{{ isnGroup.errorCount > 1 ? 's' : '' }}
+                        </v-chip>
+                        <v-chip v-else size="x-small" color="success" class="ml-2">
+                            {{ isnGroup.records.length }} Pass
                         </v-chip>
                     </v-tab>
                 </v-tabs>
@@ -186,9 +189,31 @@
                             </v-chip-group>
                         </div>
 
+                        <!-- Device ID Filter -->
+                        <div class="mb-4">
+                            <v-autocomplete
+                                v-model="selectedFilterDeviceIds[isnGroup.isn]"
+                                :items="getUniqueDeviceIdsForISN(isnGroup)"
+                                label="Filter by Device ID"
+                                variant="outlined"
+                                density="compact"
+                                prepend-inner-icon="mdi-chip"
+                                multiple
+                                chips
+                                closable-chips
+                                clearable
+                                hide-details
+                                placeholder="All Device IDs"
+                            >
+                                <template #chip="{ props, item }">
+                                    <v-chip v-bind="props" :text="item.raw" size="small" />
+                                </template>
+                            </v-autocomplete>
+                        </div>
+
                         <!-- Station Records -->
                         <v-expansion-panels v-model="expandedPanels[tabIndex]" multiple>
-                            <v-expansion-panel v-for="(record, recordIndex) in isnGroup.records"
+                            <v-expansion-panel v-for="(record, recordIndex) in getFilteredISNRecords(isnGroup)"
                                 :key="`${isnGroup.isn}-${recordIndex}`">
                                 <v-expansion-panel-title
                                     :class="record.test_status !== 'PASS' ? 'bg-red-lighten-5' : ''">
@@ -197,15 +222,15 @@
                                             <v-checkbox :model-value="isRecordSelected(tabIndex, recordIndex)"
                                                 density="compact" hide-details class="flex-grow-0" @click.stop
                                                 @update:model-value="toggleRecordSelection(tabIndex, recordIndex)" />
-                                            <v-icon :color="record.test_status === 'PASS' ? 'success' : 'error'"
-                                                size="small">
-                                                {{ record.test_status === 'PASS' ? 'mdi-check-circle' :
-                                                    'mdi-alert-circle' }}
-                                            </v-icon>
+                                            <v-icon size="small" color="primary">mdi-router-wireless</v-icon>
                                             <span class="font-weight-bold">{{ record.display_station_name ||
                                                 record.station_name
                                             }}</span>
-                                            <v-chip :color="record.test_status === 'PASS' ? 'success' : 'error'"
+                                            <v-chip size="x-small" color="secondary" variant="outlined">
+                                                <v-icon start size="x-small">mdi-chip</v-icon>
+                                                {{ record.device_id }}
+                                            </v-chip>
+                                            <v-chip :color="record.error_code === 'PASS' ? 'success' : 'error'"
                                                 size="x-small">
                                                 {{ record.error_code }}
                                             </v-chip>
@@ -215,17 +240,13 @@
                                             </v-chip>
                                         </div>
                                         <div class="d-flex align-center gap-2 text-caption text-medium-emphasis">
-                                            <v-chip size="x-small" color="secondary" variant="outlined">
-                                                <v-icon start size="x-small">mdi-chip</v-icon>
-                                                {{ record.device_id }}
-                                            </v-chip>
                                             <v-chip size="x-small" color="info" variant="outlined">
                                                 <v-icon start size="x-small">mdi-clock-end</v-icon>
                                                 {{ formatShortTime(record.test_end_time) }}
                                             </v-chip>
                                             <v-chip size="x-small" variant="outlined">
                                                 <v-icon start size="x-small">mdi-timer</v-icon>
-                                                {{ calculateTotalCycleTime(record.test_item) }}
+                                                {{ calculateDuration(record.test_start_time, record.test_end_time) }}
                                             </v-chip>
                                             <v-btn icon size="x-small" variant="outlined" color="primary"
                                                 :loading="downloadingKey === `${tabIndex}-${recordIndex}`"
@@ -238,65 +259,25 @@
                                     </div>
                                 </v-expansion-panel-title>
                                 <v-expansion-panel-text>
-                                    <!-- Record Details Grid -->
+                                    <!-- Record Details -->
                                     <v-row class="mb-3">
-                                        <v-col cols="6" sm="4" md="2">
-                                            <div class="text-caption text-medium-emphasis">Site</div>
-                                            <div class="font-weight-medium">{{ record.site }}</div>
+                                        <v-col cols="12" sm="6" md="3">
+                                            <div class="text-caption text-medium-emphasis">ISN</div>
+                                            <div class="font-weight-medium">{{ record.isn || '-' }}</div>
                                         </v-col>
-                                        <v-col cols="6" sm="4" md="2">
-                                            <div class="text-caption text-medium-emphasis">Project</div>
-                                            <div class="font-weight-medium">{{ record.project }}</div>
-                                        </v-col>
-                                        <v-col cols="6" sm="4" md="2">
-                                            <div class="text-caption text-medium-emphasis">Station Name</div>
-                                            <div class="font-weight-medium">{{ record.station_name }}</div>
-                                        </v-col>
-                                        <v-col cols="6" sm="4" md="2">
-                                            <div class="text-caption text-medium-emphasis">Device ID</div>
-                                            <div class="font-weight-medium">{{ record.device_id || '-' }}</div>
-                                        </v-col>
-                                        <v-col cols="6" sm="4" md="2">
-                                            <div class="text-caption text-medium-emphasis">Error Code</div>
-                                            <v-chip :color="record.error_code === 'PASS' ? 'success' : 'error'"
-                                                size="x-small">
-                                                {{ record.error_code }}
-                                            </v-chip>
-                                        </v-col>
-                                        <v-col cols="6" sm="4" md="2">
-                                            <div class="text-caption text-medium-emphasis">Error Name</div>
-                                            <div class="font-weight-medium">{{ record.error_name || '-' }}</div>
-                                        </v-col>
-                                    </v-row>
-                                    <v-row class="mb-3">
-                                        <v-col cols="6" sm="4" md="2">
-                                            <div class="text-caption text-medium-emphasis">Test Start Time</div>
-                                            <div class="font-weight-medium">{{ formatLocalTime(record.test_start_time)
-                                            }}</div>
-                                        </v-col>
-                                        <v-col cols="6" sm="4" md="2">
-                                            <div class="text-caption text-medium-emphasis">Test End Time</div>
-                                            <div class="font-weight-medium">{{ formatLocalTime(record.test_end_time) }}
-                                            </div>
-                                        </v-col>
-                                        <v-col cols="6" sm="4" md="2">
-                                            <div class="text-caption text-medium-emphasis">Test Duration</div>
-                                            <div class="font-weight-medium">{{ calculateDuration(record.test_start_time,
-                                                record.test_end_time) }}</div>
-                                        </v-col>
-                                        <v-col cols="6" sm="4" md="2">
-                                            <div class="text-caption text-medium-emphasis">Total Cycle Time</div>
-                                            <div class="font-weight-medium">{{ calculateTotalCycleTime(record.test_item)
-                                            }}
-                                            </div>
-                                        </v-col>
-                                        <v-col cols="6" sm="4" md="2">
+                                        <v-col cols="12" sm="6" md="3">
                                             <div class="text-caption text-medium-emphasis">Line</div>
                                             <div class="font-weight-medium">{{ record.line || '-' }}</div>
                                         </v-col>
-                                        <v-col cols="6" sm="4" md="2">
-                                            <div class="text-caption text-medium-emphasis">MO</div>
-                                            <div class="font-weight-medium">{{ record.mo || '-' }}</div>
+                                        <v-col cols="12" sm="6" md="3">
+                                            <div class="text-caption text-medium-emphasis">Station Name</div>
+                                            <div class="font-weight-medium">{{ record.station_name || '-' }}</div>
+                                        </v-col>
+                                        <v-col cols="12" sm="6" md="3">
+                                            <div class="text-caption text-medium-emphasis">Test Duration</div>
+                                            <div class="font-weight-medium">
+                                                {{ calculateDuration(record.test_start_time, record.test_end_time) }}
+                                            </div>
                                         </v-col>
                                     </v-row>
 
@@ -309,7 +290,7 @@
                                     <!-- Test Items Table -->
                                     <v-data-table :headers="testItemHeaders"
                                         :items="filterAndSearchTestItems(record.test_item, `${isnGroup.isn}-${recordIndex}`)"
-                                        :items-per-page="25" density="compact" class="elevation-1">
+                                        :items-per-page="25" density="compact" class="elevation-1 v-table--striped">
                                         <template #item.STATUS="{ item }">
                                             <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'"
                                                 size="x-small">
@@ -358,6 +339,7 @@ interface ISNGroup {
     site: string
     project: string
     hasError: boolean
+    errorCount: number
     records: IsnSearchData[]
 }
 
@@ -385,6 +367,9 @@ const showSuccess = ref(false)
 const testItemFilter = ref<'all' | 'value' | 'non-value' | 'pass-fail'>('value')
 const expandedPanels = ref<Record<number, number[]>>({})
 const testItemSearchQueries = ref<Record<string, string>>({})
+
+// Device ID filter controls
+const selectedFilterDeviceIds = ref<Record<string, string[]>>({})
 
 // Download controls
 const selectedRecordIndices = ref<string[]>([]) // Format: "tabIndex-recordIndex"
@@ -466,7 +451,9 @@ function formatShortTime(timeStr: string): string {
         // Handle format like "2025-09-16 13:23:57%:z"
         const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
         const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
+        // Convert UTC to local time
         return utcDate.toLocaleString(undefined, {
+            year: 'numeric',
             month: '2-digit',
             day: '2-digit',
             hour: '2-digit',
@@ -487,9 +474,11 @@ function getValueClass(item: IsnSearchTestItem): string {
 function formatLocalTime(timeStr: string): string {
     if (!timeStr) return '-'
     try {
-        // Handle format like "2025-09-16 13:23:57%:z"
+        // Handle format like "2025-09-16 13:23:57%:z" - API returns UTC time
         const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
+        // Parse as UTC by adding 'Z' suffix
         const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
+        // toLocaleString automatically converts to local timezone
         return utcDate.toLocaleString(undefined, {
             year: 'numeric',
             month: '2-digit',
@@ -544,6 +533,17 @@ function calculateTotalCycleTime(testItems: IsnSearchTestItem[] | undefined): st
         return `${minutes}m ${seconds}s`
     }
     return `${seconds}s`
+}
+
+// Helper functions for device ID filtering
+function getUniqueDeviceIdsForISN(isnGroup: ISNGroup): string[] {
+    return [...new Set(isnGroup.records.map(r => r.device_id))]
+}
+
+function getFilteredISNRecords(isnGroup: ISNGroup): IsnSearchData[] {
+    const filterIds = selectedFilterDeviceIds.value[isnGroup.isn]
+    if (!filterIds || filterIds.length === 0) return isnGroup.records
+    return isnGroup.records.filter(r => filterIds.includes(r.device_id))
 }
 
 function isRecordSelected(tabIndex: number, recordIndex: number): boolean {
@@ -653,6 +653,7 @@ function groupDataByISN(data: IsnSearchData[]): ISNGroup[] {
                 site: record.site,
                 project: record.project,
                 hasError: false,
+                errorCount: 0,
                 records: []
             }
         }
@@ -661,6 +662,7 @@ function groupDataByISN(data: IsnSearchData[]): ISNGroup[] {
             group.records.push(record)
             if (record.test_status !== 'PASS' || record.error_code !== 'PASS') {
                 group.hasError = true
+                group.errorCount++
             }
         }
     }
@@ -745,5 +747,14 @@ async function handleSearch(): Promise<void> {
 
 .gap-4 {
     gap: 1rem;
+}
+
+/* Striped table styling */
+:deep(.v-table--striped tbody tr:nth-of-type(even)) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+:deep(.v-theme--dark .v-table--striped tbody tr:nth-of-type(even)) {
+    background-color: rgba(255, 255, 255, 0.02);
 }
 </style>

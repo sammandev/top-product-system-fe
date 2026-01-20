@@ -112,7 +112,7 @@
                             </v-col>
                         </v-row>
 
-                        <!-- Fetch Test Items Section -->
+                        <!-- Search Test Data Section -->
                         <v-row v-if="selectedDeviceIds.length > 0" class="mt-4">
                             <v-col cols="12" class="d-flex align-center gap-3">
                                 <v-select v-model="testStatusFilter" :items="['ALL', 'PASS', 'FAIL']"
@@ -120,7 +120,7 @@
                                     style="max-width: 150px" />
                                 <v-btn color="primary" :loading="loadingTestItems" @click="fetchTestItems">
                                     <v-icon start>mdi-download</v-icon>
-                                    Fetch Test Items ({{ selectedDeviceIds.length }} device{{
+                                    Search Test Data ({{ selectedDeviceIds.length }} device{{
                                         selectedDeviceIds.length > 1 ? 's' : '' }})
                                 </v-btn>
                             </v-col>
@@ -279,7 +279,7 @@
                                             <!-- Test Items Table -->
                                             <v-data-table :headers="testItemHeaders"
                                                 :items="filterAndSearchTestItems(record.TestItem, `${stationGroup.stationName}-${recordIndex}`)"
-                                                :items-per-page="25" density="compact" class="elevation-1">
+                                            :items-per-page="25" density="compact" class="elevation-1 v-table--striped">
                                                 <template #item.STATUS="{ item }">
                                                     <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'"
                                                         size="x-small">
@@ -850,5 +850,14 @@ onMounted(async () => {
 
 .gap-3 {
     gap: 0.75rem;
+}
+
+/* Striped table styling */
+:deep(.v-table--striped tbody tr:nth-of-type(even)) {
+    background-color: rgba(0, 0, 0, 0.02);
+}
+
+:deep(.v-theme--dark .v-table--striped tbody tr:nth-of-type(even)) {
+    background-color: rgba(255, 255, 255, 0.02);
 }
 </style>
