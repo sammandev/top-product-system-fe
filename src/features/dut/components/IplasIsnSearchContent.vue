@@ -219,11 +219,15 @@
                                                 <v-icon start size="x-small">mdi-chip</v-icon>
                                                 {{ record.device_id }}
                                             </v-chip>
+                                            <v-chip size="x-small" color="info" variant="outlined">
+                                                <v-icon start size="x-small">mdi-clock-end</v-icon>
+                                                {{ formatShortTime(record.test_end_time) }}
+                                            </v-chip>
                                             <v-chip size="x-small" variant="outlined">
                                                 <v-icon start size="x-small">mdi-timer</v-icon>
                                                 {{ calculateTotalCycleTime(record.test_item) }}
                                             </v-chip>
-                                            <v-btn icon size="x-small" variant="text" color="primary"
+                                            <v-btn icon size="x-small" variant="outlined" color="primary"
                                                 :loading="downloadingKey === `${tabIndex}-${recordIndex}`"
                                                 @click.stop="downloadSingleRecord(record, tabIndex, recordIndex)">
                                                 <v-icon size="small">mdi-download</v-icon>
@@ -296,8 +300,21 @@
                                         </v-col>
                                     </v-row>
 
+                                    <!-- Test Items Search -->
+                                    <v-text-field
+                                        v-model="testItemSearchQueries[`${isnGroup.isn}-${recordIndex}`]"
+                                        label="Search Test Items"
+                                        prepend-inner-icon="mdi-magnify"
+                                        variant="outlined"
+                                        density="compact"
+                                        hide-details
+                                        clearable
+                                        class="mb-3"
+                                        placeholder="Search by test item name, status, or value..."
+                                    />
+
                                     <!-- Test Items Table -->
-                                    <v-data-table :headers="testItemHeaders" :items="filterTestItems(record.test_item)"
+                                    <v-data-table :headers="testItemHeaders" :items="filterAndSearchTestItems(record.test_item, `${isnGroup.isn}-${recordIndex}`)"
                                         :items-per-page="25" density="compact" class="elevation-1">
                                         <template #item.STATUS="{ item }">
                                             <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'"
@@ -317,7 +334,7 @@
                                     </v-data-table>
 
                                     <div class="text-caption text-medium-emphasis mt-2">
-                                        Showing {{ filterTestItems(record.test_item).length }} of {{
+                                        Showing {{ filterAndSearchTestItems(record.test_item, `${isnGroup.isn}-${recordIndex}`).length }} of {{
                                         record.test_item?.length ||
                                         0 }} test items
                                     </div>
@@ -373,6 +390,7 @@ const showSuccess = ref(false)
 // Display controls
 const testItemFilter = ref<'all' | 'value' | 'non-value' | 'pass-fail'>('value')
 const expandedPanels = ref<Record<number, number[]>>({})
+const testItemSearchQueries = ref<Record<string, string>>({})
 
 // Download controls
 const selectedRecordIndices = ref<string[]>([]) // Format: "tabIndex-recordIndex"
@@ -432,6 +450,36 @@ function filterTestItems(items: IsnSearchTestItem[] | undefined): IsnSearchTestI
             return items.filter(isPassFailData)
         default:
             return items
+    }
+}
+
+function filterAndSearchTestItems(items: IsnSearchTestItem[] | undefined, key: string): IsnSearchTestItem[] {
+    let filtered = filterTestItems(items)
+    const query = testItemSearchQueries.value[key]?.toLowerCase().trim()
+    if (query) {
+        filtered = filtered.filter(item =>
+            item.NAME?.toLowerCase().includes(query) ||
+            item.STATUS?.toLowerCase().includes(query) ||
+            item.VALUE?.toLowerCase().includes(query)
+        )
+    }
+    return filtered
+}
+
+function formatShortTime(timeStr: string): string {
+    if (!timeStr) return '-'
+    try {
+        // Handle format like "2025-09-16 13:23:57%:z"
+        const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
+        const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
+        return utcDate.toLocaleString(undefined, {
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        })
+    } catch {
+        return timeStr
     }
 }
 
@@ -534,7 +582,11 @@ function toggleExpandAll(): void {
 function formatTimeForDownload(timeStr: string): string {
     if (!timeStr) return ''
     // Convert "2025-09-16 13:23:57%:z" to "2025/09/16 13:23:57"
-    return timeStr.replace('%:z', '').replace(/-/g, '/').replace('T', ' ')
+    // Remove %:z suffix, replace T with space, replace dashes with slashes
+    let result = timeStr.replace('%:z', '').replace('T', ' ').replace(/-/g, '/')
+    // Remove any timezone info or milliseconds
+    result = result.split('.')[0] || result
+    return result
 }
 
 function createAttachmentInfo(record: IsnSearchData): DownloadAttachmentInfo {
@@ -550,6 +602,7 @@ async function downloadSingleRecord(record: IsnSearchData, tabIndex: number, rec
     downloadingKey.value = `${tabIndex}-${recordIndex}`
     try {
         const attachmentInfo = createAttachmentInfo(record)
+        console.log('Download attachment info:', attachmentInfo)
         await downloadAttachments(record.site, record.project, [attachmentInfo])
         showSuccess.value = true
     } catch (err) {

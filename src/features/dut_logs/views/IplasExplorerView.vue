@@ -676,15 +676,18 @@ function toggleSelectAllRecords(): void {
  */
 function formatTimeForDownload(timeStr: string): string {
   if (!timeStr) return ''
-  return timeStr.replace(/-/g, '/')
+  // Replace dashes with slashes, handle ISO format with T
+  return timeStr.replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
 }
 
 /**
  * Create download attachment info from a test record
  */
 function createAttachmentInfo(record: CsvTestItemData): DownloadAttachmentInfo {
+  // Use ISN if available, otherwise use DeviceId
+  const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
   return {
-    isn: record.ISN || record.DeviceId,
+    isn,
     time: formatTimeForDownload(record['Test Start Time']),
     deviceid: record.DeviceId,
     station: record.station
@@ -700,6 +703,7 @@ async function downloadSingleRecord(record: CsvTestItemData, index: number): Pro
   downloadingIndex.value = index
   try {
     const attachmentInfo = createAttachmentInfo(record)
+    console.log('Download attachment info:', attachmentInfo)
     await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
   } catch (err) {
     console.error('Failed to download test log:', err)

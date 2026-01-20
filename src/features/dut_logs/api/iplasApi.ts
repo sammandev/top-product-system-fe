@@ -9,11 +9,45 @@
 
 import axios, { type AxiosInstance } from 'axios'
 
-// API Configuration from environment
-// Note: Vite requires VITE_ prefix for env vars to be exposed to the client
-const IPLAS_V1_API_BASE_URL = import.meta.env.VITE_IPLAS_V1_API_BASE_URL || 'http://10.176.33.89:32678/api/v1'
-const IPLAS_V2_API_BASE_URL = import.meta.env.VITE_IPLAS_V2_API_BASE_URL || 'http://10.176.33.89:32678/api/v2'
-const IPLAS_API_TOKEN = import.meta.env.VITE_IPLAS_API_TOKEN || ''
+// Storage key for persisting settings (must match useIplasSettings.ts)
+const STORAGE_KEY = 'iplas_settings'
+
+// API Configuration from environment or localStorage
+function getIplasConfig(): { baseIp: string; port: number; token: string } {
+  const defaultPort = Number(import.meta.env.VITE_IPLAS_API_PORT) || 32678
+  const defaultBaseIp = (import.meta.env.VITE_IPLAS_API_PTB_BASE_URL || 'http://10.176.33.89').replace(/^https?:\/\//, '')
+  const defaultToken = import.meta.env.VITE_IPLAS_API_TOKEN_PTB || ''
+
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY)
+    if (stored) {
+      const parsed = JSON.parse(stored)
+      const selectedId = parsed.selectedServerId || 'PTB'
+      const servers = parsed.servers || []
+      const server = servers.find((s: { id: string }) => s.id === selectedId)
+      if (server) {
+        return {
+          baseIp: server.baseIp || defaultBaseIp,
+          port: server.port || defaultPort,
+          token: server.token || defaultToken
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load iPLAS config from localStorage:', error)
+  }
+  // Fallback to PTB defaults from environment variables
+  return {
+    baseIp: defaultBaseIp,
+    port: defaultPort,
+    token: defaultToken
+  }
+}
+
+const config = getIplasConfig()
+const IPLAS_V1_API_BASE_URL = import.meta.env.VITE_IPLAS_V1_API_BASE_URL || `http://${config.baseIp}:${config.port}/api/v1`
+const IPLAS_V2_API_BASE_URL = import.meta.env.VITE_IPLAS_V2_API_BASE_URL || `http://${config.baseIp}:${config.port}/api/v2`
+const IPLAS_API_TOKEN = config.token
 const IPLAS_API_TIMEOUT = Number(import.meta.env.VITE_IPLAS_API_TIMEOUT || 60) * 1000
 
 // ============================================================================

@@ -1,17 +1,15 @@
 <template>
     <div>
-        <!-- Refresh Button -->
-        <div class="d-flex justify-end mb-4">
-            <v-btn color="primary" variant="tonal" prepend-icon="mdi-close-circle"
-                :disabled="loading || (!testRecords && !dutIsn)" @click="clearAll">
-                Clear All
-            </v-btn>
-        </div>
-
         <!-- Input Section -->
         <v-card elevation="2" class="mb-4">
-            <v-card-title class="bg-default">
-                <v-icon icon="mdi-barcode-scan" class="mr-2" /> DUT ISN Search
+            <v-card-title class="bg-default d-flex align-center justify-space-between">
+                <div class="d-flex align-center">
+                    <v-icon icon="mdi-barcode-scan" class="mr-2" /> DUT ISN Search
+                </div>
+                <v-btn color="error" variant="outlined" size="small" prepend-icon="mdi-close-circle"
+                    :disabled="loading || (!testRecords && !dutIsn)" @click="clearAll">
+                    Clear All
+                </v-btn>
             </v-card-title>
             <v-card-text class="pa-4">
                 <!-- Input Mode Toggle -->

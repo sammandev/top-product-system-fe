@@ -11,6 +11,11 @@
                     Search and download DUT test data from multiple sources
                 </p>
             </div>
+            <div v-if="activeTab === 'iplas'">
+                <v-btn color="secondary" variant="outlined" prepend-icon="mdi-cog" @click="showSettingsDialog = true">
+                    iPLAS Settings
+                </v-btn>
+            </div>
         </div>
 
         <!-- Tabs -->
@@ -30,8 +35,11 @@
             <v-window-item value="iplas">
                 <!-- Info Alert -->
                 <v-alert type="info" variant="tonal" class="mb-4" density="compact">
-                    <v-icon start>mdi-information</v-icon>
                     Data is sourced directly from iPLAS but cannot display all test station data at the same time.
+                    <span class="text-caption ml-2">
+                        <v-icon size="x-small">mdi-server</v-icon>
+                        Connected to: <strong>{{ selectedServer?.name }}</strong> ({{ selectedServer?.baseIp }})
+                    </span>
                 </v-alert>
 
                 <!-- iPLAS Data Content -->
@@ -42,7 +50,6 @@
             <v-window-item value="internal">
                 <!-- Info Alert -->
                 <v-alert type="info" variant="tonal" class="mb-4" density="compact">
-                    <v-icon start>mdi-information</v-icon>
                     Data has been processed so that it can display all test station data based on the ISN provided.
                     <span class="text-caption font-italic">*Data is not as recent as iPLAS data.</span>
                 </v-alert>
@@ -51,6 +58,9 @@
                 <InternalDataContent />
             </v-window-item>
         </v-window>
+
+        <!-- iPLAS Settings Dialog -->
+        <IplasSettingsDialog v-model="showSettingsDialog" />
     </DefaultLayout>
 </template>
 
@@ -59,7 +69,15 @@ import { ref } from 'vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import IplasDataContent from '@/features/dut/components/IplasDataContent.vue'
 import InternalDataContent from '@/features/dut/components/InternalDataContent.vue'
+import IplasSettingsDialog from '@/features/dut/components/IplasSettingsDialog.vue'
+import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
 
 // Active tab state
 const activeTab = ref('iplas')
+
+// Settings dialog
+const showSettingsDialog = ref(false)
+
+// iPLAS Settings
+const { selectedServer } = useIplasSettings()
 </script>
