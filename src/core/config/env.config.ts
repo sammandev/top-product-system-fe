@@ -31,7 +31,7 @@ class EnvironmentConfig {
       throw new Error('VITE_API_BASE_URL is required in production')
     }
 
-    this.apiBaseUrl = env.VITE_API_BASE_URL || 'http://127.0.0.1:8001'
+    this.apiBaseUrl = env.VITE_API_BASE_URL || 'http://127.0.0.1:7070'
     this.dutApiBaseUrl = env.VITE_DUT_API_BASE_URL
     this.appTitle = env.VITE_APP_TITLE || 'AST Tools'
     this.appVersion = env.VITE_APP_VERSION || '1.0.0'

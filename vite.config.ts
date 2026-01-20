@@ -20,7 +20,7 @@ export default defineConfig({
     proxy: {
       // Proxy API requests to backend (avoids CORS in development)
       '/api': {
-        target: 'http://127.0.0.1:8001',
+        target: 'http://127.0.0.1:7070',
         changeOrigin: true,
         secure: false
       }

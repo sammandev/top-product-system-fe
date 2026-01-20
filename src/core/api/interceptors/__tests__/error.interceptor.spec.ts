@@ -129,7 +129,7 @@ describe('Error Interceptor', () => {
       const error: AxiosError = {
         response: { status: 401 } as any,
         config: {
-          url: 'http://localhost:8001/api/auth/external-login',
+          url: 'http://localhost:7070/api/auth/external-login',
           headers: {} as any
         } as InternalAxiosRequestConfig,
         isAxiosError: true,
