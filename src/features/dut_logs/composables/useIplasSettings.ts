@@ -68,6 +68,7 @@ const isInitialized = ref(false)
 
 /**
  * Load settings from localStorage
+ * Merges stored settings with env defaults, prioritizing env tokens if stored token is empty
  */
 function loadSettings(): void {
     const defaultServers = getDefaultServers()
@@ -75,7 +76,22 @@ function loadSettings(): void {
         const stored = localStorage.getItem(STORAGE_KEY)
         if (stored) {
             const parsed = JSON.parse(stored)
-            servers.value = parsed.servers || [...defaultServers]
+            const storedServers = parsed.servers as IplasServerConfig[] || []
+            
+            // Merge stored settings with defaults, using env token if stored token is empty
+            servers.value = defaultServers.map(defaultServer => {
+                const storedServer = storedServers.find(s => s.id === defaultServer.id)
+                if (storedServer) {
+                    return {
+                        ...defaultServer,
+                        baseIp: storedServer.baseIp || defaultServer.baseIp,
+                        port: storedServer.port || defaultServer.port,
+                        // Use stored token only if it's not empty, otherwise use env token
+                        token: storedServer.token || defaultServer.token
+                    }
+                }
+                return defaultServer
+            })
             selectedServerId.value = parsed.selectedServerId || 'PTB'
         } else {
             // Initialize with defaults from environment
