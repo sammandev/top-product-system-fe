@@ -51,7 +51,7 @@ function getDefaultServers(): IplasServerConfig[] {
         {
             id: 'PTY',
             name: 'PTY',
-            baseIp: (import.meta.env.VITE_IPLAS_API_PTY_BASE_URL || 'http://10.176.33.89').replace(/^https?:\/\//, ''),
+            baseIp: (import.meta.env.VITE_IPLAS_API_PTY_BASE_URL || 'http://172.18.212.129').replace(/^https?:\/\//, ''),
             port,
             token: import.meta.env.VITE_IPLAS_API_TOKEN_PTY || ''
         }

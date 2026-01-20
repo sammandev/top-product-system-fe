@@ -116,7 +116,7 @@
                     </v-btn>
                     <v-btn size="small" variant="outlined" color="white" @click="toggleExpandAll">
                         <v-icon start>{{ allExpanded ? 'mdi-arrow-collapse-vertical' : 'mdi-arrow-expand-vertical'
-                            }}</v-icon>
+                        }}</v-icon>
                         {{ allExpanded ? 'Collapse All' : 'Expand All' }}
                     </v-btn>
                 </div>
@@ -200,11 +200,11 @@
                                             <v-icon :color="record.test_status === 'PASS' ? 'success' : 'error'"
                                                 size="small">
                                                 {{ record.test_status === 'PASS' ? 'mdi-check-circle' :
-                                                'mdi-alert-circle' }}
+                                                    'mdi-alert-circle' }}
                                             </v-icon>
                                             <span class="font-weight-bold">{{ record.display_station_name ||
                                                 record.station_name
-                                                }}</span>
+                                            }}</span>
                                             <v-chip :color="record.test_status === 'PASS' ? 'success' : 'error'"
                                                 size="x-small">
                                                 {{ record.error_code }}
@@ -272,7 +272,7 @@
                                         <v-col cols="6" sm="4" md="2">
                                             <div class="text-caption text-medium-emphasis">Test Start Time</div>
                                             <div class="font-weight-medium">{{ formatLocalTime(record.test_start_time)
-                                                }}</div>
+                                            }}</div>
                                         </v-col>
                                         <v-col cols="6" sm="4" md="2">
                                             <div class="text-caption text-medium-emphasis">Test End Time</div>
@@ -287,7 +287,7 @@
                                         <v-col cols="6" sm="4" md="2">
                                             <div class="text-caption text-medium-emphasis">Total Cycle Time</div>
                                             <div class="font-weight-medium">{{ calculateTotalCycleTime(record.test_item)
-                                                }}
+                                            }}
                                             </div>
                                         </v-col>
                                         <v-col cols="6" sm="4" md="2">
@@ -301,20 +301,14 @@
                                     </v-row>
 
                                     <!-- Test Items Search -->
-                                    <v-text-field
-                                        v-model="testItemSearchQueries[`${isnGroup.isn}-${recordIndex}`]"
-                                        label="Search Test Items"
-                                        prepend-inner-icon="mdi-magnify"
-                                        variant="outlined"
-                                        density="compact"
-                                        hide-details
-                                        clearable
-                                        class="mb-3"
-                                        placeholder="Search by test item name, status, or value..."
-                                    />
+                                    <v-text-field v-model="testItemSearchQueries[`${isnGroup.isn}-${recordIndex}`]"
+                                        label="Search Test Items" prepend-inner-icon="mdi-magnify" variant="outlined"
+                                        density="compact" hide-details clearable class="mb-3"
+                                        placeholder="Search by test item name, status, or value..." />
 
                                     <!-- Test Items Table -->
-                                    <v-data-table :headers="testItemHeaders" :items="filterAndSearchTestItems(record.test_item, `${isnGroup.isn}-${recordIndex}`)"
+                                    <v-data-table :headers="testItemHeaders"
+                                        :items="filterAndSearchTestItems(record.test_item, `${isnGroup.isn}-${recordIndex}`)"
                                         :items-per-page="25" density="compact" class="elevation-1">
                                         <template #item.STATUS="{ item }">
                                             <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'"
@@ -334,9 +328,9 @@
                                     </v-data-table>
 
                                     <div class="text-caption text-medium-emphasis mt-2">
-                                        Showing {{ filterAndSearchTestItems(record.test_item, `${isnGroup.isn}-${recordIndex}`).length }} of {{
-                                        record.test_item?.length ||
-                                        0 }} test items
+                                        Showing {{ filterAndSearchTestItems(record.test_item,
+                                            `${isnGroup.isn}-${recordIndex}`).length }} of {{
+                                            record.test_item?.length || 0 }} test items
                                     </div>
                                 </v-expansion-panel-text>
                             </v-expansion-panel>

@@ -37,7 +37,6 @@
                 <v-alert type="info" variant="tonal" class="mb-4" density="compact">
                     Data is sourced directly from iPLAS but cannot display all test station data at the same time.
                     <span class="text-caption ml-2">
-                        <v-icon size="x-small">mdi-server</v-icon>
                         Connected to: <strong>{{ selectedServer?.name }}</strong> ({{ selectedServer?.baseIp }})
                     </span>
                 </v-alert>
