@@ -178,8 +178,8 @@
                 <v-list density="compact" nav>
                     <!-- User Info with Logout Button -->
                     <v-list-item v-if="!rail" prepend-icon="mdi-account-circle"
-                        :title="authStore.user?.username || 'User'"
-                        :subtitle="authStore.loginType === 'external' ? 'External Access' : 'Local Access'" rounded="xl"
+                        :title="authStore.displayName"
+                        :subtitle="authStore.isGuest ? 'Guest Access' : (authStore.loginType === 'external' ? 'External Access' : 'Local Access')" rounded="xl"
                         class="my-1">
                         <template #append>
                             <v-btn icon="mdi-logout" size="small" variant="text" color="error" @click="handleLogout" />
@@ -284,7 +284,7 @@ const staticMainItems: MenuItem[] = [
             { title: 'Database', icon: 'mdi-circle-small', path: '/dut/top-products/data' },
         ]
     },
-    { title: 'Test Log Download', icon: 'mdi-download-box', path: '/dut/test-log-download' },
+    { title: 'Data Explorer', icon: 'mdi-download-box', path: '/dut/data-explorer' },
 ]
 
 const staticToolsItems: MenuItem[] = [
@@ -386,15 +386,23 @@ const appConfigStore = useAppConfigStore()
 const { appName, appVersion } = storeToRefs(appConfigStore)
 
 // Fetch user's accessible menus on mount (non-blocking, uses cache)
-onMounted(async () => {
-    // Don't block rendering - fetch menus in background
-    try {
-        await menuAccessStore.fetchMenus(authStore.isGuest)
-        dynamicMenusLoaded.value = true
-    } catch (err) {
-        console.warn('Failed to load dynamic menus, using static fallback')
-        // Static menus will be used as fallback
-    }
+onMounted(() => {
+    // Don't block rendering - fetch menus in background with timeout
+    // Use Promise.race to ensure quick fallback to static menus
+    const fetchWithTimeout = Promise.race([
+        menuAccessStore.fetchMenus(authStore.isGuest),
+        new Promise<void>((resolve) => setTimeout(() => resolve(), 3000)) // 3 second timeout
+    ])
+    
+    fetchWithTimeout
+        .then(() => {
+            if (menuAccessStore.initialized) {
+                dynamicMenusLoaded.value = true
+            }
+        })
+        .catch(() => {
+            // Static menus will be used as fallback - fail silently
+        })
 })
 
 // Watch for auth changes to refresh menus

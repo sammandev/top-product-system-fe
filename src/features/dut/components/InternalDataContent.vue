@@ -1,16 +1,11 @@
 <template>
-    <DefaultLayout>
-        <!-- Header -->
-        <div class="d-flex justify-space-between align-center mb-6">
-            <div>
-                <h1 class="text-h4 mb-2">
-                    <v-icon color="primary" class="mr-2">mdi-download-box</v-icon>
-                    Data Explorer
-                </h1>
-                <p class="text-medium-emphasis">
-                    Search for DUT test records and download test log files.
-                </p>
-            </div>
+    <div>
+        <!-- Refresh Button -->
+        <div class="d-flex justify-end mb-4">
+            <v-btn color="primary" variant="tonal" prepend-icon="mdi-close-circle"
+                :disabled="loading || (!testRecords && !dutIsn)" @click="clearAll">
+                Clear All
+            </v-btn>
         </div>
 
         <!-- Input Section -->
@@ -45,7 +40,7 @@
                     </v-col>
                     <v-col cols="12" md="2" class="d-flex align-center">
                         <v-btn color="primary" variant="flat" size="large" :loading="loading" :disabled="!dutIsn.trim()"
-                            prepend-icon="mdi-magnify" @click="fetchTestRecords" block class="mb-5">
+                            prepend-icon="mdi-magnify" block class="mb-5" @click="fetchTestRecords">
                             Search
                         </v-btn>
                     </v-col>
@@ -87,15 +82,6 @@
                         </v-textarea>
                     </v-col>
                 </v-row>
-
-                <!-- Action Buttons -->
-                <v-divider v-if="testRecords || dutIsn" class="my-4" />
-                <div v-if="testRecords || dutIsn" class="d-flex justify-end gap-2">
-                    <v-btn color="error" variant="outlined" prepend-icon="mdi-close-circle" :disabled="loading"
-                        @click="clearAll">
-                        Clear All
-                    </v-btn>
-                </div>
             </v-card-text>
         </v-card>
 
@@ -114,7 +100,7 @@
                 <div>
                     <v-btn size="small" variant="outlined" color="white" @click="toggleExpandAll">
                         <v-icon start>{{ allExpanded ? 'mdi-arrow-collapse-vertical' : 'mdi-arrow-expand-vertical'
-                            }}</v-icon>
+                        }}</v-icon>
                         {{ allExpanded ? 'Collapse All' : 'Expand All' }}
                     </v-btn>
                 </div>
@@ -138,8 +124,9 @@
                                 <div class="d-flex align-center">
                                     <div>
                                         <div class="text-caption text-medium-emphasis">Site</div>
-                                        <div class="text-subtitle-1 font-weight-bold text-primary">{{
-                                            isnGroup.site_name }}</div>
+                                        <div class="text-subtitle-1 font-weight-bold text-primary">{{ isnGroup.site_name
+                                        }}
+                                        </div>
                                     </div>
                                 </div>
                                 <v-divider vertical />
@@ -147,7 +134,8 @@
                                     <div>
                                         <div class="text-caption text-medium-emphasis">Model</div>
                                         <div class="text-subtitle-1 font-weight-bold text-primary">{{
-                                            isnGroup.model_name }}</div>
+                                            isnGroup.model_name }}
+                                        </div>
                                     </div>
                                 </div>
                                 <v-divider vertical />
@@ -155,7 +143,8 @@
                                     <div>
                                         <div class="text-caption text-medium-emphasis">Stations</div>
                                         <div class="text-subtitle-1 font-weight-bold text-info">{{
-                                            isnGroup.record_data.length }}</div>
+                                            isnGroup.record_data.length
+                                        }}</div>
                                     </div>
                                 </div>
                             </div>
@@ -200,7 +189,8 @@
                                     </v-card-title>
                                     <v-card-text class="pa-0">
                                         <!-- Multiple records: Carousel with custom navigation -->
-                                        <div v-if="station.data.length > 1">{{ initializeCarousel(station.id, station.data.length) }}
+                                        <div v-if="station.data.length > 1">
+                                            {{ initializeCarousel(station.id, station.data.length) }}
                                             <!-- Navigation Controls -->
                                             <div
                                                 class="d-flex justify-center align-center gap-4 pa-1 bg-grey-lighten-4">
@@ -276,8 +266,8 @@
                                                         </div>
                                                         <!-- Download Button -->
                                                         <v-btn color="primary" size="small" prepend-icon="mdi-download"
-                                                            :loading="downloadingRecordId === record.id"
-                                                            @click="handleDownload({ station, record })" block>
+                                                            :loading="downloadingRecordId === record.id" block
+                                                            @click="handleDownload({ station, record })">
                                                             Download
                                                         </v-btn>
                                                     </div>
@@ -313,15 +303,17 @@
                                                         <v-icon
                                                             :color="getLatestRecord(station)!.test_result === 1 ? 'success' : 'error'"
                                                             size="large" class="mr-2">
-                                                            {{ getLatestRecord(station)!.test_result === 1 ? 'mdi-check-circle' :
-                                                                'mdi-alert-circle' }}
+                                                            {{ getLatestRecord(station)!.test_result === 1 ?
+                                                                'mdi-check-circle'
+                                                                : 'mdi-alert-circle' }}
                                                         </v-icon>
-                                                        <div class="text-h6">{{ getLatestRecord(station)!.device_id__name }}
+                                                        <div class="text-h6">{{
+                                                            getLatestRecord(station)!.device_id__name }}
                                                         </div>
                                                     </div>
                                                     <!-- ISN Chip (Rectangle) -->
-                                                    <v-chip color="primary" variant="outlined" size="small" class="mb-3 font-weight-bold"
-                                                        label>
+                                                    <v-chip color="primary" variant="outlined" size="small"
+                                                        class="mb-3 font-weight-bold" label>
                                                         <v-icon start size="small">mdi-barcode</v-icon>
                                                         {{ getLatestRecord(station)!.dut_id__isn }}
                                                     </v-chip>
@@ -349,8 +341,8 @@
                                                     <!-- Download Button -->
                                                     <v-btn color="primary" size="small" prepend-icon="mdi-download"
                                                         :loading="downloadingRecordId === getLatestRecord(station)!.id"
-                                                        @click="handleDownload({ station, record: getLatestRecord(station)! })"
-                                                        block>
+                                                        block
+                                                        @click="handleDownload({ station, record: getLatestRecord(station)! })">
                                                         Download
                                                     </v-btn>
                                                 </div>
@@ -386,8 +378,8 @@
                                     </v-expansion-panel-title>
                                     <v-expansion-panel-text class="pa-0">
                                         <v-list v-if="station.data.length > 0">
-                                            <v-list-item v-for="record in getReversedData(station.data)" :key="record.id"
-                                                class="border-b"
+                                            <v-list-item v-for="record in getReversedData(station.data)"
+                                                :key="record.id" class="border-b"
                                                 :class="record.test_result !== 1 ? 'bg-red-lighten-5' : ''">
                                                 <template #prepend>
                                                     <v-icon :color="record.test_result === 1 ? 'success' : 'error'"
@@ -398,16 +390,15 @@
                                                 </template>
                                                 <v-list-item-title>
                                                     <strong>{{ record.device_id__name }}</strong> • {{
-                                                        record.dut_id__isn
-                                                    }}
+                                                        record.dut_id__isn }}
                                                 </v-list-item-title>
                                                 <v-list-item-subtitle>
                                                     <div class="d-flex flex-wrap align-center gap-2 mt-1">
                                                         <v-chip size="small" label
                                                             :color="record.test_result === 1 ? 'success' : 'error'">
-                                                            {{ record.test_result === 1 ? 'PASS' : record.error_item
-                                                                ||
-                                                                'FAIL' }}
+                                                            {{ record.test_result === 1 ? 'PASS' : record.error_item ||
+                                                                'FAIL'
+                                                            }}
                                                         </v-chip>
                                                         <v-chip size="small" label color="default">
                                                             {{ record.test_duration }}s
@@ -454,8 +445,9 @@
                                         </div>
                                     </v-expansion-panel-title>
                                     <v-expansion-panel-text class="pa-0">
-                                        <v-data-table :headers="tableHeaders" :items="getReversedData(station.data).map((record, idx) => ({ ...record, record_number: station.data.length - idx }))" density="compact"
-                                            :items-per-page="-1" hide-default-footer>
+                                        <v-data-table :headers="tableHeaders"
+                                            :items="getReversedData(station.data).map((record, idx) => ({ ...record, record_number: station.data.length - idx }))"
+                                            density="compact" :items-per-page="-1" hide-default-footer>
                                             <template #item.status="{ item }">
                                                 <v-chip :color="item.test_result === 1 ? 'success' : 'error'"
                                                     size="small" label>
@@ -463,8 +455,7 @@
                                                         {{ item.test_result === 1 ? 'mdi-check-circle' :
                                                             'mdi-alert-circle' }}
                                                     </v-icon>
-                                                    {{ item.test_result === 1 ? 'PASS' : (item.error_item || 'FAIL')
-                                                    }}
+                                                    {{ item.test_result === 1 ? 'PASS' : (item.error_item || 'FAIL') }}
                                                 </v-chip>
                                             </template>
                                             <template #item.test_duration="{ item }">
@@ -535,8 +526,8 @@
                                                             </v-chip>
                                                         </div>
                                                         <v-btn color="primary" size="small" prepend-icon="mdi-download"
-                                                            :loading="downloadingRecordId === record.id"
-                                                            @click="handleDownload({ station, record })" block>
+                                                            :loading="downloadingRecordId === record.id" block
+                                                            @click="handleDownload({ station, record })">
                                                             Download
                                                         </v-btn>
                                                     </v-card>
@@ -556,19 +547,17 @@
             </v-card-text>
         </v-card>
 
-
         <!-- Success Notification -->
         <v-snackbar v-model="showSuccess" color="success" timeout="3000">
             <v-icon class="mr-2">mdi-check-circle</v-icon>
             Test log downloaded successfully!
         </v-snackbar>
-    </DefaultLayout>
+    </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import apiClient from '@/core/api/client'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
 
 interface TestRecord {
     id: number
@@ -635,8 +624,6 @@ const tableHeaders = [
     { title: 'Test Date', key: 'test_date', sortable: true },
     { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const }
 ]
-
-// Sort stations removed - now using getSortedStations function
 
 const fetchTestRecords = async () => {
     // Determine ISN list based on input mode
@@ -780,7 +767,6 @@ const handleDownload = async (downloadInfo: {
 
 const formatTimeForExternal2 = (isoDate: string): string => {
     // Convert UTC time to local timezone + 1 hour for UTC+7 (making it UTC+8)
-    // Example: "2025-11-17T06:00:24Z" (UTC+0) -> "2025/11/17 14:00:24" (UTC+7+1)
     const date = new Date(isoDate)
 
     // Add 1 hour (3600000 ms) to the local time for UTC+7 timezone

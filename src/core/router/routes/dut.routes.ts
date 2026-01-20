@@ -53,35 +53,25 @@ export const dutRoutes: RouteRecordRaw[] = [
     }
   },
   {
-    path: '/dut/test-log-download',
-    name: 'TestLogDownload',
-    component: () => import('@/features/dut/views/TestLogDownloadView.vue'),
+    path: '/dut/data-explorer',
+    name: 'DataExplorer',
+    component: () => import('@/features/dut/views/DataExplorerView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'Test Log Download',
-      icon: 'mdi-download-box',
+      title: 'Data Explorer',
+      icon: 'mdi-database-search',
       breadcrumb: [
         { title: 'Dashboard', to: '/dashboard' },
         { title: 'DUT Management', disabled: true },
-        { title: 'Test Log Download', disabled: true }
+        { title: 'Data Explorer', disabled: true }
       ]
     }
   },
-  // iPLAS Integration Routes
+  // iPLAS Integration Routes - Redirect to combined Data Explorer
   {
     path: '/iplas/explorer',
     name: 'IplasExplorer',
-    component: () => import('@/features/dut_logs/views/IplasExplorerView.vue'),
-    meta: {
-      requiresAuth: true,
-      title: 'iPLAS Explorer',
-      icon: 'mdi-compass',
-      breadcrumb: [
-        { title: 'Dashboard', to: '/dashboard' },
-        { title: 'iPLAS', disabled: true },
-        { title: 'Explorer', disabled: true }
-      ]
-    }
+    redirect: '/dut/data-explorer'
   },
   {
     path: '/iplas/download',

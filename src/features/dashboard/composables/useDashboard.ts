@@ -158,11 +158,11 @@ export function useDashboard() {
   // Quick Actions
   const quickActions: QuickAction[] = [
     {
-      title: 'Test Log Download',
-      subtitle: 'Download test logs',
+      title: 'Data Explorer',
+      subtitle: 'Search and download test logs',
       icon: 'mdi-download',
       color: 'primary',
-      path: '/dut/test-log-download'
+      path: '/dut/data-explorer'
     },
     {
       title: 'Top Products',

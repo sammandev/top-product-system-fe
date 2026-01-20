@@ -68,6 +68,7 @@ export interface CsvTestItemData {
   Model: string
   MO: string
   Line: string
+  ISN: string // DUT serial number (could have multiple same ISN if the DUT is retest)
   DeviceId: string
   'Test Status': string
   'Test Start Time': string
@@ -100,6 +101,43 @@ export interface Station {
 
 export interface VerifyResponse {
   message: string
+}
+
+// ISN Search Types (v2 API)
+export interface IsnSearchTestItem {
+  NAME: string
+  STATUS: 'PASS' | 'FAIL'
+  VALUE: string
+  UCL: string
+  LCL: string
+  CYLCE: string
+}
+
+export interface IsnSearchData {
+  site: string
+  project: string
+  isn: string
+  error_name: string
+  station_name: string
+  display_station_name: string
+  slot: string
+  error_code: string
+  error_message: string
+  test_status: string
+  line: string
+  test_start_time: string
+  test_end_time: string
+  total_testing_time: string
+  test_item: IsnSearchTestItem[]
+  mo: string
+  device_id: string
+  file_token: string
+  project_token: string
+}
+
+export interface IsnSearchResponse {
+  status_code: number
+  data: IsnSearchData[]
 }
 
 // ============================================================================
@@ -272,6 +310,17 @@ class IplasV2Api {
         }
       }
     )
+    return response.data
+  }
+
+  /**
+   * Search DUT test data by ISN
+   * Returns data from all stations that tested the same ISN
+   */
+  async searchByIsn(isn: string): Promise<IsnSearchResponse> {
+    const response = await this.client.get<IsnSearchResponse>('/isn_search', {
+      params: { isn }
+    })
     return response.data
   }
 }

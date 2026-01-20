@@ -70,9 +70,10 @@ export const useMenuAccessStore = defineStore('menuAccess', () => {
       initialized.value = true
     } catch (err: any) {
       error.value = err.response?.data?.detail || 'Failed to fetch menus'
-      console.error('Failed to fetch menus:', err)
-      // On error, use fallback menus (empty means full access for backwards compatibility)
+      // Fail silently - static fallback menus will be used
+      // This prevents blocking the UI when menu API is unavailable
       menus.value = []
+      initialized.value = false // Keep false to use static fallback
     } finally {
       loading.value = false
     }

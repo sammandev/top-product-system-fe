@@ -11,7 +11,8 @@ import {
   type SiteProject,
   type Station,
   type DownloadAttachmentInfo,
-  type CsvTestItemData
+  type CsvTestItemData,
+  type IsnSearchData
 } from '../api/iplasApi'
 
 // Module-level cache for metadata (rarely changes)
@@ -28,6 +29,7 @@ export function useIplasApi() {
   const loadingStations = ref(false)
   const loadingDevices = ref(false)
   const loadingTestItems = ref(false)
+  const loadingIsnSearch = ref(false)
   const downloading = ref(false)
 
   // Error state
@@ -38,6 +40,7 @@ export function useIplasApi() {
   const stations = ref<Station[]>([])
   const deviceIds = ref<string[]>([])
   const testItemData = ref<CsvTestItemData[]>([])
+  const isnSearchData = ref<IsnSearchData[]>([])
 
   // Computed
   const uniqueSites = computed(() => {
@@ -166,6 +169,7 @@ export function useIplasApi() {
 
   /**
    * Get CSV test items for a device
+   * Appends to existing testItemData instead of replacing
    */
   async function fetchTestItems(
     site: string,
@@ -192,7 +196,8 @@ export function useIplasApi() {
         throw new Error(`API returned status ${response.statuscode}`)
       }
 
-      testItemData.value = response.data
+      // Append to existing data instead of replacing
+      testItemData.value = [...testItemData.value, ...response.data]
       return response.data
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch test items'
@@ -200,6 +205,38 @@ export function useIplasApi() {
     } finally {
       loadingTestItems.value = false
     }
+  }
+
+  /**
+   * Search DUT test data by ISN
+   * Returns data from all stations that tested the same ISN
+   */
+  async function searchByIsn(isn: string): Promise<IsnSearchData[]> {
+    loadingIsnSearch.value = true
+    error.value = null
+
+    try {
+      const response = await iplasV2Api.searchByIsn(isn)
+
+      if (response.status_code !== 200) {
+        throw new Error(`API returned status ${response.status_code}`)
+      }
+
+      isnSearchData.value = response.data
+      return response.data
+    } catch (err: any) {
+      error.value = err.message || 'Failed to search by ISN'
+      throw err
+    } finally {
+      loadingIsnSearch.value = false
+    }
+  }
+
+  /**
+   * Clear ISN search data
+   */
+  function clearIsnSearchData(): void {
+    isnSearchData.value = []
   }
 
   /**
@@ -250,6 +287,13 @@ export function useIplasApi() {
   }
 
   /**
+   * Clear test item data (useful before fetching multiple devices)
+   */
+  function clearTestItemData(): void {
+    testItemData.value = []
+  }
+
+  /**
    * Clear all cached data
    */
   function clearCache(): void {
@@ -259,6 +303,7 @@ export function useIplasApi() {
     stations.value = []
     deviceIds.value = []
     testItemData.value = []
+    isnSearchData.value = []
   }
 
   return {
@@ -267,6 +312,7 @@ export function useIplasApi() {
     loadingStations,
     loadingDevices,
     loadingTestItems,
+    loadingIsnSearch,
     downloading,
 
     // Error state
@@ -277,6 +323,7 @@ export function useIplasApi() {
     stations,
     deviceIds,
     testItemData,
+    isnSearchData,
 
     // Computed
     uniqueSites,
@@ -288,8 +335,11 @@ export function useIplasApi() {
     fetchStations,
     fetchDeviceIds,
     fetchTestItems,
+    searchByIsn,
     downloadAttachments,
     formatDateForV1Api,
+    clearTestItemData,
+    clearIsnSearchData,
     clearCache
   }
 }
