@@ -40,5 +40,15 @@ export const adminRoutes: RouteRecordRaw[] = [
       requiresAdmin: true,
       title: 'App Configuration'
     }
+  },
+  {
+    path: '/admin/menu-access',
+    name: 'MenuAccess',
+    component: () => import('../views/MenuAccessView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Menu Access Control'
+    }
   }
 ];

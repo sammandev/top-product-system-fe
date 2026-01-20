@@ -21,10 +21,19 @@ export const useAuthStore = defineStore('auth', () => {
   const loginType = ref<'local' | 'external'>(
     (localStorage.getItem('login_type') as 'local' | 'external') || 'local'
   )
+  const isGuestMode = ref<boolean>(localStorage.getItem('is_guest_mode') === 'true')
 
   // Getters
   const isAuthenticated = computed(() => !!accessToken.value)
   const hasDUTAccess = computed(() => !!dutAccessToken.value)
+  const isGuest = computed(() => isGuestMode.value)
+  
+  // Display name - shows 'Guest' for guest mode, otherwise actual username
+  const displayName = computed(() => isGuestMode.value ? 'Guest' : (user.value?.username || 'User'))
+  
+  // Display role - shows 'Guest' for guest mode, otherwise actual roles
+  const displayRole = computed(() => isGuestMode.value ? 'Guest' : formatRoles(user.value?.roles))
+  
   const isAdmin = computed(() => {
     // Check is_admin field first (from backend)
     if (user.value?.is_admin === true) return true
@@ -44,6 +53,13 @@ export const useAuthStore = defineStore('auth', () => {
     if (!user.value?.roles) return false
     const roles = Array.isArray(user.value.roles) ? user.value.roles : [user.value.roles]
     return roles.some(role => role.toLowerCase() === roleName.toLowerCase())
+  }
+
+  // Helper to format roles for display
+  function formatRoles(roles: string | string[] | undefined | null): string {
+    if (!roles) return 'User'
+    const roleArr = Array.isArray(roles) ? roles : [roles]
+    return roleArr.join(', ') || 'User'
   }
 
   // Actions
@@ -117,6 +133,61 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  /**
+   * Guest Login - Uses predefined credentials from environment variables
+   * Logs in via external auth but marks the session as guest mode
+   */
+  async function guestLogin() {
+    const guestUsername = import.meta.env.VITE_GUEST_API_USERNAME
+    const guestPassword = import.meta.env.VITE_GUEST_API_PASSWORD
+
+    if (!guestUsername || !guestPassword) {
+      error.value = 'Guest login is not configured'
+      throw new Error('Guest credentials not configured')
+    }
+
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await authApi.externalLogin({
+        username: guestUsername,
+        password: guestPassword
+      })
+
+      accessToken.value = response.access_token
+      refreshTokenValue.value = response.refresh_token
+      loginType.value = 'external'
+      isGuestMode.value = true
+
+      // Store tokens in localStorage
+      localStorage.setItem('access_token', response.access_token)
+      localStorage.setItem('refresh_token', response.refresh_token)
+      localStorage.setItem('login_type', 'external')
+      localStorage.setItem('is_guest_mode', 'true')
+
+      // Store DUT tokens if provided
+      if (response.dut_access_token) {
+        dutAccessToken.value = response.dut_access_token
+        localStorage.setItem('dut_access_token', response.dut_access_token)
+      }
+      if (response.dut_refresh_token) {
+        dutRefreshToken.value = response.dut_refresh_token
+        localStorage.setItem('dut_refresh_token', response.dut_refresh_token)
+      }
+
+      // Fetch user info (but display will show as Guest)
+      await fetchUser()
+
+      return response
+    } catch (err: any) {
+      error.value = err.response?.data?.detail || 'Guest login failed'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
   async function refreshToken() {
     if (!refreshTokenValue.value) {
       throw new Error('No refresh token available')
@@ -156,17 +227,25 @@ export const useAuthStore = defineStore('auth', () => {
     dutAccessToken.value = null
     dutRefreshToken.value = null
     user.value = null
+    isGuestMode.value = false
 
     localStorage.removeItem('access_token')
     localStorage.removeItem('refresh_token')
     localStorage.removeItem('dut_access_token')
     localStorage.removeItem('dut_refresh_token')
     localStorage.removeItem('login_type')
+    localStorage.removeItem('is_guest_mode')
   }
 
-  // Initialize store
+  // Track initialization state to prevent duplicate fetches
+  let isInitialized = false
+
+  // Initialize store - only runs once per app lifecycle
   async function initialize() {
-    if (accessToken.value) {
+    if (isInitialized) return
+    isInitialized = true
+    
+    if (accessToken.value && !user.value) {
       await fetchUser()
     }
   }
@@ -181,16 +260,21 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     error,
     loginType,
+    isGuestMode,
 
     // Getters
     isAuthenticated,
     hasDUTAccess,
+    isGuest,
+    displayName,
+    displayRole,
     isAdmin,
     hasRole,
 
     // Actions
     login,
     externalLogin,
+    guestLogin,
     refreshToken,
     fetchUser,
     logout,

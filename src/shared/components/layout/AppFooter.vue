@@ -4,7 +4,7 @@
       <v-row align="center" justify="space-between" no-gutters>
         <v-col cols="12" md="4" class="text-center text-md-left py-1">
           <div class="d-flex align-center justify-center justify-md-start">
-            <v-icon size="small" class="mr-2">mdi-test-tube</v-icon>
+            <v-icon size="small" class="mr-2">mdi-atom-variant</v-icon>
             <span class="text-caption font-weight-medium">{{ appName }}</span>
             <v-chip size="x-small" color="primary" class="ml-2" density="compact">v{{ appVersion }}</v-chip>
           </div>
@@ -17,17 +17,8 @@
         </v-col>
 
         <v-col cols="12" md="4" class="text-center text-md-right py-1">
-          <v-btn
-            v-for="link in footerLinks"
-            :key="link.title"
-            :href="link.href"
-            :icon="link.icon"
-            size="x-small"
-            variant="text"
-            density="compact"
-            class="mx-1"
-            :title="link.title"
-          />
+          <v-btn v-for="link in footerLinks" :key="link.title" :href="link.href" :icon="link.icon" size="x-small"
+            variant="text" density="compact" class="mx-1" :title="link.title" />
         </v-col>
       </v-row>
     </v-container>

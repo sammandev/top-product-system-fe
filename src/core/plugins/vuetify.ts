@@ -2,15 +2,17 @@
  * Vuetify Plugin Configuration
  * 
  * Material Design 3 component framework with custom themes
+ * Using auto-import via vite-plugin-vuetify for optimal bundle size
  */
 
-import 'vuetify/dist/vuetify.min.css'
+import 'vuetify/styles/main.css'
 import '@mdi/font/css/materialdesignicons.css'
 import { createVuetify } from 'vuetify'
 import type { ThemeDefinition } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
+
+// NOTE: Components and directives are auto-imported by vite-plugin-vuetify
+// This reduces bundle size by only including used components
 
 /**
  * Custom Light Theme
@@ -50,10 +52,9 @@ const customDarkTheme: ThemeDefinition = {
 
 /**
  * Vuetify instance with custom configuration
+ * Components and directives are auto-imported by vite-plugin-vuetify
  */
 export default createVuetify({
-  components,
-  directives,
   icons: {
     defaultSet: 'mdi',
     aliases,

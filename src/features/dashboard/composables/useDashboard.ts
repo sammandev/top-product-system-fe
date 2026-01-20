@@ -3,6 +3,13 @@ import { useAuthStore } from '@/features/auth/store'
 import { dashboardApi } from '../api/dashboardApi'
 import type { DashboardResponse } from '../api/dashboardApi'
 
+// Cache dashboard data at module level to persist between navigation
+// This prevents re-fetching on every page visit
+let cachedDashboardData: DashboardResponse | null = null
+let cachedStorageUsed = 0
+let cacheTimestamp = 0
+const CACHE_TTL_MS = 60000 // 1 minute cache TTL
+
 /**
  * Dashboard Statistics
  */
@@ -155,7 +162,7 @@ export function useDashboard() {
       subtitle: 'Download test logs',
       icon: 'mdi-download',
       color: 'primary',
-      path: '/dut-logs'
+      path: '/dut/test-log-download'
     },
     {
       title: 'Top Products',
@@ -346,9 +353,25 @@ export function useDashboard() {
   const userName = computed(() => currentUser.value?.username || 'User')
 
   /**
-   * Fetch dashboard data from API
+   * Check if cache is still valid
    */
-  async function fetchDashboardData() {
+  function isCacheValid(): boolean {
+    return cachedDashboardData !== null && 
+           (Date.now() - cacheTimestamp) < CACHE_TTL_MS
+  }
+
+  /**
+   * Fetch dashboard data from API with caching
+   * Uses module-level cache to prevent re-fetching on navigation
+   */
+  async function fetchDashboardData(forceRefresh = false) {
+    // Use cached data if valid and not forcing refresh
+    if (!forceRefresh && isCacheValid()) {
+      dashboardData.value = cachedDashboardData
+      storageUsed.value = cachedStorageUsed
+      return
+    }
+
     loading.value = true
     error.value = null
 
@@ -358,11 +381,16 @@ export function useDashboard() {
         dashboardApi.getUploadStats()
       ])
 
+      // Update cache
+      cachedDashboardData = stats
+      cacheTimestamp = Date.now()
+      
       dashboardData.value = stats
 
       // Update storage info
       if (uploadStats.upload_dir_exists) {
         storageUsed.value = uploadStats.total_size_mb
+        cachedStorageUsed = uploadStats.total_size_mb
         // Assuming 1GB = 1000MB max storage for now
         storageTotal.value = 1000
       }
@@ -375,13 +403,13 @@ export function useDashboard() {
   }
 
   /**
-   * Refresh dashboard statistics
+   * Refresh dashboard statistics (force refresh bypasses cache)
    */
   async function refreshStats() {
-    await fetchDashboardData()
+    await fetchDashboardData(true) // Force refresh
   }
 
-  // Fetch data on mount
+  // Fetch data on mount (uses cache if available)
   onMounted(() => {
     fetchDashboardData()
   })

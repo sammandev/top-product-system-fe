@@ -170,7 +170,8 @@
 
                         <v-col cols="12" sm="6" lg="3">
                             <FormulaSelectorDialog v-model="showFormulaSelectorDialog"
-                                v-model:universal-formula="universalFormula"
+                                :universal-formula="universalFormula"
+                                @update:universal-formula="universalFormula = $event"
                                 v-model:category-formulas="categoryFormulas" @reset="handleResetFormulas"
                                 @apply="handleApplyFormulas">
                                 <template #activator="{ props: dialogProps }">
@@ -962,7 +963,7 @@ async function exportToExcelZip(ExcelJS: any, JSZip: any) {
     }
 
     // Generate ZIP with maximum compression and download
-    const zipBlob = await zip.generateAsync({ 
+    const zipBlob = await zip.generateAsync({
         type: 'blob',
         compression: 'DEFLATE',
         compressionOptions: {

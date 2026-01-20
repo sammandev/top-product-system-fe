@@ -63,6 +63,21 @@ export function useAuth() {
   }
 
   /**
+   * Perform guest login using predefined credentials
+   * Redirects to dashboard on success
+   */
+  async function guestLogin() {
+    try {
+      await authStore.guestLogin()
+      const redirect = router.currentRoute.value.query.redirect as string
+      await router.push(redirect || '/dashboard')
+    } catch (error) {
+      console.error('Guest login failed:', error)
+      throw error
+    }
+  }
+
+  /**
    * Logout and redirect to login page
    */
   async function logout() {
@@ -98,6 +113,7 @@ export function useAuth() {
     // Actions
     login,
     externalLogin,
+    guestLogin,
     logout,
     refreshToken,
     hasPermission

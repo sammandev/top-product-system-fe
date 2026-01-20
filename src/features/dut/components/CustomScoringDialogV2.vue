@@ -57,7 +57,7 @@
                         <v-expansion-panel-title>
                             <div class="d-flex align-center justify-space-between w-100">
                                 <div class="d-flex align-center gap-2">
-                                    <v-icon>mdi-test-tube</v-icon>
+                                    <v-icon>mdi-atom-variant</v-icon>
                                     <span class="font-weight-medium">Test Formula with Real Data</span>
                                     <v-chip v-if="testMeasurement" size="x-small" color="primary">
                                         Testing {{ testMeasurement.test_item }}

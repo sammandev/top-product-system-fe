@@ -2,27 +2,15 @@
     <v-card>
         <v-card-title class="d-flex align-center justify-space-between">
             <span>{{ formula.name }}</span>
-            <v-switch
-                :model-value="formula.enabled"
-                @update:model-value="emitEnabled"
-                color="primary"
-                hide-details
-                density="compact"
-            />
+            <v-switch :model-value="formula.enabled" @update:model-value="emitEnabled" color="primary" hide-details
+                density="compact" />
         </v-card-title>
 
         <v-card-text>
             <!-- Formula Type Selector -->
-            <v-select
-                :model-value="formula.formulaType"
-                @update:model-value="handleFormulaTypeChange"
-                :items="formulaTypes"
-                label="Formula Type"
-                variant="outlined"
-                density="compact"
-                class="mb-4"
-                :disabled="!formula.enabled"
-            >
+            <v-select :model-value="formula.formulaType" @update:model-value="handleFormulaTypeChange"
+                :items="formulaTypes" label="Formula Type" variant="outlined" density="compact" class="mb-4"
+                :disabled="!formula.enabled">
                 <template #item="{ props, item }">
                     <v-list-item v-bind="props">
                         <template #subtitle>
@@ -40,25 +28,12 @@
                     <v-row>
                         <v-col cols="12">
                             <div class="d-flex align-center gap-4">
-                                <v-slider
-                                    :model-value="formula.parameters.tolerance"
-                                    @update:model-value="updateParameter('tolerance', $event)"
-                                    label="Tolerance"
-                                    min="0.1"
-                                    max="5.0"
-                                    step="0.1"
-                                    thumb-label
-                                    class="flex-grow-1"
-                                />
-                                <v-text-field
-                                    :model-value="formula.parameters.tolerance"
-                                    @update:model-value="updateParameter('tolerance', Number($event))"
-                                    type="number"
-                                    variant="outlined"
-                                    density="compact"
-                                    style="width: 100px"
-                                    hide-details
-                                />
+                                <v-slider :model-value="formula.parameters.tolerance"
+                                    @update:model-value="updateParameter('tolerance', $event)" label="Tolerance"
+                                    min="0.1" max="5.0" step="0.1" thumb-label class="flex-grow-1" />
+                                <v-text-field :model-value="formula.parameters.tolerance"
+                                    @update:model-value="updateParameter('tolerance', Number($event))" type="number"
+                                    variant="outlined" density="compact" style="width: 100px" hide-details />
                             </div>
                         </v-col>
                     </v-row>
@@ -69,52 +44,28 @@
                     <div class="text-subtitle-2 mb-2">Exponential Parameters</div>
                     <v-row>
                         <v-col cols="12" md="6">
-                            <v-text-field
-                                :model-value="formula.parameters.decayRate"
-                                @update:model-value="updateParameter('decayRate', Number($event))"
-                                label="Decay Rate"
-                                type="number"
-                                variant="outlined"
-                                density="compact"
-                                hint="Higher = slower decay"
-                                persistent-hint
-                            />
+                            <v-text-field :model-value="formula.parameters.decayRate"
+                                @update:model-value="updateParameter('decayRate', Number($event))" label="Decay Rate"
+                                type="number" variant="outlined" density="compact" hint="Higher = slower decay"
+                                persistent-hint />
                         </v-col>
                         <v-col cols="12" md="6">
-                            <v-text-field
-                                :model-value="formula.parameters.baseline"
-                                @update:model-value="updateParameter('baseline', Number($event))"
-                                label="Baseline Score"
-                                type="number"
-                                variant="outlined"
-                                density="compact"
-                                hint="Score at USL/LSL boundary"
-                                persistent-hint
-                            />
+                            <v-text-field :model-value="formula.parameters.baseline"
+                                @update:model-value="updateParameter('baseline', Number($event))" label="Baseline Score"
+                                type="number" variant="outlined" density="compact" hint="Score at USL/LSL boundary"
+                                persistent-hint />
                         </v-col>
                         <v-col cols="12" md="6">
-                            <v-text-field
-                                :model-value="formula.parameters.bonusThreshold"
+                            <v-text-field :model-value="formula.parameters.bonusThreshold"
                                 @update:model-value="updateParameter('bonusThreshold', Number($event))"
-                                label="Bonus Threshold"
-                                type="number"
-                                variant="outlined"
-                                density="compact"
-                                hint="Margin for bonus points"
-                                persistent-hint
-                            />
+                                label="Bonus Threshold" type="number" variant="outlined" density="compact"
+                                hint="Margin for bonus points" persistent-hint />
                         </v-col>
                         <v-col cols="12" md="6">
-                            <v-text-field
-                                :model-value="formula.parameters.bonusRate"
-                                @update:model-value="updateParameter('bonusRate', Number($event))"
-                                label="Bonus Rate"
-                                type="number"
-                                variant="outlined"
-                                density="compact"
-                                hint="Bonus multiplier"
-                                persistent-hint
-                            />
+                            <v-text-field :model-value="formula.parameters.bonusRate"
+                                @update:model-value="updateParameter('bonusRate', Number($event))" label="Bonus Rate"
+                                type="number" variant="outlined" density="compact" hint="Bonus multiplier"
+                                persistent-hint />
                         </v-col>
                     </v-row>
                 </div>
@@ -124,16 +75,10 @@
                     <div class="text-subtitle-2 mb-2">Logarithmic Parameters</div>
                     <v-row>
                         <v-col cols="12" md="6">
-                            <v-text-field
-                                :model-value="formula.parameters.scaleFactor"
+                            <v-text-field :model-value="formula.parameters.scaleFactor"
                                 @update:model-value="updateParameter('scaleFactor', Number($event))"
-                                label="Scale Factor"
-                                type="number"
-                                variant="outlined"
-                                density="compact"
-                                hint="Multiplier for log scale"
-                                persistent-hint
-                            />
+                                label="Scale Factor" type="number" variant="outlined" density="compact"
+                                hint="Multiplier for log scale" persistent-hint />
                         </v-col>
                     </v-row>
                 </div>
@@ -146,47 +91,25 @@
                     </div>
                     <v-row v-for="(threshold, index) in formula.parameters.thresholds" :key="index">
                         <v-col cols="5">
-                            <v-text-field
-                                :model-value="threshold"
+                            <v-text-field :model-value="threshold"
                                 @update:model-value="updateThreshold(index, Number($event))"
-                                :label="`Threshold ${index + 1}`"
-                                type="number"
-                                variant="outlined"
-                                density="compact"
-                                hide-details
-                            />
+                                :label="`Threshold ${index + 1}`" type="number" variant="outlined" density="compact"
+                                hide-details />
                         </v-col>
                         <v-col cols="5">
-                            <v-text-field
-                                :model-value="formula.parameters.scores?.[index]"
-                                @update:model-value="updateScore(index, Number($event))"
-                                :label="`Score ${index + 1}`"
-                                type="number"
-                                variant="outlined"
-                                density="compact"
-                                hide-details
-                            />
+                            <v-text-field :model-value="formula.parameters.scores?.[index]"
+                                @update:model-value="updateScore(index, Number($event))" :label="`Score ${index + 1}`"
+                                type="number" variant="outlined" density="compact" hide-details />
                         </v-col>
                         <v-col cols="2" class="d-flex align-center">
-                            <v-btn
-                                icon="mdi-delete"
-                                size="small"
-                                variant="text"
-                                color="error"
+                            <v-btn icon="mdi-delete" size="small" variant="text" color="error"
                                 @click="removeStep(index)"
-                                :disabled="(formula.parameters.thresholds?.length ?? 0) <= 1"
-                            />
+                                :disabled="(formula.parameters.thresholds?.length ?? 0) <= 1" />
                         </v-col>
                     </v-row>
                     <v-row>
                         <v-col cols="12">
-                            <v-btn
-                                prepend-icon="mdi-plus"
-                                variant="outlined"
-                                size="small"
-                                @click="addStep"
-                                block
-                            >
+                            <v-btn prepend-icon="mdi-plus" variant="outlined" size="small" @click="addStep" block>
                                 Add Step
                             </v-btn>
                         </v-col>
@@ -196,37 +119,23 @@
                 <!-- Custom Expression -->
                 <div v-if="formula.formulaType === 'custom'" class="parameter-section">
                     <div class="text-subtitle-2 mb-2">Custom Expression</div>
-                    <v-textarea
-                        :model-value="formula.customExpression"
-                        @update:model-value="$emit('update:customExpression', $event)"
-                        label="JavaScript Expression"
-                        variant="outlined"
-                        rows="4"
+                    <v-textarea :model-value="formula.customExpression"
+                        @update:model-value="$emit('update:customExpression', $event)" label="JavaScript Expression"
+                        variant="outlined" rows="4"
                         hint="Available: actual, usl, lsl, target, Math, min, max, abs, exp, log, pow, sqrt, clamp01"
-                        persistent-hint
-                        class="mb-2"
-                    />
+                        persistent-hint class="mb-2" />
                     <v-alert type="info" variant="tonal" density="compact" class="mb-2">
                         <div class="text-caption">
                             <strong>Example:</strong><br>
                             <code>10 * clamp01(1 - abs(actual - target) / ((usl - lsl) / 2))</code>
                         </div>
                     </v-alert>
-                    <v-btn
-                        prepend-icon="mdi-test-tube"
-                        variant="outlined"
-                        size="small"
-                        @click="testExpression"
-                        block
-                    >
+                    <v-btn prepend-icon="mdi-atom-variant" variant="outlined" size="small" @click="testExpression"
+                        block>
                         Test Expression
                     </v-btn>
                     <div v-if="testResult !== null" class="mt-2">
-                        <v-alert
-                            :type="testResult.success ? 'success' : 'error'"
-                            variant="tonal"
-                            density="compact"
-                        >
+                        <v-alert :type="testResult.success ? 'success' : 'error'" variant="tonal" density="compact">
                             {{ testResult.message }}
                         </v-alert>
                     </div>
@@ -235,26 +144,14 @@
                 <!-- Min/Max Score (common to all types) -->
                 <v-row class="mt-2">
                     <v-col cols="12" md="6">
-                        <v-text-field
-                            :model-value="formula.parameters.minScore"
-                            @update:model-value="updateParameter('minScore', Number($event))"
-                            label="Min Score"
-                            type="number"
-                            variant="outlined"
-                            density="compact"
-                            hide-details
-                        />
+                        <v-text-field :model-value="formula.parameters.minScore"
+                            @update:model-value="updateParameter('minScore', Number($event))" label="Min Score"
+                            type="number" variant="outlined" density="compact" hide-details />
                     </v-col>
                     <v-col cols="12" md="6">
-                        <v-text-field
-                            :model-value="formula.parameters.maxScore"
-                            @update:model-value="updateParameter('maxScore', Number($event))"
-                            label="Max Score"
-                            type="number"
-                            variant="outlined"
-                            density="compact"
-                            hide-details
-                        />
+                        <v-text-field :model-value="formula.parameters.maxScore"
+                            @update:model-value="updateParameter('maxScore', Number($event))" label="Max Score"
+                            type="number" variant="outlined" density="compact" hide-details />
                     </v-col>
                 </v-row>
             </div>

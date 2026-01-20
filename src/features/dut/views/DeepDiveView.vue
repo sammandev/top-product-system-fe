@@ -1,14 +1,15 @@
 <template>
-  <v-container fluid class="pa-6">
-    <!-- Page Header -->
-    <v-row>
-      <v-col cols="12">
-        <div class="d-flex align-center justify-space-between mb-4">
-          <div>
-            <h1 class="text-h4 font-weight-bold mb-2">
-              <v-icon icon="mdi-chart-tree" class="mr-2" />
-              Top Product Hierarchical Analysis
-            </h1>
+  <DefaultLayout>
+    <v-container fluid class="pa-6">
+      <!-- Page Header -->
+      <v-row>
+        <v-col cols="12">
+          <div class="d-flex align-center justify-space-between mb-4">
+            <div>
+              <h1 class="text-h4 font-weight-bold mb-2">
+                <v-icon icon="mdi-chart-tree" class="mr-2" />
+                Top Product Hierarchical Analysis
+              </h1>
             <p class="text-subtitle-1 text-medium-emphasis">
               Deep dive into hierarchical scoring structure: Group → Subgroup → Antenna → Category
             </p>
@@ -207,11 +208,13 @@
         </v-card-actions>
       </v-card>
     </v-dialog>
-  </v-container>
+    </v-container>
+  </DefaultLayout>
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useHierarchicalStore } from '../store'
 import {
   DUTISNInput,

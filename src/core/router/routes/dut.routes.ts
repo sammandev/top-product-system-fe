@@ -66,5 +66,36 @@ export const dutRoutes: RouteRecordRaw[] = [
         { title: 'Test Log Download', disabled: true }
       ]
     }
+  },
+  // iPLAS Integration Routes
+  {
+    path: '/iplas/explorer',
+    name: 'IplasExplorer',
+    component: () => import('@/features/dut_logs/views/IplasExplorerView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'iPLAS Explorer',
+      icon: 'mdi-compass',
+      breadcrumb: [
+        { title: 'Dashboard', to: '/dashboard' },
+        { title: 'iPLAS', disabled: true },
+        { title: 'Explorer', disabled: true }
+      ]
+    }
+  },
+  {
+    path: '/iplas/download',
+    name: 'IplasDownload',
+    component: () => import('@/features/dut_logs/views/IplasDownloadView.vue'),
+    meta: {
+      requiresAuth: true,
+      title: 'iPLAS Downloader',
+      icon: 'mdi-download',
+      breadcrumb: [
+        { title: 'Dashboard', to: '/dashboard' },
+        { title: 'iPLAS', disabled: true },
+        { title: 'Downloader', disabled: true }
+      ]
+    }
   }
 ]

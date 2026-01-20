@@ -42,7 +42,7 @@
                 <!-- Station Selector -->
                 <v-col cols="12" md="4">
                     <v-select v-model="selectedStationId" :items="stationItems" label="Test Station" variant="outlined"
-                        density="comfortable" prepend-inner-icon="mdi-test-tube" :loading="loadingStations"
+                        density="comfortable" prepend-inner-icon="mdi-atom-variant" :loading="loadingStations"
                         :disabled="!selectedModelId || loadingStations" :error-messages="stationError" clearable
                         @update:model-value="handleStationChange">
                         <template #no-data>
@@ -315,5 +315,4 @@ onMounted(() => {
 })
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

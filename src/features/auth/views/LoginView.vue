@@ -6,7 +6,7 @@
                     <v-col cols="12" sm="8" md="5" lg="4">
                         <v-card elevation="12" rounded="lg">
                             <v-card-title class="text-h4 text-center pa-6">
-                                <v-icon size="large" color="primary" class="mr-2">mdi-test-tube</v-icon>
+                                <v-icon size="large" color="primary" class="mr-2">mdi-atom-variant</v-icon>
                                 {{ appName }} Login
                             </v-card-title>
 
@@ -29,10 +29,10 @@
                                 <v-form ref="loginFormRef" v-model="loginValid" @submit.prevent="handleLogin">
                                     <v-alert type="info" density="compact" class="mb-3">
                                         <small v-if="loginMode === 'local'">
-                                            Local login only provides access to file parsing and comparison features.
+                                            Local login for simple features.
                                         </small>
                                         <small v-else>
-                                            <strong>External login</strong> provides full access including DUT Management API features.
+                                            <strong>External login</strong> provides full access features.
                                         </small>
                                     </v-alert>
 
@@ -42,12 +42,12 @@
                                     <v-text-field v-model="password" :rules="[rules.required]"
                                         :type="showPassword ? 'text' : 'password'" label="Password"
                                         prepend-inner-icon="mdi-lock"
-                                        :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'"
-                                        variant="outlined" class="mb-3"
-                                        @click:append-inner="showPassword = !showPassword" />
+                                        :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'" variant="outlined"
+                                        class="mb-3" @click:append-inner="showPassword = !showPassword" />
 
                                     <div class="d-flex align-center justify-space-between mb-3">
-                                        <v-checkbox v-model="rememberMe" label="Remember Me" density="compact" hide-details />
+                                        <v-checkbox v-model="rememberMe" label="Remember Me" density="compact"
+                                            hide-details />
                                     </div>
 
                                     <v-alert v-if="error" type="error" class="mb-3" closable
@@ -55,11 +55,29 @@
                                         {{ error }}
                                     </v-alert>
 
-                                    <v-btn :loading="loading" :disabled="!loginValid" block color="primary"
-                                        size="large" type="submit">
-                                        <v-icon start>{{ loginMode === 'local' ? 'mdi-login' : 'mdi-cloud-sync' }}</v-icon>
+                                    <v-btn :loading="loading" :disabled="!loginValid" block color="primary" size="large"
+                                        type="submit">
+                                        <v-icon start>{{ loginMode === 'local' ? 'mdi-login' : 'mdi-cloud-sync'
+                                            }}</v-icon>
                                         {{ loginMode === 'local' ? 'Login' : 'Login with External Access' }}
                                     </v-btn>
+
+                                    <!-- Guest Login Section -->
+                                    <div class="text-center mt-4">
+                                        <v-divider class="mb-4">
+                                            <span class="text-caption text-medium-emphasis px-2">or</span>
+                                        </v-divider>
+
+                                        <v-btn variant="outlined" color="secondary" block :loading="guestLoading"
+                                            @click="handleGuestLogin">
+                                            <v-icon start>mdi-account-question</v-icon>
+                                            Continue as Guest
+                                        </v-btn>
+
+                                        <p class="text-caption text-medium-emphasis mt-2">
+                                            Guest access provides read-only access with limited features
+                                        </p>
+                                    </div>
                                 </v-form>
                             </v-card-text>
                         </v-card>
@@ -78,7 +96,7 @@ import { useAuthStore } from '../store'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 
 // Use auth composable with router integration
-const { login, externalLogin, loading, error } = useAuth()
+const { login, externalLogin, guestLogin, loading, error } = useAuth()
 const authStore = useAuthStore()
 const appConfigStore = useAppConfigStore()
 const { appName } = storeToRefs(appConfigStore)
@@ -88,6 +106,9 @@ const loginFormRef = ref()
 
 // Form validity
 const loginValid = ref(false)
+
+// Guest login loading state
+const guestLoading = ref(false)
 
 // Tab state
 const loginMode = ref<'local' | 'external'>(
@@ -143,6 +164,17 @@ async function handleLogin() {
         localStorage.setItem('login_mode', loginMode.value)
     } catch (err) {
         console.error('Login failed:', err)
+    }
+}
+
+async function handleGuestLogin() {
+    guestLoading.value = true
+    try {
+        await guestLogin()
+    } catch (err) {
+        console.error('Guest login failed:', err)
+    } finally {
+        guestLoading.value = false
     }
 }
 </script>

@@ -7,7 +7,7 @@
             </v-app-bar-nav-icon>
 
             <!-- <v-toolbar-title class="d-flex align-center">
-                <v-icon class="mr-2" color="white">mdi-test-tube</v-icon>
+                <v-icon class="mr-2" color="white">mdi-atom-variant</v-icon>
                 <span class="font-weight-bold">{{ appName }}</span>
             </v-toolbar-title> -->
 
@@ -34,11 +34,11 @@
             <v-menu location="bottom">
                 <template #activator="{ props }">
                     <v-btn v-bind="props" variant="text" class="text-none">
-                        <v-avatar size="32" color="secondary" class="mr-2">
-                            <v-icon size="small">mdi-account</v-icon>
+                        <v-avatar size="32" :color="authStore.isGuest ? 'warning' : 'secondary'" class="mr-2">
+                            <v-icon size="small">{{ authStore.isGuest ? 'mdi-account-question' : 'mdi-account' }}</v-icon>
                         </v-avatar>
                         <span v-if="$vuetify.display.smAndUp" style="color: white;">
-                            {{ authStore.user?.username || 'User' }}
+                            {{ authStore.displayName }}
                         </span>
                         <v-icon class="ml-1" size="small" color="white">mdi-chevron-down</v-icon>
                     </v-btn>
@@ -47,33 +47,44 @@
                 <v-list min-width="250">
                     <v-list-item>
                         <template #prepend>
-                            <v-avatar color="secondary" size="40">
-                                <v-icon>{{ authStore.user?.username || 'User' }}</v-icon>
+                            <v-avatar :color="authStore.isGuest ? 'warning' : 'secondary'" size="40">
+                                <v-icon>{{ authStore.isGuest ? 'mdi-account-question' : 'mdi-account' }}</v-icon>
                             </v-avatar>
                         </template>
                         <v-list-item-title class="font-weight-bold">
-                            {{ authStore.user?.username || 'User' }}
+                            {{ authStore.displayName }}
                         </v-list-item-title>
                         <v-list-item-subtitle>
-                            {{ formatRoles(authStore.user?.roles) }}
+                            {{ authStore.displayRole }}
                         </v-list-item-subtitle>
                     </v-list-item>
 
+                    <!-- Guest Mode Indicator -->
+                    <template v-if="authStore.isGuest">
+                        <v-divider class="my-2" />
+                        <v-list-item prepend-icon="mdi-information" title="Guest Mode" 
+                            subtitle="Limited access - login for full features">
+                            <template #append>
+                                <v-chip color="warning" size="small">Guest</v-chip>
+                            </template>
+                        </v-list-item>
+                    </template>
+
                     <v-divider class="my-2" />
 
-                    <v-list-item prepend-icon="mdi-account-cog" title="Profile Settings" />
-                    <v-list-item prepend-icon="mdi-cog" title="Preferences" />
+                    <v-list-item v-if="!authStore.isGuest" prepend-icon="mdi-account-cog" title="Profile Settings" />
+                    <v-list-item v-if="!authStore.isGuest" prepend-icon="mdi-cog" title="Preferences" />
 
-                    <v-divider class="my-2" />
+                    <v-divider v-if="!authStore.isGuest" class="my-2" />
 
-                    <v-list-item v-if="authStore.hasDUTAccess" prepend-icon="mdi-cloud-check" title="DUT Access"
+                    <v-list-item v-if="authStore.hasDUTAccess && !authStore.isGuest" prepend-icon="mdi-cloud-check" title="DUT Access"
                         subtitle="External login active">
                         <template #append>
                             <v-chip color="success" size="small">Active</v-chip>
                         </template>
                     </v-list-item>
 
-                    <v-divider v-if="authStore.hasDUTAccess" class="my-2" />
+                    <v-divider v-if="authStore.hasDUTAccess && !authStore.isGuest" class="my-2" />
 
                     <v-list-item prepend-icon="mdi-logout" title="Logout" @click="handleLogout" />
                 </v-list>
@@ -86,7 +97,7 @@
             <v-list-item class="px-2 py-3">
                 <template #prepend>
                     <v-avatar color="primary" size="40">
-                        <v-icon>mdi-test-tube</v-icon>
+                        <v-icon>mdi-atom-variant</v-icon>
                     </v-avatar>
                 </template>
                 <v-list-item-title class="font-weight-bold">{{ appName }}</v-list-item-title>
@@ -209,17 +220,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useRouter, useRoute } from 'vue-router'
 import { useAuthStore } from '@/features/auth/store'
 import { useTheme } from 'vuetify'
 import { useDrawerState, useThemeState } from '@/shared/composables'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
+import { useMenuAccessStore } from '@/features/admin/stores/menuAccess.store'
 
 const router = useRouter()
 const route = useRoute()
 const authStore = useAuthStore()
+const menuAccessStore = useMenuAccessStore()
 const theme = useTheme()
 const { saveTheme, loadTheme } = useThemeState()
 
@@ -227,6 +240,9 @@ const { saveTheme, loadTheme } = useThemeState()
 const { drawer, rail } = useDrawerState(true, false)
 
 const searchQuery = ref('')
+
+// Flag to track if dynamic menus are loaded
+const dynamicMenusLoaded = ref(false)
 
 const isDark = computed(() => theme.global.current.value.dark)
 
@@ -257,7 +273,8 @@ interface MenuItem {
     children?: MenuItem[]
 }
 
-const mainItems: MenuItem[] = [
+// Static fallback menus (used when DB menus not loaded yet)
+const staticMainItems: MenuItem[] = [
     { title: 'Dashboard', icon: 'mdi-view-dashboard', path: '/dashboard' },
     {
         title: 'Top Products',
@@ -265,14 +282,12 @@ const mainItems: MenuItem[] = [
         children: [
             { title: 'Analysis', icon: 'mdi-circle-small', path: '/dut/top-products/analysis' },
             { title: 'Database', icon: 'mdi-circle-small', path: '/dut/top-products/data' },
-            // { title: 'PA Trend', icon: 'mdi-circle-small', path: '/dut/top-products/pa-trend' },
         ]
     },
     { title: 'Test Log Download', icon: 'mdi-download-box', path: '/dut/test-log-download' },
 ]
 
-// Navigation Items - Tools Section
-const toolsItems: MenuItem[] = [
+const staticToolsItems: MenuItem[] = [
     {
         title: 'File Upload',
         icon: 'mdi-file-upload',
@@ -293,65 +308,105 @@ const toolsItems: MenuItem[] = [
     { title: 'DVT to MC2 Converter', icon: 'mdi-file-swap', path: '/conversion/dvt-to-mc2' }
 ]
 
-// Navigation Items - System Section (Admin Only)
-const systemItems: MenuItem[] = [
+const staticSystemItems: MenuItem[] = [
     {
         title: 'Access Control',
         icon: 'mdi-shield-lock',
         children: [
             { title: 'User Management', icon: 'mdi-circle-small', path: '/admin/users' },
-            { title: 'Roles & Permissions', icon: 'mdi-circle-small', path: '/admin/rbac' }
+            { title: 'Roles & Permissions', icon: 'mdi-circle-small', path: '/admin/rbac' },
+            { title: 'Menu Access', icon: 'mdi-circle-small', path: '/admin/menu-access' }
         ]
     },
     { title: 'System Cleanup', icon: 'mdi-delete-sweep', path: '/admin/cleanup' },
     { title: 'App Configuration', icon: 'mdi-cog', path: '/admin/app-config' },
-    // { title: 'Audit Logs', icon: 'mdi-file-document-outline', path: '/admin/logs' }
 ]
+
+// Dynamic menus from database (use static as fallback)
+const mainItems = computed(() => {
+    if (dynamicMenusLoaded.value && menuAccessStore.initialized) {
+        const tree = menuAccessStore.buildMenuTree()
+        return tree.main.length > 0 ? tree.main : staticMainItems
+    }
+    return staticMainItems
+})
+
+const toolsItems = computed(() => {
+    if (dynamicMenusLoaded.value && menuAccessStore.initialized) {
+        const tree = menuAccessStore.buildMenuTree()
+        return tree.tools.length > 0 ? tree.tools : staticToolsItems
+    }
+    return staticToolsItems
+})
+
+const systemItems = computed(() => {
+    if (dynamicMenusLoaded.value && menuAccessStore.initialized) {
+        const tree = menuAccessStore.buildMenuTree()
+        return tree.system.length > 0 ? tree.system : staticSystemItems
+    }
+    return staticSystemItems
+})
 
 // Filtered navigation items based on search
 const filteredMainItems = computed(() => {
-    if (!searchQuery.value) return mainItems
+    if (!searchQuery.value) return mainItems.value
     const query = searchQuery.value.toLowerCase()
-    return mainItems.filter(item =>
+    return mainItems.value.filter(item =>
         item.title.toLowerCase().includes(query) ||
         item.children?.some(child => child.title.toLowerCase().includes(query))
     )
 })
 
 const filteredToolsItems = computed(() => {
-    if (!searchQuery.value) return toolsItems
+    if (!searchQuery.value) return toolsItems.value
     const query = searchQuery.value.toLowerCase()
-    return toolsItems.filter(item =>
+    return toolsItems.value.filter(item =>
         item.title.toLowerCase().includes(query) ||
         item.children?.some(child => child.title.toLowerCase().includes(query))
     )
 })
 
 const filteredSystemItems = computed(() => {
-    if (!searchQuery.value) return systemItems
+    if (!searchQuery.value) return systemItems.value
     const query = searchQuery.value.toLowerCase()
-    return systemItems.filter(item =>
+    return systemItems.value.filter(item =>
         item.title.toLowerCase().includes(query) ||
         item.children?.some(child => child.title.toLowerCase().includes(query))
     )
 })
 
-function formatRoles(roles: string[] | string | undefined): string {
-    if (!roles) return 'User'
-    if (Array.isArray(roles)) {
-        return roles.join(', ')
-    }
-    return roles
-}
-
 function handleLogout() {
     authStore.logout()
+    menuAccessStore.clearCache()
     router.push('/login')
 }
 
 const currentYear = new Date().getFullYear()
 const appConfigStore = useAppConfigStore()
 const { appName, appVersion } = storeToRefs(appConfigStore)
+
+// Fetch user's accessible menus on mount (non-blocking, uses cache)
+onMounted(async () => {
+    // Don't block rendering - fetch menus in background
+    try {
+        await menuAccessStore.fetchMenus(authStore.isGuest)
+        dynamicMenusLoaded.value = true
+    } catch (err) {
+        console.warn('Failed to load dynamic menus, using static fallback')
+        // Static menus will be used as fallback
+    }
+})
+
+// Watch for auth changes to refresh menus
+watch(() => authStore.isAuthenticated, async (isAuth) => {
+    if (isAuth) {
+        menuAccessStore.fetchMenus(authStore.isGuest)
+        dynamicMenusLoaded.value = true
+    } else {
+        menuAccessStore.clearCache()
+        dynamicMenusLoaded.value = false
+    }
+})
 </script>
 
 <style scoped>
