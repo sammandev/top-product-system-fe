@@ -73,19 +73,19 @@ export const dutRoutes: RouteRecordRaw[] = [
     name: 'IplasExplorer',
     redirect: '/dut/data-explorer'
   },
-  {
-    path: '/iplas/download',
-    name: 'IplasDownload',
-    component: () => import('@/features/dut_logs/views/IplasDownloadView.vue'),
-    meta: {
-      requiresAuth: true,
-      title: 'iPLAS Downloader',
-      icon: 'mdi-download',
-      breadcrumb: [
-        { title: 'Dashboard', to: '/dashboard' },
-        { title: 'iPLAS', disabled: true },
-        { title: 'Downloader', disabled: true }
-      ]
-    }
-  }
+  // {
+  //   path: '/iplas/download',
+  //   name: 'IplasDownload',
+  //   component: () => import('@/features/dut_logs/views/IplasDownloadView.vue'),
+  //   meta: {
+  //     requiresAuth: true,
+  //     title: 'iPLAS Downloader',
+  //     icon: 'mdi-download',
+  //     breadcrumb: [
+  //       { title: 'Dashboard', to: '/dashboard' },
+  //       { title: 'iPLAS', disabled: true },
+  //       { title: 'Downloader', disabled: true }
+  //     ]
+  //   }
+  // }
 ]
