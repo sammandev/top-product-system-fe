@@ -643,11 +643,13 @@ function filterAndSearchTestItems(items: IsnSearchTestItem[] | undefined, key: s
 function formatShortTime(timeStr: string): string {
     if (!timeStr) return '-'
     try {
-        // Handle format like "2025-09-16 13:23:57%:z"
+        // Handle format like "2025-09-16 13:23:57%:z" - API returns UTC time
         const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
         const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
-        // Convert UTC to local time
-        return utcDate.toLocaleString(undefined, {
+        // Add +8 hours offset for local timezone
+        const localDate = new Date(utcDate.getTime() + 8 * 60 * 60 * 1000)
+        // Format the adjusted time
+        return localDate.toLocaleString(undefined, {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -673,8 +675,10 @@ function formatLocalTime(timeStr: string): string {
         const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
         // Parse as UTC by adding 'Z' suffix
         const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
-        // toLocaleString automatically converts to local timezone
-        return utcDate.toLocaleString(undefined, {
+        // Add +8 hours offset for local timezone
+        const localDate = new Date(utcDate.getTime() + 8 * 60 * 60 * 1000)
+        // Format the adjusted time
+        return localDate.toLocaleString(undefined, {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -693,6 +697,17 @@ function calculateDuration(startStr: string, endStr: string): string {
         const cleanStart = startStr.replace('%:z', '').replace('T', ' ')
         const cleanEnd = endStr.replace('%:z', '').replace('T', ' ')
         const start = new Date(cleanStart.replace(' ', 'T') + 'Z')
+        const end = new Date(cleanEnd.replace(' ', 'T') + 'Z')
+        // Add +8 hours offset to both times
+        const adjustedStart = new Date(start.getTime() + 8 * 60 * 60 * 1000)
+        const adjustedEnd = new Date(end.getTime() + 8 * 60 * 60 * 1000)
+        const diffMs = adjustedEnd.getTime() - adjustedStart.getTime()
+        const seconds = (diffMs / 1000).toFixed(2)
+        return `${seconds}s`
+    } catch {
+        return '-'
+    }
+}
         const end = new Date(cleanEnd.replace(' ', 'T') + 'Z')
         const diffMs = end.getTime() - start.getTime()
         const diffSeconds = Math.floor(diffMs / 1000)

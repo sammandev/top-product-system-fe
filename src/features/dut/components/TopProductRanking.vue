@@ -168,7 +168,8 @@
                                 </v-card-text>
 
                                 <v-data-table :headers="rankingHeaders" :items="filteredRanking" :items-per-page="10"
-                                    density="comfortable" class="ranking-table" :item-class="getRankingRowClass">
+                                    density="comfortable" class="ranking-table cursor-pointer" :item-class="getRankingRowClass"
+                                    @click:row="(_event: any, data: any) => handleRowClick(data.item, station as string)">
                                     <!-- Rank Column -->
                                     <template #item.rank="{ item }">
                                         <div class="d-flex align-center">
@@ -294,6 +295,10 @@ interface RankingItem {
 }
 
 const props = defineProps<Props>()
+
+const emit = defineEmits<{
+    (e: 'row-click', payload: { isn: string; stationName: string }): void
+}>()
 
 const selectedTab = ref<string>('')
 const searchQuery = ref<string>('')
@@ -531,6 +536,10 @@ function getRankingRowClass(item: RankingItem): string {
     if (item.rank === 2) return 'rank-2-row'
     if (item.rank === 3) return 'rank-3-row'
     return ''
+}
+
+function handleRowClick(item: RankingItem, stationName: string) {
+    emit('row-click', { isn: item.isn, stationName })
 }
 </script>
 

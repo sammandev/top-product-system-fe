@@ -574,7 +574,8 @@
         </v-card>
 
         <!-- Top Product Ranking -->
-        <TopProductRanking v-if="enhancedResults.length > 0" :results="results" />
+        <TopProductRanking v-if="enhancedResults.length > 0" :results="results"
+            @row-click="handleRankingRowClick" />
 
         <!-- Error Display -->
         <v-alert v-if="errors.length > 0" type="error" variant="tonal" class="mb-4">
@@ -910,7 +911,8 @@
                 <v-expansion-panel-text>
                     <!-- Station Results Table -->
                     <v-data-table :headers="stationHeaders" :items="result.test_result" :items-per-page="10"
-                        class="elevation-1" striped="even">
+                        class="elevation-1 cursor-pointer" striped="even"
+                        @click:row="(_event: any, data: any) => showMeasurements(result.dut_isn, data.item)">
                         <!-- Station Name -->
                         <template #item.station_name="{ item }">
                             <div class="font-weight-medium"
@@ -1965,6 +1967,20 @@ function getMeasuredValueColor(measuredValue: any, usl: number | null, lsl: numb
     }
 
     return 'success'
+}
+
+function handleRankingRowClick(payload: { isn: string; stationName: string }) {
+    // Find the DUT result for this ISN
+    const dutResult = enhancedResults.value.find((r) => r.dut_isn === payload.isn)
+    if (!dutResult) return
+
+    // Find the station result matching the station name
+    const stationResult = dutResult.test_result.find(
+        (r: TopProductStationResult) => r.station_name === payload.stationName
+    )
+    if (!stationResult) return
+
+    showMeasurements(payload.isn, stationResult)
 }
 
 function showMeasurements(dutISN: string, station: TopProductStationResult) {

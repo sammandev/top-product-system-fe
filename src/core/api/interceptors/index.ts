@@ -11,5 +11,6 @@ export {
 
 export {
   errorResponseSuccessInterceptor,
-  createErrorResponseInterceptor
+  createErrorResponseInterceptor,
+  setRouterInstance
 } from './error.interceptor'

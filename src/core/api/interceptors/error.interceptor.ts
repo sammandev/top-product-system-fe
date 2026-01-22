@@ -5,11 +5,26 @@
  * - Token refresh on 401 Unauthorized
  * - Automatic logout on refresh failure
  * - Global error handling
+ * 
+ * NOTE: This interceptor uses router.push() instead of window.location.href
+ * to avoid full page reloads which would cause loss of analysis results.
  */
 
 import type { AxiosResponse, AxiosError, InternalAxiosRequestConfig } from 'axios'
 import type { AxiosInstance } from 'axios'
+import type { Router } from 'vue-router'
 import { useAuthStore } from '@/features/auth/store'
+
+// Router instance will be injected after router is created
+let routerInstance: Router | null = null
+
+/**
+ * Set the router instance for navigation
+ * This should be called from main.ts after router is created
+ */
+export function setRouterInstance(router: Router): void {
+  routerInstance = router
+}
 
 /**
  * Response success interceptor (pass-through)
@@ -71,10 +86,21 @@ export function createErrorResponseInterceptor(apiClient: AxiosInstance) {
         const authStore = useAuthStore()
         authStore.logout()
         
-        // Redirect to login page
-        if (typeof window !== 'undefined') {
-          console.log('[API Interceptor] Redirecting to login page');
-          window.location.href = '/login'
+        // Redirect to login page using Vue Router (avoids full page reload)
+        // This preserves any in-memory state in other tabs/components
+        if (routerInstance) {
+          console.log('[API Interceptor] Redirecting to login page via router');
+          routerInstance.push({ 
+            name: 'Login', 
+            query: { 
+              redirect: originalRequest?.url || '/',
+              reason: 'session_expired' 
+            } 
+          })
+        } else if (typeof window !== 'undefined') {
+          // Fallback to window.location only if router is not available
+          console.log('[API Interceptor] Router not available, using window.location');
+          window.location.href = '/login?reason=session_expired'
         }
         
         return Promise.reject(refreshError)

@@ -5,12 +5,18 @@ import { pinia, vuetify } from '@/core/plugins'
 import { useAuthStore } from '@/features/auth/store'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { envConfig } from '@/core/config/env.config'
+import { setRouterInstance } from '@/core/api/interceptors'
 import * as Sentry from '@sentry/vue'
 
 // Import global styles
 import './assets/main.css'
 
 const app = createApp(App)
+
+// Inject router instance into API interceptors for proper navigation
+// This allows error interceptor to use router.push() instead of window.location.href
+// which prevents full page reloads that would lose analysis results
+setRouterInstance(router)
 
 if (envConfig.sentryDsn) {
     Sentry.init({

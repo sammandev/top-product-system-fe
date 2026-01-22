@@ -49,24 +49,34 @@
                                     @update:model-value="handleProjectChange" />
                             </v-col>
 
+                            <!-- Date Range Preset -->
+                            <v-col cols="12" md="6">
+                                <v-select v-model="dateRangePreset" :items="dateRangePresets"
+                                    label="Date Range" variant="outlined" density="comfortable"
+                                    prepend-inner-icon="mdi-calendar-clock" hide-details
+                                    @update:model-value="applyDateRangePreset" />
+                            </v-col>
+                        </v-row>
+
+                        <v-row class="mt-2">
                             <!-- Start Time -->
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" md="6">
                                 <v-text-field v-model="startTime" label="Start Time" type="datetime-local"
                                     variant="outlined" density="comfortable" prepend-inner-icon="mdi-calendar-start"
-                                    hide-details />
+                                    hide-details :disabled="dateRangePreset !== 'custom'" />
                             </v-col>
 
                             <!-- End Time -->
-                            <v-col cols="12" md="3">
+                            <v-col cols="12" md="6">
                                 <v-text-field v-model="endTime" label="End Time" type="datetime-local"
                                     variant="outlined" density="comfortable" prepend-inner-icon="mdi-calendar-end"
-                                    hide-details />
+                                    hide-details :disabled="dateRangePreset !== 'custom'" />
                             </v-col>
                         </v-row>
 
                         <v-row class="mt-2">
                             <!-- Station Selection (Multiple) -->
-                            <v-col cols="12" md="6">
+                            <v-col cols="12">
                                 <v-autocomplete v-model="selectedStations" :items="stationOptions"
                                     item-title="displayText" item-value="value" label="Test Stations" variant="outlined"
                                     density="comfortable" prepend-inner-icon="mdi-router-wireless"
@@ -87,41 +97,39 @@
                                     </template>
                                 </v-autocomplete>
                             </v-col>
+                        </v-row>
 
-                            <!-- Device Selection (Multiple, searchable) -->
-                            <v-col cols="12" md="6">
-                                <v-autocomplete v-model="selectedDeviceIds" :items="groupedDeviceOptions"
-                                    item-title="displayText" item-value="value" label="Device IDs" variant="outlined"
-                                    density="comfortable" prepend-inner-icon="mdi-chip" :loading="loadingDevices"
-                                    :disabled="selectedStations.length === 0" multiple chips closable-chips clearable
-                                    hide-details>
+                        <!-- Device ID Selection per Station -->
+                        <v-row v-if="selectedStations.length > 0" class="mt-2">
+                            <v-col v-for="stationValue in selectedStations" :key="stationValue" 
+                                cols="12" :md="selectedStations.length === 1 ? 12 : 6">
+                                <v-autocomplete 
+                                    v-model="stationDeviceIds[stationValue]"
+                                    :items="getDeviceIdsForStation(stationValue)"
+                                    :label="`Device IDs - ${getStationDisplayName(stationValue)}`"
+                                    variant="outlined" density="comfortable"
+                                    prepend-inner-icon="mdi-chip"
+                                    :loading="loadingDevicesByStation[stationValue]"
+                                    multiple chips closable-chips clearable
+                                    hide-details
+                                    placeholder="Leave empty for ALL devices">
                                     <template #chip="{ props, item }">
-                                        <v-chip v-bind="props" :text="item.raw.deviceId" size="small" />
-                                    </template>
-                                    <template #item="{ props, item }">
-                                        <v-list-item v-bind="props" :title="undefined">
-                                            <v-list-item-title class="font-weight-medium">
-                                                {{ item.raw.deviceId }}
-                                            </v-list-item-title>
-                                            <v-list-item-subtitle class="text-caption">
-                                                {{ item.raw.stationName }}
-                                            </v-list-item-subtitle>
-                                        </v-list-item>
+                                        <v-chip v-bind="props" :text="item.value" size="small" />
                                     </template>
                                 </v-autocomplete>
                             </v-col>
                         </v-row>
 
                         <!-- Search Test Data Section -->
-                        <v-row v-if="selectedDeviceIds.length > 0" class="mt-4">
+                        <v-row v-if="selectedStations.length > 0" class="mt-4">
                             <v-col cols="12" class="d-flex align-center gap-3">
                                 <v-select v-model="testStatusFilter" :items="['ALL', 'PASS', 'FAIL']"
                                     label="Test Status" variant="outlined" density="compact" hide-details
                                     style="max-width: 150px" />
                                 <v-btn color="primary" :loading="loadingTestItems" @click="fetchTestItems">
                                     <v-icon start>mdi-download</v-icon>
-                                    Search Test Data ({{ selectedDeviceIds.length }} device{{
-                                        selectedDeviceIds.length > 1 ? 's' : '' }})
+                                    Search Test Data ({{ selectedStations.length }} station{{
+                                        selectedStations.length > 1 ? 's' : '' }})
                                 </v-btn>
                             </v-col>
                         </v-row>
@@ -231,7 +239,7 @@
                                                 <div
                                                     class="d-flex align-center gap-2 text-caption text-medium-emphasis">
                                                     <v-chip size="x-small" color="info" variant="outlined">
-                                                        {{ formatLocalTime(record['Test end Time']) }}
+                                                        {{ record['Test end Time'] }}
                                                     </v-chip>
                                                     <v-chip size="x-small" variant="outlined">
                                                         <!-- <v-icon start size="x-small">mdi-timer</v-icon> -->
@@ -269,11 +277,11 @@
                                                 </v-col>
                                                 <v-col cols="12" sm="6" md="2">
                                                     <div class="text-caption text-medium-emphasis">Test Start</div>
-                                                    <div class="font-weight-medium">{{ formatLocalTime(record['Test Start Time']) }}</div>
+                                                    <div class="font-weight-medium">{{ record['Test Start Time'] }}</div>
                                                 </v-col>
                                                 <v-col cols="12" sm="6" md="2">
                                                     <div class="text-caption text-medium-emphasis">Test End</div>
-                                                    <div class="font-weight-medium">{{ formatLocalTime(record['Test end Time']) }}</div>
+                                                    <div class="font-weight-medium">{{ record['Test end Time'] }}</div>
                                                 </v-col>
                                                 <v-col cols="12" sm="6" md="2">
                                                     <div class="text-caption text-medium-emphasis">Test Duration</div>
@@ -428,14 +436,6 @@ interface StationGroup {
     records: CsvTestItemData[]
 }
 
-interface DeviceOption {
-    deviceId: string
-    stationName: string
-    displayStationName: string
-    displayText: string
-    value: string
-}
-
 // Search mode tab
 const searchMode = ref<'station' | 'isn'>('station')
 
@@ -465,12 +465,27 @@ const {
 const selectedSite = ref<string | null>(null)
 const selectedProject = ref<string | null>(null)
 const selectedStations = ref<string[]>([])
-const selectedDeviceIds = ref<string[]>([])
+// Per-station device ID selection (key is station value from selectedStations)
+const stationDeviceIds = ref<Record<string, string[]>>({})
+// Loading state per station
+const loadingDevicesByStation = ref<Record<string, boolean>>({})
+
+// Date range preset
+const dateRangePreset = ref<string>('current_shift')
+const dateRangePresets = [
+    { title: 'Current Shift', value: 'current_shift' },
+    { title: 'Today', value: 'today' },
+    { title: 'Yesterday', value: 'yesterday' },
+    { title: 'This Week', value: 'week' },
+    { title: 'Last Week', value: 'last_week' },
+    { title: 'This Month', value: 'month' },
+    { title: 'Custom Date Range', value: 'custom' }
+]
 
 // Device IDs grouped by station
 const deviceIdsByStation = ref<Record<string, string[]>>({})
 
-// Time range (default to current local time - 8 hours to now)
+// Helper function to format date for datetime-local input
 function getLocalTimeString(date: Date): string {
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -480,10 +495,123 @@ function getLocalTimeString(date: Date): string {
     return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
-const now = new Date()
-const eightHoursAgo = new Date(now.getTime() - 8 * 60 * 60 * 1000)
-const startTime = ref(getLocalTimeString(eightHoursAgo))
-const endTime = ref(getLocalTimeString(now))
+/**
+ * Get date range based on preset selection
+ * Current Shift: 06:50:00 - 20:00:00 (Day) or 20:00:00 - 06:50:00 next day (Night)
+ * Today: 00:00:01 - 23:59:59
+ * Yesterday: Same as today but yesterday
+ * Week: Current week 00:00:01 - 23:59:59
+ * Last Week: Monday - Sunday last week
+ * Month: Current month
+ */
+function getDateRangeForPreset(preset: string): { start: Date; end: Date } {
+    const now = new Date()
+    const currentHour = now.getHours()
+    const currentMinutes = now.getMinutes()
+
+    switch (preset) {
+        case 'current_shift': {
+            // Day Shift: 06:50:00 - 20:00:00
+            // Night Shift: 20:00:00 - 06:50:00 (next day)
+            const isDayShift = currentHour > 6 || (currentHour === 6 && currentMinutes >= 50)
+            const isBeforeNightEnd = currentHour < 6 || (currentHour === 6 && currentMinutes < 50)
+            
+            if (isDayShift && currentHour < 20) {
+                // Currently in day shift
+                const start = new Date(now)
+                start.setHours(6, 50, 0, 0)
+                const end = new Date(now)
+                end.setHours(20, 0, 0, 0)
+                return { start, end }
+            } else if (isBeforeNightEnd) {
+                // Currently in night shift (before 06:50 AM)
+                const start = new Date(now)
+                start.setDate(start.getDate() - 1)
+                start.setHours(20, 0, 0, 0)
+                const end = new Date(now)
+                end.setHours(6, 50, 0, 0)
+                return { start, end }
+            } else {
+                // After 20:00 - start of night shift
+                const start = new Date(now)
+                start.setHours(20, 0, 0, 0)
+                const end = new Date(now)
+                end.setDate(end.getDate() + 1)
+                end.setHours(6, 50, 0, 0)
+                return { start, end }
+            }
+        }
+        case 'today': {
+            const start = new Date(now)
+            start.setHours(0, 0, 1, 0)
+            const end = new Date(now)
+            end.setHours(23, 59, 59, 0)
+            return { start, end }
+        }
+        case 'yesterday': {
+            const start = new Date(now)
+            start.setDate(start.getDate() - 1)
+            start.setHours(0, 0, 1, 0)
+            const end = new Date(now)
+            end.setDate(end.getDate() - 1)
+            end.setHours(23, 59, 59, 0)
+            return { start, end }
+        }
+        case 'week': {
+            // Start from Monday of current week
+            const dayOfWeek = now.getDay()
+            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek // Sunday is 0, Monday is 1
+            const start = new Date(now)
+            start.setDate(start.getDate() + diff)
+            start.setHours(0, 0, 1, 0)
+            const end = new Date(now)
+            end.setHours(23, 59, 59, 0)
+            return { start, end }
+        }
+        case 'last_week': {
+            // Last Monday to Last Sunday
+            const dayOfWeek = now.getDay()
+            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+            const start = new Date(now)
+            start.setDate(start.getDate() + diff - 7) // Last Monday
+            start.setHours(0, 0, 1, 0)
+            const end = new Date(start)
+            end.setDate(end.getDate() + 6) // Last Sunday
+            end.setHours(23, 59, 59, 0)
+            return { start, end }
+        }
+        case 'month': {
+            const start = new Date(now.getFullYear(), now.getMonth(), 1)
+            start.setHours(0, 0, 1, 0)
+            const end = new Date(now)
+            end.setHours(23, 59, 59, 0)
+            return { start, end }
+        }
+        default: {
+            // Custom - return current values
+            return { start: now, end: now }
+        }
+    }
+}
+
+/**
+ * Apply selected date range preset
+ */
+function applyDateRangePreset(preset: string): void {
+    if (preset === 'custom') {
+        // Don't change times for custom selection
+        return
+    }
+
+    const { start, end } = getDateRangeForPreset(preset)
+    startTime.value = getLocalTimeString(start)
+    endTime.value = getLocalTimeString(end)
+}
+
+// Time range - initialize with current shift
+const { start: initialStart, end: initialEnd } = getDateRangeForPreset('current_shift')
+const startTime = ref(getLocalTimeString(initialStart))
+const endTime = ref(getLocalTimeString(initialEnd))
 
 // Display controls
 const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
@@ -544,6 +672,16 @@ async function copyToClipboard(text: string): Promise<void> {
     }
 }
 
+// Helper functions for per-station device IDs
+function getDeviceIdsForStation(stationValue: string): string[] {
+    return deviceIdsByStation.value[stationValue] || []
+}
+
+function getStationDisplayName(stationValue: string): string {
+    const station = stations.value.find((s: Station) => s.display_station_name === stationValue)
+    return station?.display_station_name || stationValue
+}
+
 // Download controls
 const selectedRecordKeys = ref<Set<string>>(new Set())
 const downloadingKey = ref<string | null>(null)
@@ -574,27 +712,10 @@ const stationOptions = computed(() => {
         }))
 })
 
-const groupedDeviceOptions = computed<DeviceOption[]>(() => {
-    const options: DeviceOption[] = []
-    for (const [stationName, devices] of Object.entries(deviceIdsByStation.value)) {
-        const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationName)
-        for (const deviceId of devices) {
-            options.push({
-                deviceId,
-                stationName: stationInfo?.station_name || stationName,
-                displayStationName: stationName,
-                displayText: `${deviceId} (${stationName})`,
-                value: `${stationName}::${deviceId}`
-            })
-        }
-    }
-    return options
-})
-
 const totalDeviceCount = computed(() => {
     let count = 0
-    for (const devices of Object.values(deviceIdsByStation.value)) {
-        count += devices.length
+    for (const deviceList of Object.values(deviceIdsByStation.value)) {
+        count += deviceList.length
     }
     return count
 })
@@ -617,6 +738,15 @@ const groupedByStation = computed<StationGroup[]>(() => {
             }
         }
         groups[stationName].records.push(record)
+    }
+
+    // Sort records within each group by Test end Time descending (latest first)
+    for (const group of Object.values(groups)) {
+        group.records.sort((a, b) => {
+            const timeA = new Date(a['Test end Time']).getTime()
+            const timeB = new Date(b['Test end Time']).getTime()
+            return timeB - timeA // Latest first
+        })
     }
 
     return Object.values(groups)
@@ -690,19 +820,18 @@ watch(selectedStations, async (newStations, oldStations) => {
     // Find removed stations
     const removedStations = oldStations.filter(s => !newStations.includes(s))
 
-    // Remove device IDs for removed stations
+    // Remove device IDs and selections for removed stations
     for (const station of removedStations) {
         delete deviceIdsByStation.value[station]
+        delete stationDeviceIds.value[station]
+        delete loadingDevicesByStation.value[station]
     }
-
-    // Clear selected device IDs that no longer exist
-    const validDeviceIds = new Set(groupedDeviceOptions.value.map(d => d.value))
-    selectedDeviceIds.value = selectedDeviceIds.value.filter(id => validDeviceIds.has(id))
 
     // Fetch device IDs for newly added stations
     if (selectedSite.value && selectedProject.value && startTime.value && endTime.value) {
         for (const station of addedStations) {
             try {
+                loadingDevicesByStation.value[station] = true
                 const start = new Date(startTime.value).toISOString()
                 const end = new Date(endTime.value).toISOString()
                 const devices = await fetchDeviceIds(
@@ -713,8 +842,16 @@ watch(selectedStations, async (newStations, oldStations) => {
                     end
                 )
                 deviceIdsByStation.value[station] = devices
-            } catch (err) {
-                console.error(`Failed to fetch devices for station ${station}:`, err)
+                // Initialize with empty selection (will use 'ALL' if empty)
+                if (!stationDeviceIds.value[station]) {
+                    stationDeviceIds.value[station] = []
+                }
+            } catch (error) {
+                console.error(`Failed to fetch device IDs for ${station}:`, error)
+                deviceIdsByStation.value[station] = []
+                stationDeviceIds.value[station] = []
+            } finally {
+                loadingDevicesByStation.value[station] = false
             }
         }
     }
@@ -867,52 +1004,52 @@ function toggleRecordSelection(stationName: string, recordIndex: number): void {
 }
 
 function toggleSelectAllRecords(): void {
-    // Get total visible (filtered + limited) records count
+    // Get visible records for the current active station tab only
+    const currentGroup = groupedByStation.value[activeStationTab.value]
+    if (!currentGroup) return
+
     const visibleRecordKeys = new Set<string>()
-    for (const group of groupedByStation.value) {
-        const displayedRecords = getDisplayedStationRecords(group)
-        for (let i = 0; i < displayedRecords.length; i++) {
-            visibleRecordKeys.add(`${group.stationName}::${i}`)
-        }
+    const displayedRecords = getDisplayedStationRecords(currentGroup)
+    for (let i = 0; i < displayedRecords.length; i++) {
+        visibleRecordKeys.add(`${currentGroup.stationName}::${i}`)
     }
 
-    // Check if all visible records are selected
+    // Check if all visible records in current tab are selected
     const allVisibleSelected = [...visibleRecordKeys].every(key => selectedRecordKeys.value.has(key))
 
     if (allVisibleSelected && visibleRecordKeys.size > 0) {
-        // Deselect all visible records
+        // Deselect all visible records in current tab
         for (const key of visibleRecordKeys) {
             selectedRecordKeys.value.delete(key)
         }
     } else {
-        // Select all visible records
+        // Select all visible records in current tab
         for (const key of visibleRecordKeys) {
             selectedRecordKeys.value.add(key)
         }
     }
 }
 
-// Get count of visible records for Select All label
+// Get count of visible records in current active station tab for Select All label
 const visibleRecordsCount = computed(() => {
-    let count = 0
-    for (const group of groupedByStation.value) {
-        count += getDisplayedStationRecords(group).length
-    }
-    return count
+    const currentGroup = groupedByStation.value[activeStationTab.value]
+    if (!currentGroup) return 0
+    return getDisplayedStationRecords(currentGroup).length
 })
 
-// Check if all visible records are selected
+// Check if all visible records in current active station tab are selected
 const allVisibleSelected = computed(() => {
-    if (visibleRecordsCount.value === 0) return false
-    for (const group of groupedByStation.value) {
-        const displayedRecords = getDisplayedStationRecords(group)
-        for (let i = 0; i < displayedRecords.length; i++) {
-            if (!selectedRecordKeys.value.has(`${group.stationName}::${i}`)) {
-                return false
-            }
+    const currentGroup = groupedByStation.value[activeStationTab.value]
+    if (!currentGroup) return false
+    
+    const displayedRecords = getDisplayedStationRecords(currentGroup)
+    for (let i = 0; i < displayedRecords.length; i++) {
+        const key = `${currentGroup.stationName}::${i}`
+        if (!selectedRecordKeys.value.has(key)) {
+            return false
         }
     }
-    return true
+    return displayedRecords.length > 0
 })
 
 // Fullscreen functions
@@ -1025,8 +1162,9 @@ async function downloadSelectedRecords(): Promise<void> {
 function handleSiteChange() {
     selectedProject.value = null
     selectedStations.value = []
-    selectedDeviceIds.value = []
+    stationDeviceIds.value = {}
     deviceIdsByStation.value = {}
+    loadingDevicesByStation.value = {}
     stations.value = []
     clearTestItemData()
     selectedRecordKeys.value.clear()
@@ -1034,8 +1172,9 @@ function handleSiteChange() {
 
 async function handleProjectChange() {
     selectedStations.value = []
-    selectedDeviceIds.value = []
+    stationDeviceIds.value = {}
     deviceIdsByStation.value = {}
+    loadingDevicesByStation.value = {}
     clearTestItemData()
     selectedRecordKeys.value.clear()
 
@@ -1045,13 +1184,12 @@ async function handleProjectChange() {
 }
 
 function handleStationChange() {
-    selectedDeviceIds.value = []
     clearTestItemData()
     selectedRecordKeys.value.clear()
 }
 
 async function fetchTestItems() {
-    if (!selectedSite.value || !selectedProject.value || selectedDeviceIds.value.length === 0) return
+    if (!selectedSite.value || !selectedProject.value || selectedStations.value.length === 0) return
 
     const begintime = formatDateForV1Api(new Date(startTime.value))
     const endtime = formatDateForV1Api(new Date(endTime.value))
@@ -1059,25 +1197,39 @@ async function fetchTestItems() {
     clearTestItemData()
     selectedRecordKeys.value.clear()
 
-    // Parse selected device IDs to get station and device info
-    for (const selectedValue of selectedDeviceIds.value) {
-        const [stationDisplayName, deviceId] = selectedValue.split('::')
-        if (!stationDisplayName || !deviceId) continue
-
-        // Find the actual station name
+    // Iterate through each selected station
+    for (const stationDisplayName of selectedStations.value) {
         const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationDisplayName)
         if (!stationInfo) continue
 
-        // Use display_station_name for API request as per API documentation
-        await fetchTestItemsApi(
-            selectedSite.value,
-            selectedProject.value,
-            stationInfo.display_station_name,
-            deviceId,
-            begintime,
-            endtime,
-            testStatusFilter.value
-        )
+        // Get device IDs for this station (empty array means use 'ALL')
+        const deviceIds = stationDeviceIds.value[stationDisplayName] || []
+        
+        if (deviceIds.length === 0) {
+            // No devices selected - use 'ALL'
+            await fetchTestItemsApi(
+                selectedSite.value,
+                selectedProject.value,
+                stationInfo.display_station_name,
+                'ALL',
+                begintime,
+                endtime,
+                testStatusFilter.value
+            )
+        } else {
+            // Fetch data for each selected device
+            for (const deviceId of deviceIds) {
+                await fetchTestItemsApi(
+                    selectedSite.value,
+                    selectedProject.value,
+                    stationInfo.display_station_name,
+                    deviceId,
+                    begintime,
+                    endtime,
+                    testStatusFilter.value
+                )
+            }
+        }
     }
 
     // Initialize expanded panels for first group
