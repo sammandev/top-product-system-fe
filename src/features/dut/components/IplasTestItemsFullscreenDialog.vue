@@ -369,8 +369,7 @@ const filteredTestItems = computed(() => {
 // Methods
 function close(): void {
     isOpen.value = false
-    // Reset filters when closing
-    testItemFilter.value = 'value'
+    // Reset filters when closing - will be set again by watcher when reopened
     testStatusFilter.value = 'ALL'
     searchTerms.value = []
 }
@@ -379,9 +378,14 @@ function handleDownload(): void {
     emit('download')
 }
 
-// Reset filters when record changes
-watch(() => props.record, () => {
-    testItemFilter.value = 'value'
+// Reset filters when record changes - show all data if record has error
+watch(() => props.record, (newRecord) => {
+    // If record has error (errorCode !== 'PASS'), show all data by default
+    if (newRecord && newRecord.errorCode !== 'PASS') {
+        testItemFilter.value = 'all'
+    } else {
+        testItemFilter.value = 'value'
+    }
     testStatusFilter.value = 'ALL'
     searchTerms.value = []
 })

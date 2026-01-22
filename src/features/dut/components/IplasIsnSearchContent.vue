@@ -708,19 +708,6 @@ function calculateDuration(startStr: string, endStr: string): string {
         return '-'
     }
 }
-        const end = new Date(cleanEnd.replace(' ', 'T') + 'Z')
-        const diffMs = end.getTime() - start.getTime()
-        const diffSeconds = Math.floor(diffMs / 1000)
-        const minutes = Math.floor(diffSeconds / 60)
-        const seconds = diffSeconds % 60
-        if (minutes > 0) {
-            return `${minutes}m ${seconds}s`
-        }
-        return `${seconds}s`
-    } catch {
-        return '-'
-    }
-}
 
 function calculateTotalCycleTime(testItems: IsnSearchTestItem[] | undefined): string {
     if (!testItems || testItems.length === 0) return '-'
@@ -1160,6 +1147,18 @@ async function handleSearch(): Promise<void> {
         if (groupedByISN.value.length > 0) {
             expandedPanels.value[0] = [0]
             activeISNTab.value = 0
+
+            // Initialize testItemFilters to 'value' for all records
+            for (let isnIndex = 0; isnIndex < groupedByISN.value.length; isnIndex++) {
+                const isnGroup = groupedByISN.value[isnIndex]
+                for (let stationIndex = 0; stationIndex < isnGroup.stations.length; stationIndex++) {
+                    const station = isnGroup.stations[stationIndex]
+                    for (let recordIndex = 0; recordIndex < station.records.length; recordIndex++) {
+                        const key = `${isnGroup.isn}-${stationIndex}-${recordIndex}`
+                        testItemFilters.value[key] = 'value'
+                    }
+                }
+            }
         }
     } catch (err) {
         console.error('Search failed:', err)

@@ -857,6 +857,20 @@ watch(selectedStations, async (newStations, oldStations) => {
     }
 }, { deep: true })
 
+// Initialize testItemFilters when records change - ensure 'value' is selected by default
+watch(groupedByStation, (groups) => {
+    for (const group of groups) {
+        const displayedRecords = getDisplayedStationRecords(group)
+        for (let i = 0; i < displayedRecords.length; i++) {
+            const key = `${group.stationName}-${i}`
+            // Only set if not already set
+            if (testItemFilters.value[key] === undefined) {
+                testItemFilters.value[key] = 'value'
+            }
+        }
+    }
+}, { immediate: true })
+
 // Helper functions
 function isValueData(item: TestItem): boolean {
     const value = item.VALUE?.toUpperCase() || ''
