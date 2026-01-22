@@ -14,7 +14,7 @@
 
         <v-window v-model="searchMode">
             <!-- Station Search Mode -->
-            <v-window-item value="station">
+            <v-window-item value="station" eager>
                 <!-- Error Alert -->
                 <v-alert v-if="error" type="error" class="mb-4" closable @click:close="error = null">
                     {{ error }}
@@ -162,19 +162,14 @@
 
                         <v-window v-model="activeStationTab">
                             <v-window-item v-for="(stationGroup, stationIndex) in groupedByStation"
-                                :key="stationGroup.stationName" :value="stationIndex">
-                                <!-- Search, Status Filter, and Device ID Filter -->
+                                :key="stationGroup.stationName" :value="stationIndex" eager>
+                                <!-- Search and Device ID Filter -->
                                 <v-row class="mb-4" dense>
-                                    <v-col cols="12" md="4">
+                                    <v-col cols="12" md="6">
                                         <v-text-field v-model="recordSearchQueries[stationGroup.stationName]"
                                             label="Search Records" prepend-inner-icon="mdi-magnify"
                                             variant="outlined" density="compact" hide-details clearable
                                             placeholder="Search ISN, Device ID, Error Code, Error Name..." />
-                                    </v-col>
-                                    <v-col cols="12" md="2">
-                                        <v-select v-model="stationStatusFilters[stationGroup.stationName]"
-                                            :items="['ALL', 'PASS', 'FAIL']" label="Status"
-                                            variant="outlined" density="compact" hide-details />
                                     </v-col>
                                     <v-col cols="12" md="6">
                                         <v-autocomplete v-model="selectedFilterDeviceIds[stationGroup.stationName]"
@@ -206,27 +201,44 @@
                                                         <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
                                                     </v-btn>
                                                     <span class="font-weight-bold">{{ record.ISN || '-' }}</span>
-                                                    <v-chip size="x-small" color="secondary" variant="outlined">
-                                                        <v-icon start size="x-small">mdi-chip</v-icon>
+                                                    <v-chip size="x-small" color="secondary" variant="outlined"
+                                                        @click.stop="copyToClipboard(record.DeviceId)">
+                                                        <v-icon start size="x-small">mdi-content-copy</v-icon>
                                                         {{ record.DeviceId }}
+                                                        <v-tooltip activator="parent" location="top">Copy Device ID</v-tooltip>
                                                     </v-chip>
+                                                    <!-- ErrorCode with copy button (only show copy when not PASS) -->
                                                     <v-chip :color="record.ErrorCode === 'PASS' ? 'success' : 'error'"
-                                                        size="x-small">
+                                                        size="x-small" @click.stop="record.ErrorCode !== 'PASS' && copyToClipboard(record.ErrorCode)">
+                                                        <v-btn v-if="record.ErrorCode !== 'PASS'" icon size="x-small"
+                                                            variant="text" class="mr-1" style="margin: -4px;"
+                                                            @click.stop="copyToClipboard(record.ErrorCode)">
+                                                            <v-icon size="x-small">mdi-content-copy</v-icon>
+                                                        </v-btn>
                                                         {{ record.ErrorCode }}
+                                                        <v-tooltip v-if="record.ErrorCode !== 'PASS'" activator="parent" location="top">Copy Error Code</v-tooltip>
                                                     </v-chip>
-                                                    <v-chip v-if="record.ErrorName && record.ErrorName !== 'N/A'"
-                                                        color="error" size="x-small" variant="outlined">
-                                                        {{ record.ErrorName }}
-                                                    </v-chip>
+                                                    <!-- ErrorName with copy button (only show when there is ErrorName) -->
+                                                    <template v-if="record.ErrorName && record.ErrorName !== 'N/A' && record.ErrorCode !== 'PASS'">
+                                                        <v-chip color="error" size="x-small" variant="outlined"
+                                                            @click.stop="copyToClipboard(record.ErrorName)">
+                                                            <v-btn icon size="x-small" variant="text" class="mr-1"
+                                                                style="margin: -4px;"
+                                                                @click.stop="copyToClipboard(record.ErrorName)">
+                                                                <v-icon size="x-small">mdi-content-copy</v-icon>
+                                                            </v-btn>
+                                                            {{ record.ErrorName }}
+                                                            <v-tooltip activator="parent" location="top">Copy Error Name</v-tooltip>
+                                                        </v-chip>
+                                                    </template>
                                                 </div>
                                                 <div
                                                     class="d-flex align-center gap-2 text-caption text-medium-emphasis">
                                                     <v-chip size="x-small" color="info" variant="outlined">
-                                                        <v-icon start size="x-small">mdi-clock-end</v-icon>
                                                         {{ formatLocalTime(record['Test end Time']) }}
                                                     </v-chip>
                                                     <v-chip size="x-small" variant="outlined">
-                                                        <v-icon start size="x-small">mdi-timer</v-icon>
+                                                        <!-- <v-icon start size="x-small">mdi-timer</v-icon> -->
                                                         {{ calculateDuration(record['Test Start Time'], record['Test end Time']) }}
                                                     </v-chip>
                                                     <v-btn icon size="x-small" variant="outlined" color="secondary"
@@ -273,7 +285,7 @@
                                                 </v-col>
                                             </v-row>
 
-                                            <!-- Filter Test Items (per-record) -->
+                                            <!-- Search Box and Filter Items Row -->
                                             <v-row class="mb-3" dense>
                                                 <v-col cols="12" md="6">
                                                     <v-combobox
@@ -289,47 +301,50 @@
                                                     </v-combobox>
                                                 </v-col>
                                                 <v-col cols="12" md="6">
-                                                    <div class="d-flex align-center flex-wrap gap-2">
-                                                        <span class="text-caption text-medium-emphasis mr-2">Filter:</span>
-                                                        <v-chip-group v-model="testItemFilters[`${stationGroup.stationName}-${recordIndex}`]" mandatory>
-                                                            <v-chip value="value" filter variant="outlined" color="success" size="small">
-                                                                Value Data
-                                                            </v-chip>
+                                                    <div class="d-flex align-center flex-wrap gap-2 h-100">
+                                                        <v-chip-group v-model="testItemFilters[`${stationGroup.stationName}-${recordIndex}`]" mandatory class="flex-grow-1">
                                                             <v-chip value="all" filter variant="outlined" color="primary" size="small">
-                                                                Show All
+                                                                All
+                                                            </v-chip>
+                                                            <v-chip value="value" filter variant="outlined" color="success" size="small">
+                                                                <v-icon v-if="!testItemFilters[`${stationGroup.stationName}-${recordIndex}`] || testItemFilters[`${stationGroup.stationName}-${recordIndex}`] === 'value'"
+                                                                    start size="x-small">mdi-check</v-icon>
+                                                                Value
                                                             </v-chip>
                                                             <v-chip value="non-value" filter variant="outlined" color="warning" size="small">
                                                                 Non-Value
                                                             </v-chip>
                                                             <v-chip value="bin" filter variant="outlined" color="info" size="small">
-                                                                Bin Data
+                                                                Bin
                                                             </v-chip>
                                                         </v-chip-group>
                                                     </div>
                                                 </v-col>
                                             </v-row>
 
-                                            <!-- Test Items Table -->
-                                            <v-data-table :headers="testItemHeaders"
-                                                :items="filterAndSearchTestItems(record.TestItem, `${stationGroup.stationName}-${recordIndex}`)"
-                                                :items-per-page="25" density="compact"
-                                                class="elevation-1 v-table--striped">
-                                                <template #item.STATUS="{ item }">
-                                                    <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'"
-                                                        size="x-small">
-                                                        {{ item.STATUS }}
-                                                    </v-chip>
-                                                </template>
-                                                <template #item.VALUE="{ item }">
-                                                    <span :class="getValueClass(item)">{{ item.VALUE }}</span>
-                                                </template>
-                                                <template #item.UCL="{ item }">
-                                                    <span class="text-medium-emphasis">{{ item.UCL || '-' }}</span>
-                                                </template>
-                                                <template #item.LCL="{ item }">
-                                                    <span class="text-medium-emphasis">{{ item.LCL || '-' }}</span>
-                                                </template>
-                                            </v-data-table>
+                                            <!-- Test Items Table (scrollable) -->
+                                            <div class="test-items-table-container" style="max-height: 400px; overflow-y: auto;">
+                                                <v-data-table :headers="testItemHeaders"
+                                                    :items="filterAndSearchTestItems(record.TestItem, `${stationGroup.stationName}-${recordIndex}`)"
+                                                    :items-per-page="25" density="compact"
+                                                    class="elevation-1 v-table--striped">
+                                                    <template #item.STATUS="{ item }">
+                                                        <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'"
+                                                            size="x-small">
+                                                            {{ item.STATUS }}
+                                                        </v-chip>
+                                                    </template>
+                                                    <template #item.VALUE="{ item }">
+                                                        <span :class="getValueClass(item)">{{ item.VALUE }}</span>
+                                                    </template>
+                                                    <template #item.UCL="{ item }">
+                                                        <span class="text-medium-emphasis">{{ item.UCL || '-' }}</span>
+                                                    </template>
+                                                    <template #item.LCL="{ item }">
+                                                        <span class="text-medium-emphasis">{{ item.LCL || '-' }}</span>
+                                                    </template>
+                                                </v-data-table>
+                                            </div>
 
                                             <div class="text-caption text-medium-emphasis mt-2">
                                                 Showing {{ filterAndSearchTestItems(record.TestItem,
@@ -389,7 +404,7 @@
             </v-window-item>
 
             <!-- ISN Search Mode -->
-            <v-window-item value="isn">
+            <v-window-item value="isn" eager>
                 <IplasIsnSearchContent />
             </v-window-item>
         </v-window>
@@ -486,6 +501,8 @@ const stationStatusFilters = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
 
 // Per-record test item filters (default to 'value')
 const testItemFilters = ref<Record<string, 'all' | 'value' | 'non-value' | 'bin'>>({})
+// Per-record test item status filters
+const testItemStatusFilters = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
 // Per-record multi-search terms (array of patterns)
 const testItemSearchTerms = ref<Record<string, string[]>>({})
 
@@ -515,7 +532,19 @@ function showMoreRecords(stationName: string): void {
 async function copyToClipboard(text: string): Promise<void> {
     if (!text) return
     try {
-        await navigator.clipboard.writeText(text)
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text)
+        } else {
+            // Fallback for older browsers or non-HTTPS contexts
+            const textArea = document.createElement('textarea')
+            textArea.value = text
+            textArea.style.position = 'fixed'
+            textArea.style.left = '-9999px'
+            document.body.appendChild(textArea)
+            textArea.select()
+            document.execCommand('copy')
+            document.body.removeChild(textArea)
+        }
         showCopySuccess.value = true
     } catch (err) {
         console.error('Failed to copy:', err)
@@ -741,6 +770,12 @@ function filterAndSearchTestItems(items: TestItem[] | undefined, key: string): T
     // Get per-record filter (default to 'value')
     const filterType = testItemFilters.value[key] || 'value'
     let filtered = filterTestItemsByType(items, filterType)
+
+    // Apply test item status filter (PASS/FAIL)
+    const statusFilter = testItemStatusFilters.value[key] || 'ALL'
+    if (statusFilter !== 'ALL') {
+        filtered = filtered.filter(item => item.STATUS === statusFilter)
+    }
     
     // Get per-record search terms (multi-pattern regex with OR logic)
     const searchTerms = testItemSearchTerms.value[key] || []
@@ -927,9 +962,10 @@ async function downloadFromFullscreen(): Promise<void> {
 }
 
 /**
- * Format time for v1 API download
- * Input: "2026-01-05 14:46:14" (from API response)
+ * Format time for v1 API download (get_csv_testitem data)
+ * Input: "2026-01-05 14:46:14" (from API response - already in local time)
  * Output: "2026/01/05 14:46:14" (required by download API)
+ * Note: get_csv_testitem returns local time, so no timezone conversion needed
  */
 function formatTimeForDownload(timeStr: string): string {
     if (!timeStr) return ''
@@ -941,7 +977,8 @@ function formatTimeForDownload(timeStr: string): string {
 function createAttachmentInfo(record: CsvTestItemData): DownloadAttachmentInfo {
     // Use ISN if available, otherwise use DeviceId
     const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-    const time = formatTimeForDownload(record['Test Start Time'])
+    // CRITICAL: Use 'Test end Time' for download_attachment API
+    const time = formatTimeForDownload(record['Test end Time'])
     const deviceid = record.DeviceId
     // Use TSP as per API documentation - TSP corresponds to display_station_name
     const station = record.TSP || record.station

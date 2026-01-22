@@ -1,187 +1,94 @@
 <template>
     <v-dialog v-model="isOpen" fullscreen transition="dialog-bottom-transition">
         <v-card v-if="record" class="d-flex flex-column" style="height: 100vh; overflow: hidden;">
-            <!-- Sticky Header Container -->
+            <!-- Compact Sticky Header Container -->
             <div class="dialog-sticky-header flex-shrink-0"
                 style="z-index: 10; background-color: rgb(var(--v-theme-surface));">
-                <v-card-title class="d-flex justify-space-between align-center flex-shrink-0 bg-primary pa-3">
+                <v-card-title class="d-flex justify-space-between align-center flex-shrink-0 bg-primary pa-2 py-1">
                     <div class="d-flex align-center">
-                        <v-icon class="mr-2" color="white">mdi-table-eye</v-icon>
-                        <span class="text-white">Test Items Details</span>
+                        <v-icon class="mr-2" color="white" size="small">mdi-table-eye</v-icon>
+                        <span class="text-white text-body-1">Test Items Details</span>
                     </div>
                     <div class="d-flex align-center gap-2">
-                        <v-btn variant="outlined" color="white" size="small" :loading="downloading" @click="handleDownload">
-                            <v-icon start size="small">mdi-download</v-icon>
-                            Download Log
+                        <v-btn variant="outlined" color="white" size="x-small" :loading="downloading" @click="handleDownload">
+                            <v-icon start size="x-small">mdi-download</v-icon>
+                            Download
                         </v-btn>
-                        <v-btn icon="mdi-close" variant="text" color="white" @click="close" />
+                        <v-btn icon="mdi-close" variant="text" color="white" size="small" @click="close" />
                     </div>
                 </v-card-title>
 
-                <!-- DUT Information Section -->
-                <div class="flex-shrink-0">
-                    <v-card-subtitle class="pa-4 py-2">
-                        <!-- Primary Information Card -->
-                        <v-card variant="tonal" color="primary" class="mb-3">
-                            <v-card-text class="py-3">
-                                <v-row dense>
-                                    <v-col cols="12" md="6">
-                                        <div class="d-flex align-center">
-                                            <v-icon size="large" class="mr-3" color="primary">mdi-barcode</v-icon>
-                                            <div>
-                                                <div class="text-caption text-medium-emphasis">DUT ISN</div>
-                                                <div class="d-flex align-center gap-2">
-                                                    <span class="text-h6 font-weight-bold">{{ record.isn || '-' }}</span>
-                                                    <v-btn v-if="record.isn" icon size="x-small" variant="text"
-                                                        @click="copyToClipboard(record.isn)">
-                                                        <v-icon size="small">mdi-content-copy</v-icon>
-                                                        <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
-                                                    </v-btn>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </v-col>
-                                    <v-col cols="12" md="6">
-                                        <div class="d-flex align-center">
-                                            <v-icon size="large" class="mr-3" color="primary">mdi-factory</v-icon>
-                                            <div>
-                                                <div class="text-caption text-medium-emphasis">Station</div>
-                                                <div class="text-h6 font-weight-bold">
-                                                    {{ record.displayStationName || record.stationName }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </v-col>
-                                </v-row>
-                            </v-card-text>
-                        </v-card>
+                <!-- Compact DUT Information Section -->
+                <div class="flex-shrink-0 px-3 py-2">
+                    <!-- Compact Summary Row -->
+                    <div class="d-flex align-center flex-wrap gap-3 text-body-2">
+                        <!-- ISN -->
+                        <div class="d-flex align-center">
+                            <v-icon size="small" class="mr-1" color="primary">mdi-barcode</v-icon>
+                            <strong class="mr-1">ISN:</strong>
+                            <span class="font-weight-bold">{{ record.isn || '-' }}</span>
+                            <v-btn v-if="record.isn" icon size="x-small" variant="text" class="ml-1"
+                                @click="copyToClipboard(record.isn)">
+                                <v-icon size="x-small">mdi-content-copy</v-icon>
+                                <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
+                            </v-btn>
+                        </div>
+                        <v-divider vertical class="mx-1" />
+                        <!-- Station -->
+                        <div class="d-flex align-center">
+                            <v-icon size="small" class="mr-1" color="primary">mdi-router-wireless</v-icon>
+                            <strong class="mr-1">Station:</strong>
+                            <span>{{ record.displayStationName || record.stationName }}</span>
+                        </div>
+                        <v-divider vertical class="mx-1" />
+                        <!-- Device ID -->
+                        <div class="d-flex align-center">
+                            <v-icon size="small" class="mr-1">mdi-chip</v-icon>
+                            <strong class="mr-1">Device:</strong>
+                            <span class="font-mono">{{ record.deviceId }}</span>
+                            <v-btn v-if="record.deviceId" icon size="x-small" variant="text" class="ml-1"
+                                @click="copyToClipboard(record.deviceId)">
+                                <v-icon size="x-small">mdi-content-copy</v-icon>
+                                <v-tooltip activator="parent" location="top">Copy Device ID</v-tooltip>
+                            </v-btn>
+                        </div>
+                        <v-divider vertical class="mx-1" />
+                        <!-- Site/Project -->
+                        <div class="d-flex align-center">
+                            <v-icon size="small" class="mr-1">mdi-map-marker</v-icon>
+                            <span>{{ record.site }} / {{ record.project }}</span>
+                        </div>
+                    </div>
 
-                        <!-- Device & Identifiers -->
-                        <v-card variant="outlined" class="mb-3">
-                            <v-card-text class="py-2">
-                                <v-row dense>
-                                    <v-col cols="12" md="4">
-                                        <div class="d-flex align-center">
-                                            <v-icon size="small" class="mr-2">mdi-chip</v-icon>
-                                            <span class="text-body-2">
-                                                <strong>Device ID:</strong>
-                                                <span class="ml-2 font-mono">{{ record.deviceId }}</span>
-                                            </span>
-                                        </div>
-                                    </v-col>
-                                    <v-col cols="12" md="4">
-                                        <div class="d-flex align-center">
-                                            <v-icon size="small" class="mr-2">mdi-map-marker</v-icon>
-                                            <span class="text-body-2">
-                                                <strong>Site / Project:</strong>
-                                                <span class="ml-2">{{ record.site }} / {{ record.project }}</span>
-                                            </span>
-                                        </div>
-                                    </v-col>
-                                    <v-col cols="12" md="4">
-                                        <div class="d-flex align-center">
-                                            <v-icon size="small" class="mr-2">mdi-router-wireless</v-icon>
-                                            <span class="text-body-2">
-                                                <strong>TSP:</strong>
-                                                <span class="ml-2">{{ record.tsp || record.displayStationName || '-' }}</span>
-                                            </span>
-                                        </div>
-                                    </v-col>
-                                </v-row>
-                            </v-card-text>
-                        </v-card>
-
-                        <!-- Timing & Status Row -->
-                        <v-row dense class="mb-2">
-                            <v-col cols="12" sm="6" md="3">
-                                <v-card variant="outlined" class="h-100">
-                                    <v-card-text class="py-2">
-                                        <div class="d-flex align-center">
-                                            <v-icon size="small" class="mr-2">mdi-calendar-clock</v-icon>
-                                            <div class="text-body-2">
-                                                <div><strong>Test Start</strong></div>
-                                                <div class="text-caption">{{ formatTime(record.testStartTime) }}</div>
-                                            </div>
-                                        </div>
-                                    </v-card-text>
-                                </v-card>
-                            </v-col>
-                            <v-col cols="12" sm="6" md="3">
-                                <v-card variant="outlined" class="h-100">
-                                    <v-card-text class="py-2">
-                                        <div class="d-flex align-center">
-                                            <v-icon size="small" class="mr-2">mdi-calendar-check</v-icon>
-                                            <div class="text-body-2">
-                                                <div><strong>Test End</strong></div>
-                                                <div class="text-caption">{{ formatTime(record.testEndTime) }}</div>
-                                            </div>
-                                        </div>
-                                    </v-card-text>
-                                </v-card>
-                            </v-col>
-                            <v-col cols="12" sm="6" md="3">
-                                <v-card variant="outlined" class="h-100">
-                                    <v-card-text class="py-2">
-                                        <div class="d-flex align-center">
-                                            <v-icon size="small" class="mr-2">mdi-timer</v-icon>
-                                            <div class="text-body-2">
-                                                <div><strong>Test Duration</strong></div>
-                                                <div class="text-body-2 font-weight-medium">
-                                                    {{ calculateDuration(record.testStartTime, record.testEndTime) }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </v-card-text>
-                                </v-card>
-                            </v-col>
-                            <v-col cols="12" sm="6" md="3">
-                                <v-card variant="outlined" class="h-100">
-                                    <v-card-text class="py-2">
-                                        <div class="d-flex align-center">
-                                            <v-icon size="small" class="mr-2">mdi-list-box</v-icon>
-                                            <div class="text-body-2">
-                                                <div><strong>Test Items</strong></div>
-                                                <v-chip size="small" color="info">
-                                                    {{ record.testItems?.length || 0 }}
-                                                </v-chip>
-                                            </div>
-                                        </div>
-                                    </v-card-text>
-                                </v-card>
-                            </v-col>
-                        </v-row>
-
-                        <!-- Error Status Row -->
-                        <v-row dense class="mb-1">
-                            <v-col cols="12">
-                                <v-card :variant="record.errorCode !== 'PASS' ? 'tonal' : 'outlined'"
-                                    :color="record.errorCode !== 'PASS' ? 'error' : 'success'" class="h-100">
-                                    <v-card-text class="py-2">
-                                        <div class="d-flex align-start">
-                                            <v-icon size="small" class="mr-2 mt-1"
-                                                :color="record.errorCode !== 'PASS' ? 'error' : 'success'">
-                                                {{ record.errorCode !== 'PASS' ? 'mdi-alert-circle' : 'mdi-check-circle' }}
-                                            </v-icon>
-                                            <div class="flex-grow-1" style="min-width: 0;">
-                                                <div>
-                                                    <strong>Test Status:</strong>
-                                                    <v-chip :color="record.errorCode === 'PASS' ? 'success' : 'error'" 
-                                                        size="small" class="ml-2">
-                                                        {{ record.errorCode }}
-                                                    </v-chip>
-                                                </div>
-                                                <div v-if="record.errorName && record.errorName !== 'N/A'"
-                                                    class="text-caption mt-1 font-weight-medium"
-                                                    style="word-break: break-word; overflow-wrap: break-word;">
-                                                    Error: {{ record.errorName }}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </v-card-text>
-                                </v-card>
-                            </v-col>
-                        </v-row>
-                    </v-card-subtitle>
+                    <!-- Compact Timing & Status Row -->
+                    <div class="d-flex align-center flex-wrap gap-2 mt-2 text-caption">
+                        <v-chip size="x-small" variant="outlined" prepend-icon="mdi-calendar-clock">
+                            Start: {{ formatTime(record.testStartTime) }}
+                        </v-chip>
+                        <v-chip size="x-small" variant="outlined" prepend-icon="mdi-calendar-check">
+                            End: {{ formatTime(record.testEndTime) }}
+                        </v-chip>
+                        <v-chip size="x-small" variant="outlined" prepend-icon="mdi-timer">
+                            {{ calculateDuration(record.testStartTime, record.testEndTime) }}
+                        </v-chip>
+                        <v-chip size="x-small" color="info" variant="outlined" prepend-icon="mdi-list-box">
+                            {{ record.testItems?.length || 0 }} items
+                        </v-chip>
+                        <!-- Status -->
+                        <v-chip size="x-small" :color="record.errorCode === 'PASS' ? 'success' : 'error'"
+                            :prepend-icon="record.errorCode === 'PASS' ? 'mdi-check-circle' : 'mdi-alert-circle'">
+                            {{ record.errorCode }}
+                        </v-chip>
+                        <template v-if="record.errorName && record.errorName !== 'N/A' && record.errorCode !== 'PASS'">
+                            <v-chip size="x-small" color="error" variant="outlined">
+                                {{ record.errorName }}
+                            </v-chip>
+                            <v-btn icon size="x-small" variant="text" @click="copyToClipboard(record.errorName)">
+                                <v-icon size="x-small">mdi-content-copy</v-icon>
+                                <v-tooltip activator="parent" location="top">Copy Error Name</v-tooltip>
+                            </v-btn>
+                        </template>
+                    </div>
                 </div>
 
                 <v-divider class="flex-shrink-0" />
@@ -189,7 +96,7 @@
             <!-- End Sticky Header Container -->
 
             <!-- Search and Filter Controls (Fixed, non-scrollable) -->
-            <v-card-text class="pb-2 pt-3 flex-shrink-0">
+            <v-card-text class="pb-2 pt-2 flex-shrink-0">
                 <v-row dense>
                     <v-col cols="12" md="4">
                         <v-combobox v-model="searchTerms" label="Search Test Items (Regex)"
@@ -314,9 +221,9 @@ const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
 const searchTerms = ref<string[]>([])
 const showCopySuccess = ref(false)
 
-// Filter options for dropdown
+// Filter options for dropdown (Value Data is default)
 const testItemFilterOptions = [
-    { title: 'Value Data', value: 'value' },
+    { title: 'Value Data ★', value: 'value' },
     { title: 'Show All', value: 'all' },
     { title: 'Non-Value', value: 'non-value' },
     { title: 'Bin Data', value: 'bin' }
@@ -404,8 +311,21 @@ function calculateDuration(startStr: string, endStr: string): string {
 }
 
 async function copyToClipboard(text: string): Promise<void> {
+    if (!text) return
     try {
-        await navigator.clipboard.writeText(text)
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            await navigator.clipboard.writeText(text)
+        } else {
+            // Fallback for older browsers or non-HTTPS contexts
+            const textArea = document.createElement('textarea')
+            textArea.value = text
+            textArea.style.position = 'fixed'
+            textArea.style.left = '-9999px'
+            document.body.appendChild(textArea)
+            textArea.select()
+            document.execCommand('copy')
+            document.body.removeChild(textArea)
+        }
         showCopySuccess.value = true
     } catch (err) {
         console.error('Failed to copy:', err)
