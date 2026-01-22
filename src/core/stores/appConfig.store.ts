@@ -14,6 +14,9 @@ export const useAppConfigStore = defineStore('appConfig', () => {
   const config = ref<AppConfig>({ ...fallbackConfig })
   const loading = ref(false)
   const error = ref<string | null>(null)
+  
+  // Navigation loading state
+  const isNavigating = ref(false)
 
   const appName = computed(() => config.value.name || APP_CONFIG.name)
   const appVersion = computed(() => config.value.version || APP_CONFIG.version)
@@ -59,6 +62,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
     config,
     loading,
     error,
+    isNavigating,
     appName,
     appVersion,
     appDescription,

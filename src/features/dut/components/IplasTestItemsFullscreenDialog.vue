@@ -1,128 +1,230 @@
 <template>
     <v-dialog v-model="isOpen" fullscreen transition="dialog-bottom-transition">
-        <v-card v-if="record">
-            <v-toolbar color="primary">
-                <v-btn icon @click="close">
-                    <v-icon>mdi-close</v-icon>
-                </v-btn>
-                <v-toolbar-title>
-                    {{ record.displayStationName || record.stationName }}
-                </v-toolbar-title>
-                <v-spacer />
-                <v-chip :color="record.errorCode === 'PASS' ? 'success' : 'error'" class="mr-4">
-                    {{ record.errorCode }}
-                </v-chip>
-                <v-btn variant="outlined" color="white" :loading="downloading" @click="handleDownload">
-                    <v-icon start>mdi-download</v-icon>
-                    Download Log
-                </v-btn>
-            </v-toolbar>
-            <v-card-text class="pa-6 fullscreen-content">
-                <!-- Record Summary -->
-                <v-row class="mb-6">
-                    <v-col cols="12" sm="6" md="3">
-                        <v-card variant="outlined" class="pa-3">
-                            <div class="text-caption text-medium-emphasis">ISN</div>
-                            <div class="text-h6 font-weight-bold text-primary">{{ record.isn || '-' }}</div>
+        <v-card v-if="record" class="d-flex flex-column" style="height: 100vh; overflow: hidden;">
+            <!-- Sticky Header Container -->
+            <div class="dialog-sticky-header flex-shrink-0"
+                style="z-index: 10; background-color: rgb(var(--v-theme-surface));">
+                <v-card-title class="d-flex justify-space-between align-center flex-shrink-0 bg-primary pa-3">
+                    <div class="d-flex align-center">
+                        <v-icon class="mr-2" color="white">mdi-table-eye</v-icon>
+                        <span class="text-white">Test Items Details</span>
+                    </div>
+                    <div class="d-flex align-center gap-2">
+                        <v-btn variant="outlined" color="white" size="small" :loading="downloading" @click="handleDownload">
+                            <v-icon start size="small">mdi-download</v-icon>
+                            Download Log
+                        </v-btn>
+                        <v-btn icon="mdi-close" variant="text" color="white" @click="close" />
+                    </div>
+                </v-card-title>
+
+                <!-- DUT Information Section -->
+                <div class="flex-shrink-0">
+                    <v-card-subtitle class="pa-4 py-2">
+                        <!-- Primary Information Card -->
+                        <v-card variant="tonal" color="primary" class="mb-3">
+                            <v-card-text class="py-3">
+                                <v-row dense>
+                                    <v-col cols="12" md="6">
+                                        <div class="d-flex align-center">
+                                            <v-icon size="large" class="mr-3" color="primary">mdi-barcode</v-icon>
+                                            <div>
+                                                <div class="text-caption text-medium-emphasis">DUT ISN</div>
+                                                <div class="d-flex align-center gap-2">
+                                                    <span class="text-h6 font-weight-bold">{{ record.isn || '-' }}</span>
+                                                    <v-btn v-if="record.isn" icon size="x-small" variant="text"
+                                                        @click="copyToClipboard(record.isn)">
+                                                        <v-icon size="small">mdi-content-copy</v-icon>
+                                                        <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
+                                                    </v-btn>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </v-col>
+                                    <v-col cols="12" md="6">
+                                        <div class="d-flex align-center">
+                                            <v-icon size="large" class="mr-3" color="primary">mdi-factory</v-icon>
+                                            <div>
+                                                <div class="text-caption text-medium-emphasis">Station</div>
+                                                <div class="text-h6 font-weight-bold">
+                                                    {{ record.displayStationName || record.stationName }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </v-col>
+                                </v-row>
+                            </v-card-text>
                         </v-card>
-                    </v-col>
-                    <v-col cols="12" sm="6" md="3">
-                        <v-card variant="outlined" class="pa-3">
-                            <div class="text-caption text-medium-emphasis">Device ID</div>
-                            <div class="text-h6 font-weight-bold">{{ record.deviceId }}</div>
+
+                        <!-- Device & Identifiers -->
+                        <v-card variant="outlined" class="mb-3">
+                            <v-card-text class="py-2">
+                                <v-row dense>
+                                    <v-col cols="12" md="4">
+                                        <div class="d-flex align-center">
+                                            <v-icon size="small" class="mr-2">mdi-chip</v-icon>
+                                            <span class="text-body-2">
+                                                <strong>Device ID:</strong>
+                                                <span class="ml-2 font-mono">{{ record.deviceId }}</span>
+                                            </span>
+                                        </div>
+                                    </v-col>
+                                    <v-col cols="12" md="4">
+                                        <div class="d-flex align-center">
+                                            <v-icon size="small" class="mr-2">mdi-map-marker</v-icon>
+                                            <span class="text-body-2">
+                                                <strong>Site / Project:</strong>
+                                                <span class="ml-2">{{ record.site }} / {{ record.project }}</span>
+                                            </span>
+                                        </div>
+                                    </v-col>
+                                    <v-col cols="12" md="4">
+                                        <div class="d-flex align-center">
+                                            <v-icon size="small" class="mr-2">mdi-router-wireless</v-icon>
+                                            <span class="text-body-2">
+                                                <strong>TSP:</strong>
+                                                <span class="ml-2">{{ record.tsp || record.displayStationName || '-' }}</span>
+                                            </span>
+                                        </div>
+                                    </v-col>
+                                </v-row>
+                            </v-card-text>
                         </v-card>
-                    </v-col>
-                    <v-col cols="12" sm="6" md="3">
-                        <v-card variant="outlined" class="pa-3">
-                            <div class="text-caption text-medium-emphasis">Test Start Time</div>
-                            <div class="text-h6">{{ formatTime(record.testStartTime) }}</div>
-                        </v-card>
-                    </v-col>
-                    <v-col cols="12" sm="6" md="3">
-                        <v-card variant="outlined" class="pa-3">
-                            <div class="text-caption text-medium-emphasis">Test End Time</div>
-                            <div class="text-h6">{{ formatTime(record.testEndTime) }}</div>
-                        </v-card>
-                    </v-col>
-                </v-row>
 
-                <v-row class="mb-4">
-                    <v-col cols="12" sm="6" md="2">
-                        <div class="text-caption text-medium-emphasis">Site</div>
-                        <div class="font-weight-medium">{{ record.site }}</div>
-                    </v-col>
-                    <v-col cols="12" sm="6" md="2">
-                        <div class="text-caption text-medium-emphasis">Project</div>
-                        <div class="font-weight-medium">{{ record.project }}</div>
-                    </v-col>
-                    <v-col cols="12" sm="6" md="2">
-                        <div class="text-caption text-medium-emphasis">Line</div>
-                        <div class="font-weight-medium">{{ record.line || '-' }}</div>
-                    </v-col>
-                    <v-col cols="12" sm="6" md="3">
-                        <div class="text-caption text-medium-emphasis">Station Name</div>
-                        <div class="font-weight-medium">{{ record.stationName }}</div>
-                    </v-col>
-                    <v-col cols="12" sm="6" md="3">
-                        <div class="text-caption text-medium-emphasis">TSP / Display Name</div>
-                        <div class="font-weight-medium">{{ record.tsp || record.displayStationName || '-' }}</div>
-                    </v-col>
-                </v-row>
+                        <!-- Timing & Status Row -->
+                        <v-row dense class="mb-2">
+                            <v-col cols="12" sm="6" md="3">
+                                <v-card variant="outlined" class="h-100">
+                                    <v-card-text class="py-2">
+                                        <div class="d-flex align-center">
+                                            <v-icon size="small" class="mr-2">mdi-calendar-clock</v-icon>
+                                            <div class="text-body-2">
+                                                <div><strong>Test Start</strong></div>
+                                                <div class="text-caption">{{ formatTime(record.testStartTime) }}</div>
+                                            </div>
+                                        </div>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                            <v-col cols="12" sm="6" md="3">
+                                <v-card variant="outlined" class="h-100">
+                                    <v-card-text class="py-2">
+                                        <div class="d-flex align-center">
+                                            <v-icon size="small" class="mr-2">mdi-calendar-check</v-icon>
+                                            <div class="text-body-2">
+                                                <div><strong>Test End</strong></div>
+                                                <div class="text-caption">{{ formatTime(record.testEndTime) }}</div>
+                                            </div>
+                                        </div>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                            <v-col cols="12" sm="6" md="3">
+                                <v-card variant="outlined" class="h-100">
+                                    <v-card-text class="py-2">
+                                        <div class="d-flex align-center">
+                                            <v-icon size="small" class="mr-2">mdi-timer</v-icon>
+                                            <div class="text-body-2">
+                                                <div><strong>Test Duration</strong></div>
+                                                <div class="text-body-2 font-weight-medium">
+                                                    {{ calculateDuration(record.testStartTime, record.testEndTime) }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                            <v-col cols="12" sm="6" md="3">
+                                <v-card variant="outlined" class="h-100">
+                                    <v-card-text class="py-2">
+                                        <div class="d-flex align-center">
+                                            <v-icon size="small" class="mr-2">mdi-list-box</v-icon>
+                                            <div class="text-body-2">
+                                                <div><strong>Test Items</strong></div>
+                                                <v-chip size="small" color="info">
+                                                    {{ record.testItems?.length || 0 }}
+                                                </v-chip>
+                                            </div>
+                                        </div>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
 
-                <v-divider class="mb-4" />
+                        <!-- Error Status Row -->
+                        <v-row dense class="mb-1">
+                            <v-col cols="12">
+                                <v-card :variant="record.errorCode !== 'PASS' ? 'tonal' : 'outlined'"
+                                    :color="record.errorCode !== 'PASS' ? 'error' : 'success'" class="h-100">
+                                    <v-card-text class="py-2">
+                                        <div class="d-flex align-start">
+                                            <v-icon size="small" class="mr-2 mt-1"
+                                                :color="record.errorCode !== 'PASS' ? 'error' : 'success'">
+                                                {{ record.errorCode !== 'PASS' ? 'mdi-alert-circle' : 'mdi-check-circle' }}
+                                            </v-icon>
+                                            <div class="flex-grow-1" style="min-width: 0;">
+                                                <div>
+                                                    <strong>Test Status:</strong>
+                                                    <v-chip :color="record.errorCode === 'PASS' ? 'success' : 'error'" 
+                                                        size="small" class="ml-2">
+                                                        {{ record.errorCode }}
+                                                    </v-chip>
+                                                </div>
+                                                <div v-if="record.errorName && record.errorName !== 'N/A'"
+                                                    class="text-caption mt-1 font-weight-medium"
+                                                    style="word-break: break-word; overflow-wrap: break-word;">
+                                                    Error: {{ record.errorName }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </v-card-text>
+                                </v-card>
+                            </v-col>
+                        </v-row>
+                    </v-card-subtitle>
+                </div>
 
-                <!-- Filters Section -->
-                <v-row class="mb-4" align="center">
-                    <!-- Test Item Filter -->
-                    <v-col cols="12" md="5">
-                        <div class="d-flex align-center flex-wrap gap-2">
-                            <span class="text-caption text-medium-emphasis mr-2">Filter Test Items:</span>
-                            <v-chip-group v-model="testItemFilter" mandatory>
-                                <v-chip value="value" filter variant="outlined" color="success">
-                                    <v-icon start size="small">mdi-numeric</v-icon>
-                                    Value Data
-                                </v-chip>
-                                <v-chip value="all" filter variant="outlined" color="primary">
-                                    <v-icon start size="small">mdi-format-list-bulleted</v-icon>
-                                    Show All
-                                </v-chip>
-                                <v-chip value="non-value" filter variant="outlined" color="warning">
-                                    <v-icon start size="small">mdi-text</v-icon>
-                                    Non-Value
-                                </v-chip>
-                                <v-chip value="bin" filter variant="outlined" color="info">
-                                    <v-icon start size="small">mdi-check-decagram</v-icon>
-                                    Bin Data
-                                </v-chip>
-                            </v-chip-group>
-                        </div>
-                    </v-col>
+                <v-divider class="flex-shrink-0" />
+            </div>
+            <!-- End Sticky Header Container -->
 
-                    <!-- Test Status Filter -->
-                    <v-col cols="12" md="3">
-                        <div class="d-flex align-center flex-wrap gap-2">
-                            <span class="text-caption text-medium-emphasis mr-2">Status:</span>
-                            <v-chip-group v-model="testStatusFilter" mandatory>
-                                <v-chip value="ALL" filter variant="outlined" color="primary">ALL</v-chip>
-                                <v-chip value="PASS" filter variant="outlined" color="success">PASS</v-chip>
-                                <v-chip value="FAIL" filter variant="outlined" color="error">FAIL</v-chip>
-                            </v-chip-group>
-                        </div>
-                    </v-col>
-
-                    <!-- Search -->
+            <!-- Search and Filter Controls (Fixed, non-scrollable) -->
+            <v-card-text class="pb-2 pt-3 flex-shrink-0">
+                <v-row dense>
                     <v-col cols="12" md="4">
                         <v-combobox v-model="searchTerms" label="Search Test Items (Regex)"
-                            prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details
-                            clearable multiple chips closable-chips
-                            placeholder="Type and press Enter for multiple search terms..."
-                            hint="Press Enter to add search terms. Supports regex." />
+                            prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details clearable
+                            multiple chips closable-chips
+                            placeholder="Type and press Enter (OR logic)..."
+                            hint="Multiple terms use OR logic">
+                            <template #chip="{ props, item }">
+                                <v-chip v-bind="props" :text="String(item.value || item)" size="small" color="primary" />
+                            </template>
+                        </v-combobox>
+                    </v-col>
+                    <v-col cols="12" md="2">
+                        <v-select v-model="testStatusFilter" :items="['ALL', 'PASS', 'FAIL']" label="Status Filter"
+                            variant="outlined" density="compact" hide-details />
+                    </v-col>
+                    <v-col cols="12" md="3">
+                        <v-select v-model="testItemFilter" :items="testItemFilterOptions" item-title="title" 
+                            item-value="value" label="Data Type" variant="outlined" density="compact" hide-details />
+                    </v-col>
+                    <v-col cols="12" md="3">
+                        <div class="d-flex align-center justify-end h-100">
+                            <span class="text-caption text-medium-emphasis">
+                                Showing {{ filteredTestItems.length }} of {{ record.testItems?.length || 0 }} items
+                            </span>
+                        </div>
                     </v-col>
                 </v-row>
+            </v-card-text>
 
-                <!-- Test Items Table (Fullsize) -->
-                <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="100"
-                    :height="tableHeight" density="comfortable" fixed-header class="elevation-1 v-table--striped">
+            <!-- Data Table Container -->
+            <div class="flex-grow-1" style="min-height: 0; overflow: hidden;">
+                <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="50"
+                    density="comfortable" fixed-header fixed-footer style="height: 100%;"
+                    class="elevation-1 v-table--striped">
                     <template #item.STATUS="{ item }">
                         <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'" size="small">
                             {{ item.STATUS }}
@@ -138,17 +240,19 @@
                         <span class="text-medium-emphasis">{{ item.LCL || '-' }}</span>
                     </template>
                 </v-data-table>
-
-                <div class="text-caption text-medium-emphasis mt-2">
-                    Showing {{ filteredTestItems.length }} of {{ record.testItems?.length || 0 }} test items
-                </div>
-            </v-card-text>
+            </div>
         </v-card>
     </v-dialog>
+
+    <!-- Copy Success Snackbar -->
+    <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="top">
+        <v-icon start>mdi-check</v-icon>
+        Copied to clipboard!
+    </v-snackbar>
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, onUnmounted } from 'vue'
+import { ref, computed, watch } from 'vue'
 
 // Normalized test item interface
 export interface NormalizedTestItem {
@@ -208,9 +312,15 @@ const isOpen = computed({
 const testItemFilter = ref<'all' | 'value' | 'non-value' | 'bin'>('value')
 const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
 const searchTerms = ref<string[]>([])
+const showCopySuccess = ref(false)
 
-// Table height for fullsize display
-const tableHeight = ref('calc(100vh - 500px)')
+// Filter options for dropdown
+const testItemFilterOptions = [
+    { title: 'Value Data', value: 'value' },
+    { title: 'Show All', value: 'all' },
+    { title: 'Non-Value', value: 'non-value' },
+    { title: 'Bin Data', value: 'bin' }
+]
 
 const testItemHeaders = [
     { title: 'Test Item', key: 'NAME', sortable: true },
@@ -276,6 +386,32 @@ function formatTime(timeStr: string): string {
     }
 }
 
+function calculateDuration(startStr: string, endStr: string): string {
+    if (!startStr || !endStr) return '-'
+    try {
+        const cleanStart = startStr.replace('%:z', '').replace('T', ' ')
+        const cleanEnd = endStr.replace('%:z', '').replace('T', ' ')
+        const start = new Date(cleanStart.replace(' ', 'T') + 'Z')
+        const end = new Date(cleanEnd.replace(' ', 'T') + 'Z')
+        const diffMs = end.getTime() - start.getTime()
+        const diffSeconds = Math.floor(diffMs / 1000)
+        const minutes = Math.floor(diffSeconds / 60)
+        const seconds = diffSeconds % 60
+        return `${minutes}m ${seconds}s`
+    } catch {
+        return '-'
+    }
+}
+
+async function copyToClipboard(text: string): Promise<void> {
+    try {
+        await navigator.clipboard.writeText(text)
+        showCopySuccess.value = true
+    } catch (err) {
+        console.error('Failed to copy:', err)
+    }
+}
+
 // Computed filtered test items
 const filteredTestItems = computed(() => {
     if (!props.record?.testItems) return []
@@ -300,13 +436,14 @@ const filteredTestItems = computed(() => {
         items = items.filter(item => item.STATUS === testStatusFilter.value)
     }
 
-    // Apply multi-term regex search (AND logic - all terms must match)
+    // Apply multi-term regex search (OR logic - any term must match)
     if (searchTerms.value.length > 0) {
         items = items.filter(item => {
             const searchableText = `${item.NAME || ''} ${item.STATUS || ''} ${item.VALUE || ''}`.toLowerCase()
-            return searchTerms.value.every(term => {
+            // OR logic: at least one term must match
+            return searchTerms.value.some(term => {
                 const trimmedTerm = term.trim().toLowerCase()
-                if (!trimmedTerm) return true
+                if (!trimmedTerm) return false
                 try {
                     const regex = new RegExp(trimmedTerm, 'i')
                     return regex.test(searchableText)
@@ -333,20 +470,6 @@ function close(): void {
 function handleDownload(): void {
     emit('download')
 }
-
-// Handle window resize
-function updateTableHeight(): void {
-    tableHeight.value = `calc(100vh - 480px)`
-}
-
-onMounted(() => {
-    updateTableHeight()
-    window.addEventListener('resize', updateTableHeight)
-})
-
-onUnmounted(() => {
-    window.removeEventListener('resize', updateTableHeight)
-})
 
 // Reset filters when record changes
 watch(() => props.record, () => {

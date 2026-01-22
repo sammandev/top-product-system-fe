@@ -194,6 +194,10 @@
             </template>
         </v-navigation-drawer>
 
+        <!-- Navigation Loading Indicator -->
+        <v-progress-linear v-if="appConfigStore.isNavigating" indeterminate color="primary" 
+            class="position-fixed" style="z-index: 9999; top: 48px;" />
+
         <!-- Main Content Area -->
         <v-main class="default-layout__main">
             <!-- Content (scrollable) -->

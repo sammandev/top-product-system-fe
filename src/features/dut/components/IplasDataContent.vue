@@ -132,7 +132,7 @@
                 <v-card v-if="testItemData.length > 0" elevation="2" class="mb-4">
                     <v-card-title class="d-flex align-center justify-space-between flex-wrap">
                         <div class="d-flex align-center">
-                            <v-icon class="mr-2" color="purple">mdi-format-list-checks</v-icon>
+                            <v-icon class="mr-2" color="info">mdi-format-list-checks</v-icon>
                             Test Results
                             <v-chip size="small" color="info" class="ml-2">{{ testItemData.length }} records</v-chip>
                         </div>
@@ -143,8 +143,7 @@
                                 Download Selected ({{ selectedRecordIndices.length }})
                             </v-btn>
                             <v-btn variant="text" size="small" @click="toggleSelectAllRecords">
-                                {{ selectedRecordIndices.length === testItemData.length ? 'Deselect All' : 'Select All'
-                                }}
+                                {{ allVisibleSelected ? 'Deselect All' : `Select All (${visibleRecordsCount})` }}
                             </v-btn>
                         </div>
                     </v-card-title>
@@ -164,8 +163,19 @@
                         <v-window v-model="activeStationTab">
                             <v-window-item v-for="(stationGroup, stationIndex) in groupedByStation"
                                 :key="stationGroup.stationName" :value="stationIndex">
-                                <!-- Device ID Filter and Search Box -->
-                                <v-row class="mb-4">
+                                <!-- Search, Status Filter, and Device ID Filter -->
+                                <v-row class="mb-4" dense>
+                                    <v-col cols="12" md="4">
+                                        <v-text-field v-model="recordSearchQueries[stationGroup.stationName]"
+                                            label="Search Records" prepend-inner-icon="mdi-magnify"
+                                            variant="outlined" density="compact" hide-details clearable
+                                            placeholder="Search ISN, Device ID, Error Code, Error Name..." />
+                                    </v-col>
+                                    <v-col cols="12" md="2">
+                                        <v-select v-model="stationStatusFilters[stationGroup.stationName]"
+                                            :items="['ALL', 'PASS', 'FAIL']" label="Status"
+                                            variant="outlined" density="compact" hide-details />
+                                    </v-col>
                                     <v-col cols="12" md="6">
                                         <v-autocomplete v-model="selectedFilterDeviceIds[stationGroup.stationName]"
                                             :items="getUniqueDeviceIdsForStation(stationGroup)" label="Filter by Device ID"
@@ -175,12 +185,6 @@
                                                 <v-chip v-bind="props" :text="item.raw" size="small" />
                                             </template>
                                         </v-autocomplete>
-                                    </v-col>
-                                    <v-col cols="12" md="6">
-                                        <v-text-field v-model="recordSearchQueries[stationGroup.stationName]"
-                                            label="Search Records" prepend-inner-icon="mdi-magnify"
-                                            variant="outlined" density="compact" hide-details clearable
-                                            placeholder="Search ISN, Device ID, Error Code, Error Name..." />
                                     </v-col>
                                 </v-row>
 
@@ -196,7 +200,11 @@
                                                         :model-value="isRecordSelected(stationGroup.stationName, recordIndex)"
                                                         density="compact" hide-details class="flex-grow-0" @click.stop
                                                         @update:model-value="toggleRecordSelection(stationGroup.stationName, recordIndex)" />
-                                                    <v-icon size="small" color="primary">mdi-barcode</v-icon>
+                                                    <v-btn icon size="x-small" variant="text" color="primary"
+                                                        @click.stop="copyToClipboard(record.ISN)">
+                                                        <v-icon size="small">mdi-content-copy</v-icon>
+                                                        <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
+                                                    </v-btn>
                                                     <span class="font-weight-bold">{{ record.ISN || '-' }}</span>
                                                     <v-chip size="x-small" color="secondary" variant="outlined">
                                                         <v-icon start size="x-small">mdi-chip</v-icon>
@@ -244,10 +252,6 @@
                                                     <div class="font-weight-medium">{{ record.ISN || '-' }}</div>
                                                 </v-col>
                                                 <v-col cols="12" sm="6" md="2">
-                                                    <div class="text-caption text-medium-emphasis">Line</div>
-                                                    <div class="font-weight-medium">{{ record.Line || '-' }}</div>
-                                                </v-col>
-                                                <v-col cols="12" sm="6" md="2">
                                                     <div class="text-caption text-medium-emphasis">Station Name</div>
                                                     <div class="font-weight-medium">{{ record.station || '-' }}</div>
                                                 </v-col>
@@ -256,52 +260,54 @@
                                                     <div class="font-weight-medium">{{ record.TSP || '-' }}</div>
                                                 </v-col>
                                                 <v-col cols="12" sm="6" md="2">
-                                                    <div class="text-caption text-medium-emphasis">Test Start Time</div>
+                                                    <div class="text-caption text-medium-emphasis">Test Start</div>
                                                     <div class="font-weight-medium">{{ formatLocalTime(record['Test Start Time']) }}</div>
                                                 </v-col>
                                                 <v-col cols="12" sm="6" md="2">
-                                                    <div class="text-caption text-medium-emphasis">Test End Time</div>
+                                                    <div class="text-caption text-medium-emphasis">Test End</div>
                                                     <div class="font-weight-medium">{{ formatLocalTime(record['Test end Time']) }}</div>
+                                                </v-col>
+                                                <v-col cols="12" sm="6" md="2">
+                                                    <div class="text-caption text-medium-emphasis">Test Duration</div>
+                                                    <div class="font-weight-medium">{{ calculateDuration(record['Test Start Time'], record['Test end Time']) }}</div>
                                                 </v-col>
                                             </v-row>
 
                                             <!-- Filter Test Items (per-record) -->
-                                            <div class="mb-3">
-                                                <span class="text-caption text-medium-emphasis mr-2">Filter Test Items:</span>
-                                                <v-chip-group v-model="testItemFilters[`${stationGroup.stationName}-${recordIndex}`]" mandatory>
-                                                    <v-chip value="value" filter variant="outlined" color="success" size="small">
-                                                        <v-icon start size="x-small">mdi-numeric</v-icon>
-                                                        Value Data
-                                                    </v-chip>
-                                                    <v-chip value="all" filter variant="outlined" color="primary" size="small">
-                                                        <v-icon start size="x-small">mdi-format-list-bulleted</v-icon>
-                                                        Show All
-                                                    </v-chip>
-                                                    <v-chip value="non-value" filter variant="outlined" color="warning" size="small">
-                                                        <v-icon start size="x-small">mdi-text</v-icon>
-                                                        Non-Value
-                                                    </v-chip>
-                                                    <v-chip value="bin" filter variant="outlined" color="info" size="small">
-                                                        <v-icon start size="x-small">mdi-check-decagram</v-icon>
-                                                        Bin Data
-                                                    </v-chip>
-                                                </v-chip-group>
-                                            </div>
-
-                                            <!-- Test Items Multi-Search -->
-                                            <v-combobox
-                                                v-model="testItemSearchTerms[`${stationGroup.stationName}-${recordIndex}`]"
-                                                label="Search Test Items (Regex)"
-                                                prepend-inner-icon="mdi-regex"
-                                                variant="outlined" density="compact" hide-details
-                                                multiple chips closable-chips clearable class="mb-3"
-                                                placeholder="Type pattern and press Enter (e.g., tx, rx)..."
-                                                hint="Press Enter to add multiple search terms. Supports regex patterns."
-                                            >
-                                                <template #chip="{ props, item }">
-                                                    <v-chip v-bind="props" :text="String(item.value || item)" size="small" color="primary" />
-                                                </template>
-                                            </v-combobox>
+                                            <v-row class="mb-3" dense>
+                                                <v-col cols="12" md="6">
+                                                    <v-combobox
+                                                        v-model="testItemSearchTerms[`${stationGroup.stationName}-${recordIndex}`]"
+                                                        label="Search Test Items (Regex, OR logic)"
+                                                        prepend-inner-icon="mdi-magnify"
+                                                        variant="outlined" density="compact" hide-details
+                                                        multiple chips closable-chips clearable
+                                                        placeholder="Type pattern and press Enter (e.g., tx, rx)...">
+                                                        <template #chip="{ props, item }">
+                                                            <v-chip v-bind="props" :text="String(item.value || item)" size="small" color="primary" />
+                                                        </template>
+                                                    </v-combobox>
+                                                </v-col>
+                                                <v-col cols="12" md="6">
+                                                    <div class="d-flex align-center flex-wrap gap-2">
+                                                        <span class="text-caption text-medium-emphasis mr-2">Filter:</span>
+                                                        <v-chip-group v-model="testItemFilters[`${stationGroup.stationName}-${recordIndex}`]" mandatory>
+                                                            <v-chip value="value" filter variant="outlined" color="success" size="small">
+                                                                Value Data
+                                                            </v-chip>
+                                                            <v-chip value="all" filter variant="outlined" color="primary" size="small">
+                                                                Show All
+                                                            </v-chip>
+                                                            <v-chip value="non-value" filter variant="outlined" color="warning" size="small">
+                                                                Non-Value
+                                                            </v-chip>
+                                                            <v-chip value="bin" filter variant="outlined" color="info" size="small">
+                                                                Bin Data
+                                                            </v-chip>
+                                                        </v-chip-group>
+                                                    </div>
+                                                </v-col>
+                                            </v-row>
 
                                             <!-- Test Items Table -->
                                             <v-data-table :headers="testItemHeaders"
@@ -391,6 +397,12 @@
         <!-- Fullscreen Dialog -->
         <IplasTestItemsFullscreenDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
             :downloading="fullscreenDownloading" @download="downloadFromFullscreen" />
+
+        <!-- Copy Success Snackbar -->
+        <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="top">
+            <v-icon start>mdi-check</v-icon>
+            Copied to clipboard!
+        </v-snackbar>
     </div>
 </template>
 
@@ -469,6 +481,9 @@ const endTime = ref(getLocalTimeString(now))
 const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
 const expandedPanels = ref<Record<number, number[]>>({})
 
+// Per-station status filters (for filtering records within each station tab)
+const stationStatusFilters = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
+
 // Per-record test item filters (default to 'value')
 const testItemFilters = ref<Record<string, 'all' | 'value' | 'non-value' | 'bin'>>({})
 // Per-record multi-search terms (array of patterns)
@@ -476,6 +491,9 @@ const testItemSearchTerms = ref<Record<string, string[]>>({})
 
 // Record search queries (for searching ISN, Device ID, Error Code, Error Name)
 const recordSearchQueries = ref<Record<string, string>>({})
+
+// Copy success snackbar
+const showCopySuccess = ref(false)
 
 // Station tab and device filter controls
 const activeStationTab = ref(0)
@@ -491,6 +509,17 @@ function getDisplayLimit(stationName: string): number {
 
 function showMoreRecords(stationName: string): void {
     displayLimits.value[stationName] = (displayLimits.value[stationName] || INITIAL_DISPLAY_LIMIT) + 50
+}
+
+// Copy to clipboard function
+async function copyToClipboard(text: string): Promise<void> {
+    if (!text) return
+    try {
+        await navigator.clipboard.writeText(text)
+        showCopySuccess.value = true
+    } catch (err) {
+        console.error('Failed to copy:', err)
+    }
 }
 
 // Download controls
@@ -586,6 +615,12 @@ function getUniqueDeviceIdsForStation(stationGroup: StationGroup): string[] {
 
 function getFilteredStationRecords(stationGroup: StationGroup): CsvTestItemData[] {
     let records = stationGroup.records
+
+    // Apply per-station status filter (ALL/PASS/FAIL)
+    const statusFilter = stationStatusFilters.value[stationGroup.stationName] || 'ALL'
+    if (statusFilter !== 'ALL') {
+        records = records.filter(r => r['Test Status'] === statusFilter)
+    }
 
     // Apply device ID filter
     const filterIds = selectedFilterDeviceIds.value[stationGroup.stationName]
@@ -707,24 +742,21 @@ function filterAndSearchTestItems(items: TestItem[] | undefined, key: string): T
     const filterType = testItemFilters.value[key] || 'value'
     let filtered = filterTestItemsByType(items, filterType)
     
-    // Get per-record search terms (multi-pattern regex)
+    // Get per-record search terms (multi-pattern regex with OR logic)
     const searchTerms = testItemSearchTerms.value[key] || []
     if (searchTerms.length > 0) {
         filtered = filtered.filter(item => {
-            const itemName = item.NAME?.toLowerCase() || ''
-            // All search terms must match (AND logic)
-            return searchTerms.every(term => {
+            const searchableText = `${item.NAME || ''} ${item.STATUS || ''} ${item.VALUE || ''}`.toLowerCase()
+            // OR logic: at least one search term must match
+            return searchTerms.some(term => {
+                const trimmedTerm = term.trim().toLowerCase()
+                if (!trimmedTerm) return false
                 try {
-                    const regex = new RegExp(term.trim(), 'i')
-                    return regex.test(itemName) ||
-                        regex.test(item.STATUS || '') ||
-                        regex.test(item.VALUE || '')
+                    const regex = new RegExp(trimmedTerm, 'i')
+                    return regex.test(searchableText)
                 } catch {
                     // If regex is invalid, fall back to simple includes
-                    const lowerTerm = term.toLowerCase().trim()
-                    return itemName.includes(lowerTerm) ||
-                        (item.STATUS?.toLowerCase() || '').includes(lowerTerm) ||
-                        (item.VALUE?.toLowerCase() || '').includes(lowerTerm)
+                    return searchableText.includes(trimmedTerm)
                 }
             })
         })
@@ -807,17 +839,53 @@ function toggleRecordSelection(stationName: string, recordIndex: number): void {
 }
 
 function toggleSelectAllRecords(): void {
-    if (selectedRecordKeys.value.size === testItemData.value.length) {
-        selectedRecordKeys.value.clear()
+    // Get total visible (filtered + limited) records count
+    const visibleRecordKeys = new Set<string>()
+    for (const group of groupedByStation.value) {
+        const displayedRecords = getDisplayedStationRecords(group)
+        for (let i = 0; i < displayedRecords.length; i++) {
+            visibleRecordKeys.add(`${group.stationName}::${i}`)
+        }
+    }
+
+    // Check if all visible records are selected
+    const allVisibleSelected = [...visibleRecordKeys].every(key => selectedRecordKeys.value.has(key))
+
+    if (allVisibleSelected && visibleRecordKeys.size > 0) {
+        // Deselect all visible records
+        for (const key of visibleRecordKeys) {
+            selectedRecordKeys.value.delete(key)
+        }
     } else {
-        selectedRecordKeys.value.clear()
-        for (const group of groupedByStation.value) {
-            for (let i = 0; i < group.records.length; i++) {
-                selectedRecordKeys.value.add(`${group.stationName}::${i}`)
-            }
+        // Select all visible records
+        for (const key of visibleRecordKeys) {
+            selectedRecordKeys.value.add(key)
         }
     }
 }
+
+// Get count of visible records for Select All label
+const visibleRecordsCount = computed(() => {
+    let count = 0
+    for (const group of groupedByStation.value) {
+        count += getDisplayedStationRecords(group).length
+    }
+    return count
+})
+
+// Check if all visible records are selected
+const allVisibleSelected = computed(() => {
+    if (visibleRecordsCount.value === 0) return false
+    for (const group of groupedByStation.value) {
+        const displayedRecords = getDisplayedStationRecords(group)
+        for (let i = 0; i < displayedRecords.length; i++) {
+            if (!selectedRecordKeys.value.has(`${group.stationName}::${i}`)) {
+                return false
+            }
+        }
+    }
+    return true
+})
 
 // Fullscreen functions
 function normalizeStationRecord(record: CsvTestItemData): NormalizedRecord {

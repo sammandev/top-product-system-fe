@@ -5,6 +5,7 @@
  * - Feature-based route organization
  * - Authentication guards
  * - Navigation tracking
+ * - Navigation loading state
  */
 
 import { createRouter, createWebHistory } from 'vue-router'
@@ -23,6 +24,7 @@ import {
   conversionRoutes
 } from './routes'
 import { authGuard } from './guards'
+import { useAppConfigStore } from '@/core/stores/appConfig.store'
 
 /**
  * Combine all feature routes
@@ -60,7 +62,20 @@ const router: Router = createRouter({
 /**
  * Global navigation guards
  */
-router.beforeEach(authGuard)
+router.beforeEach((to, from, next) => {
+  // Set navigation loading state immediately
+  const appConfigStore = useAppConfigStore()
+  appConfigStore.isNavigating = true
+  
+  // Call auth guard
+  authGuard(to, from, next)
+})
+
+router.afterEach(() => {
+  // Clear navigation loading state after navigation completes
+  const appConfigStore = useAppConfigStore()
+  appConfigStore.isNavigating = false
+})
 
 /**
  * Development-only navigation logging
