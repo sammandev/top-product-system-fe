@@ -350,7 +350,9 @@ export function useDashboard() {
 
   // Computed
   const currentUser = computed(() => authStore.user)
-  const userName = computed(() => currentUser.value?.username || 'User')
+  const isGuest = computed(() => authStore.isGuest)
+  // Hide username for Guest users
+  const userName = computed(() => isGuest.value ? 'Guest' : (currentUser.value?.username || 'User'))
 
   /**
    * Check if cache is still valid

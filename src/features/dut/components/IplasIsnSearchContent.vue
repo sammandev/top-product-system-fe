@@ -116,7 +116,7 @@
                     </v-btn>
                     <v-btn size="small" variant="outlined" color="white" @click="toggleExpandAll">
                         <v-icon start>{{ allExpanded ? 'mdi-arrow-collapse-vertical' : 'mdi-arrow-expand-vertical'
-                        }}</v-icon>
+                            }}</v-icon>
                         {{ allExpanded ? 'Collapse All' : 'Expand All' }}
                     </v-btn>
                 </div>
@@ -126,7 +126,15 @@
                 <v-tabs v-model="activeISNTab" color="primary" class="mb-4">
                     <v-tab v-for="(isnGroup, index) in groupedByISN" :key="isnGroup.isn" :value="index">
                         <v-icon start>mdi-barcode</v-icon>
-                        {{ isnGroup.isn }}
+                        <span class="isn-copyable" @click.stop="copyToClipboard(isnGroup.isn)" style="cursor: pointer;"
+                            title="Click to copy ISN">
+                            {{ isnGroup.isn }}
+                        </span>
+                        <v-btn icon size="x-small" variant="text" class="ml-1"
+                            @click.stop="copyToClipboard(isnGroup.isn)">
+                            <v-icon size="small">mdi-content-copy</v-icon>
+                            <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
+                        </v-btn>
                         <v-chip v-if="isnGroup.hasError" size="x-small" color="error" class="ml-2">
                             {{ isnGroup.errorCount }} Error{{ isnGroup.errorCount > 1 ? 's' : '' }}
                         </v-chip>
@@ -166,45 +174,31 @@
 
                         <v-divider class="mb-4" />
 
-                        <!-- Test Item Filter Chips -->
+                        <!-- Test Status Filter (ALL/PASS/FAIL) -->
                         <div class="mb-4">
-                            <span class="text-caption text-medium-emphasis mr-2">Filter Test Items:</span>
-                            <v-chip-group v-model="testItemFilter" mandatory>
-                                <v-chip value="all" filter variant="outlined" color="primary">
+                            <span class="text-caption text-medium-emphasis mr-2">Filter by Status:</span>
+                            <v-chip-group v-model="testStatusFilter" mandatory>
+                                <v-chip value="ALL" filter variant="outlined" color="primary">
                                     <v-icon start size="small">mdi-format-list-bulleted</v-icon>
-                                    Show All
+                                    ALL
                                 </v-chip>
-                                <v-chip value="value" filter variant="outlined" color="success">
-                                    <v-icon start size="small">mdi-numeric</v-icon>
-                                    Value Data
+                                <v-chip value="PASS" filter variant="outlined" color="success">
+                                    <v-icon start size="small">mdi-check-circle</v-icon>
+                                    PASS
                                 </v-chip>
-                                <v-chip value="non-value" filter variant="outlined" color="warning">
-                                    <v-icon start size="small">mdi-text</v-icon>
-                                    Non-Value Data
-                                </v-chip>
-                                <v-chip value="pass-fail" filter variant="outlined" color="info">
-                                    <v-icon start size="small">mdi-check-decagram</v-icon>
-                                    PASS/FAIL Data
+                                <v-chip value="FAIL" filter variant="outlined" color="error">
+                                    <v-icon start size="small">mdi-close-circle</v-icon>
+                                    FAIL
                                 </v-chip>
                             </v-chip-group>
                         </div>
 
                         <!-- Device ID Filter -->
                         <div class="mb-4">
-                            <v-autocomplete
-                                v-model="selectedFilterDeviceIds[isnGroup.isn]"
-                                :items="getUniqueDeviceIdsForISN(isnGroup)"
-                                label="Filter by Device ID"
-                                variant="outlined"
-                                density="compact"
-                                prepend-inner-icon="mdi-chip"
-                                multiple
-                                chips
-                                closable-chips
-                                clearable
-                                hide-details
-                                placeholder="All Device IDs"
-                            >
+                            <v-autocomplete v-model="selectedFilterDeviceIds[isnGroup.isn]"
+                                :items="getUniqueDeviceIdsForISN(isnGroup)" label="Filter by Device ID"
+                                variant="outlined" density="compact" prepend-inner-icon="mdi-chip" multiple chips
+                                closable-chips clearable hide-details placeholder="All Device IDs">
                                 <template #chip="{ props, item }">
                                     <v-chip v-bind="props" :text="item.raw" size="small" />
                                 </template>
@@ -213,7 +207,7 @@
 
                         <!-- Station Records -->
                         <v-expansion-panels v-model="expandedPanels[tabIndex]" multiple>
-                            <v-expansion-panel v-for="(record, recordIndex) in getFilteredISNRecords(isnGroup)"
+                            <v-expansion-panel v-for="(record, recordIndex) in getDisplayedISNRecords(isnGroup)"
                                 :key="`${isnGroup.isn}-${recordIndex}`">
                                 <v-expansion-panel-title
                                     :class="record.test_status !== 'PASS' ? 'bg-red-lighten-5' : ''">
@@ -225,29 +219,35 @@
                                             <v-icon size="small" color="primary">mdi-router-wireless</v-icon>
                                             <span class="font-weight-bold">{{ record.display_station_name ||
                                                 record.station_name
-                                            }}</span>
-                                            <v-chip size="x-small" color="secondary" variant="outlined">
-                                                <v-icon start size="x-small">mdi-chip</v-icon>
+                                                }}</span>
+                                            <v-chip size="small" color="secondary" variant="outlined"
+                                                class="text-body-2">
+                                                <v-icon start size="small">mdi-chip</v-icon>
                                                 {{ record.device_id }}
                                             </v-chip>
                                             <v-chip :color="record.error_code === 'PASS' ? 'success' : 'error'"
-                                                size="x-small">
+                                                size="small" class="text-body-2 font-weight-medium">
                                                 {{ record.error_code }}
                                             </v-chip>
                                             <v-chip v-if="record.error_name && record.error_name !== 'N/A'"
-                                                color="error" size="x-small" variant="outlined">
+                                                color="error" size="small" variant="outlined" class="text-body-2">
                                                 {{ record.error_name }}
                                             </v-chip>
                                         </div>
                                         <div class="d-flex align-center gap-2 text-caption text-medium-emphasis">
-                                            <v-chip size="x-small" color="info" variant="outlined">
-                                                <v-icon start size="x-small">mdi-clock-end</v-icon>
+                                            <v-chip size="small" color="info" variant="outlined" class="text-body-2">
+                                                <v-icon start size="small">mdi-clock-end</v-icon>
                                                 {{ formatShortTime(record.test_end_time) }}
                                             </v-chip>
-                                            <v-chip size="x-small" variant="outlined">
-                                                <v-icon start size="x-small">mdi-timer</v-icon>
+                                            <v-chip size="small" variant="outlined" class="text-body-2">
+                                                <v-icon start size="small">mdi-timer</v-icon>
                                                 {{ calculateDuration(record.test_start_time, record.test_end_time) }}
                                             </v-chip>
+                                            <v-btn icon size="x-small" variant="outlined" color="secondary"
+                                                @click.stop="openFullscreen(record)">
+                                                <v-icon size="small">mdi-fullscreen</v-icon>
+                                                <v-tooltip activator="parent" location="top">Fullscreen View</v-tooltip>
+                                            </v-btn>
                                             <v-btn icon size="x-small" variant="outlined" color="primary"
                                                 :loading="downloadingKey === `${tabIndex}-${recordIndex}`"
                                                 @click.stop="downloadSingleRecord(record, tabIndex, recordIndex)">
@@ -261,18 +261,32 @@
                                 <v-expansion-panel-text>
                                     <!-- Record Details -->
                                     <v-row class="mb-3">
-                                        <v-col cols="12" sm="6" md="3">
+                                        <v-col cols="12" sm="6" md="2">
                                             <div class="text-caption text-medium-emphasis">ISN</div>
                                             <div class="font-weight-medium">{{ record.isn || '-' }}</div>
                                         </v-col>
-                                        <v-col cols="12" sm="6" md="3">
+                                        <v-col cols="12" sm="6" md="2">
                                             <div class="text-caption text-medium-emphasis">Line</div>
                                             <div class="font-weight-medium">{{ record.line || '-' }}</div>
                                         </v-col>
-                                        <v-col cols="12" sm="6" md="3">
+                                        <v-col cols="12" sm="6" md="2">
                                             <div class="text-caption text-medium-emphasis">Station Name</div>
                                             <div class="font-weight-medium">{{ record.station_name || '-' }}</div>
                                         </v-col>
+                                        <v-col cols="12" sm="6" md="2">
+                                            <div class="text-caption text-medium-emphasis">Display Station</div>
+                                            <div class="font-weight-medium">{{ record.display_station_name || '-' }}</div>
+                                        </v-col>
+                                        <v-col cols="12" sm="6" md="2">
+                                            <div class="text-caption text-medium-emphasis">Test Start Time</div>
+                                            <div class="font-weight-medium">{{ formatLocalTime(record.test_start_time) }}</div>
+                                        </v-col>
+                                        <v-col cols="12" sm="6" md="2">
+                                            <div class="text-caption text-medium-emphasis">Test End Time</div>
+                                            <div class="font-weight-medium">{{ formatLocalTime(record.test_end_time) }}</div>
+                                        </v-col>
+                                    </v-row>
+                                    <v-row class="mb-3">
                                         <v-col cols="12" sm="6" md="3">
                                             <div class="text-caption text-medium-emphasis">Test Duration</div>
                                             <div class="font-weight-medium">
@@ -282,10 +296,37 @@
                                     </v-row>
 
                                     <!-- Test Items Search -->
-                                    <v-text-field v-model="testItemSearchQueries[`${isnGroup.isn}-${recordIndex}`]"
-                                        label="Search Test Items" prepend-inner-icon="mdi-magnify" variant="outlined"
-                                        density="compact" hide-details clearable class="mb-3"
-                                        placeholder="Search by test item name, status, or value..." />
+                                    <v-row class="mb-3" align="center">
+                                        <v-col cols="12" md="6">
+                                            <span class="text-caption text-medium-emphasis mr-2">Filter Test Items:</span>
+                                            <v-chip-group v-model="testItemFilters[`${isnGroup.isn}-${recordIndex}`]" mandatory>
+                                                <v-chip value="value" filter variant="outlined" color="success" size="small">
+                                                    <v-icon start size="x-small">mdi-numeric</v-icon>
+                                                    Value Data
+                                                </v-chip>
+                                                <v-chip value="all" filter variant="outlined" color="primary" size="small">
+                                                    <v-icon start size="x-small">mdi-format-list-bulleted</v-icon>
+                                                    Show All
+                                                </v-chip>
+                                                <v-chip value="non-value" filter variant="outlined" color="warning" size="small">
+                                                    <v-icon start size="x-small">mdi-text</v-icon>
+                                                    Non-Value
+                                                </v-chip>
+                                                <v-chip value="bin" filter variant="outlined" color="info" size="small">
+                                                    <v-icon start size="x-small">mdi-check-decagram</v-icon>
+                                                    Bin Data
+                                                </v-chip>
+                                            </v-chip-group>
+                                        </v-col>
+                                        <v-col cols="12" md="6">
+                                            <v-combobox v-model="testItemSearchTerms[`${isnGroup.isn}-${recordIndex}`]"
+                                                label="Search Test Items (Regex)" prepend-inner-icon="mdi-magnify"
+                                                variant="outlined" density="compact" hide-details clearable
+                                                multiple chips closable-chips
+                                                placeholder="Type and press Enter for multiple search terms..."
+                                                hint="Press Enter to add search terms. Supports regex." />
+                                        </v-col>
+                                    </v-row>
 
                                     <!-- Test Items Table -->
                                     <v-data-table :headers="testItemHeaders"
@@ -316,6 +357,17 @@
                                 </v-expansion-panel-text>
                             </v-expansion-panel>
                         </v-expansion-panels>
+
+                        <!-- Performance: Show More Button -->
+                        <div v-if="hasMoreRecords(isnGroup)" class="text-center mt-4">
+                            <v-btn color="primary" variant="outlined" @click="showMoreRecords(isnGroup.isn)">
+                                <v-icon start>mdi-chevron-down</v-icon>
+                                Show More ({{ getRemainingRecordsCount(isnGroup) }} remaining)
+                            </v-btn>
+                            <div class="text-caption text-medium-emphasis mt-1">
+                                Showing {{ getDisplayLimit(isnGroup.isn) }} of {{ getFilteredISNRecords(isnGroup).length }} records
+                            </div>
+                        </div>
                     </v-window-item>
                 </v-window>
             </v-card-text>
@@ -326,12 +378,24 @@
             <v-icon class="mr-2">mdi-check-circle</v-icon>
             Test log downloaded successfully!
         </v-snackbar>
+
+        <!-- Copy Success Notification -->
+        <v-snackbar v-model="showCopySuccess" color="info" timeout="2000">
+            <v-icon class="mr-2">mdi-content-copy</v-icon>
+            Copied to clipboard!
+        </v-snackbar>
+
+        <!-- Fullscreen Dialog -->
+        <IplasTestItemsFullscreenDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
+            :downloading="fullscreenDownloading" @download="downloadSingleRecordFromFullscreen" />
     </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
+import IplasTestItemsFullscreenDialog from './IplasTestItemsFullscreenDialog.vue'
+import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 import type { IsnSearchData, IsnSearchTestItem, DownloadAttachmentInfo } from '@/features/dut_logs/api/iplasApi'
 
 interface ISNGroup {
@@ -364,12 +428,35 @@ const activeISNTab = ref(0)
 const showSuccess = ref(false)
 
 // Display controls
-const testItemFilter = ref<'all' | 'value' | 'non-value' | 'pass-fail'>('value')
+const testItemFilters = ref<Record<string, 'all' | 'value' | 'non-value' | 'bin'>>({})
+const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
 const expandedPanels = ref<Record<number, number[]>>({})
-const testItemSearchQueries = ref<Record<string, string>>({})
+const testItemSearchTerms = ref<Record<string, string[]>>({})
 
 // Device ID filter controls
 const selectedFilterDeviceIds = ref<Record<string, string[]>>({})
+
+// Performance: Limit displayed records per ISN group
+const INITIAL_DISPLAY_LIMIT = 50
+const displayLimits = ref<Record<string, number>>({})
+
+function getDisplayLimit(isn: string): number {
+    return displayLimits.value[isn] || INITIAL_DISPLAY_LIMIT
+}
+
+function showMoreRecords(isn: string): void {
+    displayLimits.value[isn] = (displayLimits.value[isn] || INITIAL_DISPLAY_LIMIT) + 50
+}
+
+// Fullscreen dialog controls
+const fullscreenRecord = ref<NormalizedRecord | null>(null)
+const showFullscreenDialog = ref(false)
+const showCopySuccess = ref(false)
+const fullscreenSearchQuery = ref('')
+const fullscreenDownloading = ref(false)
+
+// Original record for download (to get site/project info)
+const fullscreenOriginalRecord = ref<IsnSearchData | null>(null)
 
 // Download controls
 const selectedRecordIndices = ref<string[]>([]) // Format: "tabIndex-recordIndex"
@@ -413,34 +500,62 @@ function isPassFailData(item: IsnSearchTestItem): boolean {
         (value === 'PASS' || value === 'FAIL' || value === '-999')
 }
 
-function isNonValueData(item: IsnSearchTestItem): boolean {
-    return !isValueData(item) && !isPassFailData(item)
+// Alias for better naming consistency
+function isBinData(item: IsnSearchTestItem): boolean {
+    return isPassFailData(item)
 }
 
-function filterTestItems(items: IsnSearchTestItem[] | undefined): IsnSearchTestItem[] {
-    if (!items) return []
+function isNonValueData(item: IsnSearchTestItem): boolean {
+    return !isValueData(item) && !isBinData(item)
+}
 
-    switch (testItemFilter.value) {
+function filterTestItemsByType(items: IsnSearchTestItem[], filterType: 'all' | 'value' | 'non-value' | 'bin'): IsnSearchTestItem[] {
+    switch (filterType) {
         case 'value':
             return items.filter(isValueData)
         case 'non-value':
             return items.filter(isNonValueData)
-        case 'pass-fail':
-            return items.filter(isPassFailData)
+        case 'bin':
+            return items.filter(isBinData)
         default:
             return items
     }
 }
 
+function filterTestItems(items: IsnSearchTestItem[] | undefined): IsnSearchTestItem[] {
+    if (!items) return []
+    // Default to 'value' filter for backward compatibility
+    return filterTestItemsByType(items, 'value')
+}
+
 function filterAndSearchTestItems(items: IsnSearchTestItem[] | undefined, key: string): IsnSearchTestItem[] {
-    let filtered = filterTestItems(items)
-    const query = testItemSearchQueries.value[key]?.toLowerCase().trim()
-    if (query) {
-        filtered = filtered.filter(item =>
-            item.NAME?.toLowerCase().includes(query) ||
-            item.STATUS?.toLowerCase().includes(query) ||
-            item.VALUE?.toLowerCase().includes(query)
-        )
+    if (!items) return []
+    
+    // Use fullscreen search query if key is 'fullscreen', otherwise use per-record filter
+    const filterType = key === 'fullscreen' ? 'value' : (testItemFilters.value[key] || 'value')
+    let filtered = filterTestItemsByType(items, filterType)
+    
+    // Get search terms - use fullscreen search query if key is 'fullscreen'
+    const searchTerms = key === 'fullscreen'
+        ? (fullscreenSearchQuery.value?.trim() ? [fullscreenSearchQuery.value.trim()] : [])
+        : (testItemSearchTerms.value[key] || [])
+    
+    // Apply multi-term regex search (AND logic - all terms must match)
+    if (searchTerms.length > 0) {
+        filtered = filtered.filter(item => {
+            const searchableText = `${item.NAME || ''} ${item.STATUS || ''} ${item.VALUE || ''}`.toLowerCase()
+            return searchTerms.every(term => {
+                const trimmedTerm = term.trim().toLowerCase()
+                if (!trimmedTerm) return true
+                try {
+                    const regex = new RegExp(trimmedTerm, 'i')
+                    return regex.test(searchableText)
+                } catch {
+                    // If invalid regex, fall back to simple includes
+                    return searchableText.includes(trimmedTerm)
+                }
+            })
+        })
     }
     return filtered
 }
@@ -541,9 +656,97 @@ function getUniqueDeviceIdsForISN(isnGroup: ISNGroup): string[] {
 }
 
 function getFilteredISNRecords(isnGroup: ISNGroup): IsnSearchData[] {
+    let records = isnGroup.records
+
+    // Apply test status filter (PASS/FAIL)
+    if (testStatusFilter.value !== 'ALL') {
+        const isPass = testStatusFilter.value === 'PASS'
+        records = records.filter(r => {
+            const recordPass = r.test_status === 'PASS' && r.error_code === 'PASS'
+            return isPass ? recordPass : !recordPass
+        })
+    }
+
+    // Apply device ID filter
     const filterIds = selectedFilterDeviceIds.value[isnGroup.isn]
-    if (!filterIds || filterIds.length === 0) return isnGroup.records
-    return isnGroup.records.filter(r => filterIds.includes(r.device_id))
+    if (filterIds && filterIds.length > 0) {
+        records = records.filter(r => filterIds.includes(r.device_id))
+    }
+
+    return records
+}
+
+// Performance: Get limited records for display
+function getDisplayedISNRecords(isnGroup: ISNGroup): IsnSearchData[] {
+    const filtered = getFilteredISNRecords(isnGroup)
+    const limit = getDisplayLimit(isnGroup.isn)
+    return filtered.slice(0, limit)
+}
+
+function hasMoreRecords(isnGroup: ISNGroup): boolean {
+    const filtered = getFilteredISNRecords(isnGroup)
+    const limit = getDisplayLimit(isnGroup.isn)
+    return filtered.length > limit
+}
+
+function getRemainingRecordsCount(isnGroup: ISNGroup): number {
+    const filtered = getFilteredISNRecords(isnGroup)
+    const limit = getDisplayLimit(isnGroup.isn)
+    return Math.max(0, filtered.length - limit)
+}
+
+function copyToClipboard(text: string): void {
+    navigator.clipboard.writeText(text).then(() => {
+        showCopySuccess.value = true
+    }).catch(err => {
+        console.error('Failed to copy to clipboard:', err)
+    })
+}
+
+function normalizeIsnRecord(record: IsnSearchData): NormalizedRecord {
+    return {
+        isn: record.isn,
+        deviceId: record.device_id,
+        stationName: record.station_name,
+        displayStationName: record.display_station_name,
+        tsp: record.display_station_name, // ISN Search doesn't have TSP, use display_station_name
+        site: record.site,
+        project: record.project,
+        line: record.line,
+        errorCode: record.error_code,
+        errorName: record.error_name,
+        testStatus: record.test_status,
+        testStartTime: record.test_start_time,
+        testEndTime: record.test_end_time,
+        testItems: record.test_item || []
+    }
+}
+
+function openFullscreen(record: IsnSearchData): void {
+    fullscreenOriginalRecord.value = record
+    fullscreenRecord.value = normalizeIsnRecord(record)
+    showFullscreenDialog.value = true
+}
+
+function closeFullscreen(): void {
+    fullscreenRecord.value = null
+    fullscreenOriginalRecord.value = null
+    showFullscreenDialog.value = false
+    fullscreenSearchQuery.value = ''
+}
+
+async function downloadSingleRecordFromFullscreen(): Promise<void> {
+    if (!fullscreenOriginalRecord.value) return
+    fullscreenDownloading.value = true
+    try {
+        const attachmentInfo = createAttachmentInfo(fullscreenOriginalRecord.value)
+        await downloadAttachments(fullscreenOriginalRecord.value.site, fullscreenOriginalRecord.value.project, [attachmentInfo])
+        showSuccess.value = true
+    } catch (err) {
+        console.error('Failed to download test log:', err)
+    } finally {
+        fullscreenDownloading.value = false
+    }
 }
 
 function isRecordSelected(tabIndex: number, recordIndex: number): boolean {
@@ -588,7 +791,8 @@ function createAttachmentInfo(record: IsnSearchData): DownloadAttachmentInfo {
         isn: record.isn,
         time: formatTimeForDownload(record.test_start_time),
         deviceid: record.device_id || '',
-        station: record.station_name
+        // Use display_station_name as per API documentation
+        station: record.display_station_name || record.station_name
     }
 }
 
