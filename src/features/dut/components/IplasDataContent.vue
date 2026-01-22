@@ -163,13 +163,18 @@
                         <v-window v-model="activeStationTab">
                             <v-window-item v-for="(stationGroup, stationIndex) in groupedByStation"
                                 :key="stationGroup.stationName" :value="stationIndex" eager>
-                                <!-- Search and Device ID Filter -->
+                                <!-- Search, Status and Device ID Filter -->
                                 <v-row class="mb-4" dense>
-                                    <v-col cols="12" md="6">
+                                    <v-col cols="12" md="4">
                                         <v-text-field v-model="recordSearchQueries[stationGroup.stationName]"
                                             label="Search Records" prepend-inner-icon="mdi-magnify"
                                             variant="outlined" density="compact" hide-details clearable
                                             placeholder="Search ISN, Device ID, Error Code, Error Name..." />
+                                    </v-col>
+                                    <v-col cols="12" md="2">
+                                        <v-select v-model="stationStatusFilters[stationGroup.stationName]"
+                                            :items="['ALL', 'PASS', 'FAIL']" label="Status"
+                                            variant="outlined" density="compact" hide-details />
                                     </v-col>
                                     <v-col cols="12" md="6">
                                         <v-autocomplete v-model="selectedFilterDeviceIds[stationGroup.stationName]"
@@ -201,34 +206,25 @@
                                                         <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
                                                     </v-btn>
                                                     <span class="font-weight-bold">{{ record.ISN || '-' }}</span>
+                                                    <!-- DeviceId chip - clickable to copy -->
                                                     <v-chip size="x-small" color="secondary" variant="outlined"
-                                                        @click.stop="copyToClipboard(record.DeviceId)">
-                                                        <v-icon start size="x-small">mdi-content-copy</v-icon>
+                                                        class="cursor-pointer" @click.stop="copyToClipboard(record.DeviceId)">
                                                         {{ record.DeviceId }}
-                                                        <v-tooltip activator="parent" location="top">Copy Device ID</v-tooltip>
+                                                        <v-tooltip activator="parent" location="top">Click to copy Device ID</v-tooltip>
                                                     </v-chip>
-                                                    <!-- ErrorCode with copy button (only show copy when not PASS) -->
+                                                    <!-- ErrorCode chip - clickable to copy -->
                                                     <v-chip :color="record.ErrorCode === 'PASS' ? 'success' : 'error'"
-                                                        size="x-small" @click.stop="record.ErrorCode !== 'PASS' && copyToClipboard(record.ErrorCode)">
-                                                        <v-btn v-if="record.ErrorCode !== 'PASS'" icon size="x-small"
-                                                            variant="text" class="mr-1" style="margin: -4px;"
-                                                            @click.stop="copyToClipboard(record.ErrorCode)">
-                                                            <v-icon size="x-small">mdi-content-copy</v-icon>
-                                                        </v-btn>
+                                                        size="x-small" class="cursor-pointer"
+                                                        @click.stop="copyToClipboard(record.ErrorCode)">
                                                         {{ record.ErrorCode }}
-                                                        <v-tooltip v-if="record.ErrorCode !== 'PASS'" activator="parent" location="top">Copy Error Code</v-tooltip>
+                                                        <v-tooltip activator="parent" location="top">Click to copy Error Code</v-tooltip>
                                                     </v-chip>
-                                                    <!-- ErrorName with copy button (only show when there is ErrorName) -->
+                                                    <!-- ErrorName chip - clickable to copy -->
                                                     <template v-if="record.ErrorName && record.ErrorName !== 'N/A' && record.ErrorCode !== 'PASS'">
                                                         <v-chip color="error" size="x-small" variant="outlined"
-                                                            @click.stop="copyToClipboard(record.ErrorName)">
-                                                            <v-btn icon size="x-small" variant="text" class="mr-1"
-                                                                style="margin: -4px;"
-                                                                @click.stop="copyToClipboard(record.ErrorName)">
-                                                                <v-icon size="x-small">mdi-content-copy</v-icon>
-                                                            </v-btn>
+                                                            class="cursor-pointer" @click.stop="copyToClipboard(record.ErrorName)">
                                                             {{ record.ErrorName }}
-                                                            <v-tooltip activator="parent" location="top">Copy Error Name</v-tooltip>
+                                                            <v-tooltip activator="parent" location="top">Click to copy Error Name</v-tooltip>
                                                         </v-chip>
                                                     </template>
                                                 </div>
@@ -302,19 +298,18 @@
                                                 </v-col>
                                                 <v-col cols="12" md="6">
                                                     <div class="d-flex align-center flex-wrap gap-2 h-100">
+                                                        <span class="text-caption text-medium-emphasis">Filter:</span>
                                                         <v-chip-group v-model="testItemFilters[`${stationGroup.stationName}-${recordIndex}`]" mandatory class="flex-grow-1">
-                                                            <v-chip value="all" filter variant="outlined" color="primary" size="small">
+                                                            <v-chip value="all" filter label variant="outlined" color="primary" size="small">
                                                                 All
                                                             </v-chip>
-                                                            <v-chip value="value" filter variant="outlined" color="success" size="small">
-                                                                <v-icon v-if="!testItemFilters[`${stationGroup.stationName}-${recordIndex}`] || testItemFilters[`${stationGroup.stationName}-${recordIndex}`] === 'value'"
-                                                                    start size="x-small">mdi-check</v-icon>
+                                                            <v-chip value="value" filter label variant="outlined" color="success" size="small">
                                                                 Value
                                                             </v-chip>
-                                                            <v-chip value="non-value" filter variant="outlined" color="warning" size="small">
+                                                            <v-chip value="non-value" filter label variant="outlined" color="warning" size="small">
                                                                 Non-Value
                                                             </v-chip>
-                                                            <v-chip value="bin" filter variant="outlined" color="info" size="small">
+                                                            <v-chip value="bin" filter label variant="outlined" color="info" size="small">
                                                                 Bin
                                                             </v-chip>
                                                         </v-chip-group>
@@ -322,29 +317,27 @@
                                                 </v-col>
                                             </v-row>
 
-                                            <!-- Test Items Table (scrollable) -->
-                                            <div class="test-items-table-container" style="max-height: 400px; overflow-y: auto;">
-                                                <v-data-table :headers="testItemHeaders"
-                                                    :items="filterAndSearchTestItems(record.TestItem, `${stationGroup.stationName}-${recordIndex}`)"
-                                                    :items-per-page="25" density="compact"
-                                                    class="elevation-1 v-table--striped">
-                                                    <template #item.STATUS="{ item }">
-                                                        <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'"
-                                                            size="x-small">
-                                                            {{ item.STATUS }}
-                                                        </v-chip>
-                                                    </template>
-                                                    <template #item.VALUE="{ item }">
-                                                        <span :class="getValueClass(item)">{{ item.VALUE }}</span>
-                                                    </template>
-                                                    <template #item.UCL="{ item }">
-                                                        <span class="text-medium-emphasis">{{ item.UCL || '-' }}</span>
-                                                    </template>
-                                                    <template #item.LCL="{ item }">
-                                                        <span class="text-medium-emphasis">{{ item.LCL || '-' }}</span>
-                                                    </template>
-                                                </v-data-table>
-                                            </div>
+                                            <!-- Test Items Table (scrollable with sticky header/footer) -->
+                                            <v-data-table :headers="testItemHeaders"
+                                                :items="filterAndSearchTestItems(record.TestItem, `${stationGroup.stationName}-${recordIndex}`)"
+                                                :items-per-page="25" density="compact" fixed-header
+                                                height="400" class="elevation-1 v-table--striped">
+                                                <template #item.STATUS="{ item }">
+                                                    <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'"
+                                                        size="x-small">
+                                                        {{ item.STATUS }}
+                                                    </v-chip>
+                                                </template>
+                                                <template #item.VALUE="{ item }">
+                                                    <span :class="getValueClass(item)">{{ item.VALUE }}</span>
+                                                </template>
+                                                <template #item.UCL="{ item }">
+                                                    <span class="text-medium-emphasis">{{ item.UCL || '-' }}</span>
+                                                </template>
+                                                <template #item.LCL="{ item }">
+                                                    <span class="text-medium-emphasis">{{ item.LCL || '-' }}</span>
+                                                </template>
+                                            </v-data-table>
 
                                             <div class="text-caption text-medium-emphasis mt-2">
                                                 Showing {{ filterAndSearchTestItems(record.TestItem,
@@ -1114,6 +1107,10 @@ onMounted(async () => {
 
 .gap-3 {
     gap: 0.75rem;
+}
+
+.cursor-pointer {
+    cursor: pointer;
 }
 
 /* Striped table styling */

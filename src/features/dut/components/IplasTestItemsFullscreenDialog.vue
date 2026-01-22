@@ -23,15 +23,11 @@
                     <!-- Compact Summary Row -->
                     <div class="d-flex align-center flex-wrap gap-3 text-body-2">
                         <!-- ISN -->
-                        <div class="d-flex align-center">
+                        <div class="d-flex align-center cursor-pointer" @click="copyToClipboard(record.isn)">
                             <v-icon size="small" class="mr-1" color="primary">mdi-barcode</v-icon>
                             <strong class="mr-1">ISN:</strong>
                             <span class="font-weight-bold">{{ record.isn || '-' }}</span>
-                            <v-btn v-if="record.isn" icon size="x-small" variant="text" class="ml-1"
-                                @click="copyToClipboard(record.isn)">
-                                <v-icon size="x-small">mdi-content-copy</v-icon>
-                                <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
-                            </v-btn>
+                            <v-tooltip activator="parent" location="top">Click to copy ISN</v-tooltip>
                         </div>
                         <v-divider vertical class="mx-1" />
                         <!-- Station -->
@@ -42,15 +38,11 @@
                         </div>
                         <v-divider vertical class="mx-1" />
                         <!-- Device ID -->
-                        <div class="d-flex align-center">
+                        <div class="d-flex align-center cursor-pointer" @click="copyToClipboard(record.deviceId)">
                             <v-icon size="small" class="mr-1">mdi-chip</v-icon>
                             <strong class="mr-1">Device:</strong>
                             <span class="font-mono">{{ record.deviceId }}</span>
-                            <v-btn v-if="record.deviceId" icon size="x-small" variant="text" class="ml-1"
-                                @click="copyToClipboard(record.deviceId)">
-                                <v-icon size="x-small">mdi-content-copy</v-icon>
-                                <v-tooltip activator="parent" location="top">Copy Device ID</v-tooltip>
-                            </v-btn>
+                            <v-tooltip activator="parent" location="top">Click to copy Device ID</v-tooltip>
                         </div>
                         <v-divider vertical class="mx-1" />
                         <!-- Site/Project -->
@@ -76,17 +68,17 @@
                         </v-chip>
                         <!-- Status -->
                         <v-chip size="x-small" :color="record.errorCode === 'PASS' ? 'success' : 'error'"
-                            :prepend-icon="record.errorCode === 'PASS' ? 'mdi-check-circle' : 'mdi-alert-circle'">
+                            :prepend-icon="record.errorCode === 'PASS' ? 'mdi-check-circle' : 'mdi-alert-circle'"
+                            class="cursor-pointer" @click="copyToClipboard(record.errorCode)">
                             {{ record.errorCode }}
+                            <v-tooltip activator="parent" location="top">Click to copy Error Code</v-tooltip>
                         </v-chip>
                         <template v-if="record.errorName && record.errorName !== 'N/A' && record.errorCode !== 'PASS'">
-                            <v-chip size="x-small" color="error" variant="outlined">
+                            <v-chip size="x-small" color="error" variant="outlined"
+                                class="cursor-pointer" @click="copyToClipboard(record.errorName)">
                                 {{ record.errorName }}
+                                <v-tooltip activator="parent" location="top">Click to copy Error Name</v-tooltip>
                             </v-chip>
-                            <v-btn icon size="x-small" variant="text" @click="copyToClipboard(record.errorName)">
-                                <v-icon size="x-small">mdi-content-copy</v-icon>
-                                <v-tooltip activator="parent" location="top">Copy Error Name</v-tooltip>
-                            </v-btn>
                         </template>
                     </div>
                 </div>
@@ -98,7 +90,7 @@
             <!-- Search and Filter Controls (Fixed, non-scrollable) -->
             <v-card-text class="pb-2 pt-2 flex-shrink-0">
                 <v-row dense>
-                    <v-col cols="12" md="4">
+                    <v-col cols="12" md="5">
                         <v-combobox v-model="searchTerms" label="Search Test Items (Regex)"
                             prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details clearable
                             multiple chips closable-chips
@@ -109,11 +101,7 @@
                             </template>
                         </v-combobox>
                     </v-col>
-                    <v-col cols="12" md="2">
-                        <v-select v-model="testStatusFilter" :items="['ALL', 'PASS', 'FAIL']" label="Status Filter"
-                            variant="outlined" density="compact" hide-details />
-                    </v-col>
-                    <v-col cols="12" md="3">
+                    <v-col cols="12" md="4">
                         <v-select v-model="testItemFilter" :items="testItemFilterOptions" item-title="title" 
                             item-value="value" label="Data Type" variant="outlined" density="compact" hide-details />
                     </v-col>
@@ -411,6 +399,10 @@ watch(() => props.record, () => {
 
 .gap-4 {
     gap: 1rem;
+}
+
+.cursor-pointer {
+    cursor: pointer;
 }
 
 /* Striped table styling */
