@@ -457,7 +457,6 @@ const {
     fetchDeviceIds,
     fetchTestItems: fetchTestItemsApi,
     downloadAttachments,
-    formatDateForV1Api,
     clearTestItemData
 } = useIplasApi()
 
@@ -1205,8 +1204,9 @@ function handleStationChange() {
 async function fetchTestItems() {
     if (!selectedSite.value || !selectedProject.value || selectedStations.value.length === 0) return
 
-    const begintime = formatDateForV1Api(new Date(startTime.value))
-    const endtime = formatDateForV1Api(new Date(endTime.value))
+    // Pass Date objects - the composable handles ISO format conversion
+    const begintime = new Date(startTime.value)
+    const endtime = new Date(endTime.value)
 
     clearTestItemData()
     selectedRecordKeys.value.clear()

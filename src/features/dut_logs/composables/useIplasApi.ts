@@ -213,14 +213,17 @@ export function useIplasApi() {
   /**
    * Get CSV test items for a device via backend proxy
    * Appends to existing testItemData instead of replacing
+   * 
+   * @param begintime - Start time (Date object or ISO string)
+   * @param endtime - End time (Date object or ISO string)
    */
   async function fetchTestItems(
     site: string,
     project: string,
     station: string,
     deviceid: string,
-    begintime: string,
-    endtime: string,
+    begintime: string | Date,
+    endtime: string | Date,
     testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL'
   ): Promise<CsvTestItemData[]> {
     loadingTestItems.value = true
@@ -232,8 +235,8 @@ export function useIplasApi() {
         project,
         station,
         device_id: deviceid,
-        begin_time: begintime,
-        end_time: endtime,
+        begin_time: iplasProxyApi.formatDateForRequest(begintime),
+        end_time: iplasProxyApi.formatDateForRequest(endtime),
         test_status: testStatus,
         token: getUserToken()
       })

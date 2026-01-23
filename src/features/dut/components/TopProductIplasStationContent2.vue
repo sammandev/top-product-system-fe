@@ -144,7 +144,6 @@ const {
     fetchTestItems: fetchTestItemsApi,
     fetchTestItemNames,
     fetchTestItemsFiltered,
-    formatDateForV1Api,
     clearTestItemData
 } = useIplasApi()
 
@@ -469,15 +468,14 @@ async function fetchTestItems(): Promise<void> {
                 )
             } else {
                 // Use the direct API endpoint (no filtering needed)
-                const begintime = formatDateForV1Api(new Date(startTime.value))
-                const endtime = formatDateForV1Api(new Date(endTime.value))
+                // Pass Date objects - the composable handles ISO format conversion
                 await fetchTestItemsApi(
                     selectedSite.value,
                     selectedProject.value,
                     config.displayName,
                     deviceId,
-                    begintime,
-                    endtime,
+                    new Date(startTime.value),
+                    new Date(endTime.value),
                     config.testStatus
                 )
             }
