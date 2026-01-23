@@ -303,8 +303,10 @@ async function openStationSelectionDialog(): Promise<void> {
 function handleStationClick(station: Station): void {
     selectedStationForConfig.value = station
     showStationConfigDialog.value = true
-    loadDeviceIdsForStation(station)
-    loadTestItemsForStation(station)
+    // Load device IDs first, then test items (test items need a device ID)
+    loadDeviceIdsForStation(station).then(() => {
+        loadTestItemsForStation(station)
+    })
 }
 
 async function loadDeviceIdsForStation(station: Station): Promise<void> {
@@ -350,11 +352,12 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
     currentStationTestItems.value = []
 
     try {
-        const start = new Date(startTime.value).toISOString()
-        const end = new Date(endTime.value).toISOString()
+        // V1 API requires YYYY/MM/DD HH:mm:ss format
+        const start = formatDateForV1Api(new Date(startTime.value))
+        const end = formatDateForV1Api(new Date(endTime.value))
 
-        // Fetch test items using a sample device (first available or empty string for all)
-        const deviceId = currentStationDeviceIds.value[0] ?? ''
+        // Fetch test items using a sample device (first available or 'ALL' for all devices)
+        const deviceId = currentStationDeviceIds.value[0] ?? 'ALL'
 
         const data = await fetchTestItemsApi(
             selectedSite.value,
