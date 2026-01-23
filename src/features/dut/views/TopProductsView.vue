@@ -19,7 +19,7 @@
     </div>
 
     <!-- Authentication Warning -->
-    <v-alert v-if="!hasDUTAccess" type="warning" variant="tonal" class="mb-4">
+    <!-- <v-alert v-if="!hasDUTAccess" type="warning" variant="tonal" class="mb-4">
       <template #prepend>
         <v-icon>mdi-alert</v-icon>
       </template>
@@ -29,12 +29,7 @@
           This feature requires external login access.
         </div>
       </div>
-      <!-- <template #append>
-        <v-btn color="warning" variant="elevated" size="small" @click="goToLogin">
-          Go to Login
-        </v-btn>
-      </template> -->
-    </v-alert>
+    </v-alert> -->
 
     <!-- Tab Navigation -->
     <v-tabs v-model="activeTab" class="mb-6">

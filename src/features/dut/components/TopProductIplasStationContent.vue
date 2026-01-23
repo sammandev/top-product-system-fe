@@ -89,7 +89,7 @@
                         :md="selectedStations.length === 1 ? 12 : 6">
                         <v-autocomplete v-model="stationDeviceIds[stationValue]"
                             :items="getDeviceIdsForStation(stationValue)"
-                            :label="`Device IDs - ${getStationDisplayName(stationValue)}`" variant="outlined"
+                            :label="`Select Device IDs - ${getStationDisplayName(stationValue)}`" variant="outlined"
                             density="comfortable" prepend-inner-icon="mdi-chip"
                             :loading="loadingDevicesByStation[stationValue]" multiple chips closable-chips clearable
                             hide-details placeholder="Leave empty for ALL devices">

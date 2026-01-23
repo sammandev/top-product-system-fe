@@ -106,7 +106,7 @@
                                 <v-autocomplete 
                                     v-model="stationDeviceIds[stationValue]"
                                     :items="getDeviceIdsForStation(stationValue)"
-                                    :label="`Device IDs - ${getStationDisplayName(stationValue)}`"
+                                    :label="`Select Device IDs - ${getStationDisplayName(stationValue)} (Optional)`"
                                     variant="outlined" density="comfortable"
                                     prepend-inner-icon="mdi-chip"
                                     :loading="loadingDevicesByStation[stationValue]"

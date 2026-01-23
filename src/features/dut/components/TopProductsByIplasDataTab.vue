@@ -15,6 +15,10 @@
                     <v-icon start>mdi-router-wireless</v-icon>
                     Station Search
                 </v-tab>
+                <v-tab value="station2">
+                    <v-icon start>mdi-cog-outline</v-icon>
+                    Station Search 2
+                </v-tab>
                 <v-tab value="isn">
                     <v-icon start>mdi-barcode-scan</v-icon>
                     ISN Search
@@ -25,6 +29,13 @@
                 <!-- Station Search Mode -->
                 <v-window-item value="station" eager>
                     <TopProductIplasStationContent 
+                        @show-details="handleShowDetails"
+                    />
+                </v-window-item>
+
+                <!-- Station Search 2 Mode - Custom Configuration -->
+                <v-window-item value="station2" eager>
+                    <TopProductIplasStationContent2
                         @show-details="handleShowDetails"
                     />
                 </v-window-item>
@@ -54,13 +65,14 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import TopProductIplasStationContent from './TopProductIplasStationContent.vue'
+import TopProductIplasStationContent2 from './TopProductIplasStationContent2.vue'
 import TopProductIplasIsnContent from './TopProductIplasIsnContent.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import TopProductIplasSettingsDialog from './TopProductIplasSettingsDialog.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 
 // Search mode tab
-const searchMode = ref<'station' | 'isn'>('station')
+const searchMode = ref<'station' | 'station2' | 'isn'>('station')
 
 // Settings dialog
 const showSettingsDialog = ref(false)
