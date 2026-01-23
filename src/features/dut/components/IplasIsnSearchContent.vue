@@ -1151,8 +1151,10 @@ async function handleSearch(): Promise<void> {
             // Initialize testItemFilters to 'value' for all records
             for (let isnIndex = 0; isnIndex < groupedByISN.value.length; isnIndex++) {
                 const isnGroup = groupedByISN.value[isnIndex]
+                if (!isnGroup) continue
                 for (let stationIndex = 0; stationIndex < isnGroup.stations.length; stationIndex++) {
                     const station = isnGroup.stations[stationIndex]
+                    if (!station) continue
                     for (let recordIndex = 0; recordIndex < station.records.length; recordIndex++) {
                         const key = `${isnGroup.isn}-${stationIndex}-${recordIndex}`
                         testItemFilters.value[key] = 'value'

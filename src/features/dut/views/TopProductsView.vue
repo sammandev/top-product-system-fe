@@ -46,6 +46,10 @@
         <v-icon class="mr-2">mdi-barcode-scan</v-icon>
         By DUT ISN
       </v-tab>
+      <v-tab value="iplas-data">
+        <v-icon class="mr-2">mdi-database-search</v-icon>
+        By iPLAS Data
+      </v-tab>
       <v-tab value="upload-log">
         <v-icon class="mr-2">mdi-upload</v-icon>
         By Upload Log
@@ -69,7 +73,12 @@
         <TopProductsByISNTab />
       </v-window-item>
 
-      <!-- Tab 3: By Upload Log (New) -->
+      <!-- Tab 3: By iPLAS Data -->
+      <v-window-item value="iplas-data">
+        <TopProductsByIplasDataTab />
+      </v-window-item>
+
+      <!-- Tab 4: By Upload Log (New) -->
       <v-window-item value="upload-log">
         <TopProductsByUploadLogTab />
       </v-window-item>
@@ -84,6 +93,7 @@ import { useAuthStore } from '@/features/auth/store'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import TopProductsByStationTab from '../components/TopProductsByStationTab.vue'
 import TopProductsByISNTab from '../components/TopProductsByISNTab.vue'
+import TopProductsByIplasDataTab from '../components/TopProductsByIplasDataTab.vue'
 import TopProductsByUploadLogTab from '@/features/dut_logs/components/TopProductsByUploadLogTab.vue'
 
 // Stores
