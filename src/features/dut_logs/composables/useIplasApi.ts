@@ -1,29 +1,47 @@
 /**
  * iPLAS API Composable
  * 
- * Provides reactive state and methods for interacting with iPLAS v1/v2 APIs
+ * Provides reactive state and methods for interacting with iPLAS APIs
+ * through the backend proxy for security and performance.
+ * 
+ * All methods now use the backend proxy by default. Tokens are securely
+ * managed on the backend with optional user override via settings.
  */
 
 import { ref, computed } from 'vue'
 import {
-  iplasV1Api,
-  iplasV2Api,
+  iplasProxyApi,
   type SiteProject,
-  type Station,
-  type DownloadAttachmentInfo,
+  type IplasStation,
+  type IplasTestItemInfo,
+  type IplasCsvTestItemResponse,
   type CsvTestItemData,
-  type IsnSearchData
-} from '../api/iplasApi'
+  type TestItem,
+  type IplasIsnSearchRecord,
+  type IplasDownloadAttachmentInfo
+} from '../api/iplasProxyApi'
+import { useIplasSettings } from './useIplasSettings'
+
+// Re-export types for backwards compatibility
+export type { SiteProject, IplasStation, CsvTestItemData, IplasIsnSearchRecord, TestItem }
+
+// Type aliases for backwards compatibility
+export type Station = IplasStation
+export type DownloadAttachmentInfo = IplasDownloadAttachmentInfo
+export type IsnSearchData = IplasIsnSearchRecord
 
 // Module-level cache for metadata (rarely changes)
 let cachedSiteProjects: SiteProject[] | null = null
-const cachedStations: Map<string, Station[]> = new Map()
+const cachedStations: Map<string, IplasStation[]> = new Map()
 const CACHE_KEY_SEPARATOR = '::'
 
 /**
  * Composable for iPLAS API operations
  */
 export function useIplasApi() {
+  // Get settings for user token
+  const { apiToken } = useIplasSettings()
+
   // Loading states
   const loading = ref(false)
   const loadingStations = ref(false)
@@ -64,12 +82,25 @@ export function useIplasApi() {
   })
 
   /**
-   * Verify token access for a site/project
+   * Get user token for proxy requests (if configured)
+   */
+  function getUserToken(): string | undefined {
+    const token = apiToken.value
+    // Return undefined if token is empty (backend will use default)
+    return token && token.trim() ? token : undefined
+  }
+
+  /**
+   * Verify token access for a site/project via backend proxy
    */
   async function verifyAccess(site: string, project: string): Promise<boolean> {
     try {
-      const response = await iplasV2Api.verify(site, project)
-      return response.message === 'success'
+      const response = await iplasProxyApi.verifyAccess({
+        site,
+        project,
+        token: getUserToken()
+      })
+      return response.success
     } catch (err) {
       console.error('Access verification failed:', err)
       return false
@@ -77,7 +108,7 @@ export function useIplasApi() {
   }
 
   /**
-   * Fetch site and project list (uses cache)
+   * Fetch site and project list via backend proxy (cached for 24 hours)
    */
   async function fetchSiteProjects(forceRefresh = false): Promise<SiteProject[]> {
     if (!forceRefresh && cachedSiteProjects) {
@@ -89,10 +120,10 @@ export function useIplasApi() {
     error.value = null
 
     try {
-      const data = await iplasV2Api.getSiteProjectList('simple')
-      cachedSiteProjects = data
-      siteProjects.value = data
-      return data
+      const response = await iplasProxyApi.getSiteProjects('simple')
+      cachedSiteProjects = response.data
+      siteProjects.value = response.data
+      return response.data
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch site/project list'
       throw err
@@ -102,7 +133,7 @@ export function useIplasApi() {
   }
 
   /**
-   * Fetch stations for a project (uses cache)
+   * Fetch stations for a project via backend proxy (cached for 1 hour)
    */
   async function fetchStations(
     site: string,
@@ -120,10 +151,21 @@ export function useIplasApi() {
     error.value = null
 
     try {
-      const data = await iplasV2Api.getStationList(site, project)
-      cachedStations.set(cacheKey, data)
-      stations.value = data
-      return data
+      const response = await iplasProxyApi.getStations({
+        site,
+        project,
+        token: getUserToken()
+      })
+      // Convert proxy response to Station type
+      const stationData: Station[] = response.data.map(s => ({
+        display_station_name: s.display_station_name,
+        station_name: s.station_name,
+        order: s.order,
+        data_source: s.data_source
+      }))
+      cachedStations.set(cacheKey, stationData)
+      stations.value = stationData
+      return stationData
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch station list'
       throw err
@@ -133,7 +175,7 @@ export function useIplasApi() {
   }
 
   /**
-   * Fetch device IDs for a station within a time range
+   * Fetch device IDs for a station via backend proxy (cached for 5 minutes)
    */
   async function fetchDeviceIds(
     site: string,
@@ -150,15 +192,16 @@ export function useIplasApi() {
       const start = startTime instanceof Date ? startTime.toISOString() : startTime
       const end = endTime instanceof Date ? endTime.toISOString() : endTime
 
-      const data = await iplasV2Api.getDeviceIdList(
+      const response = await iplasProxyApi.getDevices({
         site,
         project,
-        displayStationName,
-        start,
-        end
-      )
-      deviceIds.value = data
-      return data
+        station: displayStationName,
+        start_time: start,
+        end_time: end,
+        token: getUserToken()
+      })
+      deviceIds.value = response.data
+      return response.data
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch device IDs'
       throw err
@@ -168,7 +211,7 @@ export function useIplasApi() {
   }
 
   /**
-   * Get CSV test items for a device
+   * Get CSV test items for a device via backend proxy
    * Appends to existing testItemData instead of replacing
    */
   async function fetchTestItems(
@@ -184,21 +227,20 @@ export function useIplasApi() {
     error.value = null
 
     try {
-      const response = await iplasV1Api.getCsvTestItems(site, project, {
+      const response = await iplasProxyApi.getCsvTestItems({
+        site,
+        project,
         station,
-        deviceid,
+        device_id: deviceid,
+        begin_time: begintime,
+        end_time: endtime,
         test_status: testStatus,
-        begintime,
-        endtime
+        token: getUserToken()
       })
-
-      if (response.statuscode !== 200) {
-        throw new Error(`API returned status ${response.statuscode}`)
-      }
 
       // Append to existing data instead of replacing
       testItemData.value = [...testItemData.value, ...response.data]
-      return response.data
+      return response.data as CsvTestItemData[]
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch test items'
       throw err
@@ -208,7 +250,7 @@ export function useIplasApi() {
   }
 
   /**
-   * Search DUT test data by ISN
+   * Search DUT test data by ISN via backend proxy
    * Returns data from all stations that tested the same ISN
    */
   async function searchByIsn(isn: string): Promise<IsnSearchData[]> {
@@ -216,14 +258,14 @@ export function useIplasApi() {
     error.value = null
 
     try {
-      const response = await iplasV2Api.searchByIsn(isn)
+      const response = await iplasProxyApi.searchByIsn({
+        isn,
+        token: getUserToken()
+      })
 
-      if (response.status_code !== 200) {
-        throw new Error(`API returned status ${response.status_code}`)
-      }
-
-      isnSearchData.value = response.data
-      return response.data
+      // Map proxy response to IsnSearchData format
+      isnSearchData.value = response.data as unknown as IsnSearchData[]
+      return isnSearchData.value
     } catch (err: any) {
       error.value = err.message || 'Failed to search by ISN'
       throw err
@@ -240,7 +282,7 @@ export function useIplasApi() {
   }
 
   /**
-   * Download test log attachments
+   * Download test log attachments via backend proxy
    */
   async function downloadAttachments(
     site: string,
@@ -251,20 +293,29 @@ export function useIplasApi() {
     error.value = null
 
     try {
-      const response = await iplasV1Api.downloadAttachment(site, project, attachments)
+      // Convert to proxy format
+      const proxyInfo: IplasDownloadAttachmentInfo[] = attachments.map(a => ({
+        isn: a.isn,
+        time: a.time,
+        deviceid: a.deviceid,
+        station: a.station
+      }))
 
-      if (response.statuscode !== 200) {
-        throw new Error(`API returned status ${response.statuscode}`)
-      }
+      const response = await iplasProxyApi.downloadAttachment({
+        site,
+        project,
+        info: proxyInfo,
+        token: getUserToken()
+      })
 
       // Generate filename if not provided
-      const filename = response.data.filename || 
+      const filename = response.filename || 
         (attachments.length === 1 && attachments[0]
           ? `${attachments[0].isn}_${attachments[0].time.replace(/[\/:]/g, '_')}.zip`
           : `test_logs_${new Date().toISOString().slice(0, 10)}.zip`)
 
       // Trigger download
-      iplasV1Api.downloadBase64File(response.data.content, filename)
+      iplasProxyApi.downloadBase64File(response.content, filename)
     } catch (err: any) {
       error.value = err.message || 'Failed to download attachments'
       throw err
@@ -306,6 +357,87 @@ export function useIplasApi() {
     isnSearchData.value = []
   }
 
+  /**
+   * Fetch unique test item names via backend proxy (lightweight)
+   * Returns only test item names, not full data - reduces payload significantly
+   */
+  async function fetchTestItemNames(
+    site: string,
+    project: string,
+    station: string,
+    deviceId: string,
+    beginTime: string | Date,
+    endTime: string | Date,
+    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL'
+  ): Promise<IplasTestItemInfo[]> {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await iplasProxyApi.getTestItemNames({
+        site,
+        project,
+        station,
+        device_id: deviceId,
+        begin_time: iplasProxyApi.formatDateForRequest(beginTime),
+        end_time: iplasProxyApi.formatDateForRequest(endTime),
+        test_status: testStatus,
+        token: getUserToken()
+      })
+      return response.test_items
+    } catch (err: any) {
+      error.value = err.message || 'Failed to fetch test item names'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Fetch filtered test items via backend proxy with caching
+   * Filters are applied on server-side for better performance
+   */
+  async function fetchTestItemsFiltered(
+    site: string,
+    project: string,
+    station: string,
+    deviceId: string,
+    beginTime: string | Date,
+    endTime: string | Date,
+    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
+    testItemFilters?: string[],
+    limit?: number,
+    offset?: number
+  ): Promise<IplasCsvTestItemResponse> {
+    loadingTestItems.value = true
+    error.value = null
+
+    try {
+      const response = await iplasProxyApi.getCsvTestItems({
+        site,
+        project,
+        station,
+        device_id: deviceId,
+        begin_time: iplasProxyApi.formatDateForRequest(beginTime),
+        end_time: iplasProxyApi.formatDateForRequest(endTime),
+        test_status: testStatus,
+        test_item_filters: testItemFilters,
+        limit,
+        offset,
+        token: getUserToken()
+      })
+
+      // Append to existing data instead of replacing
+      testItemData.value = [...testItemData.value, ...response.data]
+      return response
+    } catch (err: any) {
+      error.value = err.message || 'Failed to fetch filtered test items'
+      throw err
+    } finally {
+      loadingTestItems.value = false
+    }
+  }
+
   return {
     // Loading states
     loading,
@@ -329,14 +461,18 @@ export function useIplasApi() {
     uniqueSites,
     projectsBySite,
 
-    // Methods
+    // Core Methods (all use backend proxy with user token support)
     verifyAccess,
     fetchSiteProjects,
     fetchStations,
     fetchDeviceIds,
     fetchTestItems,
+    fetchTestItemNames,
+    fetchTestItemsFiltered,
     searchByIsn,
     downloadAttachments,
+
+    // Utilities
     formatDateForV1Api,
     clearTestItemData,
     clearIsnSearchData,

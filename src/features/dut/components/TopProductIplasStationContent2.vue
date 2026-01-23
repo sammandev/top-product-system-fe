@@ -122,7 +122,7 @@ import StationSelectionDialog from './StationSelectionDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
 import type { StationConfig } from './StationSelectionDialog.vue'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
-import type { Station, TestItem, CsvTestItemData } from '@/features/dut_logs/api/iplasApi'
+import type { Station, TestItem, CsvTestItemData } from '@/features/dut_logs/composables/useIplasApi'
 
 // Emits
 const emit = defineEmits<{
@@ -142,6 +142,8 @@ const {
     fetchStations,
     fetchDeviceIds,
     fetchTestItems: fetchTestItemsApi,
+    fetchTestItemNames,
+    fetchTestItemsFiltered,
     formatDateForV1Api,
     clearTestItemData
 } = useIplasApi()
@@ -352,47 +354,24 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
     currentStationTestItems.value = []
 
     try {
-        // V1 API requires YYYY/MM/DD HH:mm:ss format
-        const start = formatDateForV1Api(new Date(startTime.value))
-        const end = formatDateForV1Api(new Date(endTime.value))
-
-        // Fetch test items using a sample device (first available or 'ALL' for all devices)
+        // Use the lightweight backend proxy endpoint for test item names
         const deviceId = currentStationDeviceIds.value[0] ?? 'ALL'
 
-        const data = await fetchTestItemsApi(
+        const testItems = await fetchTestItemNames(
             selectedSite.value,
             selectedProject.value,
             station.display_station_name,
             deviceId,
-            start,
-            end,
+            new Date(startTime.value),
+            new Date(endTime.value),
             'ALL'
         )
 
-        // Extract unique test item names from the response
-        const testItemsMap = new Map<string, TestItemInfo>()
-
-        for (const record of data) {
-            if (record.TestItem && Array.isArray(record.TestItem)) {
-                for (const item of record.TestItem) {
-                    if (item.NAME && !testItemsMap.has(item.NAME)) {
-                        // Determine if it's a VALUE type (numeric value) or BIN type
-                        const isValue = item.VALUE !== undefined &&
-                            item.VALUE !== null &&
-                            item.VALUE !== '' &&
-                            !isNaN(Number(item.VALUE))
-                        testItemsMap.set(item.NAME, { name: item.NAME, isValue })
-                    }
-                }
-            }
-        }
-
-        currentStationTestItems.value = Array.from(testItemsMap.values()).sort((a, b) =>
-            a.name.localeCompare(b.name)
-        )
-
-        // Clear the testItemData that was added during the fetch
-        clearTestItemData()
+        // Convert to TestItemInfo format expected by StationConfigDialog
+        currentStationTestItems.value = testItems.map(item => ({
+            name: item.name,
+            isValue: item.is_value
+        }))
     } catch (err: any) {
         testItemsError.value = err.message || 'Failed to load test items'
     } finally {
@@ -469,24 +448,39 @@ async function fetchTestItems(): Promise<void> {
 
     clearTestItemData()
 
-    const begintime = formatDateForV1Api(new Date(startTime.value))
-    const endtime = formatDateForV1Api(new Date(endTime.value))
-
     // Iterate through each configured station
     for (const config of Object.values(stationConfigs.value)) {
         const deviceIds = config.deviceIds.length > 0 ? config.deviceIds : ['ALL']
+        const hasTestItemFilters = config.selectedTestItems && config.selectedTestItems.length > 0
 
         // Fetch data for each device ID
         for (const deviceId of deviceIds) {
-            await fetchTestItemsApi(
-                selectedSite.value,
-                selectedProject.value,
-                config.displayName,
-                deviceId,
-                begintime,
-                endtime,
-                config.testStatus
-            )
+            if (hasTestItemFilters) {
+                // Use the filtered backend proxy endpoint (server-side filtering + caching)
+                await fetchTestItemsFiltered(
+                    selectedSite.value,
+                    selectedProject.value,
+                    config.displayName,
+                    deviceId,
+                    new Date(startTime.value),
+                    new Date(endTime.value),
+                    config.testStatus,
+                    config.selectedTestItems
+                )
+            } else {
+                // Use the direct API endpoint (no filtering needed)
+                const begintime = formatDateForV1Api(new Date(startTime.value))
+                const endtime = formatDateForV1Api(new Date(endTime.value))
+                await fetchTestItemsApi(
+                    selectedSite.value,
+                    selectedProject.value,
+                    config.displayName,
+                    deviceId,
+                    begintime,
+                    endtime,
+                    config.testStatus
+                )
+            }
         }
     }
 }

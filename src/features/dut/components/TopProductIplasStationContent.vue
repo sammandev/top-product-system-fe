@@ -187,7 +187,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
-import type { Station, TestItem, CsvTestItemData, DownloadAttachmentInfo } from '@/features/dut_logs/api/iplasApi'
+import type { Station, TestItem, CsvTestItemData, DownloadAttachmentInfo } from '@/features/dut_logs/composables/useIplasApi'
 
 // Emits
 const emit = defineEmits<{

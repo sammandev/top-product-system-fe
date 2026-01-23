@@ -142,7 +142,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import type { CsvTestItemData } from '@/features/dut_logs/api/iplasApi'
+import type { CsvTestItemData } from '@/features/dut_logs/composables/useIplasApi'
 
 interface Props {
     records: CsvTestItemData[]

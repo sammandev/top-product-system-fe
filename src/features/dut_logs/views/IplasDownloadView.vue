@@ -216,7 +216,7 @@
 import { ref, computed, onMounted } from 'vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
-import type { DownloadAttachmentInfo } from '@/features/dut_logs/api/iplasApi'
+import type { DownloadAttachmentInfo } from '@/features/dut_logs/composables/useIplasApi'
 
 const {
     downloading,

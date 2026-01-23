@@ -211,7 +211,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import type { Station } from '@/features/dut_logs/api/iplasApi'
+import type { Station } from '@/features/dut_logs/composables/useIplasApi'
 import type { StationConfig } from './StationSelectionDialog.vue'
 
 export interface TestItemInfo {
