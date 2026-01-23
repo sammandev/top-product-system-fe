@@ -107,8 +107,10 @@
         <StationConfigDialog v-model:show="showStationConfigDialog" :station="selectedStationForConfig"
             :site="selectedSite || ''" :project="selectedProject || ''" :start-time="startTime" :end-time="endTime"
             :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
-            :loading-devices="loadingCurrentStationDevices" :device-error="deviceError" @save="handleStationConfigSave"
-            @remove="handleStationConfigRemove" @refresh-devices="refreshCurrentStationDevices" />
+            :loading-devices="loadingCurrentStationDevices" :device-error="deviceError"
+            :available-test-items="currentStationTestItems" :loading-test-items="loadingCurrentStationTestItems"
+            :test-items-error="testItemsError" @save="handleStationConfigSave" @remove="handleStationConfigRemove"
+            @refresh-devices="refreshCurrentStationDevices" @refresh-test-items="refreshCurrentStationTestItems" />
     </div>
 </template>
 
@@ -117,7 +119,7 @@ import { ref, computed, onMounted } from 'vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
 import StationSelectionDialog from './StationSelectionDialog.vue'
-import StationConfigDialog from './StationConfigDialog.vue'
+import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
 import type { StationConfig } from './StationSelectionDialog.vue'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
 import type { Station, TestItem, CsvTestItemData } from '@/features/dut_logs/api/iplasApi'
@@ -169,6 +171,11 @@ const selectedStationForConfig = ref<Station | null>(null)
 const currentStationDeviceIds = ref<string[]>([])
 const loadingCurrentStationDevices = ref(false)
 const deviceError = ref<string | null>(null)
+
+// Test items state for config dialog
+const currentStationTestItems = ref<TestItemInfo[]>([])
+const loadingCurrentStationTestItems = ref(false)
+const testItemsError = ref<string | null>(null)
 
 // For download
 const selectedRecordKeys = ref<Set<string>>(new Set())
@@ -297,6 +304,7 @@ function handleStationClick(station: Station): void {
     selectedStationForConfig.value = station
     showStationConfigDialog.value = true
     loadDeviceIdsForStation(station)
+    loadTestItemsForStation(station)
 }
 
 async function loadDeviceIdsForStation(station: Station): Promise<void> {
@@ -329,6 +337,69 @@ async function loadDeviceIdsForStation(station: Station): Promise<void> {
 async function refreshCurrentStationDevices(): Promise<void> {
     if (selectedStationForConfig.value) {
         await loadDeviceIdsForStation(selectedStationForConfig.value)
+    }
+}
+
+async function loadTestItemsForStation(station: Station): Promise<void> {
+    if (!selectedSite.value || !selectedProject.value || !startTime.value || !endTime.value) {
+        return
+    }
+
+    loadingCurrentStationTestItems.value = true
+    testItemsError.value = null
+    currentStationTestItems.value = []
+
+    try {
+        const start = new Date(startTime.value).toISOString()
+        const end = new Date(endTime.value).toISOString()
+
+        // Fetch test items using a sample device (first available or empty string for all)
+        const deviceId = currentStationDeviceIds.value[0] ?? ''
+
+        const data = await fetchTestItemsApi(
+            selectedSite.value,
+            selectedProject.value,
+            station.display_station_name,
+            deviceId,
+            start,
+            end,
+            'ALL'
+        )
+
+        // Extract unique test item names from the response
+        const testItemsMap = new Map<string, TestItemInfo>()
+
+        for (const record of data) {
+            if (record.TestItem && Array.isArray(record.TestItem)) {
+                for (const item of record.TestItem) {
+                    if (item.NAME && !testItemsMap.has(item.NAME)) {
+                        // Determine if it's a VALUE type (numeric value) or BIN type
+                        const isValue = item.VALUE !== undefined &&
+                            item.VALUE !== null &&
+                            item.VALUE !== '' &&
+                            !isNaN(Number(item.VALUE))
+                        testItemsMap.set(item.NAME, { name: item.NAME, isValue })
+                    }
+                }
+            }
+        }
+
+        currentStationTestItems.value = Array.from(testItemsMap.values()).sort((a, b) =>
+            a.name.localeCompare(b.name)
+        )
+
+        // Clear the testItemData that was added during the fetch
+        clearTestItemData()
+    } catch (err: any) {
+        testItemsError.value = err.message || 'Failed to load test items'
+    } finally {
+        loadingCurrentStationTestItems.value = false
+    }
+}
+
+async function refreshCurrentStationTestItems(): Promise<void> {
+    if (selectedStationForConfig.value) {
+        await loadTestItemsForStation(selectedStationForConfig.value)
     }
 }
 

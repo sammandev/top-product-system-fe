@@ -52,9 +52,12 @@
                         </v-list-item-subtitle>
 
                         <template #append>
-                            <div v-if="isStationConfigured(station.display_station_name)" class="text-caption">
+                            <div v-if="isStationConfigured(station.display_station_name)" class="text-caption d-flex align-center">
                                 <v-chip size="small" color="primary" variant="tonal" class="mr-1">
-                                    {{ getStationConfig(station.display_station_name)?.deviceIds?.length || 0 }} Device(s)
+                                    {{ getStationConfig(station.display_station_name)?.deviceIds?.length || 'All' }} Device(s)
+                                </v-chip>
+                                <v-chip size="small" color="info" variant="tonal" class="mr-1">
+                                    {{ getTestItemsLabel(station.display_station_name) }}
                                 </v-chip>
                                 <v-chip size="small" color="secondary" variant="tonal">
                                     {{ getStationConfig(station.display_station_name)?.testStatus || 'ALL' }}
@@ -101,6 +104,7 @@ export interface StationConfig {
     stationName: string
     deviceIds: string[]
     testStatus: 'ALL' | 'PASS' | 'FAIL'
+    selectedTestItems: string[] // Empty means all test items
 }
 
 interface Props {
@@ -147,6 +151,14 @@ function isStationConfigured(displayName: string): boolean {
 
 function getStationConfig(displayName: string): StationConfig | undefined {
     return props.selectedConfigs[displayName]
+}
+
+function getTestItemsLabel(displayName: string): string {
+    const config = props.selectedConfigs[displayName]
+    if (!config || config.selectedTestItems.length === 0) {
+        return 'All Items'
+    }
+    return `${config.selectedTestItems.length} Item(s)`
 }
 
 function handleStationClick(station: Station): void {

@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="internalShow" max-width="800px" persistent scrollable>
+    <v-dialog v-model="internalShow" max-width="900px" persistent scrollable>
         <v-card>
             <v-card-title class="d-flex align-center justify-space-between bg-secondary">
                 <div class="d-flex align-center">
@@ -14,90 +14,175 @@
                     <strong>Station Name:</strong> {{ station?.station_name }}
                 </div>
                 <div class="text-caption text-medium-emphasis">
-                    Configure device IDs and test status for this station
+                    Configure test status, device IDs, and test items for this station
                 </div>
             </v-card-subtitle>
 
             <v-divider />
 
-            <v-card-text class="pa-4">
-                <!-- Test Status Selection -->
-                <v-card variant="outlined" class="mb-4">
-                    <v-card-title class="text-subtitle-1 bg-grey-lighten-5">
-                        <v-icon start color="primary">mdi-filter</v-icon>
-                        Test Status Filter
-                    </v-card-title>
-                    <v-card-text>
-                        <v-radio-group v-model="localConfig.testStatus" inline hide-details>
-                            <v-radio label="All (PASS & FAIL)" value="ALL" color="primary" />
-                            <v-radio label="PASS Only" value="PASS" color="success" />
-                            <v-radio label="FAIL Only" value="FAIL" color="error" />
-                        </v-radio-group>
-                    </v-card-text>
-                </v-card>
+            <v-card-text class="pa-4" style="max-height: 70vh; overflow-y: auto;">
+                <!-- Test Status Selection - Dropdown -->
+                <v-row dense class="mb-4">
+                    <v-col cols="12" md="6">
+                        <v-select v-model="localConfig.testStatus" :items="testStatusOptions" item-title="title"
+                            item-value="value" label="Test Status Filter" variant="outlined" density="comfortable"
+                            prepend-inner-icon="mdi-filter" hide-details>
+                            <template #item="{ props: itemProps, item }">
+                                <v-list-item v-bind="itemProps">
+                                    <template #prepend>
+                                        <v-icon :color="getStatusColor(item.value)">
+                                            {{ getStatusIcon(item.value) }}
+                                        </v-icon>
+                                    </template>
+                                </v-list-item>
+                            </template>
+                            <template #selection="{ item }">
+                                <v-chip :color="getStatusColor(item.value)" size="small" variant="flat" class="mr-1">
+                                    <v-icon start size="small">{{ getStatusIcon(item.value) }}</v-icon>
+                                    {{ item.title }}
+                                </v-chip>
+                            </template>
+                        </v-select>
+                    </v-col>
+                    <v-col cols="12" md="6">
+                        <!-- Device IDs Selection - Dropdown -->
+                        <v-autocomplete v-model="localConfig.deviceIds" :items="availableDeviceIds" label="Device IDs"
+                            variant="outlined" density="comfortable" prepend-inner-icon="mdi-devices" multiple
+                            chips closable-chips hide-details :loading="loadingDevices"
+                            :disabled="loadingDevices || availableDeviceIds.length === 0"
+                            placeholder="Select devices (empty = all)" clearable>
+                            <template #prepend-item>
+                                <v-list-item @click="toggleSelectAllDevices">
+                                    <template #prepend>
+                                        <v-checkbox-btn :model-value="allDevicesSelected"
+                                            :indeterminate="someDevicesSelected && !allDevicesSelected" />
+                                    </template>
+                                    <v-list-item-title>
+                                        {{ allDevicesSelected ? 'Deselect All' : 'Select All' }}
+                                    </v-list-item-title>
+                                    <template #append>
+                                        <v-chip size="x-small" color="primary">{{ availableDeviceIds.length }}</v-chip>
+                                    </template>
+                                </v-list-item>
+                                <v-divider />
+                            </template>
+                            <template #chip="{ props: chipProps, item }">
+                                <v-chip v-bind="chipProps" size="small" closable>{{ item.value }}</v-chip>
+                            </template>
+                            <template #no-data>
+                                <v-list-item>
+                                    <v-list-item-title class="text-medium-emphasis">
+                                        {{ loadingDevices ? 'Loading devices...' : 'No devices available' }}
+                                    </v-list-item-title>
+                                </v-list-item>
+                            </template>
+                            <template #append>
+                                <v-btn icon="mdi-refresh" size="small" variant="text" :loading="loadingDevices"
+                                    @click.stop="handleRefreshDevices" />
+                            </template>
+                        </v-autocomplete>
+                    </v-col>
+                </v-row>
 
-                <!-- Device IDs Selection -->
+                <!-- Error Alert for Device Loading -->
+                <v-alert v-if="deviceError" type="error" variant="tonal" class="mb-4" closable>
+                    {{ deviceError }}
+                </v-alert>
+
+                <!-- Test Items Selection Section -->
                 <v-card variant="outlined">
                     <v-card-title class="text-subtitle-1 bg-grey-lighten-5 d-flex align-center justify-space-between">
                         <div>
-                            <v-icon start color="primary">mdi-devices</v-icon>
-                            Device IDs
+                            <v-icon start color="primary">mdi-format-list-checks</v-icon>
+                            Test Items Selection
                         </div>
-                        <v-btn v-if="!loadingDevices" color="primary" variant="text" size="small"
-                            prepend-icon="mdi-refresh" @click="handleRefreshDevices">
-                            Refresh
-                        </v-btn>
+                        <div class="d-flex align-center gap-2">
+                            <v-chip v-if="localConfig.selectedTestItems.length > 0" size="small" color="success"
+                                variant="tonal">
+                                {{ localConfig.selectedTestItems.length }} / {{ availableTestItems.length }} Selected
+                            </v-chip>
+                            <v-chip v-else size="small" color="info" variant="tonal">
+                                All Items ({{ availableTestItems.length }})
+                            </v-chip>
+                            <v-btn v-if="!loadingTestItems" color="primary" variant="text" size="small"
+                                prepend-icon="mdi-refresh" @click="handleRefreshTestItems">
+                                Refresh
+                            </v-btn>
+                        </div>
                     </v-card-title>
-                    <v-card-text>
+                    <v-card-text class="pa-3">
                         <!-- Loading State -->
-                        <div v-if="loadingDevices" class="text-center pa-4">
+                        <div v-if="loadingTestItems" class="text-center pa-4">
                             <v-progress-circular indeterminate color="primary" />
-                            <div class="text-caption text-medium-emphasis mt-2">Loading device IDs...</div>
+                            <div class="text-caption text-medium-emphasis mt-2">Loading test items...</div>
                         </div>
 
                         <!-- Error State -->
-                        <v-alert v-else-if="deviceError" type="error" variant="tonal" class="mb-3">
-                            {{ deviceError }}
+                        <v-alert v-else-if="testItemsError" type="error" variant="tonal" class="mb-3">
+                            {{ testItemsError }}
                         </v-alert>
 
-                        <!-- Device IDs Selection -->
+                        <!-- No Test Items -->
+                        <v-alert v-else-if="availableTestItems.length === 0" type="info" variant="tonal">
+                            No test items available. Click "Refresh" to load test items, or ensure device IDs and date
+                            range are selected.
+                        </v-alert>
+
+                        <!-- Test Items Selection -->
                         <div v-else>
-                            <div class="mb-3">
-                                <v-btn-toggle v-model="selectAllDevices" color="primary" density="compact" class="mb-2">
-                                    <v-btn :value="true" size="small" variant="outlined">
-                                        <v-icon start>mdi-checkbox-multiple-marked</v-icon>
-                                        Select All ({{ availableDeviceIds.length }})
+                            <!-- Quick Actions and Search -->
+                            <v-row dense class="mb-3">
+                                <v-col cols="12" md="6">
+                                    <v-text-field v-model="testItemSearchQuery" label="Search Test Items"
+                                        prepend-inner-icon="mdi-magnify" variant="outlined" density="compact"
+                                        hide-details clearable placeholder="Search by test item name..." />
+                                </v-col>
+                                <v-col cols="12" md="6" class="d-flex align-center gap-2">
+                                    <v-btn size="small" variant="outlined" color="primary"
+                                        @click="selectAllTestItems">
+                                        Select All
                                     </v-btn>
-                                </v-btn-toggle>
-                            </div>
+                                    <v-btn size="small" variant="outlined" color="secondary"
+                                        @click="selectValueTestItems">
+                                        Value Only
+                                    </v-btn>
+                                    <v-btn size="small" variant="outlined" @click="clearTestItemSelection">
+                                        Clear
+                                    </v-btn>
+                                </v-col>
+                            </v-row>
 
-                            <!-- Search -->
-                            <v-text-field v-model="deviceSearchQuery" label="Search Device IDs"
-                                prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details
-                                clearable class="mb-3" placeholder="Search..." />
+                            <!-- Test Items List -->
+                            <div style="max-height: 300px; overflow-y: auto;" class="border rounded">
+                                <v-list density="compact" class="pa-0">
+                                    <v-list-item v-for="item in filteredTestItems" :key="item.name"
+                                        @click="toggleTestItem(item.name)" class="test-item-row">
+                                        <template #prepend>
+                                            <v-checkbox-btn
+                                                :model-value="localConfig.selectedTestItems.includes(item.name)"
+                                                @click.stop="toggleTestItem(item.name)" density="compact" />
+                                        </template>
+                                        <v-list-item-title class="text-body-2">
+                                            {{ item.name }}
+                                        </v-list-item-title>
+                                        <template #append>
+                                            <v-chip :color="item.isValue ? 'success' : 'grey'" size="x-small"
+                                                variant="tonal">
+                                                {{ item.isValue ? 'VALUE' : 'BIN' }}
+                                            </v-chip>
+                                        </template>
+                                    </v-list-item>
+                                </v-list>
 
-                            <!-- No devices available -->
-                            <v-alert v-if="availableDeviceIds.length === 0" type="info" variant="tonal">
-                                No device IDs available for the selected date range
-                            </v-alert>
-
-                            <!-- Device IDs List -->
-                            <div v-else style="max-height: 300px; overflow-y: auto;" class="border rounded pa-2">
-                                <v-checkbox v-for="deviceId in filteredDeviceIds" :key="deviceId"
-                                    :model-value="localConfig.deviceIds.includes(deviceId)" :label="deviceId"
-                                    @update:model-value="toggleDeviceId(deviceId)" density="compact" hide-details
-                                    class="mb-1" />
-
-                                <div v-if="filteredDeviceIds.length === 0" class="text-center text-medium-emphasis pa-4">
-                                    No matching device IDs found
+                                <div v-if="filteredTestItems.length === 0"
+                                    class="text-center text-medium-emphasis pa-4">
+                                    No matching test items found
                                 </div>
                             </div>
 
-                            <!-- Selected Count -->
-                            <div v-if="localConfig.deviceIds.length > 0" class="mt-3">
-                                <v-chip color="success" variant="tonal" size="small">
-                                    {{ localConfig.deviceIds.length }} Device(s) Selected
-                                </v-chip>
+                            <div class="text-caption text-medium-emphasis mt-2">
+                                <v-icon size="x-small">mdi-information</v-icon>
+                                Leave empty to include all test items. Select specific items to filter results.
                             </div>
                         </div>
                     </v-card-text>
@@ -129,6 +214,11 @@ import { ref, computed, watch } from 'vue'
 import type { Station } from '@/features/dut_logs/api/iplasApi'
 import type { StationConfig } from './StationSelectionDialog.vue'
 
+export interface TestItemInfo {
+    name: string
+    isValue: boolean // true if it's a value test item (has numeric VALUE), false if bin
+}
+
 interface Props {
     show: boolean
     station: Station | null
@@ -140,15 +230,23 @@ interface Props {
     availableDeviceIds: string[]
     loadingDevices: boolean
     deviceError: string | null
+    availableTestItems: TestItemInfo[]
+    loadingTestItems: boolean
+    testItemsError: string | null
 }
 
-const props = defineProps<Props>()
+const props = withDefaults(defineProps<Props>(), {
+    availableTestItems: () => [],
+    loadingTestItems: false,
+    testItemsError: null
+})
 
 const emit = defineEmits<{
     (e: 'update:show', value: boolean): void
     (e: 'save', config: StationConfig): void
     (e: 'remove', displayName: string): void
     (e: 'refresh-devices'): void
+    (e: 'refresh-test-items'): void
 }>()
 
 const internalShow = computed({
@@ -156,40 +254,43 @@ const internalShow = computed({
     set: (value) => emit('update:show', value)
 })
 
+// Test Status Options
+const testStatusOptions = [
+    { title: 'All (PASS & FAIL)', value: 'ALL' },
+    { title: 'PASS Only', value: 'PASS' },
+    { title: 'FAIL Only', value: 'FAIL' }
+]
+
 const localConfig = ref<StationConfig>({
     displayName: '',
     stationName: '',
     deviceIds: [],
-    testStatus: 'ALL'
+    testStatus: 'ALL',
+    selectedTestItems: []
 })
 
-const deviceSearchQuery = ref('')
-const selectAllDevices = ref<boolean>(false)
+const testItemSearchQuery = ref('')
 
 const isExistingConfig = computed(() => !!props.existingConfig)
 
-const filteredDeviceIds = computed(() => {
-    if (!deviceSearchQuery.value) return props.availableDeviceIds
-
-    const query = deviceSearchQuery.value.toLowerCase()
-    return props.availableDeviceIds.filter(id => id.toLowerCase().includes(query))
+// Device selection helpers
+const allDevicesSelected = computed(() => {
+    return props.availableDeviceIds.length > 0 &&
+        localConfig.value.deviceIds.length === props.availableDeviceIds.length
 })
 
-// Watch for select all toggle
-watch(selectAllDevices, (value) => {
-    if (value) {
-        localConfig.value.deviceIds = [...props.availableDeviceIds]
-    } else {
-        // Only clear if all were previously selected
-        if (localConfig.value.deviceIds.length === props.availableDeviceIds.length) {
-            localConfig.value.deviceIds = []
-        }
-    }
+const someDevicesSelected = computed(() => {
+    return localConfig.value.deviceIds.length > 0
 })
 
-// Watch for changes in selected device IDs to update selectAllDevices
-watch(() => localConfig.value.deviceIds.length, (newLength) => {
-    selectAllDevices.value = newLength === props.availableDeviceIds.length && newLength > 0
+// Test Items filtering
+const filteredTestItems = computed(() => {
+    if (!testItemSearchQuery.value) return props.availableTestItems
+
+    const query = testItemSearchQuery.value.toLowerCase()
+    return props.availableTestItems.filter(item =>
+        item.name.toLowerCase().includes(query)
+    )
 })
 
 // Initialize config when dialog opens
@@ -204,29 +305,69 @@ watch(() => props.show, (newShow) => {
                 displayName: props.station.display_station_name,
                 stationName: props.station.station_name,
                 deviceIds: [],
-                testStatus: 'ALL'
+                testStatus: 'ALL',
+                selectedTestItems: []
             }
         }
-        deviceSearchQuery.value = ''
+        testItemSearchQuery.value = ''
     }
 })
 
-function toggleDeviceId(deviceId: string): void {
-    const index = localConfig.value.deviceIds.indexOf(deviceId)
-    if (index > -1) {
-        localConfig.value.deviceIds.splice(index, 1)
-    } else {
-        localConfig.value.deviceIds.push(deviceId)
+// Helper functions
+function getStatusColor(value: string): string {
+    switch (value) {
+        case 'PASS': return 'success'
+        case 'FAIL': return 'error'
+        default: return 'primary'
     }
+}
+
+function getStatusIcon(value: string): string {
+    switch (value) {
+        case 'PASS': return 'mdi-check-circle'
+        case 'FAIL': return 'mdi-close-circle'
+        default: return 'mdi-format-list-bulleted'
+    }
+}
+
+function toggleSelectAllDevices(): void {
+    if (allDevicesSelected.value) {
+        localConfig.value.deviceIds = []
+    } else {
+        localConfig.value.deviceIds = [...props.availableDeviceIds]
+    }
+}
+
+function toggleTestItem(name: string): void {
+    const index = localConfig.value.selectedTestItems.indexOf(name)
+    if (index > -1) {
+        localConfig.value.selectedTestItems.splice(index, 1)
+    } else {
+        localConfig.value.selectedTestItems.push(name)
+    }
+}
+
+function selectAllTestItems(): void {
+    localConfig.value.selectedTestItems = props.availableTestItems.map(item => item.name)
+}
+
+function selectValueTestItems(): void {
+    localConfig.value.selectedTestItems = props.availableTestItems
+        .filter(item => item.isValue)
+        .map(item => item.name)
+}
+
+function clearTestItemSelection(): void {
+    localConfig.value.selectedTestItems = []
 }
 
 function handleSave(): void {
     if (!props.station) return
-    
+
     // Update display and station names to ensure they're current
     localConfig.value.displayName = props.station.display_station_name
     localConfig.value.stationName = props.station.station_name
-    
+
     emit('save', { ...localConfig.value })
     internalShow.value = false
 }
@@ -245,10 +386,26 @@ function handleClose(): void {
 function handleRefreshDevices(): void {
     emit('refresh-devices')
 }
+
+function handleRefreshTestItems(): void {
+    emit('refresh-test-items')
+}
 </script>
 
 <style scoped>
 .border {
     border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.gap-2 {
+    gap: 0.5rem;
+}
+
+.test-item-row {
+    cursor: pointer;
+}
+
+.test-item-row:hover {
+    background-color: rgba(0, 0, 0, 0.04);
 }
 </style>
