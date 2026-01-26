@@ -363,13 +363,14 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
             deviceId,
             new Date(startTime.value),
             new Date(endTime.value),
-            'ALL'
+            'PASS'  // Only fetch PASS test items for faster loading
         )
 
         // Convert to TestItemInfo format expected by StationConfigDialog
         currentStationTestItems.value = testItems.map(item => ({
             name: item.name,
-            isValue: item.is_value
+            isValue: item.is_value,
+            isBin: item.is_bin
         }))
     } catch (err: any) {
         testItemsError.value = err.message || 'Failed to load test items'

@@ -137,16 +137,25 @@
                                         prepend-inner-icon="mdi-magnify" variant="outlined" density="compact"
                                         hide-details clearable placeholder="Search by test item name..." />
                                 </v-col>
-                                <v-col cols="12" md="6" class="d-flex align-center gap-2">
+                                <v-col cols="12" md="6" class="d-flex align-center gap-2 flex-wrap">
                                     <v-btn size="small" variant="outlined" color="primary"
                                         @click="selectAllTestItems">
-                                        Select All
+                                        All
                                     </v-btn>
-                                    <v-btn size="small" variant="outlined" color="secondary"
+                                    <v-btn size="small" variant="outlined" color="success"
                                         @click="selectValueTestItems">
-                                        Value Only
+                                        Value
                                     </v-btn>
-                                    <v-btn size="small" variant="outlined" @click="clearTestItemSelection">
+                                    <v-btn size="small" variant="outlined" color="warning"
+                                        @click="selectNonValueTestItems">
+                                        Non-Value
+                                    </v-btn>
+                                    <v-btn size="small" variant="outlined" color="grey"
+                                        @click="selectBinTestItems">
+                                        Bin
+                                    </v-btn>
+                                    <v-btn size="small" variant="outlined" color="error"
+                                        @click="clearTestItemSelection">
                                         Clear
                                     </v-btn>
                                 </v-col>
@@ -166,9 +175,9 @@
                                             {{ item.name }}
                                         </v-list-item-title>
                                         <template #append>
-                                            <v-chip :color="item.isValue ? 'success' : 'grey'" size="x-small"
+                                            <v-chip :color="getTestItemTypeColor(item)" size="x-small"
                                                 variant="tonal">
-                                                {{ item.isValue ? 'VALUE' : 'BIN' }}
+                                                {{ getTestItemTypeLabel(item) }}
                                             </v-chip>
                                         </template>
                                     </v-list-item>
@@ -216,7 +225,8 @@ import type { StationConfig } from './StationSelectionDialog.vue'
 
 export interface TestItemInfo {
     name: string
-    isValue: boolean // true if it's a value test item (has numeric VALUE), false if bin
+    isValue: boolean // true if it's a value test item (has numeric VALUE)
+    isBin: boolean   // true if it's a binary test item (PASS/FAIL only)
 }
 
 interface Props {
@@ -357,8 +367,34 @@ function selectValueTestItems(): void {
         .map(item => item.name)
 }
 
+function selectNonValueTestItems(): void {
+    // Non-Value: items that are NOT value AND NOT bin (e.g., items with empty/non-numeric values)
+    localConfig.value.selectedTestItems = props.availableTestItems
+        .filter(item => !item.isValue && !item.isBin)
+        .map(item => item.name)
+}
+
+function selectBinTestItems(): void {
+    // Bin: items that have PASS/FAIL only values
+    localConfig.value.selectedTestItems = props.availableTestItems
+        .filter(item => item.isBin)
+        .map(item => item.name)
+}
+
 function clearTestItemSelection(): void {
     localConfig.value.selectedTestItems = []
+}
+
+function getTestItemTypeLabel(item: TestItemInfo): string {
+    if (item.isValue) return 'VALUE'
+    if (item.isBin) return 'BIN'
+    return 'NON-VALUE'
+}
+
+function getTestItemTypeColor(item: TestItemInfo): string {
+    if (item.isValue) return 'success'
+    if (item.isBin) return 'grey'
+    return 'warning'
 }
 
 function handleSave(): void {

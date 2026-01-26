@@ -11,6 +11,7 @@ import apiClient from '@/core/api/client'
 export interface IplasTestItemInfo {
   name: string
   is_value: boolean
+  is_bin: boolean
 }
 
 export interface IplasCsvTestItemRequest {
