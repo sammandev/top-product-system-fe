@@ -63,4 +63,7 @@ authStore.initialize()
 const appConfigStore = useAppConfigStore()
 appConfigStore.initialize()
 
+// Set dynamic document title from environment config
+document.title = envConfig.appTitle
+
 app.mount('#app')

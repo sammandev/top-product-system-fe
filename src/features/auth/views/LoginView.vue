@@ -11,7 +11,7 @@
                             </v-card-title>
 
                             <v-card-text>
-                                <!-- Login Type Badge -->
+                                <!-- Login Type Badge - COMMENTED OUT: Only external login for now
                                 <div class="d-flex flex-column align-center mb-4">
                                     <div class="text-caption text-medium-emphasis mb-2">Select Login Mode</div>
                                     <v-chip-group v-model="loginMode" mandatory>
@@ -25,41 +25,48 @@
                                         </v-chip>
                                     </v-chip-group>
                                 </div>
+                                -->
 
                                 <v-form ref="loginFormRef" v-model="loginValid" @submit.prevent="handleLogin">
-                                    <v-alert type="info" density="compact" class="mb-3">
-                                        <small v-if="loginMode === 'local'">
-                                            Local login for simple features.
+                                    <!-- <v-alert type="info" density="compact" class="mb-3">
+                                        <small>
+                                            <small v-if="loginMode === 'local'">
+                                                Local login for simple features.
+                                            </small>
+                                            <small v-else>
+                                                <strong>External login</strong> provides full access features.
+                                            </small>
                                         </small>
-                                        <small v-else>
-                                            <strong>External login</strong> provides full access features.
-                                        </small>
-                                    </v-alert>
+                                    </v-alert> -->
 
                                     <v-text-field v-model="username" :rules="[rules.required]" label="Username"
-                                        prepend-inner-icon="mdi-account" variant="outlined" class="mb-3" />
+                                        prepend-inner-icon="mdi-account" variant="outlined" class="mb-2" />
 
                                     <v-text-field v-model="password" :rules="[rules.required]"
                                         :type="showPassword ? 'text' : 'password'" label="Password"
                                         prepend-inner-icon="mdi-lock"
                                         :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'" variant="outlined"
-                                        class="mb-3" @click:append-inner="showPassword = !showPassword" />
+                                        class="mb-1" @click:append-inner="showPassword = !showPassword" />
 
-                                    <div class="d-flex align-center justify-space-between mb-3">
+                                    <div class="d-flex align-center justify-space-between mb-2">
                                         <v-checkbox v-model="rememberMe" label="Remember Me" density="compact"
                                             hide-details />
                                     </div>
 
-                                    <v-alert v-if="error" type="error" class="mb-3" closable
+                                    <v-alert v-if="error" type="error" class="mb-2" closable
                                         @click:close="authStore.error = null">
                                         {{ error }}
                                     </v-alert>
 
                                     <v-btn :loading="loading" :disabled="!loginValid" block color="primary" size="large"
                                         type="submit">
+                                        <v-icon start>mdi-cloud-sync</v-icon>
+                                        Login
+                                        <!-- COMMENTED OUT: Dynamic button based on login mode
                                         <v-icon start>{{ loginMode === 'local' ? 'mdi-login' : 'mdi-cloud-sync'
                                             }}</v-icon>
                                         {{ loginMode === 'local' ? 'Login' : 'Login with External Access' }}
+                                        -->
                                     </v-btn>
 
                                     <!-- Guest Login Section -->
@@ -89,14 +96,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { ref } from 'vue'
+// import { watch } from 'vue' // COMMENTED OUT: No longer needed without login mode switching
 import { storeToRefs } from 'pinia'
 import { useAuth } from '../composables'
 import { useAuthStore } from '../store'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 
 // Use auth composable with router integration
-const { login, externalLogin, guestLogin, loading, error } = useAuth()
+// COMMENTED OUT: login not used since we only use external login now
+const { /* login, */ externalLogin, guestLogin, loading, error } = useAuth()
 const authStore = useAuthStore()
 const appConfigStore = useAppConfigStore()
 const { appName } = storeToRefs(appConfigStore)
@@ -110,10 +119,11 @@ const loginValid = ref(false)
 // Guest login loading state
 const guestLoading = ref(false)
 
-// Tab state
-const loginMode = ref<'local' | 'external'>(
-    (localStorage.getItem('login_mode') as 'local' | 'external') || 'local'
-)
+// Tab state - COMMENTED OUT: Now always using external login
+// const loginMode = ref<'local' | 'external'>(
+//     (localStorage.getItem('login_mode') as 'local' | 'external') || 'local'
+// )
+const loginMode = ref<'local' | 'external'>('external') // Always external login
 
 // Shared credentials
 const username = ref('')
@@ -125,11 +135,11 @@ const rules = {
     required: (value: string) => !!value || 'Required field'
 }
 
-// Clear error when switching tabs
-watch(loginMode, () => {
-    authStore.error = null
-    localStorage.setItem('login_mode', loginMode.value)
-})
+// Clear error when switching tabs - COMMENTED OUT: No mode switching now
+// watch(loginMode, () => {
+//     authStore.error = null
+//     localStorage.setItem('login_mode', loginMode.value)
+// })
 
 if (rememberMe.value) {
     const rememberedUsername = localStorage.getItem('remember_username')
@@ -142,17 +152,18 @@ async function handleLogin() {
     if (!loginValid.value) return
 
     try {
-        if (loginMode.value === 'local') {
-            await login({
-                username: username.value,
-                password: password.value
-            })
-        } else {
-            await externalLogin({
-                username: username.value,
-                password: password.value
-            })
-        }
+        // COMMENTED OUT: Local login option - now always using external login
+        // if (loginMode.value === 'local') {
+        //     await login({
+        //         username: username.value,
+        //         password: password.value
+        //     })
+        // } else {
+        await externalLogin({
+            username: username.value,
+            password: password.value
+        })
+        // }
 
         if (rememberMe.value) {
             localStorage.setItem('remember_me', 'true')
@@ -161,7 +172,8 @@ async function handleLogin() {
             localStorage.removeItem('remember_me')
             localStorage.removeItem('remember_username')
         }
-        localStorage.setItem('login_mode', loginMode.value)
+        // COMMENTED OUT: No need to save login mode anymore
+        // localStorage.setItem('login_mode', loginMode.value)
     } catch (err) {
         console.error('Login failed:', err)
     }
