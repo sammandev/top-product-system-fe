@@ -105,14 +105,9 @@
         </v-alert>
 
         <!-- Results Section with Ranking Table -->
-        <TopProductIplasIsnRanking v-if="groupedByISN.length > 0" 
-            :isn-groups="groupedByISN" 
-            :loading="downloading"
-            :scores="recordScores"
-            :calculating-scores="calculatingScores"
-            @row-click="handleRowClick" 
-            @download-selected="handleDownloadSelected"
-            @calculate-scores="handleCalculateScores" />
+        <TopProductIplasIsnRanking v-if="groupedByISN.length > 0" :isn-groups="groupedByISN" :loading="downloading"
+            :scores="recordScores" :calculating-scores="calculatingScores" @row-click="handleRowClick"
+            @download-selected="handleDownloadSelected" @calculate-scores="handleCalculateScores" />
 
         <!-- Copy Success Snackbar -->
         <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
@@ -131,12 +126,12 @@ import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFulls
 import type { IsnSearchData, IsnSearchTestItem } from '@/features/dut_logs/api/iplasApi'
 
 // Scoring composable
-const { 
-    initializeConfigs, 
-    calculateScores, 
-    scoredRecords, 
-    loading: scoringLoading, 
-    error: scoringError 
+const {
+    initializeConfigs,
+    calculateScores,
+    scoredRecords,
+    loading: scoringLoading,
+    error: scoringError
 } = useScoring()
 
 // Scoring state
@@ -253,9 +248,9 @@ async function handleCalculateScores(): Promise<void> {
     for (const group of groupedByISN.value) {
         allRecords.push(...group.records)
     }
-    
+
     if (allRecords.length === 0) return
-    
+
     calculatingScores.value = true
     try {
         // Convert ISN search records to format expected by scoring API
@@ -273,23 +268,23 @@ async function handleCalculateScores(): Promise<void> {
                 LCL: item.LCL
             }))
         }))
-        
+
         // Initialize scoring configs from first record's test items if needed
         const firstRecord = allRecords[0]
         if (firstRecord?.test_item && firstRecord.test_item.length > 0) {
             initializeConfigs(firstRecord.test_item)
         }
-        
+
         // Calculate scores via backend API
         await calculateScores(records)
-        
+
         // Map scored records back to our score map
         const newScores: Record<string, number> = {}
         allRecords.forEach(record => {
             const key = `${record.isn}_${record.station_name}_${record.test_end_time}`
-            
+
             // Try to find matching scored record
-            const matchedScore = scoredRecords.value.find(s => 
+            const matchedScore = scoredRecords.value.find(s =>
                 (s.isn === record.isn || s.deviceId === record.device_id) &&
                 s.station === record.station_name
             )
@@ -297,7 +292,7 @@ async function handleCalculateScores(): Promise<void> {
                 newScores[key] = matchedScore.overallScore
             }
         })
-        
+
         recordScores.value = newScores
     } catch (err) {
         console.error('Failed to calculate scores:', err)
@@ -462,7 +457,7 @@ async function handleSearch(): Promise<void> {
     recordScores.value = {}
 
     try {
-        const allRecords: IsnSearchData[] = []
+        const allRecords: any[] = []
 
         for (const isn of isnList) {
             try {

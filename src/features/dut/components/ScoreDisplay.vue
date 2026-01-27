@@ -15,7 +15,8 @@
 
     <!-- Bar Variant -->
     <div v-else-if="variant === 'bar'" class="score-bar d-flex align-center">
-        <v-progress-linear :model-value="scorePercent" :color="scoreColor" :height="barHeight" rounded class="flex-grow-1" />
+        <v-progress-linear :model-value="scorePercent" :color="scoreColor" :height="barHeight" rounded
+            class="flex-grow-1" />
         <span :class="['ml-2', 'font-weight-medium', textSizeClass]">{{ formattedScore }}</span>
     </div>
 

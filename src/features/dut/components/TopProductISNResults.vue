@@ -103,7 +103,7 @@
                                                 <span class="text-body-2">
                                                     <strong>Device:</strong>
                                                     <span class="ml-2">{{ selectedMeasurement.station.device || 'N/A'
-                                                    }}</span>
+                                                        }}</span>
                                                 </span>
                                             </div>
                                         </v-col>
@@ -353,32 +353,36 @@
                         <template #item.score="{ item }">
                             <div class="text-center">
                                 <!-- Show comparison chips when custom scoring is active and different from system -->
-                                <div v-if="item.custom_scoring && item.custom_scoring.method === 'custom'" class="d-flex gap-1 justify-center flex-wrap">
-                                    <v-chip :color="getScoreColor(item.custom_scoring.systemScore)" size="x-small" variant="tonal">
+                                <div v-if="item.custom_scoring && item.custom_scoring.method === 'custom'"
+                                    class="d-flex gap-1 justify-center flex-wrap">
+                                    <v-chip :color="getScoreColor(item.custom_scoring.systemScore)" size="x-small"
+                                        variant="tonal">
                                         <v-tooltip location="top">
                                             <template #activator="{ props: tooltipProps }">
-                                                <span v-bind="tooltipProps">S: {{ item.custom_scoring.systemScore.toFixed(2) }}</span>
+                                                <span v-bind="tooltipProps">S: {{
+                                                    item.custom_scoring.systemScore.toFixed(2) }}</span>
                                             </template>
                                             System Score
                                         </v-tooltip>
                                     </v-chip>
-                                    <v-chip :color="getScoreColor(item.custom_scoring.customScore)" size="x-small" variant="elevated">
+                                    <v-chip :color="getScoreColor(item.custom_scoring.customScore)" size="x-small"
+                                        variant="elevated">
                                         <v-tooltip location="top">
                                             <template #activator="{ props: tooltipProps }">
-                                                <span v-bind="tooltipProps">C: {{ item.custom_scoring.customScore.toFixed(2) }}</span>
+                                                <span v-bind="tooltipProps">C: {{
+                                                    item.custom_scoring.customScore.toFixed(2) }}</span>
                                             </template>
                                             Custom Score ({{ item.custom_scoring.formula }})
                                         </v-tooltip>
                                     </v-chip>
-                                    <v-chip 
-                                        :color="item.custom_scoring.difference > 0 ? 'success' : item.custom_scoring.difference < 0 ? 'error' : 'default'" 
-                                        size="x-small" 
-                                        variant="outlined"
-                                    >
+                                    <v-chip
+                                        :color="item.custom_scoring.difference > 0 ? 'success' : item.custom_scoring.difference < 0 ? 'error' : 'default'"
+                                        size="x-small" variant="outlined">
                                         <v-tooltip location="top">
                                             <template #activator="{ props: tooltipProps }">
                                                 <span v-bind="tooltipProps">
-                                                    {{ item.custom_scoring.difference > 0 ? '+' : '' }}{{ item.custom_scoring.difference.toFixed(2) }}
+                                                    {{ item.custom_scoring.difference > 0 ? '+' : '' }}{{
+                                                    item.custom_scoring.difference.toFixed(2) }}
                                                 </span>
                                             </template>
                                             Difference (Custom - System)
@@ -473,32 +477,36 @@
                         <template #item.score="{ item }">
                             <div class="text-center">
                                 <!-- Show comparison chips when custom scoring is active and different from system -->
-                                <div v-if="item.custom_scoring && item.custom_scoring.method === 'custom'" class="d-flex gap-1 justify-center flex-wrap">
-                                    <v-chip :color="getScoreColor(item.custom_scoring.systemScore)" size="x-small" variant="tonal">
+                                <div v-if="item.custom_scoring && item.custom_scoring.method === 'custom'"
+                                    class="d-flex gap-1 justify-center flex-wrap">
+                                    <v-chip :color="getScoreColor(item.custom_scoring.systemScore)" size="x-small"
+                                        variant="tonal">
                                         <v-tooltip location="top">
                                             <template #activator="{ props: tooltipProps }">
-                                                <span v-bind="tooltipProps">S: {{ item.custom_scoring.systemScore.toFixed(2) }}</span>
+                                                <span v-bind="tooltipProps">S: {{
+                                                    item.custom_scoring.systemScore.toFixed(2) }}</span>
                                             </template>
                                             System Score
                                         </v-tooltip>
                                     </v-chip>
-                                    <v-chip :color="getScoreColor(item.custom_scoring.customScore)" size="x-small" variant="elevated">
+                                    <v-chip :color="getScoreColor(item.custom_scoring.customScore)" size="x-small"
+                                        variant="elevated">
                                         <v-tooltip location="top">
                                             <template #activator="{ props: tooltipProps }">
-                                                <span v-bind="tooltipProps">C: {{ item.custom_scoring.customScore.toFixed(2) }}</span>
+                                                <span v-bind="tooltipProps">C: {{
+                                                    item.custom_scoring.customScore.toFixed(2) }}</span>
                                             </template>
                                             Custom Score ({{ item.custom_scoring.formula }})
                                         </v-tooltip>
                                     </v-chip>
-                                    <v-chip 
-                                        :color="item.custom_scoring.difference > 0 ? 'success' : item.custom_scoring.difference < 0 ? 'error' : 'default'" 
-                                        size="x-small" 
-                                        variant="outlined"
-                                    >
+                                    <v-chip
+                                        :color="item.custom_scoring.difference > 0 ? 'success' : item.custom_scoring.difference < 0 ? 'error' : 'default'"
+                                        size="x-small" variant="outlined">
                                         <v-tooltip location="top">
                                             <template #activator="{ props: tooltipProps }">
                                                 <span v-bind="tooltipProps">
-                                                    {{ item.custom_scoring.difference > 0 ? '+' : '' }}{{ item.custom_scoring.difference.toFixed(2) }}
+                                                    {{ item.custom_scoring.difference > 0 ? '+' : '' }}{{
+                                                    item.custom_scoring.difference.toFixed(2) }}
                                                 </span>
                                             </template>
                                             Difference (Custom - System)
@@ -522,12 +530,9 @@
 
         <!-- Score Breakdown Dialog -->
         <!-- Component kept mounted to prevent Vue lifecycle corruption -->
-        <ScoreBreakdownDialog 
-          v-model="scoreBreakdownDialog" 
-          :item="selectedScoreBreakdown"
-          :custom-scoring-enabled="props.customScoringEnabled"
-          :universal-formula="props.universalFormula"
-          :category-formulas="props.categoryFormulas" />
+        <ScoreBreakdownDialog v-model="scoreBreakdownDialog" :item="selectedScoreBreakdown"
+            :custom-scoring-enabled="props.customScoringEnabled" :universal-formula="props.universalFormula"
+            :category-formulas="props.categoryFormulas" />
 
         <!-- Results Summary -->
         <v-card class="mb-4">
@@ -574,8 +579,7 @@
         </v-card>
 
         <!-- Top Product Ranking -->
-        <TopProductRanking v-if="enhancedResults.length > 0" :results="results"
-            @row-click="handleRankingRowClick" />
+        <TopProductRanking v-if="enhancedResults.length > 0" :results="results" @row-click="handleRankingRowClick" />
 
         <!-- Error Display -->
         <v-alert v-if="errors.length > 0" type="error" variant="tonal" class="mb-4">
@@ -626,7 +630,7 @@
                                         </template>
                                         <template #subtitle>
                                             <span class="text-caption">{{ item.raw.raw.site }} / {{ item.raw.raw.model
-                                            }}</span>
+                                                }}</span>
                                         </template>
                                     </v-list-item>
                                 </template>
@@ -853,8 +857,7 @@
                             <template v-for="result in enhancedResults" :key="`score-${result.dut_isn}`"
                                 #[`item.score_${result.dut_isn}`]="{ item }">
                                 <v-chip :color="getScoreColor(item[`score_${result.dut_isn}`])" size="small"
-                                    variant="flat"
-                                    :class="item[`breakdown_${result.dut_isn}`] ? 'cursor-pointer' : ''"
+                                    variant="flat" :class="item[`breakdown_${result.dut_isn}`] ? 'cursor-pointer' : ''"
                                     @click="item[`breakdown_${result.dut_isn}`] && handleComparisonScoreClick(item, result.dut_isn)">
                                     {{ item[`score_${result.dut_isn}`] !== undefined ?
                                         item[`score_${result.dut_isn}`].toFixed(2) : 'N/A' }}
@@ -1643,7 +1646,7 @@ const comparisonData = computed(() => {
             // Add this DUT's score and measured value
             testItemMap.get(m.test_item)![`score_${result.dut_isn}`] = m.score
             testItemMap.get(m.test_item)![`measured_${result.dut_isn}`] = m.actual
-            
+
             // Store breakdown data for score dialog
             testItemMap.get(m.test_item)![`breakdown_${result.dut_isn}`] = m.breakdown
 
@@ -1886,7 +1889,7 @@ function handleScoreClick(item: TopProductMeasurement) {
             score: item.score,
             score_breakdown: item.breakdown
         } as any // Type assertion needed due to interface mismatch
-        
+
         // Open dialog immediately - component is always mounted
         scoreBreakdownDialog.value = true
     } else {
@@ -1899,13 +1902,13 @@ function handleComparisonScoreClick(comparisonItem: any, dutIsn: string) {
     const breakdown = comparisonItem[`breakdown_${dutIsn}`]
     const score = comparisonItem[`score_${dutIsn}`]
     const measuredValue = comparisonItem[`measured_${dutIsn}`]
-    
-    console.log('Comparison score clicked:', { 
+
+    console.log('Comparison score clicked:', {
         test_item: comparisonItem.test_item,
         dut_isn: dutIsn,
-        has_breakdown: !!breakdown 
+        has_breakdown: !!breakdown
     })
-    
+
     if (breakdown) {
         console.log('Opening breakdown dialog with:', breakdown)
         selectedScoreBreakdown.value = {
@@ -1914,7 +1917,7 @@ function handleComparisonScoreClick(comparisonItem: any, dutIsn: string) {
             score: score,
             score_breakdown: breakdown
         } as any
-        
+
         // Open dialog immediately - component is always mounted
         scoreBreakdownDialog.value = true
     } else {

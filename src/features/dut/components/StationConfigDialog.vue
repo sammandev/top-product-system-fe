@@ -9,14 +9,6 @@
                 <v-btn icon="mdi-close" variant="text" color="white" @click="handleClose" />
             </v-card-title>
 
-            <v-card-subtitle class="pa-3 bg-grey-lighten-4">
-                <div class="text-caption text-medium-emphasis">
-                    Configure test status, device IDs, and test items for this station
-                </div>
-            </v-card-subtitle>
-
-            <v-divider />
-
             <v-card-text class="pa-4" style="max-height: 70vh; overflow-y: auto;">
                 <!-- Test Status Selection - Dropdown -->
                 <v-row dense class="mb-4">
@@ -44,8 +36,8 @@
                     <v-col cols="12" md="6">
                         <!-- Device IDs Selection - Dropdown -->
                         <v-autocomplete v-model="localConfig.deviceIds" :items="availableDeviceIds" label="Device IDs"
-                            variant="outlined" density="comfortable" prepend-inner-icon="mdi-devices" multiple
-                            chips closable-chips hide-details :loading="loadingDevices"
+                            variant="outlined" density="comfortable" prepend-inner-icon="mdi-devices" multiple chips
+                            closable-chips hide-details :loading="loadingDevices"
                             :disabled="loadingDevices || availableDeviceIds.length === 0"
                             placeholder="Select devices (empty = all)" clearable>
                             <template #prepend-item>
@@ -135,42 +127,20 @@
                                         hide-details clearable placeholder="Search by test item name..." />
                                 </v-col>
                             </v-row>
-                            
-                            <!-- Test Item Type Filters (multi-select) -->
+
+                            <!-- Quick Select Buttons -->
                             <v-row dense class="mb-3">
                                 <v-col cols="12" class="d-flex align-center gap-2 flex-wrap">
-                                    <span class="text-caption text-medium-emphasis">Filter:</span>
-                                    <v-chip-group v-model="testItemTypeFilter" multiple>
-                                        <v-chip value="all" filter label variant="outlined" color="primary" size="small">
-                                            All
-                                        </v-chip>
-                                        <v-chip value="value" filter label variant="outlined" color="success" size="small">
-                                            Criteria
-                                        </v-chip>
-                                        <v-chip value="non-value" filter label variant="outlined" color="warning" size="small">
-                                            Non-Criteria
-                                        </v-chip>
-                                        <v-chip value="bin" filter label variant="outlined" color="grey" size="small">
-                                            Bin
-                                        </v-chip>
-                                    </v-chip-group>
-                                    <v-divider vertical class="mx-2" />
                                     <span class="text-caption text-medium-emphasis">Select:</span>
-                                    <v-btn size="x-small" variant="tonal" color="primary"
-                                        @click="selectAllTestItems">
+                                    <v-btn size="x-small" variant="tonal" color="primary" @click="selectAllTestItems">
                                         All
                                     </v-btn>
-                                    <v-btn size="x-small" variant="tonal" color="success"
-                                        @click="selectValueTestItems">
+                                    <v-btn size="x-small" variant="tonal" color="success" @click="selectValueTestItems">
                                         Criteria
                                     </v-btn>
                                     <v-btn size="x-small" variant="tonal" color="warning"
                                         @click="selectNonValueTestItems">
                                         Non-Criteria
-                                    </v-btn>
-                                    <v-btn size="x-small" variant="tonal" color="grey"
-                                        @click="selectBinTestItems">
-                                        Bin
                                     </v-btn>
                                     <v-btn size="x-small" variant="outlined" color="error"
                                         @click="clearTestItemSelection">
@@ -193,10 +163,27 @@
                                             {{ item.name }}
                                         </v-list-item-title>
                                         <template #append>
-                                            <v-chip :color="getTestItemTypeColor(item)" size="x-small"
-                                                variant="tonal">
-                                                {{ getTestItemTypeLabel(item) }}
-                                            </v-chip>
+                                            <div class="d-flex align-center gap-1">
+                                                <!-- Scoring Type Indicator (only for selected items with criteria) -->
+                                                <v-btn
+                                                    v-if="localConfig.selectedTestItems.includes(item.name) && item.isValue"
+                                                    size="x-small" variant="tonal"
+                                                    :color="getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).color"
+                                                    @click.stop="openScoringConfig(item.name)"
+                                                    class="scoring-config-btn">
+                                                    <v-icon start size="small">{{
+                                                        getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).icon
+                                                    }}</v-icon>
+                                                    {{
+                                                        getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).label
+                                                    }}
+                                                    <v-icon end size="x-small">mdi-chevron-down</v-icon>
+                                                </v-btn>
+                                                <v-chip :color="getTestItemTypeColor(item)" size="x-small"
+                                                    variant="tonal">
+                                                    {{ getTestItemTypeLabel(item) }}
+                                                </v-chip>
+                                            </div>
                                         </template>
                                     </v-list-item>
                                 </v-list>
@@ -210,10 +197,86 @@
                             <div class="text-caption text-medium-emphasis mt-2">
                                 <v-icon size="x-small">mdi-information</v-icon>
                                 Leave empty to include all test items. Select specific items to filter results.
+                                Click on scoring type button to configure scoring algorithm.
                             </div>
                         </div>
                     </v-card-text>
                 </v-card>
+
+                <!-- Scoring Configuration Dialog -->
+                <v-dialog v-model="scoringConfigDialog" max-width="500px">
+                    <v-card v-if="scoringConfigItem">
+                        <v-card-title class="d-flex align-center bg-primary">
+                            <v-icon class="mr-2">mdi-tune</v-icon>
+                            Configure Scoring
+                        </v-card-title>
+                        <v-card-subtitle class="bg-primary pb-3">
+                            {{ scoringConfigItem }}
+                        </v-card-subtitle>
+
+                        <v-card-text class="pa-4">
+                            <!-- Scoring Type Selection -->
+                            <v-select :model-value="getTestItemScoringConfig(scoringConfigItem).scoringType"
+                                @update:model-value="updateTestItemScoringType(scoringConfigItem!, $event)"
+                                :items="scoringTypeOptions" item-title="title" item-value="value"
+                                label="Scoring Algorithm" variant="outlined" density="comfortable">
+                                <template #item="{ props: itemProps, item }">
+                                    <v-list-item v-bind="itemProps">
+                                        <template #prepend>
+                                            <v-icon :color="item.raw.color">{{ item.raw.icon }}</v-icon>
+                                        </template>
+                                        <template #subtitle>
+                                            {{ item.raw.subtitle }}
+                                        </template>
+                                        <template #append>
+                                            <v-chip v-if="item.raw.requiresTarget" size="x-small" color="warning"
+                                                variant="tonal">
+                                                Requires Target
+                                            </v-chip>
+                                        </template>
+                                    </v-list-item>
+                                </template>
+                                <template #selection="{ item }">
+                                    <v-chip :color="item.raw.color" size="small" variant="flat">
+                                        <v-icon start size="small">{{ item.raw.icon }}</v-icon>
+                                        {{ item.title }}
+                                    </v-chip>
+                                </template>
+                            </v-select>
+
+                            <!-- Target Value Input (for asymmetrical and throughput) -->
+                            <v-text-field v-if="currentScoringTypeRequiresTarget"
+                                :model-value="getTestItemScoringConfig(scoringConfigItem).target"
+                                @update:model-value="updateTestItemTarget(scoringConfigItem!, $event ? Number($event) : undefined)"
+                                label="Target Value" type="number" variant="outlined" density="comfortable"
+                                hint="Required: Enter the optimal target value for scoring" persistent-hint
+                                class="mt-4">
+                                <template #prepend-inner>
+                                    <v-icon color="warning">mdi-target</v-icon>
+                                </template>
+                            </v-text-field>
+
+                            <!-- Formula Preview -->
+                            <v-alert type="info" variant="tonal" class="mt-4" density="compact">
+                                <div class="text-caption font-weight-bold mb-1">Formula:</div>
+                                <div class="text-body-2 font-italic">
+                                    {{
+                                        getScoringTypeInfo(getTestItemScoringConfig(scoringConfigItem).scoringType).description
+                                    }}
+                                </div>
+                            </v-alert>
+                        </v-card-text>
+
+                        <v-divider />
+
+                        <v-card-actions class="pa-3">
+                            <v-spacer />
+                            <v-btn color="primary" variant="flat" @click="closeScoringConfig">
+                                Done
+                            </v-btn>
+                        </v-card-actions>
+                    </v-card>
+                </v-dialog>
             </v-card-text>
 
             <v-divider />
@@ -239,13 +302,26 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { Station } from '@/features/dut_logs/composables/useIplasApi'
-import type { StationConfig } from './StationSelectionDialog.vue'
+import type { StationConfig, TestItemScoringConfig } from './StationSelectionDialog.vue'
+import { SCORING_TYPE_INFO, type ScoringType } from '@/features/dut/types/scoring.types'
 
 export interface TestItemInfo {
     name: string
     isValue: boolean // true if it's a value test item (has numeric VALUE)
     isBin: boolean   // true if it's a binary test item (PASS/FAIL only)
 }
+
+// Available scoring types for selection (exclude binary as it's auto-detected)
+const scoringTypeOptions = Object.entries(SCORING_TYPE_INFO)
+    .filter(([key]) => key !== 'binary')
+    .map(([key, info]) => ({
+        value: key as ScoringType,
+        title: info.label,
+        subtitle: info.description,
+        icon: info.icon,
+        color: info.color,
+        requiresTarget: info.requiredInputs?.includes('target') ?? false
+    }))
 
 interface Props {
     show: boolean
@@ -294,11 +370,15 @@ const localConfig = ref<StationConfig>({
     stationName: '',
     deviceIds: [],
     testStatus: 'ALL',
-    selectedTestItems: []
+    selectedTestItems: [],
+    testItemScoringConfigs: {}
 })
 
 const testItemSearchQuery = ref('')
-const testItemTypeFilter = ref<('all' | 'value' | 'non-value' | 'bin')[]>(['all'])
+
+// Track which test item is currently being configured for scoring
+const scoringConfigItem = ref<string | null>(null)
+const scoringConfigDialog = ref(false)
 
 const isExistingConfig = computed(() => !!props.existingConfig)
 
@@ -312,34 +392,17 @@ const someDevicesSelected = computed(() => {
     return localConfig.value.deviceIds.length > 0
 })
 
-// Test Items filtering (supports multi-select type filter)
+// Test Items filtering - only show Criteria and Non-Criteria items (exclude Bin)
 const filteredTestItems = computed(() => {
-    let items = [...props.availableTestItems]
-    
-    // Apply type filter (multi-select)
-    if (testItemTypeFilter.value.length > 0 && !testItemTypeFilter.value.includes('all')) {
-        items = items.filter(item => {
-            return testItemTypeFilter.value.some(filterType => {
-                switch (filterType) {
-                    case 'value':
-                        return item.isValue
-                    case 'non-value':
-                        return !item.isValue && !item.isBin
-                    case 'bin':
-                        return item.isBin
-                    default:
-                        return true
-                }
-            })
-        })
-    }
-    
+    // Filter out Bin items, only keep Criteria (isValue) and Non-Criteria (!isValue && !isBin)
+    let items = props.availableTestItems.filter(item => !item.isBin)
+
     // Apply search query
     if (testItemSearchQuery.value) {
         const query = testItemSearchQuery.value.toLowerCase()
         items = items.filter(item => item.name.toLowerCase().includes(query))
     }
-    
+
     return items
 })
 
@@ -348,7 +411,10 @@ watch(() => props.show, (newShow) => {
     if (newShow && props.station) {
         if (props.existingConfig) {
             // Load existing config
-            localConfig.value = { ...props.existingConfig }
+            localConfig.value = {
+                ...props.existingConfig,
+                testItemScoringConfigs: props.existingConfig.testItemScoringConfigs || {}
+            }
         } else {
             // Initialize new config
             localConfig.value = {
@@ -356,10 +422,13 @@ watch(() => props.show, (newShow) => {
                 stationName: props.station.station_name,
                 deviceIds: [],
                 testStatus: 'ALL',
-                selectedTestItems: []
+                selectedTestItems: [],
+                testItemScoringConfigs: {}
             }
         }
         testItemSearchQuery.value = ''
+        scoringConfigItem.value = null
+        scoringConfigDialog.value = false
     }
 })
 
@@ -414,26 +483,17 @@ function selectNonValueTestItems(): void {
         .map(item => item.name)
 }
 
-function selectBinTestItems(): void {
-    // Bin: items that have PASS/FAIL only values
-    localConfig.value.selectedTestItems = props.availableTestItems
-        .filter(item => item.isBin)
-        .map(item => item.name)
-}
-
 function clearTestItemSelection(): void {
     localConfig.value.selectedTestItems = []
 }
 
 function getTestItemTypeLabel(item: TestItemInfo): string {
     if (item.isValue) return 'CRITERIA'
-    if (item.isBin) return 'BIN'
     return 'NON-CRITERIA'
 }
 
 function getTestItemTypeColor(item: TestItemInfo): string {
     if (item.isValue) return 'success'
-    if (item.isBin) return 'grey'
     return 'warning'
 }
 
@@ -466,11 +526,79 @@ function handleRefreshDevices(): void {
 function handleRefreshTestItems(): void {
     emit('refresh-test-items')
 }
+
+// Scoring configuration helper functions
+function getTestItemScoringConfig(testItemName: string): TestItemScoringConfig {
+    return localConfig.value.testItemScoringConfigs?.[testItemName] || { scoringType: 'symmetrical' }
+}
+
+function openScoringConfig(testItemName: string): void {
+    scoringConfigItem.value = testItemName
+    scoringConfigDialog.value = true
+}
+
+function closeScoringConfig(): void {
+    scoringConfigDialog.value = false
+    scoringConfigItem.value = null
+}
+
+function getScoringTypeInfo(scoringType: ScoringType) {
+    return SCORING_TYPE_INFO[scoringType]
+}
+
+function updateTestItemScoringType(testItemName: string, scoringType: ScoringType): void {
+    if (!localConfig.value.testItemScoringConfigs) {
+        localConfig.value.testItemScoringConfigs = {}
+    }
+
+    const existing = localConfig.value.testItemScoringConfigs[testItemName] || {}
+    localConfig.value.testItemScoringConfigs[testItemName] = {
+        ...existing,
+        scoringType
+    }
+
+    // Clear target if not required
+    const typeInfo = SCORING_TYPE_INFO[scoringType]
+    if (!typeInfo.requiredInputs?.includes('target')) {
+        delete localConfig.value.testItemScoringConfigs[testItemName].target
+    }
+}
+
+function updateTestItemTarget(testItemName: string, target: number | undefined): void {
+    if (!localConfig.value.testItemScoringConfigs) {
+        localConfig.value.testItemScoringConfigs = {}
+    }
+
+    if (!localConfig.value.testItemScoringConfigs[testItemName]) {
+        localConfig.value.testItemScoringConfigs[testItemName] = { scoringType: 'symmetrical' }
+    }
+
+    localConfig.value.testItemScoringConfigs[testItemName].target = target
+}
+
+function scoringRequiresTarget(scoringType: ScoringType): boolean {
+    return SCORING_TYPE_INFO[scoringType].requiredInputs?.includes('target') ?? false
+}
+
+// Computed for current scoring config being edited
+const currentScoringConfig = computed(() => {
+    if (!scoringConfigItem.value) return null
+    return getTestItemScoringConfig(scoringConfigItem.value)
+})
+
+const currentScoringTypeRequiresTarget = computed(() => {
+    if (!currentScoringConfig.value) return false
+    return scoringRequiresTarget(currentScoringConfig.value.scoringType)
+})
 </script>
 
 <style scoped>
 .border {
     border: 1px solid rgba(0, 0, 0, 0.12);
+}
+
+.gap-1 {
+    gap: 0.25rem;
 }
 
 .gap-2 {
@@ -483,5 +611,10 @@ function handleRefreshTestItems(): void {
 
 .test-item-row:hover {
     background-color: rgba(0, 0, 0, 0.04);
+}
+
+.scoring-config-btn {
+    text-transform: none;
+    font-size: 0.7rem;
 }
 </style>

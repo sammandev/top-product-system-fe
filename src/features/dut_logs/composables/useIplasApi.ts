@@ -141,7 +141,7 @@ export function useIplasApi() {
     forceRefresh = false
   ): Promise<Station[]> {
     const cacheKey = `${site}${CACHE_KEY_SEPARATOR}${project}`
-    
+
     if (!forceRefresh && cachedStations.has(cacheKey)) {
       stations.value = cachedStations.get(cacheKey)!
       return stations.value
@@ -312,7 +312,7 @@ export function useIplasApi() {
       })
 
       // Generate filename if not provided
-      const filename = response.filename || 
+      const filename = response.filename ||
         (attachments.length === 1 && attachments[0]
           ? `${attachments[0].isn}_${attachments[0].time.replace(/[\/:]/g, '_')}.zip`
           : `test_logs_${new Date().toISOString().slice(0, 10)}.zip`)

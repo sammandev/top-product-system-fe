@@ -10,7 +10,8 @@
                         <span class="text-white text-body-1">Test Items Details</span>
                     </div>
                     <div class="d-flex align-center gap-2">
-                        <v-btn variant="outlined" color="white" size="x-small" :loading="downloading" @click="handleDownload">
+                        <v-btn variant="outlined" color="white" size="x-small" :loading="downloading"
+                            @click="handleDownload">
                             <v-icon start size="x-small">mdi-download</v-icon>
                             Download
                         </v-btn>
@@ -74,8 +75,8 @@
                             <v-tooltip activator="parent" location="top">Click to copy Error Code</v-tooltip>
                         </v-chip>
                         <template v-if="record.errorName && record.errorName !== 'N/A' && record.errorCode !== 'PASS'">
-                            <v-chip size="x-small" color="error" variant="outlined"
-                                class="cursor-pointer" @click="copyToClipboard(record.errorName)">
+                            <v-chip size="x-small" color="error" variant="outlined" class="cursor-pointer"
+                                @click="copyToClipboard(record.errorName)">
                                 {{ record.errorName }}
                                 <v-tooltip activator="parent" location="top">Click to copy Error Name</v-tooltip>
                             </v-chip>
@@ -93,16 +94,16 @@
                     <v-col cols="12" md="5">
                         <v-combobox v-model="searchTerms" label="Search Test Items (Regex)"
                             prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details clearable
-                            multiple chips closable-chips
-                            placeholder="Type and press Enter (OR logic)..."
+                            multiple chips closable-chips placeholder="Type and press Enter (OR logic)..."
                             hint="Multiple terms use OR logic">
                             <template #chip="{ props, item }">
-                                <v-chip v-bind="props" :text="String(item.value || item)" size="small" color="primary" />
+                                <v-chip v-bind="props" :text="String(item.value || item)" size="small"
+                                    color="primary" />
                             </template>
                         </v-combobox>
                     </v-col>
                     <v-col cols="12" md="4">
-                        <v-select v-model="testItemFilter" :items="testItemFilterOptions" item-title="title" 
+                        <v-select v-model="testItemFilter" :items="testItemFilterOptions" item-title="title"
                             item-value="value" label="Data Type" variant="outlined" density="compact" hide-details
                             multiple chips closable-chips>
                             <template #chip="{ props, item }">

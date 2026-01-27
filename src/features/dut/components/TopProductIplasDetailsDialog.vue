@@ -189,12 +189,8 @@
                     </template>
                     <template #item.SCORE="{ item }">
                         <template v-if="item.score !== undefined && item.score !== null">
-                            <v-chip 
-                                :color="getScoreColor(item.score)" 
-                                size="small" 
-                                variant="flat"
-                                class="font-weight-bold cursor-pointer"
-                                @click.stop="showScoreBreakdown(item)">
+                            <v-chip :color="getScoreColor(item.score)" size="small" variant="flat"
+                                class="font-weight-bold cursor-pointer" @click.stop="showScoreBreakdown(item)">
                                 {{ item.score.toFixed(3) }}
                                 <v-icon size="x-small" end>mdi-information-outline</v-icon>
                             </v-chip>
@@ -213,12 +209,12 @@
                             {{ record.overallScore.toFixed(3) }}
                         </span>
                     </v-chip>
-                    <v-chip v-if="record.valueItemsScore !== null && record.valueItemsScore !== undefined" 
+                    <v-chip v-if="record.valueItemsScore !== null && record.valueItemsScore !== undefined"
                         color="success" variant="outlined" size="small">
                         Value Items: {{ record.valueItemsScore.toFixed(3) }}
                     </v-chip>
-                    <v-chip v-if="record.binItemsScore !== null && record.binItemsScore !== undefined" 
-                        color="info" variant="outlined" size="small">
+                    <v-chip v-if="record.binItemsScore !== null && record.binItemsScore !== undefined" color="info"
+                        variant="outlined" size="small">
                         Binary Items: {{ record.binItemsScore.toFixed(3) }}
                     </v-chip>
                 </div>
@@ -233,7 +229,8 @@
                 <v-icon class="mr-2" color="white">mdi-calculator-variant</v-icon>
                 <span class="text-white">Score Breakdown</span>
                 <v-spacer />
-                <v-btn icon="mdi-close" variant="text" color="white" size="small" @click="showBreakdownDialog = false" />
+                <v-btn icon="mdi-close" variant="text" color="white" size="small"
+                    @click="showBreakdownDialog = false" />
             </v-card-title>
             <v-card-text class="pt-4">
                 <!-- Test Item Name -->
@@ -252,9 +249,9 @@
                             <span class="font-weight-bold">{{ selectedTestItem.VALUE }}</span>
                         </template>
                     </v-list-item>
-                    
+
                     <v-divider />
-                    
+
                     <v-list-item>
                         <template #prepend>
                             <v-icon color="error">mdi-arrow-up-bold</v-icon>
@@ -264,9 +261,9 @@
                             <span class="font-weight-medium">{{ selectedTestItem.UCL || '-' }}</span>
                         </template>
                     </v-list-item>
-                    
+
                     <v-divider />
-                    
+
                     <v-list-item>
                         <template #prepend>
                             <v-icon color="warning">mdi-arrow-down-bold</v-icon>
@@ -276,23 +273,24 @@
                             <span class="font-weight-medium">{{ selectedTestItem.LCL || '-' }}</span>
                         </template>
                     </v-list-item>
-                    
+
                     <v-divider />
-                    
+
                     <v-list-item>
                         <template #prepend>
                             <v-icon color="secondary">mdi-function-variant</v-icon>
                         </template>
                         <v-list-item-title>Scoring Algorithm</v-list-item-title>
                         <template #append>
-                            <v-chip size="small" :color="getScoringTypeColor(selectedTestItem.scoringType)" variant="tonal">
+                            <v-chip size="small" :color="getScoringTypeColor(selectedTestItem.scoringType)"
+                                variant="tonal">
                                 {{ formatScoringType(selectedTestItem.scoringType) }}
                             </v-chip>
                         </template>
                     </v-list-item>
-                    
+
                     <v-divider />
-                    
+
                     <v-list-item v-if="selectedTestItem.deviation !== undefined">
                         <template #prepend>
                             <v-icon color="purple">mdi-delta</v-icon>
@@ -302,16 +300,17 @@
                             <span class="font-weight-medium">{{ selectedTestItem.deviation?.toFixed(4) }}</span>
                         </template>
                     </v-list-item>
-                    
+
                     <v-divider v-if="selectedTestItem.deviation !== undefined" />
-                    
+
                     <v-list-item>
                         <template #prepend>
                             <v-icon :color="getScoreColor(selectedTestItem.score ?? 0)">mdi-star</v-icon>
                         </template>
                         <v-list-item-title class="font-weight-bold">Final Score</v-list-item-title>
                         <template #append>
-                            <v-chip size="small" :color="getScoreColor(selectedTestItem.score ?? 0)" variant="flat" class="font-weight-bold">
+                            <v-chip size="small" :color="getScoreColor(selectedTestItem.score ?? 0)" variant="flat"
+                                class="font-weight-bold">
                                 {{ selectedTestItem.score?.toFixed(3) ?? '-' }}
                             </v-chip>
                         </template>
@@ -407,11 +406,11 @@ const testItemHeaders = computed(() => {
         { title: 'UCL', key: 'UCL', sortable: true },
         { title: 'LCL', key: 'LCL', sortable: true }
     ]
-    
+
     if (hasScores.value) {
         baseHeaders.push({ title: 'Score', key: 'SCORE', sortable: true })
     }
-    
+
     return baseHeaders
 })
 

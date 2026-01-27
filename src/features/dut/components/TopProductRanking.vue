@@ -71,7 +71,7 @@
                         <!-- Complete Ranking Table -->
                         <v-col cols="12">
 
-                            
+
                             <v-card variant="outlined">
                                 <v-card-title class="bg-grey-lighten-4">
                                     <v-icon class="mr-2">mdi-trophy</v-icon>
@@ -168,7 +168,8 @@
                                 </v-card-text>
 
                                 <v-data-table :headers="rankingHeaders" :items="filteredRanking" :items-per-page="10"
-                                    density="comfortable" class="ranking-table cursor-pointer" :item-class="getRankingRowClass"
+                                    density="comfortable" class="ranking-table cursor-pointer"
+                                    :item-class="getRankingRowClass"
                                     @click:row="(_event: any, data: any) => handleRowClick(data.item, station as string)">
                                     <!-- Rank Column -->
                                     <template #item.rank="{ item }">

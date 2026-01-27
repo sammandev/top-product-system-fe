@@ -9,17 +9,6 @@
                 <v-btn icon="mdi-close" variant="text" color="white" @click="handleClose" />
             </v-card-title>
 
-            <v-card-subtitle class="pa-3 bg-grey-lighten-4">
-                <div class="text-body-2">
-                    <strong>Site:</strong> {{ site }} | <strong>Project:</strong> {{ project }}
-                </div>
-                <div class="text-caption text-medium-emphasis">
-                    Click on a station to configure test items, device IDs, and test status
-                </div>
-            </v-card-subtitle>
-
-            <v-divider />
-
             <!-- Search and Filter -->
             <v-card-text class="pa-3">
                 <v-text-field v-model="searchQuery" label="Search Stations" prepend-inner-icon="mdi-magnify"
@@ -33,10 +22,12 @@
             <v-card-text class="pa-0" style="max-height: 500px; overflow-y: auto;">
                 <v-list>
                     <v-list-item v-for="station in filteredStations" :key="station.station_name"
-                        @click="handleStationClick(station)" class="station-item" :class="{ 'station-configured': isStationConfigured(station.display_station_name) }">
+                        @click="handleStationClick(station)" class="station-item"
+                        :class="{ 'station-configured': isStationConfigured(station.display_station_name) }">
                         <template #prepend>
                             <v-icon :color="isStationConfigured(station.display_station_name) ? 'success' : 'grey'">
-                                {{ isStationConfigured(station.display_station_name) ? 'mdi-checkbox-marked-circle' : 'mdi-circle-outline' }}
+                                {{ isStationConfigured(station.display_station_name) ? 'mdi-checkbox-marked-circle' :
+                                    'mdi-circle-outline' }}
                             </v-icon>
                         </template>
 
@@ -52,9 +43,11 @@
                         </v-list-item-subtitle>
 
                         <template #append>
-                            <div v-if="isStationConfigured(station.display_station_name)" class="text-caption d-flex align-center">
+                            <div v-if="isStationConfigured(station.display_station_name)"
+                                class="text-caption d-flex align-center">
                                 <v-chip size="small" color="primary" variant="tonal" class="mr-1">
-                                    {{ getStationConfig(station.display_station_name)?.deviceIds?.length || 'All' }} Device(s)
+                                    {{ getStationConfig(station.display_station_name)?.deviceIds?.length || 'All' }}
+                                    Device(s)
                                 </v-chip>
                                 <v-chip size="small" color="info" variant="tonal" class="mr-1">
                                     {{ getTestItemsLabel(station.display_station_name) }}
@@ -98,6 +91,13 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { Station } from '@/features/dut_logs/composables/useIplasApi'
+import type { ScoringType } from '@/features/dut/types/scoring.types'
+
+// Per-test-item scoring configuration
+export interface TestItemScoringConfig {
+    scoringType: ScoringType
+    target?: number  // Required for asymmetrical and throughput
+}
 
 export interface StationConfig {
     displayName: string
@@ -105,6 +105,7 @@ export interface StationConfig {
     deviceIds: string[]
     testStatus: 'ALL' | 'PASS' | 'FAIL'
     selectedTestItems: string[] // Empty means all test items
+    testItemScoringConfigs?: Record<string, TestItemScoringConfig> // Per-test-item scoring config
 }
 
 interface Props {

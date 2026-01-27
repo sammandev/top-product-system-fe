@@ -92,6 +92,9 @@ export interface ScoringTypeInfo {
     icon: string
     color: string
     parameters: ScoringParameter[]
+    formulaLatex?: string
+    variables?: Record<string, string>
+    requiredInputs?: string[]
 }
 
 export type ScoringConfigParameterKey =
@@ -122,6 +125,13 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
         useCase: 'TX Power, frequency measurements with symmetric limits',
         icon: 'mdi-arrow-left-right',
         color: 'primary',
+        formulaLatex: String.raw`score = \alpha + (1-\alpha) \cdot \frac{L - |x - T|}{L}`,
+        variables: {
+            'T': String.raw`Target = \frac{UCL + LCL}{2}`,
+            'L': String.raw`Limit = \frac{UCL - LCL}{2}`,
+            'x': 'Measured value',
+            'α': 'Minimum score at limit boundary (default: 0.8)'
+        },
         parameters: [
             {
                 key: 'alpha',
@@ -142,6 +152,14 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
         useCase: 'When you want steeper decay away from target',
         icon: 'mdi-chart-bell-curve',
         color: 'secondary',
+        formulaLatex: String.raw`score = e^{-\lambda \cdot d^2}`,
+        variables: {
+            'λ': String.raw`\lambda = -\frac{\ln(S_t)}{d_t^2}`,
+            'd': String.raw`|x - T| \text{ (deviation from target)}`,
+            'T': String.raw`Target = \frac{UCL + LCL}{2}`,
+            'S_t': 'Target score at target deviation (default: 0.8)',
+            'd_t': 'Target deviation distance (default: 2.5)'
+        },
         parameters: [
             {
                 key: 'targetScore',
@@ -172,6 +190,13 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
         useCase: 'EVM measurements (typically -20 to -60 dB)',
         icon: 'mdi-signal-cellular-3',
         color: 'info',
+        formulaLatex: String.raw`score = 1 - e^{-\lambda \cdot x^2}`,
+        variables: {
+            'λ': String.raw`\lambda = -\frac{\ln(1 - S_t)}{T^2}`,
+            'x': 'Measured EVM value (negative dB)',
+            'T': 'Target EVM value (default: -30)',
+            'S_t': 'Target score at target EVM (default: 0.9)'
+        },
         parameters: [
             {
                 key: 'target',
@@ -198,10 +223,20 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     throughput: {
         type: 'throughput',
         label: 'Throughput (Higher is Better)',
-        description: 'Linear to target, exponential above target',
+        description: 'Linear below target, exponential above target',
         useCase: 'Data throughput, speed measurements',
         icon: 'mdi-speedometer',
         color: 'success',
+        formulaLatex: String.raw`score = \begin{cases} m \cdot x + (S_{min} - m \cdot LCL) & x < T \\ 1 - e^{-\lambda \cdot x^2} & x \geq T \end{cases}`,
+        variables: {
+            'm': String.raw`\text{Slope} = \frac{S_t - S_{min}}{T - LCL}`,
+            'λ': String.raw`\lambda = -\frac{\ln(1 - S_t)}{T^2}`,
+            'T': 'Target throughput value (user-defined, required)',
+            'LCL': 'Lower control limit (minimum acceptable)',
+            'S_min': 'Minimum score at LCL (default: 0.4)',
+            'S_t': 'Target score at target value (default: 0.9)'
+        },
+        requiredInputs: ['target'],
         parameters: [
             {
                 key: 'minScore',
@@ -230,17 +265,25 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
                 min: 0,
                 step: 1,
                 default: 0,
-                description: 'Target throughput value (0 = auto)'
+                description: 'Target throughput value (required)'
             }
         ]
     },
     asymmetrical: {
         type: 'asymmetrical',
         label: 'Asymmetrical',
-        description: 'Custom target between UCL and LCL',
+        description: 'Custom target between UCL and LCL (not centered)',
         useCase: 'When optimal value is not centered between limits',
         icon: 'mdi-arrow-left-right-bold',
         color: 'warning',
+        formulaLatex: String.raw`score = \alpha + (1-\alpha) \cdot \frac{L - d}{L}`,
+        variables: {
+            'L': String.raw`\begin{cases} UCL - T & x \geq T \\ T - LCL & x < T \end{cases}`,
+            'd': String.raw`\begin{cases} x - T & x \geq T \\ T - x & x < T \end{cases}`,
+            'T': 'User-defined target value (required)',
+            'α': 'Minimum score at limit boundary (default: 0.4)'
+        },
+        requiredInputs: ['target'],
         parameters: [
             {
                 key: 'alpha',
@@ -265,10 +308,15 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     per_mask: {
         type: 'per_mask',
         label: 'PER/MASK (Zero is Best)',
-        description: 'Linear decrease from 1.0 at 0 to 0.0 at max',
+        description: 'Linear decrease from 1.0 at 0 to 0.0 at max deviation',
         useCase: 'Packet Error Rate, Mask margin measurements',
         icon: 'mdi-target',
         color: 'error',
+        formulaLatex: String.raw`score = \max\left(0, 1 - \frac{|x - 0|}{d_{max}}\right)`,
+        variables: {
+            'x': 'Measured value',
+            'd_max': 'Maximum deviation (score = 0 at this distance from 0)'
+        },
         parameters: [
             {
                 key: 'maxDeviation',
@@ -288,6 +336,8 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
         useCase: 'Non-numeric test items',
         icon: 'mdi-toggle-switch',
         color: 'grey',
+        formulaLatex: String.raw`score = \begin{cases} 1.0 & \text{STATUS} = \text{PASS} \\ 0.0 & \text{STATUS} = \text{FAIL} \end{cases}`,
+        variables: {},
         parameters: []
     }
 }

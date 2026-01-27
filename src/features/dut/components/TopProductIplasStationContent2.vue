@@ -101,18 +101,15 @@
         </v-alert>
 
         <!-- Results Section with Ranking Table -->
-        <TopProductIplasRanking v-if="testItemData.length > 0"
-            :records="testItemData" 
-            :scores="recordScores" 
-            :calculating-scores="calculatingScores"
-            @row-click="handleRowClick" 
-            @download="handleDownloadRecord"
+        <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
+            :calculating-scores="calculatingScores" @row-click="handleRowClick" @download="handleDownloadRecord"
             @calculate-scores="handleCalculateScores" />
 
         <!-- Station Selection Dialog -->
         <StationSelectionDialog v-model:show="showStationSelectionDialog" :site="selectedSite || ''"
             :project="selectedProject || ''" :stations="stations" :selected-configs="stationConfigs"
-            @station-click="handleStationClick" @confirm="handleStationSelectionConfirm" @clear-all="clearAllStations" />
+            @station-click="handleStationClick" @confirm="handleStationSelectionConfirm"
+            @clear-all="clearAllStations" />
 
         <!-- Station Config Dialog -->
         <StationConfigDialog v-model:show="showStationConfigDialog" :station="selectedStationForConfig"
@@ -143,11 +140,13 @@ const emit = defineEmits<{
 }>()
 
 // Scoring composable
-const { 
-    initializeConfigs, 
-    calculateScores, 
-    scoredRecords, 
-    error: scoringError 
+const {
+    initializeConfigs,
+    calculateScores,
+    scoredRecords,
+    updateConfig: updateScoringConfig,
+    setScoringType,
+    error: scoringError
 } = useScoring()
 
 // Scoring state
@@ -286,18 +285,18 @@ function formatDatetimeLocal(date: Date): string {
 // Normalize record for dialog - includes scoring data if available
 function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
     // Find matching scored record (by index in original data)
-    const recordIndex = testItemData.value.findIndex(r => 
+    const recordIndex = testItemData.value.findIndex(r =>
         (r.ISN === record.ISN || r.DeviceId === record.DeviceId) &&
         r.station === record.station &&
         r['Test end Time'] === record['Test end Time']
     )
     const scoredRecord = recordIndex >= 0 ? scoredRecords.value[recordIndex] : null
-    
+
     // Build test items with scoring data
     const testItems: NormalizedTestItem[] = (record.TestItem || []).map((item: TestItem): NormalizedTestItem => {
         // Find matching score for this test item
         const itemScore = scoredRecord?.testItemScores?.find(s => s.testItemName === item.NAME)
-        
+
         return {
             NAME: item.NAME,
             STATUS: item.STATUS,
@@ -311,7 +310,7 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
             deviation: itemScore?.deviation
         }
     })
-    
+
     return {
         isn: record.ISN || '-',
         deviceId: record.DeviceId || '-',
@@ -342,20 +341,20 @@ function handleRowClick(payload: { record: CsvTestItemData; stationName: string 
 // Handle download from ranking table action button
 async function handleDownloadRecord(payload: { record: CsvTestItemData; stationName: string }): Promise<void> {
     if (!selectedSite.value || !selectedProject.value) return
-    
+
     const record = payload.record
     const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
     const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
     const deviceid = record.DeviceId
     const station = record.TSP || record.station
-    
+
     await downloadAttachments(selectedSite.value, selectedProject.value, [{ isn, time, deviceid, station }])
 }
 
 // Handle calculate scores request from ranking table
 async function handleCalculateScores(): Promise<void> {
     if (testItemData.value.length === 0) return
-    
+
     calculatingScores.value = true
     try {
         // Convert iPLAS records to format expected by scoring API
@@ -367,41 +366,62 @@ async function handleCalculateScores(): Promise<void> {
             'Test end Time': record['Test end Time'],
             TestItem: record.TestItem || []
         }))
-        
+
         // Initialize scoring configs from first record's test items if needed
         const firstRecord = testItemData.value[0]
         if (firstRecord?.TestItem && firstRecord.TestItem.length > 0) {
             initializeConfigs(firstRecord.TestItem)
         }
-        
+
+        // Apply user-selected scoring configs from station configurations
+        applyUserScoringConfigs()
+
         // Calculate scores via backend API
         await calculateScores(records)
-        
+
         // Map scored records back to our score map
         // Ranking component uses key: `${ISN}_${station}_${Test end Time}`
         // We need to match scored records back to original records by index
         // since scoring order is preserved
         const newScores: Record<string, number> = {}
-        
+
         testItemData.value.forEach((record, index) => {
             const isn = record.ISN || record.DeviceId || '-'
             const station = record.station
             const testEndTime = record['Test end Time'] || ''
             const key = `${isn}_${station}_${testEndTime}`
-            
+
             // Get score by index (order is preserved from backend)
             const scoredRecord = scoredRecords.value[index]
             if (scoredRecord) {
                 newScores[key] = scoredRecord.overallScore
             }
         })
-        
+
         recordScores.value = newScores
     } catch (err) {
         console.error('Failed to calculate scores:', err)
         error.value = scoringError.value || 'Failed to calculate scores'
     } finally {
         calculatingScores.value = false
+    }
+}
+
+// Apply user-selected scoring configurations from station configs
+function applyUserScoringConfigs(): void {
+    // Iterate through all station configs and apply custom scoring settings
+    for (const config of Object.values(stationConfigs.value)) {
+        if (!config.testItemScoringConfigs) continue
+
+        for (const [testItemName, scoringConfig] of Object.entries(config.testItemScoringConfigs)) {
+            // Update scoring type for this test item
+            setScoringType(testItemName, scoringConfig.scoringType)
+
+            // If target is specified (for asymmetrical or throughput), update the config
+            if (scoringConfig.target !== undefined) {
+                updateScoringConfig(testItemName, { target: scoringConfig.target })
+            }
+        }
     }
 }
 

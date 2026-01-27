@@ -77,7 +77,7 @@ function loadSettings(): void {
         if (stored) {
             const parsed = JSON.parse(stored)
             const storedServers = parsed.servers as IplasServerConfig[] || []
-            
+
             // Merge stored settings with defaults, using env token if stored token is empty
             servers.value = defaultServers.map(defaultServer => {
                 const storedServer = storedServers.find(s => s.id === defaultServer.id)

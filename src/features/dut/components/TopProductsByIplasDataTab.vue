@@ -20,37 +20,27 @@
             <v-window v-model="searchMode">
                 <!-- Station Search Mode -->
                 <v-window-item value="station" eager>
-                    <TopProductIplasStationContent 
-                        @show-details="handleShowDetails"
-                        @show-settings="showSettingsDialog = true"
-                    />
+                    <TopProductIplasStationContent @show-details="handleShowDetails"
+                        @show-settings="showSettingsDialog = true" />
                 </v-window-item>
 
                 <!-- Station Search 2 Mode - Custom Configuration -->
                 <v-window-item value="station2" eager>
-                    <TopProductIplasStationContent2
-                        @show-details="handleShowDetails"
-                        @show-settings="showSettingsDialog = true"
-                    />
+                    <TopProductIplasStationContent2 @show-details="handleShowDetails"
+                        @show-settings="showSettingsDialog = true" />
                 </v-window-item>
 
                 <!-- ISN Search Mode -->
                 <v-window-item value="isn" eager>
-                    <TopProductIplasIsnContent
-                        @show-details="handleShowDetails"
-                        @show-settings="showSettingsDialog = true"
-                    />
+                    <TopProductIplasIsnContent @show-details="handleShowDetails"
+                        @show-settings="showSettingsDialog = true" />
                 </v-window-item>
             </v-window>
         </v-col>
 
         <!-- Test Items Details Dialog -->
-        <TopProductIplasDetailsDialog
-            v-model="showDetailsDialog"
-            :record="selectedRecord"
-            :downloading="downloadingDetails"
-            @download="handleDownloadFromDialog"
-        />
+        <TopProductIplasDetailsDialog v-model="showDetailsDialog" :record="selectedRecord"
+            :downloading="downloadingDetails" @download="handleDownloadFromDialog" />
 
         <!-- iPLAS Settings Dialog -->
         <TopProductIplasSettingsDialog v-model="showSettingsDialog" />

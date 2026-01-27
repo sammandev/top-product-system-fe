@@ -9,9 +9,8 @@
                 </v-chip>
             </div>
             <div class="d-flex align-center gap-2">
-                <v-btn v-if="!hasScores" color="primary" variant="outlined" size="small" 
-                    prepend-icon="mdi-calculator" :loading="calculatingScores"
-                    @click="emit('calculate-scores')">
+                <v-btn v-if="!hasScores" color="primary" variant="outlined" size="small" prepend-icon="mdi-calculator"
+                    :loading="calculatingScores" @click="emit('calculate-scores')">
                     Calculate Scores
                 </v-btn>
                 <v-chip v-if="hasScores" size="small" color="success" variant="tonal" prepend-icon="mdi-check-circle">
@@ -139,7 +138,8 @@
                                             <v-chip size="small" color="error" variant="tonal">FAIL</v-chip>
                                         </template>
                                         <template v-else-if="getRecordScore(item) !== null">
-                                            <v-chip size="small" :color="getScoreColor(getRecordScore(item)!)" variant="flat" class="font-weight-bold">
+                                            <v-chip size="small" :color="getScoreColor(getRecordScore(item)!)"
+                                                variant="flat" class="font-weight-bold">
                                                 {{ getRecordScore(item)!.toFixed(2) }}
                                             </v-chip>
                                         </template>

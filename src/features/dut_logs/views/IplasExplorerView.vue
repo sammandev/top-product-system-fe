@@ -151,8 +151,8 @@
                                 <v-btn color="primary" :loading="loadingTestItems" @click="fetchTestItems">
                                     <v-icon start>mdi-download</v-icon>
                                     Search Test Data ({{ selectedDeviceIds.length }} device{{ selectedDeviceIds.length >
-                                    1 ? 's' :
-                                    '' }})
+                                        1 ? 's' :
+                                        '' }})
                                 </v-btn>
                             </div>
                         </v-card-text>
@@ -217,7 +217,7 @@
                                                     @update:model-value="toggleRecordSelection(index)" />
                                                 <v-icon size="small" color="primary">mdi-tag</v-icon>
                                                 <span class="font-weight-bold">{{ record.ISN || record.DeviceId
-                                                    }}</span>
+                                                }}</span>
                                                 <v-chip :color="record.ErrorCode === 'PASS' ? 'success' : 'error'"
                                                     size="x-small">
                                                     {{ record.ErrorCode }}
@@ -274,8 +274,9 @@
                                             </v-col>
                                             <v-col cols="12" sm="6" md="2">
                                                 <div class="text-caption text-medium-emphasis">Test Duration</div>
-                                                <div class="font-weight-medium">{{ calculateDuration(record['Test Start Time'],
-                                                    record['Test end Time']) }}</div>
+                                                <div class="font-weight-medium">
+                                                    {{ calculateDuration(record['Test Start Time'], record['Test end Time']) }}
+                                                </div>
                                             </v-col>
                                             <v-col cols="12" sm="6" md="2">
                                                 <div class="text-caption text-medium-emphasis">Total Cycle Time</div>
@@ -307,7 +308,7 @@
 
                                         <div class="text-caption text-medium-emphasis mt-2">
                                             Showing {{ filterTestItems(record.TestItem).length }} of {{
-                                            record.TestItem?.length || 0
+                                                record.TestItem?.length || 0
                                             }} test items
                                         </div>
                                     </v-expansion-panel-text>
@@ -472,12 +473,12 @@ function isNonValueData(item: TestItem): boolean {
 
 function filterTestItems(items: TestItem[] | undefined): TestItem[] {
     if (!items) return []
-    
+
     // If no filters or 'all' is selected, return all items
     if (testItemFilter.value.length === 0 || testItemFilter.value.includes('all')) {
         return items
     }
-    
+
     // Filter items based on selected types (OR logic)
     return items.filter(item => {
         return testItemFilter.value.some(filterType => {

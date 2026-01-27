@@ -35,7 +35,7 @@ export function useTabPersistence<T extends string | number>(
   // Watch for changes and update URL
   watch(tabValue, (newValue) => {
     const currentQuery = { ...route.query }
-    
+
     // Only update if value is different from default or already in URL
     if (newValue !== defaultValue || currentQuery[tabKey] !== undefined) {
       if (newValue === defaultValue) {
@@ -44,7 +44,7 @@ export function useTabPersistence<T extends string | number>(
       } else {
         currentQuery[tabKey] = String(newValue)
       }
-      
+
       // Replace current route without adding to history for minor tab changes
       router.replace({ query: currentQuery }).catch(() => {
         // Ignore navigation duplicated errors
@@ -96,10 +96,10 @@ export function useMultiTabPersistence<T extends Record<string, string | number>
   config: T
 ): { [K in keyof T]: Ref<T[K]> } {
   const result: Partial<{ [K in keyof T]: Ref<T[K]> }> = {}
-  
+
   for (const [key, defaultValue] of Object.entries(config)) {
     result[key as keyof T] = useTabPersistence(key, defaultValue) as Ref<T[keyof T]>
   }
-  
+
   return result as { [K in keyof T]: Ref<T[K]> }
 }

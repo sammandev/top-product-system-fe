@@ -123,7 +123,8 @@
 
         <!-- Ranking Table Results -->
         <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData"
-            :station-display-names="stationDisplayNameMap" @row-click="handleRowClick" @download="handleDownloadRecord" />
+            :station-display-names="stationDisplayNameMap" @row-click="handleRowClick"
+            @download="handleDownloadRecord" />
 
         <!-- Download Section -->
         <v-card v-if="testItemData.length > 0" elevation="2" class="mb-4">
@@ -444,7 +445,7 @@ function handleRowClick(payload: { record: CsvTestItemData; stationName: string 
 // Handle download from ranking table action button
 async function handleDownloadRecord(payload: { record: CsvTestItemData; stationName: string }): Promise<void> {
     if (!selectedSite.value || !selectedProject.value) return
-    
+
     const attachmentInfo = createAttachmentInfo(payload.record)
     await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
 }

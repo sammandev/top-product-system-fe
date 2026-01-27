@@ -116,7 +116,7 @@
                     </v-btn>
                     <v-btn size="small" variant="outlined" color="white" @click="toggleExpandAll">
                         <v-icon start>{{ allExpanded ? 'mdi-arrow-collapse-vertical' : 'mdi-arrow-expand-vertical'
-                            }}</v-icon>
+                        }}</v-icon>
                         {{ allExpanded ? 'Collapse All' : 'Expand All' }}
                     </v-btn>
                 </div>
@@ -237,7 +237,7 @@
                                                         @update:model-value="toggleRecordSelection(isnIndex, stationIndex, recordIndex)" />
                                                     <span class="text-caption text-medium-emphasis">#{{
                                                         getTotalFilteredStationRecords(isnGroup,
-                                                        stationGroup) - recordIndex}}</span>
+                                                            stationGroup) - recordIndex }}</span>
                                                     <!-- DeviceId - bold text with copy button -->
                                                     <v-btn icon size="x-small" variant="text" color="primary"
                                                         @click.stop="copyToClipboard(record.device_id)">
@@ -314,7 +314,7 @@
                                                     <div class="text-caption text-medium-emphasis">Test Start</div>
                                                     <div class="font-weight-medium">{{
                                                         formatLocalTime(record.test_start_time)
-                                                    }}</div>
+                                                        }}</div>
                                                 </v-col>
                                                 <v-col cols="12" sm="6" md="2">
                                                     <div class="text-caption text-medium-emphasis">Test End</div>

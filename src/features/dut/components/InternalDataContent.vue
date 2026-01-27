@@ -98,7 +98,7 @@
                 <div>
                     <v-btn size="small" variant="outlined" color="white" @click="toggleExpandAll">
                         <v-icon start>{{ allExpanded ? 'mdi-arrow-collapse-vertical' : 'mdi-arrow-expand-vertical'
-                            }}</v-icon>
+                        }}</v-icon>
                         {{ allExpanded ? 'Collapse All' : 'Expand All' }}
                     </v-btn>
                 </div>
@@ -123,7 +123,7 @@
                                     <div>
                                         <div class="text-caption text-medium-emphasis">Site</div>
                                         <div class="text-subtitle-1 font-weight-bold text-primary">{{ isnGroup.site_name
-                                            }}
+                                        }}
                                         </div>
                                     </div>
                                 </div>
@@ -142,7 +142,7 @@
                                         <div class="text-caption text-medium-emphasis">Stations</div>
                                         <div class="text-subtitle-1 font-weight-bold text-info">{{
                                             isnGroup.record_data.length
-                                            }}</div>
+                                        }}</div>
                                     </div>
                                 </div>
                             </div>
