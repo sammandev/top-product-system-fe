@@ -200,9 +200,9 @@ function normalizeIsnRecord(record: IsnSearchData): NormalizedRecord {
             NAME: item.NAME,
             STATUS: item.STATUS,
             VALUE: item.VALUE,
-            UCL: item.UCL,
-            LCL: item.LCL,
-            CYLCE: item.CYLCE
+            UCL: item.UCL || '',
+            LCL: item.LCL || '',
+            CYCLE: item.CYCLE || ''
         }))
     }
 }

@@ -228,7 +228,7 @@
                                         v-for="(record, recordIndex) in getDisplayedStationRecords(isnGroup, stationGroup)"
                                         :key="`${isnGroup.isn}-${stationIndex}-${recordIndex}`">
                                         <v-expansion-panel-title
-                                            :class="record.test_status !== 'PASS' ? 'bg-red-lighten-5' : ''">
+                                            :class="!isStatusPass(record.test_status) ? 'bg-red-lighten-5' : ''">
                                             <div class="d-flex align-center justify-space-between w-100 pr-4">
                                                 <div class="d-flex align-center gap-2">
                                                     <v-checkbox
@@ -247,7 +247,7 @@
                                                     </v-btn>
                                                     <span class="font-weight-bold">{{ record.device_id }}</span>
                                                     <!-- ErrorCode chip - clickable to copy -->
-                                                    <v-chip :color="record.error_code === 'PASS' ? 'success' : 'error'"
+                                                    <v-chip :color="getStatusColor(record.error_code)"
                                                         size="x-small" class="cursor-pointer"
                                                         @click.stop="copyToClipboard(record.error_code)">
                                                         {{ record.error_code }}
@@ -256,7 +256,7 @@
                                                     </v-chip>
                                                     <!-- ErrorName chip - clickable to copy -->
                                                     <template
-                                                        v-if="record.error_name && record.error_name !== 'N/A' && record.error_code !== 'PASS'">
+                                                        v-if="record.error_name && record.error_name !== 'N/A' && !isStatusPass(record.error_code)">
                                                         <v-chip color="error" size="x-small" variant="outlined"
                                                             class="cursor-pointer"
                                                             @click.stop="copyToClipboard(record.error_name)">
@@ -448,7 +448,8 @@ import { ref, computed } from 'vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
 import IplasTestItemsFullscreenDialog from './IplasTestItemsFullscreenDialog.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
-import type { IsnSearchData, IsnSearchTestItem, DownloadAttachmentInfo } from '@/features/dut_logs/api/iplasApi'
+import { type IsnSearchData, type DownloadAttachmentInfo } from '@/features/dut_logs/composables/useIplasApi'
+import type { IsnSearchTestItem } from '@/features/dut_logs/api/iplasApi'
 import { adjustIplasDisplayTime, getStatusColor, normalizeStatus, isStatusPass, isStatusFail } from '@/shared/utils/helpers'
 
 interface StationGroup {
@@ -563,8 +564,8 @@ function isValueData(item: IsnSearchTestItem): boolean {
         return false
     }
     const hasNumericValue = !isNaN(parseFloat(item.VALUE)) && item.VALUE !== ''
-    const hasNumericUcl = !isNaN(parseFloat(item.UCL)) && item.UCL !== ''
-    const hasNumericLcl = !isNaN(parseFloat(item.LCL)) && item.LCL !== ''
+    const hasNumericUcl = !isNaN(parseFloat(item.UCL || '')) && item.UCL !== ''
+    const hasNumericLcl = !isNaN(parseFloat(item.LCL || '')) && item.LCL !== ''
     const numericCount = [hasNumericValue, hasNumericUcl, hasNumericLcl].filter(Boolean).length
     return numericCount >= 2
 }
@@ -684,8 +685,8 @@ function calculateTotalCycleTime(testItems: IsnSearchTestItem[] | undefined): st
 
     let totalSeconds = 0
     for (const item of testItems) {
-        if (item.CYLCE && item.CYLCE !== '') {
-            const cycleTime = parseFloat(item.CYLCE)
+        if (item.CYCLE && item.CYCLE !== '') {
+            const cycleTime = parseFloat(item.CYCLE)
             if (!isNaN(cycleTime)) {
                 totalSeconds += cycleTime
             }
@@ -718,7 +719,7 @@ function getFilteredStationRecords(isnGroup: ISNGroup, stationGroup: StationGrou
     if (statusFilter !== 'ALL') {
         const isPass = statusFilter === 'PASS'
         records = records.filter(r => {
-            const recordPass = r.test_status === 'PASS' && r.error_code === 'PASS'
+            const recordPass = isStatusPass(r.test_status) && isStatusPass(r.error_code)
             return isPass ? recordPass : !recordPass
         })
     }
@@ -814,11 +815,18 @@ function normalizeIsnRecord(record: IsnSearchData): NormalizedRecord {
         project: record.project,
         line: record.line,
         errorCode: record.error_code,
-        errorName: record.error_name,
+        errorName: record.error_name || '',
         testStatus: record.test_status,
         testStartTime: record.test_start_time,
         testEndTime: record.test_end_time,
-        testItems: record.test_item || []
+        testItems: record.test_item?.map(ti => ({
+            NAME: ti.NAME,
+            STATUS: ti.STATUS,
+            VALUE: ti.VALUE,
+            UCL: ti.UCL || '',
+            LCL: ti.LCL || '',
+            CYCLE: ti.CYCLE || ''
+        })) || []
     }
 }
 
@@ -1018,7 +1026,7 @@ function groupDataByISN(data: IsnSearchData[]): ISNGroup[] {
         const group = groups[record.isn]
         if (group) {
             group.records.push(record)
-            if (record.test_status !== 'PASS' || record.error_code !== 'PASS') {
+            if (!isStatusPass(record.test_status) || !isStatusPass(record.error_code)) {
                 group.hasError = true
                 group.errorCount++
             }
@@ -1043,7 +1051,7 @@ function groupDataByISN(data: IsnSearchData[]): ISNGroup[] {
             const station = stationMap[stationKey]
             if (station) {
                 station.records.push(record)
-                if (record.test_status !== 'PASS' || record.error_code !== 'PASS') {
+                if (!isStatusPass(record.test_status) || !isStatusPass(record.error_code)) {
                     station.hasError = true
                     station.errorCount++
                 }
@@ -1104,31 +1112,9 @@ async function handleSearch(): Promise<void> {
         for (const isn of isnList) {
             try {
                 const data = await searchByIsn(isn)
-                // Map IplasIsnSearchRecord to IsnSearchData
-                const mappedData: IsnSearchData[] = data.map(record => ({
-                    isn: record.ISN || '',
-                    device_id: record.DEVICEID || '',
-                    site: record.SITE || '',
-                    project: record.PROJECT || '',
-                    line: record.LINE || '',
-                    station_name: record.STATION || '',
-                    display_station_name: record.TSP || record.STATION || '',
-                    error_code: record.ERRORCODE || '',
-                    error_name: record.ERRORNAME || '',
-                    test_status: record.TESTSTATUS || '',
-                    test_start_time: record.TESTSTARTTIME || '',
-                    test_end_time: record.TESTENDTIME || '',
-                    test_item: Array.isArray(record.TESTITEM) ? record.TESTITEM : [],
-                    slot: '',
-                    error_message: '',
-                    total_testing_time: '',
-                    mo: '',
-                    pn: '',
-                    sn: '',
-                    file_token: '',
-                    project_token: ''
-                }))
-                allRecords.push(...mappedData)
+                // The searchByIsn function already returns data matching IsnSearchData interface
+                // (lowercase field names from backend: isn, device_id, site, project, etc.)
+                allRecords.push(...data)
             } catch (err) {
                 console.warn(`Failed to fetch records for ISN ${isn}:`, err)
             }

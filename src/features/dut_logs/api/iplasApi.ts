@@ -91,7 +91,7 @@ export interface TestItem {
   VALUE: string // Float as string or "PASS"/"FAIL" for bin data
   UCL: string // Upper Control Limit
   LCL: string // Lower Control Limit
-  CYLCE: string // Cycle time (empty for value data)
+  CYCLE: string // Cycle time (empty for value data)
 }
 
 export interface CsvTestItemData {
@@ -140,33 +140,33 @@ export interface VerifyResponse {
 // ISN Search Types (v2 API)
 export interface IsnSearchTestItem {
   NAME: string
-  STATUS: 'PASS' | 'FAIL'
+  STATUS: string
   VALUE: string
-  UCL: string
-  LCL: string
-  CYLCE: string
+  UCL?: string
+  LCL?: string
+  CYCLE?: string
 }
 
 export interface IsnSearchData {
   site: string
   project: string
   isn: string
-  error_name: string
+  error_name?: string
   station_name: string
   display_station_name: string
-  slot: string
+  slot?: string
   error_code: string
-  error_message: string
+  error_message?: string
   test_status: string
   line: string
   test_start_time: string
   test_end_time: string
-  total_testing_time: string
+  total_testing_time?: string
   test_item: IsnSearchTestItem[]
-  mo: string
+  mo?: string
   device_id: string
-  file_token: string
-  project_token: string
+  file_token?: string
+  project_token?: string
 }
 
 export interface IsnSearchResponse {

@@ -218,7 +218,7 @@
                                                 <v-icon size="small" color="primary">mdi-tag</v-icon>
                                                 <span class="font-weight-bold">{{ record.ISN || record.DeviceId
                                                 }}</span>
-                                                <v-chip :color="record.ErrorCode === 'PASS' ? 'success' : 'error'"
+                                                <v-chip :color="getStatusColor(record.ErrorCode)"
                                                     size="x-small">
                                                     {{ record.ErrorCode }}
                                                 </v-chip>
@@ -527,15 +527,15 @@ function calculateDuration(startStr: string, endStr: string): string {
 
 /**
  * Calculate total cycle time from all test items
- * Sums up all CYLCE values (which are float strings)
+ * Sums up all CYCLE values (which are float strings)
  */
 function calculateTotalCycleTime(testItems: TestItem[] | undefined): string {
     if (!testItems || testItems.length === 0) return '-'
 
     let totalSeconds = 0
     for (const item of testItems) {
-        if (item.CYLCE && item.CYLCE !== '') {
-            const cycleTime = parseFloat(item.CYLCE)
+        if (item.CYCLE && item.CYCLE !== '') {
+            const cycleTime = parseFloat(item.CYCLE)
             if (!isNaN(cycleTime)) {
                 totalSeconds += cycleTime
             }

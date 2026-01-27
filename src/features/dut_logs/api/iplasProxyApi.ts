@@ -121,15 +121,37 @@ export interface IplasIsnSearchRequest {
   token?: string  // Optional user token override
 }
 
+/** Test item from ISN search result */
+export interface IplasIsnTestItem {
+  NAME: string
+  STATUS: string
+  VALUE: string
+  UCL?: string
+  LCL?: string
+  CYCLE?: string
+}
+
+/** Single record from ISN search result - matches backend IplasIsnSearchRecord */
 export interface IplasIsnSearchRecord {
-  site?: string
-  project?: string
-  station?: string
-  device_id?: string
-  test_start_time?: string
-  test_end_time?: string
-  test_status?: string
-  [key: string]: string | undefined
+  site: string
+  project: string
+  isn: string
+  error_name?: string
+  station_name: string
+  slot?: string
+  error_code: string
+  error_message?: string
+  test_status: string
+  line: string
+  test_start_time: string
+  total_testing_time?: string
+  test_item: IplasIsnTestItem[]
+  mo?: string
+  test_end_time: string
+  device_id: string
+  file_token?: string
+  project_token?: string
+  display_station_name: string
 }
 
 export interface IplasIsnSearchResponse {
@@ -184,7 +206,6 @@ export interface TestItem {
   UCL: string
   LCL: string
   CYCLE?: string
-  CYLCE?: string  // Note: iPLAS API has typo in some responses
 }
 
 export interface CsvTestItemData {

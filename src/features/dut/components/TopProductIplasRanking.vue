@@ -158,7 +158,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { CsvTestItemData } from '@/features/dut_logs/composables/useIplasApi'
-import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
+import { adjustIplasDisplayTime, isStatusPass } from '@/shared/utils/helpers'
 import { getScoreColor } from '../types/scoring.types'
 
 interface Props {
@@ -222,7 +222,7 @@ const rankingByStation = computed(() => {
             stationMap[stationName] = []
         }
 
-        const hasError = record.ErrorCode !== 'PASS'
+        const hasError = !isStatusPass(record.ErrorCode)
         // Get score from scores map if available
         const scoreKey = `${record.ISN || record.DeviceId}_${stationName}_${record['Test end Time']}`
         const score = props.scores?.[scoreKey] ?? null

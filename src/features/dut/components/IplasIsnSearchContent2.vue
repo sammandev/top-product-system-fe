@@ -304,21 +304,19 @@
 
         <!-- Details Dialog -->
         <TopProductIplasDetailsDialog v-model="showDetailsDialog" :record="detailsRecord"
-            :downloading="detailsDownloading" :scoring-configs="detailsScoringConfigs" :scores="detailsScores"
-            @download="handleDownloadFromDetails" />
+            :downloading="detailsDownloading" @download="handleDownloadFromDetails" />
     </div>
 </template>
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
-import { useScoring } from '../composables/useScoring'
+import { useIplasApi, type IsnSearchData } from '@/features/dut_logs/composables/useIplasApi'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
 import TopProductIplasIsnRanking from './TopProductIplasIsnRanking.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import type { StationConfig as ImportedStationConfig } from './StationSelectionDialog.vue'
-import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
-import type { IsnSearchData, IsnSearchTestItem } from '@/features/dut_logs/api/iplasApi'
+import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
+import type { IsnSearchTestItem } from '@/features/dut_logs/api/iplasApi'
 import type { Station } from '@/features/dut_logs/composables/useIplasApi'
 import {
     adjustIplasDisplayTime,
@@ -353,7 +351,6 @@ interface DiscoveredStation {
 // API composable
 const {
     loadingIsnSearch,
-    downloading,
     error,
     searchByIsn,
     downloadAttachments
@@ -503,31 +500,9 @@ async function handleSearch(): Promise<void> {
         for (const isn of isnList) {
             try {
                 const data = await searchByIsn(isn)
-                // Map API response to IsnSearchData
-                const mappedData: IsnSearchData[] = data.map(record => ({
-                    isn: record.ISN || '',
-                    device_id: record.DEVICEID || '',
-                    site: record.SITE || '',
-                    project: record.PROJECT || '',
-                    line: record.LINE || '',
-                    station_name: record.STATION || '',
-                    display_station_name: record.TSP || record.STATION || '',
-                    error_code: record.ERRORCODE || '',
-                    error_name: record.ERRORNAME || '',
-                    test_status: record.TESTSTATUS || '',
-                    test_start_time: record.TESTSTARTTIME || '',
-                    test_end_time: record.TESTENDTIME || '',
-                    test_item: Array.isArray(record.TESTITEM) ? record.TESTITEM : [],
-                    slot: '',
-                    error_message: '',
-                    total_testing_time: '',
-                    mo: '',
-                    pn: '',
-                    sn: '',
-                    file_token: '',
-                    project_token: ''
-                }))
-                allRecords.push(...mappedData)
+                // The searchByIsn function already returns data matching IsnSearchData interface
+                // (lowercase field names from backend: isn, device_id, site, project, etc.)
+                allRecords.push(...data)
             } catch (err) {
                 console.warn(`Failed to fetch records for ISN ${isn}:`, err)
             }
@@ -764,8 +739,8 @@ function calculateTestItemScore(testItem: IsnSearchTestItem, config?: TestItemSc
     const value = parseFloat(testItem.VALUE)
     if (isNaN(value)) return 0
 
-    const ucl = parseFloat(testItem.UCL)
-    const lcl = parseFloat(testItem.LCL)
+    const ucl = parseFloat(testItem.UCL || '')
+    const lcl = parseFloat(testItem.LCL || '')
 
     // Default to symmetrical scoring
     const scoringType = config?.type || 'Symmetrical'
@@ -856,7 +831,7 @@ function normalizeRecord(record: IsnSearchData): NormalizedRecord {
         deviceId: record.device_id,
         testStatus: record.test_status,
         errorCode: record.error_code,
-        errorName: record.error_name,
+        errorName: record.error_name || '',
         testStartTime: record.test_start_time,
         testEndTime: record.test_end_time,
         line: record.line,
@@ -864,9 +839,9 @@ function normalizeRecord(record: IsnSearchData): NormalizedRecord {
             NAME: ti.NAME,
             STATUS: ti.STATUS,
             VALUE: ti.VALUE,
-            UCL: ti.UCL,
-            LCL: ti.LCL,
-            CYLCE: ti.CYLCE
+            UCL: ti.UCL || '',
+            LCL: ti.LCL || '',
+            CYCLE: ti.CYCLE || ''
         })) || []
     }
 }

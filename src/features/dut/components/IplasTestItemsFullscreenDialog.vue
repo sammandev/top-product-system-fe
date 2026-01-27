@@ -68,13 +68,13 @@
                             {{ record.testItems?.length || 0 }} items
                         </v-chip>
                         <!-- Status -->
-                        <v-chip size="x-small" :color="record.errorCode === 'PASS' ? 'success' : 'error'"
-                            :prepend-icon="record.errorCode === 'PASS' ? 'mdi-check-circle' : 'mdi-alert-circle'"
+                        <v-chip size="x-small" :color="getStatusColor(record.errorCode)"
+                            :prepend-icon="isStatusPass(record.errorCode) ? 'mdi-check-circle' : 'mdi-alert-circle'"
                             class="cursor-pointer" @click="copyToClipboard(record.errorCode)">
                             {{ record.errorCode }}
                             <v-tooltip activator="parent" location="top">Click to copy Error Code</v-tooltip>
                         </v-chip>
-                        <template v-if="record.errorName && record.errorName !== 'N/A' && record.errorCode !== 'PASS'">
+                        <template v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)">
                             <v-chip size="x-small" color="error" variant="outlined" class="cursor-pointer"
                                 @click="copyToClipboard(record.errorName)">
                                 {{ record.errorName }}
@@ -164,7 +164,7 @@ export interface NormalizedTestItem {
     VALUE: string
     UCL: string
     LCL: string
-    CYLCE?: string
+    CYCLE?: string
     // Optional scoring data (populated when scores are calculated)
     score?: number
     scoringType?: ScoringType
@@ -390,7 +390,7 @@ function handleDownload(): void {
 // Reset filters when record changes - show all data if record has error
 watch(() => props.record, (newRecord) => {
     // If record has error (errorCode !== 'PASS'), show all data by default
-    if (newRecord && newRecord.errorCode !== 'PASS') {
+    if (newRecord && !isStatusPass(newRecord.errorCode)) {
         testItemFilter.value = ['all']
     } else {
         testItemFilter.value = ['value']

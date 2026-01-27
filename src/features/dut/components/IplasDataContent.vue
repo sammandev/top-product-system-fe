@@ -10,11 +10,6 @@
                 <v-icon start>mdi-barcode-scan</v-icon>
                 ISN Search
             </v-tab>
-            <v-tab value="isn2">
-                <v-icon start>mdi-barcode-scan</v-icon>
-                ISN Search 2
-                <v-chip size="x-small" color="info" class="ml-1">NEW</v-chip>
-            </v-tab>
         </v-tabs>
 
         <v-window v-model="searchMode">
@@ -225,7 +220,7 @@
                                                             Device ID</v-tooltip>
                                                     </v-chip>
                                                     <!-- ErrorCode chip - clickable to copy -->
-                                                    <v-chip :color="record.ErrorCode === 'PASS' ? 'success' : 'error'"
+                                                    <v-chip :color="getStatusColor(record.ErrorCode)"
                                                         size="x-small" class="cursor-pointer"
                                                         @click.stop="copyToClipboard(record.ErrorCode)">
                                                         {{ record.ErrorCode }}
@@ -234,7 +229,7 @@
                                                     </v-chip>
                                                     <!-- ErrorName chip - clickable to copy -->
                                                     <template
-                                                        v-if="record.ErrorName && record.ErrorName !== 'N/A' && record.ErrorCode !== 'PASS'">
+                                                        v-if="record.ErrorName && record.ErrorName !== 'N/A' && !isStatusPass(record.ErrorCode)">
                                                         <v-chip color="error" size="x-small" variant="outlined"
                                                             class="cursor-pointer"
                                                             @click.stop="copyToClipboard(record.ErrorName)">
@@ -431,11 +426,6 @@
             <v-window-item value="isn" eager>
                 <IplasIsnSearchContent />
             </v-window-item>
-
-            <!-- ISN Search 2 Mode (with custom scoring) -->
-            <v-window-item value="isn2" eager>
-                <IplasIsnSearchContent2 />
-            </v-window-item>
         </v-window>
 
         <!-- Test Items Details Dialog -->
@@ -455,7 +445,6 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
 import { adjustIplasDisplayTime, getStatusColor, normalizeStatus, isStatusPass, isStatusFail } from '@/shared/utils/helpers'
 import IplasIsnSearchContent from './IplasIsnSearchContent.vue'
-import IplasIsnSearchContent2 from './IplasIsnSearchContent2.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 import type { Station, TestItem, CsvTestItemData, DownloadAttachmentInfo } from '@/features/dut_logs/api/iplasApi'
@@ -1029,8 +1018,8 @@ function calculateTotalCycleTime(testItems: TestItem[] | undefined): string {
 
     let totalSeconds = 0
     for (const item of testItems) {
-        if (item.CYLCE && item.CYLCE !== '') {
-            const cycleTime = parseFloat(item.CYLCE)
+        if (item.CYCLE && item.CYCLE !== '') {
+            const cycleTime = parseFloat(item.CYCLE)
             if (!isNaN(cycleTime)) {
                 totalSeconds += cycleTime
             }

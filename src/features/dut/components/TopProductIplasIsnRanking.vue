@@ -134,7 +134,7 @@
                                     </td>
                                     <td>
                                         <!-- Score Column -->
-                                        <template v-if="item.error_code !== 'PASS'">
+                                        <template v-if="!isStatusPass(item.error_code)">
                                             <v-chip size="small" color="error" variant="tonal">FAIL</v-chip>
                                         </template>
                                         <template v-else-if="getRecordScore(item) !== null">
@@ -175,7 +175,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { IsnSearchData } from '@/features/dut_logs/api/iplasApi'
-import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
+import { adjustIplasDisplayTime, getStatusColor, isStatusPass } from '@/shared/utils/helpers'
 import { getScoreColor } from '../types/scoring.types'
 
 interface StationGroup {
@@ -327,7 +327,7 @@ function getFilteredRecords(isnIndex: number, stationIndex: number, records: Isn
 
         // Status filter
         if (status) {
-            const isPassed = record.error_code === 'PASS'
+            const isPassed = isStatusPass(record.error_code)
             if (status === 'passed' && !isPassed) return false
             if (status === 'failed' && isPassed) return false
         }
@@ -343,7 +343,7 @@ function formatDateTime(dateStr: string): string {
 
 function getRowClass(item: IsnSearchData, index: number): string {
     const classes: string[] = []
-    if (item.error_code !== 'PASS') {
+    if (!isStatusPass(item.error_code)) {
         classes.push('error-row')
     }
     if (index < 3) {
@@ -357,11 +357,6 @@ function getRankColor(rank: number): string {
     if (rank === 2) return 'blue-grey'
     if (rank === 3) return 'brown'
     return 'grey'
-}
-
-function getStatusColor(status: string): string {
-    if (status === 'PASS') return 'success'
-    return 'error'
 }
 
 async function copyToClipboard(text: string): Promise<void> {

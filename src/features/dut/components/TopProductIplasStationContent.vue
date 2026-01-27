@@ -431,7 +431,7 @@ function normalizeStationRecord(record: CsvTestItemData): NormalizedRecord {
             VALUE: item.VALUE,
             UCL: item.UCL,
             LCL: item.LCL,
-            CYLCE: item.CYLCE
+            CYCLE: item.CYCLE
         }))
     }
 }

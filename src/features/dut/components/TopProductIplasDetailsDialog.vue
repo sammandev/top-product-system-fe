@@ -112,14 +112,14 @@
                             <span class="text-medium-emphasis mr-1">Test Items:</span>
                             {{ record.testItems?.length || 0 }}
                         </v-chip>
-                        <v-chip size="small" :color="record.errorCode === 'PASS' ? 'success' : 'error'"
-                            :prepend-icon="record.errorCode === 'PASS' ? 'mdi-check-circle' : 'mdi-alert-circle'"
+                        <v-chip size="small" :color="getStatusColor(record.errorCode)"
+                            :prepend-icon="isStatusPass(record.errorCode) ? 'mdi-check-circle' : 'mdi-alert-circle'"
                             class="cursor-pointer" label @click="copyToClipboard(record.errorCode)">
                             <span class="text-medium-emphasis mr-1">Status:</span>
                             {{ record.errorCode }}
                             <v-tooltip activator="parent" location="top">Click to copy Error Code</v-tooltip>
                         </v-chip>
-                        <template v-if="record.errorName && record.errorName !== 'N/A' && record.errorCode !== 'PASS'">
+                        <template v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)">
                             <v-chip size="small" color="error" variant="outlined" class="cursor-pointer" label
                                 prepend-icon="mdi-alert-octagon" @click="copyToClipboard(record.errorName)">
                                 <span class="text-medium-emphasis mr-1">Error:</span>
@@ -612,7 +612,7 @@ function showScoreBreakdown(item: NormalizedTestItem): void {
 
 // Reset filters when record changes - show all data if record has error
 watch(() => props.record, (newRecord) => {
-    if (newRecord && newRecord.errorCode !== 'PASS') {
+    if (newRecord && !isStatusPass(newRecord.errorCode)) {
         testItemFilter.value = ['all']
     } else {
         testItemFilter.value = ['value']

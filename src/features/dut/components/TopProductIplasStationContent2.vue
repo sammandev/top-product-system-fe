@@ -303,7 +303,7 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
             VALUE: item.VALUE,
             UCL: item.UCL,
             LCL: item.LCL,
-            CYLCE: item.CYLCE || '',
+            CYCLE: item.CYCLE || '',
             // Include scoring data if available
             score: itemScore?.score,
             scoringType: itemScore?.scoringType,
