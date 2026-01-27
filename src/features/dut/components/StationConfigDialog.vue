@@ -420,8 +420,8 @@ import { SCORING_TYPE_INFO, type ScoringType } from '@/features/dut/types/scorin
 
 export interface TestItemInfo {
     name: string
-    isValue: boolean // true if it's a value test item (has numeric VALUE)
-    isBin: boolean   // true if it's a binary test item (PASS/FAIL only)
+    isValue: boolean // true if it's a value test item (has numeric VALUE, NOT PASS/FAIL/1/0/-999)
+    isBin: boolean   // true if it's a binary test item (PASS/FAIL/1/0/-999 only)
     hasUcl: boolean  // true if it has UCL (upper control limit)
     hasLcl: boolean  // true if it has LCL (lower control limit)
 }
