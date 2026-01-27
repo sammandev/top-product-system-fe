@@ -64,6 +64,7 @@
 </template>
 
 <script setup lang="ts">
+import { ref } from 'vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import IplasDataContent from '@/features/dut/components/IplasDataContent.vue'
 import InternalDataContent from '@/features/dut/components/InternalDataContent.vue'
