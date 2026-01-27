@@ -10,9 +10,6 @@
             </v-card-title>
 
             <v-card-subtitle class="pa-3 bg-grey-lighten-4">
-                <div class="text-body-2">
-                    <strong>Station Name:</strong> {{ station?.station_name }}
-                </div>
                 <div class="text-caption text-medium-emphasis">
                     Configure test status, device IDs, and test items for this station
                 </div>
@@ -132,29 +129,50 @@
                         <div v-else>
                             <!-- Quick Actions and Search -->
                             <v-row dense class="mb-3">
-                                <v-col cols="12" md="6">
+                                <v-col cols="12">
                                     <v-text-field v-model="testItemSearchQuery" label="Search Test Items"
                                         prepend-inner-icon="mdi-magnify" variant="outlined" density="compact"
                                         hide-details clearable placeholder="Search by test item name..." />
                                 </v-col>
-                                <v-col cols="12" md="6" class="d-flex align-center gap-2 flex-wrap">
-                                    <v-btn size="small" variant="outlined" color="primary"
+                            </v-row>
+                            
+                            <!-- Test Item Type Filters (multi-select) -->
+                            <v-row dense class="mb-3">
+                                <v-col cols="12" class="d-flex align-center gap-2 flex-wrap">
+                                    <span class="text-caption text-medium-emphasis">Filter:</span>
+                                    <v-chip-group v-model="testItemTypeFilter" multiple>
+                                        <v-chip value="all" filter label variant="outlined" color="primary" size="small">
+                                            All
+                                        </v-chip>
+                                        <v-chip value="value" filter label variant="outlined" color="success" size="small">
+                                            Criteria
+                                        </v-chip>
+                                        <v-chip value="non-value" filter label variant="outlined" color="warning" size="small">
+                                            Non-Criteria
+                                        </v-chip>
+                                        <v-chip value="bin" filter label variant="outlined" color="grey" size="small">
+                                            Bin
+                                        </v-chip>
+                                    </v-chip-group>
+                                    <v-divider vertical class="mx-2" />
+                                    <span class="text-caption text-medium-emphasis">Select:</span>
+                                    <v-btn size="x-small" variant="tonal" color="primary"
                                         @click="selectAllTestItems">
                                         All
                                     </v-btn>
-                                    <v-btn size="small" variant="outlined" color="success"
+                                    <v-btn size="x-small" variant="tonal" color="success"
                                         @click="selectValueTestItems">
                                         Criteria
                                     </v-btn>
-                                    <v-btn size="small" variant="outlined" color="warning"
+                                    <v-btn size="x-small" variant="tonal" color="warning"
                                         @click="selectNonValueTestItems">
                                         Non-Criteria
                                     </v-btn>
-                                    <v-btn size="small" variant="outlined" color="grey"
+                                    <v-btn size="x-small" variant="tonal" color="grey"
                                         @click="selectBinTestItems">
                                         Bin
                                     </v-btn>
-                                    <v-btn size="small" variant="outlined" color="error"
+                                    <v-btn size="x-small" variant="outlined" color="error"
                                         @click="clearTestItemSelection">
                                         Clear
                                     </v-btn>
@@ -280,6 +298,7 @@ const localConfig = ref<StationConfig>({
 })
 
 const testItemSearchQuery = ref('')
+const testItemTypeFilter = ref<('all' | 'value' | 'non-value' | 'bin')[]>(['all'])
 
 const isExistingConfig = computed(() => !!props.existingConfig)
 
@@ -293,14 +312,35 @@ const someDevicesSelected = computed(() => {
     return localConfig.value.deviceIds.length > 0
 })
 
-// Test Items filtering
+// Test Items filtering (supports multi-select type filter)
 const filteredTestItems = computed(() => {
-    if (!testItemSearchQuery.value) return props.availableTestItems
-
-    const query = testItemSearchQuery.value.toLowerCase()
-    return props.availableTestItems.filter(item =>
-        item.name.toLowerCase().includes(query)
-    )
+    let items = [...props.availableTestItems]
+    
+    // Apply type filter (multi-select)
+    if (testItemTypeFilter.value.length > 0 && !testItemTypeFilter.value.includes('all')) {
+        items = items.filter(item => {
+            return testItemTypeFilter.value.some(filterType => {
+                switch (filterType) {
+                    case 'value':
+                        return item.isValue
+                    case 'non-value':
+                        return !item.isValue && !item.isBin
+                    case 'bin':
+                        return item.isBin
+                    default:
+                        return true
+                }
+            })
+        })
+    }
+    
+    // Apply search query
+    if (testItemSearchQuery.value) {
+        const query = testItemSearchQuery.value.toLowerCase()
+        items = items.filter(item => item.name.toLowerCase().includes(query))
+    }
+    
+    return items
 })
 
 // Initialize config when dialog opens

@@ -91,7 +91,7 @@ export const scoringApi = {
     const response = await apiClient.post<{
       scored_records: Record<string, unknown>[]
       summary: Record<string, unknown>
-    }>('/scoring/calculate', payload)
+    }>('/api/scoring/calculate', payload)
 
     return {
       scoredRecords: response.data.scored_records.map(fromSnakeCaseRecord),
@@ -117,7 +117,7 @@ export const scoringApi = {
       ucl: string
       lcl: string
       default_params: Record<string, unknown>
-    }[]>('/scoring/detect-types', record)
+    }[]>('/api/scoring/detect-types', record)
 
     return response.data.map(item => ({
       testItemName: item.test_item_name,
@@ -147,7 +147,7 @@ export const scoringApi = {
       use_case: string
       params: string[]
       defaults: Record<string, unknown>
-    }[]>('/scoring/types')
+    }[]>('/api/scoring/types')
 
     return response.data.map(item => ({
       type: item.type as ScoringType,

@@ -16,13 +16,13 @@
                 <!-- Site Selection -->
                 <v-row dense>
                     <v-col cols="12" md="6">
-                        <v-select v-model="selectedSite" :items="uniqueSites" label="Site" variant="outlined"
-                            density="comfortable" prepend-inner-icon="mdi-map-marker" clearable
+                        <v-autocomplete v-model="selectedSite" :items="uniqueSites" label="Site" variant="outlined"
+                            density="comfortable" prepend-inner-icon="mdi-map-marker" clearable hide-details
                             :disabled="loading || loadingStations" @update:model-value="handleSiteChange" />
                     </v-col>
                     <v-col cols="12" md="6">
-                        <v-select v-model="selectedProject" :items="projectsForSelectedSite" label="Project"
-                            variant="outlined" density="comfortable" prepend-inner-icon="mdi-folder"
+                        <v-autocomplete v-model="selectedProject" :items="projectsForSelectedSite" label="Project"
+                            variant="outlined" density="comfortable" prepend-inner-icon="mdi-folder" hide-details
                             :disabled="!selectedSite || loading || loadingStations" clearable
                             @update:model-value="handleProjectChange" />
                     </v-col>

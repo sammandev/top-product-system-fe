@@ -378,9 +378,9 @@ function handleDownload(): void {
 watch(() => props.record, (newRecord) => {
     // If record has error (errorCode !== 'PASS'), show all data by default
     if (newRecord && newRecord.errorCode !== 'PASS') {
-        testItemFilter.value = 'all'
+        testItemFilter.value = ['all']
     } else {
-        testItemFilter.value = 'value'
+        testItemFilter.value = ['value']
     }
     testStatusFilter.value = 'ALL'
     searchTerms.value = []

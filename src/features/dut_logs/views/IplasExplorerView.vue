@@ -186,18 +186,18 @@
                             <!-- Test Item Filter Chips -->
                             <div class="mb-4">
                                 <span class="text-caption text-medium-emphasis mr-2">Filter Test Items:</span>
-                                <v-chip-group v-model="testItemFilter" mandatory>
+                                <v-chip-group v-model="testItemFilter" multiple>
                                     <v-chip value="all" filter variant="outlined" color="primary">
                                         <v-icon start size="small">mdi-format-list-bulleted</v-icon>
                                         Show All
                                     </v-chip>
                                     <v-chip value="value" filter variant="outlined" color="success">
                                         <v-icon start size="small">mdi-numeric</v-icon>
-                                        Value Data
+                                        Criteria Data
                                     </v-chip>
                                     <v-chip value="non-value" filter variant="outlined" color="warning">
                                         <v-icon start size="small">mdi-text</v-icon>
-                                        Non-Value Data
+                                        Non-Criteria Data
                                     </v-chip>
                                     <v-chip value="pass-fail" filter variant="outlined" color="info">
                                         <v-icon start size="small">mdi-check-decagram</v-icon>
@@ -402,7 +402,7 @@ const endTime = ref(now.toISOString().slice(0, 16))
 // Display controls
 const showAllDevices = ref(false)
 const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
-const testItemFilter = ref<'all' | 'value' | 'non-value' | 'pass-fail'>('value')
+const testItemFilter = ref<('all' | 'value' | 'non-value' | 'pass-fail')[]>(['value'])
 const expandedPanels = ref<number[]>([0])
 
 // Download controls
@@ -472,17 +472,27 @@ function isNonValueData(item: TestItem): boolean {
 
 function filterTestItems(items: TestItem[] | undefined): TestItem[] {
     if (!items) return []
-
-    switch (testItemFilter.value) {
-        case 'value':
-            return items.filter(isValueData)
-        case 'non-value':
-            return items.filter(isNonValueData)
-        case 'pass-fail':
-            return items.filter(isPassFailData)
-        default:
-            return items
+    
+    // If no filters or 'all' is selected, return all items
+    if (testItemFilter.value.length === 0 || testItemFilter.value.includes('all')) {
+        return items
     }
+    
+    // Filter items based on selected types (OR logic)
+    return items.filter(item => {
+        return testItemFilter.value.some(filterType => {
+            switch (filterType) {
+                case 'value':
+                    return isValueData(item)
+                case 'non-value':
+                    return isNonValueData(item)
+                case 'pass-fail':
+                    return isPassFailData(item)
+                default:
+                    return true
+            }
+        })
+    })
 }
 
 function getValueClass(item: TestItem): string {

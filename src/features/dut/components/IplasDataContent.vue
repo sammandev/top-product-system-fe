@@ -307,15 +307,15 @@
                                                 <v-col cols="12" md="6">
                                                     <div class="d-flex align-center flex-wrap gap-2 h-100">
                                                         <span class="text-caption text-medium-emphasis">Filter:</span>
-                                                        <v-chip-group v-model="testItemFilters[`${stationGroup.stationName}-${recordIndex}`]" mandatory class="flex-grow-1">
+                                                        <v-chip-group v-model="testItemFilters[`${stationGroup.stationName}-${recordIndex}`]" multiple class="flex-grow-1">
                                                             <v-chip value="all" filter label variant="outlined" color="primary" size="small">
                                                                 All
                                                             </v-chip>
                                                             <v-chip value="value" filter label variant="outlined" color="success" size="small">
-                                                                Value
+                                                                Criteria
                                                             </v-chip>
                                                             <v-chip value="non-value" filter label variant="outlined" color="warning" size="small">
-                                                                Non-Value
+                                                                Non-Criteria
                                                             </v-chip>
                                                             <v-chip value="bin" filter label variant="outlined" color="info" size="small">
                                                                 Bin
@@ -620,8 +620,8 @@ const expandedPanels = ref<Record<number, number[]>>({})
 // Per-station status filters (for filtering records within each station tab)
 const stationStatusFilters = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
 
-// Per-record test item filters (default to 'value')
-const testItemFilters = ref<Record<string, 'all' | 'value' | 'non-value' | 'bin'>>({})
+// Per-record test item filters (default to 'value') - supports multiple selections
+const testItemFilters = ref<Record<string, ('all' | 'value' | 'non-value' | 'bin')[]>>({})
 // Per-record test item status filters
 const testItemStatusFilters = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
 // Per-record multi-search terms (array of patterns)
@@ -865,7 +865,7 @@ watch(groupedByStation, (groups) => {
             const key = `${group.stationName}-${i}`
             // Only set if not already set
             if (testItemFilters.value[key] === undefined) {
-                testItemFilters.value[key] = 'value'
+                testItemFilters.value[key] = ['value']
             }
         }
     }
@@ -895,25 +895,35 @@ function isNonValueData(item: TestItem): boolean {
     return !isValueData(item) && !isBinData(item)
 }
 
-function filterTestItemsByType(items: TestItem[] | undefined, filterType: 'all' | 'value' | 'non-value' | 'bin'): TestItem[] {
+function filterTestItemsByType(items: TestItem[] | undefined, filterTypes: ('all' | 'value' | 'non-value' | 'bin')[]): TestItem[] {
     if (!items) return []
-
-    switch (filterType) {
-        case 'value':
-            return items.filter(isValueData)
-        case 'non-value':
-            return items.filter(isNonValueData)
-        case 'bin':
-            return items.filter(isBinData)
-        default:
-            return items
+    
+    // If no filters or 'all' is selected, return all items
+    if (filterTypes.length === 0 || filterTypes.includes('all')) {
+        return items
     }
+    
+    // Filter items based on selected types (OR logic)
+    return items.filter(item => {
+        return filterTypes.some(filterType => {
+            switch (filterType) {
+                case 'value':
+                    return isValueData(item)
+                case 'non-value':
+                    return isNonValueData(item)
+                case 'bin':
+                    return isBinData(item)
+                default:
+                    return true
+            }
+        })
+    })
 }
 
 function filterAndSearchTestItems(items: TestItem[] | undefined, key: string): TestItem[] {
-    // Get per-record filter (default to 'value')
-    const filterType = testItemFilters.value[key] || 'value'
-    let filtered = filterTestItemsByType(items, filterType)
+    // Get per-record filter (default to ['value'])
+    const filterTypes = testItemFilters.value[key] || ['value']
+    let filtered = filterTestItemsByType(items, filterTypes)
 
     // Apply test item status filter (PASS/FAIL)
     const statusFilter = testItemStatusFilters.value[key] || 'ALL'

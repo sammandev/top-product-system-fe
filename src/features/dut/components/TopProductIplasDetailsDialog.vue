@@ -396,9 +396,9 @@ function handleDownload(): void {
 // Reset filters when record changes - show all data if record has error
 watch(() => props.record, (newRecord) => {
     if (newRecord && newRecord.errorCode !== 'PASS') {
-        testItemFilter.value = 'all'
+        testItemFilter.value = ['all']
     } else {
-        testItemFilter.value = 'value'
+        testItemFilter.value = ['value']
     }
     searchTerms.value = []
 })
