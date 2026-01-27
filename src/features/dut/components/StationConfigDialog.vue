@@ -132,9 +132,6 @@
                             <v-row dense class="mb-3">
                                 <v-col cols="12" class="d-flex align-center gap-2 flex-wrap">
                                     <span class="text-caption text-medium-emphasis">Select:</span>
-                                    <v-btn size="x-small" variant="tonal" color="primary" @click="selectAllTestItems">
-                                        All
-                                    </v-btn>
                                     <v-btn size="x-small" variant="tonal" color="info" @click="selectDisplayedTestItems"
                                         :disabled="filteredTestItems.length === 0">
                                         Select Displayed ({{ filteredTestItems.length }})
@@ -154,7 +151,12 @@
                                     <v-btn size="x-small" variant="flat" color="secondary"
                                         prepend-icon="mdi-tune-variant" @click="openBulkScoringConfig"
                                         :disabled="selectedCriteriaCount === 0">
-                                        Configure Scoring ({{ selectedCriteriaCount }})
+                                        Bulk Config ({{ selectedCriteriaCount }})
+                                    </v-btn>
+                                    <v-btn size="x-small" variant="flat" color="primary"
+                                        prepend-icon="mdi-playlist-check" @click="selectDisplayedAndConfigureScore"
+                                        :disabled="filteredTestItems.length === 0">
+                                        Select Displayed & Configure Score ({{ displayedCriteriaCount }})
                                     </v-btn>
                                 </v-col>
                             </v-row>
@@ -206,8 +208,8 @@
 
                             <div class="text-caption text-medium-emphasis mt-2">
                                 <v-icon size="x-small">mdi-information</v-icon>
-                                Leave empty to include all test items. Select specific items to filter results.
-                                Click on scoring type button to configure scoring algorithm.
+                                Leave empty to include all CRITERIA and NON-CRITERIA test items (excludes Bin items).
+                                Select specific items to filter results. Click on scoring type button to configure scoring algorithm.
                             </div>
                         </div>
                     </v-card-text>
@@ -585,16 +587,16 @@ function toggleTestItem(name: string): void {
     }
 }
 
-function selectAllTestItems(): void {
-    // Select only CRITERIA and NON-CRITERIA items (exclude Bin items)
-    localConfig.value.selectedTestItems = props.availableTestItems
-        .filter(item => !item.isBin)
-        .map(item => item.name)
-}
-
 function selectDisplayedTestItems(): void {
     // Select only currently displayed/filtered test items
     localConfig.value.selectedTestItems = filteredTestItems.value.map(item => item.name)
+}
+
+function selectDisplayedAndConfigureScore(): void {
+    // First select all displayed test items
+    selectDisplayedTestItems()
+    // Then open bulk scoring config dialog
+    openBulkScoringConfig()
 }
 
 function selectValueTestItems(): void {
@@ -636,7 +638,15 @@ function handleSave(): void {
     localConfig.value.displayName = props.station.display_station_name
     localConfig.value.stationName = props.station.station_name
 
-    emit('save', { ...localConfig.value })
+    // If no test items selected, default to all CRITERIA and NON-CRITERIA items (exclude Bin)
+    const configToSave = { ...localConfig.value }
+    if (configToSave.selectedTestItems.length === 0) {
+        configToSave.selectedTestItems = props.availableTestItems
+            .filter(item => !item.isBin)
+            .map(item => item.name)
+    }
+
+    emit('save', configToSave)
     internalShow.value = false
 }
 
@@ -755,6 +765,13 @@ const selectedCriteriaCount = computed(() => {
     // CRITERIA: has VALUE + (UCL or LCL)
     return props.availableTestItems
         .filter(item => item.isValue && (item.hasUcl || item.hasLcl) && localConfig.value.selectedTestItems.includes(item.name))
+        .length
+})
+
+// Get count of criteria items in currently displayed/filtered list
+const displayedCriteriaCount = computed(() => {
+    return filteredTestItems.value
+        .filter(item => item.isValue && (item.hasUcl || item.hasLcl))
         .length
 })
 
