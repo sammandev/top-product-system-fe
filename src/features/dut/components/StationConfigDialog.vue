@@ -420,8 +420,8 @@ import { SCORING_TYPE_INFO, type ScoringType } from '@/features/dut/types/scorin
 
 export interface TestItemInfo {
     name: string
-    isValue: boolean // true if it's a value test item (has numeric VALUE, NOT PASS/FAIL/1/0/-999)
-    isBin: boolean   // true if it's a binary test item (PASS/FAIL/1/0/-999 only)
+    isValue: boolean // true if it has UCL/LCL limits OR has numeric VALUE (not pure PASS/FAIL)
+    isBin: boolean   // true if it's a binary test item (PASS/FAIL/1/0/-999 without limits)
     hasUcl: boolean  // true if it has UCL (upper control limit)
     hasLcl: boolean  // true if it has LCL (lower control limit)
 }
@@ -600,7 +600,7 @@ function selectDisplayedAndConfigureScore(): void {
 }
 
 function selectValueTestItems(): void {
-    // CRITERIA: test items with numeric VALUE AND (has UCL OR has LCL)
+    // CRITERIA: test items with UCL OR LCL (control limits define criteria, regardless of value type)
     localConfig.value.selectedTestItems = props.availableTestItems
         .filter(item => item.isValue && (item.hasUcl || item.hasLcl))
         .map(item => item.name)
@@ -618,9 +618,9 @@ function clearTestItemSelection(): void {
 }
 
 function getTestItemTypeLabel(item: TestItemInfo): string {
-    // CRITERIA: has VALUE + (UCL or LCL)
+    // CRITERIA: has UCL or LCL (control limits define criteria)
     if (item.isValue && (item.hasUcl || item.hasLcl)) return 'CRITERIA'
-    // NON-CRITERIA: has VALUE but no limits
+    // NON-CRITERIA: has numeric VALUE but no limits
     if (item.isValue && !item.hasUcl && !item.hasLcl) return 'NON-CRITERIA'
     return 'OTHER'
 }
