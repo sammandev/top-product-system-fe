@@ -5,7 +5,7 @@
             <v-card-title class="d-flex align-center justify-space-between bg-primary">
                 <div class="d-flex align-center">
                     <v-icon class="mr-2">mdi-database-search</v-icon>
-                    Station Search 2 - Custom Configuration
+                    Station Search - Custom Configuration
                 </div>
                 <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-cog"
                     @click="emit('show-settings')">

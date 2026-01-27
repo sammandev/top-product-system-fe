@@ -135,6 +135,10 @@
                                     <v-btn size="x-small" variant="tonal" color="primary" @click="selectAllTestItems">
                                         All
                                     </v-btn>
+                                    <v-btn size="x-small" variant="tonal" color="info" @click="selectDisplayedTestItems"
+                                        :disabled="filteredTestItems.length === 0">
+                                        Select Displayed ({{ filteredTestItems.length }})
+                                    </v-btn>
                                     <v-btn size="x-small" variant="tonal" color="success" @click="selectValueTestItems">
                                         Criteria
                                     </v-btn>
@@ -147,14 +151,9 @@
                                         Clear
                                     </v-btn>
                                     <v-divider vertical class="mx-2" />
-                                    <v-btn 
-                                        size="x-small" 
-                                        variant="flat" 
-                                        color="secondary"
-                                        prepend-icon="mdi-tune-variant"
-                                        @click="openBulkScoringConfig"
-                                        :disabled="selectedCriteriaCount === 0"
-                                    >
+                                    <v-btn size="x-small" variant="flat" color="secondary"
+                                        prepend-icon="mdi-tune-variant" @click="openBulkScoringConfig"
+                                        :disabled="selectedCriteriaCount === 0">
                                         Configure Scoring ({{ selectedCriteriaCount }})
                                     </v-btn>
                                 </v-col>
@@ -184,7 +183,7 @@
                                                     class="scoring-config-btn">
                                                     <v-icon start size="small">{{
                                                         getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).icon
-                                                    }}</v-icon>
+                                                        }}</v-icon>
                                                     {{
                                                         getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).label
                                                     }}
@@ -268,15 +267,11 @@
                             </v-text-field>
 
                             <!-- Weight Input -->
-                            <v-text-field
-                                :model-value="getTestItemScoringConfig(scoringConfigItem).weight ?? 1.0"
+                            <v-text-field :model-value="getTestItemScoringConfig(scoringConfigItem).weight ?? 1.0"
                                 @update:model-value="updateTestItemWeight(scoringConfigItem!, $event ? Number($event) : 1.0)"
                                 label="Weight" type="number" variant="outlined" density="comfortable"
                                 hint="Weight for this test item in overall score calculation (default: 1.0)"
-                                persistent-hint
-                                class="mt-4"
-                                :min="0"
-                                :step="0.1">
+                                persistent-hint class="mt-4" :min="0" :step="0.1">
                                 <template #prepend-inner>
                                     <v-icon color="info">mdi-weight</v-icon>
                                 </template>
@@ -318,18 +313,14 @@
                         <v-card-text class="pa-4">
                             <v-alert type="info" variant="tonal" density="compact" class="mb-4">
                                 <v-icon start size="small">mdi-information</v-icon>
-                                This will apply the selected scoring algorithm and weight to all {{ selectedCriteriaCount }} selected criteria test items.
+                                This will apply the selected scoring algorithm and weight to all {{
+                                selectedCriteriaCount }} selected
+                                criteria test items.
                             </v-alert>
 
                             <!-- Scoring Type Selection -->
-                            <v-select 
-                                v-model="bulkScoringType"
-                                :items="scoringTypeOptions" 
-                                item-title="title" 
-                                item-value="value"
-                                label="Scoring Algorithm" 
-                                variant="outlined" 
-                                density="comfortable">
+                            <v-select v-model="bulkScoringType" :items="scoringTypeOptions" item-title="title"
+                                item-value="value" label="Scoring Algorithm" variant="outlined" density="comfortable">
                                 <template #item="{ props: itemProps, item }">
                                     <v-list-item v-bind="itemProps">
                                         <template #prepend>
@@ -355,15 +346,9 @@
                             </v-select>
 
                             <!-- Target Value Input (for asymmetrical and throughput) -->
-                            <v-text-field 
-                                v-if="bulkScoringTypeRequiresTarget"
-                                v-model.number="bulkTarget"
-                                label="Target Value" 
-                                type="number" 
-                                variant="outlined" 
-                                density="comfortable"
-                                hint="Required: Enter the optimal target value for scoring" 
-                                persistent-hint
+                            <v-text-field v-if="bulkScoringTypeRequiresTarget" v-model.number="bulkTarget"
+                                label="Target Value" type="number" variant="outlined" density="comfortable"
+                                hint="Required: Enter the optimal target value for scoring" persistent-hint
                                 class="mt-4">
                                 <template #prepend-inner>
                                     <v-icon color="warning">mdi-target</v-icon>
@@ -371,17 +356,10 @@
                             </v-text-field>
 
                             <!-- Weight Input -->
-                            <v-text-field
-                                v-model.number="bulkWeight"
-                                label="Weight" 
-                                type="number" 
-                                variant="outlined" 
+                            <v-text-field v-model.number="bulkWeight" label="Weight" type="number" variant="outlined"
                                 density="comfortable"
                                 hint="Weight for these test items in overall score calculation (default: 1.0)"
-                                persistent-hint
-                                class="mt-4"
-                                :min="0"
-                                :step="0.1">
+                                persistent-hint class="mt-4" :min="0" :step="0.1">
                                 <template #prepend-inner>
                                     <v-icon color="info">mdi-weight</v-icon>
                                 </template>
@@ -403,12 +381,8 @@
                                 Cancel
                             </v-btn>
                             <v-spacer />
-                            <v-btn 
-                                color="primary" 
-                                variant="flat" 
-                                @click="applyBulkScoringConfig"
-                                :disabled="bulkScoringTypeRequiresTarget && bulkTarget === undefined"
-                            >
+                            <v-btn color="primary" variant="flat" @click="applyBulkScoringConfig"
+                                :disabled="bulkScoringTypeRequiresTarget && bulkTarget === undefined">
                                 Apply to {{ selectedCriteriaCount }} Items
                             </v-btn>
                         </v-card-actions>
@@ -612,7 +586,15 @@ function toggleTestItem(name: string): void {
 }
 
 function selectAllTestItems(): void {
-    localConfig.value.selectedTestItems = props.availableTestItems.map(item => item.name)
+    // Select only CRITERIA and NON-CRITERIA items (exclude Bin items)
+    localConfig.value.selectedTestItems = props.availableTestItems
+        .filter(item => !item.isBin)
+        .map(item => item.name)
+}
+
+function selectDisplayedTestItems(): void {
+    // Select only currently displayed/filtered test items
+    localConfig.value.selectedTestItems = filteredTestItems.value.map(item => item.name)
 }
 
 function selectValueTestItems(): void {
@@ -750,21 +732,21 @@ function applyBulkScoringConfig(): void {
     // Apply to all selected criteria test items (has VALUE + UCL or LCL)
     const criteriaItems = props.availableTestItems
         .filter(item => item.isValue && (item.hasUcl || item.hasLcl) && localConfig.value.selectedTestItems.includes(item.name))
-    
+
     for (const item of criteriaItems) {
         const config: TestItemScoringConfig = {
             scoringType: bulkScoringType.value,
             weight: bulkWeight.value
         }
-        
+
         // Only add target if required and provided
         if (scoringRequiresTarget(bulkScoringType.value) && bulkTarget.value !== undefined) {
             config.target = bulkTarget.value
         }
-        
+
         localConfig.value.testItemScoringConfigs[item.name] = config
     }
-    
+
     closeBulkScoringConfig()
 }
 

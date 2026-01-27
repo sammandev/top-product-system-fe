@@ -116,7 +116,7 @@
                     </v-btn>
                     <v-btn size="small" variant="outlined" color="white" @click="toggleExpandAll">
                         <v-icon start>{{ allExpanded ? 'mdi-arrow-collapse-vertical' : 'mdi-arrow-expand-vertical'
-                        }}</v-icon>
+                            }}</v-icon>
                         {{ allExpanded ? 'Collapse All' : 'Expand All' }}
                     </v-btn>
                 </div>
@@ -247,8 +247,8 @@
                                                     </v-btn>
                                                     <span class="font-weight-bold">{{ record.device_id }}</span>
                                                     <!-- ErrorCode chip - clickable to copy -->
-                                                    <v-chip :color="getStatusColor(record.error_code)"
-                                                        size="x-small" class="cursor-pointer"
+                                                    <v-chip :color="getStatusColor(record.error_code)" size="x-small"
+                                                        class="cursor-pointer"
                                                         @click.stop="copyToClipboard(record.error_code)">
                                                         {{ record.error_code }}
                                                         <v-tooltip activator="parent" location="top">Click to copy Error
@@ -314,7 +314,7 @@
                                                     <div class="text-caption text-medium-emphasis">Test Start</div>
                                                     <div class="font-weight-medium">{{
                                                         formatLocalTime(record.test_start_time)
-                                                        }}</div>
+                                                    }}</div>
                                                 </v-col>
                                                 <v-col cols="12" sm="6" md="2">
                                                     <div class="text-caption text-medium-emphasis">Test End</div>
@@ -379,8 +379,7 @@
                                                 :items-per-page="25" density="compact" fixed-header height="400"
                                                 class="elevation-1 v-table--striped">
                                                 <template #item.STATUS="{ item }">
-                                                    <v-chip :color="getStatusColor(item.STATUS)"
-                                                        size="x-small">
+                                                    <v-chip :color="getStatusColor(item.STATUS)" size="x-small">
                                                         {{ normalizeStatus(item.STATUS) }}
                                                     </v-chip>
                                                 </template>

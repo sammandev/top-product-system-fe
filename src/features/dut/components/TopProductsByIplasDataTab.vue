@@ -3,45 +3,24 @@
         <!-- Sub-tabs for different search modes -->
         <v-col cols="12">
             <v-tabs v-model="searchMode" color="secondary" class="mb-4" density="compact">
-                <v-tab value="station">
-                    <v-icon start>mdi-router-wireless</v-icon>
-                    Station Search
-                </v-tab>
                 <v-tab value="station2">
                     <v-icon start>mdi-cog-outline</v-icon>
-                    Station Search 2
-                </v-tab>
-                <v-tab value="isn">
-                    <v-icon start>mdi-barcode-scan</v-icon>
-                    ISN Search
+                    Station Search
                 </v-tab>
                 <v-tab value="isn2">
                     <v-icon start>mdi-barcode-scan</v-icon>
-                    ISN Search 2
-                    <v-chip size="x-small" color="info" class="ml-1">NEW</v-chip>
+                    ISN Search
                 </v-tab>
             </v-tabs>
 
             <v-window v-model="searchMode">
                 <!-- Station Search Mode -->
-                <v-window-item value="station" eager>
-                    <TopProductIplasStationContent @show-details="handleShowDetails"
-                        @show-settings="showSettingsDialog = true" />
-                </v-window-item>
-
-                <!-- Station Search 2 Mode -->
                 <v-window-item value="station2" eager>
                     <TopProductIplasStationContent2 @show-details="handleShowDetails"
                         @show-settings="showSettingsDialog = true" />
                 </v-window-item>
 
                 <!-- ISN Search Mode -->
-                <v-window-item value="isn" eager>
-                    <TopProductIplasIsnContent @show-details="handleShowDetails"
-                        @show-settings="showSettingsDialog = true" />
-                </v-window-item>
-
-                <!-- ISN Search 2 Mode - Custom Scoring -->
                 <v-window-item value="isn2" eager>
                     <IplasIsnSearchContent2 />
                 </v-window-item>
@@ -58,9 +37,7 @@
 </template>
 
 <script setup lang="ts">
-import TopProductIplasStationContent from './TopProductIplasStationContent.vue'
 import TopProductIplasStationContent2 from './TopProductIplasStationContent2.vue'
-import TopProductIplasIsnContent from './TopProductIplasIsnContent.vue'
 import IplasIsnSearchContent2 from './IplasIsnSearchContent2.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import TopProductIplasSettingsDialog from './TopProductIplasSettingsDialog.vue'
@@ -69,7 +46,7 @@ import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 import { ref } from 'vue'
 
 // Search mode tab - persisted in URL
-const searchMode = useTabPersistence<'station' | 'station2' | 'isn' | 'isn2'>('subTab', 'station')
+const searchMode = useTabPersistence<'station2' | 'isn2'>('subTab', 'station2')
 
 // Settings dialog
 const showSettingsDialog = ref(false)

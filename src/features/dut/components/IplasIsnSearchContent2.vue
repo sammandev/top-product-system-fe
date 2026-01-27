@@ -4,7 +4,7 @@
         <v-card elevation="2" class="mb-4">
             <v-card-title class="d-flex align-center bg-primary">
                 <v-icon class="mr-2">mdi-barcode-scan</v-icon>
-                ISN Search 2 - Custom Scoring
+                ISN Search - Custom Scoring
             </v-card-title>
             <v-card-text class="pt-4">
                 <!-- Input Mode Toggle -->

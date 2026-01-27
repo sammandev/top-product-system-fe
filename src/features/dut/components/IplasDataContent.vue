@@ -159,7 +159,7 @@
                                 {{ stationGroup.displayName }}
                                 <v-chip size="x-small" color="info" class="ml-2">{{
                                     getFilteredStationRecords(stationGroup).length
-                                    }}</v-chip>
+                                }}</v-chip>
                             </v-tab>
                         </v-tabs>
 
@@ -220,8 +220,8 @@
                                                             Device ID</v-tooltip>
                                                     </v-chip>
                                                     <!-- ErrorCode chip - clickable to copy -->
-                                                    <v-chip :color="getStatusColor(record.ErrorCode)"
-                                                        size="x-small" class="cursor-pointer"
+                                                    <v-chip :color="getStatusColor(record.ErrorCode)" size="x-small"
+                                                        class="cursor-pointer"
                                                         @click.stop="copyToClipboard(record.ErrorCode)">
                                                         {{ record.ErrorCode }}
                                                         <v-tooltip activator="parent" location="top">Click to copy Error
@@ -283,18 +283,19 @@
                                                     <div class="text-caption text-medium-emphasis">Test Start</div>
                                                     <div class="font-weight-medium">{{
                                                         adjustIplasDisplayTime(record['Test Start Time'],
-                                                        1) }}</div>
+                                                            1) }}</div>
                                                 </v-col>
                                                 <v-col cols="12" sm="6" md="2">
                                                     <div class="text-caption text-medium-emphasis">Test End</div>
                                                     <div class="font-weight-medium">{{
                                                         adjustIplasDisplayTime(record['Test end Time'],
-                                                        1) }}</div>
+                                                            1) }}</div>
                                                 </v-col>
                                                 <v-col cols="12" sm="6" md="2">
                                                     <div class="text-caption text-medium-emphasis">Test Duration</div>
-                                                    <div class="font-weight-medium">{{ calculateDuration(record['Test Start Time'], 
-                                                        record['Test end Time']) }}</div>
+                                                    <div class="font-weight-medium">
+                                                        {{ calculateDuration(record['Test Start Time'], record['Test end Time']) }}
+                                                    </div>
                                                 </v-col>
                                             </v-row>
 
@@ -347,8 +348,7 @@
                                                 :items-per-page="25" density="compact" fixed-header height="400"
                                                 class="elevation-1 v-table--striped">
                                                 <template #item.STATUS="{ item }">
-                                                    <v-chip :color="getStatusColor(item.STATUS)"
-                                                        size="x-small">
+                                                    <v-chip :color="getStatusColor(item.STATUS)" size="x-small">
                                                         {{ normalizeStatus(item.STATUS) }}
                                                     </v-chip>
                                                 </template>
@@ -381,7 +381,7 @@
                                     </v-btn>
                                     <div class="text-caption text-medium-emphasis mt-1">
                                         Showing {{ getDisplayLimit(stationGroup.stationName) }} of {{
-                                        getFilteredStationRecords(stationGroup).length }} records
+                                            getFilteredStationRecords(stationGroup).length }} records
                                     </div>
                                 </div>
                             </v-window-item>
