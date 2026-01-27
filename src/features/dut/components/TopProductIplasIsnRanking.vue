@@ -9,6 +9,14 @@
                 </v-chip>
             </div>
             <div class="d-flex align-center gap-2">
+                <v-btn v-if="!hasScores" color="primary" variant="outlined" size="small" 
+                    prepend-icon="mdi-calculator" :loading="calculatingScores"
+                    @click="emit('calculate-scores')">
+                    Calculate Scores
+                </v-btn>
+                <v-chip v-if="hasScores" size="small" color="success" variant="tonal" prepend-icon="mdi-check-circle">
+                    Scores Calculated
+                </v-chip>
                 <v-btn v-if="selectedRecords.length > 0" color="primary" variant="tonal" size="small"
                     prepend-icon="mdi-download" :loading="loading" @click="handleDownloadSelected">
                     Download ({{ selectedRecords.length }})
@@ -126,11 +134,18 @@
                                         </v-chip>
                                     </td>
                                     <td>
-                                        <span v-if="item.error_code !== 'PASS'" class="text-error text-truncate"
-                                            style="max-width: 200px; display: inline-block;">
-                                            {{ item.error_name || '-' }}
-                                        </span>
-                                        <span v-else class="text-grey">-</span>
+                                        <!-- Score Column -->
+                                        <template v-if="item.error_code !== 'PASS'">
+                                            <v-chip size="small" color="error" variant="tonal">FAIL</v-chip>
+                                        </template>
+                                        <template v-else-if="getRecordScore(item) !== null">
+                                            <v-chip size="small" :color="getScoreColor(getRecordScore(item)!)" variant="flat" class="font-weight-bold">
+                                                {{ getRecordScore(item)!.toFixed(2) }}
+                                            </v-chip>
+                                        </template>
+                                        <template v-else>
+                                            <span class="text-medium-emphasis">-</span>
+                                        </template>
                                     </td>
                                     <td class="text-center">
                                         <v-chip size="small" variant="outlined">
@@ -160,6 +175,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { IsnSearchData } from '@/features/dut_logs/api/iplasApi'
+import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
+import { getScoreColor } from '../types/scoring.types'
 
 interface StationGroup {
     stationName: string
@@ -182,15 +199,19 @@ interface ISNGroup {
 interface Props {
     isnGroups: ISNGroup[]
     loading?: boolean
+    scores?: Record<string, number> // Map of record key to score
+    calculatingScores?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    loading: false
+    loading: false,
+    calculatingScores: false
 })
 
 const emit = defineEmits<{
     (e: 'row-click', record: IsnSearchData): void
     (e: 'download-selected', records: IsnSearchData[]): void
+    (e: 'calculate-scores'): void
 }>()
 
 // State
@@ -215,7 +236,7 @@ const headers = [
     { title: 'Device ID', key: 'device_id', sortable: true },
     { title: 'Test End Time', key: 'test_end_time', sortable: true },
     { title: 'Status', key: 'error_code', sortable: true },
-    { title: 'Error Name', key: 'error_name', sortable: true },
+    { title: 'Score', key: 'score', sortable: true, width: '100px' },
     { title: 'Test Items', key: 'test_item_count', sortable: false, align: 'center' as const },
     { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const, width: '80px' }
 ]
@@ -224,6 +245,22 @@ const headers = [
 const totalRecords = computed(() => {
     return props.isnGroups.reduce((sum, group) => sum + group.records.length, 0)
 })
+
+// Check if we have scores
+const hasScores = computed(() => {
+    return Object.keys(props.scores || {}).length > 0
+})
+
+// Get score for a record
+function getRecordScore(record: IsnSearchData): number | null {
+    if (!props.scores) return null
+    const key = getScoreKey(record)
+    return props.scores[key] ?? null
+}
+
+function getScoreKey(record: IsnSearchData): string {
+    return `${record.isn}_${record.station_name}_${record.test_end_time}`
+}
 
 const selectedRecords = computed(() => {
     const selected: IsnSearchData[] = []
@@ -300,13 +337,8 @@ function getFilteredRecords(isnIndex: number, stationIndex: number, records: Isn
 }
 
 function formatDateTime(dateStr: string): string {
-    if (!dateStr) return '-'
-    try {
-        const date = new Date(dateStr)
-        return date.toLocaleString()
-    } catch {
-        return dateStr
-    }
+    // Use the centralized helper to adjust time by -1 hour for display
+    return adjustIplasDisplayTime(dateStr, 1)
 }
 
 function getRowClass(item: IsnSearchData, index: number): string {

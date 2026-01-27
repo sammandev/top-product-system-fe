@@ -148,6 +148,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 
 // Normalized test item interface
 export interface NormalizedTestItem {
@@ -262,23 +263,8 @@ function getValueClass(item: NormalizedTestItem): string {
 }
 
 function formatTime(timeStr: string): string {
-    if (!timeStr) return '-'
-    try {
-        // Handle format like "2025-09-16 13:23:57%:z" (UTC time from API)
-        const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
-        const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
-        // Convert UTC to local time
-        return utcDate.toLocaleString(undefined, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        })
-    } catch {
-        return timeStr
-    }
+    // Use the centralized helper to adjust time by -1 hour for display
+    return adjustIplasDisplayTime(timeStr, 1)
 }
 
 function calculateDuration(startStr: string, endStr: string): string {

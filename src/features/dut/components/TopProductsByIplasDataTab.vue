@@ -1,13 +1,5 @@
 <template>
     <v-row>
-        <!-- iPLAS API Settings Button -->
-        <v-col cols="12" class="d-flex justify-end">
-            <v-btn variant="outlined" color="secondary" size="small" prepend-icon="mdi-cog"
-                @click="showSettingsDialog = true">
-                iPLAS Settings
-            </v-btn>
-        </v-col>
-
         <!-- Sub-tabs for different search modes -->
         <v-col cols="12">
             <v-tabs v-model="searchMode" color="secondary" class="mb-4" density="compact">
@@ -30,6 +22,7 @@
                 <v-window-item value="station" eager>
                     <TopProductIplasStationContent 
                         @show-details="handleShowDetails"
+                        @show-settings="showSettingsDialog = true"
                     />
                 </v-window-item>
 
@@ -37,6 +30,7 @@
                 <v-window-item value="station2" eager>
                     <TopProductIplasStationContent2
                         @show-details="handleShowDetails"
+                        @show-settings="showSettingsDialog = true"
                     />
                 </v-window-item>
 
@@ -44,6 +38,7 @@
                 <v-window-item value="isn" eager>
                     <TopProductIplasIsnContent
                         @show-details="handleShowDetails"
+                        @show-settings="showSettingsDialog = true"
                     />
                 </v-window-item>
             </v-window>
@@ -63,16 +58,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import TopProductIplasStationContent from './TopProductIplasStationContent.vue'
 import TopProductIplasStationContent2 from './TopProductIplasStationContent2.vue'
 import TopProductIplasIsnContent from './TopProductIplasIsnContent.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import TopProductIplasSettingsDialog from './TopProductIplasSettingsDialog.vue'
+import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
+import { ref } from 'vue'
 
-// Search mode tab
-const searchMode = ref<'station' | 'station2' | 'isn'>('station')
+// Search mode tab - persisted in URL
+const searchMode = useTabPersistence<'station' | 'station2' | 'isn'>('subTab', 'station')
 
 // Settings dialog
 const showSettingsDialog = ref(false)

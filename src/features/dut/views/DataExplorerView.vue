@@ -64,15 +64,15 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import IplasDataContent from '@/features/dut/components/IplasDataContent.vue'
 import InternalDataContent from '@/features/dut/components/InternalDataContent.vue'
 import IplasSettingsDialog from '@/features/dut/components/IplasSettingsDialog.vue'
 import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
+import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 
-// Active tab state
-const activeTab = ref('iplas')
+// Active tab state - persisted in URL
+const activeTab = useTabPersistence('tab', 'iplas')
 
 // Settings dialog
 const showSettingsDialog = ref(false)

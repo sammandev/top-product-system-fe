@@ -96,27 +96,33 @@
 
                     <!-- Timing & Status -->
                     <div class="d-flex align-center flex-wrap gap-2 text-caption">
-                        <v-chip size="x-small" variant="outlined" prepend-icon="mdi-calendar-clock">
-                            Start: {{ formatTime(record.testStartTime) }}
+                        <v-chip size="small" variant="tonal" color="primary" prepend-icon="mdi-calendar-clock" label>
+                            <span class="text-medium-emphasis mr-1">Start:</span>
+                            {{ formatTime(record.testStartTime) }}
                         </v-chip>
-                        <v-chip size="x-small" variant="outlined" prepend-icon="mdi-calendar-check">
-                            End: {{ formatTime(record.testEndTime) }}
+                        <v-chip size="small" variant="tonal" color="primary" prepend-icon="mdi-calendar-check" label>
+                            <span class="text-medium-emphasis mr-1">End:</span>
+                            {{ formatTime(record.testEndTime) }}
                         </v-chip>
-                        <v-chip size="x-small" variant="outlined" prepend-icon="mdi-timer">
+                        <v-chip size="small" variant="tonal" color="secondary" prepend-icon="mdi-timer" label>
+                            <span class="text-medium-emphasis mr-1">Duration:</span>
                             {{ calculateDuration(record.testStartTime, record.testEndTime) }}
                         </v-chip>
-                        <v-chip size="x-small" color="info" variant="outlined" prepend-icon="mdi-list-box">
-                            {{ record.testItems?.length || 0 }} items
+                        <v-chip size="small" variant="tonal" color="info" prepend-icon="mdi-list-box" label>
+                            <span class="text-medium-emphasis mr-1">Test Items:</span>
+                            {{ record.testItems?.length || 0 }}
                         </v-chip>
-                        <v-chip size="x-small" :color="record.errorCode === 'PASS' ? 'success' : 'error'"
+                        <v-chip size="small" :color="record.errorCode === 'PASS' ? 'success' : 'error'"
                             :prepend-icon="record.errorCode === 'PASS' ? 'mdi-check-circle' : 'mdi-alert-circle'"
-                            class="cursor-pointer" @click="copyToClipboard(record.errorCode)">
+                            class="cursor-pointer" label @click="copyToClipboard(record.errorCode)">
+                            <span class="text-medium-emphasis mr-1">Status:</span>
                             {{ record.errorCode }}
                             <v-tooltip activator="parent" location="top">Click to copy Error Code</v-tooltip>
                         </v-chip>
                         <template v-if="record.errorName && record.errorName !== 'N/A' && record.errorCode !== 'PASS'">
-                            <v-chip size="x-small" color="error" variant="outlined" class="cursor-pointer"
-                                @click="copyToClipboard(record.errorName)">
+                            <v-chip size="small" color="error" variant="outlined" class="cursor-pointer" label
+                                prepend-icon="mdi-alert-octagon" @click="copyToClipboard(record.errorName)">
+                                <span class="text-medium-emphasis mr-1">Error:</span>
                                 {{ record.errorName }}
                                 <v-tooltip activator="parent" location="top">Click to copy Error Name</v-tooltip>
                             </v-chip>
@@ -190,6 +196,7 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
+import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 
 interface Props {
     modelValue: boolean
@@ -272,9 +279,11 @@ function getValueClass(item: NormalizedTestItem): string {
 function formatTime(timeStr: string): string {
     if (!timeStr) return '-'
     try {
-        const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
-        const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
-        return utcDate.toLocaleString(undefined, {
+        // First adjust the time by deducting 1 hour (iPLAS time offset)
+        const adjustedTime = adjustIplasDisplayTime(timeStr, 1)
+        const cleanedTime = adjustedTime.replace('%:z', '').replace('T', ' ')
+        const date = new Date(cleanedTime.replace(' ', 'T'))
+        return date.toLocaleString(undefined, {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',

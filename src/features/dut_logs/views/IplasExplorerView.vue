@@ -364,6 +364,7 @@ import { ref, computed, onMounted } from 'vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
 import type { Station, TestItem, CsvTestItemData, DownloadAttachmentInfo } from '@/features/dut_logs/composables/useIplasApi'
+import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 
 const {
     loading,
@@ -491,24 +492,10 @@ function getValueClass(item: TestItem): string {
     return ''
 }
 
-// UPDATED: Format UTC time to local timezone
+// UPDATED: Format UTC time to local timezone with 1 hour deduction for iPLAS display
 function formatLocalTime(utcTimeStr: string): string {
-    if (!utcTimeStr) return '-'
-    try {
-        // Parse the UTC time string and convert to local time
-        // Input format: "2026-01-05 14:46:14" (UTC+0)
-        const utcDate = new Date(utcTimeStr.replace(' ', 'T') + 'Z')
-        return utcDate.toLocaleString(undefined, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        })
-    } catch {
-        return utcTimeStr
-    }
+    // Use the centralized helper to adjust time by -1 hour for display
+    return adjustIplasDisplayTime(utcTimeStr, 1)
 }
 
 function calculateDuration(startStr: string, endStr: string): string {

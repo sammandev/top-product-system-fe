@@ -2,9 +2,15 @@
     <div>
         <!-- Search Card -->
         <v-card elevation="2" class="mb-4">
-            <v-card-title class="d-flex align-center bg-primary">
-                <v-icon class="mr-2">mdi-barcode-scan</v-icon>
-                ISN Search
+            <v-card-title class="d-flex align-center justify-space-between bg-primary">
+                <div class="d-flex align-center">
+                    <v-icon class="mr-2">mdi-barcode-scan</v-icon>
+                    ISN Search
+                </div>
+                <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-cog"
+                    @click="emit('show-settings')">
+                    iPLAS Settings
+                </v-btn>
             </v-card-title>
             <v-card-text class="pt-4">
                 <!-- Input Mode Toggle -->
@@ -99,8 +105,14 @@
         </v-alert>
 
         <!-- Results Section with Ranking Table -->
-        <TopProductIplasIsnRanking v-if="groupedByISN.length > 0" :isn-groups="groupedByISN" :loading="downloading"
-            @row-click="handleRowClick" @download-selected="handleDownloadSelected" />
+        <TopProductIplasIsnRanking v-if="groupedByISN.length > 0" 
+            :isn-groups="groupedByISN" 
+            :loading="downloading"
+            :scores="recordScores"
+            :calculating-scores="calculatingScores"
+            @row-click="handleRowClick" 
+            @download-selected="handleDownloadSelected"
+            @calculate-scores="handleCalculateScores" />
 
         <!-- Copy Success Snackbar -->
         <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="top">
@@ -113,9 +125,23 @@
 <script setup lang="ts">
 import { ref } from 'vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
+import { useScoring } from '../composables/useScoring'
 import TopProductIplasIsnRanking from './TopProductIplasIsnRanking.vue'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
 import type { IsnSearchData, IsnSearchTestItem } from '@/features/dut_logs/api/iplasApi'
+
+// Scoring composable
+const { 
+    initializeConfigs, 
+    calculateScores, 
+    scoredRecords, 
+    loading: scoringLoading, 
+    error: scoringError 
+} = useScoring()
+
+// Scoring state
+const recordScores = ref<Record<string, number>>({})
+const calculatingScores = ref(false)
 
 interface StationGroup {
     stationName: string
@@ -138,6 +164,7 @@ interface ISNGroup {
 // Emits
 const emit = defineEmits<{
     (e: 'show-details', record: NormalizedRecord): void
+    (e: 'show-settings'): void
 }>()
 
 const {
@@ -216,6 +243,67 @@ async function handleDownloadSelected(records: IsnSearchData[]) {
     // Download for each project
     for (const group of Object.values(groupedByProject)) {
         await downloadAttachments(group.site, group.project, group.attachments)
+    }
+}
+
+// Handle calculate scores request from ranking table
+async function handleCalculateScores(): Promise<void> {
+    // Collect all records from all ISN groups
+    const allRecords: IsnSearchData[] = []
+    for (const group of groupedByISN.value) {
+        allRecords.push(...group.records)
+    }
+    
+    if (allRecords.length === 0) return
+    
+    calculatingScores.value = true
+    try {
+        // Convert ISN search records to format expected by scoring API
+        const records = allRecords.map(record => ({
+            ISN: record.isn,
+            DeviceId: record.device_id || '',
+            station: record.station_name,
+            'Test Start Time': record.test_start_time,
+            'Test end Time': record.test_end_time,
+            TestItem: (record.test_item || []).map(item => ({
+                NAME: item.NAME,
+                STATUS: item.STATUS,
+                VALUE: item.VALUE,
+                UCL: item.UCL,
+                LCL: item.LCL
+            }))
+        }))
+        
+        // Initialize scoring configs from first record's test items if needed
+        const firstRecord = allRecords[0]
+        if (firstRecord?.test_item && firstRecord.test_item.length > 0) {
+            initializeConfigs(firstRecord.test_item)
+        }
+        
+        // Calculate scores via backend API
+        await calculateScores(records)
+        
+        // Map scored records back to our score map
+        const newScores: Record<string, number> = {}
+        allRecords.forEach(record => {
+            const key = `${record.isn}_${record.station_name}_${record.test_end_time}`
+            
+            // Try to find matching scored record
+            const matchedScore = scoredRecords.value.find(s => 
+                (s.isn === record.isn || s.deviceId === record.device_id) &&
+                s.station === record.station_name
+            )
+            if (matchedScore) {
+                newScores[key] = matchedScore.overallScore
+            }
+        })
+        
+        recordScores.value = newScores
+    } catch (err) {
+        console.error('Failed to calculate scores:', err)
+        error.value = scoringError.value || 'Failed to calculate scores'
+    } finally {
+        calculatingScores.value = false
     }
 }
 
@@ -370,6 +458,8 @@ async function handleSearch(): Promise<void> {
 
     hasSearched.value = true
     groupedByISN.value = []
+    // Clear scores when performing new search
+    recordScores.value = {}
 
     try {
         const allRecords: IsnSearchData[] = []

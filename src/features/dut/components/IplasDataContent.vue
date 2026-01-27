@@ -239,7 +239,7 @@
                                                 <div
                                                     class="d-flex align-center gap-2 text-caption text-medium-emphasis">
                                                     <v-chip size="x-small" color="info" variant="outlined">
-                                                        {{ record['Test end Time'] }}
+                                                        {{ adjustIplasDisplayTime(record['Test end Time'], 1) }}
                                                     </v-chip>
                                                     <v-chip size="x-small" variant="outlined">
                                                         <!-- <v-icon start size="x-small">mdi-timer</v-icon> -->
@@ -277,11 +277,11 @@
                                                 </v-col>
                                                 <v-col cols="12" sm="6" md="2">
                                                     <div class="text-caption text-medium-emphasis">Test Start</div>
-                                                    <div class="font-weight-medium">{{ record['Test Start Time'] }}</div>
+                                                    <div class="font-weight-medium">{{ adjustIplasDisplayTime(record['Test Start Time'], 1) }}</div>
                                                 </v-col>
                                                 <v-col cols="12" sm="6" md="2">
                                                     <div class="text-caption text-medium-emphasis">Test End</div>
-                                                    <div class="font-weight-medium">{{ record['Test end Time'] }}</div>
+                                                    <div class="font-weight-medium">{{ adjustIplasDisplayTime(record['Test end Time'], 1) }}</div>
                                                 </v-col>
                                                 <v-col cols="12" sm="6" md="2">
                                                     <div class="text-caption text-medium-emphasis">Test Duration</div>
@@ -425,6 +425,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
+import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 import IplasIsnSearchContent from './IplasIsnSearchContent.vue'
 import IplasTestItemsFullscreenDialog from './IplasTestItemsFullscreenDialog.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'

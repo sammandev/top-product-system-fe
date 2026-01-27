@@ -85,6 +85,7 @@
 import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/features/auth/store'
+import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import TopProductsByStationTab from '../components/TopProductsByStationTab.vue'
 import TopProductsByISNTab from '../components/TopProductsByISNTab.vue'
@@ -95,8 +96,8 @@ import TopProductsByUploadLogTab from '@/features/dut_logs/components/TopProduct
 const router = useRouter()
 const authStore = useAuthStore()
 
-// Tab State
-const activeTab = ref('dut-isn') // Changed default from 'station' to 'dut-isn'
+// Tab State - persisted in URL
+const activeTab = useTabPersistence('tab', 'dut-isn')
 
 // Shared State (minimal - most moved to tab components)
 const error = ref<string>('')

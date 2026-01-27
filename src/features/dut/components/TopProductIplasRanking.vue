@@ -6,6 +6,14 @@
                 iPLAS Data Ranking by Test Station
             </div>
             <div class="d-flex align-center gap-2">
+                <v-btn v-if="!hasScores" color="primary" variant="outlined" size="small" 
+                    prepend-icon="mdi-calculator" :loading="calculatingScores"
+                    @click="emit('calculate-scores')">
+                    Calculate Scores
+                </v-btn>
+                <v-chip v-if="hasScores" size="small" color="success" variant="tonal" prepend-icon="mdi-check-circle">
+                    Scores Calculated
+                </v-chip>
                 <v-chip size="small" color="primary" variant="tonal" prepend-icon="mdi-factory">
                     {{ Object.keys(rankingByStation).length }} Stations
                 </v-chip>
@@ -16,7 +24,8 @@
         </v-card-title>
 
         <v-card-subtitle class="text-caption text-medium-emphasis pb-0">
-            Click on a row to view test item details. Records with errors are shown at the bottom.
+            <span v-if="hasScores">Rankings are based on scoring. Higher scores indicate better performance.</span>
+            <span v-else>Click "Calculate Scores" to rank records by performance score. Records with errors are shown at the bottom.</span>
         </v-card-subtitle>
 
         <v-card-text>
@@ -103,6 +112,21 @@
                             <v-chip size="small" variant="outlined">{{ item.device || '-' }}</v-chip>
                         </template>
 
+                        <!-- Score Column -->
+                        <template #item.score="{ item }">
+                            <template v-if="item.hasError">
+                                <v-chip size="small" color="error" variant="tonal">FAIL</v-chip>
+                            </template>
+                            <template v-else-if="item.score !== null">
+                                <v-chip size="small" :color="getScoreColor(item.score)" variant="flat" class="font-weight-bold">
+                                    {{ item.score.toFixed(2) }}
+                                </v-chip>
+                            </template>
+                            <template v-else>
+                                <span class="text-medium-emphasis">-</span>
+                            </template>
+                        </template>
+
                         <!-- Test Date Column -->
                         <template #item.testDate="{ item }">
                             <span class="text-caption">{{ item.testDate }}</span>
@@ -115,22 +139,12 @@
                             </v-chip>
                         </template>
 
-                        <!-- Error Name Column -->
-                        <template #item.errorName="{ item }">
-                            <template v-if="item.errorName && item.errorName !== 'N/A'">
-                                <v-chip color="error" size="small" variant="outlined">
-                                    {{ item.errorName }}
-                                </v-chip>
-                            </template>
-                            <span v-else class="text-medium-emphasis">-</span>
-                        </template>
-
                         <!-- Actions Column -->
                         <template #item.actions="{ item }">
-                            <v-btn icon size="small" variant="text" color="primary"
-                                @click.stop="handleViewDetails(item, station as string)">
-                                <v-icon>mdi-eye</v-icon>
-                                <v-tooltip activator="parent" location="top">View Test Items</v-tooltip>
+                            <v-btn icon size="small" variant="text" color="success"
+                                @click.stop="handleDownloadDetails(item, station as string)">
+                                <v-icon>mdi-download</v-icon>
+                                <v-tooltip activator="parent" location="top">Download Attachment</v-tooltip>
                             </v-btn>
                         </template>
                     </v-data-table>
@@ -143,10 +157,14 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import type { CsvTestItemData } from '@/features/dut_logs/composables/useIplasApi'
+import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
+import { getScoreColor } from '../types/scoring.types'
 
 interface Props {
     records: CsvTestItemData[]
     stationDisplayNames?: Record<string, string>
+    scores?: Record<string, number> // Map of ISN+station+time to score
+    calculatingScores?: boolean
 }
 
 interface RankingItem {
@@ -156,6 +174,7 @@ interface RankingItem {
     testDate: string
     testStartTime: string
     testEndTime: string
+    score: number | null
     hasError: boolean
     errorCode: string
     errorName: string
@@ -166,6 +185,8 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
     (e: 'row-click', payload: { record: CsvTestItemData; stationName: string }): void
+    (e: 'download', payload: { record: CsvTestItemData; stationName: string }): void
+    (e: 'calculate-scores'): void
 }>()
 
 const selectedTab = ref<string>('')
@@ -184,8 +205,8 @@ const rankingHeaders = [
     { title: 'DUT ISN', key: 'isn', sortable: true },
     { title: 'Device ID', key: 'device', sortable: true },
     { title: 'Test End Time', key: 'testDate', sortable: true, width: '200px' },
-    { title: 'Status', key: 'status', sortable: false },
-    { title: 'Error Name', key: 'errorName', sortable: false },
+    { title: 'Status', key: 'status', sortable: true },
+    { title: 'Score', key: 'score', sortable: true, width: '100px' },
     { title: 'Actions', key: 'actions', sortable: false, width: '80px' }
 ]
 
@@ -201,14 +222,18 @@ const rankingByStation = computed(() => {
         }
 
         const hasError = record.ErrorCode !== 'PASS'
+        // Get score from scores map if available
+        const scoreKey = `${record.ISN || record.DeviceId}_${stationName}_${record['Test end Time']}`
+        const score = props.scores?.[scoreKey] ?? null
 
         stationMap[stationName].push({
             rank: 0,
             isn: record.ISN || '-',
             device: record.DeviceId || '-',
-            testDate: record['Test end Time'] || '-',
+            testDate: adjustIplasDisplayTime(record['Test end Time'], 1) || '-',
             testStartTime: record['Test Start Time'] || '',
             testEndTime: record['Test end Time'] || '',
+            score: hasError ? null : score,
             hasError: hasError,
             errorCode: record.ErrorCode || '-',
             errorName: record.ErrorName || '',
@@ -216,7 +241,7 @@ const rankingByStation = computed(() => {
         })
     })
 
-    // Sort by test date descending and assign ranks
+    // Sort by score (if available) or test date, and assign ranks
     Object.keys(stationMap).forEach(station => {
         const items = stationMap[station]
 
@@ -226,8 +251,18 @@ const rankingByStation = computed(() => {
         const passed = items.filter(item => !item.hasError)
         const failed = items.filter(item => item.hasError)
 
-        // Sort passed by test date descending (latest first)
+        // Check if we have scores to sort by
+        const hasScores = passed.some(item => item.score !== null)
+
+        // Sort passed by score (if available, descending) or test date
         passed.sort((a, b) => {
+            if (hasScores) {
+                // Sort by score descending (higher is better)
+                const scoreA = a.score ?? -Infinity
+                const scoreB = b.score ?? -Infinity
+                if (scoreA !== scoreB) return scoreB - scoreA
+            }
+            // Fallback to test date descending
             const dateA = new Date(a.testDate).getTime()
             const dateB = new Date(b.testDate).getTime()
             return dateB - dateA
@@ -260,6 +295,11 @@ const rankingByStation = computed(() => {
     }
 
     return stationMap
+})
+
+// Check if we have scores
+const hasScores = computed(() => {
+    return Object.keys(props.scores || {}).length > 0
 })
 
 const totalRecords = computed(() => props.records.length)
@@ -359,8 +399,8 @@ function handleRowClick(item: RankingItem, stationName: string) {
     emit('row-click', { record: item.originalRecord, stationName })
 }
 
-function handleViewDetails(item: RankingItem, stationName: string) {
-    emit('row-click', { record: item.originalRecord, stationName })
+function handleDownloadDetails(item: RankingItem, stationName: string) {
+    emit('download', { record: item.originalRecord, stationName })
 }
 </script>
 

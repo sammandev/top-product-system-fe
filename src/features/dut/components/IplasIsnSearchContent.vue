@@ -449,6 +449,7 @@ import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
 import IplasTestItemsFullscreenDialog from './IplasTestItemsFullscreenDialog.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 import type { IsnSearchData, IsnSearchTestItem, DownloadAttachmentInfo } from '@/features/dut_logs/api/iplasApi'
+import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 
 interface StationGroup {
     stationName: string
@@ -641,24 +642,8 @@ function filterAndSearchTestItems(items: IsnSearchTestItem[] | undefined, key: s
 }
 
 function formatShortTime(timeStr: string): string {
-    if (!timeStr) return '-'
-    try {
-        // Handle format like "2025-09-16 13:23:57%:z" - API returns UTC time
-        const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
-        const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
-        // Add +8 hours offset for local timezone
-        const localDate = new Date(utcDate.getTime() + 8 * 60 * 60 * 1000)
-        // Format the adjusted time
-        return localDate.toLocaleString(undefined, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        })
-    } catch {
-        return timeStr
-    }
+    // Use the centralized helper to adjust time by -1 hour for display
+    return adjustIplasDisplayTime(timeStr, 1)
 }
 
 function getValueClass(item: IsnSearchTestItem): string {
@@ -669,26 +654,8 @@ function getValueClass(item: IsnSearchTestItem): string {
 }
 
 function formatLocalTime(timeStr: string): string {
-    if (!timeStr) return '-'
-    try {
-        // Handle format like "2025-09-16 13:23:57%:z" - API returns UTC time
-        const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
-        // Parse as UTC by adding 'Z' suffix
-        const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
-        // Add +8 hours offset for local timezone
-        const localDate = new Date(utcDate.getTime() + 8 * 60 * 60 * 1000)
-        // Format the adjusted time
-        return localDate.toLocaleString(undefined, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        })
-    } catch {
-        return timeStr
-    }
+    // Use the centralized helper to adjust time by -1 hour for display
+    return adjustIplasDisplayTime(timeStr, 1)
 }
 
 function calculateDuration(startStr: string, endStr: string): string {

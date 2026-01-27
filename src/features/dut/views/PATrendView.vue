@@ -163,6 +163,7 @@
 import { ref, computed } from 'vue'
 import { useDUTStore } from '../store/dut.store'
 import { useAuthStore } from '@/features/auth/store'
+import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import PATrendResultsCard from '@/features/dut/components/PATrendResultsCard.vue'
 import type { PATrendRequest } from '@/types/api'
@@ -180,8 +181,8 @@ const sromFilter = ref<'all' | 'old' | 'new'>('all')
 const startTime = ref<string>('')
 const endTime = ref<string>('')
 
-// Tab State
-const activeTab = ref<'auto' | 'dex' | 'diff'>('auto')
+// Tab State - persisted in URL
+const activeTab = useTabPersistence<'auto' | 'dex' | 'diff'>('tab', 'auto')
 
 // Filter Form Ref
 const filterForm = ref()

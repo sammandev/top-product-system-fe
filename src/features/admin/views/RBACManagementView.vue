@@ -579,10 +579,11 @@ import { ref, computed, onMounted } from 'vue'
 import { watchDebounced, useMemoize } from '@vueuse/core'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { adminApi } from '../api/admin.api'
+import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import type { Role, Permission, RBACStats, RoleDetail, PermissionDetail } from '../api/admin.api'
 
-// State
-const tab = ref('roles')
+// State - tab persisted in URL
+const tab = useTabPersistence('tab', 'roles')
 const loading = ref(false)
 const error = ref('')
 const success = ref('')

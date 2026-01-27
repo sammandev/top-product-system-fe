@@ -5,14 +5,14 @@
 
 export const APP_CONFIG = {
   // Application Info
-  name: 'Top Product Selection System',
+  name: 'Top Product',
   version: '1.0.0',
-  description: 'Wireless Test Data Analysis Platform',
+  description: 'Test Data Analysis Platform',
 
   // API Configuration
   api: {
     baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
-    timeout: 30000,
+    timeout: 120000, // 120 seconds
     retryAttempts: 3,
     retryDelay: 1000
   },
@@ -53,7 +53,7 @@ export const APP_CONFIG = {
   // UI
   ui: {
     debounceDelay: 300,
-    toastDuration: 3000,
+    toastDuration: 2000,
     animationDuration: 200,
     sidebarWidth: 256,
     sidebarRailWidth: 72

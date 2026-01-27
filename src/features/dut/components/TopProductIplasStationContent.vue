@@ -12,10 +12,16 @@
                     <v-icon class="mr-2">mdi-filter-variant</v-icon>
                     Data Selection
                 </div>
-                <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading"
-                    @click="handleRefresh">
-                    Refresh
-                </v-btn>
+                <div class="d-flex align-center gap-2">
+                    <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-cog"
+                        @click="emit('show-settings')">
+                        iPLAS Settings
+                    </v-btn>
+                    <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading"
+                        @click="handleRefresh">
+                        Refresh
+                    </v-btn>
+                </div>
             </v-card-title>
             <v-card-text class="pt-4">
                 <v-row>
@@ -117,7 +123,7 @@
 
         <!-- Ranking Table Results -->
         <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData"
-            :station-display-names="stationDisplayNameMap" @row-click="handleRowClick" />
+            :station-display-names="stationDisplayNameMap" @row-click="handleRowClick" @download="handleDownloadRecord" />
 
         <!-- Download Section -->
         <v-card v-if="testItemData.length > 0" elevation="2" class="mb-4">
@@ -192,6 +198,7 @@ import type { Station, TestItem, CsvTestItemData, DownloadAttachmentInfo } from 
 // Emits
 const emit = defineEmits<{
     (e: 'show-details', record: NormalizedRecord): void
+    (e: 'show-settings'): void
 }>()
 
 const {
@@ -432,6 +439,14 @@ function normalizeStationRecord(record: CsvTestItemData): NormalizedRecord {
 function handleRowClick(payload: { record: CsvTestItemData; stationName: string }) {
     const normalized = normalizeStationRecord(payload.record)
     emit('show-details', normalized)
+}
+
+// Handle download from ranking table action button
+async function handleDownloadRecord(payload: { record: CsvTestItemData; stationName: string }): Promise<void> {
+    if (!selectedSite.value || !selectedProject.value) return
+    
+    const attachmentInfo = createAttachmentInfo(payload.record)
+    await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
 }
 
 // Download functions

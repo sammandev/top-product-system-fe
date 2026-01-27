@@ -224,6 +224,7 @@
 import { ref, computed, onMounted } from 'vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { menuAccessApi } from '../api/menuAccess.api'
+import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import type { MenuItemData } from '../types/menuAccess.types'
 
 // State
@@ -235,7 +236,7 @@ const successMessage = ref<string | null>(null)
 
 const menus = ref<MenuItemData[]>([])
 const availableRoles = ref<string[]>(['guest', 'user', 'admin'])
-const activeTab = ref('guest')
+const activeTab = useTabPersistence('tab', 'guest')
 
 // Track menu access per role
 const roleMenuAccess = ref<Record<string, string[]>>({

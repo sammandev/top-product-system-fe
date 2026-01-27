@@ -2,9 +2,15 @@
     <div>
         <!-- Data Selection Card -->
         <v-card elevation="2" class="mb-4">
-            <v-card-title class="d-flex align-center bg-primary">
-                <v-icon class="mr-2">mdi-database-search</v-icon>
-                Station Search 2 - Custom Configuration
+            <v-card-title class="d-flex align-center justify-space-between bg-primary">
+                <div class="d-flex align-center">
+                    <v-icon class="mr-2">mdi-database-search</v-icon>
+                    Station Search 2 - Custom Configuration
+                </div>
+                <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-cog"
+                    @click="emit('show-settings')">
+                    iPLAS Settings
+                </v-btn>
             </v-card-title>
             <v-card-text class="pt-4">
                 <!-- Site Selection -->
@@ -96,7 +102,12 @@
 
         <!-- Results Section with Ranking Table -->
         <TopProductIplasRanking v-if="testItemData.length > 0"
-            :records="testItemData" @row-click="handleRowClick" />
+            :records="testItemData" 
+            :scores="recordScores" 
+            :calculating-scores="calculatingScores"
+            @row-click="handleRowClick" 
+            @download="handleDownloadRecord"
+            @calculate-scores="handleCalculateScores" />
 
         <!-- Station Selection Dialog -->
         <StationSelectionDialog v-model:show="showStationSelectionDialog" :site="selectedSite || ''"
@@ -117,6 +128,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
+import { useScoring } from '../composables/useScoring'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
 import StationSelectionDialog from './StationSelectionDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
@@ -127,7 +139,20 @@ import type { Station, TestItem, CsvTestItemData } from '@/features/dut_logs/com
 // Emits
 const emit = defineEmits<{
     (e: 'show-details', record: NormalizedRecord): void
+    (e: 'show-settings'): void
 }>()
+
+// Scoring composable
+const { 
+    initializeConfigs, 
+    calculateScores, 
+    scoredRecords, 
+    error: scoringError 
+} = useScoring()
+
+// Scoring state
+const recordScores = ref<Record<string, number>>({})
+const calculatingScores = ref(false)
 
 const {
     loading,
@@ -144,6 +169,7 @@ const {
     fetchTestItems: fetchTestItemsApi,
     fetchTestItemNames,
     fetchTestItemsFiltered,
+    downloadAttachments,
     clearTestItemData
 } = useIplasApi()
 
@@ -287,6 +313,78 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
 function handleRowClick(payload: { record: CsvTestItemData; stationName: string }) {
     const normalized = normalizeRecord(payload.record)
     emit('show-details', normalized)
+}
+
+// Handle download from ranking table action button
+async function handleDownloadRecord(payload: { record: CsvTestItemData; stationName: string }): Promise<void> {
+    if (!selectedSite.value || !selectedProject.value) return
+    
+    const record = payload.record
+    const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+    const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+    const deviceid = record.DeviceId
+    const station = record.TSP || record.station
+    
+    await downloadAttachments(selectedSite.value, selectedProject.value, [{ isn, time, deviceid, station }])
+}
+
+// Handle calculate scores request from ranking table
+async function handleCalculateScores(): Promise<void> {
+    if (testItemData.value.length === 0) return
+    
+    calculatingScores.value = true
+    try {
+        // Convert iPLAS records to format expected by scoring API
+        const records = testItemData.value.map(record => ({
+            ISN: record.ISN || record.DeviceId,
+            DeviceId: record.DeviceId,
+            station: record.station,
+            'Test Start Time': record['Test Start Time'],
+            'Test end Time': record['Test end Time'],
+            TestItem: record.TestItem || []
+        }))
+        
+        // Initialize scoring configs from first record's test items if needed
+        const firstRecord = testItemData.value[0]
+        if (firstRecord?.TestItem && firstRecord.TestItem.length > 0) {
+            initializeConfigs(firstRecord.TestItem)
+        }
+        
+        // Calculate scores via backend API
+        await calculateScores(records)
+        
+        // Map scored records back to our score map
+        const newScores: Record<string, number> = {}
+        scoredRecords.value.forEach(scored => {
+            // Create key matching what we use in ranking component
+            const key = `${scored.isn}_${scored.station}_${scored.testStartTime}`
+            newScores[key] = scored.overallScore
+        })
+        
+        // Also create alternative keys for matching
+        testItemData.value.forEach(record => {
+            const isn = record.ISN || record.DeviceId || '-'
+            const station = record.station
+            const testTime = record['Test end Time'] || ''
+            const key = `${isn}_${station}_${testTime}`
+            
+            // Try to find matching scored record
+            const matchedScore = scoredRecords.value.find(s => 
+                (s.isn === isn || s.deviceId === record.DeviceId) &&
+                s.station === station
+            )
+            if (matchedScore) {
+                newScores[key] = matchedScore.overallScore
+            }
+        })
+        
+        recordScores.value = newScores
+    } catch (err) {
+        console.error('Failed to calculate scores:', err)
+        error.value = scoringError.value || 'Failed to calculate scores'
+    } finally {
+        calculatingScores.value = false
+    }
 }
 
 // Station selection dialog handlers
@@ -447,6 +545,8 @@ async function fetchTestItems(): Promise<void> {
     }
 
     clearTestItemData()
+    // Clear scores when fetching new data
+    recordScores.value = {}
 
     // Iterate through each configured station
     for (const config of Object.values(stationConfigs.value)) {

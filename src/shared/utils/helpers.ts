@@ -209,3 +209,37 @@ export function isEmpty(obj: any): boolean {
 export function deepClone<T>(obj: T): T {
   return JSON.parse(JSON.stringify(obj))
 }
+
+/**
+ * Adjust iPLAS display time by deducting hours
+ * iPLAS API returns times that are offset by 1 hour from actual local time
+ * This function adjusts the display time by subtracting the specified hours
+ * NOTE: Only use for display purposes, not for download timestamps
+ * @param dateStr - Date string from iPLAS API (e.g., "2026-01-27 15:30:45")
+ * @param hoursToDeduct - Number of hours to subtract (default: 1)
+ * @returns Adjusted date string in same format, or original if parsing fails
+ */
+export function adjustIplasDisplayTime(dateStr: string | null | undefined, hoursToDeduct = 1): string {
+  if (!dateStr) return '-'
+  try {
+    // Parse the date string
+    const cleanedTime = dateStr.replace('T', ' ').replace('%:z', '').split('.')[0] || ''
+    const date = new Date(cleanedTime.replace(' ', 'T'))
+    if (isNaN(date.getTime())) return dateStr
+    
+    // Subtract hours
+    date.setHours(date.getHours() - hoursToDeduct)
+    
+    // Format back to the same format
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    const seconds = String(date.getSeconds()).padStart(2, '0')
+    
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+  } catch {
+    return dateStr
+  }
+}
