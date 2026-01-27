@@ -364,7 +364,11 @@ export function createDefaultScoringConfig(
 }
 
 // Utility functions
+// Score is stored as 0-1 internally but displayed as 0-10 scale
+export const SCORE_DISPLAY_MULTIPLIER = 10
+
 export function getScoreColor(score: number): string {
+    // Score is 0-1 scale internally
     if (score >= 0.9) return 'success'
     if (score >= 0.7) return 'info'
     if (score >= 0.5) return 'warning'
@@ -372,7 +376,13 @@ export function getScoreColor(score: number): string {
 }
 
 export function formatScore(score: number): string {
-    return `${(score * 100).toFixed(1)}%`
+    // Convert from 0-1 to 0-10 scale and format to 2 decimal places
+    return (score * SCORE_DISPLAY_MULTIPLIER).toFixed(2)
+}
+
+export function formatScoreWithMax(score: number): string {
+    // Format as "X.XX / 10"
+    return `${(score * SCORE_DISPLAY_MULTIPLIER).toFixed(2)} / 10`
 }
 
 export function getScoreIcon(score: number): string {

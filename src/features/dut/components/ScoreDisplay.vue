@@ -34,11 +34,11 @@ type ScoreDisplayVariant = 'circular' | 'chip' | 'bar' | 'text'
 type ScoreDisplaySize = 'x-small' | 'small' | 'default' | 'large'
 
 interface Props {
-    score: number                  // Score value between 0 and 1
+    score: number                  // Score value between 0 and 1 (internal), displayed as 0-10 scale
     variant?: ScoreDisplayVariant
     size?: ScoreDisplaySize
     showIcon?: boolean
-    showPercent?: boolean          // Show as percentage vs decimal
+    showPercent?: boolean          // If true shows as 0-10 scale, if false shows raw decimal
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -47,6 +47,9 @@ const props = withDefaults(defineProps<Props>(), {
     showIcon: false,
     showPercent: true
 })
+
+// Score display multiplier (convert 0-1 to 0-10)
+const SCORE_MULTIPLIER = 10
 
 // Computed values
 const scorePercent = computed(() => props.score * 100)
@@ -67,9 +70,10 @@ const scoreIcon = computed(() => {
 
 const formattedScore = computed(() => {
     if (props.showPercent) {
-        return `${scorePercent.value.toFixed(1)}%`
+        // Display as 0-10 scale with 2 decimal places
+        return (props.score * SCORE_MULTIPLIER).toFixed(2)
     }
-    return props.score.toFixed(3)
+    return props.score.toFixed(2)
 })
 
 // Size computations for circular variant

@@ -191,7 +191,7 @@
                         <template v-if="item.score !== undefined && item.score !== null">
                             <v-chip :color="getScoreColor(item.score)" size="small" variant="flat"
                                 class="font-weight-bold cursor-pointer" @click.stop="showScoreBreakdown(item)">
-                                {{ item.score.toFixed(3) }}
+                                {{ (item.score * 10).toFixed(2) }}
                                 <v-icon size="x-small" end>mdi-information-outline</v-icon>
                             </v-chip>
                         </template>
@@ -206,16 +206,16 @@
                     <v-chip color="primary" variant="tonal" prepend-icon="mdi-chart-line">
                         <strong>Overall Score:</strong>&nbsp;
                         <span :class="getScoreColorClass(record.overallScore)">
-                            {{ record.overallScore.toFixed(3) }}
+                            {{ (record.overallScore * 10).toFixed(2) }} / 10
                         </span>
                     </v-chip>
                     <v-chip v-if="record.valueItemsScore !== null && record.valueItemsScore !== undefined"
                         color="success" variant="outlined" size="small">
-                        Value Items: {{ record.valueItemsScore.toFixed(3) }}
+                        Value Items: {{ (record.valueItemsScore * 10).toFixed(2) }}
                     </v-chip>
                     <v-chip v-if="record.binItemsScore !== null && record.binItemsScore !== undefined" color="info"
                         variant="outlined" size="small">
-                        Binary Items: {{ record.binItemsScore.toFixed(3) }}
+                        Binary Items: {{ (record.binItemsScore * 10).toFixed(2) }}
                     </v-chip>
                 </div>
             </div>
@@ -297,7 +297,7 @@
                         </template>
                         <v-list-item-title>Deviation from Target</v-list-item-title>
                         <template #append>
-                            <span class="font-weight-medium">{{ selectedTestItem.deviation?.toFixed(4) }}</span>
+                            <span class="font-weight-medium">{{ selectedTestItem.deviation?.toFixed(2) }}</span>
                         </template>
                     </v-list-item>
 
@@ -311,7 +311,7 @@
                         <template #append>
                             <v-chip size="small" :color="getScoreColor(selectedTestItem.score ?? 0)" variant="flat"
                                 class="font-weight-bold">
-                                {{ selectedTestItem.score?.toFixed(3) ?? '-' }}
+                                {{ selectedTestItem.score !== undefined ? ((selectedTestItem.score ?? 0) * 10).toFixed(2) : '-' }} / 10
                             </v-chip>
                         </template>
                     </v-list-item>

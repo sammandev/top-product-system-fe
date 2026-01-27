@@ -120,7 +120,7 @@
                             <template v-else-if="item.score !== null">
                                 <v-chip size="small" :color="getScoreColor(item.score)" variant="flat"
                                     class="font-weight-bold">
-                                    {{ item.score.toFixed(2) }}
+                                    {{ (item.score * 10).toFixed(2) }}
                                 </v-chip>
                             </template>
                             <template v-else>

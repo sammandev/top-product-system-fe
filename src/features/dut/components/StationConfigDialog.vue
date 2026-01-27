@@ -146,6 +146,17 @@
                                         @click="clearTestItemSelection">
                                         Clear
                                     </v-btn>
+                                    <v-divider vertical class="mx-2" />
+                                    <v-btn 
+                                        size="x-small" 
+                                        variant="flat" 
+                                        color="secondary"
+                                        prepend-icon="mdi-tune-variant"
+                                        @click="openBulkScoringConfig"
+                                        :disabled="selectedCriteriaCount === 0"
+                                    >
+                                        Configure Scoring ({{ selectedCriteriaCount }})
+                                    </v-btn>
                                 </v-col>
                             </v-row>
 
@@ -256,6 +267,21 @@
                                 </template>
                             </v-text-field>
 
+                            <!-- Weight Input -->
+                            <v-text-field
+                                :model-value="getTestItemScoringConfig(scoringConfigItem).weight ?? 1.0"
+                                @update:model-value="updateTestItemWeight(scoringConfigItem!, $event ? Number($event) : 1.0)"
+                                label="Weight" type="number" variant="outlined" density="comfortable"
+                                hint="Weight for this test item in overall score calculation (default: 1.0)"
+                                persistent-hint
+                                class="mt-4"
+                                :min="0"
+                                :step="0.1">
+                                <template #prepend-inner>
+                                    <v-icon color="info">mdi-weight</v-icon>
+                                </template>
+                            </v-text-field>
+
                             <!-- Formula Preview -->
                             <v-alert type="info" variant="tonal" class="mt-4" density="compact">
                                 <div class="text-caption font-weight-bold mb-1">Formula:</div>
@@ -273,6 +299,117 @@
                             <v-spacer />
                             <v-btn color="primary" variant="flat" @click="closeScoringConfig">
                                 Done
+                            </v-btn>
+                        </v-card-actions>
+                    </v-card>
+                </v-dialog>
+
+                <!-- Bulk Scoring Configuration Dialog -->
+                <v-dialog v-model="bulkScoringDialog" max-width="550px">
+                    <v-card>
+                        <v-card-title class="d-flex align-center bg-secondary">
+                            <v-icon class="mr-2">mdi-tune-variant</v-icon>
+                            Bulk Configure Scoring
+                        </v-card-title>
+                        <v-card-subtitle class="bg-secondary pb-3">
+                            Apply to {{ selectedCriteriaCount }} selected criteria test item(s)
+                        </v-card-subtitle>
+
+                        <v-card-text class="pa-4">
+                            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+                                <v-icon start size="small">mdi-information</v-icon>
+                                This will apply the selected scoring algorithm and weight to all {{ selectedCriteriaCount }} selected criteria test items.
+                            </v-alert>
+
+                            <!-- Scoring Type Selection -->
+                            <v-select 
+                                v-model="bulkScoringType"
+                                :items="scoringTypeOptions" 
+                                item-title="title" 
+                                item-value="value"
+                                label="Scoring Algorithm" 
+                                variant="outlined" 
+                                density="comfortable">
+                                <template #item="{ props: itemProps, item }">
+                                    <v-list-item v-bind="itemProps">
+                                        <template #prepend>
+                                            <v-icon :color="item.raw.color">{{ item.raw.icon }}</v-icon>
+                                        </template>
+                                        <template #subtitle>
+                                            {{ item.raw.subtitle }}
+                                        </template>
+                                        <template #append>
+                                            <v-chip v-if="item.raw.requiresTarget" size="x-small" color="warning"
+                                                variant="tonal">
+                                                Requires Target
+                                            </v-chip>
+                                        </template>
+                                    </v-list-item>
+                                </template>
+                                <template #selection="{ item }">
+                                    <v-chip :color="item.raw.color" size="small" variant="flat">
+                                        <v-icon start size="small">{{ item.raw.icon }}</v-icon>
+                                        {{ item.title }}
+                                    </v-chip>
+                                </template>
+                            </v-select>
+
+                            <!-- Target Value Input (for asymmetrical and throughput) -->
+                            <v-text-field 
+                                v-if="bulkScoringTypeRequiresTarget"
+                                v-model.number="bulkTarget"
+                                label="Target Value" 
+                                type="number" 
+                                variant="outlined" 
+                                density="comfortable"
+                                hint="Required: Enter the optimal target value for scoring" 
+                                persistent-hint
+                                class="mt-4">
+                                <template #prepend-inner>
+                                    <v-icon color="warning">mdi-target</v-icon>
+                                </template>
+                            </v-text-field>
+
+                            <!-- Weight Input -->
+                            <v-text-field
+                                v-model.number="bulkWeight"
+                                label="Weight" 
+                                type="number" 
+                                variant="outlined" 
+                                density="comfortable"
+                                hint="Weight for these test items in overall score calculation (default: 1.0)"
+                                persistent-hint
+                                class="mt-4"
+                                :min="0"
+                                :step="0.1">
+                                <template #prepend-inner>
+                                    <v-icon color="info">mdi-weight</v-icon>
+                                </template>
+                            </v-text-field>
+
+                            <!-- Formula Preview -->
+                            <v-alert type="info" variant="tonal" class="mt-4" density="compact">
+                                <div class="text-caption font-weight-bold mb-1">Formula:</div>
+                                <div class="text-body-2 font-italic">
+                                    {{ getScoringTypeInfo(bulkScoringType).description }}
+                                </div>
+                            </v-alert>
+                        </v-card-text>
+
+                        <v-divider />
+
+                        <v-card-actions class="pa-3">
+                            <v-btn color="grey" variant="outlined" @click="closeBulkScoringConfig">
+                                Cancel
+                            </v-btn>
+                            <v-spacer />
+                            <v-btn 
+                                color="primary" 
+                                variant="flat" 
+                                @click="applyBulkScoringConfig"
+                                :disabled="bulkScoringTypeRequiresTarget && bulkTarget === undefined"
+                            >
+                                Apply to {{ selectedCriteriaCount }} Items
                             </v-btn>
                         </v-card-actions>
                     </v-card>
@@ -309,6 +446,8 @@ export interface TestItemInfo {
     name: string
     isValue: boolean // true if it's a value test item (has numeric VALUE)
     isBin: boolean   // true if it's a binary test item (PASS/FAIL only)
+    hasUcl: boolean  // true if it has UCL (upper control limit)
+    hasLcl: boolean  // true if it has LCL (lower control limit)
 }
 
 // Available scoring types for selection (exclude binary as it's auto-detected)
@@ -379,6 +518,12 @@ const testItemSearchQuery = ref('')
 // Track which test item is currently being configured for scoring
 const scoringConfigItem = ref<string | null>(null)
 const scoringConfigDialog = ref(false)
+
+// Bulk configuration state
+const bulkScoringDialog = ref(false)
+const bulkScoringType = ref<ScoringType>('symmetrical')
+const bulkTarget = ref<number | undefined>(undefined)
+const bulkWeight = ref<number>(1.0)
 
 const isExistingConfig = computed(() => !!props.existingConfig)
 
@@ -471,15 +616,16 @@ function selectAllTestItems(): void {
 }
 
 function selectValueTestItems(): void {
+    // CRITERIA: test items with numeric VALUE AND (has UCL OR has LCL)
     localConfig.value.selectedTestItems = props.availableTestItems
-        .filter(item => item.isValue)
+        .filter(item => item.isValue && (item.hasUcl || item.hasLcl))
         .map(item => item.name)
 }
 
 function selectNonValueTestItems(): void {
-    // Non-Criteria: items that are NOT value AND NOT bin (e.g., items with empty/non-numeric values)
+    // NON-CRITERIA: test items with numeric VALUE but NO UCL AND NO LCL
     localConfig.value.selectedTestItems = props.availableTestItems
-        .filter(item => !item.isValue && !item.isBin)
+        .filter(item => item.isValue && !item.hasUcl && !item.hasLcl)
         .map(item => item.name)
 }
 
@@ -488,13 +634,17 @@ function clearTestItemSelection(): void {
 }
 
 function getTestItemTypeLabel(item: TestItemInfo): string {
-    if (item.isValue) return 'CRITERIA'
-    return 'NON-CRITERIA'
+    // CRITERIA: has VALUE + (UCL or LCL)
+    if (item.isValue && (item.hasUcl || item.hasLcl)) return 'CRITERIA'
+    // NON-CRITERIA: has VALUE but no limits
+    if (item.isValue && !item.hasUcl && !item.hasLcl) return 'NON-CRITERIA'
+    return 'OTHER'
 }
 
 function getTestItemTypeColor(item: TestItemInfo): string {
-    if (item.isValue) return 'success'
-    return 'warning'
+    if (item.isValue && (item.hasUcl || item.hasLcl)) return 'success'
+    if (item.isValue && !item.hasUcl && !item.hasLcl) return 'warning'
+    return 'grey'
 }
 
 function handleSave(): void {
@@ -578,6 +728,69 @@ function updateTestItemTarget(testItemName: string, target: number | undefined):
 
 function scoringRequiresTarget(scoringType: ScoringType): boolean {
     return SCORING_TYPE_INFO[scoringType].requiredInputs?.includes('target') ?? false
+}
+
+// Bulk configuration functions
+function openBulkScoringConfig(): void {
+    bulkScoringType.value = 'symmetrical'
+    bulkTarget.value = undefined
+    bulkWeight.value = 1.0
+    bulkScoringDialog.value = true
+}
+
+function closeBulkScoringConfig(): void {
+    bulkScoringDialog.value = false
+}
+
+function applyBulkScoringConfig(): void {
+    if (!localConfig.value.testItemScoringConfigs) {
+        localConfig.value.testItemScoringConfigs = {}
+    }
+
+    // Apply to all selected criteria test items (has VALUE + UCL or LCL)
+    const criteriaItems = props.availableTestItems
+        .filter(item => item.isValue && (item.hasUcl || item.hasLcl) && localConfig.value.selectedTestItems.includes(item.name))
+    
+    for (const item of criteriaItems) {
+        const config: TestItemScoringConfig = {
+            scoringType: bulkScoringType.value,
+            weight: bulkWeight.value
+        }
+        
+        // Only add target if required and provided
+        if (scoringRequiresTarget(bulkScoringType.value) && bulkTarget.value !== undefined) {
+            config.target = bulkTarget.value
+        }
+        
+        localConfig.value.testItemScoringConfigs[item.name] = config
+    }
+    
+    closeBulkScoringConfig()
+}
+
+// Get count of selected criteria items for bulk config
+const selectedCriteriaCount = computed(() => {
+    // CRITERIA: has VALUE + (UCL or LCL)
+    return props.availableTestItems
+        .filter(item => item.isValue && (item.hasUcl || item.hasLcl) && localConfig.value.selectedTestItems.includes(item.name))
+        .length
+})
+
+const bulkScoringTypeRequiresTarget = computed(() => {
+    return scoringRequiresTarget(bulkScoringType.value)
+})
+
+// Update test item weight
+function updateTestItemWeight(testItemName: string, weight: number | undefined): void {
+    if (!localConfig.value.testItemScoringConfigs) {
+        localConfig.value.testItemScoringConfigs = {}
+    }
+
+    if (!localConfig.value.testItemScoringConfigs[testItemName]) {
+        localConfig.value.testItemScoringConfigs[testItemName] = { scoringType: 'symmetrical' }
+    }
+
+    localConfig.value.testItemScoringConfigs[testItemName].weight = weight ?? 1.0
 }
 
 // Computed for current scoring config being edited

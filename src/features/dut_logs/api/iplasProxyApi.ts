@@ -12,6 +12,8 @@ export interface IplasTestItemInfo {
   name: string
   is_value: boolean
   is_bin: boolean
+  has_ucl: boolean
+  has_lcl: boolean
 }
 
 export interface IplasCsvTestItemRequest {

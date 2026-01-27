@@ -52,6 +52,16 @@
                                 <v-chip size="small" color="info" variant="tonal" class="mr-1">
                                     {{ getTestItemsLabel(station.display_station_name) }}
                                 </v-chip>
+                                <v-chip 
+                                    v-if="getScoringConfigsCount(station.display_station_name) > 0"
+                                    size="small" 
+                                    color="warning" 
+                                    variant="tonal" 
+                                    class="mr-1"
+                                >
+                                    <v-icon start size="x-small">mdi-tune</v-icon>
+                                    {{ getScoringConfigsCount(station.display_station_name) }} Scoring
+                                </v-chip>
                                 <v-chip size="small" color="secondary" variant="tonal">
                                     {{ getStationConfig(station.display_station_name)?.testStatus || 'ALL' }}
                                 </v-chip>
@@ -97,6 +107,7 @@ import type { ScoringType } from '@/features/dut/types/scoring.types'
 export interface TestItemScoringConfig {
     scoringType: ScoringType
     target?: number  // Required for asymmetrical and throughput
+    weight?: number  // Weight for scoring (default: 1.0)
 }
 
 export interface StationConfig {
@@ -160,6 +171,12 @@ function getTestItemsLabel(displayName: string): string {
         return 'All Items'
     }
     return `${config.selectedTestItems.length} Item(s)`
+}
+
+function getScoringConfigsCount(displayName: string): number {
+    const config = props.selectedConfigs[displayName]
+    if (!config?.testItemScoringConfigs) return 0
+    return Object.keys(config.testItemScoringConfigs).length
 }
 
 function handleStationClick(station: Station): void {

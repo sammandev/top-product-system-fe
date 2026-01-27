@@ -140,7 +140,7 @@
                                         <template v-else-if="getRecordScore(item) !== null">
                                             <v-chip size="small" :color="getScoreColor(getRecordScore(item)!)"
                                                 variant="flat" class="font-weight-bold">
-                                                {{ getRecordScore(item)!.toFixed(2) }}
+                                                {{ (getRecordScore(item)! * 10).toFixed(2) }}
                                             </v-chip>
                                         </template>
                                         <template v-else>

@@ -417,9 +417,22 @@ function applyUserScoringConfigs(): void {
             // Update scoring type for this test item
             setScoringType(testItemName, scoringConfig.scoringType)
 
-            // If target is specified (for asymmetrical or throughput), update the config
+            // Build update object with target and weight if specified
+            const updates: { target?: number; weight?: number } = {}
+            
+            // If target is specified (for asymmetrical or throughput), add to updates
             if (scoringConfig.target !== undefined) {
-                updateScoringConfig(testItemName, { target: scoringConfig.target })
+                updates.target = scoringConfig.target
+            }
+            
+            // If weight is specified, add to updates
+            if (scoringConfig.weight !== undefined) {
+                updates.weight = scoringConfig.weight
+            }
+            
+            // Apply updates if any
+            if (Object.keys(updates).length > 0) {
+                updateScoringConfig(testItemName, updates)
             }
         }
     }
@@ -506,7 +519,9 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
         currentStationTestItems.value = testItems.map(item => ({
             name: item.name,
             isValue: item.is_value,
-            isBin: item.is_bin
+            isBin: item.is_bin,
+            hasUcl: item.has_ucl,
+            hasLcl: item.has_lcl
         }))
     } catch (err: any) {
         testItemsError.value = err.message || 'Failed to load test items'
