@@ -127,8 +127,8 @@
                     density="comfortable" fixed-header fixed-footer style="height: 100%;"
                     class="elevation-1 v-table--striped">
                     <template #item.STATUS="{ item }">
-                        <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'" size="small">
-                            {{ item.STATUS }}
+                        <v-chip :color="getStatusColor(item.STATUS)" size="small">
+                            {{ normalizeStatus(item.STATUS) }}
                         </v-chip>
                     </template>
                     <template #item.VALUE="{ item }">
@@ -154,7 +154,7 @@
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
-import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
+import { adjustIplasDisplayTime, getStatusColor, normalizeStatus, isStatusPass, isStatusFail } from '@/shared/utils/helpers'
 import type { ScoringType } from '../types/scoring.types'
 
 // Normalized test item interface with optional scoring data
@@ -244,7 +244,8 @@ const testItemHeaders = [
 // Helper functions
 function isValueData(item: NormalizedTestItem): boolean {
     const value = item.VALUE?.toUpperCase() || ''
-    if (value === 'PASS' || value === 'FAIL' || value === '-999') {
+    // Value data: not PASS, FAIL, 1, 0, or -999
+    if (value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999') {
         return false
     }
     const hasNumericValue = !isNaN(parseFloat(item.VALUE)) && item.VALUE !== ''
@@ -256,9 +257,10 @@ function isValueData(item: NormalizedTestItem): boolean {
 
 function isPassFailData(item: NormalizedTestItem): boolean {
     const value = item.VALUE?.toUpperCase() || ''
-    const status = item.STATUS?.toUpperCase() || ''
-    return (status === 'PASS' || status === 'FAIL' || status === '-1') &&
-        (value === 'PASS' || value === 'FAIL' || value === '-999')
+    // STATUS must be PASS, FAIL, 1, 0, or -1 AND VALUE must be PASS, FAIL, 1, 0, or -999
+    const isStatusPF = isStatusPass(item.STATUS) || isStatusFail(item.STATUS) || item.STATUS === '-1'
+    const isValuePF = value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999'
+    return isStatusPF && isValuePF
 }
 
 // Alias for better naming consistency
@@ -271,9 +273,10 @@ function isNonValueData(item: NormalizedTestItem): boolean {
 }
 
 function getValueClass(item: NormalizedTestItem): string {
-    if (item.VALUE === 'PASS') return 'text-success font-weight-medium'
-    if (item.VALUE === 'FAIL') return 'text-error font-weight-medium'
-    if (item.VALUE === '-999') return 'text-warning'
+    const value = item.VALUE?.toUpperCase() || ''
+    if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
+    if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
+    if (value === '-999') return 'text-warning'
     return ''
 }
 

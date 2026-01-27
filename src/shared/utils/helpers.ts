@@ -243,3 +243,72 @@ export function adjustIplasDisplayTime(dateStr: string | null | undefined, hours
     return dateStr
   }
 }
+
+// ============================================================================
+// iPLAS Status Normalization Utilities
+// ============================================================================
+
+/**
+ * iPLAS API STATUS values can be:
+ * - "PASS" or "1" for passing status
+ * - "FAIL" or "0" for failing status
+ * These helpers normalize status values for consistent handling.
+ */
+
+/**
+ * Check if a STATUS value indicates a PASS result.
+ * Handles both string formats: "PASS" and "1"
+ * @param status - The STATUS value from iPLAS API
+ * @returns true if the status indicates PASS
+ */
+export function isStatusPass(status: string | null | undefined): boolean {
+  if (!status) return false
+  const normalized = status.toUpperCase().trim()
+  return normalized === 'PASS' || normalized === '1'
+}
+
+/**
+ * Check if a STATUS value indicates a FAIL result.
+ * Handles both string formats: "FAIL" and "0"
+ * @param status - The STATUS value from iPLAS API
+ * @returns true if the status indicates FAIL
+ */
+export function isStatusFail(status: string | null | undefined): boolean {
+  if (!status) return false
+  const normalized = status.toUpperCase().trim()
+  return normalized === 'FAIL' || normalized === '0'
+}
+
+/**
+ * Normalize a STATUS value to standard "PASS" or "FAIL" string.
+ * @param status - The STATUS value from iPLAS API ("PASS", "FAIL", "1", "0")
+ * @returns "PASS", "FAIL", or the original status if not recognized
+ */
+export function normalizeStatus(status: string | null | undefined): string {
+  if (!status) return status ?? ''
+  const normalized = status.toUpperCase().trim()
+  if (normalized === 'PASS' || normalized === '1') return 'PASS'
+  if (normalized === 'FAIL' || normalized === '0') return 'FAIL'
+  return status
+}
+
+/**
+ * Get the appropriate color for a STATUS chip.
+ * @param status - The STATUS value from iPLAS API
+ * @returns 'success' for PASS, 'error' for FAIL, 'grey' for unknown
+ */
+export function getStatusColor(status: string | null | undefined): 'success' | 'error' | 'grey' {
+  if (isStatusPass(status)) return 'success'
+  if (isStatusFail(status)) return 'error'
+  return 'grey'
+}
+
+/**
+ * Get the display text for a STATUS value.
+ * Normalizes "1" to "PASS" and "0" to "FAIL" for consistent display.
+ * @param status - The STATUS value from iPLAS API
+ * @returns "PASS", "FAIL", or the original status for display
+ */
+export function getStatusDisplayText(status: string | null | undefined): string {
+  return normalizeStatus(status)
+}

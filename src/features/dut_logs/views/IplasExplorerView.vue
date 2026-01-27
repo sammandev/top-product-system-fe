@@ -290,9 +290,9 @@
                                             :items="filterTestItems(record.TestItem)" :items-per-page="25"
                                             density="compact" class="elevation-1">
                                             <template #item.STATUS="{ item }">
-                                                <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'"
+                                                <v-chip :color="getStatusColor(item.STATUS)"
                                                     size="x-small">
-                                                    {{ item.STATUS }}
+                                                    {{ normalizeStatus(item.STATUS) }}
                                                 </v-chip>
                                             </template>
                                             <template #item.VALUE="{ item }">
@@ -365,7 +365,7 @@ import { ref, computed, onMounted } from 'vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
 import type { Station, TestItem, CsvTestItemData, DownloadAttachmentInfo } from '@/features/dut_logs/composables/useIplasApi'
-import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
+import { adjustIplasDisplayTime, getStatusColor, normalizeStatus, isStatusPass, isStatusFail } from '@/shared/utils/helpers'
 
 const {
     loading,
@@ -447,8 +447,8 @@ const testItemHeaders = [
 // Helper functions for filtering test items
 function isValueData(item: TestItem): boolean {
     const value = item.VALUE?.toUpperCase() || ''
-    // Value data: not PASS, FAIL, or -999 and has at least 2 numeric fields
-    if (value === 'PASS' || value === 'FAIL' || value === '-999') {
+    // Value data: not PASS, FAIL, 1, 0, or -999 and has at least 2 numeric fields
+    if (value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999') {
         return false
     }
     // Check if VALUE, UCL, or LCL contain numeric data
@@ -461,10 +461,10 @@ function isValueData(item: TestItem): boolean {
 
 function isPassFailData(item: TestItem): boolean {
     const value = item.VALUE?.toUpperCase() || ''
-    const status = item.STATUS?.toUpperCase() || ''
-    // STATUS must be PASS, FAIL, or -1 AND VALUE must be PASS, FAIL, or -999
-    return (status === 'PASS' || status === 'FAIL' || status === '-1') &&
-        (value === 'PASS' || value === 'FAIL' || value === '-999')
+    // STATUS must be PASS, FAIL, 1, 0, or -1 AND VALUE must be PASS, FAIL, 1, 0, or -999
+    const isStatusPF = isStatusPass(item.STATUS) || isStatusFail(item.STATUS) || item.STATUS === '-1'
+    const isValuePF = value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999'
+    return isStatusPF && isValuePF
 }
 
 function isNonValueData(item: TestItem): boolean {
@@ -497,9 +497,10 @@ function filterTestItems(items: TestItem[] | undefined): TestItem[] {
 }
 
 function getValueClass(item: TestItem): string {
-    if (item.VALUE === 'PASS') return 'text-success font-weight-medium'
-    if (item.VALUE === 'FAIL') return 'text-error font-weight-medium'
-    if (item.VALUE === '-999') return 'text-warning'
+    const value = item.VALUE?.toUpperCase() || ''
+    if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
+    if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
+    if (value === '-999') return 'text-warning'
     return ''
 }
 

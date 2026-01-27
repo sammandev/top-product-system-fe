@@ -10,6 +10,11 @@
                 <v-icon start>mdi-barcode-scan</v-icon>
                 ISN Search
             </v-tab>
+            <v-tab value="isn2">
+                <v-icon start>mdi-barcode-scan</v-icon>
+                ISN Search 2
+                <v-chip size="x-small" color="info" class="ml-1">NEW</v-chip>
+            </v-tab>
         </v-tabs>
 
         <v-window v-model="searchMode">
@@ -347,9 +352,9 @@
                                                 :items-per-page="25" density="compact" fixed-header height="400"
                                                 class="elevation-1 v-table--striped">
                                                 <template #item.STATUS="{ item }">
-                                                    <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'"
+                                                    <v-chip :color="getStatusColor(item.STATUS)"
                                                         size="x-small">
-                                                        {{ item.STATUS }}
+                                                        {{ normalizeStatus(item.STATUS) }}
                                                     </v-chip>
                                                 </template>
                                                 <template #item.VALUE="{ item }">
@@ -426,6 +431,11 @@
             <v-window-item value="isn" eager>
                 <IplasIsnSearchContent />
             </v-window-item>
+
+            <!-- ISN Search 2 Mode (with custom scoring) -->
+            <v-window-item value="isn2" eager>
+                <IplasIsnSearchContent2 />
+            </v-window-item>
         </v-window>
 
         <!-- Test Items Details Dialog -->
@@ -443,8 +453,9 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, watch } from 'vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
-import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
+import { adjustIplasDisplayTime, getStatusColor, normalizeStatus, isStatusPass, isStatusFail } from '@/shared/utils/helpers'
 import IplasIsnSearchContent from './IplasIsnSearchContent.vue'
+import IplasIsnSearchContent2 from './IplasIsnSearchContent2.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 import type { Station, TestItem, CsvTestItemData, DownloadAttachmentInfo } from '@/features/dut_logs/api/iplasApi'
@@ -892,7 +903,8 @@ watch(groupedByStation, (groups) => {
 // Helper functions
 function isValueData(item: TestItem): boolean {
     const value = item.VALUE?.toUpperCase() || ''
-    if (value === 'PASS' || value === 'FAIL' || value === '-999') {
+    // Value data: not PASS, FAIL, 1, 0, or -999
+    if (value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999') {
         return false
     }
     const hasNumericValue = !isNaN(parseFloat(item.VALUE)) && item.VALUE !== ''
@@ -905,8 +917,10 @@ function isValueData(item: TestItem): boolean {
 function isBinData(item: TestItem): boolean {
     const value = item.VALUE?.toUpperCase() || ''
     const status = item.STATUS?.toUpperCase() || ''
-    return (status === 'PASS' || status === 'FAIL' || status === '-1') &&
-        (value === 'PASS' || value === 'FAIL' || value === '-999')
+    // STATUS must be PASS, FAIL, 1, 0, or -1 AND VALUE must be PASS, FAIL, 1, 0, or -999
+    const isStatusPF = status === 'PASS' || status === 'FAIL' || status === '1' || status === '0' || status === '-1'
+    const isValuePF = value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999'
+    return isStatusPF && isValuePF
 }
 
 function isNonValueData(item: TestItem): boolean {
@@ -988,9 +1002,10 @@ function formatLocalTime(utcTimeStr: string): string {
 }
 
 function getValueClass(item: TestItem): string {
-    if (item.VALUE === 'PASS') return 'text-success font-weight-medium'
-    if (item.VALUE === 'FAIL') return 'text-error font-weight-medium'
-    if (item.VALUE === '-999') return 'text-warning'
+    const value = item.VALUE?.toUpperCase() || ''
+    if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
+    if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
+    if (value === '-999') return 'text-warning'
     return ''
 }
 

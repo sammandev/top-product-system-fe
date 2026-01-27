@@ -379,9 +379,9 @@
                                                 :items-per-page="25" density="compact" fixed-header height="400"
                                                 class="elevation-1 v-table--striped">
                                                 <template #item.STATUS="{ item }">
-                                                    <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'"
+                                                    <v-chip :color="getStatusColor(item.STATUS)"
                                                         size="x-small">
-                                                        {{ item.STATUS }}
+                                                        {{ normalizeStatus(item.STATUS) }}
                                                     </v-chip>
                                                 </template>
                                                 <template #item.VALUE="{ item }">
@@ -449,7 +449,7 @@ import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
 import IplasTestItemsFullscreenDialog from './IplasTestItemsFullscreenDialog.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 import type { IsnSearchData, IsnSearchTestItem, DownloadAttachmentInfo } from '@/features/dut_logs/api/iplasApi'
-import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
+import { adjustIplasDisplayTime, getStatusColor, normalizeStatus, isStatusPass, isStatusFail } from '@/shared/utils/helpers'
 
 interface StationGroup {
     stationName: string
@@ -558,7 +558,8 @@ const allExpanded = computed(() => {
 // Helper functions
 function isValueData(item: IsnSearchTestItem): boolean {
     const value = item.VALUE?.toUpperCase() || ''
-    if (value === 'PASS' || value === 'FAIL' || value === '-999') {
+    // Value data: not PASS, FAIL, 1, 0, or -999
+    if (value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999') {
         return false
     }
     const hasNumericValue = !isNaN(parseFloat(item.VALUE)) && item.VALUE !== ''
@@ -570,9 +571,10 @@ function isValueData(item: IsnSearchTestItem): boolean {
 
 function isPassFailData(item: IsnSearchTestItem): boolean {
     const value = item.VALUE?.toUpperCase() || ''
-    const status = item.STATUS?.toUpperCase() || ''
-    return (status === 'PASS' || status === 'FAIL' || status === '-1') &&
-        (value === 'PASS' || value === 'FAIL' || value === '-999')
+    // STATUS must be PASS, FAIL, 1, 0, or -1 AND VALUE must be PASS, FAIL, 1, 0, or -999
+    const isStatusPF = isStatusPass(item.STATUS) || isStatusFail(item.STATUS) || item.STATUS === '-1'
+    const isValuePF = value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999'
+    return isStatusPF && isValuePF
 }
 
 // Alias for better naming consistency
@@ -647,9 +649,10 @@ function formatShortTime(timeStr: string): string {
 }
 
 function getValueClass(item: IsnSearchTestItem): string {
-    if (item.VALUE === 'PASS') return 'text-success font-weight-medium'
-    if (item.VALUE === 'FAIL') return 'text-error font-weight-medium'
-    if (item.VALUE === '-999') return 'text-warning'
+    const value = item.VALUE?.toUpperCase() || ''
+    if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
+    if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
+    if (value === '-999') return 'text-warning'
     return ''
 }
 
