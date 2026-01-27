@@ -278,7 +278,7 @@
         </v-row>
 
         <!-- Error Display -->
-        <v-snackbar v-model="showError" color="error" :timeout="6000" location="top">
+        <v-snackbar v-model="showError" color="error" :timeout="6000" location="bottom">
             <div class="d-flex align-center">
                 <v-icon start>mdi-alert-circle</v-icon>
                 {{ errorMessage }}

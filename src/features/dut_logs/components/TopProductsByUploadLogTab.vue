@@ -126,7 +126,7 @@
     </v-row>
 
     <!-- Error Display -->
-    <v-snackbar v-model="errorSnackbar" color="error" :timeout="5000" location="top">
+    <v-snackbar v-model="errorSnackbar" color="error" :timeout="5000" location="bottom">
         {{ errorMessage }}
         <template #actions>
             <v-btn variant="text" @click="errorSnackbar = false">

@@ -165,7 +165,7 @@
         </v-window>
 
         <!-- Copy Success Snackbar -->
-        <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="top">
+        <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
             <v-icon start>mdi-check</v-icon>
             Copied to clipboard!
         </v-snackbar>

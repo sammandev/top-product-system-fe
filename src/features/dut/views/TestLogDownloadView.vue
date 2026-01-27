@@ -558,7 +558,7 @@
 
 
         <!-- Success Notification -->
-        <v-snackbar v-model="showSuccess" color="success" timeout="3000">
+        <v-snackbar v-model="showSuccess" color="success" timeout="3000" location="bottom">
             <v-icon class="mr-2">mdi-check-circle</v-icon>
             Test log downloaded successfully!
         </v-snackbar>

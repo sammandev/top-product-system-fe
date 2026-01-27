@@ -103,7 +103,12 @@
                     </v-col>
                     <v-col cols="12" md="4">
                         <v-select v-model="testItemFilter" :items="testItemFilterOptions" item-title="title" 
-                            item-value="value" label="Data Type" variant="outlined" density="compact" hide-details />
+                            item-value="value" label="Data Type" variant="outlined" density="compact" hide-details
+                            multiple chips closable-chips>
+                            <template #chip="{ props, item }">
+                                <v-chip v-bind="props" :text="item.title" size="small" />
+                            </template>
+                        </v-select>
                     </v-col>
                     <v-col cols="12" md="3">
                         <div class="d-flex align-center justify-end h-100">
@@ -140,7 +145,7 @@
     </v-dialog>
 
     <!-- Copy Success Snackbar -->
-    <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="top">
+    <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
         <v-icon start>mdi-check</v-icon>
         Copied to clipboard!
     </v-snackbar>
@@ -205,16 +210,16 @@ const isOpen = computed({
 })
 
 // Filter controls
-const testItemFilter = ref<'all' | 'value' | 'non-value' | 'bin'>('value')
+const testItemFilter = ref<('all' | 'value' | 'non-value' | 'bin')[]>(['value'])
 const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
 const searchTerms = ref<string[]>([])
 const showCopySuccess = ref(false)
 
-// Filter options for dropdown (Value Data is default)
+// Filter options for dropdown (Criteria Data is default)
 const testItemFilterOptions = [
-    { title: 'Value Data ★', value: 'value' },
+    { title: 'Criteria Data ★', value: 'value' },
     { title: 'Show All', value: 'all' },
-    { title: 'Non-Value', value: 'non-value' },
+    { title: 'Non-Criteria', value: 'non-value' },
     { title: 'Bin Data', value: 'bin' }
 ]
 
@@ -312,17 +317,22 @@ const filteredTestItems = computed(() => {
 
     let items = [...props.record.testItems]
 
-    // Apply test item type filter
-    switch (testItemFilter.value) {
-        case 'value':
-            items = items.filter(isValueData)
-            break
-        case 'non-value':
-            items = items.filter(isNonValueData)
-            break
-        case 'bin':
-            items = items.filter(isBinData)
-            break
+    // Apply test item type filter (supports multiple selections)
+    if (testItemFilter.value.length > 0 && !testItemFilter.value.includes('all')) {
+        items = items.filter(item => {
+            return testItemFilter.value.some(filterType => {
+                switch (filterType) {
+                    case 'value':
+                        return isValueData(item)
+                    case 'non-value':
+                        return isNonValueData(item)
+                    case 'bin':
+                        return isBinData(item)
+                    default:
+                        return true
+                }
+            })
+        })
     }
 
     // Apply test status filter

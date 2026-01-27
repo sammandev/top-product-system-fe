@@ -426,13 +426,13 @@
         </v-card>
 
         <!-- Success Notification -->
-        <v-snackbar v-model="showSuccess" color="success" timeout="3000">
+        <v-snackbar v-model="showSuccess" color="success" timeout="3000" location="bottom">
             <v-icon class="mr-2">mdi-check-circle</v-icon>
             Test log downloaded successfully!
         </v-snackbar>
 
         <!-- Copy Success Notification -->
-        <v-snackbar v-model="showCopySuccess" color="info" timeout="2000">
+        <v-snackbar v-model="showCopySuccess" color="info" timeout="2000" location="bottom">
             <v-icon class="mr-2">mdi-content-copy</v-icon>
             Copied to clipboard!
         </v-snackbar>

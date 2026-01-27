@@ -6,7 +6,7 @@
                     <v-icon class="mr-2">mdi-cog</v-icon>
                     Configure Station: {{ station?.display_station_name }}
                 </div>
-                <v-btn icon="mdi-close" variant="text" @click="handleClose" />
+                <v-btn icon="mdi-close" variant="text" color="white" @click="handleClose" />
             </v-card-title>
 
             <v-card-subtitle class="pa-3 bg-grey-lighten-4">
@@ -144,11 +144,11 @@
                                     </v-btn>
                                     <v-btn size="small" variant="outlined" color="success"
                                         @click="selectValueTestItems">
-                                        Value
+                                        Criteria
                                     </v-btn>
                                     <v-btn size="small" variant="outlined" color="warning"
                                         @click="selectNonValueTestItems">
-                                        Non-Value
+                                        Non-Criteria
                                     </v-btn>
                                     <v-btn size="small" variant="outlined" color="grey"
                                         @click="selectBinTestItems">
@@ -368,7 +368,7 @@ function selectValueTestItems(): void {
 }
 
 function selectNonValueTestItems(): void {
-    // Non-Value: items that are NOT value AND NOT bin (e.g., items with empty/non-numeric values)
+    // Non-Criteria: items that are NOT value AND NOT bin (e.g., items with empty/non-numeric values)
     localConfig.value.selectedTestItems = props.availableTestItems
         .filter(item => !item.isValue && !item.isBin)
         .map(item => item.name)
@@ -386,9 +386,9 @@ function clearTestItemSelection(): void {
 }
 
 function getTestItemTypeLabel(item: TestItemInfo): string {
-    if (item.isValue) return 'VALUE'
+    if (item.isValue) return 'CRITERIA'
     if (item.isBin) return 'BIN'
-    return 'NON-VALUE'
+    return 'NON-CRITERIA'
 }
 
 function getTestItemTypeColor(item: TestItemInfo): string {

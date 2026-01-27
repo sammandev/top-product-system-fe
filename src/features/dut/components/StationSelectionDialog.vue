@@ -6,7 +6,7 @@
                     <v-icon class="mr-2">mdi-format-list-checkbox</v-icon>
                     Select Stations
                 </div>
-                <v-btn icon="mdi-close" variant="text" @click="handleClose" />
+                <v-btn icon="mdi-close" variant="text" color="white" @click="handleClose" />
             </v-card-title>
 
             <v-card-subtitle class="pa-3 bg-grey-lighten-4">
