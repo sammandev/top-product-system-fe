@@ -1101,7 +1101,31 @@ async function handleSearch(): Promise<void> {
         for (const isn of isnList) {
             try {
                 const data = await searchByIsn(isn)
-                allRecords.push(...data)
+                // Map IplasIsnSearchRecord to IsnSearchData
+                const mappedData: IsnSearchData[] = data.map(record => ({
+                    isn: record.ISN || '',
+                    device_id: record.DEVICEID || '',
+                    site: record.SITE || '',
+                    project: record.PROJECT || '',
+                    line: record.LINE || '',
+                    station_name: record.STATION || '',
+                    display_station_name: record.TSP || record.STATION || '',
+                    error_code: record.ERRORCODE || '',
+                    error_name: record.ERRORNAME || '',
+                    test_status: record.TESTSTATUS || '',
+                    test_start_time: record.TESTSTARTTIME || '',
+                    test_end_time: record.TESTENDTIME || '',
+                    test_item: Array.isArray(record.TESTITEM) ? record.TESTITEM : [],
+                    slot: '',
+                    error_message: '',
+                    total_testing_time: '',
+                    mo: '',
+                    pn: '',
+                    sn: '',
+                    file_token: '',
+                    project_token: ''
+                }))
+                allRecords.push(...mappedData)
             } catch (err) {
                 console.warn(`Failed to fetch records for ISN ${isn}:`, err)
             }

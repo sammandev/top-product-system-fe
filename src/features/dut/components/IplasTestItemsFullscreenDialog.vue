@@ -154,8 +154,9 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
+import type { ScoringType } from '../types/scoring.types'
 
-// Normalized test item interface
+// Normalized test item interface with optional scoring data
 export interface NormalizedTestItem {
     NAME: string
     STATUS: 'PASS' | 'FAIL' | string
@@ -163,6 +164,10 @@ export interface NormalizedTestItem {
     UCL: string
     LCL: string
     CYLCE?: string
+    // Optional scoring data (populated when scores are calculated)
+    score?: number
+    scoringType?: ScoringType
+    deviation?: number
 }
 
 // Normalized record interface that works for both Station Search and ISN Search
@@ -187,6 +192,10 @@ export interface NormalizedRecord {
     testEndTime: string
     // Test items
     testItems: NormalizedTestItem[]
+    // Optional overall scoring data
+    overallScore?: number
+    valueItemsScore?: number | null
+    binItemsScore?: number | null
 }
 
 interface Props {

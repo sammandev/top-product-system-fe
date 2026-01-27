@@ -410,8 +410,8 @@
             </v-window-item>
         </v-window>
 
-        <!-- Fullscreen Dialog -->
-        <IplasTestItemsFullscreenDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
+        <!-- Test Items Details Dialog -->
+        <TopProductIplasDetailsDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
             :downloading="fullscreenDownloading" @download="downloadFromFullscreen" />
 
         <!-- Copy Success Snackbar -->
@@ -427,7 +427,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
 import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 import IplasIsnSearchContent from './IplasIsnSearchContent.vue'
-import IplasTestItemsFullscreenDialog from './IplasTestItemsFullscreenDialog.vue'
+import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 import type { Station, TestItem, CsvTestItemData, DownloadAttachmentInfo } from '@/features/dut_logs/api/iplasApi'
 
@@ -737,7 +737,7 @@ const groupedByStation = computed<StationGroup[]>(() => {
                 records: []
             }
         }
-        groups[stationName].records.push(record)
+        groups[stationName].records.push(record as CsvTestItemData)
     }
 
     // Sort records within each group by Test end Time descending (latest first)

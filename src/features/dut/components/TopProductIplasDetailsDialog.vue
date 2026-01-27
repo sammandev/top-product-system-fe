@@ -171,7 +171,8 @@
             <div class="flex-grow-1" style="min-height: 0; overflow: hidden;">
                 <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="50"
                     density="comfortable" fixed-header fixed-footer style="height: 100%;"
-                    class="elevation-1 v-table--striped">
+                    class="elevation-1 v-table--striped" :class="{ 'clickable-rows': hasScores }"
+                    @click:row="handleRowClick">
                     <template #item.STATUS="{ item }">
                         <v-chip :color="item.STATUS === 'PASS' ? 'success' : 'error'" size="small">
                             {{ item.STATUS }}
@@ -186,8 +187,156 @@
                     <template #item.LCL="{ item }">
                         <span class="text-medium-emphasis">{{ item.LCL || '-' }}</span>
                     </template>
+                    <template #item.SCORE="{ item }">
+                        <template v-if="item.score !== undefined && item.score !== null">
+                            <v-chip 
+                                :color="getScoreColor(item.score)" 
+                                size="small" 
+                                variant="flat"
+                                class="font-weight-bold cursor-pointer"
+                                @click.stop="showScoreBreakdown(item)">
+                                {{ item.score.toFixed(3) }}
+                                <v-icon size="x-small" end>mdi-information-outline</v-icon>
+                            </v-chip>
+                        </template>
+                        <span v-else class="text-medium-emphasis">-</span>
+                    </template>
                 </v-data-table>
             </div>
+
+            <!-- Overall Score Badge (if available) -->
+            <div v-if="record.overallScore !== undefined" class="flex-shrink-0 px-3 py-2 bg-surface">
+                <div class="d-flex align-center justify-end gap-4">
+                    <v-chip color="primary" variant="tonal" prepend-icon="mdi-chart-line">
+                        <strong>Overall Score:</strong>&nbsp;
+                        <span :class="getScoreColorClass(record.overallScore)">
+                            {{ record.overallScore.toFixed(3) }}
+                        </span>
+                    </v-chip>
+                    <v-chip v-if="record.valueItemsScore !== null && record.valueItemsScore !== undefined" 
+                        color="success" variant="outlined" size="small">
+                        Value Items: {{ record.valueItemsScore.toFixed(3) }}
+                    </v-chip>
+                    <v-chip v-if="record.binItemsScore !== null && record.binItemsScore !== undefined" 
+                        color="info" variant="outlined" size="small">
+                        Binary Items: {{ record.binItemsScore.toFixed(3) }}
+                    </v-chip>
+                </div>
+            </div>
+        </v-card>
+    </v-dialog>
+
+    <!-- Score Breakdown Dialog -->
+    <v-dialog v-model="showBreakdownDialog" max-width="500px" persistent>
+        <v-card v-if="selectedTestItem">
+            <v-card-title class="d-flex align-center bg-primary">
+                <v-icon class="mr-2" color="white">mdi-calculator-variant</v-icon>
+                <span class="text-white">Score Breakdown</span>
+                <v-spacer />
+                <v-btn icon="mdi-close" variant="text" color="white" size="small" @click="showBreakdownDialog = false" />
+            </v-card-title>
+            <v-card-text class="pt-4">
+                <!-- Test Item Name -->
+                <v-alert color="info" variant="tonal" density="compact" class="mb-4">
+                    <div class="text-subtitle-2 font-weight-bold">{{ selectedTestItem.NAME }}</div>
+                </v-alert>
+
+                <!-- Score Details -->
+                <v-list density="compact" class="rounded border">
+                    <v-list-item>
+                        <template #prepend>
+                            <v-icon color="primary">mdi-target</v-icon>
+                        </template>
+                        <v-list-item-title>Measured Value</v-list-item-title>
+                        <template #append>
+                            <span class="font-weight-bold">{{ selectedTestItem.VALUE }}</span>
+                        </template>
+                    </v-list-item>
+                    
+                    <v-divider />
+                    
+                    <v-list-item>
+                        <template #prepend>
+                            <v-icon color="error">mdi-arrow-up-bold</v-icon>
+                        </template>
+                        <v-list-item-title>Upper Control Limit (UCL)</v-list-item-title>
+                        <template #append>
+                            <span class="font-weight-medium">{{ selectedTestItem.UCL || '-' }}</span>
+                        </template>
+                    </v-list-item>
+                    
+                    <v-divider />
+                    
+                    <v-list-item>
+                        <template #prepend>
+                            <v-icon color="warning">mdi-arrow-down-bold</v-icon>
+                        </template>
+                        <v-list-item-title>Lower Control Limit (LCL)</v-list-item-title>
+                        <template #append>
+                            <span class="font-weight-medium">{{ selectedTestItem.LCL || '-' }}</span>
+                        </template>
+                    </v-list-item>
+                    
+                    <v-divider />
+                    
+                    <v-list-item>
+                        <template #prepend>
+                            <v-icon color="secondary">mdi-function-variant</v-icon>
+                        </template>
+                        <v-list-item-title>Scoring Algorithm</v-list-item-title>
+                        <template #append>
+                            <v-chip size="small" :color="getScoringTypeColor(selectedTestItem.scoringType)" variant="tonal">
+                                {{ formatScoringType(selectedTestItem.scoringType) }}
+                            </v-chip>
+                        </template>
+                    </v-list-item>
+                    
+                    <v-divider />
+                    
+                    <v-list-item v-if="selectedTestItem.deviation !== undefined">
+                        <template #prepend>
+                            <v-icon color="purple">mdi-delta</v-icon>
+                        </template>
+                        <v-list-item-title>Deviation from Target</v-list-item-title>
+                        <template #append>
+                            <span class="font-weight-medium">{{ selectedTestItem.deviation?.toFixed(4) }}</span>
+                        </template>
+                    </v-list-item>
+                    
+                    <v-divider v-if="selectedTestItem.deviation !== undefined" />
+                    
+                    <v-list-item>
+                        <template #prepend>
+                            <v-icon :color="getScoreColor(selectedTestItem.score ?? 0)">mdi-star</v-icon>
+                        </template>
+                        <v-list-item-title class="font-weight-bold">Final Score</v-list-item-title>
+                        <template #append>
+                            <v-chip size="small" :color="getScoreColor(selectedTestItem.score ?? 0)" variant="flat" class="font-weight-bold">
+                                {{ selectedTestItem.score?.toFixed(3) ?? '-' }}
+                            </v-chip>
+                        </template>
+                    </v-list-item>
+                </v-list>
+
+                <!-- Scoring Formula Explanation -->
+                <v-expansion-panels variant="accordion" class="mt-4">
+                    <v-expansion-panel>
+                        <v-expansion-panel-title>
+                            <v-icon start size="small">mdi-help-circle-outline</v-icon>
+                            How is this score calculated?
+                        </v-expansion-panel-title>
+                        <v-expansion-panel-text>
+                            <div class="text-body-2 text-medium-emphasis">
+                                {{ getScoringExplanation(selectedTestItem.scoringType) }}
+                            </div>
+                        </v-expansion-panel-text>
+                    </v-expansion-panel>
+                </v-expansion-panels>
+            </v-card-text>
+            <v-card-actions>
+                <v-spacer />
+                <v-btn color="primary" variant="tonal" @click="showBreakdownDialog = false">Close</v-btn>
+            </v-card-actions>
         </v-card>
     </v-dialog>
 
@@ -201,6 +350,8 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
+import type { ScoringType } from '../types/scoring.types'
+import { getScoreColor, SCORING_TYPE_INFO } from '../types/scoring.types'
 import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 
 interface Props {
@@ -230,6 +381,10 @@ const testItemFilter = ref<('all' | 'value' | 'non-value' | 'bin')[]>(['value'])
 const searchTerms = ref<string[]>([])
 const showCopySuccess = ref(false)
 
+// Score breakdown dialog
+const showBreakdownDialog = ref(false)
+const selectedTestItem = ref<NormalizedTestItem | null>(null)
+
 // Filter options for dropdown
 const testItemFilterOptions = [
     { title: 'Criteria Data ★', value: 'value' },
@@ -238,13 +393,27 @@ const testItemFilterOptions = [
     { title: 'Bin Data', value: 'bin' }
 ]
 
-const testItemHeaders = [
-    { title: 'Test Item', key: 'NAME', sortable: true },
-    { title: 'Status', key: 'STATUS', sortable: true },
-    { title: 'Value', key: 'VALUE', sortable: true },
-    { title: 'UCL', key: 'UCL', sortable: true },
-    { title: 'LCL', key: 'LCL', sortable: true }
-]
+// Computed: check if scores are available
+const hasScores = computed(() => {
+    return props.record?.testItems?.some(item => item.score !== undefined) ?? false
+})
+
+// Dynamic headers - add Score column if scores are available
+const testItemHeaders = computed(() => {
+    const baseHeaders = [
+        { title: 'Test Item', key: 'NAME', sortable: true },
+        { title: 'Status', key: 'STATUS', sortable: true },
+        { title: 'Value', key: 'VALUE', sortable: true },
+        { title: 'UCL', key: 'UCL', sortable: true },
+        { title: 'LCL', key: 'LCL', sortable: true }
+    ]
+    
+    if (hasScores.value) {
+        baseHeaders.push({ title: 'Score', key: 'SCORE', sortable: true })
+    }
+    
+    return baseHeaders
+})
 
 // Helper functions
 function isValueData(item: NormalizedTestItem): boolean {
@@ -393,6 +562,52 @@ function handleDownload(): void {
     emit('download')
 }
 
+// Score-related helpers
+function getScoreColorClass(score: number): string {
+    if (score >= 0.9) return 'text-success font-weight-bold'
+    if (score >= 0.7) return 'text-primary font-weight-bold'
+    if (score >= 0.5) return 'text-warning font-weight-bold'
+    return 'text-error font-weight-bold'
+}
+
+function getScoringTypeColor(scoringType?: ScoringType): string {
+    if (!scoringType) return 'grey'
+    const info = SCORING_TYPE_INFO[scoringType]
+    return info?.color ?? 'grey'
+}
+
+function formatScoringType(scoringType?: ScoringType): string {
+    if (!scoringType) return 'Unknown'
+    const info = SCORING_TYPE_INFO[scoringType]
+    return info?.label ?? scoringType
+}
+
+function getScoringExplanation(scoringType?: ScoringType): string {
+    const explanations: Record<ScoringType, string> = {
+        'symmetrical': 'Linear scoring where the target is the midpoint between UCL and LCL. Score decreases linearly as the value moves away from target toward either limit.',
+        'symmetrical_nl': 'Non-linear (Gaussian) scoring centered on the midpoint. Score follows a bell curve, with faster degradation near the limits.',
+        'evm': 'EVM-style scoring where lower (more negative) values are better. Score is 1.0 at the limit and decreases as values approach 0.',
+        'throughput': 'Throughput scoring where higher values are better. Score is 1.0 at or above UCL, and decreases toward LCL.',
+        'asymmetrical': 'Scoring with a user-defined target that may not be centered. Score degrades based on deviation from the specified target.',
+        'per_mask': 'PER/MASK scoring where 0 is the ideal value. Score is 1.0 at 0 and decreases as deviation increases.',
+        'binary': 'Simple PASS/FAIL scoring. Score is 1.0 for PASS and 0.0 for FAIL.'
+    }
+    return explanations[scoringType ?? 'binary'] ?? 'Unknown scoring algorithm.'
+}
+
+// Handle row click to show score breakdown
+function handleRowClick(_event: Event, row: { item: NormalizedTestItem }): void {
+    if (hasScores.value && row.item.score !== undefined) {
+        showScoreBreakdown(row.item)
+    }
+}
+
+// Show score breakdown dialog
+function showScoreBreakdown(item: NormalizedTestItem): void {
+    selectedTestItem.value = item
+    showBreakdownDialog.value = true
+}
+
 // Reset filters when record changes - show all data if record has error
 watch(() => props.record, (newRecord) => {
     if (newRecord && newRecord.errorCode !== 'PASS') {
@@ -419,5 +634,15 @@ watch(() => props.record, (newRecord) => {
 
 :deep(.v-theme--dark .v-table--striped tbody tr:nth-of-type(even)) {
     background-color: rgba(255, 255, 255, 0.02);
+}
+
+/* Clickable rows styling when scores are available */
+.clickable-rows :deep(tbody tr) {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.clickable-rows :deep(tbody tr:hover) {
+    background-color: rgba(var(--v-theme-primary), 0.08) !important;
 }
 </style>

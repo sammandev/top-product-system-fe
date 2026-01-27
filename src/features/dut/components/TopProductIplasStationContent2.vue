@@ -283,8 +283,35 @@ function formatDatetimeLocal(date: Date): string {
     return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
-// Normalize record for dialog
+// Normalize record for dialog - includes scoring data if available
 function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
+    // Find matching scored record (by index in original data)
+    const recordIndex = testItemData.value.findIndex(r => 
+        (r.ISN === record.ISN || r.DeviceId === record.DeviceId) &&
+        r.station === record.station &&
+        r['Test end Time'] === record['Test end Time']
+    )
+    const scoredRecord = recordIndex >= 0 ? scoredRecords.value[recordIndex] : null
+    
+    // Build test items with scoring data
+    const testItems: NormalizedTestItem[] = (record.TestItem || []).map((item: TestItem): NormalizedTestItem => {
+        // Find matching score for this test item
+        const itemScore = scoredRecord?.testItemScores?.find(s => s.testItemName === item.NAME)
+        
+        return {
+            NAME: item.NAME,
+            STATUS: item.STATUS,
+            VALUE: item.VALUE,
+            UCL: item.UCL,
+            LCL: item.LCL,
+            CYLCE: item.CYLCE || '',
+            // Include scoring data if available
+            score: itemScore?.score,
+            scoringType: itemScore?.scoringType,
+            deviation: itemScore?.deviation
+        }
+    })
+    
     return {
         isn: record.ISN || '-',
         deviceId: record.DeviceId || '-',
@@ -298,14 +325,11 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
         testStatus: record['Test Status'] || '-',
         testStartTime: record['Test Start Time'] || '-',
         testEndTime: record['Test end Time'] || '-',
-        testItems: (record.TestItem || []).map((item: TestItem): NormalizedTestItem => ({
-            NAME: item.NAME,
-            STATUS: item.STATUS,
-            VALUE: item.VALUE,
-            UCL: item.UCL,
-            LCL: item.LCL,
-            CYLCE: item.CYLCE || ''
-        }))
+        testItems,
+        // Include overall scoring data if available
+        overallScore: scoredRecord?.overallScore,
+        valueItemsScore: scoredRecord?.valueItemsScore,
+        binItemsScore: scoredRecord?.binItemsScore
     }
 }
 
@@ -354,27 +378,21 @@ async function handleCalculateScores(): Promise<void> {
         await calculateScores(records)
         
         // Map scored records back to our score map
+        // Ranking component uses key: `${ISN}_${station}_${Test end Time}`
+        // We need to match scored records back to original records by index
+        // since scoring order is preserved
         const newScores: Record<string, number> = {}
-        scoredRecords.value.forEach(scored => {
-            // Create key matching what we use in ranking component
-            const key = `${scored.isn}_${scored.station}_${scored.testStartTime}`
-            newScores[key] = scored.overallScore
-        })
         
-        // Also create alternative keys for matching
-        testItemData.value.forEach(record => {
+        testItemData.value.forEach((record, index) => {
             const isn = record.ISN || record.DeviceId || '-'
             const station = record.station
-            const testTime = record['Test end Time'] || ''
-            const key = `${isn}_${station}_${testTime}`
+            const testEndTime = record['Test end Time'] || ''
+            const key = `${isn}_${station}_${testEndTime}`
             
-            // Try to find matching scored record
-            const matchedScore = scoredRecords.value.find(s => 
-                (s.isn === isn || s.deviceId === record.DeviceId) &&
-                s.station === station
-            )
-            if (matchedScore) {
-                newScores[key] = matchedScore.overallScore
+            // Get score by index (order is preserved from backend)
+            const scoredRecord = scoredRecords.value[index]
+            if (scoredRecord) {
+                newScores[key] = scoredRecord.overallScore
             }
         })
         
