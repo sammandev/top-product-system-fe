@@ -1,11 +1,17 @@
 <template>
     <v-card class="mb-4">
-        <v-card-title class="d-flex justify-space-between align-center">
+        <v-card-title class="d-flex justify-space-between align-center flex-wrap">
             <div>
                 <v-icon class="mr-2" color="warning">mdi-podium-gold</v-icon>
                 iPLAS Data Ranking by Test Station
             </div>
-            <div class="d-flex align-center gap-2">
+            <div class="d-flex align-center gap-2 flex-wrap">
+                <!-- Bulk Download Button -->
+                <v-btn v-if="selectedItems.length > 0" color="success" variant="outlined" size="small"
+                    prepend-icon="mdi-download-multiple" :loading="bulkDownloading"
+                    @click="handleBulkDownload">
+                    Download Selected ({{ selectedItems.length }})
+                </v-btn>
                 <v-btn v-if="!hasScores" color="primary" variant="outlined" size="small" prepend-icon="mdi-calculator"
                     :loading="calculatingScores" @click="emit('calculate-scores')">
                     Calculate Scores
@@ -74,9 +80,10 @@
                         </v-col>
                     </v-row>
 
-                    <!-- Data Table -->
-                    <v-data-table :headers="rankingHeaders" :items="filteredRanking" :items-per-page="25"
-                        density="comfortable" class="elevation-1 ranking-table cursor-pointer" :row-props="getRowProps"
+                    <!-- Data Table with Selection -->
+                    <v-data-table v-model="selectedItems" :headers="rankingHeaders" :items="filteredRanking" 
+                        :items-per-page="25" density="comfortable" class="elevation-1 ranking-table cursor-pointer" 
+                        :row-props="getRowProps" show-select item-value="key" return-object
                         @click:row="(_event: any, data: any) => handleRowClick(data.item, station as string)">
                         <!-- Rank Column -->
                         <template #item.rank="{ item }">
@@ -102,14 +109,37 @@
                             </div>
                         </template>
 
-                        <!-- ISN Column -->
+                        <!-- ISN Column with Copy Icon -->
                         <template #item.isn="{ item }">
-                            <div class="font-weight-medium font-mono">{{ item.isn }}</div>
+                            <div class="d-flex align-center">
+                                <span class="font-weight-medium font-mono">{{ item.isn }}</span>
+                                <v-btn icon size="x-small" variant="text" class="ml-1" @click.stop="copyToClipboard(item.isn)">
+                                    <v-icon size="small">mdi-content-copy</v-icon>
+                                    <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
+                                </v-btn>
+                            </div>
                         </template>
 
                         <!-- Device Column -->
                         <template #item.device="{ item }">
                             <v-chip size="small" variant="outlined">{{ item.device || '-' }}</v-chip>
+                        </template>
+
+                        <!-- Test End Time Column -->
+                        <template #item.testDate="{ item }">
+                            <span class="text-caption">{{ item.testDate }}</span>
+                        </template>
+
+                        <!-- Duration Column -->
+                        <template #item.duration="{ item }">
+                            <span class="text-caption text-medium-emphasis">{{ item.duration }}</span>
+                        </template>
+
+                        <!-- Status Column -->
+                        <template #item.status="{ item }">
+                            <v-chip :color="item.hasError ? 'error' : 'success'" size="small">
+                                {{ item.hasError ? item.errorCode : 'PASS' }}
+                            </v-chip>
                         </template>
 
                         <!-- Score Column -->
@@ -126,18 +156,6 @@
                             <template v-else>
                                 <span class="text-medium-emphasis">-</span>
                             </template>
-                        </template>
-
-                        <!-- Test Date Column -->
-                        <template #item.testDate="{ item }">
-                            <span class="text-caption">{{ item.testDate }}</span>
-                        </template>
-
-                        <!-- Status Column -->
-                        <template #item.status="{ item }">
-                            <v-chip :color="item.hasError ? 'error' : 'success'" size="small">
-                                {{ item.hasError ? item.errorCode : 'PASS' }}
-                            </v-chip>
                         </template>
 
                         <!-- Actions Column -->
@@ -170,12 +188,14 @@ interface Props {
 }
 
 interface RankingItem {
+    key: string  // Unique key for selection
     rank: number
     isn: string
     device: string
     testDate: string
     testStartTime: string
     testEndTime: string
+    duration: string  // Formatted duration string
     score: number | null
     hasError: boolean
     errorCode: string
@@ -188,6 +208,7 @@ const props = defineProps<Props>()
 const emit = defineEmits<{
     (e: 'row-click', payload: { record: CsvTestItemData; stationName: string }): void
     (e: 'download', payload: { record: CsvTestItemData; stationName: string }): void
+    (e: 'bulk-download', payload: { records: CsvTestItemData[]; stationName: string }): void
     (e: 'calculate-scores'): void
 }>()
 
@@ -198,6 +219,10 @@ const debouncedSearchQuery = ref<string>('')
 const statusFilter = ref<string | null>(null)
 const deviceFilter = ref<string[]>([])
 
+// Selection state for bulk actions
+const selectedItems = ref<RankingItem[]>([])
+const bulkDownloading = ref(false)
+
 // Debounce search query updates (300ms delay)
 const updateDebouncedSearch = useDebounceFn((value: string) => {
     debouncedSearchQuery.value = value
@@ -206,19 +231,26 @@ const updateDebouncedSearch = useDebounceFn((value: string) => {
 // Watch for search query changes and debounce
 watch(searchQuery, (value) => updateDebouncedSearch(value))
 
+// Clear selection when tab changes
+watch(selectedTab, () => {
+    selectedItems.value = []
+})
+
 // Filter options
 const statusFilterOptions = [
     { title: 'Passed Only', value: 'passed' },
     { title: 'Failed Only', value: 'failed' }
 ]
 
+// Updated headers: [Checkbox] [#] [DUT ISN] [Device ID] [Test End] [Duration] [Status] [Actions]
 const rankingHeaders = [
-    { title: '#', key: 'rank', sortable: false, width: '80px' },
-    { title: 'DUT ISN', key: 'isn', sortable: true },
-    { title: 'Device ID', key: 'device', sortable: true },
-    { title: 'Test End Time', key: 'testDate', sortable: true, width: '200px' },
-    { title: 'Status', key: 'status', sortable: true },
-    { title: 'Score', key: 'score', sortable: true, width: '100px' },
+    { title: '#', key: 'rank', sortable: false, width: '60px' },
+    { title: 'DUT ISN', key: 'isn', sortable: true, width: '180px' },
+    { title: 'Device ID', key: 'device', sortable: true, width: '100px' },
+    { title: 'Test End', key: 'testDate', sortable: true, width: '160px' },
+    { title: 'Duration', key: 'duration', sortable: true, width: '90px' },
+    { title: 'Status', key: 'status', sortable: true, width: '90px' },
+    { title: 'Score', key: 'score', sortable: true, width: '80px' },
     { title: 'Actions', key: 'actions', sortable: false, width: '80px' }
 ]
 
@@ -238,13 +270,23 @@ const rankingByStation = computed(() => {
         const scoreKey = `${record.ISN || record.DeviceId}_${stationName}_${record['Test end Time']}`
         const score = props.scores?.[scoreKey] ?? null
 
+        // Calculate duration from start and end times
+        const startTime = record['Test Start Time']
+        const endTime = record['Test end Time']
+        const duration = calculateDuration(startTime, endTime)
+
+        // Generate unique key for selection
+        const uniqueKey = `${record.ISN}_${stationName}_${record['Test Start Time']}`
+
         stationMap[stationName].push({
+            key: uniqueKey,
             rank: 0,
             isn: record.ISN || '-',
             device: record.DeviceId || '-',
             testDate: adjustIplasDisplayTime(record['Test end Time'], 1) || '-',
             testStartTime: record['Test Start Time'] || '',
             testEndTime: record['Test end Time'] || '',
+            duration: duration,
             score: hasError ? null : score,
             hasError: hasError,
             errorCode: record.ErrorCode || '-',
@@ -414,6 +456,68 @@ function handleRowClick(item: RankingItem, stationName: string) {
 
 function handleDownloadDetails(item: RankingItem, stationName: string) {
     emit('download', { record: item.originalRecord, stationName })
+}
+
+/**
+ * Calculate duration between start and end times
+ * Returns formatted string like "5m 30s" or "1h 15m"
+ */
+function calculateDuration(startTime: string, endTime: string): string {
+    if (!startTime || !endTime) return '-'
+    
+    try {
+        const start = new Date(startTime).getTime()
+        const end = new Date(endTime).getTime()
+        
+        if (isNaN(start) || isNaN(end)) return '-'
+        
+        const diffMs = end - start
+        if (diffMs < 0) return '-'
+        
+        const seconds = Math.floor(diffMs / 1000)
+        const minutes = Math.floor(seconds / 60)
+        const hours = Math.floor(minutes / 60)
+        
+        if (hours > 0) {
+            return `${hours}h ${minutes % 60}m`
+        } else if (minutes > 0) {
+            return `${minutes}m ${seconds % 60}s`
+        } else {
+            return `${seconds}s`
+        }
+    } catch {
+        return '-'
+    }
+}
+
+/**
+ * Copy text to clipboard with user feedback
+ */
+async function copyToClipboard(text: string): Promise<void> {
+    if (!text || text === '-') return
+    
+    try {
+        await navigator.clipboard.writeText(text)
+        // You could add a snackbar notification here if available
+        console.log(`Copied to clipboard: ${text}`)
+    } catch (err) {
+        console.error('Failed to copy to clipboard:', err)
+    }
+}
+
+/**
+ * Handle bulk download of selected items
+ */
+async function handleBulkDownload(): Promise<void> {
+    if (selectedItems.value.length === 0) return
+    
+    bulkDownloading.value = true
+    try {
+        const records = selectedItems.value.map(item => item.originalRecord)
+        emit('bulk-download', { records, stationName: selectedTab.value })
+    } finally {
+        bulkDownloading.value = false
+    }
 }
 </script>
 

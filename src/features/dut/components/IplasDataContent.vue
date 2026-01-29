@@ -174,7 +174,7 @@
                             </v-col>
                         </v-row>
                         <!-- Possibly Truncated Warning -->
-                        <v-row v-if="possiblyTruncated && testItemData.length > 0" class="mt-2">
+                        <v-row v-if="possiblyTruncated && hasRegularModeData" class="mt-2">
                             <v-col cols="12">
                                 <v-alert type="warning" density="compact" variant="tonal" closable>
                                     <v-icon start>mdi-alert</v-icon>
@@ -186,13 +186,13 @@
                     </v-card-text>
                 </v-card>
 
-                <!-- Test Items Results -->
-                <v-card v-if="testItemData.length > 0" elevation="2" class="mb-4">
+                <!-- Test Items Results (Regular Mode) -->
+                <v-card v-if="!useIndexedDbMode && hasRegularModeData" elevation="2" class="mb-4">
                     <v-card-title class="d-flex align-center justify-space-between flex-wrap">
                         <div class="d-flex align-center">
                             <v-icon class="mr-2" color="info">mdi-format-list-checks</v-icon>
                             Test Results
-                            <v-chip size="small" color="info" class="ml-2">{{ testItemData.length }} records</v-chip>
+                            <v-chip size="small" color="info" class="ml-2">{{ regularModeRecordCount }} records</v-chip>
                         </div>
                         <div class="d-flex align-center gap-2">
                             <v-btn v-if="selectedRecordIndices.length > 0" color="success" variant="outlined"
@@ -553,6 +553,18 @@ const deviceIdsByStation = ref<Record<string, string[]>>({})
 // Mode: 'full' loads complete records, 'compact' uses lazy loading for test items
 // Compact mode is more memory efficient for large datasets
 const useCompactMode = ref(true)
+
+// Computed: Check if there's regular mode data (either testItemData or compactTestItemData)
+const hasRegularModeData = computed(() => {
+    return testItemData.value.length > 0 || compactTestItemData.value.length > 0
+})
+
+// Computed: Get the total count of regular mode records
+const regularModeRecordCount = computed(() => {
+    return useCompactMode.value && compactTestItemData.value.length > 0
+        ? compactTestItemData.value.length
+        : testItemData.value.length
+})
 
 // IndexedDB Mode: Stream data directly to disk instead of keeping in memory
 // This is the most memory-efficient mode for large datasets (10,000+ records)

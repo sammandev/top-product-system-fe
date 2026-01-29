@@ -103,7 +103,7 @@
         <!-- Results Section with Ranking Table -->
         <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
             :calculating-scores="calculatingScores" @row-click="handleRowClick" @download="handleDownloadRecord"
-            @calculate-scores="handleCalculateScores" />
+            @bulk-download="handleBulkDownloadRecords" @calculate-scores="handleCalculateScores" />
 
         <!-- Station Selection Dialog -->
         <StationSelectionDialog v-model:show="showStationSelectionDialog" :site="selectedSite || ''"
@@ -349,6 +349,22 @@ async function handleDownloadRecord(payload: { record: CsvTestItemData; stationN
     const station = record.TSP || record.station
 
     await downloadAttachments(selectedSite.value, selectedProject.value, [{ isn, time, deviceid, station }])
+}
+
+// Handle bulk download from ranking table
+async function handleBulkDownloadRecords(payload: { records: CsvTestItemData[]; stationName: string }): Promise<void> {
+    if (!selectedSite.value || !selectedProject.value) return
+    if (payload.records.length === 0) return
+
+    const attachments = payload.records.map(record => {
+        const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+        const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+        const deviceid = record.DeviceId
+        const station = record.TSP || record.station
+        return { isn, time, deviceid, station }
+    })
+
+    await downloadAttachments(selectedSite.value, selectedProject.value, attachments)
 }
 
 // Handle calculate scores request from ranking table
