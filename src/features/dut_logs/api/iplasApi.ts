@@ -87,11 +87,11 @@ export interface GetCsvTestItemRequest {
 
 export interface TestItem {
   NAME: string
-  STATUS: 'PASS' | 'FAIL'
+  STATUS: string  // Can be PASS, FAIL, or other values from iPLAS
   VALUE: string // Float as string or "PASS"/"FAIL" for bin data
   UCL: string // Upper Control Limit
   LCL: string // Lower Control Limit
-  CYCLE: string // Cycle time (empty for value data)
+  CYCLE?: string // Cycle time (empty for value data, optional)
 }
 
 export interface CsvTestItemData {

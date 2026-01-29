@@ -6,9 +6,14 @@
  * 
  * All methods now use the backend proxy by default. Tokens are securely
  * managed on the backend with optional user override via settings.
+ * 
+ * Memory Optimization:
+ * - Uses shallowRef for large arrays to reduce Vue reactivity overhead
+ * - Supports compact records (without TestItem arrays) for list views
+ * - Supports lazy loading of TestItems for individual records
  */
 
-import { ref, computed } from 'vue'
+import { ref, shallowRef, computed } from 'vue'
 import {
   iplasProxyApi,
   type SiteProject,
@@ -16,6 +21,7 @@ import {
   type IplasTestItemInfo,
   type IplasCsvTestItemResponse,
   type CsvTestItemData,
+  type CompactCsvTestItemData,
   type TestItem,
   type IplasIsnSearchRecord,
   type IplasDownloadAttachmentInfo
@@ -23,12 +29,34 @@ import {
 import { useIplasSettings } from './useIplasSettings'
 
 // Re-export types for backwards compatibility
-export type { SiteProject, IplasStation, CsvTestItemData, IplasIsnSearchRecord, TestItem }
+export type { SiteProject, IplasStation, CsvTestItemData, CompactCsvTestItemData, IplasIsnSearchRecord, TestItem }
 
 // Type aliases for backwards compatibility
 export type Station = IplasStation
 export type DownloadAttachmentInfo = IplasDownloadAttachmentInfo
 export type IsnSearchData = IplasIsnSearchRecord
+
+/**
+ * Pagination options for server-side data tables
+ */
+export interface PaginationOptions {
+  page: number        // 1-based page number
+  itemsPerPage: number // Items per page (e.g., 10, 25, 50)
+  sortBy?: string     // Field name to sort by
+  sortDesc?: boolean  // Sort in descending order
+}
+
+/**
+ * Paginated response with total count for v-data-table-server
+ */
+export interface PaginatedResult<T> {
+  items: T[]
+  totalItems: number
+  page: number
+  itemsPerPage: number
+  possiblyTruncated: boolean
+  chunkProgress: { fetched: number; total: number } | null
+}
 
 // Module-level cache for metadata (rarely changes)
 let cachedSiteProjects: SiteProject[] | null = null
@@ -49,16 +77,30 @@ export function useIplasApi() {
   const loadingTestItems = ref(false)
   const loadingIsnSearch = ref(false)
   const downloading = ref(false)
+  const loadingRecordTestItems = ref(false)
 
   // Error state
   const error = ref<string | null>(null)
+  
+  // Warning state (for truncated data)
+  const possiblyTruncated = ref(false)
+  
+  // Chunk progress tracking (for multi-day queries)
+  const chunkProgress = ref<{ fetched: number; total: number } | null>(null)
 
-  // Data states
+  // Data states (using shallowRef for large arrays to reduce reactivity overhead)
   const siteProjects = ref<SiteProject[]>([])
   const stations = ref<Station[]>([])
   const deviceIds = ref<string[]>([])
-  const testItemData = ref<CsvTestItemData[]>([])
-  const isnSearchData = ref<IsnSearchData[]>([])
+  // Large arrays use shallowRef - Vue only tracks array replacement, not nested changes
+  const testItemData = shallowRef<CsvTestItemData[]>([])
+  const isnSearchData = shallowRef<IsnSearchData[]>([])
+  
+  // Compact data for memory-efficient list views (without TestItem arrays)
+  const compactTestItemData = shallowRef<CompactCsvTestItemData[]>([])
+  
+  // Lazy-loaded TestItems cache (key: `${ISN}_${TestStartTime}`)
+  const testItemsCache = new Map<string, TestItem[]>()
 
   // Computed
   const uniqueSites = computed(() => {
@@ -228,6 +270,7 @@ export function useIplasApi() {
   ): Promise<CsvTestItemData[]> {
     loadingTestItems.value = true
     error.value = null
+    chunkProgress.value = null
 
     try {
       const response = await iplasProxyApi.getCsvTestItems({
@@ -241,6 +284,19 @@ export function useIplasApi() {
         token: getUserToken()
       })
 
+      // Track truncation warning (any chunk hit 5000 limit)
+      if (response.possibly_truncated) {
+        possiblyTruncated.value = true
+      }
+      
+      // Track chunk progress
+      if (response.chunks_fetched && response.total_chunks) {
+        chunkProgress.value = {
+          fetched: response.chunks_fetched,
+          total: response.total_chunks
+        }
+      }
+
       // Append to existing data instead of replacing
       testItemData.value = [...testItemData.value, ...response.data]
       return response.data as CsvTestItemData[]
@@ -249,6 +305,177 @@ export function useIplasApi() {
       throw err
     } finally {
       loadingTestItems.value = false
+    }
+  }
+
+  /**
+   * Get compact CSV test items (without TestItem arrays) for memory efficiency.
+   * Use this for list views where you don't need test item details.
+   * 
+   * @param begintime - Start time (Date object or ISO string)
+   * @param endtime - End time (Date object or ISO string)
+   */
+  async function fetchTestItemsCompact(
+    site: string,
+    project: string,
+    station: string,
+    deviceid: string,
+    begintime: string | Date,
+    endtime: string | Date,
+    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL'
+  ): Promise<CompactCsvTestItemData[]> {
+    loadingTestItems.value = true
+    error.value = null
+    chunkProgress.value = null
+
+    try {
+      const response = await iplasProxyApi.getCsvTestItemsCompact({
+        site,
+        project,
+        station,
+        device_id: deviceid,
+        begin_time: iplasProxyApi.formatDateForRequest(begintime),
+        end_time: iplasProxyApi.formatDateForRequest(endtime),
+        test_status: testStatus,
+        token: getUserToken()
+      })
+
+      // Track truncation warning
+      if (response.possibly_truncated) {
+        possiblyTruncated.value = true
+      }
+      
+      // Track chunk progress
+      if (response.chunks_fetched && response.total_chunks) {
+        chunkProgress.value = {
+          fetched: response.chunks_fetched,
+          total: response.total_chunks
+        }
+      }
+
+      // Append to existing data instead of replacing
+      compactTestItemData.value = [...compactTestItemData.value, ...response.data]
+      return response.data
+    } catch (err: any) {
+      error.value = err.message || 'Failed to fetch compact test items'
+      throw err
+    } finally {
+      loadingTestItems.value = false
+    }
+  }
+
+  /**
+   * Fetch paginated compact test items for server-side data table.
+   * Does NOT append to existing data - designed for page-by-page loading.
+   * 
+   * @returns PaginatedResult with items, totalItems, and pagination metadata
+   */
+  async function fetchTestItemsPaginated(
+    site: string,
+    project: string,
+    station: string,
+    deviceid: string,
+    begintime: string | Date,
+    endtime: string | Date,
+    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
+    options: PaginationOptions = { page: 1, itemsPerPage: 25 }
+  ): Promise<PaginatedResult<CompactCsvTestItemData>> {
+    loadingTestItems.value = true
+    error.value = null
+    chunkProgress.value = null
+
+    try {
+      // Calculate offset from page number (1-based)
+      const offset = (options.page - 1) * options.itemsPerPage
+      
+      const response = await iplasProxyApi.getCsvTestItemsCompact({
+        site,
+        project,
+        station,
+        device_id: deviceid,
+        begin_time: iplasProxyApi.formatDateForRequest(begintime),
+        end_time: iplasProxyApi.formatDateForRequest(endtime),
+        test_status: testStatus,
+        limit: options.itemsPerPage,
+        offset: offset,
+        sort_by: options.sortBy,
+        sort_desc: options.sortDesc ?? true,
+        token: getUserToken()
+      })
+
+      // Track truncation warning
+      const truncated = response.possibly_truncated ?? false
+      if (truncated) {
+        possiblyTruncated.value = true
+      }
+      
+      // Track chunk progress
+      let progress: { fetched: number; total: number } | null = null
+      if (response.chunks_fetched && response.total_chunks) {
+        progress = {
+          fetched: response.chunks_fetched,
+          total: response.total_chunks
+        }
+        chunkProgress.value = progress
+      }
+
+      return {
+        items: response.data,
+        totalItems: response.total_records,
+        page: options.page,
+        itemsPerPage: options.itemsPerPage,
+        possiblyTruncated: truncated,
+        chunkProgress: progress
+      }
+    } catch (err: any) {
+      error.value = err.message || 'Failed to fetch paginated test items'
+      throw err
+    } finally {
+      loadingTestItems.value = false
+    }
+  }
+
+  /**
+   * Get test items for a specific record (lazy loading).
+   * Results are cached to avoid redundant API calls.
+   */
+  async function fetchRecordTestItems(
+    site: string,
+    project: string,
+    station: string,
+    isn: string,
+    testStartTime: string,
+    deviceId: string = 'ALL'
+  ): Promise<TestItem[]> {
+    const cacheKey = `${isn}_${testStartTime}`
+    
+    // Return cached if available
+    if (testItemsCache.has(cacheKey)) {
+      return testItemsCache.get(cacheKey)!
+    }
+
+    loadingRecordTestItems.value = true
+    error.value = null
+
+    try {
+      const response = await iplasProxyApi.getRecordTestItems({
+        site,
+        project,
+        station,
+        isn,
+        test_start_time: testStartTime,
+        device_id: deviceId,
+        token: getUserToken()
+      })
+
+      // Cache the result
+      testItemsCache.set(cacheKey, response.test_items)
+      return response.test_items
+    } catch (err: any) {
+      error.value = err.message || 'Failed to fetch record test items'
+      throw err
+    } finally {
+      loadingRecordTestItems.value = false
     }
   }
 
@@ -345,6 +572,9 @@ export function useIplasApi() {
    */
   function clearTestItemData(): void {
     testItemData.value = []
+    compactTestItemData.value = []
+    testItemsCache.clear()
+    possiblyTruncated.value = false
   }
 
   /**
@@ -357,7 +587,9 @@ export function useIplasApi() {
     stations.value = []
     deviceIds.value = []
     testItemData.value = []
+    compactTestItemData.value = []
     isnSearchData.value = []
+    testItemsCache.clear()
   }
 
   /**
@@ -448,17 +680,27 @@ export function useIplasApi() {
     loadingDevices,
     loadingTestItems,
     loadingIsnSearch,
+    loadingRecordTestItems,
     downloading,
 
     // Error state
     error,
+    
+    // Warning state (for truncated data)
+    possiblyTruncated,
+    
+    // Chunk progress (for multi-day queries)
+    chunkProgress,
 
-    // Data
+    // Data (full records with TestItem arrays)
     siteProjects,
     stations,
     deviceIds,
     testItemData,
     isnSearchData,
+    
+    // Compact data (without TestItem arrays - memory efficient)
+    compactTestItemData,
 
     // Computed
     uniqueSites,
@@ -470,6 +712,9 @@ export function useIplasApi() {
     fetchStations,
     fetchDeviceIds,
     fetchTestItems,
+    fetchTestItemsCompact,
+    fetchTestItemsPaginated,
+    fetchRecordTestItems,
     fetchTestItemNames,
     fetchTestItemsFiltered,
     searchByIsn,

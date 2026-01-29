@@ -123,7 +123,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
 import { useScoring } from '../composables/useScoring'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
@@ -641,6 +641,13 @@ async function fetchTestItems(): Promise<void> {
 onMounted(async () => {
     await fetchSiteProjects()
     applyDateRangePreset()
+})
+
+// Cleanup on unmount to free memory
+onUnmounted(() => {
+    clearTestItemData()
+    recordScores.value = {}
+    stationConfigs.value = {}
 })
 </script>
 

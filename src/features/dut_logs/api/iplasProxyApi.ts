@@ -27,6 +27,8 @@ export interface IplasCsvTestItemRequest {
   test_item_filters?: string[]
   limit?: number
   offset?: number
+  sort_by?: string   // Field name to sort by (e.g., 'TestStartTime', 'ISN')
+  sort_desc?: boolean // Sort in descending order (default true)
   token?: string  // Optional user token override
 }
 
@@ -36,6 +38,12 @@ export interface IplasCsvTestItemResponse {
   returned_records: number
   filtered: boolean
   cached: boolean
+  /** True if any chunk hit the 5000 record limit (data may be incomplete) */
+  possibly_truncated?: boolean
+  /** Number of API chunks fetched (for queries >6 days) */
+  chunks_fetched?: number
+  /** Total number of chunks (for queries >6 days) */
+  total_chunks?: number
 }
 
 export interface IplasTestItemNamesRequest {
@@ -227,6 +235,74 @@ export interface CsvTestItemData {
 }
 
 /**
+ * Compact record without TestItem array for memory-efficient list views.
+ * Use this for displaying record lists. TestItems can be loaded on-demand.
+ */
+export interface CompactCsvTestItemData {
+  Site: string
+  Project: string
+  station: string
+  TSP: string
+  Model: string
+  MO: string
+  Line: string
+  ISN: string
+  DeviceId: string
+  // Use same property names as CsvTestItemData for compatibility
+  'Test Status': string
+  'Test Start Time': string
+  'Test end Time': string
+  ErrorCode: string
+  ErrorName: string
+  /** Number of test items (without the actual array) */
+  TestItemCount: number
+}
+
+export interface CompactCsvTestItemResponse {
+  data: CompactCsvTestItemData[]
+  total_records: number
+  returned_records: number
+  filtered: boolean
+  cached: boolean
+  possibly_truncated?: boolean
+  /** Number of API chunks fetched (for queries >6 days) */
+  chunks_fetched?: number
+  /** Total number of chunks (for queries >6 days) */
+  total_chunks?: number
+}
+
+export interface RecordTestItemsRequest {
+  site: string
+  project: string
+  station: string
+  isn: string
+  test_start_time: string
+  device_id?: string
+  test_status?: 'ALL' | 'PASS' | 'FAIL'
+  token?: string
+}
+
+export interface RecordTestItemsResponse {
+  isn: string
+  test_start_time: string
+  test_items: TestItem[]
+  test_item_count: number
+  cached: boolean
+}
+
+/**
+ * Metadata from NDJSON streaming response header
+ */
+export interface StreamMetadata {
+  totalRecords: number
+  filtered: boolean
+  cached: boolean
+  possiblyTruncated: boolean
+  chunksFetched: number
+  totalChunks: number
+}
+
+/**
  * iPLAS Proxy API Service
  * 
  * Uses the backend proxy endpoints for cached and filtered iPLAS data access.
@@ -243,6 +319,42 @@ class IplasProxyApi {
   async getCsvTestItems(request: IplasCsvTestItemRequest): Promise<IplasCsvTestItemResponse> {
     const response = await apiClient.post<IplasCsvTestItemResponse>(
       `${this.baseUrl}/csv-test-items`,
+      request
+    )
+    return response.data
+  }
+
+  /**
+   * Get compact CSV test items (without TestItem arrays) for memory efficiency
+   * 
+   * Use this for:
+   * - Record list views where you don't need test item details
+   * - Initial page load to show record summaries
+   * - Performance-critical scenarios
+   * 
+   * @param request - Request parameters including filters
+   * @returns Compact test item data (60-80% smaller than full data)
+   */
+  async getCsvTestItemsCompact(request: IplasCsvTestItemRequest): Promise<CompactCsvTestItemResponse> {
+    const response = await apiClient.post<CompactCsvTestItemResponse>(
+      `${this.baseUrl}/csv-test-items/compact`,
+      request
+    )
+    return response.data
+  }
+
+  /**
+   * Get test items for a specific record (lazy loading)
+   * 
+   * Use this to load TestItem details on-demand when user expands a record,
+   * instead of loading all test items upfront.
+   * 
+   * @param request - Record identification parameters
+   * @returns Test items for the specific record
+   */
+  async getRecordTestItems(request: RecordTestItemsRequest): Promise<RecordTestItemsResponse> {
+    const response = await apiClient.post<RecordTestItemsResponse>(
+      `${this.baseUrl}/record-test-items`,
       request
     )
     return response.data
@@ -421,6 +533,135 @@ class IplasProxyApi {
       request
     )
     return response.data
+  }
+
+  // ============================================================================
+  // Streaming Endpoint
+  // ============================================================================
+
+  /**
+   * Stream metadata from NDJSON response
+   */
+  public static parseStreamMetadata(line: string): StreamMetadata | null {
+    try {
+      const parsed = JSON.parse(line)
+      if (parsed._metadata) {
+        return {
+          totalRecords: parsed.total_records,
+          filtered: parsed.filtered,
+          cached: parsed.cached,
+          possiblyTruncated: parsed.possibly_truncated,
+          chunksFetched: parsed.chunks_fetched,
+          totalChunks: parsed.total_chunks
+        }
+      }
+    } catch {
+      // Not valid JSON metadata
+    }
+    return null
+  }
+
+  /**
+   * Stream CSV test items as NDJSON for memory-efficient large dataset handling
+   * 
+   * Benefits:
+   * - Frontend can process records as they arrive (progressive rendering)
+   * - Reduced peak memory usage
+   * - Better UX for large datasets (users see data immediately)
+   * 
+   * @param request - Request parameters
+   * @param onRecord - Callback for each record received
+   * @param onMetadata - Callback for stream metadata (first line)
+   * @param onError - Callback for errors
+   * @param signal - Optional AbortSignal for cancellation
+   * @returns Total records processed
+   */
+  async streamCsvTestItems(
+    request: IplasCsvTestItemRequest,
+    onRecord: (record: CompactCsvTestItemData) => void,
+    onMetadata?: (metadata: StreamMetadata) => void,
+    onError?: (error: Error) => void,
+    signal?: AbortSignal
+  ): Promise<number> {
+    const url = `${import.meta.env.VITE_API_URL || ''}/api/iplas/csv-test-items/stream`
+    
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(request),
+        signal
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`)
+      }
+
+      if (!response.body) {
+        throw new Error('No response body for streaming')
+      }
+
+      const reader = response.body.getReader()
+      const decoder = new TextDecoder()
+      let buffer = ''
+      let recordCount = 0
+
+      while (true) {
+        const { done, value } = await reader.read()
+        
+        if (done) break
+
+        buffer += decoder.decode(value, { stream: true })
+        
+        // Process complete lines
+        const lines = buffer.split('\n')
+        buffer = lines.pop() || '' // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (!line.trim()) continue
+
+          // Check for metadata first
+          const metadata = IplasProxyApi.parseStreamMetadata(line)
+          if (metadata) {
+            onMetadata?.(metadata)
+            continue
+          }
+
+          // Parse record
+          try {
+            const record = JSON.parse(line) as CompactCsvTestItemData
+            onRecord(record)
+            recordCount++
+          } catch (parseError) {
+            console.warn('Failed to parse NDJSON line:', line)
+          }
+        }
+      }
+
+      // Process any remaining buffer
+      if (buffer.trim()) {
+        try {
+          const record = JSON.parse(buffer) as CompactCsvTestItemData
+          onRecord(record)
+          recordCount++
+        } catch {
+          // Ignore incomplete final line
+        }
+      }
+
+      return recordCount
+    } catch (error) {
+      if (error instanceof Error) {
+        if (error.name === 'AbortError') {
+          console.log('Stream aborted by user')
+          return 0
+        }
+        onError?.(error)
+      }
+      throw error
+    }
   }
 }
 

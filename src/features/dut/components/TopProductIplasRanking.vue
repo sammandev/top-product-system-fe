@@ -156,7 +156,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 import type { CsvTestItemData } from '@/features/dut_logs/composables/useIplasApi'
 import { adjustIplasDisplayTime, isStatusPass } from '@/shared/utils/helpers'
 import { getScoreColor } from '../types/scoring.types'
@@ -192,8 +193,18 @@ const emit = defineEmits<{
 
 const selectedTab = ref<string>('')
 const searchQuery = ref<string>('')
+// Debounced search query for performance - actual filtering uses this
+const debouncedSearchQuery = ref<string>('')
 const statusFilter = ref<string | null>(null)
 const deviceFilter = ref<string[]>([])
+
+// Debounce search query updates (300ms delay)
+const updateDebouncedSearch = useDebounceFn((value: string) => {
+    debouncedSearchQuery.value = value
+}, 300)
+
+// Watch for search query changes and debounce
+watch(searchQuery, (value) => updateDebouncedSearch(value))
 
 // Filter options
 const statusFilterOptions = [
@@ -325,7 +336,7 @@ function getUniqueDevices(stationName: string): string[] {
     return Array.from(devices)
 }
 
-// Filtered ranking
+// Filtered ranking (uses debounced search for better performance)
 const filteredRanking = computed(() => {
     const currentStation = selectedTab.value
     if (!currentStation || !rankingByStation.value[currentStation]) {
@@ -334,9 +345,9 @@ const filteredRanking = computed(() => {
 
     let items = rankingByStation.value[currentStation]
 
-    // Apply search
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase()
+    // Apply debounced search
+    if (debouncedSearchQuery.value) {
+        const query = debouncedSearchQuery.value.toLowerCase()
         items = items.filter(item => {
             return (
                 item.isn.toLowerCase().includes(query) ||
@@ -365,12 +376,12 @@ const filteredRanking = computed(() => {
 })
 
 const hasActiveFilters = computed(() => {
-    return !!(searchQuery.value || statusFilter.value || deviceFilter.value.length > 0)
+    return !!(debouncedSearchQuery.value || statusFilter.value || deviceFilter.value.length > 0)
 })
 
 const activeFilterCount = computed(() => {
     let count = 0
-    if (searchQuery.value) count++
+    if (debouncedSearchQuery.value) count++
     if (statusFilter.value) count++
     if (deviceFilter.value.length > 0) count++
     return count
@@ -378,6 +389,7 @@ const activeFilterCount = computed(() => {
 
 function clearAllFilters() {
     searchQuery.value = ''
+    debouncedSearchQuery.value = ''
     statusFilter.value = null
     deviceFilter.value = []
 }

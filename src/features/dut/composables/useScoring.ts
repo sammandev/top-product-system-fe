@@ -3,7 +3,7 @@
  * 
  * Provides reactive state and methods for the iPLAS scoring system.
  */
-import { ref, computed } from 'vue'
+import { ref, shallowRef, computed } from 'vue'
 import { scoringApi } from '../api/scoring.api'
 import {
   type ScoringConfig,
@@ -18,7 +18,8 @@ import {
 
 // Module-level state (shared across components)
 const scoringConfigs = ref<Map<string, ScoringConfig>>(new Map())
-const scoredRecords = ref<RecordScoreResult[]>([])
+// Large array uses shallowRef - Vue only tracks array replacement, not nested changes
+const scoredRecords = shallowRef<RecordScoreResult[]>([])
 const summary = ref<ScoreSummary | null>(null)
 const loading = ref(false)
 const error = ref<string | null>(null)

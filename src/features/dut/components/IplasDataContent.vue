@@ -117,15 +117,70 @@
 
                         <!-- Search Test Data Section -->
                         <v-row v-if="selectedStations.length > 0" class="mt-4">
-                            <v-col cols="12" class="d-flex align-center gap-3">
+                            <v-col cols="12" class="d-flex align-center gap-3 flex-wrap">
                                 <v-select v-model="testStatusFilter" :items="['ALL', 'PASS', 'FAIL']"
                                     label="Test Status" variant="outlined" density="compact" hide-details
                                     style="max-width: 150px" />
-                                <v-btn color="primary" :loading="loadingTestItems" @click="fetchTestItems">
+
+                                <!-- IndexedDB Mode Toggle -->
+                                <v-tooltip location="top">
+                                    <template #activator="{ props }">
+                                        <v-switch v-bind="props" v-model="useIndexedDbMode" label="Stream to Disk"
+                                            color="success" density="compact" hide-details class="flex-grow-0" />
+                                    </template>
+                                    <span>
+                                        Enable IndexedDB streaming for large datasets (10,000+ records).<br>
+                                        Data is stored locally on disk, reducing memory usage.
+                                    </span>
+                                </v-tooltip>
+
+                                <v-btn color="primary" :loading="loadingTestItems || isStreaming"
+                                    :disabled="isStreaming" @click="fetchTestItems">
                                     <v-icon start>mdi-download</v-icon>
-                                    Search Test Data ({{ selectedStations.length }} station{{
+                                    {{ useIndexedDbMode ? 'Stream' : 'Search' }} Test Data ({{ selectedStations.length
+                                    }} station{{
                                         selectedStations.length > 1 ? 's' : '' }})
                                 </v-btn>
+
+                                <!-- Abort Stream Button -->
+                                <v-btn v-if="isStreaming" color="error" variant="outlined" size="small"
+                                    @click="abortIndexedDbStream">
+                                    <v-icon start size="small">mdi-stop</v-icon>
+                                    Stop Stream
+                                </v-btn>
+
+                                <!-- Chunk Progress Indicator (regular mode) -->
+                                <div v-if="loadingTestItems && chunkProgress && !useIndexedDbMode"
+                                    class="d-flex align-center gap-2">
+                                    <v-progress-circular
+                                        :model-value="(chunkProgress.fetched / chunkProgress.total) * 100" :size="24"
+                                        :width="3" color="primary" />
+                                    <span class="text-body-2 text-medium-emphasis">
+                                        Fetching chunk {{ chunkProgress.fetched }} of {{ chunkProgress.total }}...
+                                    </span>
+                                </div>
+
+                                <!-- IndexedDB Stream Progress Indicator -->
+                                <div v-if="isStreaming" class="d-flex align-center gap-2">
+                                    <v-progress-circular :model-value="streamProgress" :size="24" :width="3"
+                                        color="success" />
+                                    <span class="text-body-2 text-medium-emphasis">
+                                        Streaming... {{ streamStatus.recordsWritten.toLocaleString() }} records saved
+                                        <template v-if="streamStatus.totalEstimated > 0">
+                                            of {{ streamStatus.totalEstimated.toLocaleString() }}
+                                        </template>
+                                    </span>
+                                </div>
+                            </v-col>
+                        </v-row>
+                        <!-- Possibly Truncated Warning -->
+                        <v-row v-if="possiblyTruncated && testItemData.length > 0" class="mt-2">
+                            <v-col cols="12">
+                                <v-alert type="warning" density="compact" variant="tonal" closable>
+                                    <v-icon start>mdi-alert</v-icon>
+                                    Results may be truncated due to iPLAS API limits. Consider narrowing your date range
+                                    or filters.
+                                </v-alert>
                             </v-col>
                         </v-row>
                     </v-card-text>
@@ -145,9 +200,6 @@
                                 <v-icon start size="small">mdi-download-multiple</v-icon>
                                 Download Selected ({{ selectedRecordIndices.length }})
                             </v-btn>
-                            <v-btn variant="text" size="small" @click="toggleSelectAllRecords">
-                                {{ allVisibleSelected ? 'Deselect All' : `Select All (${visibleRecordsCount})` }}
-                            </v-btn>
                         </div>
                     </v-card-title>
                     <v-card-text>
@@ -159,7 +211,7 @@
                                 {{ stationGroup.displayName }}
                                 <v-chip size="x-small" color="info" class="ml-2">{{
                                     getFilteredStationRecords(stationGroup).length
-                                }}</v-chip>
+                                    }}</v-chip>
                             </v-tab>
                         </v-tabs>
 
@@ -192,200 +244,105 @@
                                     </v-col>
                                 </v-row>
 
-                                <!-- Station Records -->
-                                <v-expansion-panels v-model="expandedPanels[stationIndex]" multiple>
-                                    <v-expansion-panel
-                                        v-for="(record, recordIndex) in getDisplayedStationRecords(stationGroup)"
-                                        :key="`${stationIndex}-${recordIndex}`">
-                                        <v-expansion-panel-title>
-                                            <div class="d-flex align-center justify-space-between w-100 pr-4">
-                                                <div class="d-flex align-center gap-2">
-                                                    <v-checkbox
-                                                        :model-value="isRecordSelected(stationGroup.stationName, recordIndex)"
-                                                        density="compact" hide-details class="flex-grow-0" @click.stop
-                                                        @update:model-value="toggleRecordSelection(stationGroup.stationName, recordIndex)" />
-                                                    <v-btn icon size="x-small" variant="text" color="primary"
-                                                        @click.stop="copyToClipboard(record.ISN)">
-                                                        <v-icon size="small">mdi-content-copy</v-icon>
-                                                        <v-tooltip activator="parent" location="top">Copy
-                                                            ISN</v-tooltip>
-                                                    </v-btn>
-                                                    <span class="font-weight-bold">{{ record.ISN || '-' }}</span>
-                                                    <!-- DeviceId chip - clickable to copy -->
-                                                    <v-chip size="x-small" color="secondary" variant="outlined"
-                                                        class="cursor-pointer"
-                                                        @click.stop="copyToClipboard(record.DeviceId)">
-                                                        {{ record.DeviceId }}
-                                                        <v-tooltip activator="parent" location="top">Click to copy
-                                                            Device ID</v-tooltip>
-                                                    </v-chip>
-                                                    <!-- ErrorCode chip - clickable to copy -->
-                                                    <v-chip :color="getStatusColor(record.ErrorCode)" size="x-small"
-                                                        class="cursor-pointer"
-                                                        @click.stop="copyToClipboard(record.ErrorCode)">
-                                                        {{ record.ErrorCode }}
-                                                        <v-tooltip activator="parent" location="top">Click to copy Error
-                                                            Code</v-tooltip>
-                                                    </v-chip>
-                                                    <!-- ErrorName chip - clickable to copy -->
-                                                    <template
-                                                        v-if="record.ErrorName && record.ErrorName !== 'N/A' && !isStatusPass(record.ErrorCode)">
-                                                        <v-chip color="error" size="x-small" variant="outlined"
-                                                            class="cursor-pointer"
-                                                            @click.stop="copyToClipboard(record.ErrorName)">
-                                                            {{ record.ErrorName }}
-                                                            <v-tooltip activator="parent" location="top">Click to copy
-                                                                Error Name</v-tooltip>
-                                                        </v-chip>
-                                                    </template>
-                                                </div>
-                                                <div
-                                                    class="d-flex align-center gap-2 text-caption text-medium-emphasis">
-                                                    <v-chip size="x-small" color="info" variant="outlined">
-                                                        {{ adjustIplasDisplayTime(record['Test end Time'], 1) }}
-                                                    </v-chip>
-                                                    <v-chip size="x-small" variant="outlined">
-                                                        <!-- <v-icon start size="x-small">mdi-timer</v-icon> -->
-                                                        {{ calculateDuration(record['Test Start Time'], record['Test end Time']) }}
-                                                    </v-chip>
-                                                    <v-btn icon size="x-small" variant="outlined" color="secondary"
-                                                        @click.stop="openFullscreen(record)">
-                                                        <v-icon size="small">mdi-fullscreen</v-icon>
-                                                        <v-tooltip activator="parent" location="top">Fullscreen
-                                                            View</v-tooltip>
-                                                    </v-btn>
-                                                    <v-btn icon size="x-small" variant="outlined" color="primary"
-                                                        :loading="downloadingKey === `${stationGroup.stationName}-${recordIndex}`"
-                                                        @click.stop="downloadSingleRecord(record, stationGroup.stationName, recordIndex)">
-                                                        <v-icon size="small">mdi-download</v-icon>
-                                                        <v-tooltip activator="parent" location="top">Download Test
-                                                            Log</v-tooltip>
-                                                    </v-btn>
-                                                </div>
-                                            </div>
-                                        </v-expansion-panel-title>
-                                        <v-expansion-panel-text>
-                                            <!-- Record Details -->
-                                            <v-row class="mb-3">
-                                                <v-col cols="12" sm="6" md="2">
-                                                    <div class="text-caption text-medium-emphasis">ISN</div>
-                                                    <div class="font-weight-medium">{{ record.ISN || '-' }}</div>
-                                                </v-col>
-                                                <v-col cols="12" sm="6" md="2">
-                                                    <div class="text-caption text-medium-emphasis">Station Name</div>
-                                                    <div class="font-weight-medium">{{ record.station || '-' }}</div>
-                                                </v-col>
-                                                <v-col cols="12" sm="6" md="2">
-                                                    <div class="text-caption text-medium-emphasis">TSP</div>
-                                                    <div class="font-weight-medium">{{ record.TSP || '-' }}</div>
-                                                </v-col>
-                                                <v-col cols="12" sm="6" md="2">
-                                                    <div class="text-caption text-medium-emphasis">Test Start</div>
-                                                    <div class="font-weight-medium">{{
-                                                        adjustIplasDisplayTime(record['Test Start Time'],
-                                                            1) }}</div>
-                                                </v-col>
-                                                <v-col cols="12" sm="6" md="2">
-                                                    <div class="text-caption text-medium-emphasis">Test End</div>
-                                                    <div class="font-weight-medium">{{
-                                                        adjustIplasDisplayTime(record['Test end Time'],
-                                                            1) }}</div>
-                                                </v-col>
-                                                <v-col cols="12" sm="6" md="2">
-                                                    <div class="text-caption text-medium-emphasis">Test Duration</div>
-                                                    <div class="font-weight-medium">
-                                                        {{ calculateDuration(record['Test Start Time'], record['Test end Time']) }}
-                                                    </div>
-                                                </v-col>
-                                            </v-row>
-
-                                            <!-- Search Box and Filter Items Row -->
-                                            <v-row class="mb-3" dense>
-                                                <v-col cols="12" md="6">
-                                                    <v-combobox
-                                                        v-model="testItemSearchTerms[`${stationGroup.stationName}-${recordIndex}`]"
-                                                        label="Search Test Items (Regex, OR logic)"
-                                                        prepend-inner-icon="mdi-magnify" variant="outlined"
-                                                        density="compact" hide-details multiple chips closable-chips
-                                                        clearable
-                                                        placeholder="Type pattern and press Enter (e.g., tx, rx)...">
-                                                        <template #chip="{ props, item }">
-                                                            <v-chip v-bind="props" :text="String(item.value || item)"
-                                                                size="small" color="primary" />
-                                                        </template>
-                                                    </v-combobox>
-                                                </v-col>
-                                                <v-col cols="12" md="6">
-                                                    <div class="d-flex align-center flex-wrap gap-2 h-100">
-                                                        <span class="text-caption text-medium-emphasis">Filter:</span>
-                                                        <v-chip-group
-                                                            v-model="testItemFilters[`${stationGroup.stationName}-${recordIndex}`]"
-                                                            multiple class="flex-grow-1">
-                                                            <v-chip value="all" filter label variant="outlined"
-                                                                color="primary" size="small">
-                                                                All
-                                                            </v-chip>
-                                                            <v-chip value="value" filter label variant="outlined"
-                                                                color="success" size="small">
-                                                                Criteria
-                                                            </v-chip>
-                                                            <v-chip value="non-value" filter label variant="outlined"
-                                                                color="warning" size="small">
-                                                                Non-Criteria
-                                                            </v-chip>
-                                                            <v-chip value="bin" filter label variant="outlined"
-                                                                color="info" size="small">
-                                                                Bin
-                                                            </v-chip>
-                                                        </v-chip-group>
-                                                    </div>
-                                                </v-col>
-                                            </v-row>
-
-                                            <!-- Test Items Table (scrollable with sticky header/footer) -->
-                                            <v-data-table :headers="testItemHeaders"
-                                                :items="filterAndSearchTestItems(record.TestItem, `${stationGroup.stationName}-${recordIndex}`)"
-                                                :items-per-page="25" density="compact" fixed-header height="400"
-                                                class="elevation-1 v-table--striped">
-                                                <template #item.STATUS="{ item }">
-                                                    <v-chip :color="getStatusColor(item.STATUS)" size="x-small">
-                                                        {{ normalizeStatus(item.STATUS) }}
-                                                    </v-chip>
-                                                </template>
-                                                <template #item.VALUE="{ item }">
-                                                    <span :class="getValueClass(item)">{{ item.VALUE }}</span>
-                                                </template>
-                                                <template #item.UCL="{ item }">
-                                                    <span class="text-medium-emphasis">{{ item.UCL || '-' }}</span>
-                                                </template>
-                                                <template #item.LCL="{ item }">
-                                                    <span class="text-medium-emphasis">{{ item.LCL || '-' }}</span>
-                                                </template>
-                                            </v-data-table>
-
-                                            <div class="text-caption text-medium-emphasis mt-2">
-                                                Showing {{ filterAndSearchTestItems(record.TestItem,
-                                                    `${stationGroup.stationName}-${recordIndex}`).length }} of {{
-                                                    record.TestItem?.length || 0 }} test items
-                                            </div>
-                                        </v-expansion-panel-text>
-                                    </v-expansion-panel>
-                                </v-expansion-panels>
-
-                                <!-- Performance: Show More Button -->
-                                <div v-if="hasMoreRecords(stationGroup)" class="text-center mt-4">
-                                    <v-btn color="primary" variant="outlined"
-                                        @click="showMoreRecords(stationGroup.stationName)">
-                                        <v-icon start>mdi-chevron-down</v-icon>
-                                        Show More ({{ getRemainingRecordsCount(stationGroup) }} remaining)
-                                    </v-btn>
-                                    <div class="text-caption text-medium-emphasis mt-1">
-                                        Showing {{ getDisplayLimit(stationGroup.stationName) }} of {{
-                                            getFilteredStationRecords(stationGroup).length }} records
-                                    </div>
-                                </div>
+                                <!-- Server-Side Data Table with Selection -->
+                                <IplasRecordTable
+                                    :items="serverPaginationState[stationGroup.stationName]?.items || getFilteredStationRecords(stationGroup)"
+                                    :total-items="serverPaginationState[stationGroup.stationName]?.totalItems || getFilteredStationRecords(stationGroup).length"
+                                    :loading="serverPaginationState[stationGroup.stationName]?.loading || false"
+                                    :downloading-record="downloadingKey"
+                                    :selectable="true"
+                                    :selected-keys="getSelectedKeysForStation(stationGroup.stationName)"
+                                    @update:options="(opts) => handleTableOptionsUpdate(stationGroup.stationName, opts)"
+                                    @update:selected-keys="(keys) => handleTableSelectionChange(stationGroup.stationName, keys)"
+                                    @load-test-items="handleLoadTestItemsForTable" 
+                                    @open-fullscreen="openFullscreen"
+                                    @download="(record) => downloadSingleRecord(record, stationGroup.stationName, 0)" />
                             </v-window-item>
                         </v-window>
+                    </v-card-text>
+                </v-card>
+
+                <!-- IndexedDB Mode Results -->
+                <v-card v-if="useIndexedDbMode && (indexedDbTotalItems > 0 || isStreaming)" elevation="2" class="mb-4">
+                    <v-card-title class="d-flex align-center justify-space-between flex-wrap">
+                        <div class="d-flex align-center">
+                            <v-icon class="mr-2" color="success">mdi-database</v-icon>
+                            IndexedDB Results
+                            <v-chip size="small" color="success" class="ml-2" variant="outlined">
+                                <v-icon start size="small">mdi-harddisk</v-icon>
+                                {{ indexedDbTotalItems.toLocaleString() }} records on disk
+                            </v-chip>
+                            <v-chip v-if="isStreaming" size="small" color="warning" class="ml-2">
+                                <v-icon start size="small">mdi-loading mdi-spin</v-icon>
+                                Streaming...
+                            </v-chip>
+                        </div>
+                    </v-card-title>
+                    <v-card-text>
+                        <!-- Stream Status Alert -->
+                        <v-alert v-if="streamStatus.error" type="error" class="mb-4" closable>
+                            {{ streamStatus.error }}
+                        </v-alert>
+
+                        <!-- IndexedDB Table using v-data-table-server -->
+                        <v-data-table-server v-model:items-per-page="indexedDbTableOptions.itemsPerPage"
+                            v-model:page="indexedDbTableOptions.page" v-model:sort-by="indexedDbTableOptions.sortBy"
+                            :headers="indexedDbHeaders" :items="indexedDbItems" :items-length="indexedDbTotalItems"
+                            :loading="indexedDbLoading || isStreaming" hover class="elevation-1"
+                            @update:options="loadIndexedDbItems">
+                            <!-- ISN Column -->
+                            <template #item.ISN="{ item }">
+                                <div class="d-flex align-center gap-1">
+                                    <v-btn icon size="x-small" variant="text" color="primary"
+                                        @click.stop="copyToClipboard(item.ISN)">
+                                        <v-icon size="small">mdi-content-copy</v-icon>
+                                    </v-btn>
+                                    <span class="font-weight-medium">{{ item.ISN || '-' }}</span>
+                                </div>
+                            </template>
+
+                            <!-- Device ID Column -->
+                            <template #item.DeviceId="{ item }">
+                                <v-chip size="x-small" color="secondary" variant="outlined">
+                                    {{ item.DeviceId }}
+                                </v-chip>
+                            </template>
+
+                            <!-- Error Code Column -->
+                            <template #item.ErrorCode="{ item }">
+                                <v-chip :color="getStatusColor(item.ErrorCode)" size="x-small">
+                                    {{ item.ErrorCode }}
+                                </v-chip>
+                            </template>
+
+                            <!-- Test Start Time Column -->
+                            <template #item.TestStartTime="{ item }">
+                                {{ adjustIplasDisplayTime(item.TestStartTime, 1) }}
+                            </template>
+
+                            <!-- No Data Template (during streaming) -->
+                            <template #no-data>
+                                <div v-if="isStreaming" class="text-center py-4">
+                                    <v-progress-circular indeterminate color="success" size="32" />
+                                    <div class="text-body-2 mt-2 text-medium-emphasis">
+                                        Streaming data to disk...
+                                        <br>
+                                        {{ streamStatus.recordsWritten.toLocaleString() }} records saved
+                                    </div>
+                                </div>
+                                <div v-else class="text-center py-4">
+                                    <v-icon size="48" color="grey">mdi-database-off-outline</v-icon>
+                                    <div class="text-h6 mt-2 text-grey">No data in IndexedDB</div>
+                                    <div class="text-body-2 text-grey">Start a search with "Stream to Disk" enabled
+                                    </div>
+                                </div>
+                            </template>
+
+                            <!-- Loading Template -->
+                            <template #loading>
+                                <v-skeleton-loader type="table-row@5" />
+                            </template>
+                        </v-data-table-server>
                     </v-card-text>
                 </v-card>
 
@@ -441,18 +398,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
+import { useDebounceFn } from '@vueuse/core'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
-import { adjustIplasDisplayTime, getStatusColor, normalizeStatus, isStatusPass, isStatusFail } from '@/shared/utils/helpers'
+import { useIplasLocalData } from '@/features/dut_logs/composables/useIplasLocalData'
+import { adjustIplasDisplayTime, getStatusColor } from '@/shared/utils/helpers'
 import IplasIsnSearchContent from './IplasIsnSearchContent.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
+import IplasRecordTable from './IplasRecordTable.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 import type { Station, TestItem, CsvTestItemData, DownloadAttachmentInfo } from '@/features/dut_logs/api/iplasApi'
+import type { CompactCsvTestItemData } from '@/features/dut_logs/api/iplasProxyApi'
 
+// Station group - now supports both full and compact records
 interface StationGroup {
     stationName: string
     displayName: string
-    records: CsvTestItemData[]
+    records: (CsvTestItemData | CompactCsvTestItemData)[]
 }
 
 // Search mode tab
@@ -461,20 +423,24 @@ const searchMode = ref<'station' | 'isn'>('station')
 const {
     loading,
     loadingStations,
-    loadingDevices,
     loadingTestItems,
     downloading,
     error,
+    chunkProgress,
+    possiblyTruncated,
     siteProjects,
     stations,
-    deviceIds,
     testItemData,
+    compactTestItemData,
     uniqueSites,
     projectsBySite,
     fetchSiteProjects,
     fetchStations,
     fetchDeviceIds,
     fetchTestItems: fetchTestItemsApi,
+    fetchTestItemsCompact,
+    fetchTestItemsPaginated,
+    fetchRecordTestItems,
     downloadAttachments,
     clearTestItemData
 } = useIplasApi()
@@ -503,6 +469,51 @@ const dateRangePresets = [
 // Device IDs grouped by station
 const deviceIdsByStation = ref<Record<string, string[]>>({})
 
+// Mode: 'full' loads complete records, 'compact' uses lazy loading for test items
+// Compact mode is more memory efficient for large datasets
+const useCompactMode = ref(true)
+
+// IndexedDB Mode: Stream data directly to disk instead of keeping in memory
+// This is the most memory-efficient mode for large datasets (10,000+ records)
+const useIndexedDbMode = ref(false)
+
+// ============================================================================
+// IndexedDB Mode Setup (Stream-to-Disk Architecture)
+// ============================================================================
+
+// Initialize the local data composable for IndexedDB table integration
+const {
+    items: indexedDbItems,
+    totalItems: indexedDbTotalItems,
+    loading: indexedDbLoading,
+    tableOptions: indexedDbTableOptions,
+    streamStatus,
+    isStreaming,
+    streamProgress,
+    loadItems: loadIndexedDbItems,
+    streamData: streamToIndexedDb,
+    abortStream: abortIndexedDbStream,
+    updateFilter: updateIndexedDbFilter
+} = useIplasLocalData({
+    initialItemsPerPage: 25,
+    filterDebounceMs: 300
+})
+
+// Server-side pagination state (for table view mode)
+const serverPaginationState = ref<Record<string, {
+    page: number
+    itemsPerPage: number
+    sortBy: string
+    sortDesc: boolean
+    items: (CsvTestItemData | CompactCsvTestItemData)[]
+    totalItems: number
+    loading: boolean
+}>>({})
+
+// Local cache for lazy-loaded test items (keyed by ISN_TestStartTime)
+const lazyLoadedTestItems = ref<Map<string, TestItem[]>>(new Map())
+// Track which records are loading test items
+const loadingTestItemsForRecord = ref<Set<string>>(new Set())
 // Helper function to format date for datetime-local input
 function getLocalTimeString(date: Date): string {
     const year = date.getFullYear()
@@ -633,7 +644,6 @@ const endTime = ref(getLocalTimeString(initialEnd))
 
 // Display controls
 const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
-const expandedPanels = ref<Record<number, number[]>>({})
 
 // Per-station status filters (for filtering records within each station tab)
 const stationStatusFilters = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
@@ -647,6 +657,23 @@ const testItemSearchTerms = ref<Record<string, string[]>>({})
 
 // Record search queries (for searching ISN, Device ID, Error Code, Error Name)
 const recordSearchQueries = ref<Record<string, string>>({})
+// Debounced search queries for performance
+const debouncedRecordSearchQueries = ref<Record<string, string>>({})
+
+// Debounce search query updates (300ms delay)
+const updateDebouncedSearch = useDebounceFn((stationName: string, value: string) => {
+    debouncedRecordSearchQueries.value = {
+        ...debouncedRecordSearchQueries.value,
+        [stationName]: value
+    }
+}, 300)
+
+// Watch for search query changes and debounce
+watch(recordSearchQueries, (newQueries) => {
+    Object.entries(newQueries).forEach(([stationName, value]) => {
+        updateDebouncedSearch(stationName, value)
+    })
+}, { deep: true })
 
 // Copy success snackbar
 const showCopySuccess = ref(false)
@@ -654,18 +681,6 @@ const showCopySuccess = ref(false)
 // Station tab and device filter controls
 const activeStationTab = ref(0)
 const selectedFilterDeviceIds = ref<Record<string, string[]>>({})
-
-// Performance: Limit displayed records per station group
-const INITIAL_DISPLAY_LIMIT = 50
-const displayLimits = ref<Record<string, number>>({})
-
-function getDisplayLimit(stationName: string): number {
-    return displayLimits.value[stationName] || INITIAL_DISPLAY_LIMIT
-}
-
-function showMoreRecords(stationName: string): void {
-    displayLimits.value[stationName] = (displayLimits.value[stationName] || INITIAL_DISPLAY_LIMIT) + 50
-}
 
 // Copy to clipboard function
 async function copyToClipboard(text: string): Promise<void> {
@@ -745,7 +760,12 @@ const selectedRecordIndices = computed(() => {
 const groupedByStation = computed<StationGroup[]>(() => {
     const groups: Record<string, StationGroup> = {}
 
-    for (const record of testItemData.value) {
+    // Choose data source based on mode
+    const sourceData = useCompactMode.value && compactTestItemData.value.length > 0
+        ? compactTestItemData.value
+        : testItemData.value
+
+    for (const record of sourceData) {
         const stationName = record.station
         if (!groups[stationName]) {
             const stationInfo = stations.value.find((s: Station) => s.station_name === stationName)
@@ -755,7 +775,7 @@ const groupedByStation = computed<StationGroup[]>(() => {
                 records: []
             }
         }
-        groups[stationName].records.push(record as CsvTestItemData)
+        groups[stationName].records.push(record)
     }
 
     // Sort records within each group by Test end Time descending (latest first)
@@ -778,12 +798,23 @@ const testItemHeaders = [
     { title: 'LCL', key: 'LCL', sortable: true }
 ]
 
+// Headers for IndexedDB table (compact record format)
+const indexedDbHeaders = [
+    { title: 'ISN', key: 'ISN', sortable: true, width: '180px' },
+    { title: 'Device ID', key: 'DeviceId', sortable: true, width: '120px' },
+    { title: 'Station', key: 'station', sortable: true, width: '150px' },
+    { title: 'Error Code', key: 'ErrorCode', sortable: true, width: '100px' },
+    { title: 'Error Name', key: 'ErrorName', sortable: false, width: '150px' },
+    { title: 'Test Start', key: 'TestStartTime', sortable: true, width: '160px' },
+    { title: 'Test Items', key: 'TestItemCount', sortable: false, width: '100px' }
+]
+
 // Helper functions for station sub-tabs and device ID filtering
 function getUniqueDeviceIdsForStation(stationGroup: StationGroup): string[] {
     return [...new Set(stationGroup.records.map(r => r.DeviceId))]
 }
 
-function getFilteredStationRecords(stationGroup: StationGroup): CsvTestItemData[] {
+function getFilteredStationRecords(stationGroup: StationGroup): (CsvTestItemData | CompactCsvTestItemData)[] {
     let records = stationGroup.records
 
     // Apply per-station status filter (ALL/PASS/FAIL)
@@ -798,8 +829,8 @@ function getFilteredStationRecords(stationGroup: StationGroup): CsvTestItemData[
         records = records.filter(r => filterIds.includes(r.DeviceId))
     }
 
-    // Apply record search filter (ISN, Device ID, Error Code, Error Name)
-    const searchQuery = recordSearchQueries.value[stationGroup.stationName]?.toLowerCase().trim()
+    // Apply record search filter (debounced for performance)
+    const searchQuery = debouncedRecordSearchQueries.value[stationGroup.stationName]?.toLowerCase().trim()
     if (searchQuery) {
         records = records.filter(r =>
             (r.ISN?.toLowerCase() || '').includes(searchQuery) ||
@@ -812,23 +843,87 @@ function getFilteredStationRecords(stationGroup: StationGroup): CsvTestItemData[
     return records
 }
 
-// Performance: Get limited records for display to avoid rendering thousands of items
-function getDisplayedStationRecords(stationGroup: StationGroup): CsvTestItemData[] {
-    const filtered = getFilteredStationRecords(stationGroup)
-    const limit = getDisplayLimit(stationGroup.stationName)
-    return filtered.slice(0, limit)
+/**
+ * Generate a unique key for a record (used for caching test items)
+ */
+function getRecordKey(record: CsvTestItemData | CompactCsvTestItemData): string {
+    return `${record.ISN}_${record['Test Start Time']}`
 }
 
-function hasMoreRecords(stationGroup: StationGroup): boolean {
-    const filtered = getFilteredStationRecords(stationGroup)
-    const limit = getDisplayLimit(stationGroup.stationName)
-    return filtered.length > limit
+/**
+ * Check if a record is a compact record (without TestItem array)
+ */
+function isCompactRecord(record: CsvTestItemData | CompactCsvTestItemData): record is CompactCsvTestItemData {
+    return 'TestItemCount' in record && !('TestItem' in record)
 }
 
-function getRemainingRecordsCount(stationGroup: StationGroup): number {
-    const filtered = getFilteredStationRecords(stationGroup)
-    const limit = getDisplayLimit(stationGroup.stationName)
-    return Math.max(0, filtered.length - limit)
+/**
+ * Get the total test item count for a record
+ */
+function getTotalTestItemCount(record: CsvTestItemData | CompactCsvTestItemData): number {
+    if (isCompactRecord(record)) {
+        return record.TestItemCount
+    }
+    return record.TestItem?.length || 0
+}
+
+/**
+ * Get test items for a record - returns from local cache, full record, or undefined if not loaded
+ */
+function getTestItemsForRecord(record: CsvTestItemData | CompactCsvTestItemData): TestItem[] | undefined {
+    // If it's a full record with TestItem array, return it directly
+    if (!isCompactRecord(record) && record.TestItem) {
+        return record.TestItem
+    }
+
+    // Otherwise check local cache for lazy-loaded items
+    const key = getRecordKey(record)
+    return lazyLoadedTestItems.value.get(key)
+}
+
+/**
+ * Check if test items are loading for a record
+ */
+function isLoadingTestItems(record: CsvTestItemData | CompactCsvTestItemData): boolean {
+    const key = getRecordKey(record)
+    return loadingTestItemsForRecord.value.has(key)
+}
+
+/**
+ * Lazy load test items for a compact record when panel is expanded
+ */
+async function loadTestItemsForRecord(record: CsvTestItemData | CompactCsvTestItemData): Promise<void> {
+    // Skip if not a compact record
+    if (!isCompactRecord(record)) return
+
+    // Validate required context
+    if (!selectedSite.value || !selectedProject.value) return
+
+    const key = getRecordKey(record)
+
+    // Skip if already loaded or loading
+    if (lazyLoadedTestItems.value.has(key) || loadingTestItemsForRecord.value.has(key)) return
+
+    // Mark as loading
+    loadingTestItemsForRecord.value.add(key)
+
+    try {
+        const testItems = await fetchRecordTestItems(
+            selectedSite.value,
+            selectedProject.value,
+            record.station,
+            record.ISN,
+            record['Test Start Time'],
+            record.DeviceId
+        )
+        if (testItems) {
+            lazyLoadedTestItems.value.set(key, testItems)
+        }
+    } catch (err) {
+        console.error('Failed to load test items for record:', key, err)
+    } finally {
+        loadingTestItemsForRecord.value.delete(key)
+    }
 }
 
 // Watch for station selection changes to fetch device IDs
@@ -878,8 +973,8 @@ watch(selectedStations, async (newStations, oldStations) => {
 // Initialize testItemFilters when records change - ensure 'value' is selected by default
 watch(groupedByStation, (groups) => {
     for (const group of groups) {
-        const displayedRecords = getDisplayedStationRecords(group)
-        for (let i = 0; i < displayedRecords.length; i++) {
+        const filteredRecords = getFilteredStationRecords(group)
+        for (let i = 0; i < filteredRecords.length; i++) {
             const key = `${group.stationName}-${i}`
             // Only set if not already set
             if (testItemFilters.value[key] === undefined) {
@@ -974,22 +1069,6 @@ function filterAndSearchTestItems(items: TestItem[] | undefined, key: string): T
     return filtered
 }
 
-function formatLocalTime(utcTimeStr: string): string {
-    if (!utcTimeStr) return '-'
-    try {
-        const utcDate = new Date(utcTimeStr.replace(' ', 'T') + 'Z')
-        return utcDate.toLocaleString(undefined, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-        })
-    } catch {
-        return utcTimeStr
-    }
-}
-
 function getValueClass(item: TestItem): string {
     const value = item.VALUE?.toUpperCase() || ''
     if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
@@ -1013,38 +1092,67 @@ function calculateDuration(startStr: string, endStr: string): string {
     }
 }
 
-function calculateTotalCycleTime(testItems: TestItem[] | undefined): string {
-    if (!testItems || testItems.length === 0) return '-'
-
-    let totalSeconds = 0
-    for (const item of testItems) {
-        if (item.CYCLE && item.CYCLE !== '') {
-            const cycleTime = parseFloat(item.CYCLE)
-            if (!isNaN(cycleTime)) {
-                totalSeconds += cycleTime
-            }
-        }
-    }
-
-    if (totalSeconds === 0) return '-'
-
-    const minutes = Math.floor(totalSeconds / 60)
-    const seconds = (totalSeconds % 60).toFixed(0)
-    if (minutes > 0) {
-        return `${minutes}m ${seconds}s`
-    }
-    return `${seconds}s`
-}
-
 function isRecordSelected(stationName: string, recordIndex: number): boolean {
-    return selectedRecordKeys.value.has(`${stationName}::${recordIndex}`)
+    // Kept for backward compatibility but now uses record key format
+    const currentGroup = groupedByStation.value.find(g => g.stationName === stationName)
+    if (!currentGroup) return false
+    const record = currentGroup.records[recordIndex]
+    if (!record) return false
+    const recordKey = `${record.ISN}_${record['Test Start Time']}`
+    return selectedRecordKeys.value.has(recordKey)
 }
 
 function toggleRecordSelection(stationName: string, recordIndex: number): void {
-    const key = `${stationName}::${recordIndex}`
-    if (selectedRecordKeys.value.has(key)) {
-        selectedRecordKeys.value.delete(key)
+    // Kept for backward compatibility but now uses record key format
+    const currentGroup = groupedByStation.value.find(g => g.stationName === stationName)
+    if (!currentGroup) return
+    const record = currentGroup.records[recordIndex]
+    if (!record) return
+    const recordKey = `${record.ISN}_${record['Test Start Time']}`
+    if (selectedRecordKeys.value.has(recordKey)) {
+        selectedRecordKeys.value.delete(recordKey)
     } else {
+        selectedRecordKeys.value.add(recordKey)
+    }
+}
+
+/**
+ * Get selected record keys for a specific station (used by IplasRecordTable)
+ */
+function getSelectedKeysForStation(stationName: string): string[] {
+    const stationGroup = groupedByStation.value.find(g => g.stationName === stationName)
+    if (!stationGroup) return []
+    
+    const stationRecordKeys = stationGroup.records.map(
+        r => `${r.ISN}_${r['Test Start Time']}`
+    )
+    
+    return Array.from(selectedRecordKeys.value).filter(key => 
+        stationRecordKeys.includes(key)
+    )
+}
+
+/**
+ * Handle selection changes from IplasRecordTable
+ */
+function handleTableSelectionChange(stationName: string, newSelectedKeys: string[]): void {
+    const stationGroup = groupedByStation.value.find(g => g.stationName === stationName)
+    if (!stationGroup) return
+    
+    // Get all record keys for this station
+    const stationRecordKeys = new Set(
+        stationGroup.records.map(r => `${r.ISN}_${r['Test Start Time']}`)
+    )
+    
+    // Remove old selections for this station
+    for (const key of selectedRecordKeys.value) {
+        if (stationRecordKeys.has(key)) {
+            selectedRecordKeys.value.delete(key)
+        }
+    }
+    
+    // Add new selections
+    for (const key of newSelectedKeys) {
         selectedRecordKeys.value.add(key)
     }
 }
@@ -1055,9 +1163,10 @@ function toggleSelectAllRecords(): void {
     if (!currentGroup) return
 
     const visibleRecordKeys = new Set<string>()
-    const displayedRecords = getDisplayedStationRecords(currentGroup)
-    for (let i = 0; i < displayedRecords.length; i++) {
-        visibleRecordKeys.add(`${currentGroup.stationName}::${i}`)
+    const filteredRecords = getFilteredStationRecords(currentGroup)
+    for (const record of filteredRecords) {
+        const recordKey = `${record.ISN}_${record['Test Start Time']}`
+        visibleRecordKeys.add(recordKey)
     }
 
     // Check if all visible records in current tab are selected
@@ -1080,7 +1189,7 @@ function toggleSelectAllRecords(): void {
 const visibleRecordsCount = computed(() => {
     const currentGroup = groupedByStation.value[activeStationTab.value]
     if (!currentGroup) return 0
-    return getDisplayedStationRecords(currentGroup).length
+    return getFilteredStationRecords(currentGroup).length
 })
 
 // Check if all visible records in current active station tab are selected
@@ -1088,14 +1197,14 @@ const allVisibleSelected = computed(() => {
     const currentGroup = groupedByStation.value[activeStationTab.value]
     if (!currentGroup) return false
 
-    const displayedRecords = getDisplayedStationRecords(currentGroup)
-    for (let i = 0; i < displayedRecords.length; i++) {
-        const key = `${currentGroup.stationName}::${i}`
-        if (!selectedRecordKeys.value.has(key)) {
+    const filteredRecords = getFilteredStationRecords(currentGroup)
+    for (const record of filteredRecords) {
+        const recordKey = `${record.ISN}_${record['Test Start Time']}`
+        if (!selectedRecordKeys.value.has(recordKey)) {
             return false
         }
     }
-    return displayedRecords.length > 0
+    return filteredRecords.length > 0
 })
 
 // Fullscreen functions
@@ -1118,9 +1227,26 @@ function normalizeStationRecord(record: CsvTestItemData): NormalizedRecord {
     }
 }
 
-function openFullscreen(record: CsvTestItemData): void {
-    fullscreenOriginalRecord.value = record
-    fullscreenRecord.value = normalizeStationRecord(record)
+function openFullscreen(record: CsvTestItemData | CompactCsvTestItemData): void {
+    // For compact records, we can only show the fullscreen if test items are loaded
+    if (isCompactRecord(record)) {
+        const testItems = getTestItemsForRecord(record)
+        if (!testItems) {
+            // Load test items first
+            loadTestItemsForRecord(record)
+            return
+        }
+        // Create a synthetic full record with lazy-loaded test items
+        const fullRecord: CsvTestItemData = {
+            ...record,
+            TestItem: testItems
+        }
+        fullscreenOriginalRecord.value = fullRecord
+        fullscreenRecord.value = normalizeStationRecord(fullRecord)
+    } else {
+        fullscreenOriginalRecord.value = record
+        fullscreenRecord.value = normalizeStationRecord(record)
+    }
     showFullscreenDialog.value = true
 }
 
@@ -1150,7 +1276,7 @@ function formatTimeForDownload(timeStr: string): string {
     return timeStr.replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
 }
 
-function createAttachmentInfo(record: CsvTestItemData): DownloadAttachmentInfo {
+function createAttachmentInfo(record: CsvTestItemData | CompactCsvTestItemData): DownloadAttachmentInfo {
     // Use ISN if available, otherwise use DeviceId
     const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
     // CRITICAL: Use 'Test end Time' for download_attachment API
@@ -1162,7 +1288,7 @@ function createAttachmentInfo(record: CsvTestItemData): DownloadAttachmentInfo {
     return { isn, time, deviceid, station }
 }
 
-async function downloadSingleRecord(record: CsvTestItemData, stationName: string, recordIndex: number): Promise<void> {
+async function downloadSingleRecord(record: CsvTestItemData | CompactCsvTestItemData, stationName: string, recordIndex: number): Promise<void> {
     if (!selectedSite.value || !selectedProject.value) return
 
     downloadingKey.value = `${stationName}-${recordIndex}`
@@ -1183,15 +1309,20 @@ async function downloadSelectedRecords(): Promise<void> {
     try {
         const attachments: DownloadAttachmentInfo[] = []
 
+        // Build a map of recordKey -> record for quick lookup
+        const recordMap = new Map<string, CsvTestItemData | CompactCsvTestItemData>()
         for (const group of groupedByStation.value) {
-            for (let i = 0; i < group.records.length; i++) {
-                const key = `${group.stationName}::${i}`
-                if (selectedRecordKeys.value.has(key)) {
-                    const record = group.records[i]
-                    if (record) {
-                        attachments.push(createAttachmentInfo(record))
-                    }
-                }
+            for (const record of group.records) {
+                const recordKey = `${record.ISN}_${record['Test Start Time']}`
+                recordMap.set(recordKey, record)
+            }
+        }
+
+        // Find selected records and create attachment info
+        for (const key of selectedRecordKeys.value) {
+            const record = recordMap.get(key)
+            if (record) {
+                attachments.push(createAttachmentInfo(record))
             }
         }
 
@@ -1243,6 +1374,55 @@ async function fetchTestItems() {
 
     clearTestItemData()
     selectedRecordKeys.value.clear()
+    lazyLoadedTestItems.value.clear()
+    loadingTestItemsForRecord.value.clear()
+
+    // =========================================================================
+    // IndexedDB Mode: Stream directly to disk for large datasets
+    // =========================================================================
+    if (useIndexedDbMode.value) {
+        // Get the first station for now (IndexedDB mode works best with single station queries)
+        const stationDisplayName = selectedStations.value[0]
+        if (!stationDisplayName) return
+
+        const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationDisplayName)
+        if (!stationInfo) return
+
+        // Get device IDs for this station (empty array means use 'ALL')
+        const deviceIds = stationDeviceIds.value[stationDisplayName] || []
+        const deviceId = deviceIds.length > 0 && deviceIds[0] ? deviceIds[0] : 'ALL'
+
+        try {
+            // Stream data directly to IndexedDB
+            const recordCount = await streamToIndexedDb({
+                site: selectedSite.value,
+                project: selectedProject.value,
+                station: stationInfo.display_station_name,
+                deviceId,
+                beginTime: begintime,
+                endTime: endtime,
+                testStatus: testStatusFilter.value
+            })
+
+            console.log(`[IndexedDB] Streamed ${recordCount} records to disk`)
+
+            // Apply station filter for queries
+            updateIndexedDbFilter({ station: stationInfo.display_station_name })
+
+            // Load the first page
+            await loadIndexedDbItems(indexedDbTableOptions.value)
+        } catch (err) {
+            console.error('[IndexedDB] Stream failed:', err)
+            error.value = err instanceof Error ? err.message : 'Failed to stream data to IndexedDB'
+        }
+        return
+    }
+
+    // =========================================================================
+    // Regular Mode: Fetch to memory
+    // =========================================================================
+    // Choose fetch method based on mode
+    const fetchMethod = useCompactMode.value ? fetchTestItemsCompact : fetchTestItemsApi
 
     // Iterate through each selected station
     for (const stationDisplayName of selectedStations.value) {
@@ -1254,7 +1434,7 @@ async function fetchTestItems() {
 
         if (deviceIds.length === 0) {
             // No devices selected - use 'ALL'
-            await fetchTestItemsApi(
+            await fetchMethod(
                 selectedSite.value,
                 selectedProject.value,
                 stationInfo.display_station_name,
@@ -1266,7 +1446,7 @@ async function fetchTestItems() {
         } else {
             // Fetch data for each selected device
             for (const deviceId of deviceIds) {
-                await fetchTestItemsApi(
+                await fetchMethod(
                     selectedSite.value,
                     selectedProject.value,
                     stationInfo.display_station_name,
@@ -1278,10 +1458,111 @@ async function fetchTestItems() {
             }
         }
     }
+}
 
-    // Initialize expanded panels for first group
-    if (groupedByStation.value.length > 0) {
-        expandedPanels.value[0] = [0]
+/**
+ * Handle server-side pagination for table view mode.
+ * Called when user changes page, sort, or items per page.
+ */
+async function handleTableOptionsUpdate(
+    stationName: string,
+    options: { page: number; itemsPerPage: number; sortBy: { key: string; order: 'asc' | 'desc' }[] }
+) {
+    if (!selectedSite.value || !selectedProject.value) return
+
+    const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationName)
+    if (!stationInfo) return
+
+    // Initialize state for this station if needed
+    if (!serverPaginationState.value[stationName]) {
+        serverPaginationState.value[stationName] = {
+            page: 1,
+            itemsPerPage: 25,
+            sortBy: 'TestStartTime',
+            sortDesc: true,
+            items: [],
+            totalItems: 0,
+            loading: false
+        }
+    }
+
+    const state = serverPaginationState.value[stationName]!
+    state.loading = true
+
+    // Get sort info
+    const sortInfo = options.sortBy[0]
+    const sortBy = sortInfo?.key || 'TestStartTime'
+    const sortDesc = sortInfo?.order === 'desc'
+
+    // Get device IDs for this station
+    const deviceIds = stationDeviceIds.value[stationName] || []
+    const deviceId: string = deviceIds.length > 0 && deviceIds[0] ? deviceIds[0] : 'ALL'
+
+    try {
+        const result = await fetchTestItemsPaginated(
+            selectedSite.value,
+            selectedProject.value,
+            stationInfo.display_station_name,
+            deviceId,
+            new Date(startTime.value),
+            new Date(endTime.value),
+            testStatusFilter.value,
+            {
+                page: options.page,
+                itemsPerPage: options.itemsPerPage,
+                sortBy,
+                sortDesc
+            }
+        )
+
+        // Update state
+        state.page = result.page
+        state.itemsPerPage = result.itemsPerPage
+        state.sortBy = sortBy
+        state.sortDesc = sortDesc
+        state.items = result.items
+        state.totalItems = result.totalItems
+    } catch (err) {
+        console.error('Failed to fetch paginated data:', err)
+    } finally {
+        state.loading = false
+    }
+}
+
+/**
+ * Initialize server-side pagination for a station (called when switching to table view).
+ */
+async function initializeServerPagination(stationName: string) {
+    await handleTableOptionsUpdate(stationName, {
+        page: 1,
+        itemsPerPage: 25,
+        sortBy: [{ key: 'TestStartTime', order: 'desc' }]
+    })
+}
+
+/**
+ * Handle loading test items for a record in table view.
+ */
+async function handleLoadTestItemsForTable(record: CsvTestItemData | CompactCsvTestItemData) {
+    if (!selectedSite.value || !selectedProject.value) return
+
+    const key = getRecordKey(record)
+    loadingTestItemsForRecord.value.add(key)
+
+    try {
+        const testItems = await fetchRecordTestItems(
+            selectedSite.value,
+            selectedProject.value,
+            record.station,
+            record.ISN,
+            record['Test Start Time'],
+            record.DeviceId
+        )
+        lazyLoadedTestItems.value.set(key, testItems)
+    } catch (err) {
+        console.error('Failed to load test items:', err)
+    } finally {
+        loadingTestItemsForRecord.value.delete(key)
     }
 }
 
@@ -1289,9 +1570,44 @@ async function handleRefresh() {
     await fetchSiteProjects(true)
 }
 
+// Watch for station data changes - initialize server pagination
+watch(groupedByStation, async (groups) => {
+    if (groups.length > 0) {
+        // Initialize pagination for the active station tab
+        const activeStation = groups[activeStationTab.value]
+        if (activeStation && !serverPaginationState.value[activeStation.stationName]) {
+            await initializeServerPagination(activeStation.stationName)
+        }
+    }
+}, { immediate: true })
+
+// Watch for active station tab changes - initialize pagination if needed
+watch(activeStationTab, async (newTab) => {
+    if (groupedByStation.value.length > newTab) {
+        const station = groupedByStation.value[newTab]
+        if (station && !serverPaginationState.value[station.stationName]) {
+            await initializeServerPagination(station.stationName)
+        }
+    }
+})
+
 // Initialize
 onMounted(async () => {
     await fetchSiteProjects()
+})
+
+// Cleanup on unmount to free memory
+onUnmounted(() => {
+    clearTestItemData()
+    lazyLoadedTestItems.value.clear()
+    loadingTestItemsForRecord.value.clear()
+    recordSearchQueries.value = {}
+    debouncedRecordSearchQueries.value = {}
+    testItemFilters.value = {}
+    testItemStatusFilters.value = {}
+    testItemSearchTerms.value = {}
+    serverPaginationState.value = {}
+    selectedRecordKeys.value.clear()
 })
 </script>
 
