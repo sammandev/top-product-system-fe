@@ -30,6 +30,8 @@ export interface IplasDbRecord {
   ISN: string
   /** ISO timestamp of test start */
   TestStartTime: string
+  /** ISO timestamp of test end */
+  TestEndTime?: string
   /** Test result status */
   TestStatus: 'PASS' | 'FAIL'
   /** Test station name */

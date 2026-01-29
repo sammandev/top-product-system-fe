@@ -211,7 +211,7 @@
                                 {{ stationGroup.displayName }}
                                 <v-chip size="x-small" color="info" class="ml-2">{{
                                     getFilteredStationRecords(stationGroup).length
-                                    }}</v-chip>
+                                }}</v-chip>
                             </v-tab>
                         </v-tabs>
 
@@ -249,13 +249,11 @@
                                     :items="serverPaginationState[stationGroup.stationName]?.items || getFilteredStationRecords(stationGroup)"
                                     :total-items="serverPaginationState[stationGroup.stationName]?.totalItems || getFilteredStationRecords(stationGroup).length"
                                     :loading="serverPaginationState[stationGroup.stationName]?.loading || false"
-                                    :downloading-record="downloadingKey"
-                                    :selectable="true"
+                                    :downloading-record="downloadingKey" :selectable="true"
                                     :selected-keys="getSelectedKeysForStation(stationGroup.stationName)"
                                     @update:options="(opts) => handleTableOptionsUpdate(stationGroup.stationName, opts)"
                                     @update:selected-keys="(keys) => handleTableSelectionChange(stationGroup.stationName, keys)"
-                                    @load-test-items="handleLoadTestItemsForTable" 
-                                    @open-fullscreen="openFullscreen"
+                                    @load-test-items="handleLoadTestItemsForTable" @open-fullscreen="openFullscreen"
                                     @download="(record) => downloadSingleRecord(record, stationGroup.stationName, 0)" />
                             </v-window-item>
                         </v-window>
@@ -277,6 +275,20 @@
                                 Streaming...
                             </v-chip>
                         </div>
+                        <div class="d-flex align-center gap-2">
+                            <!-- Bulk Download Button for IndexedDB -->
+                            <v-btn 
+                                v-if="indexedDbSelectedKeys.length > 0" 
+                                color="success" 
+                                variant="outlined"
+                                size="small" 
+                                :loading="downloading" 
+                                @click="downloadIndexedDbSelectedRecords"
+                            >
+                                <v-icon start size="small">mdi-download-multiple</v-icon>
+                                Download Selected ({{ indexedDbSelectedKeys.length }})
+                            </v-btn>
+                        </div>
                     </v-card-title>
                     <v-card-text>
                         <!-- Stream Status Alert -->
@@ -284,40 +296,110 @@
                             {{ streamStatus.error }}
                         </v-alert>
 
+                        <!-- Station Tabs for IndexedDB Results -->
+                        <v-tabs 
+                            v-if="indexedDbStationList.length > 0 && !isStreaming" 
+                            v-model="indexedDbActiveStationTab" 
+                            color="secondary" 
+                            class="mb-4" 
+                            show-arrows
+                        >
+                            <v-tab :value="0">
+                                <v-icon start size="small">mdi-view-list</v-icon>
+                                All Stations
+                                <v-chip size="x-small" color="info" class="ml-2">{{ indexedDbTotalItems }}</v-chip>
+                            </v-tab>
+                            <v-tab v-for="(stationName, index) in indexedDbStationList" :key="stationName" :value="index + 1">
+                                <v-icon start size="small">mdi-router-wireless</v-icon>
+                                {{ stationName }}
+                            </v-tab>
+                        </v-tabs>
+
                         <!-- IndexedDB Table using v-data-table-server -->
-                        <v-data-table-server v-model:items-per-page="indexedDbTableOptions.itemsPerPage"
-                            v-model:page="indexedDbTableOptions.page" v-model:sort-by="indexedDbTableOptions.sortBy"
-                            :headers="indexedDbHeaders" :items="indexedDbItems" :items-length="indexedDbTotalItems"
-                            :loading="indexedDbLoading || isStreaming" hover class="elevation-1"
-                            @update:options="loadIndexedDbItems">
-                            <!-- ISN Column -->
+                        <v-data-table-server 
+                            v-model="indexedDbSelectedKeys"
+                            v-model:items-per-page="indexedDbTableOptions.itemsPerPage"
+                            v-model:page="indexedDbTableOptions.page" 
+                            v-model:sort-by="indexedDbTableOptions.sortBy"
+                            :headers="indexedDbHeaders" 
+                            :items="indexedDbItems" 
+                            :items-length="indexedDbTotalItems"
+                            :loading="indexedDbLoading || isStreaming" 
+                            item-value="id"
+                            show-select
+                            hover 
+                            class="elevation-1"
+                            @update:options="loadIndexedDbItems"
+                            @click:row="handleIndexedDbRowClick"
+                        >
+                            <!-- ISN Column with Copy Button -->
                             <template #item.ISN="{ item }">
                                 <div class="d-flex align-center gap-1">
-                                    <v-btn icon size="x-small" variant="text" color="primary"
-                                        @click.stop="copyToClipboard(item.ISN)">
+                                    <v-btn 
+                                        icon 
+                                        size="x-small" 
+                                        variant="text" 
+                                        color="primary"
+                                        @click.stop="copyToClipboard(item.ISN)"
+                                    >
                                         <v-icon size="small">mdi-content-copy</v-icon>
+                                        <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
                                     </v-btn>
-                                    <span class="font-weight-medium">{{ item.ISN || '-' }}</span>
+                                    <span class="font-weight-medium cursor-pointer">{{ item.ISN || '-' }}</span>
                                 </div>
                             </template>
 
                             <!-- Device ID Column -->
                             <template #item.DeviceId="{ item }">
-                                <v-chip size="x-small" color="secondary" variant="outlined">
+                                <v-chip 
+                                    size="x-small" 
+                                    color="secondary" 
+                                    variant="outlined"
+                                    class="cursor-pointer"
+                                    @click.stop="copyToClipboard(item.DeviceId)"
+                                >
                                     {{ item.DeviceId }}
+                                    <v-tooltip activator="parent" location="top">Click to copy</v-tooltip>
                                 </v-chip>
                             </template>
 
-                            <!-- Error Code Column -->
-                            <template #item.ErrorCode="{ item }">
-                                <v-chip :color="getStatusColor(item.ErrorCode)" size="x-small">
-                                    {{ item.ErrorCode }}
+                            <!-- Test End Time Column -->
+                            <template #item.TestEndTime="{ item }">
+                                {{ item.TestEndTime ? adjustIplasDisplayTime(item.TestEndTime, 1) : adjustIplasDisplayTime(item.TestStartTime, 1) }}
+                            </template>
+
+                            <!-- Duration Column -->
+                            <template #item.Duration="{ item }">
+                                <v-chip size="x-small" variant="outlined">
+                                    {{ calculateIndexedDbDuration(item) }}
                                 </v-chip>
                             </template>
 
-                            <!-- Test Start Time Column -->
-                            <template #item.TestStartTime="{ item }">
-                                {{ adjustIplasDisplayTime(item.TestStartTime, 1) }}
+                            <!-- Status Column -->
+                            <template #item.TestStatus="{ item }">
+                                <v-chip 
+                                    :color="item.TestStatus === 'PASS' ? 'success' : 'error'" 
+                                    size="x-small"
+                                >
+                                    {{ item.TestStatus }}
+                                </v-chip>
+                            </template>
+
+                            <!-- Actions Column -->
+                            <template #item.actions="{ item }">
+                                <div class="d-flex gap-1">
+                                    <v-btn 
+                                        icon 
+                                        size="x-small" 
+                                        variant="outlined" 
+                                        color="primary"
+                                        :loading="downloading"
+                                        @click.stop="downloadIndexedDbRecord(item)"
+                                    >
+                                        <v-icon size="small">mdi-download</v-icon>
+                                        <v-tooltip activator="parent" location="top">Download Test Log</v-tooltip>
+                                    </v-btn>
+                                </div>
                             </template>
 
                             <!-- No Data Template (during streaming) -->
@@ -333,8 +415,7 @@
                                 <div v-else class="text-center py-4">
                                     <v-icon size="48" color="grey">mdi-database-off-outline</v-icon>
                                     <div class="text-h6 mt-2 text-grey">No data in IndexedDB</div>
-                                    <div class="text-body-2 text-grey">Start a search with "Stream to Disk" enabled
-                                    </div>
+                                    <div class="text-body-2 text-grey">Start a search with "Stream to Disk" enabled</div>
                                 </div>
                             </template>
 
@@ -365,13 +446,13 @@
                             <v-col cols="6" sm="3">
                                 <div class="text-center">
                                     <div class="text-h4 font-weight-bold text-warning">{{ stations.length }}</div>
-                                    <div class="text-caption text-medium-emphasis">Stations</div>
+                                    <div class="text-caption text-medium-emphasis">Stations (based on Selected Project)</div>
                                 </div>
                             </v-col>
                             <v-col cols="6" sm="3">
                                 <div class="text-center">
                                     <div class="text-h4 font-weight-bold text-info">{{ totalDeviceCount }}</div>
-                                    <div class="text-caption text-medium-emphasis">Devices</div>
+                                    <div class="text-caption text-medium-emphasis">Devices (based on Selected Station)</div>
                                 </div>
                             </v-col>
                         </v-row>
@@ -798,16 +879,165 @@ const testItemHeaders = [
     { title: 'LCL', key: 'LCL', sortable: true }
 ]
 
-// Headers for IndexedDB table (compact record format)
+// Headers for IndexedDB table - User requested columns:
+// Checkbox (via show-select), ISN, Device ID, Test End, Duration, Status, Actions
 const indexedDbHeaders = [
     { title: 'ISN', key: 'ISN', sortable: true, width: '180px' },
-    { title: 'Device ID', key: 'DeviceId', sortable: true, width: '120px' },
-    { title: 'Station', key: 'station', sortable: true, width: '150px' },
-    { title: 'Error Code', key: 'ErrorCode', sortable: true, width: '100px' },
-    { title: 'Error Name', key: 'ErrorName', sortable: false, width: '150px' },
-    { title: 'Test Start', key: 'TestStartTime', sortable: true, width: '160px' },
-    { title: 'Test Items', key: 'TestItemCount', sortable: false, width: '100px' }
+    { title: 'Device ID', key: 'DeviceId', sortable: true, width: '100px' },
+    { title: 'Test End', key: 'TestEndTime', sortable: true, width: '160px' },
+    { title: 'Duration', key: 'Duration', sortable: false, width: '90px' },
+    { title: 'Status', key: 'TestStatus', sortable: true, width: '90px' },
+    { title: 'Actions', key: 'actions', sortable: false, width: '100px' }
 ]
+
+// Selected keys for IndexedDB table (for bulk download)
+const indexedDbSelectedKeys = ref<string[]>([])
+
+// IndexedDB grouped by station
+const indexedDbGroupedByStation = computed(() => {
+    const groups: Map<string, typeof indexedDbItems.value> = new Map()
+    for (const item of indexedDbItems.value) {
+        const station = item.Station || 'Unknown'
+        if (!groups.has(station)) {
+            groups.set(station, [])
+        }
+        groups.get(station)!.push(item)
+    }
+    return groups
+})
+
+// Active station tab for IndexedDB results
+const indexedDbActiveStationTab = ref(0)
+
+// Get distinct stations from IndexedDB data
+const indexedDbStationList = computed(() => {
+    const stations = new Set<string>()
+    for (const item of indexedDbItems.value) {
+        if (item.Station) {
+            stations.add(item.Station)
+        }
+    }
+    return Array.from(stations).sort()
+})
+
+// Calculate duration for IndexedDB records
+function calculateIndexedDbDuration(record: typeof indexedDbItems.value[0]): string {
+    // First try to use pre-calculated TestDuration
+    if (record.TestDuration && record.TestDuration > 0) {
+        const mins = Math.floor(record.TestDuration / 60)
+        const secs = record.TestDuration % 60
+        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
+    }
+    
+    // Fallback: calculate from TestStartTime and TestEndTime
+    const startTime = record.TestStartTime
+    const endTime = record.TestEndTime
+    if (startTime && endTime) {
+        try {
+            const start = new Date(startTime).getTime()
+            const end = new Date(endTime).getTime()
+            const diffSecs = Math.floor((end - start) / 1000)
+            if (diffSecs >= 0) {
+                const mins = Math.floor(diffSecs / 60)
+                const secs = diffSecs % 60
+                return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
+            }
+        } catch {
+            // Ignore parse errors
+        }
+    }
+    return '-'
+}
+
+// Get record key for IndexedDB records
+function getIndexedDbRecordKey(record: typeof indexedDbItems.value[0]): string {
+    return record.id || `${record.ISN}_${record.TestStartTime}`
+}
+
+// Handle IndexedDB row click to show details dialog
+async function handleIndexedDbRowClick(_event: Event, { item }: { item: typeof indexedDbItems.value[0] }): Promise<void> {
+    if (!selectedSite.value || !selectedProject.value) return
+    
+    // Fetch test items for this record
+    const testItems = await fetchRecordTestItems(
+        selectedSite.value,
+        selectedProject.value,
+        item.Station,
+        item.ISN,
+        item.TestStartTime,
+        item.DeviceId
+    )
+    
+    // Create normalized record for dialog
+    const normalizedRecord: NormalizedRecord = {
+        isn: item.ISN,
+        deviceId: item.DeviceId,
+        stationName: item.Station,
+        displayStationName: item.Station,
+        tsp: item.Station,
+        site: item.Site,
+        project: item.Project,
+        line: item.Slot || '',
+        errorCode: item.ErrorCode || '',
+        errorName: item.ErrorName || '',
+        testStatus: item.TestStatus,
+        testStartTime: item.TestStartTime,
+        testEndTime: item.TestStartTime, // Will be computed from duration
+        testItems: testItems || []
+    }
+    
+    fullscreenRecord.value = normalizedRecord
+    showFullscreenDialog.value = true
+}
+
+// Download selected IndexedDB records
+async function downloadIndexedDbSelectedRecords(): Promise<void> {
+    if (!selectedSite.value || !selectedProject.value || indexedDbSelectedKeys.value.length === 0) return
+
+    try {
+        const attachments: DownloadAttachmentInfo[] = []
+        
+        for (const item of indexedDbItems.value) {
+            const key = getIndexedDbRecordKey(item)
+            if (indexedDbSelectedKeys.value.includes(key)) {
+                // Use ISN if available, otherwise use DeviceId
+                const isn = item.ISN && item.ISN.trim() !== '' ? item.ISN : item.DeviceId
+                attachments.push({
+                    isn,
+                    time: formatTimeForDownload(item.TestStartTime),
+                    deviceid: item.DeviceId,
+                    station: item.Station
+                })
+            }
+        }
+
+        if (attachments.length > 0) {
+            console.log('Download IndexedDB attachments:', attachments)
+            await downloadAttachments(selectedSite.value, selectedProject.value, attachments)
+        }
+    } catch (err) {
+        console.error('Failed to download IndexedDB test logs:', err)
+    }
+}
+
+// Download single IndexedDB record
+async function downloadIndexedDbRecord(record: typeof indexedDbItems.value[0]): Promise<void> {
+    if (!selectedSite.value || !selectedProject.value) return
+
+    try {
+        const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+        const attachmentInfo: DownloadAttachmentInfo = {
+            isn,
+            time: formatTimeForDownload(record.TestStartTime),
+            deviceid: record.DeviceId,
+            station: record.Station
+        }
+        console.log('Download IndexedDB attachment:', attachmentInfo)
+        await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
+    } catch (err) {
+        console.error('Failed to download IndexedDB test log:', err)
+    }
+}
 
 // Helper functions for station sub-tabs and device ID filtering
 function getUniqueDeviceIdsForStation(stationGroup: StationGroup): string[] {
@@ -1122,12 +1352,12 @@ function toggleRecordSelection(stationName: string, recordIndex: number): void {
 function getSelectedKeysForStation(stationName: string): string[] {
     const stationGroup = groupedByStation.value.find(g => g.stationName === stationName)
     if (!stationGroup) return []
-    
+
     const stationRecordKeys = stationGroup.records.map(
         r => `${r.ISN}_${r['Test Start Time']}`
     )
-    
-    return Array.from(selectedRecordKeys.value).filter(key => 
+
+    return Array.from(selectedRecordKeys.value).filter(key =>
         stationRecordKeys.includes(key)
     )
 }
@@ -1138,19 +1368,19 @@ function getSelectedKeysForStation(stationName: string): string[] {
 function handleTableSelectionChange(stationName: string, newSelectedKeys: string[]): void {
     const stationGroup = groupedByStation.value.find(g => g.stationName === stationName)
     if (!stationGroup) return
-    
+
     // Get all record keys for this station
     const stationRecordKeys = new Set(
         stationGroup.records.map(r => `${r.ISN}_${r['Test Start Time']}`)
     )
-    
+
     // Remove old selections for this station
     for (const key of selectedRecordKeys.value) {
         if (stationRecordKeys.has(key)) {
             selectedRecordKeys.value.delete(key)
         }
     }
-    
+
     // Add new selections
     for (const key of newSelectedKeys) {
         selectedRecordKeys.value.add(key)
@@ -1376,45 +1606,53 @@ async function fetchTestItems() {
     selectedRecordKeys.value.clear()
     lazyLoadedTestItems.value.clear()
     loadingTestItemsForRecord.value.clear()
+    // Clear IndexedDB selection when fetching new data
+    indexedDbSelectedKeys.value = []
 
     // =========================================================================
     // IndexedDB Mode: Stream directly to disk for large datasets
     // =========================================================================
     if (useIndexedDbMode.value) {
-        // Get the first station for now (IndexedDB mode works best with single station queries)
-        const stationDisplayName = selectedStations.value[0]
-        if (!stationDisplayName) return
+        // Stream data for ALL selected stations
+        let totalRecords = 0
+        
+        for (const stationDisplayName of selectedStations.value) {
+            const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationDisplayName)
+            if (!stationInfo) continue
 
-        const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationDisplayName)
-        if (!stationInfo) return
+            // Get device IDs for this station (empty array means use 'ALL')
+            const deviceIds = stationDeviceIds.value[stationDisplayName] || []
+            const deviceId = deviceIds.length > 0 && deviceIds[0] ? deviceIds[0] : 'ALL'
 
-        // Get device IDs for this station (empty array means use 'ALL')
-        const deviceIds = stationDeviceIds.value[stationDisplayName] || []
-        const deviceId = deviceIds.length > 0 && deviceIds[0] ? deviceIds[0] : 'ALL'
+            try {
+                // Stream data directly to IndexedDB
+                const recordCount = await streamToIndexedDb({
+                    site: selectedSite.value,
+                    project: selectedProject.value,
+                    station: stationInfo.display_station_name,
+                    deviceId,
+                    beginTime: begintime,
+                    endTime: endtime,
+                    testStatus: testStatusFilter.value
+                })
 
-        try {
-            // Stream data directly to IndexedDB
-            const recordCount = await streamToIndexedDb({
-                site: selectedSite.value,
-                project: selectedProject.value,
-                station: stationInfo.display_station_name,
-                deviceId,
-                beginTime: begintime,
-                endTime: endtime,
-                testStatus: testStatusFilter.value
-            })
-
-            console.log(`[IndexedDB] Streamed ${recordCount} records to disk`)
-
-            // Apply station filter for queries
-            updateIndexedDbFilter({ station: stationInfo.display_station_name })
-
-            // Load the first page
-            await loadIndexedDbItems(indexedDbTableOptions.value)
-        } catch (err) {
-            console.error('[IndexedDB] Stream failed:', err)
-            error.value = err instanceof Error ? err.message : 'Failed to stream data to IndexedDB'
+                console.log(`[IndexedDB] Streamed ${recordCount} records for station ${stationInfo.display_station_name}`)
+                totalRecords += recordCount
+            } catch (err) {
+                console.error(`[IndexedDB] Stream failed for station ${stationInfo.display_station_name}:`, err)
+                error.value = err instanceof Error ? err.message : 'Failed to stream data to IndexedDB'
+                // Continue with other stations even if one fails
+            }
         }
+
+        console.log(`[IndexedDB] Total: Streamed ${totalRecords} records from ${selectedStations.value.length} stations`)
+
+        // Reset station tab to "All Stations" and clear filter
+        indexedDbActiveStationTab.value = 0
+        updateIndexedDbFilter({ station: undefined })
+
+        // Load the first page
+        await loadIndexedDbItems(indexedDbTableOptions.value)
         return
     }
 
@@ -1589,6 +1827,24 @@ watch(activeStationTab, async (newTab) => {
             await initializeServerPagination(station.stationName)
         }
     }
+})
+
+// Watch for IndexedDB station tab changes - update filter
+watch(indexedDbActiveStationTab, async (newTab) => {
+    if (newTab === 0) {
+        // All stations - clear station filter
+        updateIndexedDbFilter({ station: undefined })
+    } else {
+        // Specific station selected
+        const stationName = indexedDbStationList.value[newTab - 1]
+        if (stationName) {
+            updateIndexedDbFilter({ station: stationName })
+        }
+    }
+    // Reset to page 1 when changing tabs
+    indexedDbTableOptions.value.page = 1
+    // Reload items
+    await loadIndexedDbItems(indexedDbTableOptions.value)
 })
 
 // Initialize

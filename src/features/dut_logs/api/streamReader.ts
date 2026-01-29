@@ -186,10 +186,25 @@ export async function fetchAndSinkToDB(
    * Convert compact API record to IndexedDB record
    */
   function toDbRecord(apiRecord: CompactCsvTestItemData): IplasDbRecord {
+    // Calculate duration from start and end times if available
+    let testDuration: number | undefined
+    const startTime = apiRecord['Test Start Time']
+    const endTime = apiRecord['Test end Time']
+    if (startTime && endTime) {
+      try {
+        const start = new Date(startTime).getTime()
+        const end = new Date(endTime).getTime()
+        testDuration = Math.floor((end - start) / 1000) // seconds
+      } catch {
+        // Ignore parse errors
+      }
+    }
+    
     return {
       id: generateRecordId(apiRecord.ISN, apiRecord['Test Start Time']),
       ISN: apiRecord.ISN,
       TestStartTime: apiRecord['Test Start Time'],
+      TestEndTime: apiRecord['Test end Time'],
       TestStatus: apiRecord['Test Status'] as 'PASS' | 'FAIL',
       Station: apiRecord.station,
       DeviceId: apiRecord.DeviceId,
@@ -198,7 +213,7 @@ export async function fetchAndSinkToDB(
       ErrorCode: apiRecord.ErrorCode,
       ErrorName: apiRecord.ErrorName,
       Slot: undefined, // Not in CompactCsvTestItemData
-      TestDuration: undefined, // Not in CompactCsvTestItemData
+      TestDuration: testDuration,
       runId: thisRunId
     }
   }
