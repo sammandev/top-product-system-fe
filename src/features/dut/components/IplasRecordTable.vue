@@ -5,7 +5,6 @@
             v-model:items-per-page="itemsPerPage"
             v-model:page="page"
             v-model:sort-by="sortBy"
-            v-model:expanded="expanded"
             :model-value="selectedKeys"
             :headers="computedHeaders"
             :items="itemsWithKeys"
@@ -13,104 +12,70 @@
             :loading="loading"
             item-value="recordKey"
             :show-select="selectable"
-            show-expand
             hover
-            class="elevation-1"
+            class="elevation-1 clickable-rows"
             @update:options="onOptionsUpdate"
             @update:model-value="onSelectionChange"
+            @click:row="handleRowClick"
         >
-            <!-- ISN Column with Copy Button -->
+            <!-- ISN Column with Copy Button on Left -->
             <template #item.ISN="{ item }">
                 <div class="d-flex align-center gap-1">
                     <v-btn icon size="x-small" variant="text" color="primary" @click.stop="copyToClipboard(item.ISN)">
                         <v-icon size="small">mdi-content-copy</v-icon>
                         <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
                     </v-btn>
-                    <span class="font-weight-medium">{{ item.ISN || '-' }}</span>
+                    <span class="font-weight-medium font-mono">{{ item.ISN || '-' }}</span>
                 </div>
             </template>
 
             <!-- Device ID Column -->
             <template #item.DeviceId="{ item }">
-                <v-chip 
-                    size="x-small" 
-                    color="secondary" 
-                    variant="outlined"
-                    class="cursor-pointer"
-                    @click.stop="copyToClipboard(item.DeviceId)"
-                >
-                    {{ item.DeviceId }}
-                    <v-tooltip activator="parent" location="top">Click to copy</v-tooltip>
-                </v-chip>
+                <span class="font-mono text-medium-emphasis">{{ item.DeviceId || '-' }}</span>
             </template>
 
-            <!-- Error Code Column -->
+            <!-- Error Code Column - Red when error -->
             <template #item.ErrorCode="{ item }">
                 <v-chip 
-                    :color="getStatusColor(item.ErrorCode)" 
+                    :color="isStatusPass(item.ErrorCode) ? 'success' : 'error'" 
                     size="x-small"
-                    class="cursor-pointer"
-                    @click.stop="copyToClipboard(item.ErrorCode)"
+                    :variant="isStatusPass(item.ErrorCode) ? 'tonal' : 'flat'"
                 >
-                    {{ item.ErrorCode }}
-                    <v-tooltip activator="parent" location="top">Click to copy</v-tooltip>
+                    {{ item.ErrorCode || '-' }}
                 </v-chip>
             </template>
 
-            <!-- Error Name Column -->
+            <!-- Error Name Column - Red text when error -->
             <template #item.ErrorName="{ item }">
                 <template v-if="item.ErrorName && item.ErrorName !== 'N/A' && !isStatusPass(item.ErrorCode)">
-                    <v-chip 
-                        color="error" 
-                        size="x-small" 
-                        variant="outlined"
-                        class="cursor-pointer"
-                        @click.stop="copyToClipboard(item.ErrorName)"
-                    >
-                        {{ item.ErrorName }}
-                        <v-tooltip activator="parent" location="top">Click to copy</v-tooltip>
-                    </v-chip>
+                    <span class="text-error font-weight-medium">{{ item.ErrorName }}</span>
                 </template>
                 <span v-else class="text-medium-emphasis">-</span>
             </template>
 
             <!-- Test Start Time Column -->
             <template #item.TestStartTime="{ item }">
-                {{ formatDateTime(item['Test Start Time']) }}
+                <span class="text-caption">{{ formatDateTime(item['Test Start Time']) }}</span>
             </template>
 
             <!-- Test End Time Column -->
             <template #item.TestEndTime="{ item }">
-                {{ formatDateTime(item['Test end Time']) }}
+                <span class="text-caption">{{ formatDateTime(item['Test end Time']) }}</span>
             </template>
 
-            <!-- Duration Column -->
+            <!-- Duration Column - No chip -->
             <template #item.Duration="{ item }">
-                <v-chip size="x-small" variant="outlined">
-                    {{ calculateDuration(item['Test Start Time'], item['Test end Time']) }}
-                </v-chip>
+                <span class="text-caption text-medium-emphasis">{{ calculateDuration(item['Test Start Time'], item['Test end Time']) }}</span>
             </template>
 
-            <!-- Test Item Count Column -->
+            <!-- Test Item Count Column - No chip -->
             <template #item.TestItemCount="{ item }">
-                <v-chip size="x-small" color="info" variant="outlined">
-                    {{ getTestItemCount(item) }}
-                </v-chip>
+                <span class="text-caption">{{ getTestItemCount(item) }}</span>
             </template>
 
-            <!-- Actions Column -->
+            <!-- Actions Column - Download buttons -->
             <template #item.actions="{ item }">
                 <div class="d-flex gap-1">
-                    <v-btn 
-                        icon 
-                        size="x-small" 
-                        variant="outlined" 
-                        color="secondary"
-                        @click.stop="$emit('open-fullscreen', item)"
-                    >
-                        <v-icon size="small">mdi-fullscreen</v-icon>
-                        <v-tooltip activator="parent" location="top">Fullscreen View</v-tooltip>
-                    </v-btn>
                     <v-btn 
                         icon 
                         size="x-small" 
@@ -120,57 +85,20 @@
                         @click.stop="$emit('download', item)"
                     >
                         <v-icon size="small">mdi-download</v-icon>
-                        <v-tooltip activator="parent" location="top">Download Test Log</v-tooltip>
+                        <v-tooltip activator="parent" location="top">Download TXT Log</v-tooltip>
+                    </v-btn>
+                    <v-btn 
+                        icon 
+                        size="x-small" 
+                        variant="outlined" 
+                        color="success"
+                        :loading="downloadingCsvRecord === item.recordKey"
+                        @click.stop="$emit('download-csv', item)"
+                    >
+                        <v-icon size="small">mdi-file-delimited</v-icon>
+                        <v-tooltip activator="parent" location="top">Download CSV Log</v-tooltip>
                     </v-btn>
                 </div>
-            </template>
-
-            <!-- Expanded Row Content -->
-            <template #expanded-row="{ columns, item }">
-                <tr>
-                    <td :colspan="columns.length" class="pa-4 bg-grey-lighten-4">
-                        <!-- Loading state for test items -->
-                        <div v-if="loadingTestItems.has(item.recordKey)" class="d-flex align-center justify-center py-4">
-                            <v-progress-circular indeterminate color="primary" size="24" />
-                            <span class="ml-2">Loading test items...</span>
-                        </div>
-                        
-                        <!-- Test items table -->
-                        <v-data-table 
-                            v-else-if="testItemsCache.has(item.recordKey)"
-                            :headers="testItemHeaders"
-                            :items="testItemsCache.get(item.recordKey)"
-                            density="compact"
-                            :items-per-page="10"
-                            class="elevation-0"
-                        >
-                            <template #item.VALUE="{ item: testItem }">
-                                <span class="font-weight-medium">{{ testItem.VALUE }}</span>
-                            </template>
-                            <template #item.STATUS="{ item: testItem }">
-                                <v-chip 
-                                    :color="testItem.STATUS === 'PASS' ? 'success' : 'error'" 
-                                    size="x-small"
-                                >
-                                    {{ testItem.STATUS }}
-                                </v-chip>
-                            </template>
-                        </v-data-table>
-
-                        <!-- No test items loaded yet -->
-                        <div v-else class="text-center py-4">
-                            <v-btn 
-                                color="primary" 
-                                variant="outlined" 
-                                size="small"
-                                @click="loadTestItems(item)"
-                            >
-                                <v-icon start>mdi-download</v-icon>
-                                Load Test Items ({{ getTestItemCount(item) }})
-                            </v-btn>
-                        </div>
-                    </td>
-                </tr>
             </template>
 
             <!-- Loading Overlay -->
@@ -198,8 +126,8 @@
 
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { adjustIplasDisplayTime, getStatusColor, isStatusPass } from '@/shared/utils/helpers'
-import type { CompactCsvTestItemData, CsvTestItemData, TestItem } from '@/features/dut_logs/api/iplasProxyApi'
+import { adjustIplasDisplayTime, isStatusPass } from '@/shared/utils/helpers'
+import type { CompactCsvTestItemData, CsvTestItemData } from '@/features/dut_logs/api/iplasProxyApi'
 
 // Props
 const props = withDefaults(defineProps<{
@@ -207,6 +135,7 @@ const props = withDefaults(defineProps<{
     totalItems: number
     loading: boolean
     downloadingRecord?: string | null
+    downloadingCsvRecord?: string | null
     selectable?: boolean
     selectedKeys?: string[]
 }>(), {
@@ -218,20 +147,15 @@ const props = withDefaults(defineProps<{
 const emit = defineEmits<{
     (e: 'update:options', options: { page: number; itemsPerPage: number; sortBy: { key: string; order: 'asc' | 'desc' }[] }): void
     (e: 'update:selected-keys', keys: string[]): void
-    (e: 'load-test-items', record: CsvTestItemData | CompactCsvTestItemData): void
-    (e: 'open-fullscreen', record: CsvTestItemData | CompactCsvTestItemData): void
+    (e: 'row-click', record: CsvTestItemData | CompactCsvTestItemData): void
     (e: 'download', record: CsvTestItemData | CompactCsvTestItemData): void
+    (e: 'download-csv', record: CsvTestItemData | CompactCsvTestItemData): void
 }>()
 
 // Table state
 const page = ref(1)
 const itemsPerPage = ref(25)
 const sortBy = ref<{ key: string; order: 'asc' | 'desc' }[]>([{ key: 'TestStartTime', order: 'desc' }])
-const expanded = ref<string[]>([])
-
-// Test items cache (managed externally but exposed here for display)
-const testItemsCache = ref<Map<string, TestItem[]>>(new Map())
-const loadingTestItems = ref<Set<string>>(new Set())
 
 // Copy success state
 const showCopySuccess = ref(false)
@@ -255,18 +179,9 @@ const computedHeaders = computed(() => {
         { title: 'Test End', key: 'TestEndTime', sortable: true, width: '150px' },
         { title: 'Duration', key: 'Duration', sortable: false, width: '100px' },
         { title: 'Test Items', key: 'TestItemCount', sortable: false, width: '100px' },
-        { title: 'Actions', key: 'actions', sortable: false, width: '100px' }
+        { title: 'Actions', key: 'actions', sortable: false, width: '120px' }
     ]
 })
-
-// Test item headers for expanded row
-const testItemHeaders = [
-    { title: 'Name', key: 'NAME', sortable: true },
-    { title: 'Status', key: 'STATUS', sortable: true, width: '100px' },
-    { title: 'Value', key: 'VALUE', sortable: false, width: '120px' },
-    { title: 'UCL', key: 'UCL', sortable: false, width: '100px' },
-    { title: 'LCL', key: 'LCL', sortable: false, width: '100px' }
-]
 
 // Helper functions
 function formatDateTime(dateStr: string | undefined): string {
@@ -302,8 +217,8 @@ function copyToClipboard(text: string | undefined) {
     showCopySuccess.value = true
 }
 
-function loadTestItems(record: CsvTestItemData | CompactCsvTestItemData) {
-    emit('load-test-items', record)
+function handleRowClick(_event: Event, data: { item: CsvTestItemData | CompactCsvTestItemData }) {
+    emit('row-click', data.item)
 }
 
 function onOptionsUpdate(options: { page: number; itemsPerPage: number; sortBy: { key: string; order: 'asc' | 'desc' }[] }) {
@@ -313,25 +228,16 @@ function onOptionsUpdate(options: { page: number; itemsPerPage: number; sortBy: 
 function onSelectionChange(keys: string[]) {
     emit('update:selected-keys', keys)
 }
-
-// Update cache when test items are loaded externally
-defineExpose({
-    setTestItems(key: string, items: TestItem[]) {
-        testItemsCache.value.set(key, items)
-        loadingTestItems.value.delete(key)
-    },
-    setLoadingTestItems(key: string, loading: boolean) {
-        if (loading) {
-            loadingTestItems.value.add(key)
-        } else {
-            loadingTestItems.value.delete(key)
-        }
-    }
-})
 </script>
 
 <style scoped>
-.cursor-pointer {
+.clickable-rows :deep(tbody tr) {
     cursor: pointer;
+}
+.clickable-rows :deep(tbody tr:hover) {
+    background-color: rgba(var(--v-theme-primary), 0.08);
+}
+.font-mono {
+    font-family: 'Roboto Mono', monospace;
 }
 </style>

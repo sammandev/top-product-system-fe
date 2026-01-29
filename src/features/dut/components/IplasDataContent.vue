@@ -195,10 +195,17 @@
                             <v-chip size="small" color="info" class="ml-2">{{ regularModeRecordCount }} records</v-chip>
                         </div>
                         <div class="d-flex align-center gap-2">
-                            <v-btn v-if="selectedRecordIndices.length > 0" color="success" variant="outlined"
+                            <!-- Bulk TXT Download -->
+                            <v-btn v-if="selectedRecordIndices.length > 0" color="primary" variant="outlined"
                                 size="small" :loading="downloading" @click="downloadSelectedRecords">
                                 <v-icon start size="small">mdi-download-multiple</v-icon>
-                                Download Selected ({{ selectedRecordIndices.length }})
+                                Download TXT ({{ selectedRecordIndices.length }})
+                            </v-btn>
+                            <!-- Bulk CSV Download -->
+                            <v-btn v-if="selectedRecordIndices.length > 0" color="success" variant="outlined"
+                                size="small" :loading="downloadingCsv" @click="downloadSelectedRecordsCsv">
+                                <v-icon start size="small">mdi-file-delimited</v-icon>
+                                Download CSV ({{ selectedRecordIndices.length }})
                             </v-btn>
                         </div>
                     </v-card-title>
@@ -211,7 +218,7 @@
                                 {{ stationGroup.displayName }}
                                 <v-chip size="x-small" color="info" class="ml-2">{{
                                     getFilteredStationRecords(stationGroup).length
-                                }}</v-chip>
+                                    }}</v-chip>
                             </v-tab>
                         </v-tabs>
 
@@ -249,12 +256,14 @@
                                     :items="serverPaginationState[stationGroup.stationName]?.items || getFilteredStationRecords(stationGroup)"
                                     :total-items="serverPaginationState[stationGroup.stationName]?.totalItems || getFilteredStationRecords(stationGroup).length"
                                     :loading="serverPaginationState[stationGroup.stationName]?.loading || false"
-                                    :downloading-record="downloadingKey" :selectable="true"
+                                    :downloading-record="downloadingKey" :downloading-csv-record="downloadingCsvKey"
+                                    :selectable="true"
                                     :selected-keys="getSelectedKeysForStation(stationGroup.stationName)"
                                     @update:options="(opts) => handleTableOptionsUpdate(stationGroup.stationName, opts)"
                                     @update:selected-keys="(keys) => handleTableSelectionChange(stationGroup.stationName, keys)"
-                                    @load-test-items="handleLoadTestItemsForTable" @open-fullscreen="openFullscreen"
-                                    @download="(record) => downloadSingleRecord(record, stationGroup.stationName, 0)" />
+                                    @row-click="openFullscreen"
+                                    @download="(record) => downloadSingleRecord(record, stationGroup.stationName, 0)"
+                                    @download-csv="(record) => downloadCsvRecord(record, stationGroup.stationName, 0)" />
                             </v-window-item>
                         </v-window>
                     </v-card-text>
@@ -276,17 +285,17 @@
                             </v-chip>
                         </div>
                         <div class="d-flex align-center gap-2">
-                            <!-- Bulk Download Button for IndexedDB -->
-                            <v-btn 
-                                v-if="indexedDbSelectedKeys.length > 0" 
-                                color="success" 
-                                variant="outlined"
-                                size="small" 
-                                :loading="downloading" 
-                                @click="downloadIndexedDbSelectedRecords"
-                            >
+                            <!-- Bulk TXT Download for IndexedDB -->
+                            <v-btn v-if="indexedDbSelectedKeys.length > 0" color="primary" variant="outlined"
+                                size="small" :loading="downloading" @click="downloadIndexedDbSelectedRecords">
                                 <v-icon start size="small">mdi-download-multiple</v-icon>
-                                Download Selected ({{ indexedDbSelectedKeys.length }})
+                                Download TXT ({{ indexedDbSelectedKeys.length }})
+                            </v-btn>
+                            <!-- Bulk CSV Download for IndexedDB -->
+                            <v-btn v-if="indexedDbSelectedKeys.length > 0" color="success" variant="outlined"
+                                size="small" :loading="downloadingCsv" @click="downloadIndexedDbSelectedRecordsCsv">
+                                <v-icon start size="small">mdi-file-delimited</v-icon>
+                                Download CSV ({{ indexedDbSelectedKeys.length }})
                             </v-btn>
                         </div>
                     </v-card-title>
@@ -297,51 +306,33 @@
                         </v-alert>
 
                         <!-- Station Tabs for IndexedDB Results -->
-                        <v-tabs 
-                            v-if="indexedDbStationList.length > 0 && !isStreaming" 
-                            v-model="indexedDbActiveStationTab" 
-                            color="secondary" 
-                            class="mb-4" 
-                            show-arrows
-                        >
+                        <v-tabs v-if="indexedDbStationList.length > 0 && !isStreaming"
+                            v-model="indexedDbActiveStationTab" color="secondary" class="mb-4" show-arrows>
                             <v-tab :value="0">
                                 <v-icon start size="small">mdi-view-list</v-icon>
                                 All Stations
                                 <v-chip size="x-small" color="info" class="ml-2">{{ indexedDbTotalItems }}</v-chip>
                             </v-tab>
-                            <v-tab v-for="(stationName, index) in indexedDbStationList" :key="stationName" :value="index + 1">
+                            <v-tab v-for="(stationName, index) in indexedDbStationList" :key="stationName"
+                                :value="index + 1">
                                 <v-icon start size="small">mdi-router-wireless</v-icon>
                                 {{ stationName }}
                             </v-tab>
                         </v-tabs>
 
                         <!-- IndexedDB Table using v-data-table-server -->
-                        <v-data-table-server 
-                            v-model="indexedDbSelectedKeys"
+                        <v-data-table-server v-model="indexedDbSelectedKeys"
                             v-model:items-per-page="indexedDbTableOptions.itemsPerPage"
-                            v-model:page="indexedDbTableOptions.page" 
-                            v-model:sort-by="indexedDbTableOptions.sortBy"
-                            :headers="indexedDbHeaders" 
-                            :items="indexedDbItems" 
-                            :items-length="indexedDbTotalItems"
-                            :loading="indexedDbLoading || isStreaming" 
-                            item-value="id"
-                            show-select
-                            hover 
-                            class="elevation-1"
-                            @update:options="loadIndexedDbItems"
-                            @click:row="handleIndexedDbRowClick"
-                        >
+                            v-model:page="indexedDbTableOptions.page" v-model:sort-by="indexedDbTableOptions.sortBy"
+                            :headers="indexedDbHeaders" :items="indexedDbItems" :items-length="indexedDbTotalItems"
+                            :loading="indexedDbLoading || isStreaming" item-value="id" show-select hover
+                            class="elevation-1" @update:options="loadIndexedDbItems"
+                            @click:row="handleIndexedDbRowClick">
                             <!-- ISN Column with Copy Button -->
                             <template #item.ISN="{ item }">
                                 <div class="d-flex align-center gap-1">
-                                    <v-btn 
-                                        icon 
-                                        size="x-small" 
-                                        variant="text" 
-                                        color="primary"
-                                        @click.stop="copyToClipboard(item.ISN)"
-                                    >
+                                    <v-btn icon size="x-small" variant="text" color="primary"
+                                        @click.stop="copyToClipboard(item.ISN)">
                                         <v-icon size="small">mdi-content-copy</v-icon>
                                         <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
                                     </v-btn>
@@ -351,13 +342,8 @@
 
                             <!-- Device ID Column -->
                             <template #item.DeviceId="{ item }">
-                                <v-chip 
-                                    size="x-small" 
-                                    color="secondary" 
-                                    variant="outlined"
-                                    class="cursor-pointer"
-                                    @click.stop="copyToClipboard(item.DeviceId)"
-                                >
+                                <v-chip size="x-small" color="secondary" variant="outlined" class="cursor-pointer"
+                                    @click.stop="copyToClipboard(item.DeviceId)">
                                     {{ item.DeviceId }}
                                     <v-tooltip activator="parent" location="top">Click to copy</v-tooltip>
                                 </v-chip>
@@ -365,7 +351,8 @@
 
                             <!-- Test End Time Column -->
                             <template #item.TestEndTime="{ item }">
-                                {{ item.TestEndTime ? adjustIplasDisplayTime(item.TestEndTime, 1) : adjustIplasDisplayTime(item.TestStartTime, 1) }}
+                                {{ item.TestEndTime ? adjustIplasDisplayTime(item.TestEndTime, 1) :
+                                adjustIplasDisplayTime(item.TestStartTime, 1) }}
                             </template>
 
                             <!-- Duration Column -->
@@ -377,10 +364,7 @@
 
                             <!-- Status Column -->
                             <template #item.TestStatus="{ item }">
-                                <v-chip 
-                                    :color="item.TestStatus === 'PASS' ? 'success' : 'error'" 
-                                    size="x-small"
-                                >
+                                <v-chip :color="item.TestStatus === 'PASS' ? 'success' : 'error'" size="x-small">
                                     {{ item.TestStatus }}
                                 </v-chip>
                             </template>
@@ -388,14 +372,8 @@
                             <!-- Actions Column -->
                             <template #item.actions="{ item }">
                                 <div class="d-flex gap-1">
-                                    <v-btn 
-                                        icon 
-                                        size="x-small" 
-                                        variant="outlined" 
-                                        color="primary"
-                                        :loading="downloading"
-                                        @click.stop="downloadIndexedDbRecord(item)"
-                                    >
+                                    <v-btn icon size="x-small" variant="outlined" color="primary" :loading="downloading"
+                                        @click.stop="downloadIndexedDbRecord(item)">
                                         <v-icon size="small">mdi-download</v-icon>
                                         <v-tooltip activator="parent" location="top">Download Test Log</v-tooltip>
                                     </v-btn>
@@ -415,7 +393,8 @@
                                 <div v-else class="text-center py-4">
                                     <v-icon size="48" color="grey">mdi-database-off-outline</v-icon>
                                     <div class="text-h6 mt-2 text-grey">No data in IndexedDB</div>
-                                    <div class="text-body-2 text-grey">Start a search with "Stream to Disk" enabled</div>
+                                    <div class="text-body-2 text-grey">Start a search with "Stream to Disk" enabled
+                                    </div>
                                 </div>
                             </template>
 
@@ -446,13 +425,15 @@
                             <v-col cols="6" sm="3">
                                 <div class="text-center">
                                     <div class="text-h4 font-weight-bold text-warning">{{ stations.length }}</div>
-                                    <div class="text-caption text-medium-emphasis">Stations (based on Selected Project)</div>
+                                    <div class="text-caption text-medium-emphasis">Stations (based on Selected Project)
+                                    </div>
                                 </div>
                             </v-col>
                             <v-col cols="6" sm="3">
                                 <div class="text-center">
                                     <div class="text-h4 font-weight-bold text-info">{{ totalDeviceCount }}</div>
-                                    <div class="text-caption text-medium-emphasis">Devices (based on Selected Station)</div>
+                                    <div class="text-caption text-medium-emphasis">Devices (based on Selected Station)
+                                    </div>
                                 </div>
                             </v-col>
                         </v-row>
@@ -811,6 +792,8 @@ function getStationDisplayName(stationValue: string): string {
 // Download controls
 const selectedRecordKeys = ref<Set<string>>(new Set())
 const downloadingKey = ref<string | null>(null)
+const downloadingCsvKey = ref<string | null>(null)
+const downloadingCsv = ref(false)
 
 // Fullscreen dialog controls
 const showFullscreenDialog = ref(false)
@@ -940,7 +923,7 @@ function calculateIndexedDbDuration(record: typeof indexedDbItems.value[0]): str
         const secs = record.TestDuration % 60
         return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
     }
-    
+
     // Fallback: calculate from TestStartTime and TestEndTime
     const startTime = record.TestStartTime
     const endTime = record.TestEndTime
@@ -969,17 +952,25 @@ function getIndexedDbRecordKey(record: typeof indexedDbItems.value[0]): string {
 // Handle IndexedDB row click to show details dialog
 async function handleIndexedDbRowClick(_event: Event, { item }: { item: typeof indexedDbItems.value[0] }): Promise<void> {
     if (!selectedSite.value || !selectedProject.value) return
-    
+
+    // Get station from record or use the active station tab
+    const station = item.Station || (indexedDbStationList.value[indexedDbActiveStationTab.value - 1] ?? '')
+
+    if (!station) {
+        console.error('Cannot fetch record test items: station is undefined')
+        return
+    }
+
     // Fetch test items for this record
     const testItems = await fetchRecordTestItems(
         selectedSite.value,
         selectedProject.value,
-        item.Station,
+        station,
         item.ISN,
         item.TestStartTime,
         item.DeviceId
     )
-    
+
     // Create normalized record for dialog
     const normalizedRecord: NormalizedRecord = {
         isn: item.ISN,
@@ -997,7 +988,7 @@ async function handleIndexedDbRowClick(_event: Event, { item }: { item: typeof i
         testEndTime: item.TestStartTime, // Will be computed from duration
         testItems: testItems || []
     }
-    
+
     fullscreenRecord.value = normalizedRecord
     showFullscreenDialog.value = true
 }
@@ -1008,17 +999,19 @@ async function downloadIndexedDbSelectedRecords(): Promise<void> {
 
     try {
         const attachments: DownloadAttachmentInfo[] = []
-        
+
         for (const item of indexedDbItems.value) {
             const key = getIndexedDbRecordKey(item)
             if (indexedDbSelectedKeys.value.includes(key)) {
                 // Use ISN if available, otherwise use DeviceId
                 const isn = item.ISN && item.ISN.trim() !== '' ? item.ISN : item.DeviceId
+                // Use TestEndTime for download API (required format), fallback to TestStartTime
+                const timeField = item.TestEndTime || item.TestStartTime
                 attachments.push({
                     isn,
-                    time: formatTimeForDownload(item.TestStartTime),
+                    time: formatTimeForDownload(timeField),
                     deviceid: item.DeviceId,
-                    station: item.Station
+                    station: item.Station || ''
                 })
             }
         }
@@ -1032,17 +1025,86 @@ async function downloadIndexedDbSelectedRecords(): Promise<void> {
     }
 }
 
+// Download selected IndexedDB records as CSV files
+async function downloadIndexedDbSelectedRecordsCsv(): Promise<void> {
+    if (!selectedSite.value || !selectedProject.value || indexedDbSelectedKeys.value.length === 0) return
+
+    downloadingCsv.value = true
+
+    try {
+        const csvContents: { content: string; filename: string }[] = []
+
+        for (const item of indexedDbItems.value) {
+            const key = getIndexedDbRecordKey(item)
+            if (!indexedDbSelectedKeys.value.includes(key)) continue
+
+            // Get station from indexedDbStationList if not available
+            const station = item.Station || indexedDbStationList.value[indexedDbActiveStationTab.value - 1] || ''
+
+            // Fetch test items
+            const testItems = await fetchRecordTestItems(
+                selectedSite.value,
+                selectedProject.value,
+                station,
+                item.DeviceId,
+                item.TestStartTime,
+                item.TestEndTime || item.TestStartTime
+            )
+
+            if (testItems && testItems.length > 0) {
+                // Create a mock record for CSV conversion
+                const mockRecord: CsvTestItemData = {
+                    Site: selectedSite.value,
+                    Project: selectedProject.value,
+                    station,
+                    TSP: station,
+                    Model: '',
+                    MO: '',
+                    Line: '',
+                    ISN: item.ISN || item.DeviceId,
+                    DeviceId: item.DeviceId,
+                    'Test Status': item.TestStatus,
+                    'Test Start Time': item.TestStartTime,
+                    'Test end Time': item.TestEndTime || item.TestStartTime,
+                    ErrorCode: item.ErrorCode || '',
+                    ErrorName: item.ErrorName || '',
+                    TestItem: testItems
+                }
+
+                const csvContent = convertTestItemsToCsv(mockRecord, testItems)
+                const timestamp = item.TestStartTime.replace(/[\/:]/g, '_').replace(/ /g, '_')
+                const filename = `${item.ISN || item.DeviceId}_${timestamp}_test_items.csv`
+                csvContents.push({ content: csvContent, filename })
+            }
+        }
+
+        // Download all CSVs
+        for (const { content, filename } of csvContents) {
+            downloadCsvFile(content, filename)
+            await new Promise(resolve => setTimeout(resolve, 100))
+        }
+
+        console.log(`Downloaded ${csvContents.length} CSV files from IndexedDB`)
+    } catch (err) {
+        console.error('Failed to download IndexedDB CSV files:', err)
+    } finally {
+        downloadingCsv.value = false
+    }
+}
+
 // Download single IndexedDB record
 async function downloadIndexedDbRecord(record: typeof indexedDbItems.value[0]): Promise<void> {
     if (!selectedSite.value || !selectedProject.value) return
 
     try {
         const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+        // Use TestEndTime for download API (required format), fallback to TestStartTime
+        const timeField = record.TestEndTime || record.TestStartTime
         const attachmentInfo: DownloadAttachmentInfo = {
             isn,
-            time: formatTimeForDownload(record.TestStartTime),
+            time: formatTimeForDownload(timeField),
             deviceid: record.DeviceId,
-            station: record.Station
+            station: record.Station || ''
         }
         console.log('Download IndexedDB attachment:', attachmentInfo)
         await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
@@ -1545,6 +1607,114 @@ async function downloadSingleRecord(record: CsvTestItemData | CompactCsvTestItem
     }
 }
 
+/**
+ * Download test items as CSV file for a single record
+ */
+async function downloadCsvRecord(record: CsvTestItemData | CompactCsvTestItemData, stationName: string, recordIndex: number): Promise<void> {
+    if (!selectedSite.value || !selectedProject.value) return
+
+    downloadingCsvKey.value = `${stationName}-${recordIndex}`
+
+    try {
+        // Get test items - either from the record itself or fetch them
+        let testItems: TestItem[] | undefined
+
+        // Check if it's a full record with TestItem array
+        if ('TestItem' in record && record.TestItem && record.TestItem.length > 0) {
+            testItems = record.TestItem
+        } else {
+            // Fetch test items for compact records
+            const station = record.station || stationName
+            const result = await fetchRecordTestItems(
+                selectedSite.value,
+                selectedProject.value,
+                station,
+                record.DeviceId,
+                record['Test Start Time'],
+                record['Test end Time']
+            )
+            testItems = result || []
+        }
+
+        if (!testItems || testItems.length === 0) {
+            console.warn('No test items found for CSV download')
+            return
+        }
+
+        // Convert to CSV
+        const csvContent = convertTestItemsToCsv(record, testItems)
+
+        // Generate filename
+        const timestamp = record['Test Start Time'].replace(/[\/:]/g, '_').replace(/ /g, '_')
+        const filename = `${record.ISN}_${timestamp}_test_items.csv`
+
+        // Trigger download
+        downloadCsvFile(csvContent, filename)
+    } catch (err) {
+        console.error('Failed to download CSV:', err)
+    } finally {
+        downloadingCsvKey.value = null
+    }
+}
+
+/**
+ * Convert test items to CSV format
+ */
+function convertTestItemsToCsv(record: CsvTestItemData | CompactCsvTestItemData, testItems: TestItem[]): string {
+    // Header row with record info
+    const headerInfo = [
+        `# ISN: ${record.ISN}`,
+        `# Device ID: ${record.DeviceId}`,
+        `# Station: ${record.station || ''}`,
+        `# Test Status: ${record['Test Status']}`,
+        `# Test Start: ${record['Test Start Time']}`,
+        `# Test End: ${record['Test end Time']}`,
+        ''
+    ].join('\n')
+
+    // CSV header
+    const csvHeader = 'NAME,STATUS,VALUE,UCL,LCL,CYCLE'
+
+    // CSV rows
+    const csvRows = testItems.map(item => {
+        const name = escapeCSVField(item.NAME || '')
+        const status = escapeCSVField(item.STATUS || '')
+        const value = escapeCSVField(item.VALUE || '')
+        const ucl = escapeCSVField(item.UCL || '')
+        const lcl = escapeCSVField(item.LCL || '')
+        // Handle both CYCLE (correct) and possible typo from API
+        const cycle = escapeCSVField(item.CYCLE || (item as any).CYCLE || '')
+        return `${name},${status},${value},${ucl},${lcl},${cycle}`
+    })
+
+    return headerInfo + csvHeader + '\n' + csvRows.join('\n')
+}
+
+/**
+ * Escape CSV field value
+ */
+function escapeCSVField(value: string): string {
+    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+        return `"${value.replace(/"/g, '""')}"`
+    }
+    return value
+}
+
+/**
+ * Download string content as a CSV file
+ */
+function downloadCsvFile(content: string, filename: string): void {
+    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+}
+
 async function downloadSelectedRecords(): Promise<void> {
     if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
 
@@ -1574,6 +1744,74 @@ async function downloadSelectedRecords(): Promise<void> {
         }
     } catch (err) {
         console.error('Failed to download test logs:', err)
+    }
+}
+
+/**
+ * Download all selected records as CSV files (one per record)
+ */
+async function downloadSelectedRecordsCsv(): Promise<void> {
+    if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
+
+    downloadingCsv.value = true
+
+    try {
+        // Build a map of recordKey -> record for quick lookup
+        const recordMap = new Map<string, { record: CsvTestItemData | CompactCsvTestItemData; stationName: string }>()
+        for (const group of groupedByStation.value) {
+            for (const record of group.records) {
+                const recordKey = `${record.ISN}_${record['Test Start Time']}`
+                recordMap.set(recordKey, { record, stationName: group.stationName })
+            }
+        }
+
+        // Collect all selected records with their test items
+        const csvContents: { content: string; filename: string }[] = []
+
+        for (const key of selectedRecordKeys.value) {
+            const entry = recordMap.get(key)
+            if (!entry) continue
+
+            const { record, stationName } = entry
+
+            // Get test items
+            let testItems: TestItem[] | undefined
+            if ('TestItem' in record && record.TestItem && record.TestItem.length > 0) {
+                testItems = record.TestItem
+            } else {
+                // Fetch test items for compact records
+                const station = record.station || stationName
+                const result = await fetchRecordTestItems(
+                    selectedSite.value,
+                    selectedProject.value,
+                    station,
+                    record.DeviceId,
+                    record['Test Start Time'],
+                    record['Test end Time']
+                )
+                testItems = result || []
+            }
+
+            if (testItems && testItems.length > 0) {
+                const csvContent = convertTestItemsToCsv(record, testItems)
+                const timestamp = record['Test Start Time'].replace(/[\/:]/g, '_').replace(/ /g, '_')
+                const filename = `${record.ISN}_${timestamp}_test_items.csv`
+                csvContents.push({ content: csvContent, filename })
+            }
+        }
+
+        // Download all CSVs
+        for (const { content, filename } of csvContents) {
+            downloadCsvFile(content, filename)
+            // Small delay between downloads to avoid browser blocking
+            await new Promise(resolve => setTimeout(resolve, 100))
+        }
+
+        console.log(`Downloaded ${csvContents.length} CSV files`)
+    } catch (err) {
+        console.error('Failed to download CSV files:', err)
+    } finally {
+        downloadingCsv.value = false
     }
 }
 
@@ -1627,7 +1865,7 @@ async function fetchTestItems() {
     if (useIndexedDbMode.value) {
         // Stream data for ALL selected stations
         let totalRecords = 0
-        
+
         for (const stationDisplayName of selectedStations.value) {
             const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationDisplayName)
             if (!stationInfo) continue
