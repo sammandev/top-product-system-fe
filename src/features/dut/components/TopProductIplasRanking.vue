@@ -109,14 +109,14 @@
                             </div>
                         </template>
 
-                        <!-- ISN Column with Copy Icon -->
+                        <!-- ISN Column with Copy Icon on Left -->
                         <template #item.isn="{ item }">
-                            <div class="d-flex align-center">
-                                <span class="font-weight-medium font-mono">{{ item.isn }}</span>
-                                <v-btn icon size="x-small" variant="text" class="ml-1" @click.stop="copyToClipboard(item.isn)">
+                            <div class="d-flex align-center gap-1">
+                                <v-btn icon size="x-small" variant="text" color="primary" @click.stop="copyToClipboard(item.isn)">
                                     <v-icon size="small">mdi-content-copy</v-icon>
                                     <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
                                 </v-btn>
+                                <span class="font-weight-medium font-mono">{{ item.isn }}</span>
                             </div>
                         </template>
 
@@ -491,17 +491,30 @@ function calculateDuration(startTime: string, endTime: string): string {
 }
 
 /**
- * Copy text to clipboard with user feedback
+ * Copy text to clipboard with user feedback and fallback
  */
 async function copyToClipboard(text: string): Promise<void> {
     if (!text || text === '-') return
     
     try {
         await navigator.clipboard.writeText(text)
-        // You could add a snackbar notification here if available
         console.log(`Copied to clipboard: ${text}`)
     } catch (err) {
-        console.error('Failed to copy to clipboard:', err)
+        // Fallback for browsers that don't support clipboard API or non-secure contexts
+        const textArea = document.createElement('textarea')
+        textArea.value = text
+        textArea.style.position = 'fixed'
+        textArea.style.opacity = '0'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        try {
+            document.execCommand('copy')
+            console.log(`Copied to clipboard (fallback): ${text}`)
+        } catch (e) {
+            console.error('Failed to copy to clipboard:', e)
+        }
+        document.body.removeChild(textArea)
     }
 }
 

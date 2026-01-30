@@ -168,7 +168,15 @@
             </v-card-text>
 
             <!-- Data Table Container -->
-            <div class="flex-grow-1" style="min-height: 0; overflow: hidden;">
+            <div class="flex-grow-1 position-relative" style="min-height: 0; overflow: hidden;">
+                <!-- Loading Overlay when fetching test items -->
+                <v-overlay v-model="props.loadingTestItems" contained class="align-center justify-center" persistent>
+                    <div class="text-center">
+                        <v-progress-circular indeterminate color="primary" size="64" />
+                        <div class="text-body-1 mt-4">Loading test items...</div>
+                    </div>
+                </v-overlay>
+                
                 <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="50"
                     density="comfortable" fixed-header fixed-footer style="height: 100%;"
                     class="elevation-1 v-table--striped" :class="{ 'clickable-rows': hasScores }"
@@ -357,6 +365,7 @@ interface Props {
     modelValue: boolean
     record: NormalizedRecord | null
     downloading?: boolean
+    loadingTestItems?: boolean
 }
 
 interface Emits {

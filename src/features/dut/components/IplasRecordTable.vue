@@ -211,10 +211,28 @@ function getTestItemCount(record: CsvTestItemData | CompactCsvTestItemData): num
     return record.TestItem?.length || 0
 }
 
-function copyToClipboard(text: string | undefined) {
+async function copyToClipboard(text: string | undefined) {
     if (!text) return
-    navigator.clipboard.writeText(text)
-    showCopySuccess.value = true
+    try {
+        await navigator.clipboard.writeText(text)
+        showCopySuccess.value = true
+    } catch (err) {
+        // Fallback for browsers that don't support clipboard API or non-secure contexts
+        const textArea = document.createElement('textarea')
+        textArea.value = text
+        textArea.style.position = 'fixed'
+        textArea.style.opacity = '0'
+        document.body.appendChild(textArea)
+        textArea.focus()
+        textArea.select()
+        try {
+            document.execCommand('copy')
+            showCopySuccess.value = true
+        } catch (e) {
+            console.error('Failed to copy:', e)
+        }
+        document.body.removeChild(textArea)
+    }
 }
 
 function handleRowClick(_event: Event, data: { item: CsvTestItemData | CompactCsvTestItemData }) {

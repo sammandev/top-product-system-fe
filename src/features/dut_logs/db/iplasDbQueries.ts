@@ -145,7 +145,7 @@ export async function queryRecordsForTable(
  */
 export async function getFilteredCount(filter: RecordFilter = {}): Promise<number> {
   const db = await getDb()
-  
+
   // If no filters, use fast count
   if (isEmptyFilter(filter)) {
     return db.count(STORE_NAME)
@@ -167,11 +167,11 @@ export async function getRecordsByFilter(
 ): Promise<IplasDbRecord[]> {
   const db = await getDb()
   const records = await getFilteredRecords(db, filter)
-  
+
   if (limit && records.length > limit) {
     return records.slice(0, limit)
   }
-  
+
   return records
 }
 
@@ -384,7 +384,7 @@ export async function getRecordStatistics(): Promise<RecordStatistics> {
 
   // Iterate through all records once to gather stats
   let cursor = await store.openCursor()
-  
+
   while (cursor) {
     const record = cursor.value
     stats.total++
@@ -537,7 +537,7 @@ function matchesFilter(record: IplasDbRecord, filter: RecordFilter): boolean {
   if (filter.isn && record.ISN !== filter.isn) return false
   if (filter.site && record.Site !== filter.site) return false
   if (filter.project && record.Project !== filter.project) return false
-  
+
   if (filter.dateRange) {
     if (record.TestStartTime < filter.dateRange.start) return false
     if (record.TestStartTime > filter.dateRange.end) return false

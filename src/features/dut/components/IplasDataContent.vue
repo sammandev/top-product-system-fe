@@ -195,6 +195,12 @@
                             <v-chip size="small" color="info" class="ml-2">{{ regularModeRecordCount }} records</v-chip>
                         </div>
                         <div class="d-flex align-center gap-2">
+                            <!-- Download All (TXT + CSV) -->
+                            <v-btn v-if="selectedRecordIndices.length > 0" color="secondary" variant="flat"
+                                size="small" :loading="downloading || downloadingCsv" @click="downloadAllSelectedRecords">
+                                <v-icon start size="small">mdi-download-multiple</v-icon>
+                                Download All Logs ({{ selectedRecordIndices.length }})
+                            </v-btn>
                             <!-- Bulk TXT Download -->
                             <v-btn v-if="selectedRecordIndices.length > 0" color="primary" variant="outlined"
                                 size="small" :loading="downloading" @click="downloadSelectedRecords">
@@ -449,7 +455,8 @@
 
         <!-- Test Items Details Dialog -->
         <TopProductIplasDetailsDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
-            :downloading="fullscreenDownloading" @download="downloadFromFullscreen" />
+            :downloading="fullscreenDownloading" :loading-test-items="loadingFullscreenTestItems" 
+            @download="downloadFromFullscreen" />
 
         <!-- Copy Success Snackbar -->
         <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
@@ -800,6 +807,7 @@ const showFullscreenDialog = ref(false)
 const fullscreenRecord = ref<NormalizedRecord | null>(null)
 const fullscreenOriginalRecord = ref<CsvTestItemData | null>(null)
 const fullscreenDownloading = ref(false)
+const loadingFullscreenTestItems = ref(false)
 
 // Computed
 const availableProjects = computed(() => {
@@ -1531,19 +1539,48 @@ function normalizeStationRecord(record: CsvTestItemData): NormalizedRecord {
     }
 }
 
-function openFullscreen(record: CsvTestItemData | CompactCsvTestItemData): void {
-    // For compact records, we can only show the fullscreen if test items are loaded
+async function openFullscreen(record: CsvTestItemData | CompactCsvTestItemData): Promise<void> {
+    // Show dialog immediately with loading state for compact records
+    showFullscreenDialog.value = true
+    
+    // For compact records, we need to fetch test items
     if (isCompactRecord(record)) {
-        const testItems = getTestItemsForRecord(record)
+        let testItems = getTestItemsForRecord(record)
+        
         if (!testItems) {
-            // Load test items first
-            loadTestItemsForRecord(record)
-            return
+            // Show loading and fetch test items
+            loadingFullscreenTestItems.value = true
+            fullscreenRecord.value = normalizeStationRecord({ ...record, TestItem: [] } as CsvTestItemData)
+            fullscreenOriginalRecord.value = null
+            
+            try {
+                // Fetch test items from server
+                if (selectedSite.value && selectedProject.value) {
+                    // Use TSP which corresponds to display_station_name for the API call
+                    const station = record.TSP || record.station
+                    testItems = await fetchRecordTestItems(
+                        selectedSite.value,
+                        selectedProject.value,
+                        station,
+                        record.ISN || record.DeviceId, // ISN as identifier
+                        record['Test Start Time'],
+                        record.DeviceId // deviceId as last parameter
+                    ) || []
+                    
+                    // Note: The composable already caches test items internally
+                }
+            } catch (err) {
+                console.error('Failed to fetch test items:', err)
+                testItems = []
+            } finally {
+                loadingFullscreenTestItems.value = false
+            }
         }
-        // Create a synthetic full record with lazy-loaded test items
+        
+        // Create a synthetic full record with test items
         const fullRecord: CsvTestItemData = {
             ...record,
-            TestItem: testItems
+            TestItem: testItems || []
         }
         fullscreenOriginalRecord.value = fullRecord
         fullscreenRecord.value = normalizeStationRecord(fullRecord)
@@ -1551,7 +1588,6 @@ function openFullscreen(record: CsvTestItemData | CompactCsvTestItemData): void 
         fullscreenOriginalRecord.value = record
         fullscreenRecord.value = normalizeStationRecord(record)
     }
-    showFullscreenDialog.value = true
 }
 
 async function downloadFromFullscreen(): Promise<void> {
@@ -1624,14 +1660,15 @@ async function downloadCsvRecord(record: CsvTestItemData | CompactCsvTestItemDat
             testItems = record.TestItem
         } else {
             // Fetch test items for compact records
-            const station = record.station || stationName
+            // Use TSP (which corresponds to display_station_name) for the API call
+            const station = record.TSP || record.station || stationName
             const result = await fetchRecordTestItems(
                 selectedSite.value,
                 selectedProject.value,
                 station,
-                record.DeviceId,
+                record.ISN || record.DeviceId, // ISN as identifier
                 record['Test Start Time'],
-                record['Test end Time']
+                record.DeviceId // deviceId as last parameter
             )
             testItems = result || []
         }
@@ -1780,14 +1817,15 @@ async function downloadSelectedRecordsCsv(): Promise<void> {
                 testItems = record.TestItem
             } else {
                 // Fetch test items for compact records
-                const station = record.station || stationName
+                // Use TSP which corresponds to display_station_name for the API call
+                const station = record.TSP || record.station || stationName
                 const result = await fetchRecordTestItems(
                     selectedSite.value,
                     selectedProject.value,
                     station,
-                    record.DeviceId,
+                    record.ISN || record.DeviceId, // ISN as identifier
                     record['Test Start Time'],
-                    record['Test end Time']
+                    record.DeviceId // deviceId as last parameter
                 )
                 testItems = result || []
             }
@@ -1813,6 +1851,19 @@ async function downloadSelectedRecordsCsv(): Promise<void> {
     } finally {
         downloadingCsv.value = false
     }
+}
+
+/**
+ * Download all logs (both TXT and CSV) for selected records
+ */
+async function downloadAllSelectedRecords(): Promise<void> {
+    if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
+
+    // Download TXT logs first
+    await downloadSelectedRecords()
+    
+    // Then download CSV logs
+    await downloadSelectedRecordsCsv()
 }
 
 // Handlers
@@ -1982,9 +2033,16 @@ async function handleTableOptionsUpdate(
     const sortBy = sortInfo?.key || 'TestStartTime'
     const sortDesc = sortInfo?.order === 'desc'
 
-    // Get device IDs for this station
-    const deviceIds = stationDeviceIds.value[stationName] || []
-    const deviceId: string = deviceIds.length > 0 && deviceIds[0] ? deviceIds[0] : 'ALL'
+    // Get device IDs for this station - use filter if set, otherwise ALL
+    const filterDeviceIds = selectedFilterDeviceIds.value[stationName]
+    let deviceId: string = 'ALL'
+    if (filterDeviceIds && filterDeviceIds.length === 1 && filterDeviceIds[0]) {
+        // If only one device ID is selected in filter, use it for server-side filtering
+        deviceId = filterDeviceIds[0]
+    }
+    
+    // Get status filter for this station (use per-station filter, fallback to global)
+    const statusFilter = stationStatusFilters.value[stationName] || testStatusFilter.value || 'ALL'
 
     try {
         const result = await fetchTestItemsPaginated(
@@ -1994,7 +2052,7 @@ async function handleTableOptionsUpdate(
             deviceId,
             new Date(startTime.value),
             new Date(endTime.value),
-            testStatusFilter.value,
+            statusFilter,
             {
                 page: options.page,
                 itemsPerPage: options.itemsPerPage,
