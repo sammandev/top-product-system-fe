@@ -9,8 +9,6 @@
  * - Primary key: composite of ISN + TestStartTime (unique per record)
  * - Indexes: station, status, testDate for efficient queries
  * - Optimized for cursor-based pagination and filtering
- * 
- * @see IPLAS_PERFORMANCE_OPTIMIZATION_PLAN.md Phase 5.4
  */
 
 import { openDB, deleteDB, type DBSchema, type IDBPDatabase } from 'idb'

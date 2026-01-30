@@ -9,8 +9,6 @@
  * - Single global AbortController for stream cancellation
  * - Batch writes to IndexedDB (100 records per transaction)
  * - Progress callbacks for UI updates
- * 
- * @see IPLAS_PERFORMANCE_OPTIMIZATION_PLAN.md Phase 5.4
  */
 
 import {

@@ -250,8 +250,15 @@ const testItemSuggestions = computed(() => {
         return []
     }
 
-    // Extract unique test item names
-    const itemNames = [...new Set(props.availableTestItems.map(item => item.name))].sort()
+    // Extract unique test item names (preserve original order)
+    const seen = new Set<string>()
+    const itemNames = props.availableTestItems
+        .map(item => item.name)
+        .filter(name => {
+            if (seen.has(name)) return false
+            seen.add(name)
+            return true
+        })
 
     // When user is not searching (empty search), show only individual items
     const isSearching = searchInput.value && searchInput.value.trim().length > 0
@@ -473,8 +480,15 @@ const dialogAllItems = computed(() => {
         return cachedDialogItems.value
     }
 
-    // Extract unique test item names
-    const itemNames = [...new Set(props.availableTestItems.map(item => item.name))].sort()
+    // Extract unique test item names (preserve original order)
+    const seen = new Set<string>()
+    const itemNames = props.availableTestItems
+        .map(item => item.name)
+        .filter(name => {
+            if (seen.has(name)) return false
+            seen.add(name)
+            return true
+        })
 
     // Group items by pattern
     const groups = new Map<string, string[]>()

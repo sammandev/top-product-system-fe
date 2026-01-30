@@ -2,8 +2,6 @@
  * iPLAS Database Exports
  * 
  * Barrel export for IndexedDB utilities and types.
- * 
- * @see IPLAS_PERFORMANCE_OPTIMIZATION_PLAN.md Phase 5.4, 5.5
  */
 
 export {
@@ -41,7 +39,7 @@ export {
   type IDBPDatabase
 } from './iplasDb'
 
-// Query helpers (Phase 5.5)
+// Query helpers
 export {
   // Main query function for v-data-table-server
   queryRecordsForTable,

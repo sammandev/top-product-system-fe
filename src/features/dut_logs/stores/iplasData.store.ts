@@ -8,8 +8,6 @@
  * - Supports compact records for list views
  * - Caches metadata (site/projects, stations) to reduce API calls
  * - Streams large datasets to IndexedDB (disk) instead of memory
- * 
- * @see IPLAS_PERFORMANCE_OPTIMIZATION_PLAN.md Phase 5.4
  */
 
 import { defineStore } from 'pinia'
@@ -648,7 +646,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
   }
 
   // ============================================================================
-  // IndexedDB Streaming Actions (Phase 5.4)
+  // IndexedDB Streaming Actions
   // ============================================================================
 
   /**
@@ -903,7 +901,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     streamTestItems,
     abortStream,
 
-    // IndexedDB Streaming Actions (disk-based, Phase 5.4)
+    // IndexedDB Streaming Actions (disk-based)
     streamToIndexedDb,
     abortIndexedDbStream,
     queryFromIndexedDb,

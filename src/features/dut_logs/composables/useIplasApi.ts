@@ -204,7 +204,11 @@ export function useIplasApi() {
         station_name: s.station_name,
         order: s.order,
         data_source: s.data_source
-      }))
+      })).sort((a, b) => {
+        const aOrder = a.order ?? Number.MAX_SAFE_INTEGER
+        const bOrder = b.order ?? Number.MAX_SAFE_INTEGER
+        return aOrder - bOrder
+      })
       cachedStations.set(cacheKey, stationData)
       stations.value = stationData
       return stationData

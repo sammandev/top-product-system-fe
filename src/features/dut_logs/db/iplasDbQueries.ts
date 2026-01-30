@@ -10,8 +10,6 @@
  * - Index-optimized queries for common filter patterns
  * - Compound index support for station + date queries
  * - Efficient count queries without loading full records
- * 
- * @see IPLAS_PERFORMANCE_OPTIMIZATION_PLAN.md Phase 5.5
  */
 
 import { getDb, type IplasDbRecord, type IplasDbSchema } from './iplasDb'

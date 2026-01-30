@@ -11,8 +11,6 @@
  * - Filter management with URL sync (optional)
  * - Stream progress tracking
  * - Automatic refresh on store updates
- * 
- * @see IPLAS_PERFORMANCE_OPTIMIZATION_PLAN.md Phase 5.5
  */
 
 import { ref, reactive, computed, watch, onUnmounted, type Ref } from 'vue'

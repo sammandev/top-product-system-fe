@@ -669,7 +669,6 @@ export const useCustomScoringV2 = () => {
     activeFormulaStats,
     resetFormulas,
     toggleAllCategories,
-    // NEW exports for Phase 1
     applyCustomFormulaToMeasurement,
     applyCustomFormulasToResults,
     customScoringEnabled,
