@@ -131,7 +131,7 @@ import StationSelectionDialog from './StationSelectionDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
 import type { StationConfig } from './StationSelectionDialog.vue'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
-import type { Station, TestItem, CsvTestItemData } from '@/features/dut_logs/composables/useIplasApi'
+import type { Station, TestItem, CsvTestItemData, DownloadCsvLogInfo } from '@/features/dut_logs/composables/useIplasApi'
 
 // Emits
 const emit = defineEmits<{
@@ -169,6 +169,7 @@ const {
     fetchTestItemNames,
     fetchTestItemsFiltered,
     downloadAttachments,
+    downloadCsvLogs,
     clearTestItemData
 } = useIplasApi()
 
@@ -339,6 +340,7 @@ function handleRowClick(payload: { record: CsvTestItemData; stationName: string 
 }
 
 // Handle download from ranking table action button
+// Downloads both TXT attachments and CSV test logs
 async function handleDownloadRecord(payload: { record: CsvTestItemData; stationName: string }): Promise<void> {
     if (!selectedSite.value || !selectedProject.value) return
 
@@ -348,10 +350,33 @@ async function handleDownloadRecord(payload: { record: CsvTestItemData; stationN
     const deviceid = record.DeviceId
     const station = record.TSP || record.station
 
+    // Download TXT attachments
     await downloadAttachments(selectedSite.value, selectedProject.value, [{ isn, time, deviceid, station }])
+
+    // Also download CSV test log via iPLAS API
+    // Format test_end_time with .000 milliseconds as required by iPLAS API
+    const testEndTime = record['Test end Time'] || ''
+    const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+    // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
+    const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
+
+    const csvLogInfo: DownloadCsvLogInfo = {
+        site: selectedSite.value,
+        project: selectedProject.value,
+        station,
+        line: record.Line || 'NA',
+        model: record.Model || 'ALL',
+        deviceid,
+        isn,
+        test_end_time: apiEndTime,
+        data_source: 0
+    }
+
+    await downloadCsvLogs([csvLogInfo])
 }
 
 // Handle bulk download from ranking table
+// Downloads both TXT attachments and CSV test logs for all selected records
 async function handleBulkDownloadRecords(payload: { records: CsvTestItemData[]; stationName: string }): Promise<void> {
     if (!selectedSite.value || !selectedProject.value) return
     if (payload.records.length === 0) return
@@ -364,7 +389,35 @@ async function handleBulkDownloadRecords(payload: { records: CsvTestItemData[]; 
         return { isn, time, deviceid, station }
     })
 
+    // Download TXT attachments
     await downloadAttachments(selectedSite.value, selectedProject.value, attachments)
+
+    // Also download CSV test logs via iPLAS API
+    const csvLogInfos: DownloadCsvLogInfo[] = payload.records.map(record => {
+        const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+        const deviceid = record.DeviceId
+        const station = record.TSP || record.station
+        
+        // Format test_end_time with .000 milliseconds as required by iPLAS API
+        const testEndTime = record['Test end Time'] || ''
+        const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+        // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
+        const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
+
+        return {
+            site: selectedSite.value!,
+            project: selectedProject.value!,
+            station,
+            line: record.Line || 'NA',
+            model: record.Model || 'ALL',
+            deviceid,
+            isn,
+            test_end_time: apiEndTime,
+            data_source: 0
+        }
+    })
+
+    await downloadCsvLogs(csvLogInfos)
 }
 
 // Handle calculate scores request from ranking table

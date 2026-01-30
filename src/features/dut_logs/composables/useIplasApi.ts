@@ -24,7 +24,8 @@ import {
   type CompactCsvTestItemData,
   type TestItem,
   type IplasIsnSearchRecord,
-  type IplasDownloadAttachmentInfo
+  type IplasDownloadAttachmentInfo,
+  type IplasDownloadCsvLogInfo
 } from '../api/iplasProxyApi'
 import { useIplasSettings } from './useIplasSettings'
 
@@ -34,6 +35,7 @@ export type { SiteProject, IplasStation, CsvTestItemData, CompactCsvTestItemData
 // Type aliases for backwards compatibility
 export type Station = IplasStation
 export type DownloadAttachmentInfo = IplasDownloadAttachmentInfo
+export type DownloadCsvLogInfo = IplasDownloadCsvLogInfo
 export type IsnSearchData = IplasIsnSearchRecord
 
 /**
@@ -559,6 +561,49 @@ export function useIplasApi() {
   }
 
   /**
+   * Download CSV test logs via backend proxy
+   * 
+   * UPDATED: Added for downloading actual CSV test logs from iPLAS API
+   */
+  async function downloadCsvLogs(
+    records: DownloadCsvLogInfo[]
+  ): Promise<void> {
+    downloading.value = true
+    error.value = null
+
+    try {
+      const response = await iplasProxyApi.downloadCsvLog({
+        query_list: records.map(r => ({
+          site: r.site,
+          project: r.project,
+          station: r.station,
+          line: r.line,
+          model: r.model || 'ALL',
+          deviceid: r.deviceid,
+          isn: r.isn,
+          test_end_time: r.test_end_time,
+          data_source: r.data_source ?? 0
+        })),
+        token: getUserToken()
+      })
+
+      // Generate filename if not provided
+      const filename = response.filename ||
+        (records.length === 1 && records[0]
+          ? `${records[0].isn}_${records[0].test_end_time.replace(/[\/:. ]/g, '_')}.csv`
+          : `test_logs_${new Date().toISOString().slice(0, 10)}.csv`)
+
+      // Trigger download
+      iplasProxyApi.downloadCsvFile(response.content, filename)
+    } catch (err: any) {
+      error.value = err.message || 'Failed to download CSV logs'
+      throw err
+    } finally {
+      downloading.value = false
+    }
+  }
+
+  /**
    * Format date for iPLAS v1 API (YYYY/MM/DD HH:mm:ss)
    */
   function formatDateForV1Api(date: Date): string {
@@ -727,6 +772,7 @@ export function useIplasApi() {
     fetchTestItemsFiltered,
     searchByIsn,
     downloadAttachments,
+    downloadCsvLogs,
 
     // Utilities
     formatDateForV1Api,

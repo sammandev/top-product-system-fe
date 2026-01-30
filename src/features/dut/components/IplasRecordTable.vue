@@ -1,7 +1,9 @@
 <template>
     <div>
+        <!-- UPDATED: Support both server-side and client-side pagination modes -->
         <!-- Server-side Data Table with Selection Support -->
         <v-data-table-server
+            v-if="serverSide"
             v-model:items-per-page="itemsPerPage"
             v-model:page="page"
             v-model:sort-by="sortBy"
@@ -116,6 +118,121 @@
             </template>
         </v-data-table-server>
 
+        <!-- Client-side Data Table (for local data) -->
+        <v-data-table
+            v-else
+            v-model:items-per-page="itemsPerPage"
+            v-model:page="page"
+            v-model:sort-by="sortBy"
+            :model-value="selectedKeys"
+            :headers="computedHeaders"
+            :items="itemsWithKeys"
+            :loading="loading"
+            item-value="recordKey"
+            :show-select="selectable"
+            hover
+            class="elevation-1 clickable-rows"
+            @update:model-value="onSelectionChange"
+            @click:row="handleRowClick"
+        >
+            <!-- ISN Column with Copy Button on Left -->
+            <template #item.ISN="{ item }">
+                <div class="d-flex align-center gap-1">
+                    <v-btn icon size="x-small" variant="text" color="primary" @click.stop="copyToClipboard(item.ISN)">
+                        <v-icon size="small">mdi-content-copy</v-icon>
+                        <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
+                    </v-btn>
+                    <span class="font-weight-medium font-mono">{{ item.ISN || '-' }}</span>
+                </div>
+            </template>
+
+            <!-- Device ID Column -->
+            <template #item.DeviceId="{ item }">
+                <span class="font-mono text-medium-emphasis">{{ item.DeviceId || '-' }}</span>
+            </template>
+
+            <!-- Error Code Column - Red when error -->
+            <template #item.ErrorCode="{ item }">
+                <v-chip 
+                    :color="isStatusPass(item.ErrorCode) ? 'success' : 'error'" 
+                    size="x-small"
+                    :variant="isStatusPass(item.ErrorCode) ? 'tonal' : 'flat'"
+                >
+                    {{ item.ErrorCode || '-' }}
+                </v-chip>
+            </template>
+
+            <!-- Error Name Column - Red text when error -->
+            <template #item.ErrorName="{ item }">
+                <template v-if="item.ErrorName && item.ErrorName !== 'N/A' && !isStatusPass(item.ErrorCode)">
+                    <span class="text-error font-weight-medium">{{ item.ErrorName }}</span>
+                </template>
+                <span v-else class="text-medium-emphasis">-</span>
+            </template>
+
+            <!-- Test Start Time Column -->
+            <template #item.TestStartTime="{ item }">
+                <span class="text-caption">{{ formatDateTime(item['Test Start Time']) }}</span>
+            </template>
+
+            <!-- Test End Time Column -->
+            <template #item.TestEndTime="{ item }">
+                <span class="text-caption">{{ formatDateTime(item['Test end Time']) }}</span>
+            </template>
+
+            <!-- Duration Column - No chip -->
+            <template #item.Duration="{ item }">
+                <span class="text-caption text-medium-emphasis">{{ calculateDuration(item['Test Start Time'], item['Test end Time']) }}</span>
+            </template>
+
+            <!-- Test Item Count Column - No chip -->
+            <template #item.TestItemCount="{ item }">
+                <span class="text-caption">{{ getTestItemCount(item) }}</span>
+            </template>
+
+            <!-- Actions Column - Download buttons -->
+            <template #item.actions="{ item }">
+                <div class="d-flex gap-1">
+                    <v-btn 
+                        icon 
+                        size="x-small" 
+                        variant="outlined" 
+                        color="primary"
+                        :loading="downloadingRecord === item.recordKey"
+                        @click.stop="$emit('download', item)"
+                    >
+                        <v-icon size="small">mdi-download</v-icon>
+                        <v-tooltip activator="parent" location="top">Download TXT Log</v-tooltip>
+                    </v-btn>
+                    <v-btn 
+                        icon 
+                        size="x-small" 
+                        variant="outlined" 
+                        color="success"
+                        :loading="downloadingCsvRecord === item.recordKey"
+                        @click.stop="$emit('download-csv', item)"
+                    >
+                        <v-icon size="small">mdi-file-delimited</v-icon>
+                        <v-tooltip activator="parent" location="top">Download CSV Log</v-tooltip>
+                    </v-btn>
+                </div>
+            </template>
+
+            <!-- Loading Overlay -->
+            <template #loading>
+                <v-skeleton-loader type="table-row@5" />
+            </template>
+
+            <!-- No Data -->
+            <template #no-data>
+                <div class="text-center py-4">
+                    <v-icon size="48" color="grey">mdi-database-off-outline</v-icon>
+                    <div class="text-h6 mt-2 text-grey">No records found</div>
+                    <div class="text-body-2 text-grey">Try adjusting your search criteria</div>
+                </div>
+            </template>
+        </v-data-table>
+
         <!-- Copy Success Snackbar -->
         <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
             <v-icon start>mdi-check</v-icon>
@@ -138,9 +255,11 @@ const props = withDefaults(defineProps<{
     downloadingCsvRecord?: string | null
     selectable?: boolean
     selectedKeys?: string[]
+    serverSide?: boolean
 }>(), {
     selectable: false,
-    selectedKeys: () => []
+    selectedKeys: () => [],
+    serverSide: true
 })
 
 // Emits

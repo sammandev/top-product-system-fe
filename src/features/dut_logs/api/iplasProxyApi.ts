@@ -194,6 +194,32 @@ export interface IplasDownloadAttachmentResponse {
 }
 
 // ============================================================================
+// CSV Test Log Download Types
+// ============================================================================
+
+export interface IplasDownloadCsvLogInfo {
+  site: string
+  project: string
+  station: string
+  line: string
+  model: string  // Usually "ALL"
+  deviceid: string
+  isn: string
+  test_end_time: string  // Format: "YYYY/MM/DD HH:mm:ss.000" (MUST include .000)
+  data_source: number  // Usually 0
+}
+
+export interface IplasDownloadCsvLogRequest {
+  query_list: IplasDownloadCsvLogInfo[]
+  token?: string  // Optional user token override
+}
+
+export interface IplasDownloadCsvLogResponse {
+  content: string  // CSV file content as string
+  filename?: string  // Filename from response header
+}
+
+// ============================================================================
 // Verify Endpoint Types
 // ============================================================================
 
@@ -506,6 +532,47 @@ class IplasProxyApi {
     }
 
     const blob = new Blob([bytes], { type: 'application/zip' })
+    const url = URL.createObjectURL(blob)
+
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
+  }
+
+  // ============================================================================
+  // v1 Download CSV Test Log
+  // ============================================================================
+
+  /**
+   * Download CSV test logs from iPLAS
+   * 
+   * Uses the iPLAS endpoint: POST /raw/get_test_log
+   * 
+   * **Important**: The test_end_time field MUST include milliseconds (e.g., '2026/01/22 18:57:05.000')
+   * 
+   * @param request - Download request with query list
+   * @returns CSV file content as string with optional filename
+   */
+  async downloadCsvLog(request: IplasDownloadCsvLogRequest): Promise<IplasDownloadCsvLogResponse> {
+    const response = await apiClient.post<IplasDownloadCsvLogResponse>(
+      `${this.baseUrl}/v1/download-csv-log`,
+      request
+    )
+    return response.data
+  }
+
+  /**
+   * Helper to download CSV content as a file
+   * 
+   * @param csvContent - CSV file content as string
+   * @param filename - Filename for the download
+   */
+  downloadCsvFile(csvContent: string, filename: string): void {
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
     const url = URL.createObjectURL(blob)
 
     const a = document.createElement('a')

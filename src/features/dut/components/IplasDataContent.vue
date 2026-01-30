@@ -257,15 +257,15 @@
                                     </v-col>
                                 </v-row>
 
-                                <!-- Server-Side Data Table with Selection -->
+                                <!-- UPDATED: Client-Side Data Table with Selection (changed from server-side for better UX) -->
                                 <IplasRecordTable
-                                    :items="serverPaginationState[stationGroup.stationName]?.items || getFilteredStationRecords(stationGroup)"
-                                    :total-items="serverPaginationState[stationGroup.stationName]?.totalItems || getFilteredStationRecords(stationGroup).length"
-                                    :loading="serverPaginationState[stationGroup.stationName]?.loading || false"
+                                    :items="getFilteredStationRecords(stationGroup)"
+                                    :total-items="getFilteredStationRecords(stationGroup).length"
+                                    :loading="false"
                                     :downloading-record="downloadingKey" :downloading-csv-record="downloadingCsvKey"
                                     :selectable="true"
                                     :selected-keys="getSelectedKeysForStation(stationGroup.stationName)"
-                                    @update:options="(opts) => handleTableOptionsUpdate(stationGroup.stationName, opts)"
+                                    :server-side="false"
                                     @update:selected-keys="(keys) => handleTableSelectionChange(stationGroup.stationName, keys)"
                                     @row-click="openFullscreen"
                                     @download="(record) => downloadSingleRecord(record, stationGroup.stationName, 0)"
@@ -327,7 +327,6 @@
                         </v-tabs>
 
                         <!-- IndexedDB Table using v-data-table (client-side pagination) -->
-                        <!-- UPDATED: Changed from v-data-table-server to v-data-table for better UX with local IndexedDB data -->
                         <v-data-table v-model="indexedDbSelectedKeys"
                             v-model:items-per-page="indexedDbTableOptions.itemsPerPage"
                             v-model:page="indexedDbTableOptions.page" v-model:sort-by="indexedDbTableOptions.sortBy"
@@ -479,6 +478,7 @@ import IplasRecordTable from './IplasRecordTable.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 import type { Station, TestItem, CsvTestItemData, DownloadAttachmentInfo } from '@/features/dut_logs/api/iplasApi'
 import type { CompactCsvTestItemData } from '@/features/dut_logs/api/iplasProxyApi'
+import type { DownloadCsvLogInfo } from '@/features/dut_logs/composables/useIplasApi'
 
 // Station group - now supports both full and compact records
 interface StationGroup {
@@ -512,6 +512,7 @@ const {
     fetchTestItemsPaginated,
     fetchRecordTestItems,
     downloadAttachments,
+    downloadCsvLogs,
     clearTestItemData
 } = useIplasApi()
 
@@ -1646,7 +1647,8 @@ async function downloadSingleRecord(record: CsvTestItemData | CompactCsvTestItem
 }
 
 /**
- * Download test items as CSV file for a single record
+ * Download CSV test log from iPLAS API for a single record
+ * UPDATED: Uses the actual iPLAS API endpoint to get official CSV test logs
  */
 async function downloadCsvRecord(record: CsvTestItemData | CompactCsvTestItemData, stationName: string, recordIndex: number): Promise<void> {
     if (!selectedSite.value || !selectedProject.value) return
@@ -1654,41 +1656,23 @@ async function downloadCsvRecord(record: CsvTestItemData | CompactCsvTestItemDat
     downloadingCsvKey.value = `${stationName}-${recordIndex}`
 
     try {
-        // Get test items - either from the record itself or fetch them
-        let testItems: TestItem[] | undefined
+        // Format test_end_time with .000 milliseconds as required by iPLAS API
+        const testEndTime = record['Test end Time']
+        const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+        // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
+        const apiEndTime = formattedEndTime.replace(/-/g, '/')
 
-        // Check if it's a full record with TestItem array
-        if ('TestItem' in record && record.TestItem && record.TestItem.length > 0) {
-            testItems = record.TestItem
-        } else {
-            // Fetch test items for compact records
-            // Use TSP (which corresponds to display_station_name) for the API call
-            const station = record.TSP || record.station || stationName
-            const result = await fetchRecordTestItems(
-                selectedSite.value,
-                selectedProject.value,
-                station,
-                record.ISN || record.DeviceId, // ISN as identifier
-                record['Test Start Time'],
-                record.DeviceId // deviceId as last parameter
-            )
-            testItems = result || []
-        }
-
-        if (!testItems || testItems.length === 0) {
-            console.warn('No test items found for CSV download')
-            return
-        }
-
-        // Convert to CSV
-        const csvContent = convertTestItemsToCsv(record, testItems)
-
-        // Generate filename
-        const timestamp = record['Test Start Time'].replace(/[\/:]/g, '_').replace(/ /g, '_')
-        const filename = `${record.ISN}_${timestamp}_test_items.csv`
-
-        // Trigger download
-        downloadCsvFile(csvContent, filename)
+        await downloadCsvLogs([{
+            site: selectedSite.value,
+            project: selectedProject.value,
+            station: record.TSP || record.station || stationName,
+            line: record.Line || 'NA',
+            model: record.Model || 'ALL',
+            deviceid: record.DeviceId,
+            isn: record.ISN,
+            test_end_time: apiEndTime,
+            data_source: 0
+        }])
     } catch (err) {
         console.error('Failed to download CSV:', err)
     } finally {
@@ -1788,6 +1772,7 @@ async function downloadSelectedRecords(): Promise<void> {
 
 /**
  * Download all selected records as CSV files (one per record)
+ * UPDATED: Uses the actual iPLAS API endpoint to get official CSV test logs
  */
 async function downloadSelectedRecordsCsv(): Promise<void> {
     if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
@@ -1804,8 +1789,8 @@ async function downloadSelectedRecordsCsv(): Promise<void> {
             }
         }
 
-        // Collect all selected records with their test items
-        const csvContents: { content: string; filename: string }[] = []
+        // Collect all CSV log info for selected records
+        const csvLogInfos: DownloadCsvLogInfo[] = []
 
         for (const key of selectedRecordKeys.value) {
             const entry = recordMap.get(key)
@@ -1813,41 +1798,29 @@ async function downloadSelectedRecordsCsv(): Promise<void> {
 
             const { record, stationName } = entry
 
-            // Get test items
-            let testItems: TestItem[] | undefined
-            if ('TestItem' in record && record.TestItem && record.TestItem.length > 0) {
-                testItems = record.TestItem
-            } else {
-                // Fetch test items for compact records
-                // Use TSP which corresponds to display_station_name for the API call
-                const station = record.TSP || record.station || stationName
-                const result = await fetchRecordTestItems(
-                    selectedSite.value,
-                    selectedProject.value,
-                    station,
-                    record.ISN || record.DeviceId, // ISN as identifier
-                    record['Test Start Time'],
-                    record.DeviceId // deviceId as last parameter
-                )
-                testItems = result || []
-            }
+            // Format test_end_time with .000 milliseconds as required by iPLAS API
+            const testEndTime = record['Test end Time']
+            const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+            // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
+            const apiEndTime = formattedEndTime.replace(/-/g, '/')
 
-            if (testItems && testItems.length > 0) {
-                const csvContent = convertTestItemsToCsv(record, testItems)
-                const timestamp = record['Test Start Time'].replace(/[\/:]/g, '_').replace(/ /g, '_')
-                const filename = `${record.ISN}_${timestamp}_test_items.csv`
-                csvContents.push({ content: csvContent, filename })
-            }
+            csvLogInfos.push({
+                site: selectedSite.value!,
+                project: selectedProject.value!,
+                station: record.TSP || record.station || stationName,
+                line: record.Line || 'NA',
+                model: record.Model || 'ALL',
+                deviceid: record.DeviceId,
+                isn: record.ISN,
+                test_end_time: apiEndTime,
+                data_source: 0
+            })
         }
 
-        // Download all CSVs
-        for (const { content, filename } of csvContents) {
-            downloadCsvFile(content, filename)
-            // Small delay between downloads to avoid browser blocking
-            await new Promise(resolve => setTimeout(resolve, 100))
+        if (csvLogInfos.length > 0) {
+            console.log(`Downloading ${csvLogInfos.length} CSV logs via iPLAS API`)
+            await downloadCsvLogs(csvLogInfos)
         }
-
-        console.log(`Downloaded ${csvContents.length} CSV files`)
     } catch (err) {
         console.error('Failed to download CSV files:', err)
     } finally {
