@@ -289,6 +289,17 @@ export async function fetchAndSinkToDB(
 
           // Check for metadata line (first line)
           if (parsed._metadata) {
+            // Check if this is an error response
+            if (parsed._error) {
+              const errorMessage = parsed.error_message || 'Unknown server error'
+              const errorCode = parsed.error_code || 500
+              console.error(`[StreamReader] Server error: ${errorCode} - ${errorMessage}`)
+              const serverError = new Error(`Server error (${errorCode}): ${errorMessage}`)
+              onError?.(serverError)
+              reportProgress(true, serverError)
+              return 0
+            }
+
             const metadata: StreamMetadata = {
               totalRecords: parsed.total_records,
               filtered: parsed.filtered,

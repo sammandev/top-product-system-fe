@@ -17,6 +17,7 @@ import { ref, reactive, computed, watch, onUnmounted, type Ref } from 'vue'
 import { useIplasDataStore, type StreamStatus, type StreamToDbRequest } from '../stores/iplasData.store'
 import {
   queryRecordsForTable,
+  getRecordsByFilter,
   getRecordStatistics,
   getDistinctValues,
   type RecordFilter,
@@ -86,6 +87,7 @@ export interface UseIplasLocalDataReturn {
   
   // Methods
   loadItems: (options: VuetifyTableOptions) => Promise<void>
+  loadAllItems: () => Promise<void>
   refreshData: () => Promise<void>
   updateFilter: (newFilter: Partial<RecordFilter>) => void
   clearFilter: () => void
@@ -216,6 +218,32 @@ export function useIplasLocalData(
     } catch (err) {
       console.error('[useIplasLocalData] Query failed:', err)
       error.value = err instanceof Error ? err.message : 'Query failed'
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Load ALL items from IndexedDB for client-side pagination.
+   * 
+   * Use this for v-data-table (client-side) instead of v-data-table-server.
+   * Loads all matching records from IndexedDB into the items array.
+   * 
+   * UPDATED: Added for client-side table pagination support
+   */
+  async function loadAllItems(): Promise<void> {
+    loading.value = true
+    error.value = null
+
+    try {
+      // Get all records matching the current filter (no limit)
+      const allRecords = await getRecordsByFilter(filter)
+      
+      items.value = allRecords
+      totalItems.value = allRecords.length
+    } catch (err) {
+      console.error('[useIplasLocalData] Load all items failed:', err)
+      error.value = err instanceof Error ? err.message : 'Load all items failed'
     } finally {
       loading.value = false
     }
@@ -390,6 +418,7 @@ export function useIplasLocalData(
 
     // Methods
     loadItems,
+    loadAllItems,
     refreshData,
     updateFilter,
     clearFilter,

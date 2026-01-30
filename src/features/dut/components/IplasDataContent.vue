@@ -326,13 +326,14 @@
                             </v-tab>
                         </v-tabs>
 
-                        <!-- IndexedDB Table using v-data-table-server -->
-                        <v-data-table-server v-model="indexedDbSelectedKeys"
+                        <!-- IndexedDB Table using v-data-table (client-side pagination) -->
+                        <!-- UPDATED: Changed from v-data-table-server to v-data-table for better UX with local IndexedDB data -->
+                        <v-data-table v-model="indexedDbSelectedKeys"
                             v-model:items-per-page="indexedDbTableOptions.itemsPerPage"
                             v-model:page="indexedDbTableOptions.page" v-model:sort-by="indexedDbTableOptions.sortBy"
-                            :headers="indexedDbHeaders" :items="indexedDbItems" :items-length="indexedDbTotalItems"
+                            :headers="indexedDbHeaders" :items="indexedDbItems"
                             :loading="indexedDbLoading || isStreaming" item-value="id" show-select hover
-                            class="elevation-1" @update:options="loadIndexedDbItems"
+                            class="elevation-1"
                             @click:row="handleIndexedDbRowClick">
                             <!-- ISN Column with Copy Button -->
                             <template #item.ISN="{ item }">
@@ -408,7 +409,7 @@
                             <template #loading>
                                 <v-skeleton-loader type="table-row@5" />
                             </template>
-                        </v-data-table-server>
+                        </v-data-table>
                     </v-card-text>
                 </v-card>
 
@@ -572,6 +573,7 @@ const {
     isStreaming,
     streamProgress,
     loadItems: loadIndexedDbItems,
+    loadAllItems: loadAllIndexedDbItems,
     streamData: streamToIndexedDb,
     abortStream: abortIndexedDbStream,
     updateFilter: updateIndexedDbFilter
@@ -2127,6 +2129,14 @@ watch(groupedByStation, async (groups) => {
     }
 }, { immediate: true })
 
+// UPDATED: Watch for streaming completion to load all items for client-side table
+watch(isStreaming, async (streaming, wasStreaming) => {
+    if (wasStreaming && !streaming && streamStatus.recordsWritten > 0) {
+        // Streaming completed - load all items for v-data-table client-side pagination
+        await loadAllIndexedDbItems()
+    }
+})
+
 // Watch for active station tab changes - initialize pagination if needed
 watch(activeStationTab, async (newTab) => {
     if (groupedByStation.value.length > newTab) {
@@ -2151,13 +2161,15 @@ watch(indexedDbActiveStationTab, async (newTab) => {
     }
     // Reset to page 1 when changing tabs
     indexedDbTableOptions.value.page = 1
-    // Reload items
-    await loadIndexedDbItems(indexedDbTableOptions.value)
+    // UPDATED: Load all items for client-side pagination with v-data-table
+    await loadAllIndexedDbItems()
 })
 
 // Initialize
 onMounted(async () => {
     await fetchSiteProjects()
+    // UPDATED: Load all IndexedDB items on mount for client-side table pagination
+    await loadAllIndexedDbItems()
 })
 
 // Cleanup on unmount to free memory

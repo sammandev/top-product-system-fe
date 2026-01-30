@@ -521,6 +521,7 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
         // Use the lightweight backend proxy endpoint for test item names
         const deviceId = currentStationDeviceIds.value[0] ?? 'ALL'
 
+        // UPDATED: Pass excludeBin=true to filter out BIN test items at backend level
         const testItems = await fetchTestItemNames(
             selectedSite.value,
             selectedProject.value,
@@ -528,7 +529,8 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
             deviceId,
             new Date(startTime.value),
             new Date(endTime.value),
-            'PASS'  // Only fetch PASS test items for faster loading
+            'PASS',  // Only fetch PASS test items for faster loading
+            true     // Exclude BIN items - not needed for scoring
         )
 
         // Convert to TestItemInfo format expected by StationConfigDialog

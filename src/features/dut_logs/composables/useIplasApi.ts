@@ -599,6 +599,8 @@ export function useIplasApi() {
   /**
    * Fetch unique test item names via backend proxy (lightweight)
    * Returns only test item names, not full data - reduces payload significantly
+   * 
+   * UPDATED: Added excludeBin option to filter out BIN/PASS-FAIL test items
    */
   async function fetchTestItemNames(
     site: string,
@@ -607,7 +609,8 @@ export function useIplasApi() {
     deviceId: string,
     beginTime: string | Date,
     endTime: string | Date,
-    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL'
+    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
+    excludeBin = false
   ): Promise<IplasTestItemInfo[]> {
     loading.value = true
     error.value = null
@@ -621,7 +624,8 @@ export function useIplasApi() {
         begin_time: iplasProxyApi.formatDateForRequest(beginTime),
         end_time: iplasProxyApi.formatDateForRequest(endTime),
         test_status: testStatus,
-        token: getUserToken()
+        token: getUserToken(),
+        exclude_bin: excludeBin
       })
       return response.test_items
     } catch (err: any) {

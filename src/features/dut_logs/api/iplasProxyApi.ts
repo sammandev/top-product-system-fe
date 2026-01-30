@@ -55,6 +55,8 @@ export interface IplasTestItemNamesRequest {
   end_time: string    // ISO format
   test_status: 'ALL' | 'PASS' | 'FAIL'
   token?: string  // Optional user token override
+  // UPDATED: Option to exclude BIN/PASS-FAIL test items
+  exclude_bin?: boolean
 }
 
 export interface IplasTestItemNamesResponse {
