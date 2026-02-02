@@ -1,11 +1,12 @@
 <template>
     <v-dialog v-model="internalShow" max-width="1000" scrollable persistent>
         <v-card>
-            <v-card-title class="d-flex align-center">
-                <v-icon start color="primary">mdi-tune-variant</v-icon>
-                Configure Scoring Parameters
+            <!-- UPDATED: Added bg-info for distinct dialog header color -->
+            <v-card-title class="d-flex align-center bg-info">
+                <v-icon start color="white">mdi-tune-variant</v-icon>
+                <span class="text-white">Configure Scoring Parameters</span>
                 <v-spacer />
-                <v-btn icon variant="text" @click="handleClose">
+                <v-btn icon variant="text" color="white" @click="handleClose">
                     <v-icon>mdi-close</v-icon>
                 </v-btn>
             </v-card-title>
@@ -249,7 +250,8 @@ import {
     type ScoringConfig,
     type ScoringType,
     SCORING_TYPE_INFO,
-    createDefaultScoringConfig
+    createDefaultScoringConfig,
+    getUIScoringTypeOptions
 } from '../types/scoring.types'
 import { useScoring } from '../composables/useScoring'
 
@@ -290,14 +292,8 @@ const internalShow = computed({
     set: (value) => emit('update:show', value)
 })
 
-const scoringTypeOptions = computed(() =>
-    Object.values(SCORING_TYPE_INFO).map(info => ({
-        type: info.type,
-        label: info.label,
-        description: info.description,
-        raw: info
-    }))
-)
+// UPDATED: Use simplified UI scoring types (only Symmetrical and Asymmetrical)
+const scoringTypeOptions = computed(() => getUIScoringTypeOptions())
 
 const filteredTestItems = computed(() => {
     let items = configList.value
@@ -427,5 +423,14 @@ function handleApply(): void {
 <style scoped>
 .test-item-row:hover {
     background-color: rgba(var(--v-theme-primary), 0.05);
+}
+
+/* UPDATED: Fix icon cropping inside chips */
+:deep(.v-chip .v-icon) {
+    margin-right: 4px;
+}
+
+:deep(.v-chip__content) {
+    overflow: visible;
 }
 </style>

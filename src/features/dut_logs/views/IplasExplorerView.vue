@@ -69,8 +69,8 @@
                                 <!-- Station Selection (Multiple) -->
                                 <v-col cols="12" md="6">
                                     <v-autocomplete v-model="selectedStations" :items="stationOptions"
-                                        item-title="displayText" item-value="value" label="Test Stations"
-                                        variant="outlined" density="comfortable"
+                                        item-title="displayText" item-value="value"
+                                        label="Select Test Stations (Multiple)" variant="outlined" density="comfortable"
                                         prepend-inner-icon="mdi-router-wireless" :loading="loadingStations"
                                         :disabled="!selectedProject" multiple chips closable-chips clearable
                                         hide-details @update:model-value="handleStationChange">
@@ -217,9 +217,8 @@
                                                     @update:model-value="toggleRecordSelection(index)" />
                                                 <v-icon size="small" color="primary">mdi-tag</v-icon>
                                                 <span class="font-weight-bold">{{ record.ISN || record.DeviceId
-                                                }}</span>
-                                                <v-chip :color="getStatusColor(record.ErrorCode)"
-                                                    size="x-small">
+                                                    }}</span>
+                                                <v-chip :color="getStatusColor(record.ErrorCode)" size="x-small">
                                                     {{ record.ErrorCode }}
                                                 </v-chip>
                                                 <v-chip v-if="record.ErrorName && record.ErrorName !== 'N/A'"
@@ -290,8 +289,7 @@
                                             :items="filterTestItems(record.TestItem)" :items-per-page="25"
                                             density="compact" class="elevation-1">
                                             <template #item.STATUS="{ item }">
-                                                <v-chip :color="getStatusColor(item.STATUS)"
-                                                    size="x-small">
+                                                <v-chip :color="getStatusColor(item.STATUS)" size="x-small">
                                                     {{ normalizeStatus(item.STATUS) }}
                                                 </v-chip>
                                             </template>

@@ -185,7 +185,7 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     },
     evm: {
         type: 'evm',
-        label: 'EVM (Lower is Better)',
+        label: 'EVM',
         description: 'For negative dB values like EVM - more negative = better',
         useCase: 'EVM measurements (typically -20 to -60 dB)',
         icon: 'mdi-signal-cellular-3',
@@ -222,7 +222,7 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     },
     throughput: {
         type: 'throughput',
-        label: 'Throughput (Higher is Better)',
+        label: 'Throughput',
         description: 'Linear below target, exponential above target',
         useCase: 'Data throughput, speed measurements',
         icon: 'mdi-speedometer',
@@ -307,7 +307,7 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     },
     per_mask: {
         type: 'per_mask',
-        label: 'PER/MASK (Zero is Best)',
+        label: 'PER/MASK (Close to 0)',
         description: 'Linear decrease from 1.0 at 0 to 0.0 at max deviation',
         useCase: 'Packet Error Rate, Mask margin measurements',
         icon: 'mdi-target',
@@ -390,4 +390,19 @@ export function getScoreIcon(score: number): string {
     if (score >= 0.7) return 'mdi-check'
     if (score >= 0.5) return 'mdi-alert'
     return 'mdi-close-circle'
+}
+
+// UPDATED: UI-visible scoring types (simplified for user selection)
+// Only Symmetrical and Asymmetrical are shown to users.
+// Other types (evm, per_mask, etc.) are assigned automatically by name-based detection.
+export const UI_SCORING_TYPES: ScoringType[] = ['symmetrical', 'asymmetrical']
+
+// Helper to get UI-visible scoring type options for dropdowns
+export function getUIScoringTypeOptions() {
+    return UI_SCORING_TYPES.map(type => ({
+        type: SCORING_TYPE_INFO[type].type,
+        label: SCORING_TYPE_INFO[type].label,
+        description: SCORING_TYPE_INFO[type].description,
+        raw: SCORING_TYPE_INFO[type]
+    }))
 }

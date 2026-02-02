@@ -77,7 +77,7 @@
                             <!-- Station Selection (Multiple) -->
                             <v-col cols="12">
                                 <v-autocomplete v-model="selectedStations" :items="stationOptions"
-                                    item-title="displayText" item-value="value" label="Test Stations" variant="outlined"
+                                    item-title="displayText" item-value="value" label="Select Test Stations (Multiple)" variant="outlined"
                                     density="comfortable" prepend-inner-icon="mdi-router-wireless"
                                     :loading="loadingStations" :disabled="!selectedProject" multiple chips
                                     closable-chips clearable hide-details @update:model-value="handleStationChange">
@@ -104,10 +104,10 @@
                                 :md="selectedStations.length === 1 ? 12 : 6">
                                 <v-autocomplete v-model="stationDeviceIds[stationValue]"
                                     :items="getDeviceIdsForStation(stationValue)"
-                                    :label="`Select Device IDs - ${getStationDisplayName(stationValue)} (Optional)`"
+                                    :label="`${getStationDisplayName(stationValue)} Device IDs (Default All)`"
                                     variant="outlined" density="comfortable" prepend-inner-icon="mdi-chip"
                                     :loading="loadingDevicesByStation[stationValue]" multiple chips closable-chips
-                                    clearable hide-details placeholder="Leave empty for ALL devices">
+                                    clearable hide-details placeholder="Select Device IDs - (Empty = ALL)">
                                     <template #chip="{ props, item }">
                                         <v-chip v-bind="props" :text="item.value" size="small" />
                                     </template>

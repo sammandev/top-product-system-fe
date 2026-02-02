@@ -35,11 +35,11 @@
                     </v-col>
                     <v-col cols="12" md="6">
                         <!-- Device IDs Selection - Dropdown -->
-                        <v-autocomplete v-model="localConfig.deviceIds" :items="availableDeviceIds" label="Device IDs"
+                        <v-autocomplete v-model="localConfig.deviceIds" :items="availableDeviceIds" label="Device IDs (Default All)"
                             variant="outlined" density="comfortable" prepend-inner-icon="mdi-devices" multiple chips
                             closable-chips hide-details :loading="loadingDevices"
                             :disabled="loadingDevices || availableDeviceIds.length === 0"
-                            placeholder="Select devices (empty = all)" clearable>
+                            placeholder="Select Devices (empty = all)" clearable>
                             <template #prepend-item>
                                 <v-list-item @click="toggleSelectAllDevices">
                                     <template #prepend>
@@ -185,7 +185,7 @@
                                                     class="scoring-config-btn">
                                                     <v-icon start size="small">{{
                                                         getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).icon
-                                                        }}</v-icon>
+                                                    }}</v-icon>
                                                     {{
                                                         getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).label
                                                     }}
@@ -209,7 +209,8 @@
                             <div class="text-caption text-medium-emphasis mt-2">
                                 <v-icon size="x-small">mdi-information</v-icon>
                                 Leave empty to include all CRITERIA and NON-CRITERIA test items (excludes Bin items).
-                                Select specific items to filter results. Click on scoring type button to configure scoring algorithm.
+                                Select specific items to filter results. Click on scoring type button to configure
+                                scoring algorithm.
                             </div>
                         </div>
                     </v-card-text>
@@ -218,11 +219,11 @@
                 <!-- Scoring Configuration Dialog -->
                 <v-dialog v-model="scoringConfigDialog" max-width="500px">
                     <v-card v-if="scoringConfigItem">
-                        <v-card-title class="d-flex align-center bg-primary">
+                        <v-card-title class="d-flex align-center bg-info">
                             <v-icon class="mr-2">mdi-tune</v-icon>
                             Configure Scoring
                         </v-card-title>
-                        <v-card-subtitle class="bg-primary pb-3">
+                        <v-card-subtitle class="bg-info py-3">
                             {{ scoringConfigItem }}
                         </v-card-subtitle>
 
@@ -308,7 +309,7 @@
                             <v-icon class="mr-2">mdi-tune-variant</v-icon>
                             Bulk Configure Scoring
                         </v-card-title>
-                        <v-card-subtitle class="bg-secondary pb-3">
+                        <v-card-subtitle class="bg-secondary py-3">
                             Apply to {{ selectedCriteriaCount }} selected criteria test item(s)
                         </v-card-subtitle>
 
@@ -316,7 +317,7 @@
                             <v-alert type="info" variant="tonal" density="compact" class="mb-4">
                                 <v-icon start size="small">mdi-information</v-icon>
                                 This will apply the selected scoring algorithm and weight to all {{
-                                selectedCriteriaCount }} selected
+                                    selectedCriteriaCount }} selected
                                 criteria test items.
                             </v-alert>
 
@@ -828,5 +829,14 @@ const currentScoringTypeRequiresTarget = computed(() => {
 .scoring-config-btn {
     text-transform: none;
     font-size: 0.7rem;
+}
+
+/* UPDATED: Fix icon cropping inside chips */
+:deep(.v-chip .v-icon) {
+    margin-right: 4px;
+}
+
+:deep(.v-chip__content) {
+    overflow: visible;
 }
 </style>

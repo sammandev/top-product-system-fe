@@ -40,14 +40,63 @@ export function useScoring() {
   )
 
   /**
-   * Auto-detect scoring type based on test item characteristics
+   * Detect scoring type based on test item NAME patterns
+   * UPDATED: Automatically assigns scoring types based on test item name patterns
+   */
+  function detectScoringTypeByName(itemName: string): ScoringType | null {
+    const upperName = itemName.toUpperCase()
+    
+    // EVM scoring for test items containing "EVM" in their name
+    if (upperName.includes('EVM')) {
+      return 'evm'
+    }
+    
+    // PER/MASK scoring for test items containing "PER" or "MASK" in their name
+    if (upperName.includes('PER') || upperName.includes('MASK')) {
+      return 'per_mask'
+    }
+    
+    return null // No name-based detection, use value-based detection
+  }
+
+  /**
+   * Get default weight based on test item NAME patterns
+   * UPDATED: Automatically assigns weights based on test item name patterns
+   */
+  function getDefaultWeightByName(itemName: string): number {
+    const upperName = itemName.toUpperCase()
+    
+    // Weight 3 for test items containing "POW_OLD"
+    if (upperName.includes('POW_OLD')) {
+      return 3.0
+    }
+    
+    // Weight 2 for test items containing "FIXTURE_OR_DUT_PROBLEM_POW"
+    if (upperName.includes('FIXTURE_OR_DUT_PROBLEM_POW')) {
+      return 2.0
+    }
+    
+    return 1.0 // Default weight
+  }
+
+  /**
+   * Auto-detect scoring type based on test item characteristics (value-based)
    */
   function detectScoringType(testItem: {
+    NAME?: string
     VALUE?: string
     UCL?: string
     LCL?: string
     STATUS?: string
   }): ScoringType {
+    // UPDATED: First check name-based detection (takes precedence)
+    if (testItem.NAME) {
+      const nameBasedType = detectScoringTypeByName(testItem.NAME)
+      if (nameBasedType) {
+        return nameBasedType
+      }
+    }
+
     const value = testItem.VALUE?.toUpperCase() || ''
     const ucl = parseFloat(testItem.UCL || '')
     const lcl = parseFloat(testItem.LCL || '')
@@ -89,6 +138,7 @@ export function useScoring() {
   /**
    * Initialize scoring configs from test items
    * Uses auto-detection for scoring type, defaults to symmetrical for value items
+   * UPDATED: Also applies name-based weight assignments
    */
   function initializeConfigs(testItems: { NAME: string; VALUE?: string; UCL?: string; LCL?: string; STATUS?: string }[]): void {
     const seen = new Set<string>()
@@ -100,6 +150,9 @@ export function useScoring() {
       
       const scoringType = detectScoringType(item)
       const config = createDefaultScoringConfig(name, scoringType)
+      
+      // UPDATED: Apply name-based weight assignment
+      config.weight = getDefaultWeightByName(name)
       
       scoringConfigs.value.set(name, config)
     }

@@ -520,7 +520,7 @@
                     <v-card-text class="pt-4">
                         <div class="mb-4">
                             <p class="text-body-1 mb-2">
-                                You are about to delete this top product:
+                                You are about to delete this top product record:
                             </p>
                             <v-card variant="outlined" class="mb-4">
                                 <v-card-text>

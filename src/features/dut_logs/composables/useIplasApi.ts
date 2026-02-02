@@ -83,10 +83,10 @@ export function useIplasApi() {
 
   // Error state
   const error = ref<string | null>(null)
-  
+
   // Warning state (for truncated data)
   const possiblyTruncated = ref(false)
-  
+
   // Chunk progress tracking (for multi-day queries)
   const chunkProgress = ref<{ fetched: number; total: number } | null>(null)
 
@@ -97,10 +97,10 @@ export function useIplasApi() {
   // Large arrays use shallowRef - Vue only tracks array replacement, not nested changes
   const testItemData = shallowRef<CsvTestItemData[]>([])
   const isnSearchData = shallowRef<IsnSearchData[]>([])
-  
+
   // Compact data for memory-efficient list views (without TestItem arrays)
   const compactTestItemData = shallowRef<CompactCsvTestItemData[]>([])
-  
+
   // Lazy-loaded TestItems cache (key: `${ISN}_${TestStartTime}`)
   const testItemsCache = new Map<string, TestItem[]>()
 
@@ -294,7 +294,7 @@ export function useIplasApi() {
       if (response.possibly_truncated) {
         possiblyTruncated.value = true
       }
-      
+
       // Track chunk progress
       if (response.chunks_fetched && response.total_chunks) {
         chunkProgress.value = {
@@ -350,7 +350,7 @@ export function useIplasApi() {
       if (response.possibly_truncated) {
         possiblyTruncated.value = true
       }
-      
+
       // Track chunk progress
       if (response.chunks_fetched && response.total_chunks) {
         chunkProgress.value = {
@@ -393,7 +393,7 @@ export function useIplasApi() {
     try {
       // Calculate offset from page number (1-based)
       const offset = (options.page - 1) * options.itemsPerPage
-      
+
       const response = await iplasProxyApi.getCsvTestItemsCompact({
         site,
         project,
@@ -414,7 +414,7 @@ export function useIplasApi() {
       if (truncated) {
         possiblyTruncated.value = true
       }
-      
+
       // Track chunk progress
       let progress: { fetched: number; total: number } | null = null
       if (response.chunks_fetched && response.total_chunks) {
@@ -454,7 +454,7 @@ export function useIplasApi() {
     deviceId: string = 'ALL'
   ): Promise<TestItem[]> {
     const cacheKey = `${isn}_${testStartTime}`
-    
+
     // Return cached if available
     if (testItemsCache.has(cacheKey)) {
       return testItemsCache.get(cacheKey)!
@@ -738,10 +738,10 @@ export function useIplasApi() {
 
     // Error state
     error,
-    
+
     // Warning state (for truncated data)
     possiblyTruncated,
-    
+
     // Chunk progress (for multi-day queries)
     chunkProgress,
 
@@ -751,7 +751,7 @@ export function useIplasApi() {
     deviceIds,
     testItemData,
     isnSearchData,
-    
+
     // Compact data (without TestItem arrays - memory efficient)
     compactTestItemData,
 

@@ -24,11 +24,15 @@
                     <v-list-item v-for="station in filteredStations" :key="station.station_name"
                         @click="handleStationClick(station)" class="station-item"
                         :class="{ 'station-configured': isStationConfigured(station.display_station_name) }">
+                        <!-- UPDATED: Changed icon to v-checkbox for better UX -->
                         <template #prepend>
-                            <v-icon :color="isStationConfigured(station.display_station_name) ? 'success' : 'grey'">
-                                {{ isStationConfigured(station.display_station_name) ? 'mdi-checkbox-marked-circle' :
-                                    'mdi-circle-outline' }}
-                            </v-icon>
+                            <v-checkbox
+                                :model-value="isStationConfigured(station.display_station_name)"
+                                :color="isStationConfigured(station.display_station_name) ? 'success' : 'grey'"
+                                hide-details
+                                density="compact"
+                                @click.stop
+                            />
                         </template>
 
                         <v-list-item-title>
@@ -52,14 +56,15 @@
                                 <v-chip size="small" color="info" variant="tonal" class="mr-1">
                                     {{ getTestItemsLabel(station.display_station_name) }}
                                 </v-chip>
+                                <!-- UPDATED: Fixed icon cropping by using proper icon size -->
                                 <v-chip 
                                     v-if="getScoringConfigsCount(station.display_station_name) > 0"
                                     size="small" 
                                     color="warning" 
                                     variant="tonal" 
-                                    class="mr-1"
+                                    class="mr-1 chip-with-icon"
                                 >
-                                    <v-icon start size="x-small">mdi-tune</v-icon>
+                                    <v-icon start size="small">mdi-tune</v-icon>
                                     {{ getScoringConfigsCount(station.display_station_name) }} Scoring
                                 </v-chip>
                                 <v-chip size="small" color="secondary" variant="tonal">
@@ -219,5 +224,14 @@ watch(() => props.show, (newShow) => {
 
 .station-configured:hover {
     background-color: rgba(76, 175, 80, 0.15);
+}
+
+/* UPDATED: Fix icon cropping inside chips */
+.chip-with-icon :deep(.v-chip__content) {
+    overflow: visible;
+}
+
+.chip-with-icon :deep(.v-icon) {
+    margin-right: 4px;
 }
 </style>
