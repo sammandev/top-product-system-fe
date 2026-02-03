@@ -52,9 +52,6 @@
                             </v-file-input>
 
                             <v-alert v-if="mc2FileActual" type="info" variant="tonal" density="compact" class="mt-2">
-                                <template #prepend>
-                                    <v-icon size="small">mdi-information</v-icon>
-                                </template>
                                 File: {{ mc2FileActual.name }} ({{ formatFileSize(mc2FileActual.size) }})
                             </v-alert>
                         </div>
@@ -89,9 +86,6 @@
                             </v-file-input>
 
                             <v-alert v-if="specFileActual" type="info" variant="tonal" density="compact" class="mt-2">
-                                <template #prepend>
-                                    <v-icon size="small">mdi-information</v-icon>
-                                </template>
                                 File: {{ specFileActual.name }} ({{ formatFileSize(specFileActual.size) }})
                             </v-alert>
                         </div>
@@ -154,7 +148,7 @@
                                 </template>
                                 <v-list-item-title>Output File:</v-list-item-title>
                                 <v-list-item-subtitle>{{ lastAnalyzedFile.replace(/\.(csv|xlsx)$/i, '_Compiled.xlsx')
-                                    }}</v-list-item-subtitle>
+                                }}</v-list-item-subtitle>
                             </v-list-item>
                         </v-list>
 

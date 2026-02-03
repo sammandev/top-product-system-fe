@@ -100,7 +100,6 @@
 
         <!-- No Results Alert -->
         <v-alert v-if="hasSearched && groupedByISN.length === 0 && !loadingIsnSearch" type="info" class="mb-4">
-            <v-icon class="mr-2">mdi-information</v-icon>
             No test records found for the provided ISN(s).
         </v-alert>
 

@@ -35,7 +35,8 @@
                 <template #activator="{ props }">
                     <v-btn v-bind="props" variant="text" class="text-none">
                         <v-avatar size="32" :color="authStore.isGuest ? 'warning' : 'secondary'" class="mr-2">
-                            <v-icon size="small">{{ authStore.isGuest ? 'mdi-account-question' : 'mdi-account' }}</v-icon>
+                            <v-icon size="small">{{ authStore.isGuest ? 'mdi-account-question' : 'mdi-account'
+                                }}</v-icon>
                         </v-avatar>
                         <span v-if="$vuetify.display.smAndUp" style="color: white;">
                             {{ authStore.displayName }}
@@ -62,7 +63,7 @@
                     <!-- Guest Mode Indicator -->
                     <template v-if="authStore.isGuest">
                         <v-divider class="my-2" />
-                        <v-list-item prepend-icon="mdi-information" title="Guest Mode" 
+                        <v-list-item prepend-icon="mdi-information" title="Guest Mode"
                             subtitle="Limited access - login for full features">
                             <template #append>
                                 <v-chip color="warning" size="small">Guest</v-chip>
@@ -77,8 +78,8 @@
 
                     <v-divider v-if="!authStore.isGuest" class="my-2" />
 
-                    <v-list-item v-if="authStore.hasDUTAccess && !authStore.isGuest" prepend-icon="mdi-cloud-check" title="DUT Access"
-                        subtitle="External login active">
+                    <v-list-item v-if="authStore.hasDUTAccess && !authStore.isGuest" prepend-icon="mdi-cloud-check"
+                        title="DUT Access" subtitle="External login active">
                         <template #append>
                             <v-chip color="success" size="small">Active</v-chip>
                         </template>
@@ -177,10 +178,9 @@
                 <v-divider />
                 <v-list density="compact" nav>
                     <!-- User Info with Logout Button -->
-                    <v-list-item v-if="!rail" prepend-icon="mdi-account-circle"
-                        :title="authStore.displayName"
-                        :subtitle="authStore.isGuest ? 'Guest Access' : (authStore.loginType === 'external' ? 'External Access' : 'Local Access')" rounded="xl"
-                        class="my-1">
+                    <v-list-item v-if="!rail" prepend-icon="mdi-account-circle" :title="authStore.displayName"
+                        :subtitle="authStore.isGuest ? 'Guest Access' : (authStore.loginType === 'external' ? 'External Access' : 'Local Access')"
+                        rounded="xl" class="my-1">
                         <template #append>
                             <v-btn icon="mdi-logout" size="small" variant="text" color="error" @click="handleLogout" />
                         </template>
@@ -195,8 +195,8 @@
         </v-navigation-drawer>
 
         <!-- Navigation Loading Indicator -->
-        <v-progress-linear v-if="appConfigStore.isNavigating" indeterminate color="primary" 
-            class="position-fixed" style="z-index: 9999; top: 48px;" />
+        <v-progress-linear v-if="appConfigStore.isNavigating" indeterminate color="primary" class="position-fixed"
+            style="z-index: 9999; top: 48px;" />
 
         <!-- Main Content Area -->
         <v-main class="default-layout__main">
@@ -397,7 +397,7 @@ onMounted(() => {
         menuAccessStore.fetchMenus(authStore.isGuest),
         new Promise<void>((resolve) => setTimeout(() => resolve(), 3000)) // 3 second timeout
     ])
-    
+
     fetchWithTimeout
         .then(() => {
             if (menuAccessStore.initialized) {

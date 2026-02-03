@@ -216,6 +216,7 @@
 import { ref, computed, onMounted } from 'vue'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
+import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
 import type { DownloadAttachmentInfo } from '@/features/dut_logs/composables/useIplasApi'
 
 const {
@@ -353,7 +354,15 @@ async function checkApiStatus() {
 }
 
 // Initialize
-onMounted(() => {
+onMounted(async () => {
     checkApiStatus()
+    await fetchSiteProjects()
+
+    // UPDATED: Set default site based on connected iPLAS server
+    const { selectedServer } = useIplasSettings()
+    const serverId = selectedServer.value?.id?.toUpperCase()
+    if (serverId && uniqueSites.value.includes(serverId) && !selectedSite.value) {
+        selectedSite.value = serverId
+    }
 })
 </script>

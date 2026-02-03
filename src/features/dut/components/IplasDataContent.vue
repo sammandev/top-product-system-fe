@@ -470,6 +470,7 @@
 import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
+import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
 import { useIplasLocalData } from '@/features/dut_logs/composables/useIplasLocalData'
 import { adjustIplasDisplayTime, getStatusColor } from '@/shared/utils/helpers'
 import IplasIsnSearchContent from './IplasIsnSearchContent.vue'
@@ -2143,6 +2144,13 @@ onMounted(async () => {
     await fetchSiteProjects()
     // UPDATED: Load all IndexedDB items on mount for client-side table pagination
     await loadAllIndexedDbItems()
+
+    // UPDATED: Set default site based on connected iPLAS server
+    const { selectedServer } = useIplasSettings()
+    const serverId = selectedServer.value?.id?.toUpperCase()
+    if (serverId && uniqueSites.value.includes(serverId) && !selectedSite.value) {
+        selectedSite.value = serverId
+    }
 })
 
 // Cleanup on unmount to free memory

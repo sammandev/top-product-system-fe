@@ -5,10 +5,7 @@
         <v-icon start>mdi-table-column</v-icon>
         Column Selection
       </div>
-      <v-chip
-        :color="selectedCount > 0 ? 'primary' : 'default'"
-        size="small"
-      >
+      <v-chip :color="selectedCount > 0 ? 'primary' : 'default'" size="small">
         {{ selectedCount }} / {{ columns.length }} selected
       </v-chip>
     </v-card-title>
@@ -19,37 +16,16 @@
 
     <v-card-text>
       <!-- Search Box -->
-      <v-text-field
-        v-model="searchQuery"
-        label="Search columns"
-        variant="outlined"
-        density="compact"
-        prepend-inner-icon="mdi-magnify"
-        clearable
-        hide-details
-        class="mb-4"
-      />
+      <v-text-field v-model="searchQuery" label="Search columns" variant="outlined" density="compact"
+        prepend-inner-icon="mdi-magnify" clearable hide-details class="mb-4" />
 
       <!-- Quick Selection Input -->
-      <v-text-field
-        v-model="quickSelectInput"
-        label="Quick Select (e.g., 'A-Z' or 'A,C,E,J')"
-        variant="outlined"
-        density="compact"
-        prepend-inner-icon="mdi-lightning-bolt"
-        clearable
+      <v-text-field v-model="quickSelectInput" label="Quick Select (e.g., 'A-Z' or 'A,C,E,J')" variant="outlined"
+        density="compact" prepend-inner-icon="mdi-lightning-bolt" clearable
         hint="Press Enter to apply. Use ranges (A-Z) or individual columns (A,E,J). Also supports numbers (1-10)."
-        persistent-hint
-        class="mb-4"
-        @keydown.enter.prevent="applyQuickSelect"
-      >
+        persistent-hint class="mb-4" @keydown.enter.prevent="applyQuickSelect">
         <template #append-inner>
-          <v-btn
-            size="small"
-            variant="text"
-            color="primary"
-            @click="applyQuickSelect"
-          >
+          <v-btn size="small" variant="text" color="primary" @click="applyQuickSelect">
             Apply
           </v-btn>
         </template>
@@ -57,51 +33,24 @@
 
       <!-- Quick Actions -->
       <div class="d-flex gap-2 mb-4">
-        <v-btn
-          size="small"
-          variant="tonal"
-          prepend-icon="mdi-checkbox-multiple-marked"
-          @click="selectAll"
-        >
+        <v-btn size="small" variant="tonal" prepend-icon="mdi-checkbox-multiple-marked" @click="selectAll">
           Select All
         </v-btn>
-        <v-btn
-          size="small"
-          variant="tonal"
-          prepend-icon="mdi-checkbox-multiple-blank-outline"
-          @click="deselectAll"
-        >
+        <v-btn size="small" variant="tonal" prepend-icon="mdi-checkbox-multiple-blank-outline" @click="deselectAll">
           Deselect All
         </v-btn>
-        <v-btn
-          v-if="modelValue && modelValue.length > 0"
-          size="small"
-          variant="tonal"
-          prepend-icon="mdi-swap-horizontal"
-          @click="invertSelection"
-        >
+        <v-btn v-if="modelValue && modelValue.length > 0" size="small" variant="tonal"
+          prepend-icon="mdi-swap-horizontal" @click="invertSelection">
           Invert
         </v-btn>
       </div>
 
       <!-- Column List -->
-      <v-list
-        v-if="filteredColumns.length > 0"
-        density="compact"
-        class="column-list"
-      >
-        <v-list-item
-          v-for="column in filteredColumns"
-          :key="column"
-          class="column-item"
-        >
+      <v-list v-if="filteredColumns.length > 0" density="compact" class="column-list">
+        <v-list-item v-for="column in filteredColumns" :key="column" class="column-item">
           <template #prepend>
-            <v-checkbox
-              :model-value="isSelected(column)"
-              hide-details
-              density="compact"
-              @update:model-value="toggleColumn(column)"
-            />
+            <v-checkbox :model-value="isSelected(column)" hide-details density="compact"
+              @update:model-value="toggleColumn(column)" />
           </template>
 
           <v-list-item-title>
@@ -110,11 +59,7 @@
           </v-list-item-title>
 
           <template #append>
-            <v-chip
-              size="x-small"
-              variant="tonal"
-              color="primary"
-            >
+            <v-chip size="x-small" variant="tonal" color="primary">
               {{ getColumnType(column) }}
             </v-chip>
           </template>
@@ -122,16 +67,7 @@
       </v-list>
 
       <!-- No Results -->
-      <v-alert
-        v-else
-        type="info"
-        variant="tonal"
-        density="compact"
-        class="mt-4"
-      >
-        <template #prepend>
-          <v-icon>mdi-information</v-icon>
-        </template>
+      <v-alert v-else type="info" variant="tonal" density="compact" class="mt-4">
         No columns match your search
       </v-alert>
 
@@ -225,13 +161,13 @@ function getColumnType(column: string): string {
 function getColumnLetter(index: number): string {
   let letter = ''
   let num = index + 1 // Convert to 1-based
-  
+
   while (num > 0) {
     const remainder = (num - 1) % 26
     letter = String.fromCharCode(65 + remainder) + letter
     num = Math.floor((num - 1) / 26)
   }
-  
+
   return letter
 }
 
@@ -239,11 +175,11 @@ function getColumnLetter(index: number): string {
 function letterToIndex(letter: string): number {
   let index = 0
   const upperLetter = letter.toUpperCase()
-  
+
   for (let i = 0; i < upperLetter.length; i++) {
     index = index * 26 + (upperLetter.charCodeAt(i) - 64)
   }
-  
+
   return index - 1 // Convert to 0-based
 }
 
@@ -259,7 +195,7 @@ function formatColumnName(column: string): string {
 // Utility: Get selected columns summary with letters
 function getSelectedColumnsSummary(): string {
   if (!props.modelValue || props.modelValue.length === 0) return ''
-  
+
   return props.modelValue
     .map(col => {
       const index = props.columns.indexOf(col)
@@ -273,20 +209,20 @@ function getSelectedColumnsSummary(): string {
 function parseQuickSelectInput(input: string): number[] {
   const indices: number[] = []
   const parts = input.split(',').map(p => p.trim()).filter(p => p)
-  
+
   for (const part of parts) {
     if (part.includes('-')) {
       // Range like "A-Z" or "1-30"
       const rangeParts = part.split('-').map(p => p.trim())
       const startStr = rangeParts[0] || ''
       const endStr = rangeParts[1] || ''
-      
+
       // Check if it's letter-based (A-Z) or number-based (1-30)
       if (/^[A-Za-z]+$/.test(startStr) && /^[A-Za-z]+$/.test(endStr)) {
         // Letter-based range
         const startIdx = letterToIndex(startStr)
         const endIdx = letterToIndex(endStr)
-        
+
         if (startIdx >= 0 && endIdx >= 0 && startIdx <= endIdx) {
           for (let i = startIdx; i <= endIdx; i++) {
             if (i >= 0 && i < props.columns.length && !indices.includes(i + 1)) {
@@ -298,7 +234,7 @@ function parseQuickSelectInput(input: string): number[] {
         // Number-based range
         const start = parseInt(startStr)
         const end = parseInt(endStr)
-        
+
         if (!isNaN(start) && !isNaN(end) && start <= end) {
           for (let i = start; i <= end; i++) {
             if (i > 0 && i <= props.columns.length && !indices.includes(i)) {
@@ -324,18 +260,18 @@ function parseQuickSelectInput(input: string): number[] {
       }
     }
   }
-  
+
   return indices.sort((a, b) => a - b)
 }
 
 function applyQuickSelect() {
   if (!quickSelectInput.value) return
-  
+
   const indices = parseQuickSelectInput(quickSelectInput.value)
   const selectedColumns = indices
     .map(idx => props.columns[idx - 1]) // Convert 1-based to 0-based
     .filter((col): col is string => col !== undefined)
-  
+
   emit('update:modelValue', selectedColumns)
   quickSelectInput.value = ''
 }

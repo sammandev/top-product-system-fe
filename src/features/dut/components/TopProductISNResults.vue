@@ -103,7 +103,7 @@
                                                 <span class="text-body-2">
                                                     <strong>Device:</strong>
                                                     <span class="ml-2">{{ selectedMeasurement.station.device || 'N/A'
-                                                        }}</span>
+                                                    }}</span>
                                                 </span>
                                             </div>
                                         </v-col>
@@ -382,7 +382,7 @@
                                             <template #activator="{ props: tooltipProps }">
                                                 <span v-bind="tooltipProps">
                                                     {{ item.custom_scoring.difference > 0 ? '+' : '' }}{{
-                                                    item.custom_scoring.difference.toFixed(2) }}
+                                                        item.custom_scoring.difference.toFixed(2) }}
                                                 </span>
                                             </template>
                                             Difference (Custom - System)
@@ -506,7 +506,7 @@
                                             <template #activator="{ props: tooltipProps }">
                                                 <span v-bind="tooltipProps">
                                                     {{ item.custom_scoring.difference > 0 ? '+' : '' }}{{
-                                                    item.custom_scoring.difference.toFixed(2) }}
+                                                        item.custom_scoring.difference.toFixed(2) }}
                                                 </span>
                                             </template>
                                             Difference (Custom - System)
@@ -630,7 +630,7 @@
                                         </template>
                                         <template #subtitle>
                                             <span class="text-caption">{{ item.raw.raw.site }} / {{ item.raw.raw.model
-                                                }}</span>
+                                            }}</span>
                                         </template>
                                     </v-list-item>
                                 </template>

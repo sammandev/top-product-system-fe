@@ -18,9 +18,6 @@
 
             <!-- All Rows Mode -->
             <v-alert v-if="selectionMode === 'all'" type="info" variant="tonal" density="compact" class="mt-4">
-                <template #prepend>
-                    <v-icon>mdi-information</v-icon>
-                </template>
                 All {{ totalRows }} rows will be included in the output
             </v-alert>
 
@@ -28,9 +25,9 @@
             <div v-if="selectionMode === 'range'" class="mt-4">
                 <v-row>
                     <v-col cols="12" md="6">
-                        <v-text-field v-model.number="rangeStart" label="Start Row" type="number"
-                            variant="outlined" density="compact" :min="1" :max="totalRows"
-                            :rules="[validateRangeStart]" hint="Row number (1-based)" persistent-hint>
+                        <v-text-field v-model.number="rangeStart" label="Start Row" type="number" variant="outlined"
+                            density="compact" :min="1" :max="totalRows" :rules="[validateRangeStart]"
+                            hint="Row number (1-based)" persistent-hint>
                             <template #prepend-inner>
                                 <v-icon>mdi-arrow-right-top</v-icon>
                             </template>
@@ -49,8 +46,9 @@
 
                 <!-- Excluded Rows (inside Range mode) -->
                 <v-text-field v-model="excludeInput" label="Excluded Rows (optional)" variant="outlined"
-                    density="compact" class="mt-4" hint="Enter row numbers or ranges: e.g., '5,10,15' or '5-10,20-25' (1-based)"
-                    persistent-hint clearable @keydown.enter.prevent="applyExcludedRows">
+                    density="compact" class="mt-4"
+                    hint="Enter row numbers or ranges: e.g., '5,10,15' or '5-10,20-25' (1-based)" persistent-hint
+                    clearable @keydown.enter.prevent="applyExcludedRows">
                     <template #prepend-inner>
                         <v-icon>mdi-minus-circle</v-icon>
                     </template>

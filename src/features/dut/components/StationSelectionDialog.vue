@@ -24,25 +24,22 @@
                     <v-list-item v-for="station in filteredStations" :key="station.station_name"
                         @click="handleStationClick(station)" class="station-item"
                         :class="{ 'station-configured': isStationConfigured(station.display_station_name) }">
-                        <!-- UPDATED: Changed icon to v-checkbox for better UX -->
                         <template #prepend>
-                            <v-checkbox
-                                :model-value="isStationConfigured(station.display_station_name)"
+                            <!-- UPDATED: Made checkbox larger and clicking it opens Configure Station dialog -->
+                            <v-checkbox :model-value="isStationConfigured(station.display_station_name)"
                                 :color="isStationConfigured(station.display_station_name) ? 'success' : 'grey'"
-                                hide-details
-                                density="compact"
-                                @click.stop
-                            />
+                                hide-details density="default" @click.stop="handleStationClick(station)"
+                                class="station-checkbox" />
                         </template>
 
-                        <v-list-item-title>
+                        <v-list-item-title class="text-subtitle-1 font-weight-medium">
                             {{ station.display_station_name }}
                         </v-list-item-title>
 
                         <v-list-item-subtitle>
-                            Station: {{ station.station_name }}
+                            TSP: {{ station.station_name }}
                             <v-chip v-if="station.order" size="x-small" class="ml-2" variant="outlined">
-                                Order: {{ station.order }}
+                                #{{ station.order }}
                             </v-chip>
                         </v-list-item-subtitle>
 
@@ -57,13 +54,8 @@
                                     {{ getTestItemsLabel(station.display_station_name) }}
                                 </v-chip>
                                 <!-- UPDATED: Fixed icon cropping by using proper icon size -->
-                                <v-chip 
-                                    v-if="getScoringConfigsCount(station.display_station_name) > 0"
-                                    size="small" 
-                                    color="warning" 
-                                    variant="tonal" 
-                                    class="mr-1 chip-with-icon"
-                                >
+                                <v-chip v-if="getScoringConfigsCount(station.display_station_name) > 0" size="small"
+                                    color="warning" variant="tonal" class="mr-1 chip-with-icon">
                                     <v-icon start size="small">mdi-tune</v-icon>
                                     {{ getScoringConfigsCount(station.display_station_name) }} Scoring
                                 </v-chip>
@@ -106,12 +98,13 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import type { Station } from '@/features/dut_logs/composables/useIplasApi'
-import type { ScoringType } from '@/features/dut/types/scoring.types'
+import type { ScoringType, ScoringPolicy } from '@/features/dut/types/scoring.types'
 
 // Per-test-item scoring configuration
 export interface TestItemScoringConfig {
     scoringType: ScoringType
-    target?: number  // Required for asymmetrical and throughput
+    target?: number  // Required for asymmetrical
+    policy?: ScoringPolicy  // Policy for asymmetrical (symmetrical/higher/lower)
     weight?: number  // Weight for scoring (default: 1.0)
 }
 
@@ -224,6 +217,16 @@ watch(() => props.show, (newShow) => {
 
 .station-configured:hover {
     background-color: rgba(76, 175, 80, 0.15);
+}
+
+/* UPDATED: Make checkbox larger and more proportional to station name */
+.station-checkbox {
+    transform: scale(1.2);
+    margin-right: 8px;
+}
+
+.station-checkbox :deep(.v-selection-control) {
+    min-height: 32px;
 }
 
 /* UPDATED: Fix icon cropping inside chips */

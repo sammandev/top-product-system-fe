@@ -1,19 +1,65 @@
 /**
  * Scoring System Types
- * 
- * TypeScript types for the iPLAS test item scoring system.
+ *
+ * TypeScript types for the Universal 0-10 Scoring System.
  * These types match the backend scoring schemas.
+ *
+ * Score Range: 0.00 - 10.00
+ * - Outside limits: 0.00
+ * - At limit boundary (LCL/UCL): 1.00 (limit_score)
+ * - At target: 10.00
+ *
+ * Scoring Types:
+ * - Symmetrical: Target = midpoint (UCL + LCL) / 2
+ * - Asymmetrical: User-defined custom target with Policy
+ * - PER/MASK: UCL-only, lower is better (best=0)
+ * - EVM: UCL-only, lower is better (best=-35 dB, gentle decay)
+ * - Binary: PASS = 10, FAIL = 0
  */
 
 // Scoring algorithm types
 export type ScoringType =
-    | 'symmetrical'
+    | 'symmetrical'       // Target centered between UCL and LCL
+    | 'asymmetrical'      // User-defined custom target with Policy
+    | 'per_mask'          // UCL-only, lower is better (best=0)
+    | 'evm'               // UCL-only, lower is better (best=-35 dB, gentle decay)
+    | 'binary'            // PASS/FAIL scoring
+    // Legacy types kept for backwards compatibility
     | 'symmetrical_nl'
-    | 'evm'
     | 'throughput'
-    | 'asymmetrical'
-    | 'per_mask'
-    | 'binary'
+
+// Policy for asymmetrical scoring - determines how score decays from target
+export type ScoringPolicy = 'symmetrical' | 'higher' | 'lower'
+
+// Policy metadata for UI
+export interface ScoringPolicyInfo {
+    value: ScoringPolicy
+    label: string
+    description: string
+    icon: string
+}
+
+// Available scoring policies for asymmetrical type
+export const SCORING_POLICIES: ScoringPolicyInfo[] = [
+    {
+        value: 'symmetrical',
+        label: 'Based on Target',
+        description: 'Peak score at target, linear decay to both limits',
+        icon: 'mdi-arrow-left-right'
+    },
+    {
+        value: 'higher',
+        label: 'Higher than Target',
+        description: 'Perfect score at/above target, decay below target to LCL',
+        icon: 'mdi-arrow-up-bold'
+    },
+    {
+        value: 'lower',
+        label: 'Lower than Target',
+        description: 'Perfect score at/below target, decay above target to UCL',
+        icon: 'mdi-arrow-down-bold'
+    }
+]
 
 // Configuration for scoring a specific test item
 export interface ScoringConfig {
@@ -22,13 +68,17 @@ export interface ScoringConfig {
     enabled: boolean
     weight: number
 
-    // Type-specific parameters
-    alpha?: number           // Min score at limit (symmetrical, asymmetrical)
-    target?: number          // User-defined target value
-    targetScore?: number     // Score at target deviation
-    targetDeviation?: number // Deviation for target_score (Gaussian)
-    minScore?: number        // Minimum score (throughput)
-    maxDeviation?: number    // Max deviation (PER/MASK)
+    // Main parameters
+    target?: number          // User-defined target value (required for asymmetrical)
+    policy?: ScoringPolicy   // Scoring policy for asymmetrical (symmetrical/higher/lower)
+    limitScore?: number      // Score at limit boundary (default: 1.0 on 0-10 scale)
+
+    // Legacy parameters kept for backwards compatibility
+    alpha?: number           // Legacy: Min score at limit (deprecated, use limitScore)
+    targetScore?: number     // Legacy: Score at target deviation (deprecated)
+    targetDeviation?: number // Legacy: Deviation for target_score (deprecated)
+    minScore?: number        // Legacy: Minimum score (deprecated)
+    maxDeviation?: number    // Legacy: Max deviation (deprecated)
 }
 
 // Score result for a single test item
@@ -39,7 +89,8 @@ export interface TestItemScoreResult {
     lcl: number | null
     status: string
     scoringType: ScoringType
-    score: number
+    policy?: ScoringPolicy | null  // Only for asymmetrical scoring
+    score: number  // Stored as 0-1, displayed as 0-10
     deviation?: number
 }
 
@@ -50,7 +101,7 @@ export interface RecordScoreResult {
     station: string
     testStartTime: string
     testStatus: string
-    overallScore: number
+    overallScore: number  // Stored as 0-1, displayed as 0-10
     valueItemsScore: number | null
     binItemsScore: number | null
     testItemScores: TestItemScoreResult[]
@@ -98,8 +149,10 @@ export interface ScoringTypeInfo {
 }
 
 export type ScoringConfigParameterKey =
-    | 'alpha'
     | 'target'
+    | 'limitScore'
+    // Legacy keys
+    | 'alpha'
     | 'targetScore'
     | 'targetDeviation'
     | 'minScore'
@@ -120,181 +173,34 @@ export interface ScoringParameter {
 export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     symmetrical: {
         type: 'symmetrical',
-        label: 'Symmetrical',
-        description: 'Linear scoring with centered target (UCL + LCL / 2)',
-        useCase: 'TX Power, frequency measurements with symmetric limits',
+        label: 'Symmetrical (Target Centered)',
+        description: 'Target = midpoint between UCL and LCL. Score is 10 at target, 1 at limits, 0 outside.',
+        useCase: 'Most test items with UCL and LCL limits',
         icon: 'mdi-arrow-left-right',
         color: 'primary',
-        formulaLatex: String.raw`score = \alpha + (1-\alpha) \cdot \frac{L - |x - T|}{L}`,
+        formulaLatex: String.raw`score = 1 + 9 \cdot \frac{L - |x - T|}{L}`,
         variables: {
             'T': String.raw`Target = \frac{UCL + LCL}{2}`,
-            'L': String.raw`Limit = \frac{UCL - LCL}{2}`,
-            'x': 'Measured value',
-            'α': 'Minimum score at limit boundary (default: 0.8)'
+            'L': String.raw`Distance to limit from target`,
+            'x': 'Measured value'
         },
-        parameters: [
-            {
-                key: 'alpha',
-                label: 'Alpha (Min Score)',
-                type: 'slider',
-                min: 0,
-                max: 1,
-                step: 0.05,
-                default: 0.8,
-                description: 'Score at the limit boundary'
-            }
-        ]
-    },
-    symmetrical_nl: {
-        type: 'symmetrical_nl',
-        label: 'Symmetrical (Gaussian)',
-        description: 'Non-linear Gaussian scoring curve',
-        useCase: 'When you want steeper decay away from target',
-        icon: 'mdi-chart-bell-curve',
-        color: 'secondary',
-        formulaLatex: String.raw`score = e^{-\lambda \cdot d^2}`,
-        variables: {
-            'λ': String.raw`\lambda = -\frac{\ln(S_t)}{d_t^2}`,
-            'd': String.raw`|x - T| \text{ (deviation from target)}`,
-            'T': String.raw`Target = \frac{UCL + LCL}{2}`,
-            'S_t': 'Target score at target deviation (default: 0.8)',
-            'd_t': 'Target deviation distance (default: 2.5)'
-        },
-        parameters: [
-            {
-                key: 'targetScore',
-                label: 'Target Score',
-                type: 'slider',
-                min: 0,
-                max: 1,
-                step: 0.05,
-                default: 0.8,
-                description: 'Score at target deviation'
-            },
-            {
-                key: 'targetDeviation',
-                label: 'Target Deviation',
-                type: 'number',
-                min: 0.1,
-                max: 10,
-                step: 0.1,
-                default: 2.5,
-                description: 'Deviation value for target score'
-            }
-        ]
-    },
-    evm: {
-        type: 'evm',
-        label: 'EVM',
-        description: 'For negative dB values like EVM - more negative = better',
-        useCase: 'EVM measurements (typically -20 to -60 dB)',
-        icon: 'mdi-signal-cellular-3',
-        color: 'info',
-        formulaLatex: String.raw`score = 1 - e^{-\lambda \cdot x^2}`,
-        variables: {
-            'λ': String.raw`\lambda = -\frac{\ln(1 - S_t)}{T^2}`,
-            'x': 'Measured EVM value (negative dB)',
-            'T': 'Target EVM value (default: -30)',
-            'S_t': 'Target score at target EVM (default: 0.9)'
-        },
-        parameters: [
-            {
-                key: 'target',
-                label: 'Target EVM',
-                type: 'number',
-                min: -100,
-                max: 0,
-                step: 1,
-                default: -30,
-                description: 'Target EVM value for scoring'
-            },
-            {
-                key: 'targetScore',
-                label: 'Target Score',
-                type: 'slider',
-                min: 0,
-                max: 1,
-                step: 0.05,
-                default: 0.9,
-                description: 'Score at target EVM value'
-            }
-        ]
-    },
-    throughput: {
-        type: 'throughput',
-        label: 'Throughput',
-        description: 'Linear below target, exponential above target',
-        useCase: 'Data throughput, speed measurements',
-        icon: 'mdi-speedometer',
-        color: 'success',
-        formulaLatex: String.raw`score = \begin{cases} m \cdot x + (S_{min} - m \cdot LCL) & x < T \\ 1 - e^{-\lambda \cdot x^2} & x \geq T \end{cases}`,
-        variables: {
-            'm': String.raw`\text{Slope} = \frac{S_t - S_{min}}{T - LCL}`,
-            'λ': String.raw`\lambda = -\frac{\ln(1 - S_t)}{T^2}`,
-            'T': 'Target throughput value (user-defined, required)',
-            'LCL': 'Lower control limit (minimum acceptable)',
-            'S_min': 'Minimum score at LCL (default: 0.4)',
-            'S_t': 'Target score at target value (default: 0.9)'
-        },
-        requiredInputs: ['target'],
-        parameters: [
-            {
-                key: 'minScore',
-                label: 'Min Score',
-                type: 'slider',
-                min: 0,
-                max: 0.5,
-                step: 0.05,
-                default: 0.4,
-                description: 'Score at minimum threshold (LCL)'
-            },
-            {
-                key: 'targetScore',
-                label: 'Target Score',
-                type: 'slider',
-                min: 0.5,
-                max: 1,
-                step: 0.05,
-                default: 0.9,
-                description: 'Score at target throughput'
-            },
-            {
-                key: 'target',
-                label: 'Target Value',
-                type: 'number',
-                min: 0,
-                step: 1,
-                default: 0,
-                description: 'Target throughput value (required)'
-            }
-        ]
+        parameters: []  // No configurable parameters for symmetrical
     },
     asymmetrical: {
         type: 'asymmetrical',
-        label: 'Asymmetrical',
-        description: 'Custom target between UCL and LCL (not centered)',
+        label: 'Asymmetrical (Custom Target)',
+        description: 'User-defined target with Policy options: Based on Target, Higher than Target, or Lower than Target.',
         useCase: 'When optimal value is not centered between limits',
         icon: 'mdi-arrow-left-right-bold',
         color: 'warning',
-        formulaLatex: String.raw`score = \alpha + (1-\alpha) \cdot \frac{L - d}{L}`,
+        formulaLatex: String.raw`score = 1 + 9 \cdot \frac{L - d}{L}`,
         variables: {
-            'L': String.raw`\begin{cases} UCL - T & x \geq T \\ T - LCL & x < T \end{cases}`,
-            'd': String.raw`\begin{cases} x - T & x \geq T \\ T - x & x < T \end{cases}`,
-            'T': 'User-defined target value (required)',
-            'α': 'Minimum score at limit boundary (default: 0.4)'
+            'L': 'Distance from target to relevant limit',
+            'd': 'Distance from measured value to target',
+            'T': 'User-defined target value'
         },
-        requiredInputs: ['target'],
+        requiredInputs: ['target', 'policy'],
         parameters: [
-            {
-                key: 'alpha',
-                label: 'Alpha (Min Score)',
-                type: 'slider',
-                min: 0,
-                max: 1,
-                step: 0.05,
-                default: 0.4,
-                description: 'Score at limit boundary'
-            },
             {
                 key: 'target',
                 label: 'Target Value',
@@ -307,37 +213,62 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     },
     per_mask: {
         type: 'per_mask',
-        label: 'PER/MASK (Close to 0)',
-        description: 'Linear decrease from 1.0 at 0 to 0.0 at max deviation',
-        useCase: 'Packet Error Rate, Mask margin measurements',
+        label: 'PER/MASK (Lower is Better)',
+        description: 'UCL-only scoring. Score is 10 at 0 (best), 1 at UCL, 0 above UCL.',
+        useCase: 'Packet Error Rate (PER) and MASK test items where 0 is ideal',
         icon: 'mdi-target',
         color: 'error',
-        formulaLatex: String.raw`score = \max\left(0, 1 - \frac{|x - 0|}{d_{max}}\right)`,
+        formulaLatex: String.raw`score = 1 + 9 \cdot \frac{UCL - x}{UCL}`,
         variables: {
             'x': 'Measured value',
-            'd_max': 'Maximum deviation (score = 0 at this distance from 0)'
+            'UCL': 'Upper Control Limit (failure threshold)'
         },
-        parameters: [
-            {
-                key: 'maxDeviation',
-                label: 'Max Deviation',
-                type: 'number',
-                min: 0.1,
-                step: 0.1,
-                default: 10,
-                description: 'Maximum acceptable deviation (default: UCL)'
-            }
-        ]
+        parameters: []  // No configurable parameters - best is always 0
+    },
+    evm: {
+        type: 'evm',
+        label: 'EVM (Gentle Decay)',
+        description: 'UCL-only scoring with gentle decay. Score is 10 at -35 dB (best), 1 at UCL, 0 above UCL.',
+        useCase: 'Error Vector Magnitude (EVM) test items where lower dB values are better',
+        icon: 'mdi-signal-cellular-3',
+        color: 'info',
+        formulaLatex: String.raw`score = 1 + 9 \cdot \left(1 - \frac{x - ref}{UCL - ref}\right)^{0.25}`,
+        variables: {
+            'x': 'Measured EVM value (dB)',
+            'ref': 'Reference best (-35 dB)',
+            'UCL': 'Upper Control Limit (failure threshold)',
+            '0.25': 'Exponent for gentle decay'
+        },
+        parameters: []  // Parameters are fixed: ref=-35, exponent=0.25
     },
     binary: {
         type: 'binary',
         label: 'Binary (PASS/FAIL)',
-        description: 'PASS = 1.0, FAIL = 0.0',
-        useCase: 'Non-numeric test items',
+        description: 'PASS = 10.0, FAIL = 0.0',
+        useCase: 'Non-numeric test items (status-based)',
         icon: 'mdi-toggle-switch',
         color: 'grey',
-        formulaLatex: String.raw`score = \begin{cases} 1.0 & \text{STATUS} = \text{PASS} \\ 0.0 & \text{STATUS} = \text{FAIL} \end{cases}`,
+        formulaLatex: String.raw`score = \begin{cases} 10.0 & \text{STATUS} = \text{PASS} \\ 0.0 & \text{STATUS} = \text{FAIL} \end{cases}`,
         variables: {},
+        parameters: []
+    },
+    // Legacy types (mapped internally)
+    symmetrical_nl: {
+        type: 'symmetrical_nl',
+        label: 'Symmetrical (Legacy)',
+        description: 'Legacy type - now uses standard symmetrical scoring',
+        useCase: 'Legacy compatibility',
+        icon: 'mdi-chart-bell-curve',
+        color: 'secondary',
+        parameters: []
+    },
+    throughput: {
+        type: 'throughput',
+        label: 'Throughput (Legacy)',
+        description: 'Legacy type - now uses standard symmetrical scoring',
+        useCase: 'Legacy compatibility',
+        icon: 'mdi-speedometer',
+        color: 'success',
         parameters: []
     }
 }
@@ -356,8 +287,16 @@ export function createDefaultScoringConfig(
     }
 
     // Set default parameters from type info
-    for (const param of typeInfo.parameters) {
-        config[param.key] = param.default
+    if (typeInfo && typeInfo.parameters) {
+        for (const param of typeInfo.parameters) {
+            // Use type assertion to properly set dynamic keys
+            ;(config as unknown as Record<string, unknown>)[param.key] = param.default
+        }
+    }
+
+    // Set default policy for asymmetrical
+    if (scoringType === 'asymmetrical') {
+        config.policy = 'symmetrical'
     }
 
     return config
@@ -392,10 +331,9 @@ export function getScoreIcon(score: number): string {
     return 'mdi-close-circle'
 }
 
-// UPDATED: UI-visible scoring types (simplified for user selection)
-// Only Symmetrical and Asymmetrical are shown to users.
-// Other types (evm, per_mask, etc.) are assigned automatically by name-based detection.
-export const UI_SCORING_TYPES: ScoringType[] = ['symmetrical', 'asymmetrical']
+// UI-visible scoring types for user selection
+// Symmetrical, Asymmetrical, PER/MASK, and EVM are shown to users
+export const UI_SCORING_TYPES: ScoringType[] = ['symmetrical', 'asymmetrical', 'per_mask', 'evm']
 
 // Helper to get UI-visible scoring type options for dropdowns
 export function getUIScoringTypeOptions() {
@@ -405,4 +343,34 @@ export function getUIScoringTypeOptions() {
         description: SCORING_TYPE_INFO[type].description,
         raw: SCORING_TYPE_INFO[type]
     }))
+}
+
+// Helper to detect if a test item should use PER/MASK scoring
+export function shouldUsePerMaskScoring(testItemName: string): boolean {
+    const upperName = testItemName.toUpperCase()
+
+    // Check for PER
+    if (upperName.includes('PER')) {
+        return true
+    }
+
+    // Check for MASK but not "MASK MARGIN" or compound words
+    if (upperName.includes('MASK')) {
+        const excluded = ['MASK MARGIN', 'MASKING', 'MASKED', 'MASK_MARGIN']
+        for (const pattern of excluded) {
+            if (upperName.includes(pattern)) {
+                return false
+            }
+        }
+        return true
+    }
+
+    return false
+}
+
+// Helper to detect if a test item should use EVM scoring
+// Note: EVM scoring should only be used when the item has UCL but no LCL
+export function shouldUseEvmScoring(testItemName: string): boolean {
+    const upperName = testItemName.toUpperCase()
+    return upperName.includes('EVM')
 }

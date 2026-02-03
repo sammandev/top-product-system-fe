@@ -54,9 +54,6 @@
           </div>
 
           <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-            <template #prepend>
-              <v-icon>mdi-information</v-icon>
-            </template>
             <div class="text-caption">
               Select the columns to use as join keys for matching rows between the two files.
               These should be unique identifiers (e.g., ID, ISN, Serial Number).

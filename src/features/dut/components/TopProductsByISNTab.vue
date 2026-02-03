@@ -112,9 +112,6 @@
 
                     <v-expansion-panel-text>
                         <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-                            <template #prepend>
-                                <v-icon size="small">mdi-information</v-icon>
-                            </template>
                             Configure specific filters for each selected station. Per-station filters
                             <strong>override</strong>
                             universal filters.

@@ -163,9 +163,6 @@
 
       <!-- No Results -->
       <v-alert v-if="!hasResults" type="info" variant="tonal" density="compact">
-        <template #prepend>
-          <v-icon>mdi-information</v-icon>
-        </template>
         No comparison results yet. Configure comparison settings and click "Compare Files" to start.
       </v-alert>
 

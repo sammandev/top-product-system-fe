@@ -63,9 +63,6 @@
 
       <!-- No Columns -->
       <v-alert v-else type="info" variant="tonal" density="compact">
-        <template #prepend>
-          <v-icon>mdi-information</v-icon>
-        </template>
         Upload both files to start mapping columns
       </v-alert>
 
@@ -81,9 +78,6 @@
       </v-alert>
 
       <v-alert v-if="unmappedColumnsB.length > 0" type="info" variant="tonal" density="compact" class="mt-2">
-        <template #prepend>
-          <v-icon>mdi-information</v-icon>
-        </template>
         <div>
           <strong>{{ unmappedColumnsB.length }} unused column(s) from File B:</strong>
           <div class="text-caption">{{ unmappedColumnsB.join(', ') }}</div>

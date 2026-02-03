@@ -227,9 +227,7 @@
 
             <!-- Value Column -->
             <template #item.value="{ item }">
-              <v-chip 
-                size="small" 
-                :color="item.is_calculated ? 'primary' : getStatusColor(item.value)"
+              <v-chip size="small" :color="item.is_calculated ? 'primary' : getStatusColor(item.value)"
                 :class="{ 'font-weight-bold': item.is_calculated }">
                 {{ item.value }}
               </v-chip>
@@ -237,7 +235,8 @@
 
             <!-- Decimal Value Column (for ADJUSTED_POW items) -->
             <template #item.decimal_value="{ item }">
-              <span v-if="item.test_item.includes('ADJUSTED_POW') && (item.hex_decimal !== null && item.hex_decimal !== undefined)" 
+              <span
+                v-if="item.test_item.includes('ADJUSTED_POW') && (item.hex_decimal !== null && item.hex_decimal !== undefined)"
                 class="text-body-2 font-weight-medium text-primary">
                 {{ item.hex_decimal }}
               </span>
@@ -386,15 +385,14 @@
               </div>
             </template>
             <template #item.value="{ item }">
-              <v-chip 
-                size="small" 
-                :color="item.is_calculated ? 'primary' : getStatusColor(item.value)"
+              <v-chip size="small" :color="item.is_calculated ? 'primary' : getStatusColor(item.value)"
                 :class="{ 'font-weight-bold': item.is_calculated }">
                 {{ item.value }}
               </v-chip>
             </template>
             <template #item.decimal_value="{ item }">
-              <span v-if="item.test_item.includes('ADJUSTED_POW') && (item.hex_decimal !== null && item.hex_decimal !== undefined)" 
+              <span
+                v-if="item.test_item.includes('ADJUSTED_POW') && (item.hex_decimal !== null && item.hex_decimal !== undefined)"
                 class="text-body-2 font-weight-medium text-primary">
                 {{ item.hex_decimal }}
               </span>
@@ -512,13 +510,13 @@ const customItemsPerPageNonValue = ref(10)
 // Separate value and non-value items
 // Note: ADJUSTED_POW items are moved to non-value items
 const valueItems = computed(() => {
-  return props.result.parsed_items_enhanced.filter(item => 
+  return props.result.parsed_items_enhanced.filter(item =>
     item.is_value_type && !item.test_item.includes('ADJUSTED_POW')
   )
 })
 
 const nonValueItems = computed(() => {
-  return props.result.parsed_items_enhanced.filter(item => 
+  return props.result.parsed_items_enhanced.filter(item =>
     !item.is_value_type || item.test_item.includes('ADJUSTED_POW')
   )
 })

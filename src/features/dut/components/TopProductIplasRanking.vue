@@ -3,7 +3,8 @@
         <v-card-title class="d-flex justify-space-between align-center flex-wrap">
             <div>
                 <v-icon class="mr-2" color="warning">mdi-podium-gold</v-icon>
-                iPLAS Data Ranking by Test Station
+                <!-- UPDATED: Change title based on whether scores are calculated -->
+                {{ hasScores ? 'iPLAS Data Ranking by Test Station' : 'iPLAS Data Result' }}
             </div>
             <div class="d-flex align-center gap-2 flex-wrap">
                 <!-- Bulk Download Button -->
@@ -12,9 +13,14 @@
                     @click="handleBulkDownload">
                     Download Selected ({{ selectedItems.length }})
                 </v-btn>
+                <!-- UPDATED: Show Calculate/Re-calculate button -->
                 <v-btn v-if="!hasScores" color="primary" variant="outlined" size="small" prepend-icon="mdi-calculator"
                     :loading="calculatingScores" @click="emit('calculate-scores')">
                     Calculate Scores
+                </v-btn>
+                <v-btn v-else color="secondary" variant="outlined" size="small" prepend-icon="mdi-refresh"
+                    :loading="calculatingScores" @click="emit('calculate-scores')">
+                    Re-calculate
                 </v-btn>
                 <v-chip v-if="hasScores" size="small" color="success" variant="tonal" prepend-icon="mdi-check-circle">
                     Scores Calculated
@@ -47,10 +53,10 @@
             </v-tabs>
 
             <!-- Station Rankings -->
-            <v-window v-model="selectedTab" class="mt-4">
+            <v-window v-model="selectedTab" class="pt-4">
                 <v-window-item v-for="(_, station) in rankingByStation" :key="station" :value="station">
                     <!-- Filters -->
-                    <v-row class="mb-4" dense>
+                    <v-row class="mb-2" dense>
                         <v-col cols="12" md="4">
                             <v-text-field v-model="searchQuery" label="Search Records" prepend-inner-icon="mdi-magnify"
                                 variant="outlined" density="compact" hide-details clearable
@@ -238,21 +244,35 @@ watch(selectedTab, () => {
 
 // Filter options
 const statusFilterOptions = [
-    { title: 'Passed Only', value: 'passed' },
-    { title: 'Failed Only', value: 'failed' }
+    { title: 'PASS', value: 'passed' },
+    { title: 'FAIL', value: 'failed' }
 ]
 
-// Updated headers: [Checkbox] [#] [DUT ISN] [Device ID] [Test End] [Duration] [Status] [Actions]
-const rankingHeaders = [
-    { title: '#', key: 'rank', sortable: false, width: '60px' },
-    { title: 'DUT ISN', key: 'isn', sortable: true, width: '180px' },
-    { title: 'Device ID', key: 'device', sortable: true, width: '100px' },
-    { title: 'Test End', key: 'testDate', sortable: true, width: '160px' },
-    { title: 'Duration', key: 'duration', sortable: true, width: '90px' },
-    { title: 'Status', key: 'status', sortable: true, width: '90px' },
-    { title: 'Score', key: 'score', sortable: true, width: '80px' },
-    { title: 'Actions', key: 'actions', sortable: false, width: '80px' }
-]
+// Check if we have scores - must be defined before rankingHeaders
+const hasScores = computed(() => {
+    return Object.keys(props.scores || {}).length > 0
+})
+
+// Updated headers: conditional rank column based on hasScores
+// [Checkbox] [#] [DUT ISN] [Device ID] [Test End] [Duration] [Status] [Score] [Actions]
+const rankingHeaders = computed(() => {
+    const headers = [
+        { title: 'DUT ISN', key: 'isn', sortable: true, width: '180px' },
+        { title: 'Device ID', key: 'device', sortable: true, width: '100px' },
+        { title: 'Test End', key: 'testDate', sortable: true, width: '160px' },
+        { title: 'Duration', key: 'duration', sortable: true, width: '90px' },
+        { title: 'Status', key: 'status', sortable: true, width: '90px' },
+        { title: 'Score', key: 'score', sortable: true, width: '80px' },
+        { title: 'Actions', key: 'actions', sortable: false, width: '80px' }
+    ]
+    
+    // UPDATED: Only show rank column when scores are calculated
+    if (hasScores.value) {
+        headers.unshift({ title: '#', key: 'rank', sortable: false, width: '60px' })
+    }
+    
+    return headers
+})
 
 // Compute rankings grouped by station
 const rankingByStation = computed(() => {
@@ -349,11 +369,6 @@ const rankingByStation = computed(() => {
     }
 
     return stationMap
-})
-
-// Check if we have scores
-const hasScores = computed(() => {
-    return Object.keys(props.scores || {}).length > 0
 })
 
 const totalRecords = computed(() => props.records.length)

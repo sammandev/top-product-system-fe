@@ -35,10 +35,10 @@
                     </v-col>
                     <v-col cols="12" md="6">
                         <!-- Device IDs Selection - Dropdown -->
-                        <v-autocomplete v-model="localConfig.deviceIds" :items="availableDeviceIds" label="Device IDs (Default All)"
-                            variant="outlined" density="comfortable" prepend-inner-icon="mdi-devices" multiple chips
-                            closable-chips hide-details :loading="loadingDevices"
-                            :disabled="loadingDevices || availableDeviceIds.length === 0"
+                        <v-autocomplete v-model="localConfig.deviceIds" :items="availableDeviceIds"
+                            label="Device IDs (Default All)" variant="outlined" density="comfortable"
+                            prepend-inner-icon="mdi-devices" multiple chips closable-chips hide-details
+                            :loading="loadingDevices" :disabled="loadingDevices || availableDeviceIds.length === 0"
                             placeholder="Select Devices (empty = all)" clearable>
                             <template #prepend-item>
                                 <v-list-item @click="toggleSelectAllDevices">
@@ -185,7 +185,7 @@
                                                     class="scoring-config-btn">
                                                     <v-icon start size="small">{{
                                                         getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).icon
-                                                    }}</v-icon>
+                                                        }}</v-icon>
                                                     {{
                                                         getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).label
                                                     }}
@@ -257,7 +257,7 @@
                                 </template>
                             </v-select>
 
-                            <!-- Target Value Input (for asymmetrical and throughput) -->
+                            <!-- Target Value Input (for asymmetrical) -->
                             <v-text-field v-if="currentScoringTypeRequiresTarget"
                                 :model-value="getTestItemScoringConfig(scoringConfigItem).target"
                                 @update:model-value="updateTestItemTarget(scoringConfigItem!, $event ? Number($event) : undefined)"
@@ -268,6 +268,30 @@
                                     <v-icon color="warning">mdi-target</v-icon>
                                 </template>
                             </v-text-field>
+
+                            <!-- Policy Selection (for asymmetrical only) -->
+                            <v-select v-if="currentScoringTypeRequiresPolicy"
+                                :model-value="getTestItemScoringConfig(scoringConfigItem).policy || 'symmetrical'"
+                                @update:model-value="updateTestItemPolicy(scoringConfigItem!, $event)"
+                                :items="policyOptions" item-title="title" item-value="value"
+                                label="Scoring Policy" variant="outlined" density="comfortable" class="mt-4">
+                                <template #item="{ props: itemProps, item }">
+                                    <v-list-item v-bind="itemProps">
+                                        <template #prepend>
+                                            <v-icon color="primary">{{ item.raw.icon }}</v-icon>
+                                        </template>
+                                        <template #subtitle>
+                                            {{ item.raw.subtitle }}
+                                        </template>
+                                    </v-list-item>
+                                </template>
+                                <template #selection="{ item }">
+                                    <v-chip color="primary" size="small" variant="flat">
+                                        <v-icon start size="small">{{ item.raw.icon }}</v-icon>
+                                        {{ item.title }}
+                                    </v-chip>
+                                </template>
+                            </v-select>
 
                             <!-- Weight Input -->
                             <v-text-field :model-value="getTestItemScoringConfig(scoringConfigItem).weight ?? 1.0"
@@ -315,7 +339,6 @@
 
                         <v-card-text class="pa-4">
                             <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-                                <v-icon start size="small">mdi-information</v-icon>
                                 This will apply the selected scoring algorithm and weight to all {{
                                     selectedCriteriaCount }} selected
                                 criteria test items.
@@ -348,7 +371,7 @@
                                 </template>
                             </v-select>
 
-                            <!-- Target Value Input (for asymmetrical and throughput) -->
+                            <!-- Target Value Input (for asymmetrical) -->
                             <v-text-field v-if="bulkScoringTypeRequiresTarget" v-model.number="bulkTarget"
                                 label="Target Value" type="number" variant="outlined" density="comfortable"
                                 hint="Required: Enter the optimal target value for scoring" persistent-hint
@@ -357,6 +380,28 @@
                                     <v-icon color="warning">mdi-target</v-icon>
                                 </template>
                             </v-text-field>
+
+                            <!-- Policy Selection (for asymmetrical only) -->
+                            <v-select v-if="bulkScoringTypeRequiresPolicy" v-model="bulkPolicy"
+                                :items="policyOptions" item-title="title" item-value="value"
+                                label="Scoring Policy" variant="outlined" density="comfortable" class="mt-4">
+                                <template #item="{ props: itemProps, item }">
+                                    <v-list-item v-bind="itemProps">
+                                        <template #prepend>
+                                            <v-icon color="primary">{{ item.raw.icon }}</v-icon>
+                                        </template>
+                                        <template #subtitle>
+                                            {{ item.raw.subtitle }}
+                                        </template>
+                                    </v-list-item>
+                                </template>
+                                <template #selection="{ item }">
+                                    <v-chip color="primary" size="small" variant="flat">
+                                        <v-icon start size="small">{{ item.raw.icon }}</v-icon>
+                                        {{ item.title }}
+                                    </v-chip>
+                                </template>
+                            </v-select>
 
                             <!-- Weight Input -->
                             <v-text-field v-model.number="bulkWeight" label="Weight" type="number" variant="outlined"
@@ -417,7 +462,15 @@
 import { ref, computed, watch } from 'vue'
 import type { Station } from '@/features/dut_logs/composables/useIplasApi'
 import type { StationConfig, TestItemScoringConfig } from './StationSelectionDialog.vue'
-import { SCORING_TYPE_INFO, type ScoringType } from '@/features/dut/types/scoring.types'
+import {
+    SCORING_TYPE_INFO,
+    SCORING_POLICIES,
+    UI_SCORING_TYPES,
+    shouldUsePerMaskScoring,
+    shouldUseEvmScoring,
+    type ScoringType,
+    type ScoringPolicy
+} from '@/features/dut/types/scoring.types'
 
 export interface TestItemInfo {
     name: string
@@ -427,17 +480,24 @@ export interface TestItemInfo {
     hasLcl: boolean  // true if it has LCL (lower control limit)
 }
 
-// Available scoring types for selection (exclude binary as it's auto-detected)
-const scoringTypeOptions = Object.entries(SCORING_TYPE_INFO)
-    .filter(([key]) => key !== 'binary')
-    .map(([key, info]) => ({
-        value: key as ScoringType,
-        title: info.label,
-        subtitle: info.description,
-        icon: info.icon,
-        color: info.color,
-        requiresTarget: info.requiredInputs?.includes('target') ?? false
-    }))
+// Available scoring types for selection (from UI_SCORING_TYPES)
+const scoringTypeOptions = UI_SCORING_TYPES.map(key => ({
+    value: key as ScoringType,
+    title: SCORING_TYPE_INFO[key].label,
+    subtitle: SCORING_TYPE_INFO[key].description,
+    icon: SCORING_TYPE_INFO[key].icon,
+    color: SCORING_TYPE_INFO[key].color,
+    requiresTarget: SCORING_TYPE_INFO[key].requiredInputs?.includes('target') ?? false,
+    requiresPolicy: SCORING_TYPE_INFO[key].requiredInputs?.includes('policy') ?? false
+}))
+
+// Policy options for asymmetrical scoring
+const policyOptions = SCORING_POLICIES.map(p => ({
+    value: p.value,
+    title: p.label,
+    subtitle: p.description,
+    icon: p.icon
+}))
 
 interface Props {
     show: boolean
@@ -485,7 +545,7 @@ const localConfig = ref<StationConfig>({
     displayName: '',
     stationName: '',
     deviceIds: [],
-    testStatus: 'ALL',
+    testStatus: 'PASS',  // UPDATED: Default to PASS only
     selectedTestItems: [],
     testItemScoringConfigs: {}
 })
@@ -500,6 +560,7 @@ const scoringConfigDialog = ref(false)
 const bulkScoringDialog = ref(false)
 const bulkScoringType = ref<ScoringType>('symmetrical')
 const bulkTarget = ref<number | undefined>(undefined)
+const bulkPolicy = ref<ScoringPolicy>('symmetrical')  // UPDATED: Add policy for bulk config
 const bulkWeight = ref<number>(1.0)
 
 const isExistingConfig = computed(() => !!props.existingConfig)
@@ -543,7 +604,7 @@ watch(() => props.show, (newShow) => {
                 displayName: props.station.display_station_name,
                 stationName: props.station.station_name,
                 deviceIds: [],
-                testStatus: 'ALL',
+                testStatus: 'PASS',  // UPDATED: Default to PASS only
                 selectedTestItems: [],
                 testItemScoringConfigs: {}
             }
@@ -672,7 +733,27 @@ function handleRefreshTestItems(): void {
 
 // Scoring configuration helper functions
 function getTestItemScoringConfig(testItemName: string): TestItemScoringConfig {
-    return localConfig.value.testItemScoringConfigs?.[testItemName] || { scoringType: 'symmetrical' }
+    // Return existing config if already set
+    if (localConfig.value.testItemScoringConfigs?.[testItemName]) {
+        return localConfig.value.testItemScoringConfigs[testItemName]
+    }
+
+    // Auto-detect scoring type for new items
+    const testItem = props.availableTestItems.find(item => item.name === testItemName)
+
+    // UPDATED: Auto-detect PER/MASK items (UCL-only, lower is better)
+    if (testItem && shouldUsePerMaskScoring(testItemName) && testItem.hasUcl && !testItem.hasLcl) {
+        return { scoringType: 'per_mask' }
+    }
+
+    // UPDATED: Auto-detect EVM items (UCL-only, lower is better with gentle decay)
+    // Only use EVM scoring when there's no LCL - if LCL exists, use symmetrical
+    if (testItem && shouldUseEvmScoring(testItemName) && testItem.hasUcl && !testItem.hasLcl) {
+        return { scoringType: 'evm' }
+    }
+
+    // Default to symmetrical for all other items
+    return { scoringType: 'symmetrical' }
 }
 
 function openScoringConfig(testItemName: string): void {
@@ -719,6 +800,19 @@ function updateTestItemTarget(testItemName: string, target: number | undefined):
     localConfig.value.testItemScoringConfigs[testItemName].target = target
 }
 
+// UPDATED: Add function to update test item policy
+function updateTestItemPolicy(testItemName: string, policy: ScoringPolicy): void {
+    if (!localConfig.value.testItemScoringConfigs) {
+        localConfig.value.testItemScoringConfigs = {}
+    }
+
+    if (!localConfig.value.testItemScoringConfigs[testItemName]) {
+        localConfig.value.testItemScoringConfigs[testItemName] = { scoringType: 'asymmetrical' }
+    }
+
+    localConfig.value.testItemScoringConfigs[testItemName].policy = policy
+}
+
 function scoringRequiresTarget(scoringType: ScoringType): boolean {
     return SCORING_TYPE_INFO[scoringType].requiredInputs?.includes('target') ?? false
 }
@@ -727,6 +821,7 @@ function scoringRequiresTarget(scoringType: ScoringType): boolean {
 function openBulkScoringConfig(): void {
     bulkScoringType.value = 'symmetrical'
     bulkTarget.value = undefined
+    bulkPolicy.value = 'symmetrical'  // UPDATED: Reset policy
     bulkWeight.value = 1.0
     bulkScoringDialog.value = true
 }
@@ -753,6 +848,11 @@ function applyBulkScoringConfig(): void {
         // Only add target if required and provided
         if (scoringRequiresTarget(bulkScoringType.value) && bulkTarget.value !== undefined) {
             config.target = bulkTarget.value
+        }
+
+        // UPDATED: Add policy for asymmetrical scoring
+        if (bulkScoringType.value === 'asymmetrical') {
+            config.policy = bulkPolicy.value
         }
 
         localConfig.value.testItemScoringConfigs[item.name] = config
@@ -802,6 +902,17 @@ const currentScoringConfig = computed(() => {
 const currentScoringTypeRequiresTarget = computed(() => {
     if (!currentScoringConfig.value) return false
     return scoringRequiresTarget(currentScoringConfig.value.scoringType)
+})
+
+// UPDATED: Check if current scoring type requires policy (asymmetrical only)
+const currentScoringTypeRequiresPolicy = computed(() => {
+    if (!currentScoringConfig.value) return false
+    return currentScoringConfig.value.scoringType === 'asymmetrical'
+})
+
+// UPDATED: Check if bulk scoring type requires policy
+const bulkScoringTypeRequiresPolicy = computed(() => {
+    return bulkScoringType.value === 'asymmetrical'
 })
 </script>
 

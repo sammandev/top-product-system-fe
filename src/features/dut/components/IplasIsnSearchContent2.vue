@@ -207,7 +207,6 @@
             </v-card-title>
             <v-card-text>
                 <v-alert type="info" variant="tonal" class="mb-4">
-                    <v-icon start>mdi-information</v-icon>
                     Configure stations above to enable custom scoring. Click "Calculate Scores" after configuration.
                 </v-alert>
 

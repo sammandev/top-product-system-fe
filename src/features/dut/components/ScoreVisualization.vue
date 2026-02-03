@@ -42,9 +42,6 @@
 
             <!-- No Data Alert -->
             <v-alert v-if="!hasData" type="info" variant="tonal" density="compact" class="mt-4">
-                <template #prepend>
-                    <v-icon>mdi-information</v-icon>
-                </template>
                 <div class="text-caption">
                     No data available for visualization. Run an analysis to see charts.
                 </div>

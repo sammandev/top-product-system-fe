@@ -41,8 +41,8 @@
                                 multiple clearable show-size :error-messages="dvtFilesError"
                                 @update:model-value="handleDvtFilesChange">
                                 <template #selection="{ fileNames }">
-                                    <v-chip v-for="fileName in fileNames.slice(0, 2)" :key="fileName"
-                                        size="small" color="primary" class="me-2">
+                                    <v-chip v-for="fileName in fileNames.slice(0, 2)" :key="fileName" size="small"
+                                        color="primary" class="me-2">
                                         {{ fileName }}
                                     </v-chip>
                                     <v-chip v-if="fileNames.length > 2" size="small" color="grey" class="me-2">
@@ -53,9 +53,6 @@
 
                             <v-alert v-if="dvtFiles.length > 0" type="info" variant="tonal" density="compact"
                                 class="mt-2">
-                                <template #prepend>
-                                    <v-icon size="small">mdi-information</v-icon>
-                                </template>
                                 {{ dvtFiles.length }} file(s) selected ({{ formatTotalSize(dvtFiles) }})
                             </v-alert>
                         </div>

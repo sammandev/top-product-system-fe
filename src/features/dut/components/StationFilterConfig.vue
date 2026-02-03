@@ -172,9 +172,6 @@
                 <!-- Info Alert -->
                 <v-col v-if="!hasFilters" cols="12">
                     <v-alert type="info" variant="tonal" density="compact">
-                        <template #prepend>
-                            <v-icon size="small">mdi-information</v-icon>
-                        </template>
                         No station-specific filters configured. Universal filters will apply.
                     </v-alert>
                 </v-col>
