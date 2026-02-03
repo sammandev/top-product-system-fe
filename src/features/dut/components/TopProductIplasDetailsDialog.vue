@@ -149,7 +149,7 @@
                             </template>
                         </v-combobox>
                     </v-col>
-                    <v-col cols="12" md="3">
+                    <v-col cols="12" md="4">
                         <v-select v-model="testItemFilter" :items="testItemFilterOptions" item-title="title"
                             item-value="value" label="Data Type" variant="outlined" density="compact" hide-details
                             multiple chips closable-chips>
@@ -159,7 +159,7 @@
                         </v-select>
                     </v-col>
                     <!-- UPDATED: Score Filter -->
-                    <v-col cols="12" md="3" v-if="hasScores">
+                    <v-col cols="12" md="4" v-if="hasScores">
                         <v-row dense class="align-center">
                             <v-col cols="6">
                                 <v-select v-model="scoreFilterType" :items="scoreFilterOptions" item-title="title"
@@ -173,13 +173,6 @@
                                     :min="0" :max="10" step="0.1" placeholder="0.00" />
                             </v-col>
                         </v-row>
-                    </v-col>
-                    <v-col cols="12" :md="hasScores ? 2 : 5">
-                        <div class="d-flex align-center justify-end h-100">
-                            <span class="text-caption text-medium-emphasis">
-                                Showing {{ filteredTestItems.length }} of {{ record.testItems?.length || 0 }} items
-                            </span>
-                        </div>
                     </v-col>
                 </v-row>
             </v-card-text>

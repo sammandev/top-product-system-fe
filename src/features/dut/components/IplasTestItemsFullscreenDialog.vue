@@ -91,7 +91,7 @@
             <!-- Search and Filter Controls (Fixed, non-scrollable) -->
             <v-card-text class="pb-2 pt-2 flex-shrink-0">
                 <v-row dense>
-                    <v-col cols="12" md="5">
+                    <v-col cols="12" md="6">
                         <v-combobox v-model="searchTerms" label="Search Test Items (Regex)"
                             prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details clearable
                             multiple chips closable-chips placeholder="Type and press Enter (OR logic)..."
@@ -102,7 +102,7 @@
                             </template>
                         </v-combobox>
                     </v-col>
-                    <v-col cols="12" md="4">
+                    <v-col cols="12" md="6">
                         <v-select v-model="testItemFilter" :items="testItemFilterOptions" item-title="title"
                             item-value="value" label="Data Type" variant="outlined" density="compact" hide-details
                             multiple chips closable-chips>
@@ -110,13 +110,6 @@
                                 <v-chip v-bind="props" :text="item.title" size="small" />
                             </template>
                         </v-select>
-                    </v-col>
-                    <v-col cols="12" md="3">
-                        <div class="d-flex align-center justify-end h-100">
-                            <span class="text-caption text-medium-emphasis">
-                                Showing {{ filteredTestItems.length }} of {{ record.testItems?.length || 0 }} items
-                            </span>
-                        </div>
                     </v-col>
                 </v-row>
             </v-card-text>
