@@ -30,9 +30,9 @@
 
                 <!-- Date Range Preset -->
                 <v-row dense>
-                    <v-col cols="12">
-                        <v-select v-model="dateRangePreset" :items="dateRangePresets" item-title="title"
-                            item-value="value" label="Date Range Preset" variant="outlined" density="comfortable"
+                    <v-col cols="12" class="mt-4">
+                        <v-select v-model="dateRangePreset" :items="dateRangePresets" item-value="value"
+                            label="Date Range Preset" variant="outlined" density="comfortable"
                             prepend-inner-icon="mdi-calendar-clock" @update:model-value="applyDateRangePreset" />
                     </v-col>
                 </v-row>
@@ -125,6 +125,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
+import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
 import { useScoring } from '../composables/useScoring'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
 import StationSelectionDialog from './StationSelectionDialog.vue'
@@ -397,7 +398,7 @@ async function handleBulkDownloadRecords(payload: { records: CsvTestItemData[]; 
         const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
         const deviceid = record.DeviceId
         const station = record.TSP || record.station
-        
+
         // Format test_end_time with .000 milliseconds as required by iPLAS API
         const testEndTime = record['Test end Time'] || ''
         const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
@@ -488,17 +489,17 @@ function applyUserScoringConfigs(): void {
 
             // Build update object with target and weight if specified
             const updates: { target?: number; weight?: number } = {}
-            
+
             // If target is specified (for asymmetrical or throughput), add to updates
             if (scoringConfig.target !== undefined) {
                 updates.target = scoringConfig.target
             }
-            
+
             // If weight is specified, add to updates
             if (scoringConfig.weight !== undefined) {
                 updates.weight = scoringConfig.weight
             }
-            
+
             // Apply updates if any
             if (Object.keys(updates).length > 0) {
                 updateScoringConfig(testItemName, updates)
@@ -674,7 +675,25 @@ async function fetchTestItems(): Promise<void> {
 
     // Iterate through each configured station
     for (const config of Object.values(stationConfigs.value)) {
-        const deviceIds = config.deviceIds.length > 0 ? config.deviceIds : ['ALL']
+        let deviceIds = config.deviceIds
+
+        // UPDATED: When user leaves device ID empty, fetch all available device IDs
+        // instead of using 'ALL' which is slower on the iPLAS API side
+        if (deviceIds.length === 0) {
+            try {
+                deviceIds = await fetchDeviceIds(
+                    selectedSite.value,
+                    selectedProject.value,
+                    config.displayName,
+                    new Date(startTime.value),
+                    new Date(endTime.value)
+                )
+            } catch (err) {
+                console.warn(`Failed to fetch device IDs for ${config.displayName}, falling back to ALL`)
+                deviceIds = ['ALL']
+            }
+        }
+
         const hasTestItemFilters = config.selectedTestItems && config.selectedTestItems.length > 0
 
         // Fetch data for each device ID
@@ -712,6 +731,13 @@ async function fetchTestItems(): Promise<void> {
 onMounted(async () => {
     await fetchSiteProjects()
     applyDateRangePreset()
+
+    // UPDATED: Set default site based on connected iPLAS server
+    const { selectedServer } = useIplasSettings()
+    const serverId = selectedServer.value?.id?.toUpperCase()
+    if (serverId && uniqueSites.value.includes(serverId) && !selectedSite.value) {
+        selectedSite.value = serverId
+    }
 })
 
 // Cleanup on unmount to free memory

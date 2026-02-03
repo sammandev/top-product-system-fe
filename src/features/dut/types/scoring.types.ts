@@ -290,7 +290,7 @@ export function createDefaultScoringConfig(
     if (typeInfo && typeInfo.parameters) {
         for (const param of typeInfo.parameters) {
             // Use type assertion to properly set dynamic keys
-            ;(config as unknown as Record<string, unknown>)[param.key] = param.default
+            ; (config as unknown as Record<string, unknown>)[param.key] = param.default
         }
     }
 

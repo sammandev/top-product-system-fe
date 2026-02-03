@@ -68,8 +68,8 @@
                     <!-- Station Selection (Multiple) -->
                     <v-col cols="12">
                         <v-autocomplete v-model="selectedStations" :items="stationOptions" item-title="displayText"
-                            item-value="value" label="Select Test Stations (Multiple)" variant="outlined" density="comfortable"
-                            prepend-inner-icon="mdi-router-wireless" :loading="loadingStations"
+                            item-value="value" label="Select Test Stations (Multiple)" variant="outlined"
+                            density="comfortable" prepend-inner-icon="mdi-router-wireless" :loading="loadingStations"
                             :disabled="!selectedProject" multiple chips closable-chips clearable hide-details
                             @update:model-value="handleStationChange">
                             <template #chip="{ props, item }">

@@ -3,9 +3,59 @@
  * 
  * Provides access to the backend iPLAS proxy endpoints with Redis caching
  * and server-side filtering for better performance.
+ * 
+ * Features:
+ * - Request cancellation support via AbortController
+ * - Automatic request deduplication on backend
+ * - Streaming support for large datasets
  */
 
 import apiClient from '@/core/api/client'
+
+// ============================================================================
+// Request Cancellation Support
+// ============================================================================
+
+/** Map of request keys to their AbortControllers for cancellation */
+const pendingRequests = new Map<string, AbortController>()
+
+/**
+ * Generate a unique key for a request based on endpoint and parameters
+ */
+function getRequestKey(endpoint: string, params?: Record<string, unknown>): string {
+  return `${endpoint}:${JSON.stringify(params || {})}`
+}
+
+/**
+ * Cancel a pending request by its key
+ */
+export function cancelRequest(key: string): void {
+  const controller = pendingRequests.get(key)
+  if (controller) {
+    controller.abort()
+    pendingRequests.delete(key)
+  }
+}
+
+/**
+ * Cancel all pending requests matching a prefix
+ * Useful for cancelling all requests for a specific feature
+ */
+export function cancelRequestsByPrefix(prefix: string): void {
+  for (const [key, controller] of pendingRequests.entries()) {
+    if (key.startsWith(prefix)) {
+      controller.abort()
+      pendingRequests.delete(key)
+    }
+  }
+}
+
+/**
+ * Cancel all pending iPLAS requests
+ */
+export function cancelAllIplasRequests(): void {
+  cancelRequestsByPrefix('/api/iplas')
+}
 
 // Types for iPLAS proxy API
 export interface IplasTestItemInfo {
@@ -234,6 +284,48 @@ export interface IplasVerifyResponse {
   message: string
 }
 
+// ============================================================================
+// V1 Get Test Item By ISN Types (Cross-Station Search)
+// ============================================================================
+
+export interface IplasTestItemByIsnRequest {
+  site: string
+  project: string
+  isn: string
+  station?: string   // Optional station filter (empty = search all stations)
+  device?: string    // Optional device ID filter (empty = search all devices)
+  begin_time: string // ISO format
+  end_time: string   // ISO format
+  token?: string     // Optional user token override
+}
+
+export interface IplasTestItemByIsnTestItem {
+  name: string
+  Status: string
+  LSL: string   // Lower Spec Limit (same as LCL)
+  Value: string
+  USL: string   // Upper Spec Limit (same as UCL)
+  CYCLE: string
+}
+
+export interface IplasTestItemByIsnRecord {
+  site: string
+  project: string
+  ISN: string
+  station: string
+  model: string
+  line: string
+  device: string
+  test_end_time: string
+  test_item: IplasTestItemByIsnTestItem[]
+}
+
+export interface IplasTestItemByIsnResponse {
+  data: IplasTestItemByIsnRecord[]
+  total_count: number
+  cached: boolean
+}
+
 // Re-export types from iplasApi for convenience
 export interface TestItem {
   NAME: string
@@ -334,20 +426,27 @@ export interface StreamMetadata {
  * iPLAS Proxy API Service
  * 
  * Uses the backend proxy endpoints for cached and filtered iPLAS data access.
+ * Supports request cancellation to prevent redundant API calls.
  */
 class IplasProxyApi {
   private readonly baseUrl = '/api/iplas'
 
   /**
    * Get filtered CSV test items from iPLAS with caching
+   * Supports request cancellation via signal.
    * 
    * @param request - Request parameters including filters
+   * @param options - Optional configuration including signal for cancellation
    * @returns Filtered test item data with cache metadata
    */
-  async getCsvTestItems(request: IplasCsvTestItemRequest): Promise<IplasCsvTestItemResponse> {
+  async getCsvTestItems(
+    request: IplasCsvTestItemRequest,
+    options?: { signal?: AbortSignal }
+  ): Promise<IplasCsvTestItemResponse> {
     const response = await apiClient.post<IplasCsvTestItemResponse>(
       `${this.baseUrl}/csv-test-items`,
-      request
+      request,
+      { signal: options?.signal }
     )
     return response.data
   }
@@ -360,13 +459,20 @@ class IplasProxyApi {
    * - Initial page load to show record summaries
    * - Performance-critical scenarios
    * 
+   * Supports request cancellation via signal.
+   * 
    * @param request - Request parameters including filters
+   * @param options - Optional configuration including signal for cancellation
    * @returns Compact test item data (60-80% smaller than full data)
    */
-  async getCsvTestItemsCompact(request: IplasCsvTestItemRequest): Promise<CompactCsvTestItemResponse> {
+  async getCsvTestItemsCompact(
+    request: IplasCsvTestItemRequest,
+    options?: { signal?: AbortSignal }
+  ): Promise<CompactCsvTestItemResponse> {
     const response = await apiClient.post<CompactCsvTestItemResponse>(
       `${this.baseUrl}/csv-test-items/compact`,
-      request
+      request,
+      { signal: options?.signal }
     )
     return response.data
   }
@@ -469,16 +575,42 @@ class IplasProxyApi {
    * Get device list for a specific station within a time range
    * 
    * Results are cached for 5 minutes.
+   * Supports request cancellation - previous requests for same station are auto-cancelled.
    * 
    * @param request - Station and time range parameters
+   * @param options - Optional configuration including signal for cancellation
    * @returns List of device IDs
    */
-  async getDevices(request: IplasDeviceListRequest): Promise<IplasDeviceListResponse> {
-    const response = await apiClient.post<IplasDeviceListResponse>(
-      `${this.baseUrl}/v2/devices`,
-      request
-    )
-    return response.data
+  async getDevices(
+    request: IplasDeviceListRequest,
+    options?: { signal?: AbortSignal; cancelPrevious?: boolean }
+  ): Promise<IplasDeviceListResponse> {
+    const endpoint = `${this.baseUrl}/v2/devices`
+    const requestKey = getRequestKey(endpoint, { 
+      site: request.site, 
+      project: request.project, 
+      station: request.station 
+    })
+    
+    // Cancel previous request for the same station if requested
+    if (options?.cancelPrevious !== false) {
+      cancelRequest(requestKey)
+    }
+    
+    // Create new abort controller
+    const controller = new AbortController()
+    pendingRequests.set(requestKey, controller)
+    
+    try {
+      const response = await apiClient.post<IplasDeviceListResponse>(
+        endpoint,
+        request,
+        { signal: options?.signal || controller.signal }
+      )
+      return response.data
+    } finally {
+      pendingRequests.delete(requestKey)
+    }
   }
 
   /**
@@ -599,6 +731,33 @@ class IplasProxyApi {
   async verifyAccess(request: IplasVerifyRequest): Promise<IplasVerifyResponse> {
     const response = await apiClient.post<IplasVerifyResponse>(
       `${this.baseUrl}/v2/verify`,
+      request
+    )
+    return response.data
+  }
+
+  // ============================================================================
+  // v1 Get Test Item By ISN (Cross-Station Search)
+  // ============================================================================
+
+  /**
+   * Get test items by ISN from iPLAS v1 API (cross-station search)
+   * 
+   * This endpoint searches for an ISN across all related test stations within a date range.
+   * More flexible than V2 isn_search because it supports date filtering and returns
+   * test items from ALL stations that processed this ISN.
+   * 
+   * **Use Cases:**
+   * - Track a DUT through the entire production flow
+   * - Find all test records for a specific serial number
+   * - Compare test results across different stations for the same ISN
+   * 
+   * @param request - ISN search parameters with optional date range
+   * @returns List of matching records across all related stations
+   */
+  async getTestItemByIsn(request: IplasTestItemByIsnRequest): Promise<IplasTestItemByIsnResponse> {
+    const response = await apiClient.post<IplasTestItemByIsnResponse>(
+      `${this.baseUrl}/v1/test-item-by-isn`,
       request
     )
     return response.data

@@ -260,10 +260,10 @@ class IplasV1Api {
     for (let i = 0; i < binaryString.length; i++) {
       bytes[i] = binaryString.charCodeAt(i)
     }
-    
+
     const blob = new Blob([bytes], { type: 'application/zip' })
     const url = URL.createObjectURL(blob)
-    
+
     const a = document.createElement('a')
     a.href = url
     a.download = filename

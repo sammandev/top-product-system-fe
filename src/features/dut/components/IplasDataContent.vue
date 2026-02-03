@@ -77,8 +77,8 @@
                             <!-- Station Selection (Multiple) -->
                             <v-col cols="12">
                                 <v-autocomplete v-model="selectedStations" :items="stationOptions"
-                                    item-title="displayText" item-value="value" label="Select Test Stations (Multiple)" variant="outlined"
-                                    density="comfortable" prepend-inner-icon="mdi-router-wireless"
+                                    item-title="displayText" item-value="value" label="Select Test Stations (Multiple)"
+                                    variant="outlined" density="comfortable" prepend-inner-icon="mdi-router-wireless"
                                     :loading="loadingStations" :disabled="!selectedProject" multiple chips
                                     closable-chips clearable hide-details @update:model-value="handleStationChange">
                                     <template #chip="{ props, item }">
@@ -196,8 +196,8 @@
                         </div>
                         <div class="d-flex align-center gap-2">
                             <!-- Download All (TXT + CSV) -->
-                            <v-btn v-if="selectedRecordIndices.length > 0" color="secondary" variant="flat"
-                                size="small" :loading="downloading || downloadingCsv" @click="downloadAllSelectedRecords">
+                            <v-btn v-if="selectedRecordIndices.length > 0" color="secondary" variant="flat" size="small"
+                                :loading="downloading || downloadingCsv" @click="downloadAllSelectedRecords">
                                 <v-icon start size="small">mdi-download-multiple</v-icon>
                                 Download All Logs ({{ selectedRecordIndices.length }})
                             </v-btn>
@@ -258,10 +258,8 @@
                                 </v-row>
 
                                 <!-- UPDATED: Client-Side Data Table with Selection (changed from server-side for better UX) -->
-                                <IplasRecordTable
-                                    :items="getFilteredStationRecords(stationGroup)"
-                                    :total-items="getFilteredStationRecords(stationGroup).length"
-                                    :loading="false"
+                                <IplasRecordTable :items="getFilteredStationRecords(stationGroup)"
+                                    :total-items="getFilteredStationRecords(stationGroup).length" :loading="false"
                                     :downloading-record="downloadingKey" :downloading-csv-record="downloadingCsvKey"
                                     :selectable="true"
                                     :selected-keys="getSelectedKeysForStation(stationGroup.stationName)"
@@ -332,8 +330,7 @@
                             v-model:page="indexedDbTableOptions.page" v-model:sort-by="indexedDbTableOptions.sortBy"
                             :headers="indexedDbHeaders" :items="indexedDbItems"
                             :loading="indexedDbLoading || isStreaming" item-value="id" show-select hover
-                            class="elevation-1"
-                            @click:row="handleIndexedDbRowClick">
+                            class="elevation-1" @click:row="handleIndexedDbRowClick">
                             <!-- ISN Column with Copy Button -->
                             <template #item.ISN="{ item }">
                                 <div class="d-flex align-center gap-1">
@@ -358,7 +355,7 @@
                             <!-- Test End Time Column -->
                             <template #item.TestEndTime="{ item }">
                                 {{ item.TestEndTime ? adjustIplasDisplayTime(item.TestEndTime, 1) :
-                                adjustIplasDisplayTime(item.TestStartTime, 1) }}
+                                    adjustIplasDisplayTime(item.TestStartTime, 1) }}
                             </template>
 
                             <!-- Duration Column -->
@@ -455,7 +452,7 @@
 
         <!-- Test Items Details Dialog -->
         <TopProductIplasDetailsDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
-            :downloading="fullscreenDownloading" :loading-test-items="loadingFullscreenTestItems" 
+            :downloading="fullscreenDownloading" :loading-test-items="loadingFullscreenTestItems"
             @download="downloadFromFullscreen" />
 
         <!-- Copy Success Snackbar -->
@@ -1546,17 +1543,17 @@ function normalizeStationRecord(record: CsvTestItemData): NormalizedRecord {
 async function openFullscreen(record: CsvTestItemData | CompactCsvTestItemData): Promise<void> {
     // Show dialog immediately with loading state for compact records
     showFullscreenDialog.value = true
-    
+
     // For compact records, we need to fetch test items
     if (isCompactRecord(record)) {
         let testItems = getTestItemsForRecord(record)
-        
+
         if (!testItems) {
             // Show loading and fetch test items
             loadingFullscreenTestItems.value = true
             fullscreenRecord.value = normalizeStationRecord({ ...record, TestItem: [] } as CsvTestItemData)
             fullscreenOriginalRecord.value = null
-            
+
             try {
                 // Fetch test items from server
                 if (selectedSite.value && selectedProject.value) {
@@ -1570,7 +1567,7 @@ async function openFullscreen(record: CsvTestItemData | CompactCsvTestItemData):
                         record['Test Start Time'],
                         record.DeviceId // deviceId as last parameter
                     ) || []
-                    
+
                     // Note: The composable already caches test items internally
                 }
             } catch (err) {
@@ -1580,7 +1577,7 @@ async function openFullscreen(record: CsvTestItemData | CompactCsvTestItemData):
                 loadingFullscreenTestItems.value = false
             }
         }
-        
+
         // Create a synthetic full record with test items
         const fullRecord: CsvTestItemData = {
             ...record,
@@ -1837,7 +1834,7 @@ async function downloadAllSelectedRecords(): Promise<void> {
 
     // Download TXT logs first
     await downloadSelectedRecords()
-    
+
     // Then download CSV logs
     await downloadSelectedRecordsCsv()
 }
@@ -1897,28 +1894,47 @@ async function fetchTestItems() {
             const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationDisplayName)
             if (!stationInfo) continue
 
-            // Get device IDs for this station (empty array means use 'ALL')
-            const deviceIds = stationDeviceIds.value[stationDisplayName] || []
-            const deviceId = deviceIds.length > 0 && deviceIds[0] ? deviceIds[0] : 'ALL'
+            // Get device IDs for this station (empty array means fetch all available)
+            let deviceIds = stationDeviceIds.value[stationDisplayName] || []
 
-            try {
-                // Stream data directly to IndexedDB
-                const recordCount = await streamToIndexedDb({
-                    site: selectedSite.value,
-                    project: selectedProject.value,
-                    station: stationInfo.display_station_name,
-                    deviceId,
-                    beginTime: begintime,
-                    endTime: endtime,
-                    testStatus: testStatusFilter.value
-                })
+            // UPDATED: When user leaves device ID empty, fetch all available device IDs
+            // instead of using 'ALL' which is slower on the iPLAS API side
+            if (deviceIds.length === 0) {
+                try {
+                    deviceIds = await fetchDeviceIds(
+                        selectedSite.value,
+                        selectedProject.value,
+                        stationInfo.display_station_name,
+                        begintime,
+                        endtime
+                    )
+                } catch (err) {
+                    console.warn(`Failed to fetch device IDs for ${stationDisplayName}, falling back to ALL`)
+                    deviceIds = ['ALL']
+                }
+            }
 
-                console.log(`[IndexedDB] Streamed ${recordCount} records for station ${stationInfo.display_station_name}`)
-                totalRecords += recordCount
-            } catch (err) {
-                console.error(`[IndexedDB] Stream failed for station ${stationInfo.display_station_name}:`, err)
-                error.value = err instanceof Error ? err.message : 'Failed to stream data to IndexedDB'
-                // Continue with other stations even if one fails
+            // Fetch data for each device ID
+            for (const deviceId of deviceIds) {
+                try {
+                    // Stream data directly to IndexedDB
+                    const recordCount = await streamToIndexedDb({
+                        site: selectedSite.value,
+                        project: selectedProject.value,
+                        station: stationInfo.display_station_name,
+                        deviceId,
+                        beginTime: begintime,
+                        endTime: endtime,
+                        testStatus: testStatusFilter.value
+                    })
+
+                    console.log(`[IndexedDB] Streamed ${recordCount} records for station ${stationInfo.display_station_name} device ${deviceId}`)
+                    totalRecords += recordCount
+                } catch (err) {
+                    console.error(`[IndexedDB] Stream failed for station ${stationInfo.display_station_name} device ${deviceId}:`, err)
+                    error.value = err instanceof Error ? err.message : 'Failed to stream data to IndexedDB'
+                    // Continue with other devices/stations even if one fails
+                }
             }
         }
 
@@ -1944,33 +1960,37 @@ async function fetchTestItems() {
         const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationDisplayName)
         if (!stationInfo) continue
 
-        // Get device IDs for this station (empty array means use 'ALL')
-        const deviceIds = stationDeviceIds.value[stationDisplayName] || []
+        // Get device IDs for this station (empty array means fetch all available)
+        let deviceIds = stationDeviceIds.value[stationDisplayName] || []
 
+        // UPDATED: When user leaves device ID empty, fetch all available device IDs
+        // instead of using 'ALL' which is slower on the iPLAS API side
         if (deviceIds.length === 0) {
-            // No devices selected - use 'ALL'
+            try {
+                deviceIds = await fetchDeviceIds(
+                    selectedSite.value,
+                    selectedProject.value,
+                    stationInfo.display_station_name,
+                    begintime,
+                    endtime
+                )
+            } catch (err) {
+                console.warn(`Failed to fetch device IDs for ${stationDisplayName}, falling back to ALL`)
+                deviceIds = ['ALL']
+            }
+        }
+
+        // Fetch data for each selected device
+        for (const deviceId of deviceIds) {
             await fetchMethod(
                 selectedSite.value,
                 selectedProject.value,
                 stationInfo.display_station_name,
-                'ALL',
+                deviceId,
                 begintime,
                 endtime,
                 testStatusFilter.value
             )
-        } else {
-            // Fetch data for each selected device
-            for (const deviceId of deviceIds) {
-                await fetchMethod(
-                    selectedSite.value,
-                    selectedProject.value,
-                    stationInfo.display_station_name,
-                    deviceId,
-                    begintime,
-                    endtime,
-                    testStatusFilter.value
-                )
-            }
         }
     }
 }
@@ -2016,7 +2036,7 @@ async function handleTableOptionsUpdate(
         // If only one device ID is selected in filter, use it for server-side filtering
         deviceId = filterDeviceIds[0]
     }
-    
+
     // Get status filter for this station (use per-station filter, fallback to global)
     const statusFilter = stationStatusFilters.value[stationName] || testStatusFilter.value || 'ALL'
 
