@@ -231,7 +231,7 @@
                                 {{ stationGroup.displayName }}
                                 <v-chip size="x-small" color="info" class="ml-2">{{
                                     getFilteredStationRecords(stationGroup).length
-                                }}</v-chip>
+                                    }}</v-chip>
                             </v-tab>
                         </v-tabs>
 
@@ -1933,11 +1933,10 @@ async function fetchTestItems() {
             for (const deviceId of deviceIds) {
                 try {
                     // Stream data directly to IndexedDB
-                    // Note: V1 API expects station_name (TSP), not display_station_name
                     const recordCount = await streamToIndexedDb({
                         site: selectedSite.value,
                         project: selectedProject.value,
-                        station: stationInfo.station_name, // V1 API expects station_name (TSP)
+                        station: stationInfo.display_station_name,
                         deviceId,
                         beginTime: begintime,
                         endTime: endtime,
@@ -1997,12 +1996,11 @@ async function fetchTestItems() {
         }
 
         // Fetch data for each selected device
-        // Note: V1 API expects station_name (TSP), not display_station_name
         for (const deviceId of deviceIds) {
             await fetchMethod(
                 selectedSite.value,
                 selectedProject.value,
-                stationInfo.station_name, // V1 API expects station_name (TSP)
+                stationInfo.display_station_name,
                 deviceId,
                 begintime,
                 endtime,
@@ -2058,11 +2056,10 @@ async function handleTableOptionsUpdate(
     const statusFilter = stationStatusFilters.value[stationName] || testStatusFilter.value || 'ALL'
 
     try {
-        // Note: V1 API expects station_name (TSP), not display_station_name
         const result = await fetchTestItemsPaginated(
             selectedSite.value,
             selectedProject.value,
-            stationInfo.station_name, // V1 API expects station_name (TSP)
+            stationInfo.display_station_name,
             deviceId,
             new Date(startTime.value),
             new Date(endTime.value),

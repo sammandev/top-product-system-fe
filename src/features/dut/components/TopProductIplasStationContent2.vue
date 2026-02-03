@@ -572,8 +572,7 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
     const deviceId = currentStationDeviceIds.value[0] ?? 'ALL'
 
     // UPDATED: Generate cache key and check cache first
-    // Use station_name (TSP) for the cache key since that's what the API uses
-    const cacheKey = `${selectedSite.value}_${selectedProject.value}_${station.station_name}_${deviceId}`
+    const cacheKey = `${selectedSite.value}_${selectedProject.value}_${station.display_station_name}_${deviceId}`
     const cachedData = testItemNamesCache.value.get(cacheKey)
 
     if (cachedData) {
@@ -588,13 +587,12 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
 
     try {
         // Use the lightweight backend proxy endpoint for test item names
-        // Note: V1 API expects station_name (TSP), not display_station_name
 
         // UPDATED: Pass excludeBin=true to filter out BIN test items at backend level
         const testItems = await fetchTestItemNames(
             selectedSite.value,
             selectedProject.value,
-            station.station_name, // V1 API expects station_name (TSP)
+            station.display_station_name,
             deviceId,
             new Date(startTime.value),
             new Date(endTime.value),
@@ -625,10 +623,9 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
 async function refreshCurrentStationTestItems(): Promise<void> {
     if (selectedStationForConfig.value) {
         // UPDATED: Invalidate cache entry for this station to force fresh data
-        // Use station_name (TSP) for cache key consistency
         const deviceId = currentStationDeviceIds.value[0] ?? 'ALL'
         if (selectedSite.value && selectedProject.value) {
-            const cacheKey = `${selectedSite.value}_${selectedProject.value}_${selectedStationForConfig.value.station_name}_${deviceId}`
+            const cacheKey = `${selectedSite.value}_${selectedProject.value}_${selectedStationForConfig.value.display_station_name}_${deviceId}`
             testItemNamesCache.value.delete(cacheKey)
         }
         await loadTestItemsForStation(selectedStationForConfig.value)
@@ -708,13 +705,12 @@ async function fetchTestItems(): Promise<void> {
 
         // UPDATED: When user leaves device ID empty, fetch all available device IDs
         // instead of using 'ALL' which is slower on the iPLAS API side
-        // Note: fetchDeviceIds uses V2 API which expects display_station_name
         if (deviceIds.length === 0) {
             try {
                 deviceIds = await fetchDeviceIds(
                     selectedSite.value,
                     selectedProject.value,
-                    config.displayName, // V2 API expects display_station_name
+                    config.displayName,
                     new Date(startTime.value),
                     new Date(endTime.value)
                 )
@@ -727,14 +723,13 @@ async function fetchTestItems(): Promise<void> {
         const hasTestItemFilters = config.selectedTestItems && config.selectedTestItems.length > 0
 
         // Fetch data for each device ID
-        // Note: V1 API expects station_name (TSP), not display_station_name
         for (const deviceId of deviceIds) {
             if (hasTestItemFilters) {
                 // Use the filtered backend proxy endpoint (server-side filtering + caching)
                 await fetchTestItemsFiltered(
                     selectedSite.value,
                     selectedProject.value,
-                    config.stationName, // V1 API expects station_name (TSP)
+                    config.displayName,
                     deviceId,
                     new Date(startTime.value),
                     new Date(endTime.value),
@@ -747,7 +742,7 @@ async function fetchTestItems(): Promise<void> {
                 await fetchTestItemsApi(
                     selectedSite.value,
                     selectedProject.value,
-                    config.stationName, // V1 API expects station_name (TSP)
+                    config.displayName,
                     deviceId,
                     new Date(startTime.value),
                     new Date(endTime.value),
