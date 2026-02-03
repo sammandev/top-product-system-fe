@@ -169,9 +169,10 @@ export interface NormalizedTestItem {
     score?: number
     scoringType?: ScoringType
     deviation?: number
-    // UPDATED: Added policy and target for asymmetrical scoring display
+    // UPDATED: Added policy, target, and weight for scoring display
     policy?: 'symmetrical' | 'higher' | 'lower'
     target?: number
+    weight?: number  // Weight used for this test item in scoring (default 1.0)
 }
 
 // Normalized record interface that works for both Station Search and ISN Search

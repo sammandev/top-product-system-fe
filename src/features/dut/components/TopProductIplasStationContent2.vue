@@ -310,8 +310,10 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
             score: itemScore?.score,
             scoringType: itemScore?.scoringType,
             deviation: itemScore?.deviation,
-            // UPDATED: Include policy for asymmetrical scoring display (convert null to undefined)
-            policy: itemScore?.policy ?? undefined
+            // UPDATED: Include policy, target, and weight for scoring display
+            policy: itemScore?.policy ?? undefined,
+            target: itemScore?.target ?? undefined,
+            weight: itemScore?.weight ?? 1.0
         }
     })
 

@@ -92,6 +92,8 @@ export interface TestItemScoreResult {
     policy?: ScoringPolicy | null  // Only for asymmetrical scoring
     score: number  // Stored as 0-1, displayed as 0-10
     deviation?: number
+    weight: number  // Weight used for this test item in scoring (default 1.0)
+    target?: number | null  // Target value used for scoring
 }
 
 // Score result for a single test record
@@ -189,7 +191,7 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     asymmetrical: {
         type: 'asymmetrical',
         label: 'Asymmetrical (Custom Target)',
-        description: 'User-defined target with Policy options: Based on Target, Higher than Target, or Lower than Target.',
+        description: 'Policy options: Based on Target, Higher than Target, or Lower than Target.',
         useCase: 'When optimal value is not centered between limits',
         icon: 'mdi-arrow-left-right-bold',
         color: 'warning',

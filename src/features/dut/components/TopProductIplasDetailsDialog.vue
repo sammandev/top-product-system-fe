@@ -301,18 +301,15 @@
 
                     <v-divider />
 
-                    <!-- UPDATED: Target (Centered Symmetrical) or Asymmetrical with Policy -->
+                    <!-- UPDATED: Target with dynamic label based on scoring type -->
                     <v-list-item>
                         <template #prepend>
                             <v-icon color="success">mdi-target</v-icon>
                         </template>
                         <v-list-item-title>
                             Target
-                            <span v-if="selectedTestItem.scoringType === 'asymmetrical' && selectedTestItem.policy" class="text-caption text-medium-emphasis">
-                                ({{ formatPolicy(selectedTestItem.policy) }})
-                            </span>
-                            <span v-else class="text-caption text-medium-emphasis">
-                                (Centered)
+                            <span class="text-caption text-medium-emphasis">
+                                ({{ getTargetLabel(selectedTestItem) }})
                             </span>
                         </v-list-item-title>
                         <template #append>
@@ -337,7 +334,7 @@
 
                     <v-divider />
 
-                    <!-- UPDATED: Added Score Weight -->
+                    <!-- UPDATED: Score Weight displays actual weight from scoring data -->
                     <v-list-item>
                         <template #prepend>
                             <v-icon color="blue-grey">mdi-weight</v-icon>
@@ -345,7 +342,7 @@
                         <v-list-item-title>Score Weight</v-list-item-title>
                         <template #append>
                             <v-chip size="small" color="blue-grey" variant="tonal">
-                                1.0x
+                                {{ formatWeight(selectedTestItem.weight) }}
                             </v-chip>
                         </template>
                     </v-list-item>
@@ -708,12 +705,52 @@ function getScoringExplanation(scoringType?: ScoringType): string {
     return explanations[scoringType ?? 'binary'] ?? 'Unknown scoring algorithm.'
 }
 
-// UPDATED: Added helper to compute target for score breakdown display
+// UPDATED: Get target label based on scoring type and policy
+function getTargetLabel(item: NormalizedTestItem): string {
+    const scoringType = item.scoringType
+    
+    // For asymmetrical scoring, use policy
+    if (scoringType === 'asymmetrical' && item.policy) {
+        switch (item.policy) {
+            case 'higher':
+                return 'Higher is Better'
+            case 'lower':
+                return 'Lower is Better'
+            default:
+                return 'Centered'
+        }
+    }
+    
+    // For other scoring types
+    switch (scoringType) {
+        case 'per_mask':
+            return 'Lower is Better'
+        case 'evm':
+            return 'Lower is Better'
+        case 'throughput':
+            return 'Higher is Better'
+        case 'symmetrical':
+        case 'symmetrical_nl':
+            return 'Centered'
+        case 'binary':
+            return 'Pass/Fail'
+        default:
+            return 'Centered'
+    }
+}
+
+// UPDATED: Compute target using backend target value if available, otherwise compute locally
 function computeTarget(item: NormalizedTestItem): string {
+    // If target is provided from backend, use it
+    if (item.target !== undefined && item.target !== null) {
+        return item.target.toFixed(2)
+    }
+    
+    // Fallback: compute target locally based on scoring type
     const ucl = parseFloat(item.UCL)
     const lcl = parseFloat(item.LCL)
     
-    // UPDATED: For asymmetrical scoring with policy, compute target based on policy
+    // For asymmetrical scoring with policy, compute target based on policy
     if (item.scoringType === 'asymmetrical' && item.policy) {
         switch (item.policy) {
             case 'higher':
@@ -728,18 +765,39 @@ function computeTarget(item: NormalizedTestItem): string {
         }
     }
     
+    // For per_mask, target is 0
+    if (item.scoringType === 'per_mask') {
+        return '0.00'
+    }
+    
+    // For evm, target is -35 dB
+    if (item.scoringType === 'evm') {
+        return '-35.00'
+    }
+    
+    // For throughput, target is UCL
+    if (item.scoringType === 'throughput') {
+        return isNaN(ucl) ? '-' : ucl.toFixed(2)
+    }
+    
     // For symmetrical scoring, target = (UCL + LCL) / 2
     if (!isNaN(ucl) && !isNaN(lcl)) {
         const target = (ucl + lcl) / 2
         return target.toFixed(2)
     }
     
-    // For PER/MASK (UCL only), target is 0
+    // For UCL only, target is 0 (assumed lower is better)
     if (!isNaN(ucl) && isNaN(lcl)) {
         return '0.00'
     }
     
     return '-'
+}
+
+// UPDATED: Format weight for display (e.g., "1.0x", "3.0x")
+function formatWeight(weight?: number): string {
+    const w = weight ?? 1.0
+    return `${w.toFixed(1)}x`
 }
 
 // UPDATED: Added helper to format policy for display
