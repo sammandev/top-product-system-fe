@@ -55,7 +55,7 @@
             <!-- Station Rankings -->
             <v-window v-model="selectedTab" class="pt-4">
                 <v-window-item v-for="(_, station) in rankingByStation" :key="station" :value="station">
-                    <!-- Filters -->
+                    <!-- Filters Row 1: Search, Status, Device -->
                     <v-row class="mb-2" dense>
                         <v-col cols="12" md="4">
                             <v-text-field v-model="searchQuery" label="Search Records" prepend-inner-icon="mdi-magnify"
@@ -83,6 +83,42 @@
                                 Clear Filters
                                 <v-chip size="x-small" color="primary" class="ml-1">{{ activeFilterCount }}</v-chip>
                             </v-btn>
+                        </v-col>
+                    </v-row>
+
+                    <!-- Filters Row 2: Score Filter (only shown when scores are calculated) -->
+                    <v-row v-if="hasScores" class="mb-2" dense>
+                        <v-col cols="12" md="3">
+                            <v-select v-model="scoreFilterType" :items="scoreFilterTypeOptions" item-title="title"
+                                item-value="value" label="Score Filter" variant="outlined" density="compact" 
+                                prepend-inner-icon="mdi-filter-variant" hide-details clearable
+                                @update:model-value="() => { if (!scoreFilterType) { scoreFilterValue = null; scoreFilterValue2 = null } }" />
+                        </v-col>
+                        <v-col cols="12" md="2">
+                            <v-text-field v-model.number="scoreFilterValue" label="Score Value" type="number"
+                                variant="outlined" density="compact" hide-details
+                                :disabled="!scoreFilterType" min="0" max="100" step="0.1"
+                                placeholder="0-100" />
+                        </v-col>
+                        <v-col v-if="scoreFilterType === 'between'" cols="12" md="2">
+                            <v-text-field v-model.number="scoreFilterValue2" label="To Value" type="number"
+                                variant="outlined" density="compact" hide-details
+                                min="0" max="100" step="0.1"
+                                placeholder="0-100" />
+                        </v-col>
+                        <v-col cols="12" :md="scoreFilterType === 'between' ? 5 : 7" class="d-flex align-center">
+                            <span v-if="scoreFilterType && scoreFilterValue !== null" class="text-caption text-medium-emphasis">
+                                <v-icon size="small" class="mr-1">mdi-information-outline</v-icon>
+                                Filtering scores 
+                                <template v-if="scoreFilterType === 'gt'">&gt; {{ scoreFilterValue }}</template>
+                                <template v-else-if="scoreFilterType === 'gte'">&ge; {{ scoreFilterValue }}</template>
+                                <template v-else-if="scoreFilterType === 'eq'">= {{ scoreFilterValue }}</template>
+                                <template v-else-if="scoreFilterType === 'lt'">&lt; {{ scoreFilterValue }}</template>
+                                <template v-else-if="scoreFilterType === 'lte'">&le; {{ scoreFilterValue }}</template>
+                                <template v-else-if="scoreFilterType === 'between' && scoreFilterValue2 !== null">
+                                    between {{ Math.min(scoreFilterValue, scoreFilterValue2) }} and {{ Math.max(scoreFilterValue, scoreFilterValue2) }}
+                                </template>
+                            </span>
                         </v-col>
                     </v-row>
 
@@ -225,6 +261,11 @@ const debouncedSearchQuery = ref<string>('')
 const statusFilter = ref<string | null>(null)
 const deviceFilter = ref<string[]>([])
 
+// Score filter state
+const scoreFilterType = ref<string | null>(null)
+const scoreFilterValue = ref<number | null>(null)
+const scoreFilterValue2 = ref<number | null>(null) // For "between" filter
+
 // Selection state for bulk actions
 const selectedItems = ref<RankingItem[]>([])
 const bulkDownloading = ref(false)
@@ -246,6 +287,16 @@ watch(selectedTab, () => {
 const statusFilterOptions = [
     { title: 'PASS', value: 'passed' },
     { title: 'FAIL', value: 'failed' }
+]
+
+// Score filter type options
+const scoreFilterTypeOptions = [
+    { title: 'Greater Than', value: 'gt' },
+    { title: 'Greater Than or Equal', value: 'gte' },
+    { title: 'Equals To', value: 'eq' },
+    { title: 'Lower Than', value: 'lt' },
+    { title: 'Lower Than or Equal', value: 'lte' },
+    { title: 'In Between', value: 'between' }
 ]
 
 // Check if we have scores - must be defined before rankingHeaders
@@ -429,11 +480,47 @@ const filteredRanking = computed(() => {
         items = items.filter(item => deviceFilter.value.includes(item.device))
     }
 
+    // Apply score filter (only when scores are available and filter is set)
+    if (hasScores.value && scoreFilterType.value && scoreFilterValue.value !== null) {
+        // Score is stored as 0-1, but displayed as 0-100 (score * 10 = 0-10 scale, displayed as 0-100)
+        // User inputs score in 0-100 scale, so we compare against item.score * 100
+        const filterValue = scoreFilterValue.value
+        const filterValue2 = scoreFilterValue2.value
+        
+        items = items.filter(item => {
+            // Skip items without score (errors)
+            if (item.score === null) return false
+            
+            const displayScore = item.score * 100 // Convert to 0-100 scale
+            
+            switch (scoreFilterType.value) {
+                case 'gt':
+                    return displayScore > filterValue
+                case 'gte':
+                    return displayScore >= filterValue
+                case 'eq':
+                    // Use small tolerance for floating point comparison
+                    return Math.abs(displayScore - filterValue) < 0.01
+                case 'lt':
+                    return displayScore < filterValue
+                case 'lte':
+                    return displayScore <= filterValue
+                case 'between':
+                    if (filterValue2 === null) return true
+                    const min = Math.min(filterValue, filterValue2)
+                    const max = Math.max(filterValue, filterValue2)
+                    return displayScore >= min && displayScore <= max
+                default:
+                    return true
+            }
+        })
+    }
+
     return items
 })
 
 const hasActiveFilters = computed(() => {
-    return !!(debouncedSearchQuery.value || statusFilter.value || deviceFilter.value.length > 0)
+    return !!(debouncedSearchQuery.value || statusFilter.value || deviceFilter.value.length > 0 || (scoreFilterType.value && scoreFilterValue.value !== null))
 })
 
 const activeFilterCount = computed(() => {
@@ -441,6 +528,7 @@ const activeFilterCount = computed(() => {
     if (debouncedSearchQuery.value) count++
     if (statusFilter.value) count++
     if (deviceFilter.value.length > 0) count++
+    if (scoreFilterType.value && scoreFilterValue.value !== null) count++
     return count
 })
 
@@ -449,6 +537,9 @@ function clearAllFilters() {
     debouncedSearchQuery.value = ''
     statusFilter.value = null
     deviceFilter.value = []
+    scoreFilterType.value = null
+    scoreFilterValue.value = null
+    scoreFilterValue2.value = null
 }
 
 function getRowProps({ item }: { item: RankingItem }) {

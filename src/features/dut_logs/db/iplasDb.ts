@@ -32,8 +32,10 @@ export interface IplasDbRecord {
   TestEndTime?: string
   /** Test result status */
   TestStatus: 'PASS' | 'FAIL'
-  /** Test station name */
+  /** Test station name (internal) */
   Station: string
+  /** Display station name for API calls (TSP field from iPLAS) */
+  TSP?: string
   /** Device identifier */
   DeviceId: string
   /** Site identifier */

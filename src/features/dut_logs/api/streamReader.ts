@@ -205,6 +205,7 @@ export async function fetchAndSinkToDB(
       TestEndTime: apiRecord['Test end Time'],
       TestStatus: apiRecord['Test Status'] as 'PASS' | 'FAIL',
       Station: apiRecord.station,
+      TSP: apiRecord.TSP, // Display station name for API calls
       DeviceId: apiRecord.DeviceId,
       Site: apiRecord.Site || request.site,
       Project: apiRecord.Project || request.project,

@@ -974,15 +974,16 @@ function getIndexedDbRecordKey(record: typeof indexedDbItems.value[0]): string {
 async function handleIndexedDbRowClick(_event: Event, { item }: { item: typeof indexedDbItems.value[0] }): Promise<void> {
     if (!selectedSite.value || !selectedProject.value) return
 
-    // Get station from record or use the active station tab
-    const station = item.Station || (indexedDbStationList.value[indexedDbActiveStationTab.value - 1] ?? '')
+    // Get station from record - prefer TSP (display_station_name) for API calls
+    // TSP is the display station name used by iPLAS API
+    const station = item.TSP || item.Station || (indexedDbStationList.value[indexedDbActiveStationTab.value - 1] ?? '')
 
     if (!station) {
         console.error('Cannot fetch record test items: station is undefined')
         return
     }
 
-    // Fetch test items for this record
+    // Fetch test items for this record using display station name
     const testItems = await fetchRecordTestItems(
         selectedSite.value,
         selectedProject.value,
@@ -1060,9 +1061,10 @@ async function downloadIndexedDbSelectedRecordsCsv(): Promise<void> {
             if (!indexedDbSelectedKeys.value.includes(key)) continue
 
             // Get station from indexedDbStationList if not available
-            const station = item.Station || indexedDbStationList.value[indexedDbActiveStationTab.value - 1] || ''
+            // Use TSP (display station name) for the API call
+            const station = item.TSP || item.Station || indexedDbStationList.value[indexedDbActiveStationTab.value - 1] || ''
 
-            // Fetch test items
+            // Fetch test items using display station name
             const testItems = await fetchRecordTestItems(
                 selectedSite.value,
                 selectedProject.value,
@@ -1233,10 +1235,11 @@ async function loadTestItemsForRecord(record: CsvTestItemData | CompactCsvTestIt
     loadingTestItemsForRecord.value.add(key)
 
     try {
+        // Use TSP (display station name) for the API call, not station
         const testItems = await fetchRecordTestItems(
             selectedSite.value,
             selectedProject.value,
-            record.station,
+            record.TSP || record.station,
             record.ISN,
             record['Test Start Time'],
             record.DeviceId
@@ -2104,10 +2107,11 @@ async function handleLoadTestItemsForTable(record: CsvTestItemData | CompactCsvT
     loadingTestItemsForRecord.value.add(key)
 
     try {
+        // Use TSP (display station name) for the API call
         const testItems = await fetchRecordTestItems(
             selectedSite.value,
             selectedProject.value,
-            record.station,
+            record.TSP || record.station,
             record.ISN,
             record['Test Start Time'],
             record.DeviceId
