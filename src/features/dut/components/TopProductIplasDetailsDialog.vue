@@ -119,7 +119,8 @@
                             {{ record.errorCode }}
                             <v-tooltip activator="parent" location="top">Click to copy Error Code</v-tooltip>
                         </v-chip>
-                        <template v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)">
+                        <template
+                            v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)">
                             <v-chip size="small" color="error" variant="outlined" class="cursor-pointer" label
                                 prepend-icon="mdi-alert-octagon" @click="copyToClipboard(record.errorName)">
                                 <span class="text-medium-emphasis mr-1">Error:</span>
@@ -178,7 +179,8 @@
             </v-card-text>
 
             <!-- Data Table Container - UPDATED: Added overflow-y: auto for scrolling in non-fullscreen mode -->
-            <div class="flex-grow-1 position-relative" :style="{ minHeight: 0, overflow: isFullscreen ? 'hidden' : 'auto' }">
+            <div class="flex-grow-1 position-relative"
+                :style="{ minHeight: 0, overflow: isFullscreen ? 'hidden' : 'auto' }">
                 <!-- Loading Overlay when fetching test items -->
                 <v-overlay v-model="props.loadingTestItems" contained class="align-center justify-center" persistent>
                     <div class="text-center">
@@ -186,7 +188,7 @@
                         <div class="text-body-1 mt-4">Loading test items...</div>
                     </div>
                 </v-overlay>
-                
+
                 <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="50"
                     density="comfortable" fixed-header fixed-footer style="height: 100%;"
                     class="elevation-1 v-table--striped" :class="{ 'clickable-rows': hasScores }"
@@ -260,18 +262,6 @@
                 <v-list density="compact" class="rounded border">
                     <v-list-item>
                         <template #prepend>
-                            <v-icon color="primary">mdi-speedometer</v-icon>
-                        </template>
-                        <v-list-item-title>Measured Value</v-list-item-title>
-                        <template #append>
-                            <span class="font-weight-bold">{{ selectedTestItem.VALUE }}</span>
-                        </template>
-                    </v-list-item>
-
-                    <v-divider />
-
-                    <v-list-item>
-                        <template #prepend>
                             <v-icon color="error">mdi-arrow-up-bold</v-icon>
                         </template>
                         <v-list-item-title>Upper Criteria Limit (UCL)</v-list-item-title>
@@ -294,7 +284,18 @@
 
                     <v-divider />
 
-                    <!-- UPDATED: Target with dynamic label based on scoring type -->
+                    <v-list-item>
+                        <template #prepend>
+                            <v-icon color="primary">mdi-speedometer</v-icon>
+                        </template>
+                        <v-list-item-title>Measured Value</v-list-item-title>
+                        <template #append>
+                            <span class="font-weight-bold">{{ selectedTestItem.VALUE }}</span>
+                        </template>
+                    </v-list-item>
+
+                    <v-divider />
+
                     <v-list-item>
                         <template #prepend>
                             <v-icon color="success">mdi-target</v-icon>
@@ -327,7 +328,6 @@
 
                     <v-divider />
 
-                    <!-- UPDATED: Score Weight displays actual weight from scoring data -->
                     <v-list-item>
                         <template #prepend>
                             <v-icon color="blue-grey">mdi-weight</v-icon>
@@ -362,7 +362,8 @@
                         <template #append>
                             <v-chip size="small" :color="getScoreColor(selectedTestItem.score ?? 0)" variant="flat"
                                 class="font-weight-bold">
-                                {{ selectedTestItem.score !== undefined ? ((selectedTestItem.score ?? 0) * 10).toFixed(2) : '-' }} / 10
+                                {{ selectedTestItem.score !== undefined ? ((selectedTestItem.score ?? 0) *
+                                    10).toFixed(2) : '-' }} / 10
                             </v-chip>
                         </template>
                     </v-list-item>
@@ -378,13 +379,14 @@
                         <v-expansion-panel-text>
                             <div class="text-body-2">
                                 <p class="mb-3">{{ getScoringExplanation(selectedTestItem.scoringType) }}</p>
-                                
+
                                 <!-- Formula Display -->
                                 <v-alert density="compact" variant="tonal" color="info" class="mb-3">
                                     <div class="text-subtitle-2 font-weight-bold mb-1">Formula:</div>
-                                    <code class="text-body-2">{{ getScoringFormula(selectedTestItem.scoringType) }}</code>
+                                    <code
+                                        class="text-body-2">{{ getScoringFormula(selectedTestItem.scoringType) }}</code>
                                 </v-alert>
-                                
+
                                 <!-- Score Range Explanation -->
                                 <div class="text-caption text-medium-emphasis">
                                     <v-icon size="x-small" class="mr-1">mdi-information-outline</v-icon>
@@ -701,7 +703,7 @@ function getScoringExplanation(scoringType?: ScoringType): string {
 // UPDATED: Get target label based on scoring type and policy
 function getTargetLabel(item: NormalizedTestItem): string {
     const scoringType = item.scoringType
-    
+
     // For asymmetrical scoring, use policy
     if (scoringType === 'asymmetrical' && item.policy) {
         switch (item.policy) {
@@ -713,7 +715,7 @@ function getTargetLabel(item: NormalizedTestItem): string {
                 return 'Centered'
         }
     }
-    
+
     // For other scoring types
     switch (scoringType) {
         case 'per_mask':
@@ -738,11 +740,11 @@ function computeTarget(item: NormalizedTestItem): string {
     if (item.target !== undefined && item.target !== null) {
         return item.target.toFixed(2)
     }
-    
+
     // Fallback: compute target locally based on scoring type
     const ucl = parseFloat(item.UCL)
     const lcl = parseFloat(item.LCL)
-    
+
     // For asymmetrical scoring with policy, compute target based on policy
     if (item.scoringType === 'asymmetrical' && item.policy) {
         switch (item.policy) {
@@ -757,33 +759,33 @@ function computeTarget(item: NormalizedTestItem): string {
                 break
         }
     }
-    
+
     // For per_mask, target is 0
     if (item.scoringType === 'per_mask') {
         return '0.00'
     }
-    
+
     // For evm, target is -35 dB
     if (item.scoringType === 'evm') {
         return '-35.00'
     }
-    
+
     // For throughput, target is UCL
     if (item.scoringType === 'throughput') {
         return isNaN(ucl) ? '-' : ucl.toFixed(2)
     }
-    
+
     // For symmetrical scoring, target = (UCL + LCL) / 2
     if (!isNaN(ucl) && !isNaN(lcl)) {
         const target = (ucl + lcl) / 2
         return target.toFixed(2)
     }
-    
+
     // For UCL only, target is 0 (assumed lower is better)
     if (!isNaN(ucl) && isNaN(lcl)) {
         return '0.00'
     }
-    
+
     return '-'
 }
 
