@@ -974,17 +974,16 @@ function getIndexedDbRecordKey(record: typeof indexedDbItems.value[0]): string {
 async function handleIndexedDbRowClick(_event: Event, { item }: { item: typeof indexedDbItems.value[0] }): Promise<void> {
     if (!selectedSite.value || !selectedProject.value) return
 
-    // Get station from record - look up display_station_name from stations array
-    // record.Station contains station_name, but V1 API expects display_station_name
-    const stationInfo = stations.value.find((s: Station) => s.station_name === item.Station)
-    const station = stationInfo?.display_station_name || item.TSP || item.Station || (indexedDbStationList.value[indexedDbActiveStationTab.value - 1] ?? '')
+    // Get station from record - use Station field for API calls (not TSP)
+    // Per iPLAS API docs: "station" is used to make requests, "TSP" is display only
+    const station = item.Station || (indexedDbStationList.value[indexedDbActiveStationTab.value - 1] ?? '')
 
     if (!station) {
         console.error('Cannot fetch record test items: station is undefined')
         return
     }
 
-    // Fetch test items for this record using display station name
+    // Fetch test items for this record
     const testItems = await fetchRecordTestItems(
         selectedSite.value,
         selectedProject.value,
@@ -1062,11 +1061,10 @@ async function downloadIndexedDbSelectedRecordsCsv(): Promise<void> {
             if (!indexedDbSelectedKeys.value.includes(key)) continue
 
             // Get station from indexedDbStationList if not available
-            // Look up display_station_name from stations array - V1 API expects display_station_name
-            const stationInfo = stations.value.find((s: Station) => s.station_name === item.Station)
-            const station = stationInfo?.display_station_name || item.TSP || item.Station || indexedDbStationList.value[indexedDbActiveStationTab.value - 1] || ''
+            // Use Station field for API calls (not TSP) per iPLAS API docs
+            const station = item.Station || indexedDbStationList.value[indexedDbActiveStationTab.value - 1] || ''
 
-            // Fetch test items using display station name
+            // Fetch test items
             const testItems = await fetchRecordTestItems(
                 selectedSite.value,
                 selectedProject.value,
@@ -1237,13 +1235,11 @@ async function loadTestItemsForRecord(record: CsvTestItemData | CompactCsvTestIt
     loadingTestItemsForRecord.value.add(key)
 
     try {
-        // Look up display_station_name from stations array - V1 API expects display_station_name
-        const stationInfo = stations.value.find((s: Station) => s.station_name === record.station)
-        const station = stationInfo?.display_station_name || record.TSP || record.station
+        // Use station field for API calls (not TSP) per iPLAS API docs
         const testItems = await fetchRecordTestItems(
             selectedSite.value,
             selectedProject.value,
-            station,
+            record.station,
             record.ISN,
             record['Test Start Time'],
             record.DeviceId
@@ -1576,14 +1572,11 @@ async function openFullscreen(record: CsvTestItemData | CompactCsvTestItemData):
             try {
                 // Fetch test items from server
                 if (selectedSite.value && selectedProject.value) {
-                    // Look up display_station_name from stations array using station_name
-                    // record.station contains station_name, but V1 API expects display_station_name
-                    const stationInfo = stations.value.find((s: Station) => s.station_name === record.station)
-                    const station = stationInfo?.display_station_name || record.TSP || record.station
+                    // Use station field for API calls (not TSP) per iPLAS API docs
                     testItems = await fetchRecordTestItems(
                         selectedSite.value,
                         selectedProject.value,
-                        station,
+                        record.station,
                         record.ISN || record.DeviceId, // ISN as identifier
                         record['Test Start Time'],
                         record.DeviceId // deviceId as last parameter
@@ -2113,13 +2106,11 @@ async function handleLoadTestItemsForTable(record: CsvTestItemData | CompactCsvT
     loadingTestItemsForRecord.value.add(key)
 
     try {
-        // Look up display_station_name from stations array - V1 API expects display_station_name
-        const stationInfo = stations.value.find((s: Station) => s.station_name === record.station)
-        const station = stationInfo?.display_station_name || record.TSP || record.station
+        // Use station field for API calls (not TSP) per iPLAS API docs
         const testItems = await fetchRecordTestItems(
             selectedSite.value,
             selectedProject.value,
-            station,
+            record.station,
             record.ISN,
             record['Test Start Time'],
             record.DeviceId
