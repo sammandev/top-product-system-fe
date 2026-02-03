@@ -174,7 +174,7 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     symmetrical: {
         type: 'symmetrical',
         label: 'Symmetrical (Target Centered)',
-        description: 'Target = midpoint between UCL and LCL. Score is 10 at target, 1 at limits, 0 outside.',
+        description: 'Target is midpoint between UCL and LCL.',
         useCase: 'Most test items with UCL and LCL limits',
         icon: 'mdi-arrow-left-right',
         color: 'primary',
@@ -213,8 +213,8 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     },
     per_mask: {
         type: 'per_mask',
-        label: 'PER/MASK (Lower is Better)',
-        description: 'UCL-only scoring. Score is 10 at 0 (best), 1 at UCL, 0 above UCL.',
+        label: 'Lower is Better (e.g., PER/MASK)',
+        description: 'UCL-only scoring. Near zero is ideal.',
         useCase: 'Packet Error Rate (PER) and MASK test items where 0 is ideal',
         icon: 'mdi-target',
         color: 'error',
@@ -227,8 +227,8 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     },
     evm: {
         type: 'evm',
-        label: 'EVM (Gentle Decay)',
-        description: 'UCL-only scoring with gentle decay. Score is 10 at -35 dB (best), 1 at UCL, 0 above UCL.',
+        label: 'EVM (Exponent Decay)',
+        description: 'EVM scoring with gentle decay.',
         useCase: 'Error Vector Magnitude (EVM) test items where lower dB values are better',
         icon: 'mdi-signal-cellular-3',
         color: 'info',
