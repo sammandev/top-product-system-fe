@@ -30,7 +30,7 @@ export default defineConfig({
       'vuetify/components/VChip',
       'vuetify/components/VDataTable',
       'vuetify/components/VOverlay',
-      'vuetify/components/VTimeLine',
+      'vuetify/components/VTimeline',
       'vuetify/components/VForm',
       'vuetify/components/VTextField',
       'vuetify/components/VSelect',

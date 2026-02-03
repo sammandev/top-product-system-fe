@@ -208,19 +208,6 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  async function fetchUser() {
-    if (!accessToken.value) return
-
-    try {
-      user.value = await authApi.me()
-    } catch (err: any) {
-      console.error('Failed to fetch user:', err)
-      if (err.response?.status === 401) {
-        logout()
-      }
-    }
-  }
-
   function logout() {
     accessToken.value = null
     refreshTokenValue.value = null
@@ -239,6 +226,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   // Track initialization state to prevent duplicate fetches
   let isInitialized = false
+  let fetchUserPromise: Promise<void> | null = null
 
   // Initialize store - only runs once per app lifecycle
   async function initialize() {
@@ -248,6 +236,39 @@ export const useAuthStore = defineStore('auth', () => {
     if (accessToken.value && !user.value) {
       await fetchUser()
     }
+  }
+
+  /**
+   * Fetch user data with deduplication
+   * Ensures only one fetch is in flight at a time
+   */
+  async function fetchUser() {
+    if (!accessToken.value) return
+
+    // If a fetch is already in progress, return the existing promise
+    if (fetchUserPromise) {
+      return fetchUserPromise
+    }
+
+    // If user is already loaded, skip fetch
+    if (user.value) {
+      return
+    }
+
+    fetchUserPromise = (async () => {
+      try {
+        user.value = await authApi.me()
+      } catch (err: any) {
+        console.error('Failed to fetch user:', err)
+        if (err.response?.status === 401) {
+          logout()
+        }
+      } finally {
+        fetchUserPromise = null
+      }
+    })()
+
+    return fetchUserPromise
   }
 
   return {

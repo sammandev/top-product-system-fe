@@ -8,9 +8,6 @@
 import type { NavigationGuardNext, RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '@/features/auth/store'
 
-// Track if initial user fetch has been done this session
-let initialFetchDone = false
-
 /**
  * Check if route requires authentication and handle accordingly
  * 
@@ -20,7 +17,7 @@ let initialFetchDone = false
  * - If route is login and user is authenticated → redirect to dashboard
  * - Otherwise → allow navigation
  * 
- * Performance: Only fetches user data once per session (on first protected route)
+ * Performance: Deferred to auth store's fetchUser() which handles deduplication
  */
 export async function authGuard(
   to: RouteLocationNormalized,
@@ -29,10 +26,9 @@ export async function authGuard(
 ): Promise<void> {
   const authStore = useAuthStore()
   
-  // Only fetch user data once per session when we have a token but no user data
-  // This prevents redundant API calls on every navigation
-  if (authStore.accessToken && !authStore.user && !initialFetchDone) {
-    initialFetchDone = true
+  // Ensure user data is loaded if we have a token
+  // The store handles deduplication - if a fetch is in progress, it returns the same promise
+  if (authStore.accessToken && !authStore.user) {
     await authStore.fetchUser()
   }
 
@@ -41,8 +37,6 @@ export async function authGuard(
 
   // Check if route requires authentication
   if (requiresAuth && !authStore.isAuthenticated) {
-    // Reset flag on logout so next login will fetch user
-    initialFetchDone = false
     // User not authenticated, redirect to login with return path
     next({
       name: 'Login',
