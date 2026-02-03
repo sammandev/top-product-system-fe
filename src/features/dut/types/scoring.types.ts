@@ -221,7 +221,7 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
         formulaLatex: String.raw`score = 1 + 9 \cdot \frac{UCL - x}{UCL}`,
         variables: {
             'x': 'Measured value',
-            'UCL': 'Upper Control Limit (failure threshold)'
+            'UCL': 'Upper Criteria Limit (failure threshold)'
         },
         parameters: []  // No configurable parameters - best is always 0
     },
@@ -236,7 +236,7 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
         variables: {
             'x': 'Measured EVM value (dB)',
             'ref': 'Reference best (-35 dB)',
-            'UCL': 'Upper Control Limit (failure threshold)',
+            'UCL': 'Upper Criteria Limit (failure threshold)',
             '0.25': 'Exponent for gentle decay'
         },
         parameters: []  // Parameters are fixed: ref=-35, exponent=0.25

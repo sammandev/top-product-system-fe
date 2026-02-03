@@ -28,22 +28,18 @@
                     </v-col>
                 </v-row>
 
-                <!-- Date Range Preset -->
-                <v-row dense>
-                    <v-col cols="12" class="mt-4">
+                <!-- UPDATED: Date Range Preset and Date Range fields in same row -->
+                <v-row dense class="mt-4">
+                    <v-col cols="12" md="4">
                         <v-select v-model="dateRangePreset" :items="dateRangePresets" item-value="value"
                             label="Date Range Preset" variant="outlined" density="comfortable"
                             prepend-inner-icon="mdi-calendar-clock" @update:model-value="applyDateRangePreset" />
                     </v-col>
-                </v-row>
-
-                <!-- Date Range -->
-                <v-row dense>
-                    <v-col cols="12" md="6">
+                    <v-col cols="12" md="4">
                         <v-text-field v-model="startTime" label="Start Time" type="datetime-local" variant="outlined"
                             density="comfortable" prepend-inner-icon="mdi-calendar-start" />
                     </v-col>
-                    <v-col cols="12" md="6">
+                    <v-col cols="12" md="4">
                         <v-text-field v-model="endTime" label="End Time" type="datetime-local" variant="outlined"
                             density="comfortable" prepend-inner-icon="mdi-calendar-end" />
                     </v-col>
@@ -205,6 +201,10 @@ const currentStationTestItems = ref<TestItemInfo[]>([])
 const loadingCurrentStationTestItems = ref(false)
 const testItemsError = ref<string | null>(null)
 
+// UPDATED: Cache for test item names to avoid repeated API calls
+// Key format: `${site}_${project}_${station}_${deviceId}`
+const testItemNamesCache = ref<Map<string, TestItemInfo[]>>(new Map())
+
 // For download
 const selectedRecordKeys = ref<Set<string>>(new Set())
 
@@ -309,7 +309,9 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
             // Include scoring data if available
             score: itemScore?.score,
             scoringType: itemScore?.scoringType,
-            deviation: itemScore?.deviation
+            deviation: itemScore?.deviation,
+            // UPDATED: Include policy for asymmetrical scoring display (convert null to undefined)
+            policy: itemScore?.policy ?? undefined
         }
     })
 
@@ -567,13 +569,24 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
         return
     }
 
+    const deviceId = currentStationDeviceIds.value[0] ?? 'ALL'
+
+    // UPDATED: Generate cache key and check cache first
+    const cacheKey = `${selectedSite.value}_${selectedProject.value}_${station.display_station_name}_${deviceId}`
+    const cachedData = testItemNamesCache.value.get(cacheKey)
+
+    if (cachedData) {
+        // Use cached data
+        currentStationTestItems.value = cachedData
+        return
+    }
+
     loadingCurrentStationTestItems.value = true
     testItemsError.value = null
     currentStationTestItems.value = []
 
     try {
         // Use the lightweight backend proxy endpoint for test item names
-        const deviceId = currentStationDeviceIds.value[0] ?? 'ALL'
 
         // UPDATED: Pass excludeBin=true to filter out BIN test items at backend level
         const testItems = await fetchTestItemNames(
@@ -588,13 +601,18 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
         )
 
         // Convert to TestItemInfo format expected by StationConfigDialog
-        currentStationTestItems.value = testItems.map(item => ({
+        const testItemInfos: TestItemInfo[] = testItems.map(item => ({
             name: item.name,
             isValue: item.is_value,
             isBin: item.is_bin,
             hasUcl: item.has_ucl,
             hasLcl: item.has_lcl
         }))
+
+        currentStationTestItems.value = testItemInfos
+
+        // UPDATED: Store in cache for future use
+        testItemNamesCache.value.set(cacheKey, testItemInfos)
     } catch (err: any) {
         testItemsError.value = err.message || 'Failed to load test items'
     } finally {
@@ -604,6 +622,12 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
 
 async function refreshCurrentStationTestItems(): Promise<void> {
     if (selectedStationForConfig.value) {
+        // UPDATED: Invalidate cache entry for this station to force fresh data
+        const deviceId = currentStationDeviceIds.value[0] ?? 'ALL'
+        if (selectedSite.value && selectedProject.value) {
+            const cacheKey = `${selectedSite.value}_${selectedProject.value}_${selectedStationForConfig.value.display_station_name}_${deviceId}`
+            testItemNamesCache.value.delete(cacheKey)
+        }
         await loadTestItemsForStation(selectedStationForConfig.value)
     }
 }
@@ -662,6 +686,8 @@ function handleClearAll(): void {
     stationConfigs.value = {}
     clearTestItemData()
     selectedRecordKeys.value.clear()
+    // UPDATED: Clear test item names cache
+    testItemNamesCache.value.clear()
 }
 
 async function fetchTestItems(): Promise<void> {

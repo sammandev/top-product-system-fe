@@ -476,8 +476,8 @@ export interface TestItemInfo {
     name: string
     isValue: boolean // true if it has UCL/LCL limits OR has numeric VALUE (not pure PASS/FAIL)
     isBin: boolean   // true if it's a binary test item (PASS/FAIL/1/0/-999 without limits)
-    hasUcl: boolean  // true if it has UCL (upper control limit)
-    hasLcl: boolean  // true if it has LCL (lower control limit)
+    hasUcl: boolean  // true if it has UCL (upper criteria limit)
+    hasLcl: boolean  // true if it has LCL (lower criteria limit)
 }
 
 // Available scoring types for selection (from UI_SCORING_TYPES)
@@ -662,7 +662,7 @@ function selectDisplayedAndConfigureScore(): void {
 }
 
 function selectValueTestItems(): void {
-    // CRITERIA: test items with UCL OR LCL (control limits define criteria, regardless of value type)
+    // CRITERIA: test items with UCL OR LCL (criteria limits define criteria, regardless of value type)
     localConfig.value.selectedTestItems = props.availableTestItems
         .filter(item => item.isValue && (item.hasUcl || item.hasLcl))
         .map(item => item.name)
@@ -680,7 +680,7 @@ function clearTestItemSelection(): void {
 }
 
 function getTestItemTypeLabel(item: TestItemInfo): string {
-    // CRITERIA: has UCL or LCL (control limits define criteria)
+    // CRITERIA: has UCL or LCL (criteria limits define criteria)
     if (item.isValue && (item.hasUcl || item.hasLcl)) return 'CRITERIA'
     // NON-CRITERIA: has numeric VALUE but no limits
     if (item.isValue && !item.hasUcl && !item.hasLcl) return 'NON-CRITERIA'

@@ -266,9 +266,9 @@ const rankingHeaders = computed(() => {
         { title: 'Actions', key: 'actions', sortable: false, width: '80px' }
     ]
     
-    // UPDATED: Only show rank column when scores are calculated
+    // UPDATED: Show rank column when scores are calculated, now sortable
     if (hasScores.value) {
-        headers.unshift({ title: '#', key: 'rank', sortable: false, width: '60px' })
+        headers.unshift({ title: '#', key: 'rank', sortable: true, width: '60px' })
     }
     
     return headers

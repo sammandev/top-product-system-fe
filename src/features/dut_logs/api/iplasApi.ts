@@ -89,8 +89,8 @@ export interface TestItem {
   NAME: string
   STATUS: string  // Can be PASS, FAIL, or other values from iPLAS
   VALUE: string // Float as string or "PASS"/"FAIL" for bin data
-  UCL: string // Upper Control Limit
-  LCL: string // Lower Control Limit
+  UCL: string // Upper Criteria Limit
+  LCL: string // Lower Criteria Limit
   CYCLE?: string // Cycle time (empty for value data, optional)
 }
 

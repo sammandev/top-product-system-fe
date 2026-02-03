@@ -169,6 +169,9 @@ export interface NormalizedTestItem {
     score?: number
     scoringType?: ScoringType
     deviation?: number
+    // UPDATED: Added policy and target for asymmetrical scoring display
+    policy?: 'symmetrical' | 'higher' | 'lower'
+    target?: number
 }
 
 // Normalized record interface that works for both Station Search and ISN Search

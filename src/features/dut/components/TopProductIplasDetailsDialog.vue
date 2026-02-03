@@ -137,18 +137,19 @@
             <!-- Search and Filter Controls -->
             <v-card-text class="pb-2 pt-2 flex-shrink-0">
                 <v-row dense>
-                    <v-col cols="12" md="5">
+                    <v-col cols="12" md="4">
+                        <!-- UPDATED: Changed hint to AND logic -->
                         <v-combobox v-model="searchTerms" label="Search Test Items (Regex)"
                             prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details clearable
-                            multiple chips closable-chips placeholder="Type and press Enter (OR logic)..."
-                            hint="Multiple terms use OR logic">
+                            multiple chips closable-chips placeholder="Type and press Enter (AND logic)..."
+                            hint="Multiple terms use AND logic">
                             <template #chip="{ props, item }">
                                 <v-chip v-bind="props" :text="String(item.value || item)" size="small"
                                     color="primary" />
                             </template>
                         </v-combobox>
                     </v-col>
-                    <v-col cols="12" md="4">
+                    <v-col cols="12" md="3">
                         <v-select v-model="testItemFilter" :items="testItemFilterOptions" item-title="title"
                             item-value="value" label="Data Type" variant="outlined" density="compact" hide-details
                             multiple chips closable-chips>
@@ -157,7 +158,23 @@
                             </template>
                         </v-select>
                     </v-col>
-                    <v-col cols="12" md="3">
+                    <!-- UPDATED: Score Filter -->
+                    <v-col cols="12" md="3" v-if="hasScores">
+                        <v-row dense class="align-center">
+                            <v-col cols="6">
+                                <v-select v-model="scoreFilterType" :items="scoreFilterOptions" item-title="title"
+                                    item-value="value" label="Score Filter" variant="outlined" density="compact"
+                                    hide-details clearable placeholder="Filter...">
+                                </v-select>
+                            </v-col>
+                            <v-col cols="6">
+                                <v-text-field v-model.number="scoreFilterValue" type="number" label="Value (0-10)"
+                                    variant="outlined" density="compact" hide-details :disabled="!scoreFilterType"
+                                    :min="0" :max="10" step="0.1" placeholder="0.00" />
+                            </v-col>
+                        </v-row>
+                    </v-col>
+                    <v-col cols="12" :md="hasScores ? 2 : 5">
                         <div class="d-flex align-center justify-end h-100">
                             <span class="text-caption text-medium-emphasis">
                                 Showing {{ filteredTestItems.length }} of {{ record.testItems?.length || 0 }} items
@@ -167,8 +184,8 @@
                 </v-row>
             </v-card-text>
 
-            <!-- Data Table Container -->
-            <div class="flex-grow-1 position-relative" style="min-height: 0; overflow: hidden;">
+            <!-- Data Table Container - UPDATED: Added overflow-y: auto for scrolling in non-fullscreen mode -->
+            <div class="flex-grow-1 position-relative" :style="{ minHeight: 0, overflow: isFullscreen ? 'hidden' : 'auto' }">
                 <!-- Loading Overlay when fetching test items -->
                 <v-overlay v-model="props.loadingTestItems" contained class="align-center justify-center" persistent>
                     <div class="text-center">
@@ -250,7 +267,7 @@
                 <v-list density="compact" class="rounded border">
                     <v-list-item>
                         <template #prepend>
-                            <v-icon color="primary">mdi-target</v-icon>
+                            <v-icon color="primary">mdi-speedometer</v-icon>
                         </template>
                         <v-list-item-title>Measured Value</v-list-item-title>
                         <template #append>
@@ -264,7 +281,7 @@
                         <template #prepend>
                             <v-icon color="error">mdi-arrow-up-bold</v-icon>
                         </template>
-                        <v-list-item-title>Upper Control Limit (UCL)</v-list-item-title>
+                        <v-list-item-title>Upper Criteria Limit (UCL)</v-list-item-title>
                         <template #append>
                             <span class="font-weight-medium">{{ selectedTestItem.UCL || '-' }}</span>
                         </template>
@@ -276,9 +293,30 @@
                         <template #prepend>
                             <v-icon color="warning">mdi-arrow-down-bold</v-icon>
                         </template>
-                        <v-list-item-title>Lower Control Limit (LCL)</v-list-item-title>
+                        <v-list-item-title>Lower Criteria Limit (LCL)</v-list-item-title>
                         <template #append>
                             <span class="font-weight-medium">{{ selectedTestItem.LCL || '-' }}</span>
+                        </template>
+                    </v-list-item>
+
+                    <v-divider />
+
+                    <!-- UPDATED: Target (Centered Symmetrical) or Asymmetrical with Policy -->
+                    <v-list-item>
+                        <template #prepend>
+                            <v-icon color="success">mdi-target</v-icon>
+                        </template>
+                        <v-list-item-title>
+                            Target
+                            <span v-if="selectedTestItem.scoringType === 'asymmetrical' && selectedTestItem.policy" class="text-caption text-medium-emphasis">
+                                ({{ formatPolicy(selectedTestItem.policy) }})
+                            </span>
+                            <span v-else class="text-caption text-medium-emphasis">
+                                (Centered)
+                            </span>
+                        </v-list-item-title>
+                        <template #append>
+                            <span class="font-weight-bold text-success">{{ computeTarget(selectedTestItem) }}</span>
                         </template>
                     </v-list-item>
 
@@ -293,6 +331,21 @@
                             <v-chip size="small" :color="getScoringTypeColor(selectedTestItem.scoringType)"
                                 variant="tonal">
                                 {{ formatScoringType(selectedTestItem.scoringType) }}
+                            </v-chip>
+                        </template>
+                    </v-list-item>
+
+                    <v-divider />
+
+                    <!-- UPDATED: Added Score Weight -->
+                    <v-list-item>
+                        <template #prepend>
+                            <v-icon color="blue-grey">mdi-weight</v-icon>
+                        </template>
+                        <v-list-item-title>Score Weight</v-list-item-title>
+                        <template #append>
+                            <v-chip size="small" color="blue-grey" variant="tonal">
+                                1.0x
                             </v-chip>
                         </template>
                     </v-list-item>
@@ -333,8 +386,25 @@
                             How is this score calculated?
                         </v-expansion-panel-title>
                         <v-expansion-panel-text>
-                            <div class="text-body-2 text-medium-emphasis">
-                                {{ getScoringExplanation(selectedTestItem.scoringType) }}
+                            <div class="text-body-2">
+                                <p class="mb-3">{{ getScoringExplanation(selectedTestItem.scoringType) }}</p>
+                                
+                                <!-- Formula Display -->
+                                <v-alert density="compact" variant="tonal" color="info" class="mb-3">
+                                    <div class="text-subtitle-2 font-weight-bold mb-1">Formula:</div>
+                                    <code class="text-body-2">{{ getScoringFormula(selectedTestItem.scoringType) }}</code>
+                                </v-alert>
+                                
+                                <!-- Score Range Explanation -->
+                                <div class="text-caption text-medium-emphasis">
+                                    <v-icon size="x-small" class="mr-1">mdi-information-outline</v-icon>
+                                    <strong>Score Range:</strong> 0.00 - 10.00
+                                    <ul class="mt-1 ml-4">
+                                        <li><strong>10.00</strong> = At target (best possible)</li>
+                                        <li><strong>1.00</strong> = At UCL/LCL boundary (limit score)</li>
+                                        <li><strong>0.00</strong> = Outside limits (failed)</li>
+                                    </ul>
+                                </div>
                             </div>
                         </v-expansion-panel-text>
                     </v-expansion-panel>
@@ -385,9 +455,14 @@ const isOpen = computed({
 const isFullscreen = ref(false)
 
 // Filter controls
-const testItemFilter = ref<('all' | 'value' | 'non-value' | 'bin')[]>(['value'])
+// UPDATED: Default to 'all' (Show All) instead of 'value'
+const testItemFilter = ref<('all' | 'value' | 'non-value' | 'bin')[]>(['all'])
 const searchTerms = ref<string[]>([])
 const showCopySuccess = ref(false)
+
+// UPDATED: Score filter state
+const scoreFilterType = ref<'gt' | 'gte' | 'lt' | 'lte' | 'eq' | null>(null)
+const scoreFilterValue = ref<number | null>(null)
 
 // Score breakdown dialog
 const showBreakdownDialog = ref(false)
@@ -399,6 +474,15 @@ const testItemFilterOptions = [
     { title: 'Show All', value: 'all' },
     { title: 'Non-Criteria', value: 'non-value' },
     { title: 'Bin Data', value: 'bin' }
+]
+
+// UPDATED: Score filter options
+const scoreFilterOptions = [
+    { title: '> Greater than', value: 'gt' },
+    { title: '≥ Greater or equal', value: 'gte' },
+    { title: '< Less than', value: 'lt' },
+    { title: '≤ Less or equal', value: 'lte' },
+    { title: '= Equals', value: 'eq' }
 ]
 
 // Computed: check if scores are available
@@ -543,13 +627,14 @@ const filteredTestItems = computed(() => {
         })
     }
 
-    // Apply multi-term regex search (OR logic)
+    // UPDATED: Apply multi-term regex search (AND logic - all terms must match)
     if (searchTerms.value.length > 0) {
         items = items.filter(item => {
             const searchableText = `${item.NAME || ''} ${item.STATUS || ''} ${item.VALUE || ''}`.toLowerCase()
-            return searchTerms.value.some(term => {
+            // AND logic: every term must match
+            return searchTerms.value.every(term => {
                 const trimmedTerm = term.trim().toLowerCase()
-                if (!trimmedTerm) return false
+                if (!trimmedTerm) return true  // Empty terms don't affect filtering
                 try {
                     const regex = new RegExp(trimmedTerm, 'i')
                     return regex.test(searchableText)
@@ -557,6 +642,23 @@ const filteredTestItems = computed(() => {
                     return searchableText.includes(trimmedTerm)
                 }
             })
+        })
+    }
+
+    // UPDATED: Apply score filter if active
+    if (scoreFilterType.value && scoreFilterValue.value !== null && hasScores.value) {
+        items = items.filter(item => {
+            if (item.score === undefined || item.score === null) return true // Keep items without scores
+            const score = item.score * 10 // Convert to 0-10 scale for comparison
+            const filterValue = scoreFilterValue.value!
+            switch (scoreFilterType.value) {
+                case 'gt': return score > filterValue
+                case 'gte': return score >= filterValue
+                case 'lt': return score < filterValue
+                case 'lte': return score <= filterValue
+                case 'eq': return Math.abs(score - filterValue) < 0.01
+                default: return true
+            }
         })
     }
 
@@ -595,15 +697,73 @@ function formatScoringType(scoringType?: ScoringType): string {
 
 function getScoringExplanation(scoringType?: ScoringType): string {
     const explanations: Record<ScoringType, string> = {
-        'symmetrical': 'Linear scoring where the target is the midpoint between UCL and LCL. Score decreases linearly as the value moves away from target toward either limit.',
+        'symmetrical': 'Linear scoring where the target is the midpoint between UCL and LCL. Score decreases linearly as the measured value moves away from the target toward either limit. At the target, score is 10.0. At UCL or LCL boundary, score is 1.0.',
         'symmetrical_nl': 'Non-linear (Gaussian) scoring centered on the midpoint. Score follows a bell curve, with faster degradation near the limits.',
-        'evm': 'EVM-style scoring where lower (more negative) values are better. Score is 1.0 at the limit and decreases as values approach 0.',
-        'throughput': 'Throughput scoring where higher values are better. Score is 1.0 at or above UCL, and decreases toward LCL.',
-        'asymmetrical': 'Scoring with a user-defined target that may not be centered. Score degrades based on deviation from the specified target.',
-        'per_mask': 'PER/MASK scoring where 0 is the ideal value. Score is 1.0 at 0 and decreases as deviation increases.',
-        'binary': 'Simple PASS/FAIL scoring. Score is 1.0 for PASS and 0.0 for FAIL.'
+        'evm': 'EVM-style scoring optimized for Error Vector Magnitude measurements. Lower (more negative) values in dB are better. Uses a gentle decay exponent (0.25) from reference point of -35 dB.',
+        'throughput': 'Throughput scoring where higher values are better. Score is 10.0 at or above UCL, and decreases toward LCL.',
+        'asymmetrical': 'Scoring with a user-defined target that may not be centered between limits. Score degrades based on deviation from the specified target according to the selected policy.',
+        'per_mask': 'Lower-is-better scoring ideal for PER/MASK measurements. Zero is the ideal value with score 10.0, score decreases linearly as the value approaches UCL (failure threshold).',
+        'binary': 'Simple PASS/FAIL scoring. PASS status = 10.0, FAIL status = 0.0. No intermediate values.'
     }
     return explanations[scoringType ?? 'binary'] ?? 'Unknown scoring algorithm.'
+}
+
+// UPDATED: Added helper to compute target for score breakdown display
+function computeTarget(item: NormalizedTestItem): string {
+    const ucl = parseFloat(item.UCL)
+    const lcl = parseFloat(item.LCL)
+    
+    // UPDATED: For asymmetrical scoring with policy, compute target based on policy
+    if (item.scoringType === 'asymmetrical' && item.policy) {
+        switch (item.policy) {
+            case 'higher':
+                // Target is UCL for "higher is better"
+                return isNaN(ucl) ? '-' : ucl.toFixed(2)
+            case 'lower':
+                // Target is LCL for "lower is better"
+                return isNaN(lcl) ? '-' : lcl.toFixed(2)
+            default:
+                // For 'symmetrical' policy or unknown, use centered target
+                break
+        }
+    }
+    
+    // For symmetrical scoring, target = (UCL + LCL) / 2
+    if (!isNaN(ucl) && !isNaN(lcl)) {
+        const target = (ucl + lcl) / 2
+        return target.toFixed(2)
+    }
+    
+    // For PER/MASK (UCL only), target is 0
+    if (!isNaN(ucl) && isNaN(lcl)) {
+        return '0.00'
+    }
+    
+    return '-'
+}
+
+// UPDATED: Added helper to format policy for display
+function formatPolicy(policy?: string): string {
+    const policyLabels: Record<string, string> = {
+        'higher': 'Higher is Better',
+        'lower': 'Lower is Better',
+        'symmetrical': 'Centered'
+    }
+    return policyLabels[policy ?? ''] ?? policy ?? 'Unknown'
+}
+
+// UPDATED: Added helper to get formula for score breakdown display
+function getScoringFormula(scoringType?: ScoringType): string {
+    const formulas: Record<ScoringType, string> = {
+        'symmetrical': 'Score = 1 + 9 × (L - |x - T|) / L, where T = (UCL + LCL) / 2',
+        'symmetrical_nl': 'Score = exp(-((x - T) / σ)²), Gaussian decay',
+        'evm': 'Score = 1 + 9 × (1 - (x - ref) / (UCL - ref))^0.25, ref = -35 dB',
+        'throughput': 'Score = 1 + 9 × (x - LCL) / (UCL - LCL)',
+        'asymmetrical': 'Score = 1 + 9 × (L - d) / L, with policy-based limit selection',
+        'per_mask': 'Score = 1 + 9 × (UCL - x) / UCL, where 0 is ideal',
+        'binary': 'Score = 10.0 if PASS, 0.0 if FAIL'
+    }
+    return formulas[scoringType ?? 'binary'] ?? 'Unknown formula'
 }
 
 // Handle row click to show score breakdown
@@ -619,14 +779,14 @@ function showScoreBreakdown(item: NormalizedTestItem): void {
     showBreakdownDialog.value = true
 }
 
-// Reset filters when record changes - show all data if record has error
-watch(() => props.record, (newRecord) => {
-    if (newRecord && !isStatusPass(newRecord.errorCode)) {
-        testItemFilter.value = ['all']
-    } else {
-        testItemFilter.value = ['value']
-    }
+// Reset filters when record changes - always default to Show All
+watch(() => props.record, () => {
+    // UPDATED: Always default to Show All
+    testItemFilter.value = ['all']
     searchTerms.value = []
+    // Clear score filter
+    scoreFilterType.value = null
+    scoreFilterValue.value = null
 })
 </script>
 

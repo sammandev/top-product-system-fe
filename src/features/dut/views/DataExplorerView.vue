@@ -41,8 +41,8 @@
                     </span>
                 </v-alert>
 
-                <!-- iPLAS Data Content -->
-                <IplasDataContent />
+                <!-- iPLAS Data Content - UPDATED: Added show-settings event handler -->
+                <IplasDataContent @show-settings="showSettingsDialog = true" />
             </v-window-item>
 
             <!-- Internal Data Tab -->

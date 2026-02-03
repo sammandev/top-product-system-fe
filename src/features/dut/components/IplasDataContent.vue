@@ -27,10 +27,17 @@
                             <v-icon class="mr-2">mdi-filter-variant</v-icon>
                             Data Selection
                         </div>
-                        <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-refresh"
-                            :loading="loading" @click="handleRefresh">
-                            Refresh
-                        </v-btn>
+                        <!-- UPDATED: Added iPLAS Settings button and Refresh button -->
+                        <div class="d-flex gap-2">
+                            <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-cog"
+                                @click="emit('show-settings')">
+                                iPLAS Settings
+                            </v-btn>
+                            <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-refresh"
+                                :loading="loading" @click="handleRefresh">
+                                Refresh
+                            </v-btn>
+                        </div>
                     </v-card-title>
                     <v-card-text class="pt-4">
                         <v-row>
@@ -104,7 +111,7 @@
                                 :md="selectedStations.length === 1 ? 12 : 6">
                                 <v-autocomplete v-model="stationDeviceIds[stationValue]"
                                     :items="getDeviceIdsForStation(stationValue)"
-                                    :label="`${getStationDisplayName(stationValue)} Device IDs (Default All)`"
+                                    :label="`${getStationDisplayName(stationValue)} - Device IDs (Default All)`"
                                     variant="outlined" density="comfortable" prepend-inner-icon="mdi-chip"
                                     :loading="loadingDevicesByStation[stationValue]" multiple chips closable-chips
                                     clearable hide-details placeholder="Select Device IDs - (Empty = ALL)">
@@ -224,7 +231,7 @@
                                 {{ stationGroup.displayName }}
                                 <v-chip size="x-small" color="info" class="ml-2">{{
                                     getFilteredStationRecords(stationGroup).length
-                                    }}</v-chip>
+                                }}</v-chip>
                             </v-tab>
                         </v-tabs>
 
@@ -477,6 +484,11 @@ import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 import type { Station, TestItem, CsvTestItemData, DownloadAttachmentInfo } from '@/features/dut_logs/api/iplasApi'
 import type { CompactCsvTestItemData } from '@/features/dut_logs/api/iplasProxyApi'
 import type { DownloadCsvLogInfo } from '@/features/dut_logs/composables/useIplasApi'
+
+// UPDATED: Define emits for iPLAS Settings button
+const emit = defineEmits<{
+    (e: 'show-settings'): void
+}>()
 
 // Station group - now supports both full and compact records
 interface StationGroup {
