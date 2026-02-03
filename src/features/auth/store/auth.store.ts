@@ -8,20 +8,24 @@ import type { LoginRequest, ExternalLoginRequest, User } from '@/core/types'
  * 
  * Manages user authentication state, tokens, and login flows.
  * Supports dual authentication: local (file features only) and external (full DUT API access).
+ * 
+ * IMPORTANT: Uses sessionStorage instead of localStorage to prevent cross-tab/cross-user
+ * token conflicts. Each browser tab maintains its own session. This means users need to
+ * log in for each new tab, but prevents User B's login from invalidating User A's session.
  */
 export const useAuthStore = defineStore('auth', () => {
-  // State
-  const accessToken = ref<string | null>(localStorage.getItem('access_token'))
-  const refreshTokenValue = ref<string | null>(localStorage.getItem('refresh_token'))
-  const dutAccessToken = ref<string | null>(localStorage.getItem('dut_access_token'))
-  const dutRefreshToken = ref<string | null>(localStorage.getItem('dut_refresh_token'))
+  // State - use sessionStorage for session-isolated auth tokens
+  const accessToken = ref<string | null>(sessionStorage.getItem('access_token'))
+  const refreshTokenValue = ref<string | null>(sessionStorage.getItem('refresh_token'))
+  const dutAccessToken = ref<string | null>(sessionStorage.getItem('dut_access_token'))
+  const dutRefreshToken = ref<string | null>(sessionStorage.getItem('dut_refresh_token'))
   const user = ref<User | null>(null)
   const loading = ref(false)
   const error = ref<string | null>(null)
   const loginType = ref<'local' | 'external'>(
-    (localStorage.getItem('login_type') as 'local' | 'external') || 'local'
+    (sessionStorage.getItem('login_type') as 'local' | 'external') || 'local'
   )
-  const isGuestMode = ref<boolean>(localStorage.getItem('is_guest_mode') === 'true')
+  const isGuestMode = ref<boolean>(sessionStorage.getItem('is_guest_mode') === 'true')
 
   // Getters
   const isAuthenticated = computed(() => !!accessToken.value)
@@ -73,16 +77,16 @@ export const useAuthStore = defineStore('auth', () => {
       refreshTokenValue.value = response.refresh_token
       loginType.value = 'local'
 
-      // Store tokens in localStorage
-      localStorage.setItem('access_token', response.access_token)
-      localStorage.setItem('refresh_token', response.refresh_token)
-      localStorage.setItem('login_type', 'local')
+      // Store tokens in sessionStorage (session-isolated)
+      sessionStorage.setItem('access_token', response.access_token)
+      sessionStorage.setItem('refresh_token', response.refresh_token)
+      sessionStorage.setItem('login_type', 'local')
 
       // Clear DUT tokens for local login
       dutAccessToken.value = null
       dutRefreshToken.value = null
-      localStorage.removeItem('dut_access_token')
-      localStorage.removeItem('dut_refresh_token')
+      sessionStorage.removeItem('dut_access_token')
+      sessionStorage.removeItem('dut_refresh_token')
 
       // Fetch user info
       await fetchUser()
@@ -106,19 +110,19 @@ export const useAuthStore = defineStore('auth', () => {
       refreshTokenValue.value = response.refresh_token
       loginType.value = 'external'
 
-      // Store tokens in localStorage
-      localStorage.setItem('access_token', response.access_token)
-      localStorage.setItem('refresh_token', response.refresh_token)
-      localStorage.setItem('login_type', 'external')
+      // Store tokens in sessionStorage (session-isolated)
+      sessionStorage.setItem('access_token', response.access_token)
+      sessionStorage.setItem('refresh_token', response.refresh_token)
+      sessionStorage.setItem('login_type', 'external')
 
       // Store DUT tokens if provided
       if (response.dut_access_token) {
         dutAccessToken.value = response.dut_access_token
-        localStorage.setItem('dut_access_token', response.dut_access_token)
+        sessionStorage.setItem('dut_access_token', response.dut_access_token)
       }
       if (response.dut_refresh_token) {
         dutRefreshToken.value = response.dut_refresh_token
-        localStorage.setItem('dut_refresh_token', response.dut_refresh_token)
+        sessionStorage.setItem('dut_refresh_token', response.dut_refresh_token)
       }
 
       // Fetch user info
@@ -160,20 +164,20 @@ export const useAuthStore = defineStore('auth', () => {
       loginType.value = 'external'
       isGuestMode.value = true
 
-      // Store tokens in localStorage
-      localStorage.setItem('access_token', response.access_token)
-      localStorage.setItem('refresh_token', response.refresh_token)
-      localStorage.setItem('login_type', 'external')
-      localStorage.setItem('is_guest_mode', 'true')
+      // Store tokens in sessionStorage (session-isolated)
+      sessionStorage.setItem('access_token', response.access_token)
+      sessionStorage.setItem('refresh_token', response.refresh_token)
+      sessionStorage.setItem('login_type', 'external')
+      sessionStorage.setItem('is_guest_mode', 'true')
 
       // Store DUT tokens if provided
       if (response.dut_access_token) {
         dutAccessToken.value = response.dut_access_token
-        localStorage.setItem('dut_access_token', response.dut_access_token)
+        sessionStorage.setItem('dut_access_token', response.dut_access_token)
       }
       if (response.dut_refresh_token) {
         dutRefreshToken.value = response.dut_refresh_token
-        localStorage.setItem('dut_refresh_token', response.dut_refresh_token)
+        sessionStorage.setItem('dut_refresh_token', response.dut_refresh_token)
       }
 
       // Fetch user info (but display will show as Guest)
@@ -198,8 +202,8 @@ export const useAuthStore = defineStore('auth', () => {
       accessToken.value = response.access_token
       refreshTokenValue.value = response.refresh_token
 
-      localStorage.setItem('access_token', response.access_token)
-      localStorage.setItem('refresh_token', response.refresh_token)
+      sessionStorage.setItem('access_token', response.access_token)
+      sessionStorage.setItem('refresh_token', response.refresh_token)
 
       return response
     } catch (err) {
@@ -229,12 +233,12 @@ export const useAuthStore = defineStore('auth', () => {
     user.value = null
     isGuestMode.value = false
 
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('dut_access_token')
-    localStorage.removeItem('dut_refresh_token')
-    localStorage.removeItem('login_type')
-    localStorage.removeItem('is_guest_mode')
+    sessionStorage.removeItem('access_token')
+    sessionStorage.removeItem('refresh_token')
+    sessionStorage.removeItem('dut_access_token')
+    sessionStorage.removeItem('dut_refresh_token')
+    sessionStorage.removeItem('login_type')
+    sessionStorage.removeItem('is_guest_mode')
   }
 
   // Track initialization state to prevent duplicate fetches
