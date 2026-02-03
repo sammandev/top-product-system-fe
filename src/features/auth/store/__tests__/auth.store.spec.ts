@@ -19,15 +19,15 @@ describe('Auth Store', () => {
     // Create fresh Pinia instance
     setActivePinia(createPinia())
     
-    // Clear sessionStorage (auth tokens use sessionStorage)
-    sessionStorage.clear()
+    // Clear localStorage
+    localStorage.clear()
     
     // Clear all mocks
     vi.clearAllMocks()
   })
 
   afterEach(() => {
-    sessionStorage.clear()
+    localStorage.clear()
   })
 
   describe('Initial State', () => {
@@ -44,10 +44,10 @@ describe('Auth Store', () => {
       expect(store.loginType).toBe('local')
     })
 
-    it('should restore tokens from sessionStorage', () => {
-      sessionStorage.setItem('access_token', 'stored-access-token')
-      sessionStorage.setItem('refresh_token', 'stored-refresh-token')
-      sessionStorage.setItem('login_type', 'external')
+    it('should restore tokens from localStorage', () => {
+      localStorage.setItem('access_token', 'stored-access-token')
+      localStorage.setItem('refresh_token', 'stored-refresh-token')
+      localStorage.setItem('login_type', 'external')
       
       const store = useAuthStore()
       
@@ -121,22 +121,22 @@ describe('Auth Store', () => {
       expect(result).toEqual(mockLoginResponse)
     })
 
-    it('should store tokens in sessionStorage', async () => {
+    it('should store tokens in localStorage', async () => {
       vi.mocked(authApi.login).mockResolvedValue(mockLoginResponse)
       vi.mocked(authApi.me).mockResolvedValue(mockUser)
       
       const store = useAuthStore()
       await store.login({ username: 'test', password: 'password' })
       
-      expect(sessionStorage.getItem('access_token')).toBe('test-access-token')
-      expect(sessionStorage.getItem('refresh_token')).toBe('test-refresh-token')
-      expect(sessionStorage.getItem('login_type')).toBe('local')
+      expect(localStorage.getItem('access_token')).toBe('test-access-token')
+      expect(localStorage.getItem('refresh_token')).toBe('test-refresh-token')
+      expect(localStorage.getItem('login_type')).toBe('local')
     })
 
     it('should clear DUT tokens on local login', async () => {
       // Set some DUT tokens first
-      sessionStorage.setItem('dut_access_token', 'dut-token')
-      sessionStorage.setItem('dut_refresh_token', 'dut-refresh')
+      localStorage.setItem('dut_access_token', 'dut-token')
+      localStorage.setItem('dut_refresh_token', 'dut-refresh')
       
       vi.mocked(authApi.login).mockResolvedValue(mockLoginResponse)
       vi.mocked(authApi.me).mockResolvedValue(mockUser)
@@ -149,8 +149,8 @@ describe('Auth Store', () => {
       
       expect(store.dutAccessToken).toBeNull()
       expect(store.dutRefreshToken).toBeNull()
-      expect(sessionStorage.getItem('dut_access_token')).toBeNull()
-      expect(sessionStorage.getItem('dut_refresh_token')).toBeNull()
+      expect(localStorage.getItem('dut_access_token')).toBeNull()
+      expect(localStorage.getItem('dut_refresh_token')).toBeNull()
     })
 
     it('should set error on login failure', async () => {
@@ -248,7 +248,7 @@ describe('Auth Store', () => {
       expect(store.user).toEqual(mockUser)
     })
 
-    it('should store DUT tokens in sessionStorage', async () => {
+    it('should store DUT tokens in localStorage', async () => {
       vi.mocked(authApi.externalLogin).mockResolvedValue(mockExternalLoginResponse)
       vi.mocked(authApi.me).mockResolvedValue(mockUser)
       
@@ -258,9 +258,9 @@ describe('Auth Store', () => {
         password: 'password'
       })
       
-      expect(sessionStorage.getItem('dut_access_token')).toBe('dut-access-token')
-      expect(sessionStorage.getItem('dut_refresh_token')).toBe('dut-refresh-token')
-      expect(sessionStorage.getItem('login_type')).toBe('external')
+      expect(localStorage.getItem('dut_access_token')).toBe('dut-access-token')
+      expect(localStorage.getItem('dut_refresh_token')).toBe('dut-refresh-token')
+      expect(localStorage.getItem('login_type')).toBe('external')
     })
 
     it('should handle external login without DUT tokens', async () => {
@@ -324,8 +324,8 @@ describe('Auth Store', () => {
       expect(authApi.refreshToken).toHaveBeenCalledWith('old-refresh-token')
       expect(store.accessToken).toBe('new-access-token')
       expect(store.refreshTokenValue).toBe('new-refresh-token')
-      expect(sessionStorage.getItem('access_token')).toBe('new-access-token')
-      expect(sessionStorage.getItem('refresh_token')).toBe('new-refresh-token')
+      expect(localStorage.getItem('access_token')).toBe('new-access-token')
+      expect(localStorage.getItem('refresh_token')).toBe('new-refresh-token')
     })
 
     it('should throw error when no refresh token available', async () => {
@@ -379,21 +379,21 @@ describe('Auth Store', () => {
       expect(store.user).toBeNull()
     })
 
-    it('should clear all tokens from sessionStorage', () => {
-      sessionStorage.setItem('access_token', 'token')
-      sessionStorage.setItem('refresh_token', 'refresh')
-      sessionStorage.setItem('dut_access_token', 'dut-token')
-      sessionStorage.setItem('dut_refresh_token', 'dut-refresh')
-      sessionStorage.setItem('login_type', 'external')
+    it('should clear all tokens from localStorage', () => {
+      localStorage.setItem('access_token', 'token')
+      localStorage.setItem('refresh_token', 'refresh')
+      localStorage.setItem('dut_access_token', 'dut-token')
+      localStorage.setItem('dut_refresh_token', 'dut-refresh')
+      localStorage.setItem('login_type', 'external')
       
       const store = useAuthStore()
       store.logout()
       
-      expect(sessionStorage.getItem('access_token')).toBeNull()
-      expect(sessionStorage.getItem('refresh_token')).toBeNull()
-      expect(sessionStorage.getItem('dut_access_token')).toBeNull()
-      expect(sessionStorage.getItem('dut_refresh_token')).toBeNull()
-      expect(sessionStorage.getItem('login_type')).toBeNull()
+      expect(localStorage.getItem('access_token')).toBeNull()
+      expect(localStorage.getItem('refresh_token')).toBeNull()
+      expect(localStorage.getItem('dut_access_token')).toBeNull()
+      expect(localStorage.getItem('dut_refresh_token')).toBeNull()
+      expect(localStorage.getItem('login_type')).toBeNull()
     })
   })
 
@@ -463,7 +463,7 @@ describe('Auth Store', () => {
       
       vi.mocked(authApi.me).mockResolvedValue(mockUser)
       
-      sessionStorage.setItem('access_token', 'stored-token')
+      localStorage.setItem('access_token', 'stored-token')
       
       const store = useAuthStore()
       await store.initialize()
