@@ -213,8 +213,8 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     },
     per_mask: {
         type: 'per_mask',
-        label: 'Lower is Better (e.g., PER/MASK)',
-        description: 'UCL-only scoring. Near zero is ideal.',
+        label: 'Lower is Better',
+        description: 'Near zero is ideal (e.g., PER/MASK).',
         useCase: 'Packet Error Rate (PER) and MASK test items where 0 is ideal',
         icon: 'mdi-target',
         color: 'error',
@@ -227,8 +227,8 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     },
     evm: {
         type: 'evm',
-        label: 'EVM (Exponent Decay)',
-        description: 'EVM scoring with gentle decay.',
+        label: 'EVM',
+        description: 'EVM scoring with exponent decay.',
         useCase: 'Error Vector Magnitude (EVM) test items where lower dB values are better',
         icon: 'mdi-signal-cellular-3',
         color: 'info',
