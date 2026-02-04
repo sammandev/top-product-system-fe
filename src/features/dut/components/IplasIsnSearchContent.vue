@@ -2,9 +2,16 @@
     <div>
         <!-- Search Card -->
         <v-card elevation="2" class="mb-4">
-            <v-card-title class="d-flex align-center bg-primary">
-                <v-icon class="mr-2">mdi-barcode-scan</v-icon>
-                ISN Search
+            <v-card-title class="d-flex align-center justify-space-between bg-primary">
+                <div class="d-flex align-center">
+                    <v-icon class="mr-2">mdi-barcode-scan</v-icon>
+                    ISN Search
+                </div>
+                <v-btn color="error" variant="outlined" size="small" prepend-icon="mdi-close-circle"
+                    :disabled="loadingIsnSearch || (!searchIsn && selectedISNs.length === 0 && groupedByISN.length === 0)"
+                    @click="clearAll">
+                    Clear All
+                </v-btn>
             </v-card-title>
             <v-card-text class="pt-4">
                 <!-- Input Mode Toggle -->
@@ -25,7 +32,7 @@
 
                 <!-- Single ISN Input -->
                 <v-row v-if="inputMode === 'single'">
-                    <v-col cols="12" md="10">
+                    <v-col cols="12" md="8">
                         <v-text-field v-model="searchIsn" label="DUT ISN" placeholder="e.g., DM2520270073965"
                             prepend-inner-icon="mdi-barcode-scan" variant="outlined" density="comfortable" clearable
                             hint="Enter the ISN to search across all stations" persistent-hint
@@ -35,6 +42,16 @@
                         <v-btn color="primary" size="large" :loading="loadingIsnSearch" :disabled="!searchIsn?.trim()"
                             prepend-icon="mdi-magnify" block class="mb-5" @click="handleSearch">
                             Search
+                        </v-btn>
+                    </v-col>
+                    <v-col cols="12" md="2" class="d-flex align-center">
+                        <v-btn color="secondary" size="large" variant="outlined" :loading="loadingSfistspLookup"
+                            :disabled="!searchIsn?.trim()" prepend-icon="mdi-link-variant" block class="mb-5"
+                            @click="handleSfistspLookup">
+                            Lookup Ref
+                            <v-tooltip activator="parent" location="top">
+                                Look up ISN references (SSN, MAC) from SFISTSP
+                            </v-tooltip>
                         </v-btn>
                     </v-col>
                 </v-row>
@@ -76,14 +93,59 @@
                     </v-col>
                 </v-row>
 
-                <!-- Action Buttons -->
-                <v-divider v-if="groupedByISN.length > 0" class="my-4" />
-                <div v-if="groupedByISN.length > 0" class="d-flex justify-end gap-2">
-                    <v-btn color="error" variant="outlined" prepend-icon="mdi-close-circle" :disabled="loadingIsnSearch"
-                        @click="clearAll">
-                        Clear All
-                    </v-btn>
-                </div>
+                <!-- SFISTSP Reference Results (shown when lookup is performed) -->
+                <v-expand-transition>
+                    <v-card v-if="sfistspReferences.length > 0" variant="outlined" color="info" class="mt-4">
+                        <v-card-title class="text-subtitle-1 bg-info d-flex align-center justify-space-between">
+                            <div class="d-flex align-center">
+                                <v-icon class="mr-2" size="small">mdi-link-variant</v-icon>
+                                ISN References from SFISTSP
+                            </div>
+                            <v-btn icon size="x-small" variant="text" @click="sfistspReferences = []">
+                                <v-icon>mdi-close</v-icon>
+                            </v-btn>
+                        </v-card-title>
+                        <v-card-text class="pt-3">
+                            <v-row dense>
+                                <v-col v-for="ref in sfistspReferences" :key="ref.isn" cols="12" md="4">
+                                    <v-card variant="tonal" :color="ref.success ? 'success' : 'error'">
+                                        <v-card-text class="pa-3">
+                                            <div class="d-flex align-center justify-space-between mb-2">
+                                                <span class="font-weight-bold">{{ ref.isn }}</span>
+                                                <v-chip :color="ref.success ? 'success' : 'error'" size="x-small">
+                                                    {{ ref.success ? 'Found' : 'Not Found' }}
+                                                </v-chip>
+                                            </div>
+                                            <div v-if="ref.success" class="text-body-2">
+                                                <div v-if="ref.ssn" class="d-flex align-center gap-2 mb-1">
+                                                    <span class="text-medium-emphasis">SSN:</span>
+                                                    <code class="bg-grey-lighten-4 px-1 rounded cursor-pointer"
+                                                        @click="copyToClipboard(ref.ssn)">
+                                                        {{ ref.ssn }}
+                                                        <v-tooltip activator="parent" location="top">Click to
+                                                            copy</v-tooltip>
+                                                    </code>
+                                                </div>
+                                                <div v-if="ref.mac" class="d-flex align-center gap-2">
+                                                    <span class="text-medium-emphasis">MAC:</span>
+                                                    <code class="bg-grey-lighten-4 px-1 rounded cursor-pointer"
+                                                        @click="copyToClipboard(ref.mac)">
+                                                        {{ formatMacAddress(ref.mac) }}
+                                                        <v-tooltip activator="parent" location="top">Click to
+                                                            copy</v-tooltip>
+                                                    </code>
+                                                </div>
+                                            </div>
+                                            <div v-else class="text-body-2 text-error">
+                                                {{ ref.errorMessage || 'No data found' }}
+                                            </div>
+                                        </v-card-text>
+                                    </v-card>
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
+                </v-expand-transition>
             </v-card-text>
         </v-card>
 
@@ -449,6 +511,7 @@ import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 import { type IsnSearchData, type DownloadAttachmentInfo } from '@/features/dut_logs/composables/useIplasApi'
 import type { IsnSearchTestItem } from '@/features/dut_logs/api/iplasApi'
 import { adjustIplasDisplayTime, getStatusColor, normalizeStatus, isStatusPass, isStatusFail } from '@/shared/utils/helpers'
+import { lookupIsn, lookupIsnsBatch, type SfistspIsnReferenceResponse } from '@/features/dut_logs/api/sfistspApi'
 
 interface StationGroup {
     stationName: string
@@ -466,6 +529,15 @@ interface ISNGroup {
     errorCount: number
     records: IsnSearchData[]
     stations: StationGroup[]
+}
+
+// SFISTSP Reference interface
+interface SfistspReference {
+    isn: string
+    success: boolean
+    ssn?: string
+    mac?: string
+    errorMessage?: string
 }
 
 const {
@@ -487,6 +559,10 @@ const hasSearched = ref(false)
 const groupedByISN = ref<ISNGroup[]>([])
 const activeISNTab = ref(0)
 const showSuccess = ref(false)
+
+// SFISTSP lookup state
+const loadingSfistspLookup = ref(false)
+const sfistspReferences = ref<SfistspReference[]>([])
 
 // Display controls
 const testItemFilters = ref<Record<string, 'all' | 'value' | 'non-value' | 'bin'>>({})
@@ -1076,7 +1152,75 @@ function clearAll(): void {
     selectedFilterDeviceIds.value = {}
     testItemFilters.value = {}
     testItemSearchTerms.value = {}
+    sfistspReferences.value = []
     clearIsnSearchData()
+}
+
+/**
+ * Format MAC address with colons (e.g., "AABBCCDDEEFF" -> "AA:BB:CC:DD:EE:FF")
+ */
+function formatMacAddress(mac: string | undefined): string {
+    if (!mac) return '-'
+    // Remove any existing separators and whitespace
+    const cleanMac = mac.replace(/[:\-\s]/g, '').toUpperCase()
+    if (cleanMac.length !== 12) return mac // Return original if not valid length
+    return cleanMac.match(/.{2}/g)?.join(':') || mac
+}
+
+/**
+ * Handle SFISTSP ISN reference lookup
+ */
+async function handleSfistspLookup(): Promise<void> {
+    // Determine ISN list based on input mode
+    let isnList: string[] = []
+
+    if (inputMode.value === 'multiple') {
+        isnList = selectedISNs.value.map(isn => String(isn).trim()).filter(isn => isn.length > 0)
+    } else {
+        if (!searchIsn.value?.trim()) return
+        isnList = searchIsn.value
+            .split(/[\n,\s]+/)
+            .map(isn => isn.trim())
+            .filter(isn => isn && isn.length > 0)
+    }
+
+    if (isnList.length === 0) {
+        error.value = 'Please enter at least one valid ISN for SFISTSP lookup'
+        return
+    }
+
+    loadingSfistspLookup.value = true
+    sfistspReferences.value = []
+
+    try {
+        if (isnList.length === 1) {
+            // Single ISN lookup
+            const response = await lookupIsn(isnList[0]!)
+            sfistspReferences.value = [{
+                isn: response.isn,
+                success: response.success,
+                ssn: response.ssn || undefined,
+                mac: response.mac || undefined,
+                errorMessage: response.error_message || undefined
+            }]
+        } else {
+            // Batch lookup
+            const response = await lookupIsnsBatch(isnList)
+            sfistspReferences.value = response.results.map((r: SfistspIsnReferenceResponse) => ({
+                isn: r.isn,
+                success: r.success,
+                ssn: r.ssn || undefined,
+                mac: r.mac || undefined,
+                errorMessage: r.error_message || undefined
+            }))
+        }
+    } catch (err: unknown) {
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+        console.error('SFISTSP lookup failed:', err)
+        error.value = `SFISTSP lookup failed: ${errorMessage}`
+    } finally {
+        loadingSfistspLookup.value = false
+    }
 }
 
 async function handleSearch(): Promise<void> {
