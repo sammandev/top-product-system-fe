@@ -385,14 +385,13 @@
                                                         :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'bg-green-lighten-5 pa-3 rounded' : 'bg-red-lighten-5 pa-3 rounded'">
                                                         <!-- Row 1: ISN and DeviceID -->
                                                         <div class="d-flex align-center flex-wrap gap-2 mb-2">
-                                                            <v-chip color="primary" variant="flat"
-                                                                class="font-weight-bold text-body-1" label>
+                                                            <v-chip color="primary" variant="outlined"
+                                                                class="text-body-1" label>
                                                                 <v-icon start>mdi-barcode</v-icon>
                                                                 {{ record.isn }}
                                                             </v-chip>
-                                                            <v-chip color="secondary" variant="flat"
-                                                                class="font-weight-bold text-body-1" label>
-                                                                <v-icon start>mdi-cellphone</v-icon>
+                                                            <v-chip color="default" variant="outlined"
+                                                                class="text-body-1" label>
                                                                 {{ record.device_id }}
                                                             </v-chip>
                                                         </div>
@@ -466,14 +465,13 @@
                                                     :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'bg-green-lighten-5 pa-3 rounded' : 'bg-red-lighten-5 pa-3 rounded'">
                                                     <!-- Row 1: ISN and DeviceID -->
                                                     <div class="d-flex align-center flex-wrap gap-2 mb-2">
-                                                        <v-chip color="primary" variant="flat"
-                                                            class="font-weight-bold text-body-1" label>
+                                                        <v-chip color="primary" variant="outlined" class="text-body-1"
+                                                            label>
                                                             <v-icon start>mdi-barcode</v-icon>
                                                             {{ record.isn }}
                                                         </v-chip>
-                                                        <v-chip color="secondary" variant="flat"
-                                                            class="font-weight-bold text-body-1" label>
-                                                            <v-icon start>mdi-cellphone</v-icon>
+                                                        <v-chip color="default" variant="outlined" class="text-body-1"
+                                                            label>
                                                             {{ record.device_id }}
                                                         </v-chip>
                                                     </div>
@@ -786,6 +784,7 @@ import { type IsnSearchData, type DownloadAttachmentInfo, type DownloadCsvLogInf
 import type { IsnSearchTestItem } from '@/features/dut_logs/api/iplasApi'
 import { adjustIplasDisplayTime, isStatusPass, isStatusFail } from '@/shared/utils/helpers'
 import { lookupIsn, lookupIsnsBatch, type SfistspIsnReferenceResponse } from '@/features/dut_logs/api/sfistspApi'
+import { iplasProxyApi } from '@/features/dut_logs/api/iplasProxyApi'
 
 interface StationGroup {
     stationName: string
@@ -793,6 +792,7 @@ interface StationGroup {
     hasError: boolean
     errorCount: number
     records: IsnSearchData[]
+    order: number  // Station order from iPLAS API
 }
 
 interface ISNGroup {
@@ -872,7 +872,6 @@ function getDisplayLimit(isn: string): number {
 const fullscreenRecord = ref<NormalizedRecord | null>(null)
 const showFullscreenDialog = ref(false)
 const showCopySuccess = ref(false)
-const fullscreenSearchQuery = ref('')
 const fullscreenDownloading = ref(false)
 
 // Original record for download (to get site/project info)
@@ -938,62 +937,10 @@ function hasLatestStationError(stationGroup: StationGroup): boolean {
     return latestRecord ? (!isStatusPass(latestRecord.test_status) || !isStatusPass(latestRecord.error_code)) : false
 }
 
-// Helper functions
-function isValueData(item: IsnSearchTestItem): boolean {
-    const value = item.VALUE?.toUpperCase() || ''
-    // Value data: not PASS, FAIL, 1, 0, or -999
-    if (value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999') {
-        return false
-    }
-    const hasNumericValue = !isNaN(parseFloat(item.VALUE)) && item.VALUE !== ''
-    const hasNumericUcl = !isNaN(parseFloat(item.UCL || '')) && item.UCL !== ''
-    const hasNumericLcl = !isNaN(parseFloat(item.LCL || '')) && item.LCL !== ''
-    const numericCount = [hasNumericValue, hasNumericUcl, hasNumericLcl].filter(Boolean).length
-    return numericCount >= 2
-}
-
-function isPassFailData(item: IsnSearchTestItem): boolean {
-    const value = item.VALUE?.toUpperCase() || ''
-    // STATUS must be PASS, FAIL, 1, 0, or -1 AND VALUE must be PASS, FAIL, 1, 0, or -999
-    const isStatusPF = isStatusPass(item.STATUS) || isStatusFail(item.STATUS) || item.STATUS === '-1'
-    const isValuePF = value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999'
-    return isStatusPF && isValuePF
-}
-
 // Alias for better naming consistency
-function isBinData(item: IsnSearchTestItem): boolean {
-    return isPassFailData(item)
-}
-
-function isNonValueData(item: IsnSearchTestItem): boolean {
-    return !isValueData(item) && !isBinData(item)
-}
-
-function filterTestItemsByType(items: IsnSearchTestItem[], filterType: 'all' | 'value' | 'non-value' | 'bin'): IsnSearchTestItem[] {
-    switch (filterType) {
-        case 'value':
-            return items.filter(isValueData)
-        case 'non-value':
-            return items.filter(isNonValueData)
-        case 'bin':
-            return items.filter(isBinData)
-        default:
-            return items
-    }
-}
-
-
 function formatShortTime(timeStr: string): string {
     // Use the centralized helper to adjust time by -1 hour for display
     return adjustIplasDisplayTime(timeStr, 1)
-}
-
-function getValueClass(item: IsnSearchTestItem): string {
-    const value = item.VALUE?.toUpperCase() || ''
-    if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
-    if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
-    if (value === '-999') return 'text-warning'
-    return ''
 }
 
 function calculateDuration(startStr: string, endStr: string): string {
@@ -1288,17 +1235,25 @@ async function downloadSelectedRecords(): Promise<void> {
     }
 }
 
-function groupDataByISN(data: IsnSearchData[], mergeAll: boolean = false): ISNGroup[] {
+function groupDataByISN(
+    data: IsnSearchData[],
+    identifierToPrimaryIsn: Map<string, string> = new Map(),
+    stationOrderMap: Map<string, number> = new Map()
+): ISNGroup[] {
     const groups: Record<string, ISNGroup> = {}
 
-    // When mergeAll is true, use a single unified key to group all records together
-    const getGroupKey = (record: IsnSearchData) => mergeAll ? '__unified__' : record.isn
+    // Get the primary ISN for a record - uses the mapping if available, otherwise uses record's ISN
+    const getPrimaryIsn = (record: IsnSearchData): string => {
+        // Check if record's ISN has a mapped primary ISN
+        const primaryIsn = identifierToPrimaryIsn.get(record.isn)
+        return primaryIsn || record.isn
+    }
 
     for (const record of data) {
-        const groupKey = getGroupKey(record)
+        const groupKey = getPrimaryIsn(record)
         if (!groups[groupKey]) {
             groups[groupKey] = {
-                isn: mergeAll ? 'All Results' : record.isn,
+                isn: groupKey,
                 site: record.site,
                 project: record.project,
                 hasError: false,
@@ -1324,12 +1279,15 @@ function groupDataByISN(data: IsnSearchData[], mergeAll: boolean = false): ISNGr
         for (const record of isnGroup.records) {
             const stationKey = record.display_station_name || record.station_name
             if (!stationMap[stationKey]) {
+                // Get station order from map, default to high number if not found
+                const order = stationOrderMap.get(stationKey) ?? stationOrderMap.get(record.station_name) ?? 9999
                 stationMap[stationKey] = {
                     stationName: record.station_name,
                     displayName: record.display_station_name || record.station_name,
                     hasError: false,
                     errorCount: 0,
-                    records: []
+                    records: [],
+                    order
                 }
             }
             const station = stationMap[stationKey]
@@ -1342,7 +1300,8 @@ function groupDataByISN(data: IsnSearchData[], mergeAll: boolean = false): ISNGr
             }
         }
 
-        isnGroup.stations = Object.values(stationMap)
+        // Sort stations by order
+        isnGroup.stations = Object.values(stationMap).sort((a, b) => a.order - b.order)
     }
 
     return Object.values(groups)
@@ -1463,36 +1422,61 @@ async function handleSearch(): Promise<void> {
     hasSearched.value = true
 
     try {
-        // If unified search is enabled, first look up SFISTSP to get all related identifiers
+        // Maps for unified search: identifier -> primary ISN
+        const identifierToPrimaryIsn = new Map<string, string>()
         let searchTerms: string[] = [...isnList]
 
         if (enableUnifiedSearch.value) {
-            // Collect all related identifiers from SFISTSP
+            // Collect all related identifiers from SFISTSP and map them to primary ISN
             const allIdentifiers = new Set<string>(isnList)
 
             try {
                 if (isnList.length === 1) {
                     // Single ISN lookup
                     const response = await lookupIsn(isnList[0]!)
-                    if (response.success) {
-                        // Add primary ISN
-                        if (response.isn) allIdentifiers.add(response.isn)
-                        // Add SSN if available
-                        if (response.ssn) allIdentifiers.add(response.ssn)
-                        // Add MAC if available
-                        if (response.mac) allIdentifiers.add(response.mac)
+                    if (response.success && response.isn) {
+                        const primaryIsn = response.isn
+                        // Map the searched term to primary ISN
+                        identifierToPrimaryIsn.set(isnList[0]!, primaryIsn)
+                        // Add and map primary ISN
+                        allIdentifiers.add(primaryIsn)
+                        identifierToPrimaryIsn.set(primaryIsn, primaryIsn)
+                        // Add and map SSN if available
+                        if (response.ssn) {
+                            allIdentifiers.add(response.ssn)
+                            identifierToPrimaryIsn.set(response.ssn, primaryIsn)
+                        }
+                        // Add and map MAC if available
+                        if (response.mac) {
+                            allIdentifiers.add(response.mac)
+                            identifierToPrimaryIsn.set(response.mac, primaryIsn)
+                        }
                     }
                 } else {
                     // Batch lookup
                     const response = await lookupIsnsBatch(isnList)
-                    for (const result of response.results) {
-                        if (result.success) {
-                            // Add primary ISN
-                            if (result.isn) allIdentifiers.add(result.isn)
-                            // Add SSN if available
-                            if (result.ssn) allIdentifiers.add(result.ssn)
-                            // Add MAC if available
-                            if (result.mac) allIdentifiers.add(result.mac)
+                    for (let i = 0; i < response.results.length; i++) {
+                        const result = response.results[i]!
+                        const searchedIsn = isnList[i]
+                        if (result.success && result.isn) {
+                            const primaryIsn = result.isn
+                            // Map the searched term to primary ISN
+                            if (searchedIsn) {
+                                identifierToPrimaryIsn.set(searchedIsn, primaryIsn)
+                            }
+                            // Add and map primary ISN
+                            allIdentifiers.add(primaryIsn)
+                            identifierToPrimaryIsn.set(primaryIsn, primaryIsn)
+                            // Add and map SSN if available
+                            if (result.ssn) {
+                                allIdentifiers.add(result.ssn)
+                                identifierToPrimaryIsn.set(result.ssn, primaryIsn)
+                            }
+                            // Add and map MAC if available
+                            if (result.mac) {
+                                allIdentifiers.add(result.mac)
+                                identifierToPrimaryIsn.set(result.mac, primaryIsn)
+                            }
                         }
                     }
                 }
@@ -1524,8 +1508,34 @@ async function handleSearch(): Promise<void> {
             }
         }
 
-        // Group by ISN - merge all results into single tab when unified search is enabled
-        groupedByISN.value = groupDataByISN(allRecords, enableUnifiedSearch.value)
+        // Fetch station order from iPLAS API
+        const stationOrderMap = new Map<string, number>()
+        if (allRecords.length > 0) {
+            try {
+                // Get unique ISNs from records to fetch station info
+                const uniqueIsns = [...new Set(allRecords.map(r => r.isn))]
+                if (uniqueIsns.length === 1) {
+                    const stationsResponse = await iplasProxyApi.getStationsFromIsn({ isn: uniqueIsns[0]! })
+                    for (const station of stationsResponse.stations) {
+                        stationOrderMap.set(station.display_station_name, station.order)
+                        stationOrderMap.set(station.station_name, station.order)
+                    }
+                } else if (uniqueIsns.length > 1) {
+                    const stationsResponse = await iplasProxyApi.getStationsFromIsnBatch({ isns: uniqueIsns.slice(0, 50) })
+                    for (const result of stationsResponse.results) {
+                        for (const station of result.stations) {
+                            stationOrderMap.set(station.display_station_name, station.order)
+                            stationOrderMap.set(station.station_name, station.order)
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('Failed to fetch station order, using default order:', err)
+            }
+        }
+
+        // Group by ISN with identifier mapping and station order
+        groupedByISN.value = groupDataByISN(allRecords, identifierToPrimaryIsn, stationOrderMap)
 
         // Initialize expanded panels for first tab
         if (groupedByISN.value.length > 0) {
