@@ -19,64 +19,105 @@
                     </div>
                 </v-card-title>
 
-                <!-- Compact DUT Information Section -->
+                <!-- DUT Information Section -->
                 <div class="flex-shrink-0 px-3 py-2">
-                    <!-- Compact Summary Row -->
-                    <div class="d-flex align-center flex-wrap gap-3 text-body-2">
-                        <!-- ISN -->
-                        <div class="d-flex align-center cursor-pointer" @click="copyToClipboard(record.isn)">
-                            <v-icon size="small" class="mr-1" color="primary">mdi-barcode</v-icon>
-                            <strong class="mr-1">ISN:</strong>
-                            <span class="font-weight-bold">{{ record.isn || '-' }}</span>
-                            <v-tooltip activator="parent" location="top">Click to copy ISN</v-tooltip>
-                        </div>
-                        <v-divider vertical class="mx-1" />
-                        <!-- Station -->
-                        <div class="d-flex align-center">
-                            <v-icon size="small" class="mr-1" color="primary">mdi-router-wireless</v-icon>
-                            <strong class="mr-1">Station:</strong>
-                            <span>{{ record.displayStationName || record.stationName }}</span>
-                        </div>
-                        <v-divider vertical class="mx-1" />
-                        <!-- Device ID -->
-                        <div class="d-flex align-center cursor-pointer" @click="copyToClipboard(record.deviceId)">
-                            <v-icon size="small" class="mr-1">mdi-chip</v-icon>
-                            <strong class="mr-1">Device:</strong>
-                            <span class="font-mono">{{ record.deviceId }}</span>
-                            <v-tooltip activator="parent" location="top">Click to copy Device ID</v-tooltip>
-                        </div>
-                        <v-divider vertical class="mx-1" />
-                        <!-- Site/Project -->
-                        <div class="d-flex align-center">
-                            <v-icon size="small" class="mr-1">mdi-map-marker</v-icon>
-                            <span>{{ record.site }} / {{ record.project }}</span>
-                        </div>
-                    </div>
+                    <!-- Primary Information -->
+                    <v-card variant="tonal" color="primary" class="mb-3">
+                        <v-card-text class="py-3">
+                            <v-row dense>
+                                <v-col cols="12" md="6">
+                                    <div class="d-flex align-center cursor-pointer"
+                                        @click="copyToClipboard(record.isn)">
+                                        <v-icon size="large" class="mr-3" color="primary">mdi-barcode</v-icon>
+                                        <div>
+                                            <div class="text-caption text-medium-emphasis">DUT ISN</div>
+                                            <div class="text-h6 font-weight-bold">{{ record.isn || '-' }}</div>
+                                        </div>
+                                        <v-tooltip activator="parent" location="top">Click to copy ISN</v-tooltip>
+                                    </div>
+                                </v-col>
+                                <v-col cols="12" md="6">
+                                    <div class="d-flex align-center">
+                                        <v-icon size="large" class="mr-3" color="primary">mdi-factory</v-icon>
+                                        <div>
+                                            <div class="text-caption text-medium-emphasis">Station</div>
+                                            <div class="text-h6 font-weight-bold">
+                                                {{ record.displayStationName || record.stationName }}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
 
-                    <!-- Compact Timing & Status Row -->
-                    <div class="d-flex align-center flex-wrap gap-2 mt-2 text-caption">
-                        <v-chip size="x-small" variant="outlined" prepend-icon="mdi-calendar-clock">
-                            Start: {{ formatTime(record.testStartTime) }}
+                    <!-- Device & Identifiers -->
+                    <v-card variant="outlined" class="mb-3">
+                        <v-card-text class="py-2">
+                            <v-row dense>
+                                <v-col cols="12" md="4">
+                                    <div class="d-flex align-center cursor-pointer"
+                                        @click="copyToClipboard(record.deviceId)">
+                                        <v-icon size="small" class="mr-2">mdi-chip</v-icon>
+                                        <span class="text-body-2">
+                                            <strong>Device ID:</strong>
+                                            <span class="ml-2 font-mono">{{ record.deviceId }}</span>
+                                        </span>
+                                        <v-tooltip activator="parent" location="top">Click to copy Device
+                                            ID</v-tooltip>
+                                    </div>
+                                </v-col>
+                                <v-col cols="12" md="4">
+                                    <div class="d-flex align-center">
+                                        <v-icon size="small" class="mr-2">mdi-map-marker</v-icon>
+                                        <span class="text-body-2">
+                                            <strong>Site:</strong>
+                                            <span class="ml-2">{{ record.site }}</span>
+                                        </span>
+                                    </div>
+                                </v-col>
+                                <v-col cols="12" md="4">
+                                    <div class="d-flex align-center">
+                                        <v-icon size="small" class="mr-2">mdi-folder</v-icon>
+                                        <span class="text-body-2">
+                                            <strong>Project:</strong>
+                                            <span class="ml-2">{{ record.project }}</span>
+                                        </span>
+                                    </div>
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
+
+                    <!-- Timing & Status -->
+                    <div class="d-flex align-center flex-wrap gap-2 text-caption">
+                        <v-chip size="small" variant="tonal" color="primary" prepend-icon="mdi-calendar-clock" label>
+                            <span class="text-medium-emphasis mr-1">Start:</span>
+                            {{ formatTime(record.testStartTime) }}
                         </v-chip>
-                        <v-chip size="x-small" variant="outlined" prepend-icon="mdi-calendar-check">
-                            End: {{ formatTime(record.testEndTime) }}
+                        <v-chip size="small" variant="tonal" color="primary" prepend-icon="mdi-calendar-check" label>
+                            <span class="text-medium-emphasis mr-1">End:</span>
+                            {{ formatTime(record.testEndTime) }}
                         </v-chip>
-                        <v-chip size="x-small" variant="outlined" prepend-icon="mdi-timer">
+                        <v-chip size="small" variant="tonal" color="secondary" prepend-icon="mdi-timer" label>
+                            <span class="text-medium-emphasis mr-1">Duration:</span>
                             {{ calculateDuration(record.testStartTime, record.testEndTime) }}
                         </v-chip>
-                        <v-chip size="x-small" color="info" variant="outlined" prepend-icon="mdi-list-box">
-                            {{ record.testItems?.length || 0 }} items
+                        <v-chip size="small" variant="tonal" color="info" prepend-icon="mdi-list-box" label>
+                            <span class="text-medium-emphasis mr-1">Test Items:</span>
+                            {{ record.testItems?.length || 0 }}
                         </v-chip>
-                        <!-- Status -->
-                        <v-chip size="x-small" :color="getStatusColor(record.errorCode)"
+                        <v-chip size="small" :color="getStatusColor(record.errorCode)"
                             :prepend-icon="isStatusPass(record.errorCode) ? 'mdi-check-circle' : 'mdi-alert-circle'"
-                            class="cursor-pointer" @click="copyToClipboard(record.errorCode)">
+                            class="cursor-pointer" label @click="copyToClipboard(record.errorCode)">
+                            <span class="text-medium-emphasis mr-1">Status:</span>
                             {{ record.errorCode }}
                             <v-tooltip activator="parent" location="top">Click to copy Error Code</v-tooltip>
                         </v-chip>
                         <template v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)">
-                            <v-chip size="x-small" color="error" variant="outlined" class="cursor-pointer"
-                                @click="copyToClipboard(record.errorName)">
+                            <v-chip size="small" color="error" variant="outlined" class="cursor-pointer" label
+                                prepend-icon="mdi-alert-octagon" @click="copyToClipboard(record.errorName)">
+                                <span class="text-medium-emphasis mr-1">Error:</span>
                                 {{ record.errorName }}
                                 <v-tooltip activator="parent" location="top">Click to copy Error Name</v-tooltip>
                             </v-chip>
