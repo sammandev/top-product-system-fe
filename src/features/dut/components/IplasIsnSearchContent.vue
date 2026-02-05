@@ -295,13 +295,6 @@
                                     <div class="text-subtitle-1 font-weight-bold text-info">{{ isnGroup.records.length
                                     }}</div>
                                 </div>
-                                <v-divider vertical />
-                                <div>
-                                    <div class="text-caption text-medium-emphasis">Status</div>
-                                    <v-chip :color="isnGroup.hasError ? 'error' : 'success'" size="small">
-                                        {{ isnGroup.hasError ? 'HAS ERRORS' : 'ALL PASS' }}
-                                    </v-chip>
-                                </div>
                             </div>
 
                             <!-- View Mode Toggle -->
@@ -391,13 +384,17 @@
                                                     <div
                                                         :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'bg-green-lighten-5 pa-3 rounded' : 'bg-red-lighten-5 pa-3 rounded'">
                                                         <!-- Row 1: ISN and DeviceID -->
-                                                        <div class="d-flex align-center gap-2 mb-2">
-                                                            <v-chip color="primary" variant="outlined" size="small"
-                                                                class="font-weight-bold" label>
-                                                                <v-icon start size="small">mdi-barcode</v-icon>
+                                                        <div class="d-flex align-center flex-wrap gap-2 mb-2">
+                                                            <v-chip color="primary" variant="flat"
+                                                                class="font-weight-bold text-body-1" label>
+                                                                <v-icon start>mdi-barcode</v-icon>
                                                                 {{ record.isn }}
                                                             </v-chip>
-                                                            <span class="text-h6">{{ record.device_id }}</span>
+                                                            <v-chip color="secondary" variant="flat"
+                                                                class="font-weight-bold text-body-1" label>
+                                                                <v-icon start>mdi-cellphone</v-icon>
+                                                                {{ record.device_id }}
+                                                            </v-chip>
                                                         </div>
                                                         <!-- Row 2: TestEndTime and TestDuration -->
                                                         <div class="d-flex align-center gap-2 mb-2">
@@ -412,16 +409,17 @@
                                                             </v-chip>
                                                         </div>
                                                         <!-- Row 3: Status Icon and ErrorName -->
-                                                        <div class="d-flex align-center gap-2 mb-3">
+                                                        <div class="d-flex align-start gap-2 mb-3">
                                                             <v-icon
                                                                 :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'"
-                                                                size="small">
+                                                                size="small" class="flex-shrink-0 mt-1">
                                                                 {{ isStatusPass(record.test_status) &&
                                                                     isStatusPass(record.error_code) ? 'mdi-check-circle' :
                                                                     'mdi-alert-circle' }}
                                                             </v-icon>
                                                             <span
-                                                                :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'text-success' : 'text-error'">
+                                                                :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'text-success' : 'text-error'"
+                                                                class="text-break" style="word-break: break-word;">
                                                                 {{ isStatusPass(record.test_status) &&
                                                                     isStatusPass(record.error_code) ? 'PASS' :
                                                                     (record.error_name || record.error_code || 'FAIL') }}
@@ -467,13 +465,17 @@
                                                     :key="`grid-single-${idx}`"
                                                     :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'bg-green-lighten-5 pa-3 rounded' : 'bg-red-lighten-5 pa-3 rounded'">
                                                     <!-- Row 1: ISN and DeviceID -->
-                                                    <div class="d-flex align-center gap-2 mb-2">
-                                                        <v-chip color="primary" variant="outlined" size="small"
-                                                            class="font-weight-bold" label>
-                                                            <v-icon start size="small">mdi-barcode</v-icon>
+                                                    <div class="d-flex align-center flex-wrap gap-2 mb-2">
+                                                        <v-chip color="primary" variant="flat"
+                                                            class="font-weight-bold text-body-1" label>
+                                                            <v-icon start>mdi-barcode</v-icon>
                                                             {{ record.isn }}
                                                         </v-chip>
-                                                        <span class="text-h6">{{ record.device_id }}</span>
+                                                        <v-chip color="secondary" variant="flat"
+                                                            class="font-weight-bold text-body-1" label>
+                                                            <v-icon start>mdi-cellphone</v-icon>
+                                                            {{ record.device_id }}
+                                                        </v-chip>
                                                     </div>
                                                     <!-- Row 2: TestEndTime and TestDuration -->
                                                     <div class="d-flex align-center gap-2 mb-2">
@@ -488,16 +490,17 @@
                                                         </v-chip>
                                                     </div>
                                                     <!-- Row 3: Status Icon and ErrorName -->
-                                                    <div class="d-flex align-center gap-2 mb-3">
+                                                    <div class="d-flex align-start gap-2 mb-3">
                                                         <v-icon
                                                             :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'"
-                                                            size="small">
+                                                            size="small" class="flex-shrink-0 mt-1">
                                                             {{ isStatusPass(record.test_status) &&
                                                                 isStatusPass(record.error_code) ? 'mdi-check-circle' :
                                                                 'mdi-alert-circle' }}
                                                         </v-icon>
                                                         <span
-                                                            :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'text-success' : 'text-error'">
+                                                            :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'text-success' : 'text-error'"
+                                                            class="text-break" style="word-break: break-word;">
                                                             {{ isStatusPass(record.test_status) &&
                                                                 isStatusPass(record.error_code) ? 'PASS' :
                                                                 (record.error_name || record.error_code || 'FAIL') }}
@@ -1285,13 +1288,17 @@ async function downloadSelectedRecords(): Promise<void> {
     }
 }
 
-function groupDataByISN(data: IsnSearchData[]): ISNGroup[] {
+function groupDataByISN(data: IsnSearchData[], mergeAll: boolean = false): ISNGroup[] {
     const groups: Record<string, ISNGroup> = {}
 
+    // When mergeAll is true, use a single unified key to group all records together
+    const getGroupKey = (record: IsnSearchData) => mergeAll ? '__unified__' : record.isn
+
     for (const record of data) {
-        if (!groups[record.isn]) {
-            groups[record.isn] = {
-                isn: record.isn,
+        const groupKey = getGroupKey(record)
+        if (!groups[groupKey]) {
+            groups[groupKey] = {
+                isn: mergeAll ? 'All Results' : record.isn,
                 site: record.site,
                 project: record.project,
                 hasError: false,
@@ -1300,7 +1307,7 @@ function groupDataByISN(data: IsnSearchData[]): ISNGroup[] {
                 stations: []
             }
         }
-        const group = groups[record.isn]
+        const group = groups[groupKey]
         if (group) {
             group.records.push(record)
             if (!isStatusPass(record.test_status) || !isStatusPass(record.error_code)) {
@@ -1517,8 +1524,8 @@ async function handleSearch(): Promise<void> {
             }
         }
 
-        // Group by ISN
-        groupedByISN.value = groupDataByISN(allRecords)
+        // Group by ISN - merge all results into single tab when unified search is enabled
+        groupedByISN.value = groupDataByISN(allRecords, enableUnifiedSearch.value)
 
         // Initialize expanded panels for first tab
         if (groupedByISN.value.length > 0) {
