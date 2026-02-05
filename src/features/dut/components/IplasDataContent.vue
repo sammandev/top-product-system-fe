@@ -497,8 +497,9 @@ interface StationGroup {
     records: (CsvTestItemData | CompactCsvTestItemData)[]
 }
 
-// Search mode tab
-const searchMode = ref<'station' | 'isn'>('station')
+// Search mode tab - persisted in URL
+import { useTabPersistence } from '@/shared/composables/useTabPersistence'
+const searchMode = useTabPersistence<'station' | 'isn'>('subTab', 'station')
 
 const {
     loading,

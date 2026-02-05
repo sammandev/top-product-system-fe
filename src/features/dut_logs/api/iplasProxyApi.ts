@@ -741,7 +741,7 @@ class IplasProxyApi {
    */
   async downloadAttachment(request: IplasDownloadAttachmentRequest): Promise<IplasDownloadAttachmentResponse> {
     const response = await apiClient.post<IplasDownloadAttachmentResponse>(
-      `${this.baseUrl}/v1/download-attachment`,
+      `${this.baseUrl}/download-attachment`,
       request
     )
     return response.data
@@ -788,7 +788,7 @@ class IplasProxyApi {
    */
   async downloadCsvLog(request: IplasDownloadCsvLogRequest): Promise<IplasDownloadCsvLogResponse> {
     const response = await apiClient.post<IplasDownloadCsvLogResponse>(
-      `${this.baseUrl}/v1/download-csv-log`,
+      `${this.baseUrl}/download-csv-log`,
       request
     )
     return response.data
@@ -854,7 +854,7 @@ class IplasProxyApi {
    */
   async getTestItemByIsn(request: IplasTestItemByIsnRequest): Promise<IplasTestItemByIsnResponse> {
     const response = await apiClient.post<IplasTestItemByIsnResponse>(
-      `${this.baseUrl}/v1/test-item-by-isn`,
+      `${this.baseUrl}/test-item-by-isn`,
       request
     )
     return response.data

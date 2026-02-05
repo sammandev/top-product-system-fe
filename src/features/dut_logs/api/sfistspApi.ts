@@ -20,6 +20,7 @@ import api from '@/core/api/client'
  * Response for a single ISN lookup
  */
 export interface SfistspIsnReferenceResponse {
+    isn_searched: string
     isn: string
     ssn: string | null
     mac: string | null

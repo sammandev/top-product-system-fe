@@ -258,7 +258,7 @@ const isOpen = computed({
 })
 
 // Filter controls
-const testItemFilter = ref<('all' | 'value' | 'non-value' | 'bin')[]>(['value'])
+const testItemFilter = ref<('all' | 'value' | 'non-value' | 'bin')[]>(['all'])
 const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
 const searchTerms = ref<string[]>([])
 const showCopySuccess = ref(false)
