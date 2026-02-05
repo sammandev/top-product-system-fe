@@ -15,40 +15,56 @@
             </v-card-title>
             <v-card-text class="pt-4">
                 <!-- Input Mode Toggle -->
-                <v-btn-toggle v-model="inputMode" mandatory color="primary" class="mb-4">
-                    <v-btn value="single" size="small">
-                        <v-icon start>mdi-numeric-1-box</v-icon>
-                        Single ISN
-                    </v-btn>
-                    <v-btn value="multiple" size="small">
-                        <v-icon start>mdi-format-list-bulleted</v-icon>
-                        Multiple ISNs
-                    </v-btn>
-                    <v-btn value="bulk" size="small">
-                        <v-icon start>mdi-text-box-multiple</v-icon>
-                        Bulk Paste
-                    </v-btn>
-                </v-btn-toggle>
+                <div class="d-flex align-center flex-wrap gap-4 mb-4">
+                    <v-btn-toggle v-model="inputMode" mandatory color="primary">
+                        <v-btn value="single" size="small">
+                            <v-icon start>mdi-numeric-1-box</v-icon>
+                            Single ISN
+                        </v-btn>
+                        <v-btn value="multiple" size="small">
+                            <v-icon start>mdi-format-list-bulleted</v-icon>
+                            Multiple ISNs
+                        </v-btn>
+                        <v-btn value="bulk" size="small">
+                            <v-icon start>mdi-text-box-multiple</v-icon>
+                            Bulk Paste
+                        </v-btn>
+                    </v-btn-toggle>
+
+                    <v-switch v-model="enableUnifiedSearch" label="Unified Search" color="primary" hide-details
+                        density="compact" class="ml-2">
+                        <template #label>
+                            <span class="text-body-2">Unified Search</span>
+                            <v-tooltip activator="parent" location="top" max-width="400">
+                                <span>When enabled, searches for all related identifiers (ISN, SSN, MAC) using SFISTSP
+                                    lookup.
+                                    This finds all test data from all stations that tested the same DUT, even if
+                                    different identifiers were used.</span>
+                            </v-tooltip>
+                        </template>
+                    </v-switch>
+                </div>
 
                 <!-- Single ISN Input -->
                 <v-row v-if="inputMode === 'single'">
                     <v-col cols="12" md="8">
-                        <v-text-field v-model="searchIsn" label="DUT ISN" placeholder="e.g., DM2520270073965"
-                            prepend-inner-icon="mdi-barcode-scan" variant="outlined" density="comfortable" clearable
-                            hint="Enter the ISN to search across all stations" persistent-hint
+                        <v-text-field v-model="searchIsn" label="DUT ISN / SSN / MAC"
+                            placeholder="e.g., DM2520270073965 or BCD5EDA7830D" prepend-inner-icon="mdi-barcode-scan"
+                            variant="outlined" density="comfortable" clearable
+                            hint="Enter ISN, SSN, or MAC address to search across all stations" persistent-hint
                             @keyup.enter="handleSearch" />
                     </v-col>
-                    <v-col cols="12" md="2" class="d-flex align-center">
-                        <v-btn color="primary" size="large" :loading="loadingIsnSearch" :disabled="!searchIsn?.trim()"
-                            prepend-icon="mdi-magnify" block class="mb-5" @click="handleSearch">
+                    <v-col cols="12" md="2" class="d-flex align-center gap-2">
+                        <v-btn color="primary" :loading="loadingIsnSearch" :disabled="!searchIsn?.trim()"
+                            prepend-icon="mdi-magnify" class="mb-5 flex-grow-1" @click="handleSearch">
                             Search
                         </v-btn>
                     </v-col>
-                    <v-col cols="12" md="2" class="d-flex align-center">
-                        <v-btn color="secondary" size="large" variant="outlined" :loading="loadingSfistspLookup"
-                            :disabled="!searchIsn?.trim()" prepend-icon="mdi-link-variant" block class="mb-5"
+                    <v-col cols="12" md="2" class="d-flex align-center gap-2">
+                        <v-btn color="secondary" variant="outlined" :loading="loadingSfistspLookup"
+                            :disabled="!searchIsn?.trim()" prepend-icon="mdi-link-variant" class="mb-5 flex-grow-1"
                             @click="handleSfistspLookup">
-                            Lookup Ref
+                            ISN Ref
                             <v-tooltip activator="parent" location="top">
                                 Look up ISN references (SSN, MAC) from SFISTSP
                             </v-tooltip>
@@ -59,18 +75,30 @@
                 <!-- Multiple ISNs Combobox -->
                 <v-row v-if="inputMode === 'multiple'">
                     <v-col cols="12">
-                        <v-combobox v-model="selectedISNs" label="DUT ISNs" placeholder="Type ISN and press Enter"
-                            prepend-inner-icon="mdi-barcode-scan" variant="outlined" chips multiple closable-chips
-                            clearable hint="Type ISN and press Enter to add multiple" persistent-hint>
+                        <v-combobox v-model="selectedISNs" label="DUT ISNs / SSNs / MACs"
+                            placeholder="Type ISN, SSN, or MAC and press Enter" prepend-inner-icon="mdi-barcode-scan"
+                            variant="outlined" chips multiple closable-chips clearable
+                            hint="Type ISN, SSN, or MAC and press Enter to add multiple" persistent-hint>
                             <template #chip="{ props, item }">
                                 <v-chip v-bind="props" :text="String(item.value || item)" closable />
                             </template>
                             <template #append>
-                                <v-btn color="primary" variant="flat" size="small" :loading="loadingIsnSearch"
-                                    :disabled="!selectedISNs || selectedISNs.length === 0" prepend-icon="mdi-magnify"
-                                    @click="handleSearch">
-                                    Search
-                                </v-btn>
+                                <div class="d-flex gap-2">
+                                    <v-btn color="secondary" variant="outlined" size="small"
+                                        :loading="loadingSfistspLookup"
+                                        :disabled="!selectedISNs || selectedISNs.length === 0"
+                                        prepend-icon="mdi-link-variant" @click="handleSfistspLookup">
+                                        ISN Ref
+                                        <v-tooltip activator="parent" location="top">
+                                            Look up ISN references (SSN, MAC) from SFISTSP
+                                        </v-tooltip>
+                                    </v-btn>
+                                    <v-btn color="primary" variant="flat" size="small" :loading="loadingIsnSearch"
+                                        :disabled="!selectedISNs || selectedISNs.length === 0"
+                                        prepend-icon="mdi-magnify" @click="handleSearch">
+                                        Search
+                                    </v-btn>
+                                </div>
                             </template>
                         </v-combobox>
                     </v-col>
@@ -79,15 +107,25 @@
                 <!-- Bulk Paste Textarea -->
                 <v-row v-if="inputMode === 'bulk'">
                     <v-col cols="12">
-                        <v-textarea v-model="searchIsn" label="Bulk ISN Input"
-                            placeholder="Paste multiple ISNs (one per line, comma-separated, or space-separated)&#10;Example:&#10;DM2520270073965&#10;DM2527470036123"
+                        <v-textarea v-model="searchIsn" label="Bulk ISN / SSN / MAC Input"
+                            placeholder="Paste multiple ISNs, SSNs, or MACs (one per line, comma-separated, or space-separated)&#10;Example:&#10;DM2520270073965&#10;BCD5EDA7830D"
                             prepend-inner-icon="mdi-text-box-multiple" variant="outlined" rows="4" clearable
-                            hint="Paste ISNs separated by newlines, commas, or spaces" persistent-hint>
+                            hint="Paste ISNs, SSNs, or MACs separated by newlines, commas, or spaces" persistent-hint>
                             <template #append>
-                                <v-btn color="primary" variant="flat" size="small" :loading="loadingIsnSearch"
-                                    :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify" @click="handleSearch">
-                                    Search
-                                </v-btn>
+                                <div class="d-flex flex-column gap-2">
+                                    <v-btn color="secondary" variant="outlined" size="small"
+                                        :loading="loadingSfistspLookup" :disabled="!searchIsn?.trim()"
+                                        prepend-icon="mdi-link-variant" @click="handleSfistspLookup">
+                                        ISN Ref
+                                        <v-tooltip activator="parent" location="top">
+                                            Look up ISN references (SSN, MAC) from SFISTSP
+                                        </v-tooltip>
+                                    </v-btn>
+                                    <v-btn color="primary" variant="flat" size="small" :loading="loadingIsnSearch"
+                                        :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify" @click="handleSearch">
+                                        Search
+                                    </v-btn>
+                                </div>
                             </template>
                         </v-textarea>
                     </v-col>
@@ -204,7 +242,7 @@
                     </v-btn>
                     <v-btn size="small" variant="outlined" color="white" @click="toggleExpandAll">
                         <v-icon start>{{ allExpanded ? 'mdi-arrow-collapse-vertical' : 'mdi-arrow-expand-vertical'
-                        }}</v-icon>
+                            }}</v-icon>
                         {{ allExpanded ? 'Collapse All' : 'Expand All' }}
                     </v-btn>
                 </div>
@@ -249,13 +287,13 @@
                                 <div>
                                     <div class="text-caption text-medium-emphasis">Stations</div>
                                     <div class="text-subtitle-1 font-weight-bold text-info">{{ isnGroup.stations.length
-                                        }}</div>
+                                    }}</div>
                                 </div>
                                 <v-divider vertical />
                                 <div>
                                     <div class="text-caption text-medium-emphasis">Total Records</div>
                                     <div class="text-subtitle-1 font-weight-bold text-info">{{ isnGroup.records.length
-                                        }}</div>
+                                    }}</div>
                                 </div>
                                 <v-divider vertical />
                                 <div>
@@ -301,7 +339,7 @@
                                             <span class="font-weight-bold">{{ stationGroup.displayName }}</span>
                                             <v-spacer />
                                             <v-chip v-if="getStationErrorCount(stationGroup) > 0" size="small"
-                                                color="error" variant="flat">
+                                                color="error" variant="flat" label>
                                                 {{ getStationErrorCount(stationGroup) }} error(s)
                                             </v-chip>
                                         </div>
@@ -311,7 +349,7 @@
                                         <div v-if="getDisplayedStationRecords(isnGroup, stationGroup).length > 1">
                                             <span v-show="false">{{
                                                 initializeCarousel(`${isnGroup.isn}-${stationGroup.stationName}`,
-                                                getDisplayedStationRecords(isnGroup, stationGroup).length) }}</span>
+                                                    getDisplayedStationRecords(isnGroup, stationGroup).length) }}</span>
                                             <!-- Navigation Controls -->
                                             <div
                                                 class="d-flex justify-center align-center gap-4 pa-1 bg-grey-lighten-4">
@@ -325,11 +363,12 @@
                                                     @click="carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] = Math.max(0, (carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] || 0) - 1)">
                                                     <v-icon>mdi-chevron-left</v-icon>
                                                 </v-btn>
-                                                <v-chip color="primary" variant="flat" size="small">
+                                                <v-chip color="primary" variant="flat" size="small" label
+                                                    class="font-weight-bold">
                                                     Record {{
                                                         (carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] ||
-                                                    0) + 1 }} / {{ getDisplayedStationRecords(isnGroup,
-                                                    stationGroup).length }}
+                                                            0) + 1 }} / {{ getDisplayedStationRecords(isnGroup,
+                                                        stationGroup).length }}
                                                 </v-chip>
                                                 <v-btn icon size="small" variant="text"
                                                     :disabled="(carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] || 0) >= getDisplayedStationRecords(isnGroup, stationGroup).length - 1"
@@ -351,47 +390,44 @@
                                                     :key="`grid-${record.device_id}-${idx}`" :value="idx">
                                                     <div
                                                         :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'bg-green-lighten-5 pa-3 rounded' : 'bg-red-lighten-5 pa-3 rounded'">
-                                                        <!-- Device Name with ISN and Status Icon -->
-                                                        <div class="d-flex align-center mb-3">
-                                                            <v-icon
-                                                                :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'"
-                                                                size="large" class="mr-2">
-                                                                {{ isStatusPass(record.test_status) &&
-                                                                    isStatusPass(record.error_code) ? 'mdi-check-circle' :
-                                                                'mdi-alert-circle' }}
-                                                            </v-icon>
-                                                            <div class="text-h6">{{ record.device_id }}</div>
+                                                        <!-- Row 1: ISN and DeviceID -->
+                                                        <div class="d-flex align-center gap-2 mb-2">
                                                             <v-chip color="primary" variant="outlined" size="small"
-                                                                class="ml-2 font-weight-bold" label>
+                                                                class="font-weight-bold" label>
                                                                 <v-icon start size="small">mdi-barcode</v-icon>
                                                                 {{ record.isn }}
                                                             </v-chip>
+                                                            <span class="text-h6">{{ record.device_id }}</span>
                                                         </div>
-                                                        <!-- Status Chip -->
-                                                        <div class="mb-3">
-                                                            <v-chip
-                                                                :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'"
-                                                                size="small" label>
-                                                                {{ isStatusPass(record.test_status) &&
-                                                                    isStatusPass(record.error_code) ? 'PASS' :
-                                                                (record.error_name ||
-                                                                record.error_code || 'FAIL') }}
-                                                            </v-chip>
-                                                        </div>
-                                                        <!-- Date and Duration Chips -->
-                                                        <div class="d-flex align-center gap-2 mb-3">
+                                                        <!-- Row 2: TestEndTime and TestDuration -->
+                                                        <div class="d-flex align-center gap-2 mb-2">
                                                             <v-chip size="small" label color="default">
                                                                 <v-icon start size="small">mdi-calendar</v-icon>
                                                                 {{ formatShortTime(record.test_end_time) }}
                                                             </v-chip>
-                                                            <span class="text-medium-emphasis">•</span>
                                                             <v-chip size="small" label color="default">
                                                                 <v-icon start size="small">mdi-timer</v-icon>
                                                                 {{ calculateDuration(record.test_start_time,
-                                                                record.test_end_time) }}
+                                                                    record.test_end_time) }}
                                                             </v-chip>
                                                         </div>
-                                                        <!-- Action Buttons -->
+                                                        <!-- Row 3: Status Icon and ErrorName -->
+                                                        <div class="d-flex align-center gap-2 mb-3">
+                                                            <v-icon
+                                                                :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'"
+                                                                size="small">
+                                                                {{ isStatusPass(record.test_status) &&
+                                                                    isStatusPass(record.error_code) ? 'mdi-check-circle' :
+                                                                    'mdi-alert-circle' }}
+                                                            </v-icon>
+                                                            <span
+                                                                :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'text-success' : 'text-error'">
+                                                                {{ isStatusPass(record.test_status) &&
+                                                                    isStatusPass(record.error_code) ? 'PASS' :
+                                                                    (record.error_name || record.error_code || 'FAIL') }}
+                                                            </span>
+                                                        </div>
+                                                        <!-- Row 4: Action Buttons -->
                                                         <div class="d-flex gap-2">
                                                             <v-btn color="secondary" size="small"
                                                                 prepend-icon="mdi-fullscreen"
@@ -419,8 +455,8 @@
                                                     disabled><v-icon>mdi-page-first</v-icon></v-btn>
                                                 <v-btn icon size="small" variant="text"
                                                     disabled><v-icon>mdi-chevron-left</v-icon></v-btn>
-                                                <v-chip color="primary" variant="flat" size="small">Record 1 /
-                                                    1</v-chip>
+                                                <v-chip color="primary" variant="flat" size="small" label
+                                                    class="font-weight-bold">Record 1 / 1</v-chip>
                                                 <v-btn icon size="small" variant="text"
                                                     disabled><v-icon>mdi-chevron-right</v-icon></v-btn>
                                                 <v-btn icon size="x-small" variant="text"
@@ -430,44 +466,44 @@
                                                 <div v-for="(record, idx) in getDisplayedStationRecords(isnGroup, stationGroup).slice(0, 1)"
                                                     :key="`grid-single-${idx}`"
                                                     :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'bg-green-lighten-5 pa-3 rounded' : 'bg-red-lighten-5 pa-3 rounded'">
-                                                    <div class="d-flex align-center mb-3">
-                                                        <v-icon
-                                                            :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'"
-                                                            size="large" class="mr-2">
-                                                            {{ isStatusPass(record.test_status) &&
-                                                                isStatusPass(record.error_code) ? 'mdi-check-circle' :
-                                                            'mdi-alert-circle' }}
-                                                        </v-icon>
-                                                        <div class="text-h6">{{ record.device_id }}</div>
+                                                    <!-- Row 1: ISN and DeviceID -->
+                                                    <div class="d-flex align-center gap-2 mb-2">
                                                         <v-chip color="primary" variant="outlined" size="small"
-                                                            class="ml-2 font-weight-bold" label>
+                                                            class="font-weight-bold" label>
                                                             <v-icon start size="small">mdi-barcode</v-icon>
                                                             {{ record.isn }}
                                                         </v-chip>
+                                                        <span class="text-h6">{{ record.device_id }}</span>
                                                     </div>
-                                                    <div class="mb-3">
-                                                        <v-chip
-                                                            :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'"
-                                                            size="small" label>
-                                                            {{ isStatusPass(record.test_status) &&
-                                                                isStatusPass(record.error_code) ? 'PASS' :
-                                                            (record.error_name ||
-                                                            record.error_code || 'FAIL') }}
-                                                        </v-chip>
-                                                    </div>
-                                                    <div class="d-flex align-center gap-2 mb-3">
+                                                    <!-- Row 2: TestEndTime and TestDuration -->
+                                                    <div class="d-flex align-center gap-2 mb-2">
                                                         <v-chip size="small" label color="default">
                                                             <v-icon start size="small">mdi-calendar</v-icon>
                                                             {{ formatShortTime(record.test_end_time) }}
                                                         </v-chip>
-                                                        <span class="text-medium-emphasis">•</span>
                                                         <v-chip size="small" label color="default">
                                                             <v-icon start size="small">mdi-timer</v-icon>
                                                             {{ calculateDuration(record.test_start_time,
-                                                            record.test_end_time)
-                                                            }}
+                                                                record.test_end_time) }}
                                                         </v-chip>
                                                     </div>
+                                                    <!-- Row 3: Status Icon and ErrorName -->
+                                                    <div class="d-flex align-center gap-2 mb-3">
+                                                        <v-icon
+                                                            :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'"
+                                                            size="small">
+                                                            {{ isStatusPass(record.test_status) &&
+                                                                isStatusPass(record.error_code) ? 'mdi-check-circle' :
+                                                                'mdi-alert-circle' }}
+                                                        </v-icon>
+                                                        <span
+                                                            :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'text-success' : 'text-error'">
+                                                            {{ isStatusPass(record.test_status) &&
+                                                                isStatusPass(record.error_code) ? 'PASS' :
+                                                                (record.error_name || record.error_code || 'FAIL') }}
+                                                        </span>
+                                                    </div>
+                                                    <!-- Row 4: Action Buttons -->
                                                     <div class="d-flex gap-2">
                                                         <v-btn color="secondary" size="small"
                                                             prepend-icon="mdi-fullscreen"
@@ -523,7 +559,7 @@
                                                         size="large">
                                                         {{ isStatusPass(record.test_status) &&
                                                             isStatusPass(record.error_code) ? 'mdi-check-circle' :
-                                                        'mdi-alert-circle' }}
+                                                            'mdi-alert-circle' }}
                                                     </v-icon>
                                                 </template>
                                                 <v-list-item-title>
@@ -535,12 +571,12 @@
                                                             :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'">
                                                             {{ isStatusPass(record.test_status) &&
                                                                 isStatusPass(record.error_code) ? 'PASS' : record.error_name
-                                                            ||
-                                                            record.error_code || 'FAIL' }}
+                                                                ||
+                                                                record.error_code || 'FAIL' }}
                                                         </v-chip>
                                                         <v-chip size="small" label color="default">
                                                             {{ calculateDuration(record.test_start_time,
-                                                            record.test_end_time)
+                                                                record.test_end_time)
                                                             }}
                                                         </v-chip>
                                                         <v-chip size="small" label color="default">
@@ -606,10 +642,10 @@
                                                     <v-icon start size="small">
                                                         {{ isStatusPass(item.test_status) &&
                                                             isStatusPass(item.error_code) ? 'mdi-check-circle' :
-                                                        'mdi-alert-circle' }}
+                                                            'mdi-alert-circle' }}
                                                     </v-icon>
                                                     {{ isStatusPass(item.test_status) && isStatusPass(item.error_code) ?
-                                                    'PASS' : item.error_code }}
+                                                        'PASS' : item.error_code }}
                                                 </v-chip>
                                             </template>
                                             <template #item.error_name="{ item }">
@@ -677,8 +713,8 @@
                                                             style="white-space: normal; max-width: 100%;">
                                                             {{ isStatusPass(record.test_status) &&
                                                                 isStatusPass(record.error_code) ? 'PASS' :
-                                                            (record.error_name ||
-                                                            record.error_code || 'FAIL') }}
+                                                                (record.error_name ||
+                                                                    record.error_code || 'FAIL') }}
                                                         </v-chip>
                                                         <div class="d-flex flex-wrap gap-2 mb-2">
                                                             <v-chip size="small" label color="default">
@@ -688,7 +724,7 @@
                                                             <v-chip size="small" label color="default">
                                                                 <v-icon start size="small">mdi-timer</v-icon>
                                                                 {{ calculateDuration(record.test_start_time,
-                                                                record.test_end_time) }}
+                                                                    record.test_end_time) }}
                                                             </v-chip>
                                                         </div>
                                                         <div class="d-flex gap-1">
@@ -801,6 +837,9 @@ const showSuccess = ref(false)
 // SFISTSP lookup state
 const loadingSfistspLookup = ref(false)
 const sfistspReferences = ref<SfistspReference[]>([])
+
+// Unified search toggle - when enabled, first looks up SFISTSP to find all related identifiers
+const enableUnifiedSearch = ref(true)
 
 // Display controls
 const viewMode = ref<'grid' | 'list' | 'table' | 'compact'>('grid')
@@ -1417,15 +1456,62 @@ async function handleSearch(): Promise<void> {
     hasSearched.value = true
 
     try {
+        // If unified search is enabled, first look up SFISTSP to get all related identifiers
+        let searchTerms: string[] = [...isnList]
+
+        if (enableUnifiedSearch.value) {
+            // Collect all related identifiers from SFISTSP
+            const allIdentifiers = new Set<string>(isnList)
+
+            try {
+                if (isnList.length === 1) {
+                    // Single ISN lookup
+                    const response = await lookupIsn(isnList[0]!)
+                    if (response.success) {
+                        // Add primary ISN
+                        if (response.isn) allIdentifiers.add(response.isn)
+                        // Add SSN if available
+                        if (response.ssn) allIdentifiers.add(response.ssn)
+                        // Add MAC if available
+                        if (response.mac) allIdentifiers.add(response.mac)
+                    }
+                } else {
+                    // Batch lookup
+                    const response = await lookupIsnsBatch(isnList)
+                    for (const result of response.results) {
+                        if (result.success) {
+                            // Add primary ISN
+                            if (result.isn) allIdentifiers.add(result.isn)
+                            // Add SSN if available
+                            if (result.ssn) allIdentifiers.add(result.ssn)
+                            // Add MAC if available
+                            if (result.mac) allIdentifiers.add(result.mac)
+                        }
+                    }
+                }
+            } catch (err) {
+                console.warn('SFISTSP lookup failed during unified search, proceeding with original terms:', err)
+            }
+
+            searchTerms = Array.from(allIdentifiers).filter(term => term && term.length > 0)
+            console.log(`Unified search: expanded ${isnList.length} terms to ${searchTerms.length} unique identifiers`)
+        }
+
         // Fetch all ISNs
         const allRecords: IsnSearchData[] = []
+        const seenRecordKeys = new Set<string>() // Deduplicate records
 
-        for (const isn of isnList) {
+        for (const isn of searchTerms) {
             try {
                 const data = await searchByIsn(isn)
-                // The searchByIsn function already returns data matching IsnSearchData interface
-                // (lowercase field names from backend: isn, device_id, site, project, etc.)
-                allRecords.push(...data)
+                // Deduplicate records based on unique key (site + project + device_id + test_end_time)
+                for (const record of data) {
+                    const recordKey = `${record.site}-${record.project}-${record.device_id}-${record.test_end_time}`
+                    if (!seenRecordKeys.has(recordKey)) {
+                        seenRecordKeys.add(recordKey)
+                        allRecords.push(record)
+                    }
+                }
             } catch (err) {
                 console.warn(`Failed to fetch records for ISN ${isn}:`, err)
             }
