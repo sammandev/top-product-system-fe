@@ -204,36 +204,57 @@
                 <v-window v-model="activeISNTab">
                     <v-window-item v-for="(isnGroup, isnIndex) in groupedByISN" :key="isnGroup.isn" :value="isnIndex"
                         eager>
-                        <!-- ISN Summary Info -->
-                        <div class="d-flex align-center gap-4 mb-4 flex-wrap">
-                            <div>
-                                <div class="text-caption text-medium-emphasis">Site</div>
-                                <div class="text-subtitle-1 font-weight-bold text-primary">{{ isnGroup.site }}</div>
-                            </div>
-                            <v-divider vertical />
-                            <div>
-                                <div class="text-caption text-medium-emphasis">Project</div>
-                                <div class="text-subtitle-1 font-weight-bold text-primary">{{ isnGroup.project }}</div>
-                            </div>
-                            <v-divider vertical />
-                            <div>
-                                <div class="text-caption text-medium-emphasis">Stations</div>
-                                <div class="text-subtitle-1 font-weight-bold text-info">{{ isnGroup.stations.length }}
+                        <!-- Site, Project & View Mode Controls -->
+                        <div class="d-flex justify-space-between align-center flex-wrap gap-3 mb-4">
+                            <!-- Highlighted Site & Project Info -->
+                            <div class="d-flex align-center gap-4">
+                                <div>
+                                    <div class="text-caption text-medium-emphasis">Site</div>
+                                    <div class="text-subtitle-1 font-weight-bold text-primary">{{ isnGroup.site }}</div>
+                                </div>
+                                <v-divider vertical />
+                                <div>
+                                    <div class="text-caption text-medium-emphasis">Project</div>
+                                    <div class="text-subtitle-1 font-weight-bold text-primary">{{ isnGroup.project }}</div>
+                                </div>
+                                <v-divider vertical />
+                                <div>
+                                    <div class="text-caption text-medium-emphasis">Stations</div>
+                                    <div class="text-subtitle-1 font-weight-bold text-info">{{ isnGroup.stations.length }}</div>
+                                </div>
+                                <v-divider vertical />
+                                <div>
+                                    <div class="text-caption text-medium-emphasis">Total Records</div>
+                                    <div class="text-subtitle-1 font-weight-bold text-info">{{ isnGroup.records.length }}</div>
+                                </div>
+                                <v-divider vertical />
+                                <div>
+                                    <div class="text-caption text-medium-emphasis">Status</div>
+                                    <v-chip :color="isnGroup.hasError ? 'error' : 'success'" size="small">
+                                        {{ isnGroup.hasError ? 'HAS ERRORS' : 'ALL PASS' }}
+                                    </v-chip>
                                 </div>
                             </div>
-                            <v-divider vertical />
-                            <div>
-                                <div class="text-caption text-medium-emphasis">Total Records</div>
-                                <div class="text-subtitle-1 font-weight-bold text-info">{{ isnGroup.records.length }}
-                                </div>
-                            </div>
-                            <v-divider vertical />
-                            <div>
-                                <div class="text-caption text-medium-emphasis">Status</div>
-                                <v-chip :color="isnGroup.hasError ? 'error' : 'success'" size="small">
-                                    {{ isnGroup.hasError ? 'HAS ERRORS' : 'ALL PASS' }}
-                                </v-chip>
-                            </div>
+
+                            <!-- View Mode Toggle -->
+                            <v-btn-toggle v-model="viewMode" color="primary" mandatory variant="outlined" density="compact">
+                                <v-btn value="grid" size="small">
+                                    <v-icon>mdi-view-grid</v-icon>
+                                    <span class="ml-1 d-none d-sm-inline">Grid</span>
+                                </v-btn>
+                                <v-btn value="list" size="small">
+                                    <v-icon>mdi-view-list</v-icon>
+                                    <span class="ml-1 d-none d-sm-inline">List</span>
+                                </v-btn>
+                                <v-btn value="table" size="small">
+                                    <v-icon>mdi-table</v-icon>
+                                    <span class="ml-1 d-none d-sm-inline">Table</span>
+                                </v-btn>
+                                <v-btn value="compact" size="small">
+                                    <v-icon>mdi-view-compact</v-icon>
+                                    <span class="ml-1 d-none d-sm-inline">Compact</span>
+                                </v-btn>
+                            </v-btn-toggle>
                         </div>
 
                         <v-divider class="mb-4" />
@@ -283,8 +304,166 @@
                                     </v-col>
                                 </v-row>
 
-                                <!-- Station Records -->
-                                <v-expansion-panels v-model="expandedPanels[`${isnIndex}-${stationIndex}`]" multiple>
+                                <!-- Grid View -->
+                                <v-row v-if="viewMode === 'grid'">
+                                    <v-col cols="12">
+                                        <v-card variant="outlined">
+                                            <v-card-title :class="hasLatestStationError(stationGroup) ? 'bg-red-lighten-4' : 'bg-secondary'">
+                                                <div class="d-flex align-center w-100">
+                                                    <v-icon start>mdi-router-wireless</v-icon>
+                                                    <span class="font-weight-bold">{{ stationGroup.displayName }}</span>
+                                                    <v-spacer />
+                                                    <v-chip v-if="getStationErrorCount(stationGroup) > 0" size="small" color="error" variant="flat" class="mr-2">
+                                                        {{ getStationErrorCount(stationGroup) }} error(s)
+                                                    </v-chip>
+                                                    <v-chip size="small" color="white" variant="outlined">
+                                                        {{ getTotalFilteredStationRecords(isnGroup, stationGroup) }} record(s)
+                                                    </v-chip>
+                                                </div>
+                                            </v-card-title>
+                                            <v-card-text class="pa-0">
+                                                <!-- Multiple records: Carousel with custom navigation -->
+                                                <div v-if="getDisplayedStationRecords(isnGroup, stationGroup).length > 1">
+                                                    <span v-show="false">{{ initializeCarousel(`${isnGroup.isn}-${stationGroup.stationName}`, getDisplayedStationRecords(isnGroup, stationGroup).length) }}</span>
+                                                    <!-- Navigation Controls -->
+                                                    <div class="d-flex justify-center align-center gap-4 pa-1 bg-grey-lighten-4">
+                                                        <v-btn icon size="x-small" variant="text"
+                                                            :disabled="(carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] || 0) === 0"
+                                                            @click="carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] = 0">
+                                                            <v-icon>mdi-page-first</v-icon>
+                                                        </v-btn>
+                                                        <v-btn icon size="small" variant="text"
+                                                            :disabled="(carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] || 0) === 0"
+                                                            @click="carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] = Math.max(0, (carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] || 0) - 1)">
+                                                            <v-icon>mdi-chevron-left</v-icon>
+                                                        </v-btn>
+                                                        <v-chip color="primary" variant="flat" size="small">
+                                                            Record {{ (carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] || 0) + 1 }} / {{ getDisplayedStationRecords(isnGroup, stationGroup).length }}
+                                                        </v-chip>
+                                                        <v-btn icon size="small" variant="text"
+                                                            :disabled="(carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] || 0) >= getDisplayedStationRecords(isnGroup, stationGroup).length - 1"
+                                                            @click="carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] = Math.min(getDisplayedStationRecords(isnGroup, stationGroup).length - 1, (carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] || 0) + 1)">
+                                                            <v-icon>mdi-chevron-right</v-icon>
+                                                        </v-btn>
+                                                        <v-btn icon size="x-small" variant="text"
+                                                            :disabled="(carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] || 0) >= getDisplayedStationRecords(isnGroup, stationGroup).length - 1"
+                                                            @click="carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] = getDisplayedStationRecords(isnGroup, stationGroup).length - 1">
+                                                            <v-icon>mdi-page-last</v-icon>
+                                                        </v-btn>
+                                                    </div>
+                                                    <!-- Carousel Content -->
+                                                    <v-window v-model="carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`]" class="pa-2">
+                                                        <v-window-item v-for="(record, idx) in getDisplayedStationRecords(isnGroup, stationGroup)" :key="`grid-${record.device_id}-${idx}`" :value="idx">
+                                                            <div :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'bg-green-lighten-5 pa-3 rounded' : 'bg-red-lighten-5 pa-3 rounded'">
+                                                                <!-- Device Name with Status Icon -->
+                                                                <div class="d-flex align-center mb-3">
+                                                                    <v-icon :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'" size="large" class="mr-2">
+                                                                        {{ isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+                                                                    </v-icon>
+                                                                    <div class="text-h6">{{ record.device_id }}</div>
+                                                                </div>
+                                                                <!-- ISN Chip -->
+                                                                <v-chip color="primary" variant="outlined" size="small" class="mb-3 font-weight-bold" label>
+                                                                    <v-icon start size="small">mdi-barcode</v-icon>
+                                                                    {{ record.isn }}
+                                                                </v-chip>
+                                                                <!-- Status Chip -->
+                                                                <div class="mb-3">
+                                                                    <v-chip :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'" size="small" label>
+                                                                        {{ isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'PASS' : (record.error_name || record.error_code || 'FAIL') }}
+                                                                    </v-chip>
+                                                                </div>
+                                                                <!-- Date and Duration Chips -->
+                                                                <div class="d-flex align-center gap-2 mb-3">
+                                                                    <v-chip size="small" label color="default">
+                                                                        <v-icon start size="small">mdi-calendar</v-icon>
+                                                                        {{ formatShortTime(record.test_end_time) }}
+                                                                    </v-chip>
+                                                                    <span class="text-medium-emphasis">•</span>
+                                                                    <v-chip size="small" label color="default">
+                                                                        <v-icon start size="small">mdi-timer</v-icon>
+                                                                        {{ calculateDuration(record.test_start_time, record.test_end_time) }}
+                                                                    </v-chip>
+                                                                </div>
+                                                                <!-- Action Buttons -->
+                                                                <div class="d-flex gap-2">
+                                                                    <v-btn color="secondary" size="small" prepend-icon="mdi-fullscreen" @click="openFullscreen(record)">
+                                                                        Details
+                                                                    </v-btn>
+                                                                    <v-btn color="primary" size="small" prepend-icon="mdi-download"
+                                                                        :loading="downloadingKey === `${isnIndex}-${stationIndex}-${idx}`"
+                                                                        @click="downloadSingleRecord(record, `${isnIndex}-${stationIndex}`, idx)">
+                                                                        Download
+                                                                    </v-btn>
+                                                                </div>
+                                                            </div>
+                                                        </v-window-item>
+                                                    </v-window>
+                                                </div>
+                                                <!-- Single record: Direct card -->
+                                                <div v-else-if="getDisplayedStationRecords(isnGroup, stationGroup).length === 1">
+                                                    <!-- Navigation Controls (disabled for single record) -->
+                                                    <div class="d-flex justify-center align-center gap-3 pa-1 bg-grey-lighten-4">
+                                                        <v-btn icon size="x-small" variant="text" disabled><v-icon>mdi-page-first</v-icon></v-btn>
+                                                        <v-btn icon size="small" variant="text" disabled><v-icon>mdi-chevron-left</v-icon></v-btn>
+                                                        <v-chip color="primary" variant="flat" size="small">Record 1 / 1</v-chip>
+                                                        <v-btn icon size="small" variant="text" disabled><v-icon>mdi-chevron-right</v-icon></v-btn>
+                                                        <v-btn icon size="x-small" variant="text" disabled><v-icon>mdi-page-last</v-icon></v-btn>
+                                                    </div>
+                                                    <div class="pa-2">
+                                                        <div v-for="(record, idx) in getDisplayedStationRecords(isnGroup, stationGroup).slice(0, 1)" :key="`grid-single-${idx}`"
+                                                            :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'bg-green-lighten-5 pa-3 rounded' : 'bg-red-lighten-5 pa-3 rounded'">
+                                                            <div class="d-flex align-center mb-3">
+                                                                <v-icon :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'" size="large" class="mr-2">
+                                                                    {{ isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+                                                                </v-icon>
+                                                                <div class="text-h6">{{ record.device_id }}</div>
+                                                            </div>
+                                                            <v-chip color="primary" variant="outlined" size="small" class="mb-3 font-weight-bold" label>
+                                                                <v-icon start size="small">mdi-barcode</v-icon>
+                                                                {{ record.isn }}
+                                                            </v-chip>
+                                                            <div class="mb-3">
+                                                                <v-chip :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'" size="small" label>
+                                                                    {{ isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'PASS' : (record.error_name || record.error_code || 'FAIL') }}
+                                                                </v-chip>
+                                                            </div>
+                                                            <div class="d-flex align-center gap-2 mb-3">
+                                                                <v-chip size="small" label color="default">
+                                                                    <v-icon start size="small">mdi-calendar</v-icon>
+                                                                    {{ formatShortTime(record.test_end_time) }}
+                                                                </v-chip>
+                                                                <span class="text-medium-emphasis">•</span>
+                                                                <v-chip size="small" label color="default">
+                                                                    <v-icon start size="small">mdi-timer</v-icon>
+                                                                    {{ calculateDuration(record.test_start_time, record.test_end_time) }}
+                                                                </v-chip>
+                                                            </div>
+                                                            <div class="d-flex gap-2">
+                                                                <v-btn color="secondary" size="small" prepend-icon="mdi-fullscreen" @click="openFullscreen(record)">
+                                                                    Details
+                                                                </v-btn>
+                                                                <v-btn color="primary" size="small" prepend-icon="mdi-download"
+                                                                    :loading="downloadingKey === `${isnIndex}-${stationIndex}-0`"
+                                                                    @click="downloadSingleRecord(record, `${isnIndex}-${stationIndex}`, 0)">
+                                                                    Download
+                                                                </v-btn>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <!-- No records: Empty state -->
+                                                <v-alert v-else type="info" variant="tonal" density="compact" class="ma-4">
+                                                    No test records available for this station
+                                                </v-alert>
+                                            </v-card-text>
+                                        </v-card>
+                                    </v-col>
+                                </v-row>
+
+                                <!-- List View (original expansion panels) -->
+                                <div v-if="viewMode === 'list'">
+                                    <v-expansion-panels v-model="expandedPanels[`${isnIndex}-${stationIndex}`]" multiple>
                                     <v-expansion-panel
                                         v-for="(record, recordIndex) in getDisplayedStationRecords(isnGroup, stationGroup)"
                                         :key="`${isnGroup.isn}-${stationIndex}-${recordIndex}`">
@@ -463,6 +642,128 @@
                                         </v-expansion-panel-text>
                                     </v-expansion-panel>
                                 </v-expansion-panels>
+                                </div>
+
+                                <!-- Table View -->
+                                <div v-if="viewMode === 'table'">
+                                    <v-card variant="outlined" class="mb-4">
+                                        <v-card-title :class="hasLatestStationError(stationGroup) ? 'bg-red-lighten-4' : 'bg-secondary'">
+                                            <div class="d-flex align-center w-100">
+                                                <v-icon start>mdi-router-wireless</v-icon>
+                                                <span class="font-weight-bold">{{ stationGroup.displayName }}</span>
+                                                <v-spacer />
+                                                <v-chip v-if="getStationErrorCount(stationGroup) > 0" size="small" color="error" variant="flat" class="mr-2">
+                                                    {{ getStationErrorCount(stationGroup) }} error(s)
+                                                </v-chip>
+                                                <v-chip size="small" color="white" variant="outlined">
+                                                    {{ getTotalFilteredStationRecords(isnGroup, stationGroup) }} record(s)
+                                                </v-chip>
+                                            </div>
+                                        </v-card-title>
+                                        <v-card-text class="pa-0">
+                                            <v-data-table
+                                                :headers="recordTableHeaders"
+                                                :items="getDisplayedStationRecords(isnGroup, stationGroup).map((record, idx) => ({
+                                                    ...record,
+                                                    record_number: getTotalFilteredStationRecords(isnGroup, stationGroup) - idx,
+                                                    duration: calculateDuration(record.test_start_time, record.test_end_time),
+                                                    _idx: idx
+                                                }))"
+                                                density="compact"
+                                                :items-per-page="-1"
+                                                hide-default-footer
+                                            >
+                                                <template #item.status="{ item }">
+                                                    <v-chip :color="isStatusPass(item.test_status) && isStatusPass(item.error_code) ? 'success' : 'error'" size="small" label>
+                                                        <v-icon start size="small">
+                                                            {{ isStatusPass(item.test_status) && isStatusPass(item.error_code) ? 'mdi-check-circle' : 'mdi-alert-circle' }}
+                                                        </v-icon>
+                                                        {{ isStatusPass(item.test_status) && isStatusPass(item.error_code) ? 'PASS' : item.error_code }}
+                                                    </v-chip>
+                                                </template>
+                                                <template #item.error_name="{ item }">
+                                                    <span :class="!isStatusPass(item.error_code) ? 'text-error' : ''">{{ item.error_name || '-' }}</span>
+                                                </template>
+                                                <template #item.test_end_time="{ item }">
+                                                    {{ formatShortTime(item.test_end_time) }}
+                                                </template>
+                                                <template #item.actions="{ item }">
+                                                    <div class="d-flex gap-1">
+                                                        <v-btn color="secondary" variant="outlined" size="x-small" icon="mdi-fullscreen"
+                                                            @click="openFullscreen(item)" />
+                                                        <v-btn color="primary" variant="outlined" size="x-small" icon="mdi-download"
+                                                            :loading="downloadingKey === `${isnIndex}-${stationIndex}-${item._idx}`"
+                                                            @click="downloadSingleRecord(item, `${isnIndex}-${stationIndex}`, item._idx)" />
+                                                    </div>
+                                                </template>
+                                            </v-data-table>
+                                        </v-card-text>
+                                    </v-card>
+                                </div>
+
+                                <!-- Compact View -->
+                                <div v-if="viewMode === 'compact'">
+                                    <v-card variant="outlined" class="mb-3">
+                                        <v-card-title :class="hasLatestStationError(stationGroup) ? 'bg-red-lighten-4' : 'bg-secondary'" class="text-subtitle-1 py-2">
+                                            <div class="d-flex align-center w-100">
+                                                <v-icon start size="small">mdi-router-wireless</v-icon>
+                                                <span class="font-weight-bold">{{ stationGroup.displayName }}</span>
+                                                <v-spacer />
+                                                <v-chip v-if="getStationErrorCount(stationGroup) > 0" size="small" color="error" variant="flat" class="mr-2">
+                                                    {{ getStationErrorCount(stationGroup) }} error(s)
+                                                </v-chip>
+                                                <v-chip size="small" color="white" variant="outlined">
+                                                    {{ getTotalFilteredStationRecords(isnGroup, stationGroup) }} record(s)
+                                                </v-chip>
+                                            </div>
+                                        </v-card-title>
+                                        <v-card-text class="pa-4">
+                                            <div v-if="getDisplayedStationRecords(isnGroup, stationGroup).length > 0">
+                                                <v-row dense justify="center">
+                                                    <v-col v-for="(record, recordIndex) in getDisplayedStationRecords(isnGroup, stationGroup)" :key="`compact-${record.device_id}-${recordIndex}`"
+                                                        :cols="getDisplayedStationRecords(isnGroup, stationGroup).length === 1 ? 12 : 12"
+                                                        :sm="getDisplayedStationRecords(isnGroup, stationGroup).length === 1 ? 6 : 6"
+                                                        :md="getDisplayedStationRecords(isnGroup, stationGroup).length === 1 ? 4 : 4"
+                                                        :lg="getDisplayedStationRecords(isnGroup, stationGroup).length === 1 ? 3 : 3">
+                                                        <v-card variant="flat" class="pa-2"
+                                                            :color="!isStatusPass(record.test_status) || !isStatusPass(record.error_code) ? 'red-lighten-5' : ''">
+                                                            <div class="text-body-2 font-weight-bold mb-2">
+                                                                {{ record.device_id }} • {{ record.isn }}
+                                                            </div>
+                                                            <v-chip :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'"
+                                                                size="small" label class="mb-2" style="white-space: normal; max-width: 100%;">
+                                                                {{ isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'PASS' : (record.error_name || record.error_code || 'FAIL') }}
+                                                            </v-chip>
+                                                            <div class="d-flex flex-wrap gap-2 mb-2">
+                                                                <v-chip size="small" label color="default">
+                                                                    <v-icon start size="small">mdi-calendar</v-icon>
+                                                                    {{ formatShortTime(record.test_end_time) }}
+                                                                </v-chip>
+                                                                <v-chip size="small" label color="default">
+                                                                    <v-icon start size="small">mdi-timer</v-icon>
+                                                                    {{ calculateDuration(record.test_start_time, record.test_end_time) }}
+                                                                </v-chip>
+                                                            </div>
+                                                            <div class="d-flex gap-1">
+                                                                <v-btn color="secondary" size="small" prepend-icon="mdi-fullscreen" @click="openFullscreen(record)">
+                                                                    Details
+                                                                </v-btn>
+                                                                <v-btn color="primary" size="small" prepend-icon="mdi-download"
+                                                                    :loading="downloadingKey === `${isnIndex}-${stationIndex}-${recordIndex}`"
+                                                                    @click="downloadSingleRecord(record, `${isnIndex}-${stationIndex}`, recordIndex)">
+                                                                    Download
+                                                                </v-btn>
+                                                            </div>
+                                                        </v-card>
+                                                    </v-col>
+                                                </v-row>
+                                            </div>
+                                            <v-alert v-else type="info" variant="tonal" density="compact">
+                                                No test records available for this station
+                                            </v-alert>
+                                        </v-card-text>
+                                    </v-card>
+                                </div>
 
                                 <!-- Performance: Show More Button -->
                                 <div v-if="hasMoreStationRecords(isnGroup, stationGroup)" class="text-center mt-4">
@@ -565,11 +866,14 @@ const loadingSfistspLookup = ref(false)
 const sfistspReferences = ref<SfistspReference[]>([])
 
 // Display controls
+const viewMode = ref<'grid' | 'list' | 'table' | 'compact'>('list')
 const testItemFilters = ref<Record<string, 'all' | 'value' | 'non-value' | 'bin'>>({})
 const testItemStatusFilters = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({}) // Per-test item status filter
 const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
 const expandedPanels = ref<Record<string, number[]>>({}) // Key format: "isnIndex-stationIndex"
 const testItemSearchTerms = ref<Record<string, string[]>>({})
+const carouselModels = ref<Record<string, number>>({}) // For grid view carousel navigation
+const compactExpanded = ref<Record<number, Record<number, number[]>>>({}) // For compact view per-ISN per-station expansion
 
 // Device ID filter controls
 const selectedFilterDeviceIds = ref<Record<string, string[]>>({})
@@ -614,6 +918,17 @@ const testItemHeaders = [
     { title: 'LCL', key: 'LCL', sortable: true }
 ]
 
+// Table headers for records table view (like InternalDataContent.vue)
+const recordTableHeaders = [
+    { title: '#', key: 'record_number', sortable: true },
+    { title: 'Device ID', key: 'device_id', sortable: true },
+    { title: 'Status', key: 'status', sortable: false },
+    { title: 'Error Name', key: 'error_name', sortable: true },
+    { title: 'Duration', key: 'duration', sortable: true },
+    { title: 'Test End', key: 'test_end_time', sortable: true },
+    { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const }
+]
+
 // Computed
 const allExpanded = computed(() => {
     const currentTab = activeISNTab.value
@@ -624,11 +939,43 @@ const allExpanded = computed(() => {
     const currentStation = currentGroup.stations[activeStationTab]
     if (!currentStation) return false
 
-    const panelKey = `${currentTab}-${activeStationTab}`
-    const expanded = expandedPanels.value[panelKey] || []
-    const filteredRecords = getFilteredStationRecords(currentGroup, currentStation)
-    return expanded.length === filteredRecords.length && filteredRecords.length > 0
+    if (viewMode.value === 'compact') {
+        const isnExpanded = compactExpanded.value[currentTab] || {}
+        const stationExpanded = isnExpanded[activeStationTab] || []
+        const filteredRecords = getFilteredStationRecords(currentGroup, currentStation)
+        return stationExpanded.length === filteredRecords.length && filteredRecords.length > 0
+    } else {
+        const panelKey = `${currentTab}-${activeStationTab}`
+        const expanded = expandedPanels.value[panelKey] || []
+        const filteredRecords = getFilteredStationRecords(currentGroup, currentStation)
+        return expanded.length === filteredRecords.length && filteredRecords.length > 0
+    }
 })
+
+// Helper to initialize carousel at latest record for grid view
+function initializeCarousel(key: string, dataLength: number): void {
+    if (!(key in carouselModels.value) && dataLength > 1) {
+        carouselModels.value[key] = dataLength - 1 // Start at last record
+    }
+}
+
+// Helper to get error count for a station
+function getStationErrorCount(stationGroup: StationGroup): number {
+    return stationGroup.records.filter(r => !isStatusPass(r.test_status) || !isStatusPass(r.error_code)).length
+}
+
+// Helper to check if latest record has error
+function hasLatestStationError(stationGroup: StationGroup): boolean {
+    if (stationGroup.records.length === 0) return false
+    // Sort by test_end_time descending and check the first one
+    const sortedRecords = [...stationGroup.records].sort((a, b) => {
+        const timeA = new Date(a.test_end_time.replace('%:z', '').replace(' ', 'T') + 'Z').getTime()
+        const timeB = new Date(b.test_end_time.replace('%:z', '').replace(' ', 'T') + 'Z').getTime()
+        return timeB - timeA
+    })
+    const latestRecord = sortedRecords[0]
+    return latestRecord ? (!isStatusPass(latestRecord.test_status) || !isStatusPass(latestRecord.error_code)) : false
+}
 
 // Helper functions
 function isValueData(item: IsnSearchTestItem): boolean {
@@ -954,14 +1301,29 @@ function toggleExpandAll(): void {
     const currentStation = currentGroup.stations[activeStationTab]
     if (!currentStation) return
 
-    const panelKey = `${currentTab}-${activeStationTab}`
-    const currentExpanded = expandedPanels.value[panelKey] || []
     const filteredRecords = getFilteredStationRecords(currentGroup, currentStation)
 
-    if (currentExpanded.length === filteredRecords.length && filteredRecords.length > 0) {
-        expandedPanels.value[panelKey] = []
+    if (viewMode.value === 'compact') {
+        // For compact view, toggle expansion per ISN and station tab
+        if (!compactExpanded.value[currentTab]) {
+            compactExpanded.value[currentTab] = {}
+        }
+        const currentStationExpanded = compactExpanded.value[currentTab]![activeStationTab] || []
+
+        if (currentStationExpanded.length === filteredRecords.length && filteredRecords.length > 0) {
+            compactExpanded.value[currentTab]![activeStationTab] = []
+        } else {
+            compactExpanded.value[currentTab]![activeStationTab] = filteredRecords.map((_, i) => i)
+        }
     } else {
-        expandedPanels.value[panelKey] = filteredRecords.map((_, i) => i)
+        const panelKey = `${currentTab}-${activeStationTab}`
+        const currentExpanded = expandedPanels.value[panelKey] || []
+
+        if (currentExpanded.length === filteredRecords.length && filteredRecords.length > 0) {
+            expandedPanels.value[panelKey] = []
+        } else {
+            expandedPanels.value[panelKey] = filteredRecords.map((_, i) => i)
+        }
     }
 }
 
@@ -1153,6 +1515,8 @@ function clearAll(): void {
     testItemFilters.value = {}
     testItemSearchTerms.value = {}
     sfistspReferences.value = []
+    carouselModels.value = {}
+    compactExpanded.value = {}
     clearIsnSearchData()
 }
 

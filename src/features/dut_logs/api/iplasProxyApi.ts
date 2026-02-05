@@ -221,6 +221,54 @@ export interface IplasIsnSearchResponse {
 }
 
 // ============================================================================
+// Stations From ISN Types
+// ============================================================================
+
+/** Request to get station list from a single ISN */
+export interface IplasStationsFromIsnRequest {
+  isn: string
+  token?: string  // Optional user token override
+}
+
+/** Request to get station lists from multiple ISNs */
+export interface IplasStationsFromIsnBatchRequest {
+  isns: string[]
+  token?: string  // Optional user token override
+}
+
+/** Information about an ISN's project discovered from ISN search */
+export interface IplasIsnProjectInfo {
+  isn: string
+  site: string
+  project: string
+  found: boolean
+}
+
+/** Response for single ISN stations lookup */
+export interface IplasStationsFromIsnResponse {
+  isn_info: IplasIsnProjectInfo
+  stations: IplasStation[]
+  total_stations: number
+  cached: boolean
+}
+
+/** Single item in batch stations lookup response */
+export interface IplasStationsFromIsnBatchItem {
+  isn_info: IplasIsnProjectInfo
+  stations: IplasStation[]
+  total_stations: number
+}
+
+/** Response for batch ISN stations lookup */
+export interface IplasStationsFromIsnBatchResponse {
+  results: IplasStationsFromIsnBatchItem[]
+  total_isns: number
+  unique_projects: number
+  not_found_isns: string[]
+  cached: boolean
+}
+
+// ============================================================================
 // Download Attachment Types
 // ============================================================================
 
@@ -549,7 +597,7 @@ class IplasProxyApi {
    */
   async getSiteProjects(dataType: 'simple' | 'strict' = 'simple'): Promise<IplasSiteProjectListResponse> {
     const response = await apiClient.get<IplasSiteProjectListResponse>(
-      `${this.baseUrl}/v2/site-projects`,
+      `${this.baseUrl}/site-projects`,
       { params: { data_type: dataType } }
     )
     return response.data
@@ -565,7 +613,7 @@ class IplasProxyApi {
    */
   async getStations(request: IplasStationListRequest): Promise<IplasStationListResponse> {
     const response = await apiClient.post<IplasStationListResponse>(
-      `${this.baseUrl}/v2/stations`,
+      `${this.baseUrl}/stations`,
       request
     )
     return response.data
@@ -585,7 +633,7 @@ class IplasProxyApi {
     request: IplasDeviceListRequest,
     options?: { signal?: AbortSignal; cancelPrevious?: boolean }
   ): Promise<IplasDeviceListResponse> {
-    const endpoint = `${this.baseUrl}/v2/devices`
+    const endpoint = `${this.baseUrl}/devices`
     const requestKey = getRequestKey(endpoint, { 
       site: request.site, 
       project: request.project, 
@@ -624,7 +672,56 @@ class IplasProxyApi {
    */
   async searchByIsn(request: IplasIsnSearchRequest): Promise<IplasIsnSearchResponse> {
     const response = await apiClient.post<IplasIsnSearchResponse>(
-      `${this.baseUrl}/v2/isn-search`,
+      `${this.baseUrl}/isn-search`,
+      request
+    )
+    return response.data
+  }
+
+  // ============================================================================
+  // v2 Stations From ISN
+  // ============================================================================
+
+  /**
+   * Get station list from a single ISN
+   * 
+   * Looks up the ISN to find its site/project, then returns all stations
+   * for that project.
+   * 
+   * Cache TTL:
+   * - ISN lookup: 5 minutes
+   * - Station list: 1 hour
+   * 
+   * @param request - ISN to look up
+   * @returns Station list for the ISN's project
+   */
+  async getStationsFromIsn(request: IplasStationsFromIsnRequest): Promise<IplasStationsFromIsnResponse> {
+    const response = await apiClient.post<IplasStationsFromIsnResponse>(
+      `${this.baseUrl}/isn/stations`,
+      request
+    )
+    return response.data
+  }
+
+  /**
+   * Get station lists from multiple ISNs
+   * 
+   * Looks up multiple ISNs and returns station lists for each unique project.
+   * Results are deduplicated - if multiple ISNs belong to the same project,
+   * the station list is only fetched once.
+   * 
+   * Limits: Maximum 50 ISNs per request
+   * 
+   * Cache TTL:
+   * - ISN lookup: 5 minutes
+   * - Station list: 1 hour
+   * 
+   * @param request - ISNs to look up
+   * @returns Station lists for each ISN's project
+   */
+  async getStationsFromIsnBatch(request: IplasStationsFromIsnBatchRequest): Promise<IplasStationsFromIsnBatchResponse> {
+    const response = await apiClient.post<IplasStationsFromIsnBatchResponse>(
+      `${this.baseUrl}/isn-batch/stations`,
       request
     )
     return response.data
@@ -730,7 +827,7 @@ class IplasProxyApi {
    */
   async verifyAccess(request: IplasVerifyRequest): Promise<IplasVerifyResponse> {
     const response = await apiClient.post<IplasVerifyResponse>(
-      `${this.baseUrl}/v2/verify`,
+      `${this.baseUrl}/verify`,
       request
     )
     return response.data
