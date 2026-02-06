@@ -14,7 +14,7 @@
                     Calculate Scores
                 </v-btn>
                 <v-btn v-if="totalRecords > 0" color="primary" variant="tonal" size="small"
-                    prepend-icon="mdi-file-export" :loading="exportingAll" @click="handleExportAll">
+                    prepend-icon="mdi-file-export" :loading="props.exportingAll" @click="handleExportAll">
                     Export All ({{ totalRecords }})
                 </v-btn>
                 <v-btn v-if="selectedRecords.length > 0" color="success" variant="tonal" size="small"
@@ -206,11 +206,13 @@ interface Props {
     loading?: boolean
     scores?: Record<string, number> // Map of record key to score
     calculatingScores?: boolean
+    exportingAll?: boolean // Whether export all is in progress (controlled by parent)
 }
 
 const props = withDefaults(defineProps<Props>(), {
     loading: false,
-    calculatingScores: false
+    calculatingScores: false,
+    exportingAll: false
 })
 
 const emit = defineEmits<{
@@ -230,7 +232,6 @@ const selectAllToggles = ref<Record<string, boolean>>({})
 const selectedRecordsMap = ref<Record<string, boolean>>({})
 const showCopySuccess = ref(false)
 const exporting = ref(false)
-const exportingAll = ref(false)
 
 // Status options
 const statusOptions = [
@@ -410,12 +411,8 @@ function handleExportAll(): void {
     }
     if (allRecords.length === 0) return
     
-    exportingAll.value = true
-    try {
-        emit('export-all', { records: allRecords, isnGroups: props.isnGroups })
-    } finally {
-        exportingAll.value = false
-    }
+    // Loading state is managed by parent via exportingAll prop
+    emit('export-all', { records: allRecords, isnGroups: props.isnGroups })
 }
 </script>
 

@@ -106,7 +106,7 @@
 
         <!-- Results Section with Ranking Table -->
         <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
-            :calculating-scores="calculatingScores" :loading="loadingTestItems" @row-click="handleRowClick" @download="handleDownloadRecord"
+            :calculating-scores="calculatingScores" :loading="loadingTestItems" :exporting-all="exportingAll" @row-click="handleRowClick" @download="handleDownloadRecord"
             @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores" />
 
         <!-- Station Selection Dialog -->
@@ -158,6 +158,7 @@ const {
 // Scoring state
 const recordScores = ref<Record<string, number>>({})
 const calculatingScores = ref(false)
+const exportingAll = ref(false)
 
 const {
     loading,
@@ -484,36 +485,37 @@ async function handleExportRecords(payload: { records: CsvTestItemData[]; statio
 async function handleExportAllRecords(payload: { records: CsvTestItemData[]; filenamePrefix: string }): Promise<void> {
     if (payload.records.length === 0) return
 
-    // Transform CsvTestItemData to ExportRecord format
-    const exportRecords: ExportRecord[] = payload.records.map(record => {
-        const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-        const station = record.TSP || record.station
-
-        // Map test items from the TestItem array
-        const testItems: ExportTestItem[] = (record.TestItem || []).map(item => ({
-            NAME: item.NAME,
-            STATUS: item.STATUS || '',
-            VALUE: item.VALUE || '',
-            UCL: item.UCL || '',
-            LCL: item.LCL || ''
-        }))
-
-        return {
-            ISN: isn,
-            Project: record.Project || '',
-            Station: station,
-            DeviceId: record.DeviceId,
-            Line: record.Line || 'NA',
-            ErrorCode: record.ErrorCode || '',
-            ErrorName: record.ErrorName || '',
-            Type: 'ONLINE',
-            TestStartTime: record['Test Start Time'] || '',
-            TestEndTime: record['Test end Time'] || '',
-            TestItems: testItems
-        }
-    })
-
+    exportingAll.value = true
     try {
+        // Transform CsvTestItemData to ExportRecord format
+        const exportRecords: ExportRecord[] = payload.records.map(record => {
+            const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+            const station = record.TSP || record.station
+
+            // Map test items from the TestItem array
+            const testItems: ExportTestItem[] = (record.TestItem || []).map(item => ({
+                NAME: item.NAME,
+                STATUS: item.STATUS || '',
+                VALUE: item.VALUE || '',
+                UCL: item.UCL || '',
+                LCL: item.LCL || ''
+            }))
+
+            return {
+                ISN: isn,
+                Project: record.Project || '',
+                Station: station,
+                DeviceId: record.DeviceId,
+                Line: record.Line || 'NA',
+                ErrorCode: record.ErrorCode || '',
+                ErrorName: record.ErrorName || '',
+                Type: 'ONLINE',
+                TestStartTime: record['Test Start Time'] || '',
+                TestEndTime: record['Test end Time'] || '',
+                TestItems: testItems
+            }
+        })
+
         const response = await iplasProxyApi.exportTestItems({
             records: exportRecords,
             format: 'xlsx', // XLSX for multi-sheet support (each station is a sheet)
@@ -523,6 +525,8 @@ async function handleExportAllRecords(payload: { records: CsvTestItemData[]; fil
         iplasProxyApi.downloadExportFile(response)
     } catch (error) {
         console.error('Export all failed:', error)
+    } finally {
+        exportingAll.value = false
     }
 }
 

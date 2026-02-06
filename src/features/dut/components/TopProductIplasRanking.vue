@@ -9,7 +9,7 @@
             <div class="d-flex align-center gap-2 flex-wrap">
                 <!-- Export All Button -->
                 <v-btn v-if="totalRecords > 0" color="primary" variant="outlined" size="small"
-                    prepend-icon="mdi-file-export" :loading="exportingAll"
+                    prepend-icon="mdi-file-export" :loading="props.exportingAll"
                     @click="handleExportAll">
                     Export All ({{ totalRecords }})
                 </v-btn>
@@ -212,6 +212,7 @@ interface Props {
     scores?: Record<string, number> // Map of ISN+station+time to score
     calculatingScores?: boolean
     loading?: boolean // Whether data is still being fetched
+    exportingAll?: boolean // Whether export all is in progress (controlled by parent)
 }
 
 interface RankingItem {
@@ -257,7 +258,6 @@ const scoreRangeInput = ref<string>('') // For "between" filter input (e.g., "8-
 const selectedItems = ref<RankingItem[]>([])
 const bulkDownloading = ref(false)
 const exporting = ref(false)
-const exportingAll = ref(false)
 
 // Debounce search query updates (300ms delay)
 const updateDebouncedSearch = useDebounceFn((value: string) => {
@@ -655,16 +655,11 @@ async function handleExport(): Promise<void> {
 /**
  * Handle export of ALL records from all stations
  */
-async function handleExportAll(): Promise<void> {
+function handleExportAll(): void {
     if (props.records.length === 0) return
-    
-    exportingAll.value = true
-    try {
-        // Export all records - backend will group by station into separate sheets
-        emit('export-all', { records: props.records, filenamePrefix: 'all_stations' })
-    } finally {
-        exportingAll.value = false
-    }
+    // Export all records - backend will group by station into separate sheets
+    // Loading state is managed by parent via exportingAll prop
+    emit('export-all', { records: props.records, filenamePrefix: 'all_stations' })
 }
 </script>
 

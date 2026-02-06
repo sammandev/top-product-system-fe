@@ -105,7 +105,7 @@
 
         <!-- Results Section with Ranking Table -->
         <TopProductIplasIsnRanking v-if="groupedByISN.length > 0" :isn-groups="groupedByISN" :loading="downloading"
-            :scores="recordScores" :calculating-scores="calculatingScores" @row-click="handleRowClick"
+            :scores="recordScores" :calculating-scores="calculatingScores" :exporting-all="exportingAll" @row-click="handleRowClick"
             @download-selected="handleDownloadSelected" @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores" />
 
         <!-- Copy Success Snackbar -->
@@ -137,6 +137,7 @@ const {
 // Scoring state
 const recordScores = ref<Record<string, number>>({})
 const calculatingScores = ref(false)
+const exportingAll = ref(false)
 
 interface StationGroup {
     stationName: string
@@ -354,33 +355,34 @@ async function handleExportRecords(payload: { records: IsnSearchData[]; isnGroup
 async function handleExportAllRecords(payload: { records: IsnSearchData[]; isnGroups: any[] }): Promise<void> {
     if (payload.records.length === 0) return
 
-    // Transform IsnSearchData to ExportRecord format
-    const exportRecords: ExportRecord[] = payload.records.map(record => {
-        // Build test items from the record's test_item array
-        const testItems: ExportTestItem[] = (record.test_item || []).map(item => ({
-            NAME: item.NAME,
-            STATUS: item.STATUS || '',
-            VALUE: item.VALUE || '',
-            UCL: item.UCL || '',
-            LCL: item.LCL || ''
-        }))
-
-        return {
-            ISN: record.isn,
-            Project: record.project || '',
-            Station: record.display_station_name || record.station_name,
-            DeviceId: record.device_id || '',
-            Line: record.line || 'NA',
-            ErrorCode: record.error_code || '',
-            ErrorName: record.error_name || '',
-            Type: 'ONLINE',
-            TestStartTime: record.test_start_time || '',
-            TestEndTime: record.test_end_time || '',
-            TestItems: testItems
-        }
-    })
-
+    exportingAll.value = true
     try {
+        // Transform IsnSearchData to ExportRecord format
+        const exportRecords: ExportRecord[] = payload.records.map(record => {
+            // Build test items from the record's test_item array
+            const testItems: ExportTestItem[] = (record.test_item || []).map(item => ({
+                NAME: item.NAME,
+                STATUS: item.STATUS || '',
+                VALUE: item.VALUE || '',
+                UCL: item.UCL || '',
+                LCL: item.LCL || ''
+            }))
+
+            return {
+                ISN: record.isn,
+                Project: record.project || '',
+                Station: record.display_station_name || record.station_name,
+                DeviceId: record.device_id || '',
+                Line: record.line || 'NA',
+                ErrorCode: record.error_code || '',
+                ErrorName: record.error_name || '',
+                Type: 'ONLINE',
+                TestStartTime: record.test_start_time || '',
+                TestEndTime: record.test_end_time || '',
+                TestItems: testItems
+            }
+        })
+
         // Use a more descriptive filename for export all
         const uniqueISNs = [...new Set(payload.records.map(r => r.isn))]
         const fileName = `all_${uniqueISNs.length}_ISNs`
@@ -394,6 +396,8 @@ async function handleExportAllRecords(payload: { records: IsnSearchData[]; isnGr
         iplasProxyApi.downloadExportFile(response)
     } catch (error) {
         console.error('Export all failed:', error)
+    } finally {
+        exportingAll.value = false
     }
 }
 
