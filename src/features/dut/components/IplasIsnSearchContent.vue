@@ -1031,11 +1031,11 @@ function getFilteredStationRecords(_isnGroup: ISNGroup, stationGroup: StationGro
 function getDisplayedStationRecords(isnGroup: ISNGroup, stationGroup: StationGroup): IsnSearchData[] {
     const filtered = getFilteredStationRecords(isnGroup, stationGroup)
     const limit = getDisplayLimit(`${isnGroup.isn}-${stationGroup.stationName}`)
-    // Sort by test_end_time descending (latest first)
+    // Sort by test_end_time ascending (oldest first, latest last)
     const sorted = [...filtered].sort((a, b) => {
         const timeA = new Date(a.test_end_time.replace('%:z', '').replace(' ', 'T') + 'Z').getTime()
         const timeB = new Date(b.test_end_time.replace('%:z', '').replace(' ', 'T') + 'Z').getTime()
-        return timeB - timeA
+        return timeA - timeB
     })
     return sorted.slice(0, limit)
 }
@@ -1071,6 +1071,11 @@ async function copyToClipboard(text: string): Promise<void> {
 }
 
 function normalizeIsnRecord(record: IsnSearchData): NormalizedRecord {
+    // UPDATED: Convert UTC+0 times from ISN API to local time for display
+    // ISN API returns UTC+0 time with %:z suffix, need to convert to local time
+    const localStartTime = formatTimeForDisplay(record.test_start_time, record.site)
+    const localEndTime = formatTimeForDisplay(record.test_end_time, record.site)
+    
     return {
         isn: record.isn,
         deviceId: record.device_id,
@@ -1083,8 +1088,8 @@ function normalizeIsnRecord(record: IsnSearchData): NormalizedRecord {
         errorCode: record.error_code,
         errorName: record.error_name || '',
         testStatus: record.test_status,
-        testStartTime: record.test_start_time,
-        testEndTime: record.test_end_time,
+        testStartTime: localStartTime,
+        testEndTime: localEndTime,
         testItems: record.test_item?.map(ti => ({
             NAME: ti.NAME,
             STATUS: ti.STATUS,

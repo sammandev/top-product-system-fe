@@ -326,10 +326,28 @@ function formatTime(timeStr: string): string {
 function calculateDuration(startStr: string, endStr: string): string {
     if (!startStr || !endStr) return '-'
     try {
-        const cleanStart = startStr.replace('%:z', '').replace('T', ' ')
-        const cleanEnd = endStr.replace('%:z', '').replace('T', ' ')
-        const start = new Date(cleanStart.replace(' ', 'T') + 'Z')
-        const end = new Date(cleanEnd.replace(' ', 'T') + 'Z')
+        // Handle both formats:
+        // 1. API format: "2025-09-16 13:23:57%:z" or "2025-09-16T13:23:57"
+        // 2. Display format: "2025/09/16, 21:23:57"
+        let start: Date
+        let end: Date
+        
+        if (startStr.includes('/') && startStr.includes(',')) {
+            // Display format: "YYYY/MM/DD, HH:mm:ss"
+            const startParts = startStr.replace(',', '').replace(/\//g, '-').replace(/\s+/g, 'T')
+            const endParts = endStr.replace(',', '').replace(/\//g, '-').replace(/\s+/g, 'T')
+            start = new Date(startParts)
+            end = new Date(endParts)
+        } else {
+            // API format: clean and parse
+            const cleanStart = startStr.replace('%:z', '').replace('T', ' ')
+            const cleanEnd = endStr.replace('%:z', '').replace('T', ' ')
+            start = new Date(cleanStart.replace(' ', 'T') + 'Z')
+            end = new Date(cleanEnd.replace(' ', 'T') + 'Z')
+        }
+        
+        if (isNaN(start.getTime()) || isNaN(end.getTime())) return '-'
+        
         const diffMs = end.getTime() - start.getTime()
         const diffSeconds = Math.floor(diffMs / 1000)
         const minutes = Math.floor(diffSeconds / 60)
