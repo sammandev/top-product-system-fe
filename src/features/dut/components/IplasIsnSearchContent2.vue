@@ -10,20 +10,35 @@
             </v-card-title>
             <v-card-text class="pt-4">
                 <!-- Input Mode Toggle -->
-                <v-btn-toggle v-model="inputMode" mandatory color="primary" class="mb-4">
-                    <v-btn value="single" size="small">
-                        <v-icon start>mdi-numeric-1-box</v-icon>
-                        Single ISN
-                    </v-btn>
-                    <v-btn value="multiple" size="small">
-                        <v-icon start>mdi-format-list-bulleted</v-icon>
-                        Multiple ISNs
-                    </v-btn>
-                    <v-btn value="bulk" size="small">
-                        <v-icon start>mdi-text-box-multiple</v-icon>
-                        Bulk Paste
-                    </v-btn>
-                </v-btn-toggle>
+                <div class="d-flex align-center mb-4">
+                    <v-btn-toggle v-model="inputMode" mandatory color="primary">
+                        <v-btn value="single" size="small">
+                            <v-icon start>mdi-numeric-1-box</v-icon>
+                            Single ISN
+                        </v-btn>
+                        <v-btn value="multiple" size="small">
+                            <v-icon start>mdi-format-list-bulleted</v-icon>
+                            Multiple ISNs
+                        </v-btn>
+                        <v-btn value="bulk" size="small">
+                            <v-icon start>mdi-text-box-multiple</v-icon>
+                            Bulk Paste
+                        </v-btn>
+                    </v-btn-toggle>
+
+                    <v-switch v-model="enableUnifiedSearch" label="Unified Search" color="primary" hide-details
+                        density="compact" class="ml-4">
+                        <template #label>
+                            <span class="text-body-2">Unified Search</span>
+                            <v-tooltip activator="parent" location="top" max-width="400">
+                                <span>When enabled, searches for all related identifiers (ISN, SSN, MAC) using SFISTSP
+                                    lookup.
+                                    This finds all test data from all stations that tested the same DUT, even if
+                                    different identifiers were used.</span>
+                            </v-tooltip>
+                        </template>
+                    </v-switch>
+                </div>
 
                 <!-- Single ISN Input -->
                 <v-row v-if="inputMode === 'single'">
@@ -103,7 +118,7 @@
                                     </v-chip>
                                     <v-chip color="success" label>
                                         <v-icon start>mdi-router-wireless</v-icon>
-                                        {{ availableStations.length }} Stations Available
+                                        {{ availableStations.length }} Stations
                                     </v-chip>
                                 </div>
                             </v-col>
@@ -194,6 +209,7 @@ import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useIplasApi, type Station, type CsvTestItemData, type TestItem } from '@/features/dut_logs/composables/useIplasApi'
 import { useScoring } from '@/features/dut/composables/useScoring'
 import { iplasProxyApi, type IplasIsnProjectInfo, type IplasIsnSearchRecord } from '@/features/dut_logs/api/iplasProxyApi'
+import { lookupIsnsBatch, type SfistspIsnReferenceResponse } from '@/features/dut_logs/api/sfistspApi'
 import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
@@ -207,6 +223,18 @@ import type { IplasDownloadCsvLogInfo } from '@/features/dut_logs/api/iplasProxy
 const inputMode = ref<'single' | 'multiple' | 'bulk'>('single')
 const searchIsn = ref('')
 const selectedISNs = ref<string[]>([])
+
+// ============================================================================
+// State: SFISTSP Reference Lookup
+// ============================================================================
+/** All unique identifiers to search (ISN, SSN, MAC) */
+const allIdentifiersToSearch = ref<string[]>([])
+/** SFISTSP lookup results for reference */
+const sfistspReferences = ref<SfistspIsnReferenceResponse[]>([])
+/** Loading state for SFISTSP lookup */
+const loadingSfistsp = ref(false)
+/** Toggle for unified search (ISN/SSN/MAC reference lookup) */
+const enableUnifiedSearch = ref(true)
 
 // ============================================================================
 // State: Station Lookup
@@ -390,6 +418,85 @@ function extractTestItemsFromRecords(records: IplasIsnSearchRecord[], stationNam
 // ============================================================================
 // ISN Lookup Functions
 // ============================================================================
+
+/**
+ * Lookup ISN references from SFISTSP to get SSN and MAC.
+ * Returns a list of all unique identifiers (ISN, SSN, MAC) to search in iPLAS.
+ */
+async function lookupSfistspReferences(isnList: string[]): Promise<string[]> {
+    loadingSfistsp.value = true
+    sfistspReferences.value = []
+    
+    try {
+        // Use batch lookup for efficiency
+        const batchResponse = await lookupIsnsBatch(isnList)
+        sfistspReferences.value = batchResponse.results
+        
+        // Collect all unique identifiers (ISN, SSN, MAC)
+        const identifiers = new Set<string>()
+        
+        for (const ref of batchResponse.results) {
+            // Add the original ISN
+            if (ref.isn && ref.isn.trim()) {
+                identifiers.add(ref.isn.trim())
+            }
+            // Add the searched ISN (might be different)
+            if (ref.isn_searched && ref.isn_searched.trim()) {
+                identifiers.add(ref.isn_searched.trim())
+            }
+            // Add SSN if available
+            if (ref.ssn && ref.ssn.trim()) {
+                identifiers.add(ref.ssn.trim())
+            }
+            // Add MAC if available
+            if (ref.mac && ref.mac.trim()) {
+                identifiers.add(ref.mac.trim())
+            }
+            // Add all ISN references
+            for (const refIsn of ref.isn_references || []) {
+                if (refIsn && refIsn.trim()) {
+                    identifiers.add(refIsn.trim())
+                }
+            }
+        }
+        
+        console.info(`SFISTSP lookup found ${identifiers.size} unique identifiers from ${isnList.length} ISNs`)
+        return Array.from(identifiers)
+    } catch (err) {
+        console.warn('SFISTSP lookup failed, using original ISNs only:', err)
+        // If SFISTSP fails, just use the original ISNs
+        return isnList
+    } finally {
+        loadingSfistsp.value = false
+    }
+}
+
+/**
+ * Fetch station list with proper ordering from iPLAS v2 API.
+ * Uses the /isn/stations or /isn-batch/stations endpoint.
+ */
+async function fetchStationListFromIsn(identifier: string): Promise<Station[]> {
+    try {
+        const response = await iplasProxyApi.getStationsFromIsn({ isn: identifier })
+        
+        if (!response.isn_info.found) {
+            console.warn(`Station list not found for identifier: ${identifier}`)
+            return []
+        }
+        
+        // Convert IplasStation to Station format with proper ordering
+        return response.stations.map(s => ({
+            station_name: s.station_name,
+            display_station_name: s.display_station_name,
+            order: s.order,
+            data_source: s.data_source
+        }))
+    } catch (err) {
+        console.warn(`Failed to fetch station list for identifier ${identifier}:`, err)
+        return []
+    }
+}
+
 async function handleLookupStations(): Promise<void> {
     // Parse ISN list based on input mode
     let isnList: string[] = []
@@ -417,6 +524,8 @@ async function handleLookupStations(): Promise<void> {
     availableStations.value = []
     stationConfigs.value = {}
     isnSearchRecords.value = []
+    allIdentifiersToSearch.value = []
+    sfistspReferences.value = []
     clearTestItemData()
     recordScores.value = {}
 
@@ -424,45 +533,65 @@ async function handleLookupStations(): Promise<void> {
     error.value = null
 
     try {
-        // UPDATED: Search for ALL ISNs in parallel and aggregate results
-        const searchPromises = isnList.map(isn => 
-            iplasProxyApi.searchByIsn({ isn }).catch(err => {
-                console.warn(`Failed to search ISN "${isn}":`, err)
+        // STEP 1: Conditionally lookup SFISTSP to get all ISN, SSN, MAC references
+        let allIdentifiers: string[]
+        if (enableUnifiedSearch.value) {
+            allIdentifiers = await lookupSfistspReferences(isnList)
+        } else {
+            // Skip SFISTSP lookup - use original ISN list only
+            allIdentifiers = isnList
+        }
+        allIdentifiersToSearch.value = allIdentifiers
+        
+        // STEP 2: Search for ALL identifiers in parallel and aggregate results
+        const searchPromises = allIdentifiers.map(identifier => 
+            iplasProxyApi.searchByIsn({ isn: identifier }).catch(err => {
+                console.warn(`Failed to search identifier "${identifier}":`, err)
                 return { data: [] as IplasIsnSearchRecord[] }
             })
         )
         
         const responses = await Promise.all(searchPromises)
         
-        // Aggregate all records from all ISN searches
+        // Aggregate all records from all ISN/SSN/MAC searches
         const allRecords: IplasIsnSearchRecord[] = []
-        const notFoundIsns: string[] = []
+        const foundIdentifiers: string[] = []
+        const notFoundIdentifiers: string[] = []
+        
+        // Use a Set to deduplicate records by unique key (ISN + station + test_end_time)
+        const recordKeys = new Set<string>()
         
         for (let i = 0; i < responses.length; i++) {
             const response = responses[i]!
-            const isn = isnList[i]!
+            const identifier = allIdentifiers[i]!
             
             if (response.data.length === 0) {
-                notFoundIsns.push(isn)
+                notFoundIdentifiers.push(identifier)
             } else {
-                allRecords.push(...response.data)
+                foundIdentifiers.push(identifier)
+                for (const record of response.data) {
+                    // Create unique key to avoid duplicates
+                    const key = `${record.isn}_${record.display_station_name}_${record.test_end_time}`
+                    if (!recordKeys.has(key)) {
+                        recordKeys.add(key)
+                        allRecords.push(record)
+                    }
+                }
             }
         }
         
         if (allRecords.length === 0) {
-            error.value = `No data found for ISN(s): ${isnList.join(', ')}`
+            error.value = `No data found for identifier(s): ${allIdentifiers.slice(0, 5).join(', ')}${allIdentifiers.length > 5 ? '...' : ''}`
             return
         }
         
-        // Show warning if some ISNs were not found
-        if (notFoundIsns.length > 0) {
-            console.warn(`ISNs not found: ${notFoundIsns.join(', ')}`)
-        }
+        // Log summary
+        console.info(`Found ${allRecords.length} unique records from ${foundIdentifiers.length} identifiers (${notFoundIdentifiers.length} not found)`)
 
-        // Store the raw ISN search records for later use (aggregated from all ISNs)
+        // Store the raw ISN search records for later use (aggregated and deduplicated)
         isnSearchRecords.value = allRecords
 
-        // Extract project info from first record (assume same project for all ISNs)
+        // Extract project info from first record (assume same project for all)
         const firstRecord = allRecords[0]!
         isnProjectInfo.value = {
             isn: firstRecord.isn,
@@ -471,8 +600,24 @@ async function handleLookupStations(): Promise<void> {
             found: true
         }
 
-        // Extract unique stations from ALL ISN search results
-        availableStations.value = extractStationsFromIsnRecords(allRecords)
+        // STEP 3: Get station list with proper ordering from iPLAS API
+        // Use the first found identifier to get the station list
+        const stationsFromApi = await fetchStationListFromIsn(firstRecord.isn)
+        
+        if (stationsFromApi.length > 0) {
+            // Use API station list with proper ordering
+            // But only keep stations that have records in the search results
+            const stationsWithRecords = new Set(allRecords.map(r => r.display_station_name))
+            availableStations.value = stationsFromApi
+                .filter(s => stationsWithRecords.has(s.display_station_name))
+                .sort((a, b) => a.order - b.order)
+            
+            console.info(`Using ${availableStations.value.length} stations from API list (ordered)`)
+        } else {
+            // Fallback: Extract unique stations from search results (no ordering)
+            availableStations.value = extractStationsFromIsnRecords(allRecords)
+            console.info(`Fallback: Using ${availableStations.value.length} stations from search results`)
+        }
 
         // Pre-cache test items and device IDs for all stations (performance optimization)
         preCacheStationData(allRecords, isnProjectInfo.value)

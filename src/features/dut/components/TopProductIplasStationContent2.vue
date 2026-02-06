@@ -163,7 +163,6 @@ const {
     fetchStations,
     fetchDeviceIds,
     fetchTestItems: fetchTestItemsApi,
-    fetchTestItemNames,
     fetchTestItemNamesCached,
     fetchTestItemsFiltered,
     downloadAttachments,
@@ -572,7 +571,7 @@ async function loadTestItemsForStation(station: Station, forceRefresh = false): 
         return
     }
 
-    // UPDATED: Use database-backed cache (no date range dependency)
+    // Use database-backed cache with session in-memory cache for instant response
     const cacheKey = `${selectedSite.value}_${selectedProject.value}_${station.display_station_name}`
     
     // Check in-memory cache first (for instant response during session)
@@ -589,13 +588,15 @@ async function loadTestItemsForStation(station: Station, forceRefresh = false): 
     currentStationTestItems.value = []
 
     try {
-        // UPDATED: Use database-backed cached endpoint (no date range needed)
+        // UPDATED: Pass user's selected time range for use when fetching fresh data on cache miss
         const response = await fetchTestItemNamesCached(
             selectedSite.value,
             selectedProject.value,
             station.display_station_name,
             true,         // Exclude BIN items - not needed for scoring
-            forceRefresh  // Force cache refresh if requested
+            forceRefresh, // Force cache refresh if requested
+            startTime.value ? new Date(startTime.value) : undefined, // Pass current time range
+            endTime.value ? new Date(endTime.value) : undefined
         )
 
         // Convert to TestItemInfo format expected by StationConfigDialog

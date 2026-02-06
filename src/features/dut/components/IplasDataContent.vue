@@ -231,7 +231,7 @@
                                 {{ stationGroup.displayName }}
                                 <v-chip size="x-small" color="info" class="ml-2">{{
                                     getFilteredStationRecords(stationGroup).length
-                                }}</v-chip>
+                                    }}</v-chip>
                             </v-tab>
                         </v-tabs>
 
@@ -476,7 +476,7 @@ import { useDebounceFn } from '@vueuse/core'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
 import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
 import { useIplasLocalData } from '@/features/dut_logs/composables/useIplasLocalData'
-import { adjustIplasDisplayTime, getStatusColor } from '@/shared/utils/helpers'
+import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 import IplasIsnSearchContent from './IplasIsnSearchContent.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import IplasRecordTable from './IplasRecordTable.vue'
@@ -911,19 +911,6 @@ const indexedDbHeaders = [
 // Selected keys for IndexedDB table (for bulk download)
 const indexedDbSelectedKeys = ref<string[]>([])
 
-// IndexedDB grouped by station
-const indexedDbGroupedByStation = computed(() => {
-    const groups: Map<string, typeof indexedDbItems.value> = new Map()
-    for (const item of indexedDbItems.value) {
-        const station = item.Station || 'Unknown'
-        if (!groups.has(station)) {
-            groups.set(station, [])
-        }
-        groups.get(station)!.push(item)
-    }
-    return groups
-})
-
 // Active station tab for IndexedDB results
 const indexedDbActiveStationTab = ref(0)
 
@@ -1187,16 +1174,6 @@ function isCompactRecord(record: CsvTestItemData | CompactCsvTestItemData): reco
 }
 
 /**
- * Get the total test item count for a record
- */
-function getTotalTestItemCount(record: CsvTestItemData | CompactCsvTestItemData): number {
-    if (isCompactRecord(record)) {
-        return record.TestItemCount
-    }
-    return record.TestItem?.length || 0
-}
-
-/**
  * Get test items for a record - returns from local cache, full record, or undefined if not loaded
  */
 function getTestItemsForRecord(record: CsvTestItemData | CompactCsvTestItemData): TestItem[] | undefined {
@@ -1208,52 +1185,6 @@ function getTestItemsForRecord(record: CsvTestItemData | CompactCsvTestItemData)
     // Otherwise check local cache for lazy-loaded items
     const key = getRecordKey(record)
     return lazyLoadedTestItems.value.get(key)
-}
-
-/**
- * Check if test items are loading for a record
- */
-function isLoadingTestItems(record: CsvTestItemData | CompactCsvTestItemData): boolean {
-    const key = getRecordKey(record)
-    return loadingTestItemsForRecord.value.has(key)
-}
-
-/**
- * Lazy load test items for a compact record when panel is expanded
- */
-async function loadTestItemsForRecord(record: CsvTestItemData | CompactCsvTestItemData): Promise<void> {
-    // Skip if not a compact record
-    if (!isCompactRecord(record)) return
-
-    // Validate required context
-    if (!selectedSite.value || !selectedProject.value) return
-
-    const key = getRecordKey(record)
-
-    // Skip if already loaded or loading
-    if (lazyLoadedTestItems.value.has(key) || loadingTestItemsForRecord.value.has(key)) return
-
-    // Mark as loading
-    loadingTestItemsForRecord.value.add(key)
-
-    try {
-        // Use station field for API calls (not TSP) per iPLAS API docs
-        const testItems = await fetchRecordTestItems(
-            selectedSite.value,
-            selectedProject.value,
-            record.station,
-            record.ISN,
-            record['Test Start Time'],
-            record.DeviceId
-        )
-        if (testItems) {
-            lazyLoadedTestItems.value.set(key, testItems)
-        }
-    } catch (err) {
-        console.error('Failed to load test items for record:', key, err)
-    } finally {
-        loadingTestItemsForRecord.value.delete(key)
-    }
 }
 
 // Watch for station selection changes to fetch device IDs
@@ -1314,138 +1245,6 @@ watch(groupedByStation, (groups) => {
     }
 }, { immediate: true })
 
-// Helper functions
-function isValueData(item: TestItem): boolean {
-    const value = item.VALUE?.toUpperCase() || ''
-    // Value data: not PASS, FAIL, 1, 0, or -999
-    if (value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999') {
-        return false
-    }
-    const hasNumericValue = !isNaN(parseFloat(item.VALUE)) && item.VALUE !== ''
-    const hasNumericUcl = !isNaN(parseFloat(item.UCL)) && item.UCL !== ''
-    const hasNumericLcl = !isNaN(parseFloat(item.LCL)) && item.LCL !== ''
-    const numericCount = [hasNumericValue, hasNumericUcl, hasNumericLcl].filter(Boolean).length
-    return numericCount >= 2
-}
-
-function isBinData(item: TestItem): boolean {
-    const value = item.VALUE?.toUpperCase() || ''
-    const status = item.STATUS?.toUpperCase() || ''
-    // STATUS must be PASS, FAIL, 1, 0, or -1 AND VALUE must be PASS, FAIL, 1, 0, or -999
-    const isStatusPF = status === 'PASS' || status === 'FAIL' || status === '1' || status === '0' || status === '-1'
-    const isValuePF = value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999'
-    return isStatusPF && isValuePF
-}
-
-function isNonValueData(item: TestItem): boolean {
-    return !isValueData(item) && !isBinData(item)
-}
-
-function filterTestItemsByType(items: TestItem[] | undefined, filterTypes: ('all' | 'value' | 'non-value' | 'bin')[]): TestItem[] {
-    if (!items) return []
-
-    // If no filters or 'all' is selected, return all items
-    if (filterTypes.length === 0 || filterTypes.includes('all')) {
-        return items
-    }
-
-    // Filter items based on selected types (OR logic)
-    return items.filter(item => {
-        return filterTypes.some(filterType => {
-            switch (filterType) {
-                case 'value':
-                    return isValueData(item)
-                case 'non-value':
-                    return isNonValueData(item)
-                case 'bin':
-                    return isBinData(item)
-                default:
-                    return true
-            }
-        })
-    })
-}
-
-function filterAndSearchTestItems(items: TestItem[] | undefined, key: string): TestItem[] {
-    // Get per-record filter (default to ['value'])
-    const filterTypes = testItemFilters.value[key] || ['value']
-    let filtered = filterTestItemsByType(items, filterTypes)
-
-    // Apply test item status filter (PASS/FAIL)
-    const statusFilter = testItemStatusFilters.value[key] || 'ALL'
-    if (statusFilter !== 'ALL') {
-        filtered = filtered.filter(item => item.STATUS === statusFilter)
-    }
-
-    // Get per-record search terms (multi-pattern regex with OR logic)
-    const searchTerms = testItemSearchTerms.value[key] || []
-    if (searchTerms.length > 0) {
-        filtered = filtered.filter(item => {
-            const searchableText = `${item.NAME || ''} ${item.STATUS || ''} ${item.VALUE || ''}`.toLowerCase()
-            // OR logic: at least one search term must match
-            return searchTerms.some(term => {
-                const trimmedTerm = term.trim().toLowerCase()
-                if (!trimmedTerm) return false
-                try {
-                    const regex = new RegExp(trimmedTerm, 'i')
-                    return regex.test(searchableText)
-                } catch {
-                    // If regex is invalid, fall back to simple includes
-                    return searchableText.includes(trimmedTerm)
-                }
-            })
-        })
-    }
-    return filtered
-}
-
-function getValueClass(item: TestItem): string {
-    const value = item.VALUE?.toUpperCase() || ''
-    if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
-    if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
-    if (value === '-999') return 'text-warning'
-    return ''
-}
-
-function calculateDuration(startStr: string, endStr: string): string {
-    if (!startStr || !endStr) return '-'
-    try {
-        const start = new Date(startStr.replace(' ', 'T') + 'Z')
-        const end = new Date(endStr.replace(' ', 'T') + 'Z')
-        const diffMs = end.getTime() - start.getTime()
-        const diffSeconds = Math.floor(diffMs / 1000)
-        const minutes = Math.floor(diffSeconds / 60)
-        const seconds = diffSeconds % 60
-        return `${minutes}m ${seconds}s`
-    } catch {
-        return '-'
-    }
-}
-
-function isRecordSelected(stationName: string, recordIndex: number): boolean {
-    // Kept for backward compatibility but now uses record key format
-    const currentGroup = groupedByStation.value.find(g => g.stationName === stationName)
-    if (!currentGroup) return false
-    const record = currentGroup.records[recordIndex]
-    if (!record) return false
-    const recordKey = `${record.ISN}_${record['Test Start Time']}`
-    return selectedRecordKeys.value.has(recordKey)
-}
-
-function toggleRecordSelection(stationName: string, recordIndex: number): void {
-    // Kept for backward compatibility but now uses record key format
-    const currentGroup = groupedByStation.value.find(g => g.stationName === stationName)
-    if (!currentGroup) return
-    const record = currentGroup.records[recordIndex]
-    if (!record) return
-    const recordKey = `${record.ISN}_${record['Test Start Time']}`
-    if (selectedRecordKeys.value.has(recordKey)) {
-        selectedRecordKeys.value.delete(recordKey)
-    } else {
-        selectedRecordKeys.value.add(recordKey)
-    }
-}
-
 /**
  * Get selected record keys for a specific station (used by IplasRecordTable)
  */
@@ -1486,56 +1285,6 @@ function handleTableSelectionChange(stationName: string, newSelectedKeys: string
         selectedRecordKeys.value.add(key)
     }
 }
-
-function toggleSelectAllRecords(): void {
-    // Get visible records for the current active station tab only
-    const currentGroup = groupedByStation.value[activeStationTab.value]
-    if (!currentGroup) return
-
-    const visibleRecordKeys = new Set<string>()
-    const filteredRecords = getFilteredStationRecords(currentGroup)
-    for (const record of filteredRecords) {
-        const recordKey = `${record.ISN}_${record['Test Start Time']}`
-        visibleRecordKeys.add(recordKey)
-    }
-
-    // Check if all visible records in current tab are selected
-    const allVisibleSelected = [...visibleRecordKeys].every(key => selectedRecordKeys.value.has(key))
-
-    if (allVisibleSelected && visibleRecordKeys.size > 0) {
-        // Deselect all visible records in current tab
-        for (const key of visibleRecordKeys) {
-            selectedRecordKeys.value.delete(key)
-        }
-    } else {
-        // Select all visible records in current tab
-        for (const key of visibleRecordKeys) {
-            selectedRecordKeys.value.add(key)
-        }
-    }
-}
-
-// Get count of visible records in current active station tab for Select All label
-const visibleRecordsCount = computed(() => {
-    const currentGroup = groupedByStation.value[activeStationTab.value]
-    if (!currentGroup) return 0
-    return getFilteredStationRecords(currentGroup).length
-})
-
-// Check if all visible records in current active station tab are selected
-const allVisibleSelected = computed(() => {
-    const currentGroup = groupedByStation.value[activeStationTab.value]
-    if (!currentGroup) return false
-
-    const filteredRecords = getFilteredStationRecords(currentGroup)
-    for (const record of filteredRecords) {
-        const recordKey = `${record.ISN}_${record['Test Start Time']}`
-        if (!selectedRecordKeys.value.has(recordKey)) {
-            return false
-        }
-    }
-    return filteredRecords.length > 0
-})
 
 // Fullscreen functions
 function normalizeStationRecord(record: CsvTestItemData): NormalizedRecord {
@@ -1984,53 +1733,62 @@ async function fetchTestItems() {
         // Stream data for ALL selected stations
         let totalRecords = 0
 
+        // STEP 1: Collect all stations and identify which need device ID fetching
+        const stationInfoList: { stationInfo: Station; stationDisplayName: string; deviceIds: string[] }[] = []
         for (const stationDisplayName of selectedStations.value) {
             const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationDisplayName)
             if (!stationInfo) continue
+            const deviceIds = stationDeviceIds.value[stationDisplayName] || []
+            stationInfoList.push({ stationInfo, stationDisplayName, deviceIds })
+        }
 
-            // Get device IDs for this station (empty array means fetch all available)
-            let deviceIds = stationDeviceIds.value[stationDisplayName] || []
-
-            // UPDATED: When user leaves device ID empty, fetch all available device IDs
-            // instead of using 'ALL' which is slower on the iPLAS API side
-            if (deviceIds.length === 0) {
+        // STEP 2: Fetch device IDs in parallel for stations that don't have them
+        const deviceIdPromises = stationInfoList.map(async (entry) => {
+            if (entry.deviceIds.length === 0) {
                 try {
-                    deviceIds = await fetchDeviceIds(
-                        selectedSite.value,
-                        selectedProject.value,
-                        stationInfo.display_station_name,
+                    entry.deviceIds = await fetchDeviceIds(
+                        selectedSite.value!,
+                        selectedProject.value!,
+                        entry.stationInfo.display_station_name,
                         begintime,
                         endtime
                     )
                 } catch (err) {
-                    console.warn(`Failed to fetch device IDs for ${stationDisplayName}, falling back to ALL`)
-                    deviceIds = ['ALL']
+                    console.warn(`Failed to fetch device IDs for ${entry.stationDisplayName}, falling back to ALL`)
+                    entry.deviceIds = ['ALL']
                 }
             }
+            return entry
+        })
+        const resolvedStations = await Promise.all(deviceIdPromises)
 
-            // Fetch data for each device ID
+        // STEP 3: Build list of all station+device combinations and fetch data in parallel
+        const streamPromises: Promise<void>[] = []
+        for (const { stationInfo, deviceIds } of resolvedStations) {
             for (const deviceId of deviceIds) {
-                try {
-                    // Stream data directly to IndexedDB
-                    const recordCount = await streamToIndexedDb({
-                        site: selectedSite.value,
-                        project: selectedProject.value,
-                        station: stationInfo.display_station_name,
-                        deviceId,
-                        beginTime: begintime,
-                        endTime: endtime,
-                        testStatus: testStatusFilter.value
-                    })
-
-                    console.log(`[IndexedDB] Streamed ${recordCount} records for station ${stationInfo.display_station_name} device ${deviceId}`)
-                    totalRecords += recordCount
-                } catch (err) {
-                    console.error(`[IndexedDB] Stream failed for station ${stationInfo.display_station_name} device ${deviceId}:`, err)
-                    error.value = err instanceof Error ? err.message : 'Failed to stream data to IndexedDB'
-                    // Continue with other devices/stations even if one fails
-                }
+                streamPromises.push(
+                    (async () => {
+                        try {
+                            const recordCount = await streamToIndexedDb({
+                                site: selectedSite.value!,
+                                project: selectedProject.value!,
+                                station: stationInfo.display_station_name,
+                                deviceId,
+                                beginTime: begintime,
+                                endTime: endtime,
+                                testStatus: testStatusFilter.value
+                            })
+                            console.log(`[IndexedDB] Streamed ${recordCount} records for station ${stationInfo.display_station_name} device ${deviceId}`)
+                            totalRecords += recordCount
+                        } catch (err) {
+                            console.error(`[IndexedDB] Stream failed for station ${stationInfo.display_station_name} device ${deviceId}:`, err)
+                            error.value = err instanceof Error ? err.message : 'Failed to stream data to IndexedDB'
+                        }
+                    })()
+                )
             }
         }
+        await Promise.all(streamPromises)
 
         console.log(`[IndexedDB] Total: Streamed ${totalRecords} records from ${selectedStations.value.length} stations`)
 
@@ -2049,44 +1807,53 @@ async function fetchTestItems() {
     // Choose fetch method based on mode
     const fetchMethod = useCompactMode.value ? fetchTestItemsCompact : fetchTestItemsApi
 
-    // Iterate through each selected station
+    // STEP 1: Collect all stations and identify which need device ID fetching
+    const stationInfoList: { stationInfo: Station; stationDisplayName: string; deviceIds: string[] }[] = []
     for (const stationDisplayName of selectedStations.value) {
         const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationDisplayName)
         if (!stationInfo) continue
+        const deviceIds = stationDeviceIds.value[stationDisplayName] || []
+        stationInfoList.push({ stationInfo, stationDisplayName, deviceIds })
+    }
 
-        // Get device IDs for this station (empty array means fetch all available)
-        let deviceIds = stationDeviceIds.value[stationDisplayName] || []
-
-        // UPDATED: When user leaves device ID empty, fetch all available device IDs
-        // instead of using 'ALL' which is slower on the iPLAS API side
-        if (deviceIds.length === 0) {
+    // STEP 2: Fetch device IDs in parallel for stations that don't have them
+    const deviceIdPromises = stationInfoList.map(async (entry) => {
+        if (entry.deviceIds.length === 0) {
             try {
-                deviceIds = await fetchDeviceIds(
-                    selectedSite.value,
-                    selectedProject.value,
-                    stationInfo.display_station_name,
+                entry.deviceIds = await fetchDeviceIds(
+                    selectedSite.value!,
+                    selectedProject.value!,
+                    entry.stationInfo.display_station_name,
                     begintime,
                     endtime
                 )
             } catch (err) {
-                console.warn(`Failed to fetch device IDs for ${stationDisplayName}, falling back to ALL`)
-                deviceIds = ['ALL']
+                console.warn(`Failed to fetch device IDs for ${entry.stationDisplayName}, falling back to ALL`)
+                entry.deviceIds = ['ALL']
             }
         }
+        return entry
+    })
+    const resolvedStations = await Promise.all(deviceIdPromises)
 
-        // Fetch data for each selected device
+    // STEP 3: Build list of all station+device combinations and fetch data in parallel
+    const fetchPromises: Promise<unknown>[] = []
+    for (const { stationInfo, deviceIds } of resolvedStations) {
         for (const deviceId of deviceIds) {
-            await fetchMethod(
-                selectedSite.value,
-                selectedProject.value,
-                stationInfo.display_station_name,
-                deviceId,
-                begintime,
-                endtime,
-                testStatusFilter.value
+            fetchPromises.push(
+                fetchMethod(
+                    selectedSite.value!,
+                    selectedProject.value!,
+                    stationInfo.display_station_name,
+                    deviceId,
+                    begintime,
+                    endtime,
+                    testStatusFilter.value
+                )
             )
         }
     }
+    await Promise.all(fetchPromises)
 }
 
 /**
@@ -2174,33 +1941,6 @@ async function initializeServerPagination(stationName: string) {
         itemsPerPage: 25,
         sortBy: [{ key: 'TestStartTime', order: 'desc' }]
     })
-}
-
-/**
- * Handle loading test items for a record in table view.
- */
-async function handleLoadTestItemsForTable(record: CsvTestItemData | CompactCsvTestItemData) {
-    if (!selectedSite.value || !selectedProject.value) return
-
-    const key = getRecordKey(record)
-    loadingTestItemsForRecord.value.add(key)
-
-    try {
-        // Use station field for API calls (not TSP) per iPLAS API docs
-        const testItems = await fetchRecordTestItems(
-            selectedSite.value,
-            selectedProject.value,
-            record.station,
-            record.ISN,
-            record['Test Start Time'],
-            record.DeviceId
-        )
-        lazyLoadedTestItems.value.set(key, testItems)
-    } catch (err) {
-        console.error('Failed to load test items:', err)
-    } finally {
-        loadingTestItemsForRecord.value.delete(key)
-    }
 }
 
 async function handleRefresh() {

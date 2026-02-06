@@ -748,13 +748,17 @@ export function useIplasApi() {
    * @param station - Station name
    * @param excludeBin - Filter out BIN/PASS-FAIL test items
    * @param forceRefresh - Force cache refresh even if not expired
+   * @param beginTime - Optional start time for fetching fresh data (used on cache miss)
+   * @param endTime - Optional end time for fetching fresh data (used on cache miss)
    */
   async function fetchTestItemNamesCached(
     site: string,
     project: string,
     station: string,
     excludeBin = false,
-    forceRefresh = false
+    forceRefresh = false,
+    beginTime?: string | Date,
+    endTime?: string | Date
   ): Promise<IplasCachedTestItemNamesResponse> {
     loading.value = true
     error.value = null
@@ -766,7 +770,9 @@ export function useIplasApi() {
         station,
         token: getUserToken(),
         exclude_bin: excludeBin,
-        force_refresh: forceRefresh
+        force_refresh: forceRefresh,
+        begin_time: beginTime ? iplasProxyApi.formatDateForRequest(beginTime) : undefined,
+        end_time: endTime ? iplasProxyApi.formatDateForRequest(endTime) : undefined
       })
       return response
     } catch (err: any) {

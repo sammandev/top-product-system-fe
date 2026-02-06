@@ -55,7 +55,7 @@
                             @keyup.enter="handleSearch" />
                     </v-col>
                     <v-col cols="12" md="2" class="d-flex align-center gap-2">
-                        <v-btn color="primary" :loading="loadingIsnSearch" :disabled="!searchIsn?.trim()"
+                        <v-btn color="primary" :loading="isSearching || loadingIsnSearch" :disabled="!searchIsn?.trim()"
                             prepend-icon="mdi-magnify" class="mb-5 flex-grow-1" @click="handleSearch">
                             Search
                         </v-btn>
@@ -93,7 +93,7 @@
                                             Look up ISN references (SSN, MAC) from SFISTSP
                                         </v-tooltip>
                                     </v-btn>
-                                    <v-btn color="primary" variant="flat" size="small" :loading="loadingIsnSearch"
+                                    <v-btn color="primary" variant="flat" size="small" :loading="isSearching || loadingIsnSearch"
                                         :disabled="!selectedISNs || selectedISNs.length === 0"
                                         prepend-icon="mdi-magnify" @click="handleSearch">
                                         Search
@@ -121,7 +121,7 @@
                                             Look up ISN references (SSN, MAC) from SFISTSP
                                         </v-tooltip>
                                     </v-btn>
-                                    <v-btn color="primary" variant="flat" size="small" :loading="loadingIsnSearch"
+                                    <v-btn color="primary" variant="flat" size="small" :loading="isSearching || loadingIsnSearch"
                                         :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify" @click="handleSearch">
                                         Search
                                     </v-btn>
@@ -220,7 +220,7 @@
         </v-alert>
 
         <!-- No Results Alert -->
-        <v-alert v-if="hasSearched && groupedByISN.length === 0 && !loadingIsnSearch" type="info" class="mb-4">
+        <v-alert v-if="hasSearched && groupedByISN.length === 0 && !isSearching" type="info" class="mb-4">
             No test records found for the provided ISN(s).
         </v-alert>
 
@@ -833,6 +833,7 @@ const selectedISNs = ref<string[]>([])
 
 // Search state
 const hasSearched = ref(false)
+const isSearching = ref(false) // Local state to track entire search operation (fixes premature "no results" alert)
 const groupedByISN = ref<ISNGroup[]>([])
 const activeISNTab = ref(0)
 const showSuccess = ref(false)
@@ -1312,6 +1313,7 @@ function clearAll(): void {
     selectedISNs.value = []
     groupedByISN.value = []
     hasSearched.value = false
+    isSearching.value = false
     selectedRecordIndices.value = []
     expandedPanels.value = {}
     activeISNTab.value = 0
@@ -1419,7 +1421,8 @@ async function handleSearch(): Promise<void> {
     clearIsnSearchData()
     selectedRecordIndices.value = []
     expandedPanels.value = {}
-    hasSearched.value = true
+    isSearching.value = true
+    hasSearched.value = false // Will be set to true after search completes
 
     try {
         // Maps for unified search: identifier -> primary ISN
@@ -1564,6 +1567,10 @@ async function handleSearch(): Promise<void> {
         }
     } catch (err) {
         console.error('Search failed:', err)
+    } finally {
+        // Mark search as complete - this prevents premature "no results" alert
+        isSearching.value = false
+        hasSearched.value = true
     }
 }
 </script>

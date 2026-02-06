@@ -124,6 +124,10 @@ export interface IplasCachedTestItemNamesRequest {
   exclude_bin?: boolean
   // Force refresh the cache even if not expired
   force_refresh?: boolean
+  // Optional time range for fetching fresh data on cache miss
+  // If provided, uses user's selected time range instead of default 7-day window
+  begin_time?: string
+  end_time?: string
 }
 
 export interface IplasCachedTestItemNamesResponse {
