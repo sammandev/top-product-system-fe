@@ -34,8 +34,9 @@
                             @keyup.enter="handleLookupStations" />
                     </v-col>
                     <v-col cols="12" md="2" class="d-flex align-center">
-                        <v-btn color="secondary" size="large" :loading="loadingStationLookup" :disabled="!searchIsn?.trim()"
-                            prepend-icon="mdi-magnify" block class="mb-5" @click="handleLookupStations">
+                        <v-btn color="secondary" size="large" :loading="loadingStationLookup"
+                            :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify" block class="mb-5"
+                            @click="handleLookupStations">
                             Lookup Stations
                         </v-btn>
                     </v-col>
@@ -70,7 +71,8 @@
                             hint="Paste ISNs separated by newlines, commas, or spaces" persistent-hint>
                             <template #append>
                                 <v-btn color="secondary" variant="flat" size="small" :loading="loadingStationLookup"
-                                    :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify" @click="handleLookupStations">
+                                    :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify"
+                                    @click="handleLookupStations">
                                     Lookup Stations
                                 </v-btn>
                             </template>
@@ -183,18 +185,18 @@
             @bulk-download="handleBulkDownloadRecords" @calculate-scores="handleCalculateScores" />
 
         <!-- Station Selection Dialog -->
-        <StationSelectionDialog v-model:show="showStationSelectionDialog" :stations="availableStations"
-            :station-configs="stationConfigs" :loading="loadingStations" @station-click="handleStationClick"
+        <StationSelectionDialog v-model:show="showStationSelectionDialog" :stations="(availableStations as any)"
+            :site="isnProjectInfo?.site || ''" :project="isnProjectInfo?.project || ''"
+            :selected-configs="stationConfigs" :loading="loadingStations" @station-click="handleStationClick"
             @confirm="handleStationSelectionConfirm" />
 
         <!-- Station Config Dialog -->
         <StationConfigDialog v-model:show="showStationConfigDialog" :station="selectedStationForConfig"
             :site="isnProjectInfo?.site || ''" :project="isnProjectInfo?.project || ''" :start-time="startTime"
-            :end-time="endTime" :existing-config="currentStationConfig"
-            :available-device-ids="currentStationDeviceIds" :loading-devices="loadingCurrentStationDevices"
-            :device-error="deviceError" :available-test-items="currentStationTestItems"
-            :loading-test-items="loadingCurrentStationTestItems" :test-items-error="testItemsError"
-            @save="handleStationConfigSave" @remove="handleStationConfigRemove"
+            :end-time="endTime" :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
+            :loading-devices="loadingCurrentStationDevices" :device-error="deviceError"
+            :available-test-items="currentStationTestItems" :loading-test-items="loadingCurrentStationTestItems"
+            :test-items-error="testItemsError" @save="handleStationConfigSave" @remove="handleStationConfigRemove"
             @refresh-devices="refreshCurrentStationDevices" @refresh-test-items="refreshCurrentStationTestItems" />
 
         <!-- Details Dialog -->
@@ -215,8 +217,7 @@ import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vu
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
-import type { DownloadCsvLogInfo } from '@/features/dut_logs/api/iplasProxyApi'
-import { getScoreColor } from '../types/scoring.types'
+import type { IplasDownloadCsvLogInfo } from '@/features/dut_logs/api/iplasProxyApi'
 
 // ============================================================================
 // State: ISN Input
@@ -287,7 +288,7 @@ const {
     initializeConfigs,
     calculateScores,
     scoredRecords,
-    scoringError,
+    error: scoringError,
     updateConfig: updateScoringConfig,
     setScoringType
 } = useScoring()
@@ -787,7 +788,7 @@ async function handleDownloadRecord(payload: { record: CsvTestItemData; stationN
     const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
     const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
 
-    const csvLogInfo: DownloadCsvLogInfo = {
+    const csvLogInfo: IplasDownloadCsvLogInfo = {
         site: isnProjectInfo.value.site,
         project: isnProjectInfo.value.project,
         station,
@@ -815,7 +816,7 @@ async function handleBulkDownloadRecords(payload: { records: CsvTestItemData[]; 
 
     await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, attachments)
 
-    const csvLogInfos: DownloadCsvLogInfo[] = payload.records.map(record => {
+    const csvLogInfos: IplasDownloadCsvLogInfo[] = payload.records.map(record => {
         const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
         const deviceid = record.DeviceId
         const station = record.TSP || record.station
@@ -888,3 +889,5 @@ onUnmounted(() => {
 
 .gap-3 {
     gap: 0.75rem;
+}
+</style>
