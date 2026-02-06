@@ -7,7 +7,7 @@
                     <v-icon class="mr-2">mdi-barcode-scan</v-icon>
                     ISN Search
                 </div>
-                <v-btn color="error" variant="outlined" size="small" prepend-icon="mdi-close-circle"
+                <v-btn color="default" variant="outlined" size="small" prepend-icon="mdi-close-circle"
                     :disabled="loadingIsnSearch || (!searchIsn && selectedISNs.length === 0 && groupedByISN.length === 0)"
                     @click="clearAll">
                     Clear All
@@ -137,9 +137,9 @@
                         <v-card-title class="text-subtitle-1 bg-info d-flex align-center justify-space-between">
                             <div class="d-flex align-center">
                                 <v-icon class="mr-2" size="small">mdi-link-variant</v-icon>
-                                ISN References from SFISTSP
+                                ISN Reference
                             </div>
-                            <v-btn icon size="x-small" variant="text" @click="sfistspReferences = []">
+                            <v-btn icon size="small" color="default" variant="text" @click="sfistspReferences = []">
                                 <v-icon>mdi-close</v-icon>
                             </v-btn>
                         </v-card-title>
@@ -386,7 +386,7 @@
                                                         <!-- Row 1: ISN and DeviceID -->
                                                         <div class="d-flex align-center flex-wrap gap-2 mb-2">
                                                             <v-chip color="primary" variant="outlined"
-                                                                class="text-body-1" label>
+                                                                class="font-weigjht-bold text-body-1" label>
                                                                 <v-icon start>mdi-barcode</v-icon>
                                                                 {{ record.isn }}
                                                             </v-chip>
@@ -1488,26 +1488,32 @@ async function handleSearch(): Promise<void> {
             console.log(`Unified search: expanded ${isnList.length} terms to ${searchTerms.length} unique identifiers`)
         }
 
-        // Fetch all ISNs
+        // Fetch all ISNs - use parallel requests for better performance
         const allRecords: IsnSearchData[] = []
         const seenRecordKeys = new Set<string>() // Deduplicate records
 
-        for (const isn of searchTerms) {
+        // UPDATED: Parallelize search requests for better performance
+        const searchPromises = searchTerms.map(async (isn) => {
             try {
-                const data = await searchByIsn(isn)
-                // Deduplicate records based on unique key (site + project + device_id + test_end_time)
-                for (const record of data) {
-                    const recordKey = `${record.site}-${record.project}-${record.device_id}-${record.test_end_time}`
-                    if (!seenRecordKeys.has(recordKey)) {
-                        seenRecordKeys.add(recordKey)
-                        allRecords.push(record)
-                    }
-                }
+                return await searchByIsn(isn)
             } catch (err) {
                 console.warn(`Failed to fetch records for ISN ${isn}:`, err)
+                return []
+            }
+        })
+
+        const searchResults = await Promise.all(searchPromises)
+
+        // Process results and deduplicate
+        for (const data of searchResults) {
+            for (const record of data) {
+                const recordKey = `${record.site}-${record.project}-${record.device_id}-${record.test_end_time}`
+                if (!seenRecordKeys.has(recordKey)) {
+                    seenRecordKeys.add(recordKey)
+                    allRecords.push(record)
+                }
             }
         }
-
         // Fetch station order from iPLAS API
         const stationOrderMap = new Map<string, number>()
         if (allRecords.length > 0) {

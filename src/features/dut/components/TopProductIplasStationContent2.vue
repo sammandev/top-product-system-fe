@@ -164,6 +164,7 @@ const {
     fetchDeviceIds,
     fetchTestItems: fetchTestItemsApi,
     fetchTestItemNames,
+    fetchTestItemNamesCached,
     fetchTestItemsFiltered,
     downloadAttachments,
     downloadCsvLogs,
@@ -566,21 +567,21 @@ async function refreshCurrentStationDevices(): Promise<void> {
     }
 }
 
-async function loadTestItemsForStation(station: Station): Promise<void> {
-    if (!selectedSite.value || !selectedProject.value || !startTime.value || !endTime.value) {
+async function loadTestItemsForStation(station: Station, forceRefresh = false): Promise<void> {
+    if (!selectedSite.value || !selectedProject.value) {
         return
     }
 
-    const deviceId = currentStationDeviceIds.value[0] ?? 'ALL'
-
-    // UPDATED: Generate cache key and check cache first
-    const cacheKey = `${selectedSite.value}_${selectedProject.value}_${station.display_station_name}_${deviceId}`
-    const cachedData = testItemNamesCache.value.get(cacheKey)
-
-    if (cachedData) {
-        // Use cached data
-        currentStationTestItems.value = cachedData
-        return
+    // UPDATED: Use database-backed cache (no date range dependency)
+    const cacheKey = `${selectedSite.value}_${selectedProject.value}_${station.display_station_name}`
+    
+    // Check in-memory cache first (for instant response during session)
+    if (!forceRefresh) {
+        const cachedData = testItemNamesCache.value.get(cacheKey)
+        if (cachedData) {
+            currentStationTestItems.value = cachedData
+            return
+        }
     }
 
     loadingCurrentStationTestItems.value = true
@@ -588,22 +589,17 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
     currentStationTestItems.value = []
 
     try {
-        // Use the lightweight backend proxy endpoint for test item names
-
-        // UPDATED: Pass excludeBin=true to filter out BIN test items at backend level
-        const testItems = await fetchTestItemNames(
+        // UPDATED: Use database-backed cached endpoint (no date range needed)
+        const response = await fetchTestItemNamesCached(
             selectedSite.value,
             selectedProject.value,
             station.display_station_name,
-            deviceId,
-            new Date(startTime.value),
-            new Date(endTime.value),
-            'PASS',  // Only fetch PASS test items for faster loading
-            true     // Exclude BIN items - not needed for scoring
+            true,         // Exclude BIN items - not needed for scoring
+            forceRefresh  // Force cache refresh if requested
         )
 
         // Convert to TestItemInfo format expected by StationConfigDialog
-        const testItemInfos: TestItemInfo[] = testItems.map(item => ({
+        const testItemInfos: TestItemInfo[] = response.test_items.map(item => ({
             name: item.name,
             isValue: item.is_value,
             isBin: item.is_bin,
@@ -613,8 +609,15 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
 
         currentStationTestItems.value = testItemInfos
 
-        // UPDATED: Store in cache for future use
+        // Store in session cache for instant response
         testItemNamesCache.value.set(cacheKey, testItemInfos)
+
+        // Log cache info
+        if (response.cached) {
+            console.log(`[TestItems] Loaded from DB cache (${response.cache_age_hours?.toFixed(1)}h old)`)
+        } else {
+            console.log('[TestItems] Fetched fresh from iPLAS and cached to DB')
+        }
     } catch (err: any) {
         testItemsError.value = err.message || 'Failed to load test items'
     } finally {
@@ -624,13 +627,12 @@ async function loadTestItemsForStation(station: Station): Promise<void> {
 
 async function refreshCurrentStationTestItems(): Promise<void> {
     if (selectedStationForConfig.value) {
-        // UPDATED: Invalidate cache entry for this station to force fresh data
-        const deviceId = currentStationDeviceIds.value[0] ?? 'ALL'
+        // UPDATED: Clear session cache and force-refresh from database
         if (selectedSite.value && selectedProject.value) {
-            const cacheKey = `${selectedSite.value}_${selectedProject.value}_${selectedStationForConfig.value.display_station_name}_${deviceId}`
+            const cacheKey = `${selectedSite.value}_${selectedProject.value}_${selectedStationForConfig.value.display_station_name}`
             testItemNamesCache.value.delete(cacheKey)
         }
-        await loadTestItemsForStation(selectedStationForConfig.value)
+        await loadTestItemsForStation(selectedStationForConfig.value, true)  // forceRefresh=true
     }
 }
 

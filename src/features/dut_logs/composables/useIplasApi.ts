@@ -20,6 +20,8 @@ import {
   type IplasStation,
   type IplasTestItemInfo,
   type IplasCsvTestItemResponse,
+  type IplasCachedTestItemNamesResponse,
+  type IplasBatchDownloadResponse,
   type CsvTestItemData,
   type CompactCsvTestItemData,
   type TestItem,
@@ -604,6 +606,59 @@ export function useIplasApi() {
   }
 
   /**
+   * Batch download test logs (TXT, CSV, or both) as a zip archive
+   * 
+   * This is the recommended method for downloading multiple logs as it:
+   * - Uses parallel requests for faster downloads
+   * - Properly packages files into a zip archive
+   * - Organizes files in /txt/ and /csv/ folders
+   * 
+   * @param site - Site identifier
+   * @param project - Project identifier
+   * @param records - List of records to download
+   * @param downloadType - 'txt' for attachments, 'csv' for CSV logs, 'all' for both
+   */
+  async function batchDownloadLogs(
+    site: string,
+    project: string,
+    records: DownloadCsvLogInfo[],
+    downloadType: 'txt' | 'csv' | 'all' = 'all'
+  ): Promise<IplasBatchDownloadResponse> {
+    downloading.value = true
+    error.value = null
+
+    try {
+      const response = await iplasProxyApi.batchDownload({
+        site,
+        project,
+        items: records.map(r => ({
+          site: r.site,
+          project: r.project,
+          station: r.station,
+          line: r.line,
+          model: r.model || 'ALL',
+          deviceid: r.deviceid,
+          isn: r.isn,
+          test_end_time: r.test_end_time,
+          data_source: r.data_source ?? 0
+        })),
+        download_type: downloadType,
+        token: getUserToken()
+      })
+
+      // Trigger download
+      iplasProxyApi.downloadBatchFile(response)
+      
+      return response
+    } catch (err: any) {
+      error.value = err.message || 'Failed to batch download logs'
+      throw err
+    } finally {
+      downloading.value = false
+    }
+  }
+
+  /**
    * Format date for iPLAS v1 API (YYYY/MM/DD HH:mm:ss)
    */
   function formatDateForV1Api(date: Date): string {
@@ -675,6 +730,47 @@ export function useIplasApi() {
       return response.test_items
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch test item names'
+      throw err
+    } finally {
+      loading.value = false
+    }
+  }
+
+  /**
+   * Fetch cached test item names from database
+   * 
+   * Optimized for Configure Station dialog where date ranges of 30+ days
+   * would cause timeouts. Uses database cache with 7-day TTL.
+   * Cache key: site + project + station (date range NOT included)
+   * 
+   * @param site - Site code
+   * @param project - Project name
+   * @param station - Station name
+   * @param excludeBin - Filter out BIN/PASS-FAIL test items
+   * @param forceRefresh - Force cache refresh even if not expired
+   */
+  async function fetchTestItemNamesCached(
+    site: string,
+    project: string,
+    station: string,
+    excludeBin = false,
+    forceRefresh = false
+  ): Promise<IplasCachedTestItemNamesResponse> {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await iplasProxyApi.getTestItemNamesCached({
+        site,
+        project,
+        station,
+        token: getUserToken(),
+        exclude_bin: excludeBin,
+        force_refresh: forceRefresh
+      })
+      return response
+    } catch (err: any) {
+      error.value = err.message || 'Failed to fetch cached test item names'
       throw err
     } finally {
       loading.value = false
@@ -769,10 +865,12 @@ export function useIplasApi() {
     fetchTestItemsPaginated,
     fetchRecordTestItems,
     fetchTestItemNames,
+    fetchTestItemNamesCached,
     fetchTestItemsFiltered,
     searchByIsn,
     downloadAttachments,
     downloadCsvLogs,
+    batchDownloadLogs,
 
     // Utilities
     formatDateForV1Api,

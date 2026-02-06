@@ -114,6 +114,25 @@ export interface IplasTestItemNamesResponse {
   total_count: number
 }
 
+// Cached test item names - database-backed for long-term caching
+export interface IplasCachedTestItemNamesRequest {
+  site: string
+  project: string
+  station: string
+  token?: string
+  // Option to exclude BIN/PASS-FAIL test items
+  exclude_bin?: boolean
+  // Force refresh the cache even if not expired
+  force_refresh?: boolean
+}
+
+export interface IplasCachedTestItemNamesResponse {
+  test_items: IplasTestItemInfo[]
+  total_count: number
+  cached: boolean
+  cache_age_hours: number | null
+}
+
 export interface IplasProxyHealthResponse {
   status: string
   redis_cache: string
@@ -315,6 +334,26 @@ export interface IplasDownloadCsvLogRequest {
 export interface IplasDownloadCsvLogResponse {
   content: string  // CSV file content as string
   filename?: string  // Filename from response header
+}
+
+// ============================================================================
+// Batch Download Types (for multiple TXT/CSV downloads)
+// ============================================================================
+
+export interface IplasBatchDownloadRequest {
+  site: string
+  project: string
+  items: IplasDownloadCsvLogInfo[]
+  download_type: 'txt' | 'csv' | 'all'  // 'txt' for attachments, 'csv' for CSV logs, 'all' for both
+  token?: string  // Optional user token override
+}
+
+export interface IplasBatchDownloadResponse {
+  content: string  // Base64 encoded zip file content
+  filename: string  // Suggested filename
+  file_count: number  // Total files in archive
+  txt_count: number  // Number of TXT files
+  csv_count: number  // Number of CSV files
 }
 
 // ============================================================================
@@ -554,6 +593,26 @@ class IplasProxyApi {
   async getTestItemNames(request: IplasTestItemNamesRequest): Promise<IplasTestItemNamesResponse> {
     const response = await apiClient.post<IplasTestItemNamesResponse>(
       `${this.baseUrl}/test-item-names`,
+      request
+    )
+    return response.data
+  }
+
+  /**
+   * Get cached test item names from database
+   * 
+   * This is optimized for the "Configure Station" dialog where loading
+   * test items for long date ranges (30+ days) often times out.
+   * 
+   * Cache key: site + project + station (date range NOT included)
+   * Cache TTL: 7 days in database
+   * 
+   * @param request - Request parameters (no date range needed)
+   * @returns List of unique test item names with cache info
+   */
+  async getTestItemNamesCached(request: IplasCachedTestItemNamesRequest): Promise<IplasCachedTestItemNamesResponse> {
+    const response = await apiClient.post<IplasCachedTestItemNamesResponse>(
+      `${this.baseUrl}/test-item-names-cached`,
       request
     )
     return response.data
@@ -811,6 +870,38 @@ class IplasProxyApi {
     a.click()
     document.body.removeChild(a)
     URL.revokeObjectURL(url)
+  }
+
+  // ============================================================================
+  // Batch Download (TXT, CSV, or both)
+  // ============================================================================
+
+  /**
+   * Batch download test logs (TXT, CSV, or both) as a zip archive
+   * 
+   * This is optimized for downloading multiple logs at once, packaging them
+   * into a single zip file with proper structure:
+   * - /txt/ folder contains TXT attachment files
+   * - /csv/ folder contains CSV test log files
+   * 
+   * @param request - Batch download request with items and download type
+   * @returns Base64 encoded zip file with file counts
+   */
+  async batchDownload(request: IplasBatchDownloadRequest): Promise<IplasBatchDownloadResponse> {
+    const response = await apiClient.post<IplasBatchDownloadResponse>(
+      `${this.baseUrl}/batch-download`,
+      request
+    )
+    return response.data
+  }
+
+  /**
+   * Helper to download batch download response as a file
+   * 
+   * @param response - Batch download response from API
+   */
+  downloadBatchFile(response: IplasBatchDownloadResponse): void {
+    this.downloadBase64File(response.content, response.filename)
   }
 
   // ============================================================================

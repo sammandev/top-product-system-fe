@@ -1,10 +1,12 @@
 <template>
     <div>
-        <!-- Step 1: ISN Input Card -->
+        <!-- UPDATED: Step 1: ISN Input & Station Lookup Card (like Station Search) -->
         <v-card elevation="2" class="mb-4">
-            <v-card-title class="d-flex align-center bg-primary">
-                <v-icon class="mr-2">mdi-barcode-scan</v-icon>
-                ISN Search - Custom Scoring
+            <v-card-title class="d-flex align-center justify-space-between bg-primary">
+                <div class="d-flex align-center">
+                    <v-icon class="mr-2">mdi-barcode-scan</v-icon>
+                    ISN Search - Custom Configuration
+                </div>
             </v-card-title>
             <v-card-text class="pt-4">
                 <!-- Input Mode Toggle -->
@@ -28,13 +30,13 @@
                     <v-col cols="12" md="10">
                         <v-text-field v-model="searchIsn" label="DUT ISN" placeholder="e.g., DM2520270073965"
                             prepend-inner-icon="mdi-barcode-scan" variant="outlined" density="comfortable" clearable
-                            hint="Enter ISN to search and configure stations" persistent-hint
-                            @keyup.enter="handleSearch" />
+                            hint="Enter ISN to lookup available stations" persistent-hint
+                            @keyup.enter="handleLookupStations" />
                     </v-col>
                     <v-col cols="12" md="2" class="d-flex align-center">
-                        <v-btn color="primary" size="large" :loading="loadingIsnSearch" :disabled="!searchIsn?.trim()"
-                            prepend-icon="mdi-magnify" block class="mb-5" @click="handleSearch">
-                            Search
+                        <v-btn color="secondary" size="large" :loading="loadingStationLookup" :disabled="!searchIsn?.trim()"
+                            prepend-icon="mdi-magnify" block class="mb-5" @click="handleLookupStations">
+                            Lookup Stations
                         </v-btn>
                     </v-col>
                 </v-row>
@@ -49,10 +51,10 @@
                                 <v-chip v-bind="props" :text="String(item.value || item)" closable />
                             </template>
                             <template #append>
-                                <v-btn color="primary" variant="flat" size="small" :loading="loadingIsnSearch"
+                                <v-btn color="secondary" variant="flat" size="small" :loading="loadingStationLookup"
                                     :disabled="!selectedISNs || selectedISNs.length === 0" prepend-icon="mdi-magnify"
-                                    @click="handleSearch">
-                                    Search
+                                    @click="handleLookupStations">
+                                    Lookup Stations
                                 </v-btn>
                             </template>
                         </v-combobox>
@@ -67,14 +69,106 @@
                             prepend-inner-icon="mdi-text-box-multiple" variant="outlined" rows="4" clearable
                             hint="Paste ISNs separated by newlines, commas, or spaces" persistent-hint>
                             <template #append>
-                                <v-btn color="primary" variant="flat" size="small" :loading="loadingIsnSearch"
-                                    :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify" @click="handleSearch">
-                                    Search
+                                <v-btn color="secondary" variant="flat" size="small" :loading="loadingStationLookup"
+                                    :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify" @click="handleLookupStations">
+                                    Lookup Stations
                                 </v-btn>
                             </template>
                         </v-textarea>
                     </v-col>
                 </v-row>
+
+                <!-- UPDATED: ISN Lookup Results - Site/Project Info -->
+                <v-card v-if="isnProjectInfo" variant="outlined" class="mt-4 bg-grey-lighten-5">
+                    <v-card-text class="py-3">
+                        <v-row align="center">
+                            <v-col cols="auto">
+                                <v-icon color="success" size="large">mdi-check-circle</v-icon>
+                            </v-col>
+                            <v-col>
+                                <div class="d-flex flex-wrap align-center gap-3">
+                                    <v-chip color="primary" label>
+                                        <v-icon start>mdi-barcode-scan</v-icon>
+                                        {{ parsedIsns.length }} ISN(s)
+                                    </v-chip>
+                                    <v-chip color="info" label>
+                                        <v-icon start>mdi-map-marker</v-icon>
+                                        Site: {{ isnProjectInfo.site }}
+                                    </v-chip>
+                                    <v-chip color="info" label>
+                                        <v-icon start>mdi-folder</v-icon>
+                                        Project: {{ isnProjectInfo.project }}
+                                    </v-chip>
+                                    <v-chip color="success" label>
+                                        <v-icon start>mdi-router-wireless</v-icon>
+                                        {{ availableStations.length }} Stations Available
+                                    </v-chip>
+                                </div>
+                            </v-col>
+                        </v-row>
+                    </v-card-text>
+                </v-card>
+
+                <!-- UPDATED: Date Range Configuration (shown after ISN lookup) -->
+                <v-row v-if="isnProjectInfo" dense class="mt-4">
+                    <v-col cols="12" md="4">
+                        <v-select v-model="dateRangePreset" :items="dateRangePresets" item-value="value"
+                            label="Date Range Preset" variant="outlined" density="comfortable"
+                            prepend-inner-icon="mdi-calendar-clock" @update:model-value="applyDateRangePreset" />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                        <v-text-field v-model="startTime" label="Start Time" type="datetime-local" variant="outlined"
+                            density="comfortable" prepend-inner-icon="mdi-calendar-start" />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                        <v-text-field v-model="endTime" label="End Time" type="datetime-local" variant="outlined"
+                            density="comfortable" prepend-inner-icon="mdi-calendar-end" />
+                    </v-col>
+                </v-row>
+
+                <!-- UPDATED: Configure Stations Button (like Station Search) -->
+                <v-row v-if="isnProjectInfo" dense class="mt-2">
+                    <v-col cols="12">
+                        <v-btn color="secondary" block size="large" prepend-icon="mdi-format-list-checkbox"
+                            :disabled="availableStations.length === 0" :loading="loadingStations"
+                            @click="openStationSelectionDialog">
+                            Configure Stations
+                            <v-chip v-if="configuredStationsCount > 0" size="small" color="success" variant="flat"
+                                class="ml-2">
+                                {{ configuredStationsCount }} Selected
+                            </v-chip>
+                        </v-btn>
+                    </v-col>
+                </v-row>
+
+                <!-- UPDATED: Configured Stations Summary (like Station Search) -->
+                <v-card v-if="configuredStationsCount > 0" variant="outlined" class="mt-4">
+                    <v-card-title class="text-subtitle-1 bg-grey-lighten-5">
+                        Configured Stations Summary
+                    </v-card-title>
+                    <v-card-text class="pa-2">
+                        <v-chip v-for="(config, displayName) in stationConfigs" :key="displayName" class="ma-1"
+                            color="primary" variant="tonal" closable @click="editStationConfig(displayName)"
+                            @click:close="removeStationConfig(displayName)">
+                            {{ displayName }}
+                            <v-badge :content="config.deviceIds.length || 'All'" color="success" inline class="ml-1" />
+                            <v-chip size="x-small" class="ml-1" variant="outlined">{{ config.testStatus }}</v-chip>
+                        </v-chip>
+                    </v-card-text>
+                </v-card>
+
+                <!-- UPDATED: Action Buttons (like Station Search) -->
+                <v-divider v-if="isnProjectInfo" class="my-4" />
+                <div v-if="isnProjectInfo" class="d-flex justify-end gap-2">
+                    <v-btn color="error" variant="outlined" prepend-icon="mdi-refresh" :disabled="loadingTestItems"
+                        @click="handleClearAll">
+                        Clear All
+                    </v-btn>
+                    <v-btn color="primary" variant="flat" prepend-icon="mdi-magnify" :loading="loadingTestItems"
+                        :disabled="!canFetchData" @click="fetchTestItems">
+                        Search
+                    </v-btn>
+                </div>
             </v-card-text>
         </v-card>
 
@@ -83,223 +177,25 @@
             {{ error }}
         </v-alert>
 
-        <!-- Step 2: Discovered Stations Configuration -->
-        <v-card v-if="discoveredStations.length > 0" elevation="2" class="mb-4">
-            <v-card-title class="bg-secondary d-flex justify-space-between align-center">
-                <div>
-                    <v-icon icon="mdi-router-wireless" class="mr-2" />
-                    Discovered Stations
-                    <v-chip size="small" color="white" variant="outlined" class="ml-2">
-                        {{ discoveredStations.length }} station(s)
-                    </v-chip>
-                    <v-chip size="small" color="info" variant="outlined" class="ml-2">
-                        {{ totalRecordCount }} record(s)
-                    </v-chip>
-                </div>
-                <div class="d-flex align-center gap-2">
-                    <v-btn size="small" color="white" variant="outlined" prepend-icon="mdi-cog"
-                        :disabled="configuredStationsCount === 0" @click="showConfigSummary = true">
-                        View Config ({{ configuredStationsCount }})
-                    </v-btn>
-                    <v-btn size="small" color="success" variant="flat" prepend-icon="mdi-calculator"
-                        :loading="calculatingScores"
-                        :disabled="configuredStationsCount === 0 || isnRecords.length === 0"
-                        @click="handleCalculateScores">
-                        Calculate Scores
-                    </v-btn>
-                </div>
-            </v-card-title>
-            <v-card-text class="pa-0">
-                <!-- Station Tabs -->
-                <v-tabs v-model="activeStationTab" color="primary" show-arrows>
-                    <v-tab v-for="(station, index) in discoveredStations" :key="station.stationName" :value="index">
-                        <v-icon start :color="stationConfigs[station.displayName] ? 'success' : 'grey'">
-                            {{ stationConfigs[station.displayName] ? 'mdi-check-circle' : 'mdi-circle-outline' }}
-                        </v-icon>
-                        {{ station.displayName }}
-                        <v-badge :content="station.recordCount" color="info" inline class="ml-1" />
-                    </v-tab>
-                </v-tabs>
+        <!-- UPDATED: Results Section with TopProductIplasRanking (like Station Search) -->
+        <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
+            :calculating-scores="calculatingScores" @row-click="handleRowClick" @download="handleDownloadRecord"
+            @bulk-download="handleBulkDownloadRecords" @calculate-scores="handleCalculateScores" />
 
-                <v-divider />
-
-                <!-- Station Content -->
-                <v-window v-model="activeStationTab">
-                    <v-window-item v-for="(station, index) in discoveredStations" :key="station.stationName"
-                        :value="index" eager>
-                        <v-card flat class="pa-4">
-                            <v-row>
-                                <v-col cols="12" md="6">
-                                    <div class="text-subtitle-2 mb-2">Station Info</div>
-                                    <v-chip label class="mr-2 mb-2">
-                                        <v-icon start>mdi-router-wireless</v-icon>
-                                        {{ station.stationName }}
-                                    </v-chip>
-                                    <v-chip label class="mr-2 mb-2" color="info">
-                                        <v-icon start>mdi-database</v-icon>
-                                        {{ station.recordCount }} records
-                                    </v-chip>
-                                    <v-chip label class="mb-2" color="success">
-                                        <v-icon start>mdi-barcode-scan</v-icon>
-                                        {{ station.isnCount }} ISNs
-                                    </v-chip>
-                                </v-col>
-                                <v-col cols="12" md="6" class="d-flex align-center justify-end">
-                                    <v-btn v-if="!stationConfigs[station.displayName]" color="primary" variant="flat"
-                                        prepend-icon="mdi-cog" @click="openStationConfig(station)">
-                                        Configure Scoring
-                                    </v-btn>
-                                    <div v-else class="d-flex align-center gap-2">
-                                        <v-chip color="success" variant="flat">
-                                            <v-icon start>mdi-check</v-icon>
-                                            {{ stationConfigs[station.displayName]?.selectedTestItems?.length || 0 }}
-                                            items
-                                        </v-chip>
-                                        <v-btn color="secondary" variant="tonal" size="small" prepend-icon="mdi-pencil"
-                                            @click="openStationConfig(station)">
-                                            Edit
-                                        </v-btn>
-                                        <v-btn color="error" variant="text" size="small" icon="mdi-delete"
-                                            @click="removeStationConfig(station.displayName)" />
-                                    </div>
-                                </v-col>
-                            </v-row>
-
-                            <!-- Device IDs in this station -->
-                            <div class="mt-4">
-                                <div class="text-subtitle-2 mb-2">
-                                    Device IDs
-                                    <v-chip size="x-small" class="ml-2">{{ station.deviceIds.length }}</v-chip>
-                                </div>
-                                <v-chip-group>
-                                    <v-chip v-for="deviceId in station.deviceIds.slice(0, 10)" :key="deviceId"
-                                        size="small" variant="outlined">
-                                        {{ deviceId }}
-                                    </v-chip>
-                                    <v-chip v-if="station.deviceIds.length > 10" size="small" color="info">
-                                        +{{ station.deviceIds.length - 10 }} more
-                                    </v-chip>
-                                </v-chip-group>
-                            </div>
-                        </v-card>
-                    </v-window-item>
-                </v-window>
-            </v-card-text>
-        </v-card>
-
-        <!-- Step 3: Results with Ranking -->
-        <TopProductIplasIsnRanking v-if="isnRecords.length > 0 && Object.keys(recordScores).length > 0"
-            :isn-groups="isnGroups" :scores="recordScores" :calculating-scores="calculatingScores"
-            @row-click="handleRowClick" @download-selected="handleDownloadSelected" />
-
-        <!-- Alternative: Simple Results Table when no scores -->
-        <v-card v-else-if="isnRecords.length > 0" elevation="2" class="mb-4">
-            <v-card-title class="bg-grey-lighten-4 d-flex justify-space-between align-center">
-                <div>
-                    <v-icon icon="mdi-format-list-bulleted" class="mr-2" />
-                    Search Results
-                    <v-chip size="small" class="ml-2" color="info">{{ isnRecords.length }} records</v-chip>
-                </div>
-                <v-btn v-if="configuredStationsCount > 0" color="primary" variant="flat" size="small"
-                    prepend-icon="mdi-calculator" :loading="calculatingScores" @click="handleCalculateScores">
-                    Calculate Scores
-                </v-btn>
-            </v-card-title>
-            <v-card-text>
-                <v-alert type="info" variant="tonal" class="mb-4">
-                    Configure stations above to enable custom scoring. Click "Calculate Scores" after configuration.
-                </v-alert>
-
-                <!-- Group by Station -->
-                <v-expansion-panels v-model="expandedResultPanels">
-                    <v-expansion-panel v-for="station in discoveredStations" :key="station.stationName">
-                        <v-expansion-panel-title>
-                            <div class="d-flex align-center">
-                                <v-icon class="mr-2" :color="stationConfigs[station.displayName] ? 'success' : 'grey'">
-                                    {{ stationConfigs[station.displayName] ? 'mdi-check-circle' : 'mdi-circle-outline'
-                                    }}
-                                </v-icon>
-                                <span class="font-weight-medium">{{ station.displayName }}</span>
-                                <v-chip size="small" class="ml-2">{{ station.recordCount }} records</v-chip>
-                            </div>
-                        </v-expansion-panel-title>
-                        <v-expansion-panel-text>
-                            <v-data-table :headers="recordHeaders" :items="getStationRecords(station.stationName)"
-                                :items-per-page="10" density="compact" class="elevation-1">
-                                <template #item.test_status="{ item }">
-                                    <v-chip :color="getStatusColor(item.test_status)" size="x-small">
-                                        {{ normalizeStatus(item.test_status) }}
-                                    </v-chip>
-                                </template>
-                                <template #item.test_end_time="{ item }">
-                                    {{ formatTime(item.test_end_time) }}
-                                </template>
-                                <template #item.actions="{ item }">
-                                    <v-btn icon="mdi-eye" size="x-small" variant="text" @click="handleRowClick(item)" />
-                                </template>
-                            </v-data-table>
-                        </v-expansion-panel-text>
-                    </v-expansion-panel>
-                </v-expansion-panels>
-            </v-card-text>
-        </v-card>
+        <!-- Station Selection Dialog -->
+        <StationSelectionDialog v-model:show="showStationSelectionDialog" :stations="availableStations"
+            :station-configs="stationConfigs" :loading="loadingStations" @station-click="handleStationClick"
+            @confirm="handleStationSelectionConfirm" />
 
         <!-- Station Config Dialog -->
         <StationConfigDialog v-model:show="showStationConfigDialog" :station="selectedStationForConfig"
-            :site="currentSite" :project="currentProject" :start-time="''" :end-time="''"
-            :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
-            :loading-devices="false" :device-error="null" :available-test-items="currentStationTestItems"
+            :site="isnProjectInfo?.site || ''" :project="isnProjectInfo?.project || ''" :start-time="startTime"
+            :end-time="endTime" :existing-config="currentStationConfig"
+            :available-device-ids="currentStationDeviceIds" :loading-devices="loadingCurrentStationDevices"
+            :device-error="deviceError" :available-test-items="currentStationTestItems"
             :loading-test-items="loadingCurrentStationTestItems" :test-items-error="testItemsError"
             @save="handleStationConfigSave" @remove="handleStationConfigRemove"
-            @refresh-test-items="refreshCurrentStationTestItems" />
-
-        <!-- Config Summary Dialog -->
-        <v-dialog v-model="showConfigSummary" max-width="800">
-            <v-card>
-                <v-card-title class="bg-primary">
-                    <v-icon class="mr-2">mdi-cog</v-icon>
-                    Scoring Configuration Summary
-                </v-card-title>
-                <v-card-text class="pa-4">
-                    <v-expansion-panels v-if="configuredStationsCount > 0">
-                        <v-expansion-panel v-for="(config, displayName) in stationConfigs" :key="displayName">
-                            <v-expansion-panel-title>
-                                <div class="d-flex align-center">
-                                    <v-icon class="mr-2" color="success">mdi-check-circle</v-icon>
-                                    {{ displayName }}
-                                    <v-chip size="small" class="ml-2">
-                                        {{ config.selectedTestItems?.length || 0 }} test items
-                                    </v-chip>
-                                </div>
-                            </v-expansion-panel-title>
-                            <v-expansion-panel-text>
-                                <v-list density="compact">
-                                    <v-list-item v-for="item in config.selectedTestItems || []" :key="item">
-                                        <v-list-item-title>{{ item }}</v-list-item-title>
-                                        <template #append>
-                                            <v-chip size="x-small" color="info" class="mr-1">
-                                                {{
-                                                    config.scoringConfigs?.[item]?.type || 'Symmetrical'
-                                                }}
-                                            </v-chip>
-                                            <v-chip v-if="config.scoringConfigs?.[item]?.weight !== 1" size="x-small"
-                                                color="warning">
-                                                Weight: {{ config.scoringConfigs?.[item]?.weight || 1 }}
-                                            </v-chip>
-                                        </template>
-                                    </v-list-item>
-                                </v-list>
-                            </v-expansion-panel-text>
-                        </v-expansion-panel>
-                    </v-expansion-panels>
-                    <v-alert v-else type="info">No stations configured yet.</v-alert>
-                </v-card-text>
-                <v-card-actions>
-                    <v-spacer />
-                    <v-btn color="primary" @click="showConfigSummary = false">Close</v-btn>
-                </v-card-actions>
-            </v-card>
-        </v-dialog>
+            @refresh-devices="refreshCurrentStationDevices" @refresh-test-items="refreshCurrentStationTestItems" />
 
         <!-- Details Dialog -->
         <TopProductIplasDetailsDialog v-model="showDetailsDialog" :record="detailsRecord"
@@ -308,145 +204,106 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useIplasApi, type IsnSearchData } from '@/features/dut_logs/composables/useIplasApi'
+// UPDATED: Complete rewrite of script section for new UX flow
+import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { useIplasApi, type Station, type CsvTestItemData, type TestItem } from '@/features/dut_logs/composables/useIplasApi'
+import { useScoring } from '@/features/dut/composables/useScoring'
+import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
+import { iplasProxyApi, type IplasIsnProjectInfo, type IplasStation } from '@/features/dut_logs/api/iplasProxyApi'
+import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
-import TopProductIplasIsnRanking from './TopProductIplasIsnRanking.vue'
+import TopProductIplasRanking from './TopProductIplasRanking.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
-import type { StationConfig as ImportedStationConfig } from './StationSelectionDialog.vue'
-import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
-import type { IsnSearchTestItem } from '@/features/dut_logs/api/iplasApi'
-import type { Station } from '@/features/dut_logs/composables/useIplasApi'
-import {
-    adjustIplasDisplayTime,
-    getStatusColor,
-    normalizeStatus,
-    isStatusPass,
-    isStatusFail
-} from '@/shared/utils/helpers'
+import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
+import type { DownloadCsvLogInfo } from '@/features/dut_logs/api/iplasProxyApi'
+import { getScoreColor } from '../types/scoring.types'
 
-// Interfaces
-interface TestItemScoringConfig {
-    type: 'Symmetrical' | 'Asymmetrical' | 'Throughput' | 'EVM'
-    weight: number
-    target?: number
-}
-
-interface StationConfig extends ImportedStationConfig {
-    scoringConfigs?: Record<string, TestItemScoringConfig>
-}
-
-interface DiscoveredStation {
-    stationName: string
-    displayName: string
-    site: string
-    project: string
-    recordCount: number
-    isnCount: number
-    deviceIds: string[]
-    records: IsnSearchData[]
-}
-
-// API composable
-const {
-    loadingIsnSearch,
-    error,
-    searchByIsn,
-    downloadAttachments
-} = useIplasApi()
-
-// Scoring composable (currently unused - using custom scoring logic below)
-// const { initializeConfigs, calculateScores, scoredRecords, updateConfig: updateScoringConfig, setScoringType } = useScoring()
-
-// Input state
+// ============================================================================
+// State: ISN Input
+// ============================================================================
 const inputMode = ref<'single' | 'multiple' | 'bulk'>('single')
 const searchIsn = ref('')
 const selectedISNs = ref<string[]>([])
 
-// Search results state
-const isnRecords = ref<IsnSearchData[]>([])
-const discoveredStations = ref<DiscoveredStation[]>([])
-const activeStationTab = ref(0)
-const expandedResultPanels = ref<number[]>([])
+// ============================================================================
+// State: Station Lookup
+// ============================================================================
+const loadingStationLookup = ref(false)
+const isnProjectInfo = ref<IplasIsnProjectInfo | null>(null)
+const availableStations = ref<Station[]>([])
+const parsedIsns = ref<string[]>([])
 
-// Station configuration state
+// ============================================================================
+// State: Configuration (like Station Search)
+// ============================================================================
+const loadingStations = ref(false)
 const stationConfigs = ref<Record<string, StationConfig>>({})
+const showStationSelectionDialog = ref(false)
 const showStationConfigDialog = ref(false)
 const selectedStationForConfig = ref<Station | null>(null)
 const currentStationDeviceIds = ref<string[]>([])
+const loadingCurrentStationDevices = ref(false)
+const deviceError = ref<string | null>(null)
 const currentStationTestItems = ref<TestItemInfo[]>([])
 const loadingCurrentStationTestItems = ref(false)
 const testItemsError = ref<string | null>(null)
+const testItemNamesCache = ref<Map<string, TestItemInfo[]>>(new Map())
 
-// Scoring state
+// ============================================================================
+// State: Date Range
+// ============================================================================
+const dateRangePreset = ref<string>('current_shift')
+const dateRangePresets = [
+    { title: 'Current Shift', value: 'current_shift' },
+    { title: 'Today', value: 'today' },
+    { title: 'Yesterday', value: 'yesterday' },
+    { title: 'Last 7 Days', value: 'last_7_days' },
+    { title: 'Last 30 Days', value: 'last_30_days' }
+]
+const startTime = ref('')
+const endTime = ref('')
+
+// ============================================================================
+// State: Data Fetching & Results
+// ============================================================================
+const {
+    loading,
+    loadingTestItems,
+    error,
+    testItemData,
+    fetchDeviceIds,
+    fetchTestItems: fetchTestItemsApi,
+    fetchTestItemNamesCached,
+    fetchTestItemsFiltered,
+    downloadAttachments,
+    downloadCsvLogs,
+    clearTestItemData
+} = useIplasApi()
+
+// ============================================================================
+// State: Scoring
+// ============================================================================
+const {
+    initializeConfigs,
+    calculateScores,
+    scoredRecords,
+    scoringError,
+    updateConfig: updateScoringConfig,
+    setScoringType
+} = useScoring()
 const recordScores = ref<Record<string, number>>({})
 const calculatingScores = ref(false)
 
-// Dialog state
-const showConfigSummary = ref(false)
+// ============================================================================
+// State: Details Dialog
+// ============================================================================
 const showDetailsDialog = ref(false)
 const detailsRecord = ref<NormalizedRecord | null>(null)
 const detailsDownloading = ref(false)
-const detailsScoringConfigs = ref<Record<string, TestItemScoringConfig>>({})
-const detailsScores = ref<Record<string, number>>({})
 
+// ============================================================================
 // Computed
-const currentSite = computed(() => {
-    return discoveredStations.value[0]?.site || ''
-})
-
-const isnGroups = computed(() => {
-    // Group records by ISN
-    const groups = new Map<string, IsnSearchData[]>()
-
-    for (const record of isnRecords.value) {
-        if (!groups.has(record.isn)) {
-            groups.set(record.isn, [])
-        }
-        groups.get(record.isn)!.push(record)
-    }
-
-    return Array.from(groups.entries()).map(([isn, records]) => {
-        const hasError = records.some(r => isStatusFail(r.test_status))
-        const errorCount = records.filter(r => isStatusFail(r.test_status)).length
-        const uniqueStations = new Set(records.map(r => r.display_station_name || r.station_name))
-
-        // Transform station names into StationGroup objects
-        const stationGroups = Array.from(uniqueStations).map(stationName => {
-            const stationRecords = records.filter(r => (r.display_station_name || r.station_name) === stationName)
-            const stationHasError = stationRecords.some(r => isStatusFail(r.test_status))
-            const stationErrorCount = stationRecords.filter(r => isStatusFail(r.test_status)).length
-
-            return {
-                stationName,
-                displayName: stationName,
-                records: stationRecords,
-                hasError: stationHasError,
-                errorCount: stationErrorCount,
-                recordCount: stationRecords.length
-            }
-        })
-
-        return {
-            isn,
-            records,
-            site: records[0]?.site || '',
-            project: records[0]?.project || '',
-            hasError,
-            errorCount,
-            stations: stationGroups
-        }
-    })
-})
-
-const currentProject = computed(() => {
-    return discoveredStations.value[0]?.project || ''
-})
-
-const totalRecordCount = computed(() => {
-    return isnRecords.value.length
-})
-
+// ============================================================================
 const configuredStationsCount = computed(() => {
     return Object.keys(stationConfigs.value).length
 })
@@ -456,19 +313,74 @@ const currentStationConfig = computed(() => {
     return stationConfigs.value[selectedStationForConfig.value.display_station_name]
 })
 
-// Table headers
-const recordHeaders = [
-    { title: 'ISN', key: 'isn', sortable: true },
-    { title: 'Device ID', key: 'device_id', sortable: true },
-    { title: 'Status', key: 'test_status', sortable: true },
-    { title: 'Error Code', key: 'error_code', sortable: true },
-    { title: 'Test End Time', key: 'test_end_time', sortable: true },
-    { title: 'Actions', key: 'actions', sortable: false }
-]
+const canFetchData = computed(() => {
+    return isnProjectInfo.value && configuredStationsCount.value > 0 && startTime.value && endTime.value
+})
 
-// Search handler
-async function handleSearch(): Promise<void> {
-    // Determine ISN list based on input mode
+// ============================================================================
+// Date Range Functions
+// ============================================================================
+function applyDateRangePreset(): void {
+    const now = new Date()
+    let start = new Date()
+    let end = new Date()
+
+    switch (dateRangePreset.value) {
+        case 'current_shift':
+            const currentHour = now.getHours()
+            if (currentHour >= 8 && currentHour < 20) {
+                start.setHours(8, 0, 0, 0)
+                end.setHours(20, 0, 0, 0)
+            } else if (currentHour >= 20) {
+                start.setHours(20, 0, 0, 0)
+                end.setDate(end.getDate() + 1)
+                end.setHours(8, 0, 0, 0)
+            } else {
+                start.setDate(start.getDate() - 1)
+                start.setHours(20, 0, 0, 0)
+                end.setHours(8, 0, 0, 0)
+            }
+            break
+        case 'today':
+            start.setHours(0, 0, 0, 0)
+            end.setHours(23, 59, 59, 999)
+            break
+        case 'yesterday':
+            start.setDate(start.getDate() - 1)
+            start.setHours(0, 0, 0, 0)
+            end.setDate(end.getDate() - 1)
+            end.setHours(23, 59, 59, 999)
+            break
+        case 'last_7_days':
+            start.setDate(start.getDate() - 7)
+            start.setHours(0, 0, 0, 0)
+            end.setHours(23, 59, 59, 999)
+            break
+        case 'last_30_days':
+            start.setDate(start.getDate() - 30)
+            start.setHours(0, 0, 0, 0)
+            end.setHours(23, 59, 59, 999)
+            break
+    }
+
+    startTime.value = formatDatetimeLocal(start)
+    endTime.value = formatDatetimeLocal(end)
+}
+
+function formatDatetimeLocal(date: Date): string {
+    const year = date.getFullYear()
+    const month = String(date.getMonth() + 1).padStart(2, '0')
+    const day = String(date.getDate()).padStart(2, '0')
+    const hours = String(date.getHours()).padStart(2, '0')
+    const minutes = String(date.getMinutes()).padStart(2, '0')
+    return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+// ============================================================================
+// ISN Lookup Functions
+// ============================================================================
+async function handleLookupStations(): Promise<void> {
+    // Parse ISN list based on input mode
     let isnList: string[] = []
 
     if (inputMode.value === 'multiple') {
@@ -486,452 +398,493 @@ async function handleSearch(): Promise<void> {
         return
     }
 
+    // Store parsed ISNs
+    parsedIsns.value = isnList
+
     // Clear previous state
-    isnRecords.value = []
-    discoveredStations.value = []
+    isnProjectInfo.value = null
+    availableStations.value = []
     stationConfigs.value = {}
+    clearTestItemData()
     recordScores.value = {}
-    activeStationTab.value = 0
+
+    loadingStationLookup.value = true
+    error.value = null
 
     try {
-        const allRecords: IsnSearchData[] = []
-
-        for (const isn of isnList) {
-            try {
-                const data = await searchByIsn(isn)
-                // The searchByIsn function already returns data matching IsnSearchData interface
-                // (lowercase field names from backend: isn, device_id, site, project, etc.)
-                allRecords.push(...data)
-            } catch (err) {
-                console.warn(`Failed to fetch records for ISN ${isn}:`, err)
+        if (isnList.length === 1) {
+            // Single ISN lookup
+            const response = await iplasProxyApi.getStationsFromIsn({ isn: isnList[0]! })
+            if (!response.isn_info.found) {
+                error.value = `ISN "${isnList[0]}" not found in iPLAS database`
+                return
             }
+            isnProjectInfo.value = response.isn_info
+            // Convert IplasStation to Station type
+            availableStations.value = response.stations.map((s: IplasStation): Station => ({
+                station_name: s.station_name,
+                display_station_name: s.display_station_name,
+                order: s.order,
+                data_source: s.data_source || ''
+            }))
+        } else {
+            // Batch ISN lookup
+            const response = await iplasProxyApi.getStationsFromIsnBatch({ isns: isnList.slice(0, 50) })
+            if (response.results.length === 0) {
+                error.value = 'No ISNs found in iPLAS database'
+                return
+            }
+            // Use first found ISN's info
+            const firstFound = response.results.find(r => r.isn_info.found)
+            if (!firstFound) {
+                error.value = 'No ISNs found in iPLAS database'
+                return
+            }
+            isnProjectInfo.value = firstFound.isn_info
+            availableStations.value = firstFound.stations.map((s: IplasStation): Station => ({
+                station_name: s.station_name,
+                display_station_name: s.display_station_name,
+                order: s.order,
+                data_source: s.data_source || ''
+            }))
         }
 
-        isnRecords.value = allRecords
-
-        // Group by station
-        discoveredStations.value = groupRecordsByStation(allRecords)
-
-        // Initialize expanded panels
-        if (discoveredStations.value.length > 0) {
-            expandedResultPanels.value = [0]
-        }
+        // Apply default date range
+        applyDateRangePreset()
     } catch (err) {
-        console.error('Search failed:', err)
-        error.value = err instanceof Error ? err.message : 'Search failed'
+        console.error('Station lookup failed:', err)
+        error.value = err instanceof Error ? err.message : 'Failed to lookup stations'
+    } finally {
+        loadingStationLookup.value = false
     }
 }
 
-// Group records by station
-function groupRecordsByStation(records: IsnSearchData[]): DiscoveredStation[] {
-    const stationMap = new Map<string, DiscoveredStation>()
-
-    for (const record of records) {
-        const key = record.station_name || record.display_station_name
-        if (!stationMap.has(key)) {
-            stationMap.set(key, {
-                stationName: record.station_name,
-                displayName: record.display_station_name || record.station_name,
-                site: record.site,
-                project: record.project,
-                recordCount: 0,
-                isnCount: 0,
-                deviceIds: [],
-                records: []
-            })
-        }
-
-        const station = stationMap.get(key)!
-        station.records.push(record)
-        station.recordCount++
-
-        if (!station.deviceIds.includes(record.device_id)) {
-            station.deviceIds.push(record.device_id)
-        }
-    }
-
-    // Calculate unique ISN count per station
-    for (const station of stationMap.values()) {
-        const uniqueIsns = new Set(station.records.map(r => r.isn))
-        station.isnCount = uniqueIsns.size
-    }
-
-    return Array.from(stationMap.values()).sort((a, b) => b.recordCount - a.recordCount)
+// ============================================================================
+// Station Selection Dialog Functions
+// ============================================================================
+function openStationSelectionDialog(): void {
+    if (availableStations.value.length === 0) return
+    showStationSelectionDialog.value = true
 }
 
-// Get records for a specific station
-function getStationRecords(stationName: string): IsnSearchData[] {
-    return isnRecords.value.filter(r => r.station_name === stationName || r.display_station_name === stationName)
-}
-
-// Open station config dialog
-function openStationConfig(discoveredStation: DiscoveredStation): void {
-    // Create a mock Station object for the dialog
-    const mockStation: Station = {
-        station_name: discoveredStation.stationName,
-        display_station_name: discoveredStation.displayName,
-        order: 0,
-        data_source: 'ISN Search'
-    }
-
-    selectedStationForConfig.value = mockStation
-    currentStationDeviceIds.value = discoveredStation.deviceIds
-
-    // Extract test items from records
-    extractTestItemsFromRecords(discoveredStation.records)
-
+function handleStationClick(station: Station): void {
+    selectedStationForConfig.value = station
     showStationConfigDialog.value = true
+    // Load device IDs first, then test items
+    loadDeviceIdsForStation(station).then(() => {
+        loadTestItemsForStation(station)
+    })
 }
 
-// Extract test items from ISN search records
-function extractTestItemsFromRecords(records: IsnSearchData[]): void {
+async function loadDeviceIdsForStation(station: Station): Promise<void> {
+    if (!isnProjectInfo.value || !startTime.value || !endTime.value) return
+
+    loadingCurrentStationDevices.value = true
+    deviceError.value = null
+    currentStationDeviceIds.value = []
+
+    try {
+        const start = new Date(startTime.value).toISOString()
+        const end = new Date(endTime.value).toISOString()
+        const deviceIds = await fetchDeviceIds(
+            isnProjectInfo.value.site,
+            isnProjectInfo.value.project,
+            station.display_station_name,
+            start,
+            end
+        )
+        currentStationDeviceIds.value = deviceIds
+    } catch (err: any) {
+        deviceError.value = err.message || 'Failed to load device IDs'
+    } finally {
+        loadingCurrentStationDevices.value = false
+    }
+}
+
+async function refreshCurrentStationDevices(): Promise<void> {
+    if (selectedStationForConfig.value) {
+        await loadDeviceIdsForStation(selectedStationForConfig.value)
+    }
+}
+
+async function loadTestItemsForStation(station: Station, forceRefresh = false): Promise<void> {
+    if (!isnProjectInfo.value) return
+
+    const cacheKey = `${isnProjectInfo.value.site}_${isnProjectInfo.value.project}_${station.display_station_name}`
+
+    // Check in-memory cache first
+    if (!forceRefresh) {
+        const cachedData = testItemNamesCache.value.get(cacheKey)
+        if (cachedData) {
+            currentStationTestItems.value = cachedData
+            return
+        }
+    }
+
     loadingCurrentStationTestItems.value = true
     testItemsError.value = null
+    currentStationTestItems.value = []
 
     try {
-        const testItemsMap = new Map<string, TestItemInfo>()
+        const response = await fetchTestItemNamesCached(
+            isnProjectInfo.value.site,
+            isnProjectInfo.value.project,
+            station.display_station_name,
+            true,         // Exclude BIN items
+            forceRefresh
+        )
 
-        for (const record of records) {
-            if (!record.test_item) continue
+        const testItemInfos: TestItemInfo[] = response.test_items.map(item => ({
+            name: item.name,
+            isValue: item.is_value,
+            isBin: item.is_bin,
+            hasUcl: item.has_ucl,
+            hasLcl: item.has_lcl
+        }))
 
-            for (const item of record.test_item) {
-                const name = item.NAME
-                if (!name || testItemsMap.has(name)) continue
-
-                // Determine item type
-                const value = (item.VALUE || '').toUpperCase().trim()
-                let isValue = false
-                let isBin = false
-                let hasUcl = false
-                let hasLcl = false
-
-                // Check for bin data
-                if (value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999') {
-                    isBin = true
-                } else if (value !== '') {
-                    // Try to parse as numeric
-                    const numVal = parseFloat(value)
-                    if (!isNaN(numVal)) {
-                        isValue = true
-                    }
-                }
-
-                // Check for UCL/LCL
-                const uclStr = (item.UCL || '').trim()
-                const lclStr = (item.LCL || '').trim()
-                if (uclStr && !isNaN(parseFloat(uclStr))) hasUcl = true
-                if (lclStr && !isNaN(parseFloat(lclStr))) hasLcl = true
-
-                testItemsMap.set(name, {
-                    name,
-                    isValue,
-                    isBin,
-                    hasUcl,
-                    hasLcl
-                })
-            }
-        }
-
-        currentStationTestItems.value = Array.from(testItemsMap.values()).sort((a, b) => a.name.localeCompare(b.name))
-    } catch (err) {
-        console.error('Failed to extract test items:', err)
-        testItemsError.value = 'Failed to extract test items from records'
+        currentStationTestItems.value = testItemInfos
+        testItemNamesCache.value.set(cacheKey, testItemInfos)
+    } catch (err: any) {
+        testItemsError.value = err.message || 'Failed to load test items'
     } finally {
         loadingCurrentStationTestItems.value = false
     }
 }
 
-// Refresh test items (for dialog compatibility)
-function refreshCurrentStationTestItems(): void {
-    const activeStation = discoveredStations.value[activeStationTab.value]
-    if (activeStation) {
-        extractTestItemsFromRecords(activeStation.records)
+async function refreshCurrentStationTestItems(): Promise<void> {
+    if (selectedStationForConfig.value && isnProjectInfo.value) {
+        const cacheKey = `${isnProjectInfo.value.site}_${isnProjectInfo.value.project}_${selectedStationForConfig.value.display_station_name}`
+        testItemNamesCache.value.delete(cacheKey)
+        await loadTestItemsForStation(selectedStationForConfig.value, true)
     }
 }
 
-// Handle station config save
+function handleStationSelectionConfirm(configs: Record<string, StationConfig>): void {
+    stationConfigs.value = { ...configs }
+    showStationSelectionDialog.value = false
+}
+
 function handleStationConfigSave(config: StationConfig): void {
-    if (!selectedStationForConfig.value) return
-
-    const displayName = selectedStationForConfig.value.display_station_name
-    stationConfigs.value[displayName] = config
-    showStationConfigDialog.value = false
+    stationConfigs.value[config.displayName] = { ...config }
 }
 
-// Handle station config remove
-function handleStationConfigRemove(): void {
-    if (!selectedStationForConfig.value) return
-
-    const displayName = selectedStationForConfig.value.display_station_name
+function handleStationConfigRemove(displayName: string): void {
     delete stationConfigs.value[displayName]
-    showStationConfigDialog.value = false
 }
 
-// Remove station config
+function editStationConfig(displayName: string): void {
+    const station = availableStations.value.find(s => s.display_station_name === displayName)
+    if (station) {
+        handleStationClick(station)
+    }
+}
+
 function removeStationConfig(displayName: string): void {
     delete stationConfigs.value[displayName]
 }
 
-// Calculate scores
-async function handleCalculateScores(): Promise<void> {
-    if (configuredStationsCount.value === 0 || isnRecords.value.length === 0) return
+// ============================================================================
+// Data Fetching (like Station Search)
+// ============================================================================
+async function fetchTestItems(): Promise<void> {
+    if (!isnProjectInfo.value || configuredStationsCount.value === 0) return
 
-    calculatingScores.value = true
+    clearTestItemData()
     recordScores.value = {}
 
-    try {
-        // Build scoring configs from all configured stations
-        const allConfigs: Record<string, TestItemScoringConfig> = {}
+    // Iterate through each configured station
+    for (const config of Object.values(stationConfigs.value)) {
+        let deviceIds = config.deviceIds
 
-        for (const config of Object.values(stationConfigs.value)) {
-            if (config.scoringConfigs) {
-                Object.assign(allConfigs, config.scoringConfigs)
+        // When user leaves device ID empty, fetch all available device IDs
+        if (deviceIds.length === 0) {
+            try {
+                deviceIds = await fetchDeviceIds(
+                    isnProjectInfo.value.site,
+                    isnProjectInfo.value.project,
+                    config.displayName,
+                    new Date(startTime.value),
+                    new Date(endTime.value)
+                )
+            } catch (err) {
+                console.warn(`Failed to fetch device IDs for ${config.displayName}, falling back to ALL`)
+                deviceIds = ['ALL']
             }
         }
 
-        // Convert records to normalized format for scoring
-        for (const record of isnRecords.value) {
-            const displayName = record.display_station_name || record.station_name
-            const stationConfig = stationConfigs.value[displayName]
-            if (!stationConfig) continue
+        const hasTestItemFilters = config.selectedTestItems && config.selectedTestItems.length > 0
 
-            // Calculate score for this record
-            const score = calculateRecordScore(record, stationConfig)
-            const recordKey = `${record.isn}-${record.device_id}-${record.test_end_time}`
-            recordScores.value[recordKey] = score
+        // Fetch data for each device ID
+        for (const deviceId of deviceIds) {
+            if (hasTestItemFilters) {
+                await fetchTestItemsFiltered(
+                    isnProjectInfo.value.site,
+                    isnProjectInfo.value.project,
+                    config.displayName,
+                    deviceId,
+                    new Date(startTime.value),
+                    new Date(endTime.value),
+                    config.testStatus,
+                    config.selectedTestItems
+                )
+            } else {
+                await fetchTestItemsApi(
+                    isnProjectInfo.value.site,
+                    isnProjectInfo.value.project,
+                    config.displayName,
+                    deviceId,
+                    new Date(startTime.value),
+                    new Date(endTime.value),
+                    config.testStatus
+                )
+            }
         }
+    }
+}
+
+// ============================================================================
+// Scoring Functions
+// ============================================================================
+async function handleCalculateScores(): Promise<void> {
+    if (testItemData.value.length === 0) return
+
+    calculatingScores.value = true
+    try {
+        const records = testItemData.value.map(record => ({
+            ISN: record.ISN || record.DeviceId,
+            DeviceId: record.DeviceId,
+            station: record.station,
+            'Test Start Time': record['Test Start Time'],
+            'Test end Time': record['Test end Time'],
+            TestItem: record.TestItem || []
+        }))
+
+        // Initialize scoring configs from first record's test items
+        const firstRecord = testItemData.value[0]
+        if (firstRecord?.TestItem && firstRecord.TestItem.length > 0) {
+            initializeConfigs(firstRecord.TestItem)
+        }
+
+        // Apply user-selected scoring configs from station configurations
+        applyUserScoringConfigs()
+
+        await calculateScores(records)
+
+        // Map scored records back to score map
+        const newScores: Record<string, number> = {}
+        testItemData.value.forEach((record, index) => {
+            const isn = record.ISN || record.DeviceId || '-'
+            const station = record.station
+            const testEndTime = record['Test end Time'] || ''
+            const key = `${isn}_${station}_${testEndTime}`
+
+            const scoredRecord = scoredRecords.value[index]
+            if (scoredRecord) {
+                newScores[key] = scoredRecord.overallScore
+            }
+        })
+
+        recordScores.value = newScores
     } catch (err) {
         console.error('Failed to calculate scores:', err)
-        error.value = err instanceof Error ? err.message : 'Failed to calculate scores'
+        error.value = scoringError.value || 'Failed to calculate scores'
     } finally {
         calculatingScores.value = false
     }
 }
 
-// Calculate score for a single record
-function calculateRecordScore(record: IsnSearchData, config: StationConfig): number {
-    if (!config.selectedTestItems || config.selectedTestItems.length === 0) {
-        return 0
+function applyUserScoringConfigs(): void {
+    for (const config of Object.values(stationConfigs.value)) {
+        if (!config.testItemScoringConfigs) continue
+
+        for (const [testItemName, scoringConfig] of Object.entries(config.testItemScoringConfigs)) {
+            setScoringType(testItemName, scoringConfig.scoringType)
+
+            const updates: { target?: number; weight?: number } = {}
+            if (scoringConfig.target !== undefined) {
+                updates.target = scoringConfig.target
+            }
+            if (scoringConfig.weight !== undefined) {
+                updates.weight = scoringConfig.weight
+            }
+            if (Object.keys(updates).length > 0) {
+                updateScoringConfig(testItemName, updates)
+            }
+        }
     }
-
-    let totalWeightedScore = 0
-    let totalWeight = 0
-
-    for (const testItemName of config.selectedTestItems) {
-        const testItem = record.test_item?.find(ti => ti.NAME === testItemName)
-        if (!testItem) continue
-
-        const scoringConfig = config.scoringConfigs?.[testItemName]
-        const weight = scoringConfig?.weight || 1
-
-        // Calculate individual test item score
-        const itemScore = calculateTestItemScore(testItem, scoringConfig)
-        totalWeightedScore += itemScore * weight
-        totalWeight += weight
-    }
-
-    return totalWeight > 0 ? totalWeightedScore / totalWeight : 0
 }
 
-// Calculate score for a single test item
-function calculateTestItemScore(testItem: IsnSearchTestItem, config?: TestItemScoringConfig): number {
-    const value = parseFloat(testItem.VALUE)
-    if (isNaN(value)) return 0
+// ============================================================================
+// Record Normalization & Details
+// ============================================================================
+function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
+    const recordIndex = testItemData.value.findIndex(r =>
+        (r.ISN === record.ISN || r.DeviceId === record.DeviceId) &&
+        r.station === record.station &&
+        r['Test end Time'] === record['Test end Time']
+    )
+    const scoredRecord = recordIndex >= 0 ? scoredRecords.value[recordIndex] : null
 
-    const ucl = parseFloat(testItem.UCL || '')
-    const lcl = parseFloat(testItem.LCL || '')
-
-    // Default to symmetrical scoring
-    const scoringType = config?.type || 'Symmetrical'
-    const target = config?.target
-
-    if (isNaN(ucl) && isNaN(lcl)) {
-        // No limits, return 1 if pass
-        return isStatusPass(testItem.STATUS) ? 1 : 0
-    }
-
-    const hasUcl = !isNaN(ucl)
-    const hasLcl = !isNaN(lcl)
-
-    let score = 0
-
-    switch (scoringType) {
-        case 'Symmetrical': {
-            // Symmetrical scoring with midpoint as target
-            if (hasUcl && hasLcl) {
-                const midpoint = (ucl + lcl) / 2
-                const range = (ucl - lcl) / 2
-                if (range > 0) {
-                    const deviation = Math.abs(value - midpoint) / range
-                    score = Math.max(0, 1 - deviation)
-                }
-            } else if (hasUcl) {
-                score = value <= ucl ? 1 : Math.max(0, 1 - (value - ucl) / ucl)
-            } else if (hasLcl) {
-                score = value >= lcl ? 1 : Math.max(0, 1 - (lcl - value) / Math.abs(lcl))
-            }
-            break
+    const testItems: NormalizedTestItem[] = (record.TestItem || []).map((item: TestItem): NormalizedTestItem => {
+        const itemScore = scoredRecord?.testItemScores?.find(s => s.testItemName === item.NAME)
+        return {
+            NAME: item.NAME,
+            STATUS: item.STATUS,
+            VALUE: item.VALUE,
+            UCL: item.UCL,
+            LCL: item.LCL,
+            CYCLE: item.CYCLE || '',
+            score: itemScore?.score,
+            scoringType: itemScore?.scoringType,
+            deviation: itemScore?.deviation,
+            policy: itemScore?.policy ?? undefined,
+            target: itemScore?.target ?? undefined,
+            weight: itemScore?.weight ?? 1.0
         }
-        case 'Asymmetrical': {
-            // Asymmetrical scoring with custom target
-            const targetValue = target !== undefined ? target : (hasUcl && hasLcl ? (ucl + lcl) / 2 : value)
-            if (hasUcl && hasLcl) {
-                if (value >= targetValue) {
-                    const range = ucl - targetValue
-                    score = range > 0 ? Math.max(0, 1 - (value - targetValue) / range) : 1
-                } else {
-                    const range = targetValue - lcl
-                    score = range > 0 ? Math.max(0, 1 - (targetValue - value) / range) : 1
-                }
-            }
-            break
-        }
-        case 'Throughput': {
-            // Higher is better
-            const targetValue = target !== undefined ? target : (hasUcl ? ucl : value)
-            if (hasLcl && value >= lcl) {
-                if (targetValue > lcl) {
-                    score = Math.min(1, (value - lcl) / (targetValue - lcl))
-                } else {
-                    score = 1
-                }
-            } else if (hasLcl) {
-                score = 0
-            } else {
-                score = 1
-            }
-            break
-        }
-        case 'EVM': {
-            // Lower is better (like EVM, error rates)
-            if (hasUcl && value <= ucl) {
-                score = hasLcl ? Math.max(0, (ucl - value) / (ucl - lcl)) : (value <= 0 ? 1 : Math.max(0, 1 - value / ucl))
-            } else if (hasUcl) {
-                score = 0
-            }
-            break
-        }
-        default:
-            score = isStatusPass(testItem.STATUS) ? 1 : 0
-    }
+    })
 
-    return Math.max(0, Math.min(1, score))
-}
-
-// Normalize record for details dialog
-function normalizeRecord(record: IsnSearchData): NormalizedRecord {
     return {
-        site: record.site,
-        project: record.project,
-        stationName: record.station_name,
-        displayStationName: record.display_station_name,
-        tsp: record.display_station_name,
-        isn: record.isn,
-        deviceId: record.device_id,
-        testStatus: record.test_status,
-        errorCode: record.error_code,
-        errorName: record.error_name || '',
-        testStartTime: record.test_start_time,
-        testEndTime: record.test_end_time,
-        line: record.line,
-        testItems: record.test_item?.map(ti => ({
-            NAME: ti.NAME,
-            STATUS: ti.STATUS,
-            VALUE: ti.VALUE,
-            UCL: ti.UCL || '',
-            LCL: ti.LCL || '',
-            CYCLE: ti.CYCLE || ''
-        })) || []
+        isn: record.ISN || '-',
+        deviceId: record.DeviceId || '-',
+        stationName: record.station,
+        displayStationName: record.TSP || record.station,
+        site: record.Site || '-',
+        project: record.Project || '-',
+        line: record.Line || '-',
+        errorCode: record.ErrorCode || '-',
+        errorName: record.ErrorName || '-',
+        testStatus: record['Test Status'] || '-',
+        testStartTime: record['Test Start Time'] || '-',
+        testEndTime: record['Test end Time'] || '-',
+        testItems,
+        overallScore: scoredRecord?.overallScore,
+        valueItemsScore: scoredRecord?.valueItemsScore,
+        binItemsScore: scoredRecord?.binItemsScore
     }
 }
 
-// Handle row click
-function handleRowClick(record: IsnSearchData): void {
-    detailsRecord.value = normalizeRecord(record)
-
-    // Get scoring configs for this station
-    const displayName = record.display_station_name || record.station_name
-    const stationConfig = stationConfigs.value[displayName]
-    detailsScoringConfigs.value = stationConfig?.scoringConfigs || {}
-
-    // Get scores for test items if calculated
-    detailsScores.value = {}
-    if (record.test_item && stationConfig) {
-        for (const item of record.test_item) {
-            if (stationConfig.selectedTestItems?.includes(item.NAME)) {
-                const scoringConfig = stationConfig.scoringConfigs?.[item.NAME]
-                detailsScores.value[item.NAME] = calculateTestItemScore(item, scoringConfig)
-            }
-        }
-    }
-
+function handleRowClick(payload: { record: CsvTestItemData; stationName: string }): void {
+    const normalized = normalizeRecord(payload.record)
+    detailsRecord.value = normalized
     showDetailsDialog.value = true
 }
 
-// Handle download selected records
-async function handleDownloadSelected(records: IsnSearchData[]): Promise<void> {
-    if (records.length === 0) return
+// ============================================================================
+// Download Functions
+// ============================================================================
+async function handleDownloadRecord(payload: { record: CsvTestItemData; stationName: string }): Promise<void> {
+    if (!isnProjectInfo.value) return
 
-    try {
-        const firstRecord = records[0]
-        if (!firstRecord) return
+    const record = payload.record
+    const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+    const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+    const deviceid = record.DeviceId
+    const station = record.TSP || record.station
 
-        const site = firstRecord.site
-        const project = firstRecord.project
+    await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, [{ isn, time, deviceid, station }])
 
-        await downloadAttachments(
-            site,
-            project,
-            records.map(r => ({
-                isn: r.isn,
-                time: r.test_end_time,
-                deviceid: r.device_id,
-                station: r.station_name
-            }))
-        )
-    } catch (err) {
-        console.error('Download failed:', err)
-        error.value = err instanceof Error ? err.message : 'Download failed'
-    }
-}
+    const testEndTime = record['Test end Time'] || ''
+    const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+    const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
 
-// Handle download
-async function handleDownloadRecord(record: NormalizedRecord): Promise<void> {
-    // Find original record
-    const originalRecord = isnRecords.value.find(r =>
-        r.isn === record.isn &&
-        r.device_id === record.deviceId &&
-        (r.test_end_time === record.testEndTime || r.display_station_name === record.tsp)
-    )
-
-    if (!originalRecord) {
-        error.value = 'Could not find record for download'
-        return
+    const csvLogInfo: DownloadCsvLogInfo = {
+        site: isnProjectInfo.value.site,
+        project: isnProjectInfo.value.project,
+        station,
+        line: record.Line || 'NA',
+        model: record.Model || 'ALL',
+        deviceid,
+        isn,
+        test_end_time: apiEndTime,
+        data_source: 0
     }
 
-    await handleDownloadSelected([originalRecord])
+    await downloadCsvLogs([csvLogInfo])
 }
 
-// Handle download from details dialog
+async function handleBulkDownloadRecords(payload: { records: CsvTestItemData[]; stationName: string }): Promise<void> {
+    if (!isnProjectInfo.value || payload.records.length === 0) return
+
+    const attachments = payload.records.map(record => {
+        const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+        const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+        const deviceid = record.DeviceId
+        const station = record.TSP || record.station
+        return { isn, time, deviceid, station }
+    })
+
+    await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, attachments)
+
+    const csvLogInfos: DownloadCsvLogInfo[] = payload.records.map(record => {
+        const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+        const deviceid = record.DeviceId
+        const station = record.TSP || record.station
+        const testEndTime = record['Test end Time'] || ''
+        const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+        const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
+
+        return {
+            site: isnProjectInfo.value!.site,
+            project: isnProjectInfo.value!.project,
+            station,
+            line: record.Line || 'NA',
+            model: record.Model || 'ALL',
+            deviceid,
+            isn,
+            test_end_time: apiEndTime,
+            data_source: 0
+        }
+    })
+
+    await downloadCsvLogs(csvLogInfos)
+}
+
 async function handleDownloadFromDetails(): Promise<void> {
-    if (!detailsRecord.value) return
+    if (!detailsRecord.value || !isnProjectInfo.value) return
     detailsDownloading.value = true
     try {
-        await handleDownloadRecord(detailsRecord.value)
+        const record = testItemData.value.find(r =>
+            (r.ISN === detailsRecord.value?.isn || r.DeviceId === detailsRecord.value?.deviceId) &&
+            (r.station === detailsRecord.value?.stationName || r.TSP === detailsRecord.value?.displayStationName)
+        )
+        if (record) {
+            await handleDownloadRecord({ record, stationName: record.station })
+        }
     } finally {
         detailsDownloading.value = false
     }
 }
 
-// Format time
-function formatTime(timeStr: string): string {
-    if (!timeStr) return '-'
-    return adjustIplasDisplayTime(timeStr, 1)
+// ============================================================================
+// Clear & Lifecycle
+// ============================================================================
+function handleClearAll(): void {
+    searchIsn.value = ''
+    selectedISNs.value = []
+    parsedIsns.value = []
+    isnProjectInfo.value = null
+    availableStations.value = []
+    stationConfigs.value = {}
+    clearTestItemData()
+    recordScores.value = {}
+    testItemNamesCache.value.clear()
 }
+
+onMounted(() => {
+    applyDateRangePreset()
+})
+
+onUnmounted(() => {
+    clearTestItemData()
+    recordScores.value = {}
+    stationConfigs.value = {}
+})
 </script>
 
 <style scoped>
-.v-expansion-panel-title {
-    min-height: 48px;
+.gap-2 {
+    gap: 0.5rem;
 }
-</style>
+
+.gap-3 {
+    gap: 0.75rem;

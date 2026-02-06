@@ -524,6 +524,7 @@ const {
     fetchRecordTestItems,
     downloadAttachments,
     downloadCsvLogs,
+    batchDownloadLogs,
     clearTestItemData
 } = useIplasApi()
 
@@ -1754,6 +1755,13 @@ function downloadCsvFile(content: string, filename: string): void {
 async function downloadSelectedRecords(): Promise<void> {
     if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
 
+    // UPDATED: Use batch download for multiple TXT files
+    if (selectedRecordKeys.value.size > 1) {
+        await downloadSelectedBatch('txt')
+        return
+    }
+
+    // Single file download - use original method
     try {
         const attachments: DownloadAttachmentInfo[] = []
 
@@ -1785,11 +1793,18 @@ async function downloadSelectedRecords(): Promise<void> {
 
 /**
  * Download all selected records as CSV files (one per record)
- * UPDATED: Uses the actual iPLAS API endpoint to get official CSV test logs
+ * UPDATED: Uses batch download for multiple files to create proper zip archive
  */
 async function downloadSelectedRecordsCsv(): Promise<void> {
     if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
 
+    // UPDATED: Use batch download for multiple CSV files
+    if (selectedRecordKeys.value.size > 1) {
+        await downloadSelectedBatch('csv')
+        return
+    }
+
+    // Single file download - use original method
     downloadingCsv.value = true
 
     try {
@@ -1842,16 +1857,80 @@ async function downloadSelectedRecordsCsv(): Promise<void> {
 }
 
 /**
+ * Download selected records using batch download API
+ * Creates a proper zip archive with organized folder structure
+ */
+async function downloadSelectedBatch(downloadType: 'txt' | 'csv' | 'all'): Promise<void> {
+    if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
+
+    if (downloadType === 'csv') {
+        downloadingCsv.value = true
+    }
+
+    try {
+        // Build a map of recordKey -> record for quick lookup
+        const recordMap = new Map<string, { record: CsvTestItemData | CompactCsvTestItemData; stationName: string }>()
+        for (const group of groupedByStation.value) {
+            for (const record of group.records) {
+                const recordKey = `${record.ISN}_${record['Test Start Time']}`
+                recordMap.set(recordKey, { record, stationName: group.stationName })
+            }
+        }
+
+        // Collect all log info for selected records
+        const logInfos: DownloadCsvLogInfo[] = []
+
+        for (const key of selectedRecordKeys.value) {
+            const entry = recordMap.get(key)
+            if (!entry) continue
+
+            const { record, stationName } = entry
+
+            // Format test_end_time with .000 milliseconds as required by iPLAS API
+            const testEndTime = record['Test end Time']
+            const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+            // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
+            const apiEndTime = formattedEndTime.replace(/-/g, '/')
+
+            logInfos.push({
+                site: selectedSite.value!,
+                project: selectedProject.value!,
+                station: record.TSP || record.station || stationName,
+                line: record.Line || 'NA',
+                model: record.Model || 'ALL',
+                deviceid: record.DeviceId,
+                isn: record.ISN,
+                test_end_time: apiEndTime,
+                data_source: 0
+            })
+        }
+
+        if (logInfos.length > 0) {
+            console.log(`Batch downloading ${logInfos.length} ${downloadType} logs`)
+            const response = await batchDownloadLogs(
+                selectedSite.value,
+                selectedProject.value,
+                logInfos,
+                downloadType
+            )
+            console.log(`Downloaded: ${response.txt_count} TXT + ${response.csv_count} CSV files`)
+        }
+    } catch (err) {
+        console.error(`Failed to batch download ${downloadType} files:`, err)
+    } finally {
+        downloadingCsv.value = false
+    }
+}
+
+/**
  * Download all logs (both TXT and CSV) for selected records
+ * UPDATED: Uses batch download to create a single zip with both types
  */
 async function downloadAllSelectedRecords(): Promise<void> {
     if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
 
-    // Download TXT logs first
-    await downloadSelectedRecords()
-
-    // Then download CSV logs
-    await downloadSelectedRecordsCsv()
+    // UPDATED: Use batch download with 'all' type to get both TXT and CSV in one zip
+    await downloadSelectedBatch('all')
 }
 
 // Handlers
