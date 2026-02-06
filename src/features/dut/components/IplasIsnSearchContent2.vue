@@ -7,6 +7,10 @@
                     <v-icon class="mr-2">mdi-barcode-scan</v-icon>
                     ISN Search - Custom Configuration
                 </div>
+                <v-btn v-if="isnProjectInfo" color="white" variant="text" prepend-icon="mdi-refresh" size="small"
+                    :disabled="loadingTestItems" @click="handleClearAll">
+                    Clear All
+                </v-btn>
             </v-card-title>
             <v-card-text class="pt-4">
                 <!-- Input Mode Toggle -->
@@ -156,19 +160,6 @@
                         </v-chip>
                     </v-card-text>
                 </v-card>
-
-                <!-- UPDATED: Action Buttons (like Station Search) -->
-                <v-divider v-if="isnProjectInfo" class="my-4" />
-                <div v-if="isnProjectInfo" class="d-flex justify-end gap-2">
-                    <v-btn color="error" variant="outlined" prepend-icon="mdi-refresh" :disabled="loadingTestItems"
-                        @click="handleClearAll">
-                        Clear All
-                    </v-btn>
-                    <v-btn color="primary" variant="flat" prepend-icon="mdi-magnify" :loading="loadingTestItems"
-                        :disabled="!canFetchData" @click="fetchTestItems">
-                        Search
-                    </v-btn>
-                </div>
             </v-card-text>
         </v-card>
 
@@ -311,10 +302,6 @@ const currentStationConfig = computed(() => {
     return stationConfigs.value[selectedStationForConfig.value.display_station_name]
 })
 
-const canFetchData = computed(() => {
-    return isnProjectInfo.value && configuredStationsCount.value > 0
-})
-
 // ============================================================================
 // Helper Functions: Transform ISN Search Data to CsvTestItemData
 // ============================================================================
@@ -426,22 +413,22 @@ function extractTestItemsFromRecords(records: IplasIsnSearchRecord[], stationNam
 async function lookupSfistspReferences(isnList: string[]): Promise<string[]> {
     loadingSfistsp.value = true
     sfistspReferences.value = []
-    
+
     try {
         // Use batch lookup for efficiency
         const batchResponse = await lookupIsnsBatch(isnList)
         sfistspReferences.value = batchResponse.results
-        
-        // Collect all unique identifiers (ISN, SSN, MAC)
+
+        // Collect only primary identifiers: isn (or isn_searched if isn not present), ssn, mac
+        // Do NOT collect isn_references to avoid searching all related ISNs
         const identifiers = new Set<string>()
-        
+
         for (const ref of batchResponse.results) {
-            // Add the original ISN
+            // Add the primary ISN: use 'isn' if present, otherwise use 'isn_searched'
             if (ref.isn && ref.isn.trim()) {
                 identifiers.add(ref.isn.trim())
-            }
-            // Add the searched ISN (might be different)
-            if (ref.isn_searched && ref.isn_searched.trim()) {
+            } else if (ref.isn_searched && ref.isn_searched.trim()) {
+                // If 'isn' is not present, user's input is the primary ISN
                 identifiers.add(ref.isn_searched.trim())
             }
             // Add SSN if available
@@ -452,14 +439,9 @@ async function lookupSfistspReferences(isnList: string[]): Promise<string[]> {
             if (ref.mac && ref.mac.trim()) {
                 identifiers.add(ref.mac.trim())
             }
-            // Add all ISN references
-            for (const refIsn of ref.isn_references || []) {
-                if (refIsn && refIsn.trim()) {
-                    identifiers.add(refIsn.trim())
-                }
-            }
+            // NOTE: Intentionally not adding isn_references to limit search scope
         }
-        
+
         console.info(`SFISTSP lookup found ${identifiers.size} unique identifiers from ${isnList.length} ISNs`)
         return Array.from(identifiers)
     } catch (err) {
@@ -478,12 +460,12 @@ async function lookupSfistspReferences(isnList: string[]): Promise<string[]> {
 async function fetchStationListFromIsn(identifier: string): Promise<Station[]> {
     try {
         const response = await iplasProxyApi.getStationsFromIsn({ isn: identifier })
-        
+
         if (!response.isn_info.found) {
             console.warn(`Station list not found for identifier: ${identifier}`)
             return []
         }
-        
+
         // Convert IplasStation to Station format with proper ordering
         return response.stations.map(s => ({
             station_name: s.station_name,
@@ -542,29 +524,29 @@ async function handleLookupStations(): Promise<void> {
             allIdentifiers = isnList
         }
         allIdentifiersToSearch.value = allIdentifiers
-        
+
         // STEP 2: Search for ALL identifiers in parallel and aggregate results
-        const searchPromises = allIdentifiers.map(identifier => 
+        const searchPromises = allIdentifiers.map(identifier =>
             iplasProxyApi.searchByIsn({ isn: identifier }).catch(err => {
                 console.warn(`Failed to search identifier "${identifier}":`, err)
                 return { data: [] as IplasIsnSearchRecord[] }
             })
         )
-        
+
         const responses = await Promise.all(searchPromises)
-        
+
         // Aggregate all records from all ISN/SSN/MAC searches
         const allRecords: IplasIsnSearchRecord[] = []
         const foundIdentifiers: string[] = []
         const notFoundIdentifiers: string[] = []
-        
+
         // Use a Set to deduplicate records by unique key (ISN + station + test_end_time)
         const recordKeys = new Set<string>()
-        
+
         for (let i = 0; i < responses.length; i++) {
             const response = responses[i]!
             const identifier = allIdentifiers[i]!
-            
+
             if (response.data.length === 0) {
                 notFoundIdentifiers.push(identifier)
             } else {
@@ -579,12 +561,12 @@ async function handleLookupStations(): Promise<void> {
                 }
             }
         }
-        
+
         if (allRecords.length === 0) {
             error.value = `No data found for identifier(s): ${allIdentifiers.slice(0, 5).join(', ')}${allIdentifiers.length > 5 ? '...' : ''}`
             return
         }
-        
+
         // Log summary
         console.info(`Found ${allRecords.length} unique records from ${foundIdentifiers.length} identifiers (${notFoundIdentifiers.length} not found)`)
 
@@ -603,7 +585,7 @@ async function handleLookupStations(): Promise<void> {
         // STEP 3: Get station list with proper ordering from iPLAS API
         // Use the first found identifier to get the station list
         const stationsFromApi = await fetchStationListFromIsn(firstRecord.isn)
-        
+
         if (stationsFromApi.length > 0) {
             // Use API station list with proper ordering
             // But only keep stations that have records in the search results
@@ -611,7 +593,7 @@ async function handleLookupStations(): Promise<void> {
             availableStations.value = stationsFromApi
                 .filter(s => stationsWithRecords.has(s.display_station_name))
                 .sort((a, b) => a.order - b.order)
-            
+
             console.info(`Using ${availableStations.value.length} stations from API list (ordered)`)
         } else {
             // Fallback: Extract unique stations from search results (no ordering)
@@ -769,14 +751,14 @@ async function refreshCurrentStationTestItems(): Promise<void> {
 function handleStationSelectionConfirm(configs: Record<string, StationConfig>): void {
     stationConfigs.value = { ...configs }
     showStationSelectionDialog.value = false
-    
+
     // UPDATED: Auto-fetch data and calculate scores after station selection confirmation
     autoFetchAndScore()
 }
 
 async function handleStationConfigSave(config: StationConfig): Promise<void> {
     stationConfigs.value[config.displayName] = { ...config }
-    
+
     // UPDATED: Auto-fetch data and calculate scores after station config is saved
     await autoFetchAndScore()
 }
@@ -787,11 +769,11 @@ async function autoFetchAndScore(): Promise<void> {
     if (configuredStationsCount.value === 0 || !isnProjectInfo.value) {
         return
     }
-    
+
     try {
         // First, fetch the test item data
         await fetchTestItems()
-        
+
         // Then calculate scores if we have data
         if (testItemData.value.length > 0) {
             await handleCalculateScores()

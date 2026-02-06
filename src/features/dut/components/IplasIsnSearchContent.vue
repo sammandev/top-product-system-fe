@@ -386,7 +386,7 @@
                                                         <!-- Row 1: ISN and DeviceID -->
                                                         <div class="d-flex align-center flex-wrap gap-2 mb-2">
                                                             <v-chip color="primary" variant="outlined"
-                                                                class="font-weigjht-bold text-body-1" label>
+                                                                class="font-weight-bold text-body-1" label>
                                                                 <v-icon start>mdi-barcode</v-icon>
                                                                 {{ record.isn }}
                                                             </v-chip>
