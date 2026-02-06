@@ -513,6 +513,45 @@ export interface StreamMetadata {
   totalChunks: number
 }
 
+// ============================================================================
+// Export Test Items Types
+// ============================================================================
+
+export interface ExportTestItem {
+  NAME: string
+  STATUS: string
+  VALUE: string
+  UCL: string
+  LCL: string
+}
+
+export interface ExportRecord {
+  ISN: string
+  Project: string
+  Station: string
+  DeviceId: string
+  Line: string
+  ErrorCode: string
+  ErrorName: string
+  Type: string
+  TestStartTime: string
+  TestEndTime: string
+  TestItems: ExportTestItem[]
+}
+
+export interface ExportTestItemsRequest {
+  records: ExportRecord[]
+  selected_test_items?: string[]
+  format: 'csv' | 'xlsx'
+  filename_prefix?: string
+}
+
+export interface ExportTestItemsResponse {
+  content: string
+  filename: string
+  content_type: string
+}
+
 /**
  * iPLAS Proxy API Service
  * 
@@ -906,6 +945,53 @@ class IplasProxyApi {
    */
   downloadBatchFile(response: IplasBatchDownloadResponse): void {
     this.downloadBase64File(response.content, response.filename)
+  }
+
+  // ============================================================================
+  // Export Test Items (CSV/XLSX)
+  // ============================================================================
+
+  /**
+   * Export selected test items to CSV or XLSX format
+   * 
+   * Creates a combined export with:
+   * - Metadata rows (ISN, Project, DeviceId, etc.) as columns
+   * - Selected test items with their values for each record
+   * - For XLSX: separate sheets per station
+   * 
+   * @param request - Export request with records and selected test items
+   * @returns Base64 encoded file content
+   */
+  async exportTestItems(request: ExportTestItemsRequest): Promise<ExportTestItemsResponse> {
+    const response = await apiClient.post<ExportTestItemsResponse>(
+      `${this.baseUrl}/export-test-items`,
+      request
+    )
+    return response.data
+  }
+
+  /**
+   * Helper to download export response as a file
+   * 
+   * @param response - Export response from API
+   */
+  downloadExportFile(response: ExportTestItemsResponse): void {
+    const binaryString = atob(response.content)
+    const bytes = new Uint8Array(binaryString.length)
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i)
+    }
+
+    const blob = new Blob([bytes], { type: response.content_type })
+    const url = URL.createObjectURL(blob)
+
+    const a = document.createElement('a')
+    a.href = url
+    a.download = response.filename
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 
   // ============================================================================

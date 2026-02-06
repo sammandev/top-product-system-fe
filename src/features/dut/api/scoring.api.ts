@@ -47,8 +47,11 @@ function fromSnakeCaseRecord(data: Record<string, unknown>): RecordScoreResult {
         lcl: item.lcl as number | null,
         status: item.status as string,
         scoringType: item.scoring_type as ScoringType,
+        policy: item.policy as 'symmetrical' | 'higher' | 'lower' | null | undefined,
         score: item.score as number,
-        deviation: item.deviation as number | undefined
+        deviation: item.deviation as number | undefined,
+        weight: (item.weight as number) ?? 1.0,
+        target: item.target as number | null | undefined
       }
     }),
     totalItems: data.total_items as number,

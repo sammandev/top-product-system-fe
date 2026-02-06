@@ -96,10 +96,18 @@
             {{ error }}
         </v-alert>
 
+        <!-- Loading Indicator -->
+        <v-card v-if="loadingTestItems" class="mb-4">
+            <v-card-text class="text-center py-8">
+                <v-progress-circular indeterminate color="primary" size="48" />
+                <p class="text-medium-emphasis mt-4">Fetching test data from iPLAS...</p>
+            </v-card-text>
+        </v-card>
+
         <!-- Results Section with Ranking Table -->
         <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
-            :calculating-scores="calculatingScores" @row-click="handleRowClick" @download="handleDownloadRecord"
-            @bulk-download="handleBulkDownloadRecords" @calculate-scores="handleCalculateScores" />
+            :calculating-scores="calculatingScores" :loading="loadingTestItems" @row-click="handleRowClick" @download="handleDownloadRecord"
+            @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords" @calculate-scores="handleCalculateScores" />
 
         <!-- Station Selection Dialog -->
         <StationSelectionDialog v-model:show="showStationSelectionDialog" :site="selectedSite || ''"
@@ -121,6 +129,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
+import { iplasProxyApi, type ExportRecord, type ExportTestItem } from '@/features/dut_logs/api/iplasProxyApi'
 import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
 import { useScoring } from '../composables/useScoring'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
@@ -425,8 +434,56 @@ async function handleBulkDownloadRecords(payload: { records: CsvTestItemData[]; 
     await downloadCsvLogs(csvLogInfos)
 }
 
+// Handle export selected records to CSV/XLSX
+async function handleExportRecords(payload: { records: CsvTestItemData[]; stationName: string }): Promise<void> {
+    if (payload.records.length === 0) return
+
+    // Transform CsvTestItemData to ExportRecord format
+    const exportRecords: ExportRecord[] = payload.records.map(record => {
+        const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+        const station = record.TSP || record.station
+
+        // Map test items from the TestItem array
+        const testItems: ExportTestItem[] = (record.TestItem || []).map(item => ({
+            NAME: item.NAME,
+            STATUS: item.STATUS || '',
+            VALUE: item.VALUE || '',
+            UCL: item.UCL || '',
+            LCL: item.LCL || ''
+        }))
+
+        return {
+            ISN: isn,
+            Project: record.Project || '',
+            Station: station,
+            DeviceId: record.DeviceId,
+            Line: record.Line || 'NA',
+            ErrorCode: record.ErrorCode || '',
+            ErrorName: record.ErrorName || '',
+            Type: 'ONLINE',
+            TestStartTime: record['Test Start Time'] || '',
+            TestEndTime: record['Test end Time'] || '',
+            TestItems: testItems
+        }
+    })
+
+    try {
+        const response = await iplasProxyApi.exportTestItems({
+            records: exportRecords,
+            format: 'xlsx', // Default to XLSX for multi-sheet support
+            filename_prefix: payload.stationName || 'test_items_export'
+        })
+
+        iplasProxyApi.downloadExportFile(response)
+    } catch (error) {
+        console.error('Export failed:', error)
+    }
+}
+
 // Handle calculate scores request from ranking table
 async function handleCalculateScores(): Promise<void> {
+    // Prevent calculation while data is still loading
+    if (loadingTestItems.value) return
     if (testItemData.value.length === 0) return
 
     calculatingScores.value = true

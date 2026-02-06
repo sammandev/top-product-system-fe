@@ -215,7 +215,7 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     },
     per_mask: {
         type: 'per_mask',
-        label: 'Lower is Better',
+        label: 'Near Zero',
         description: 'Near zero is ideal (e.g., PER/MASK).',
         useCase: 'Packet Error Rate (PER) and MASK test items where 0 is ideal',
         icon: 'mdi-target',

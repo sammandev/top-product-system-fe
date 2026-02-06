@@ -7,6 +7,12 @@
                 {{ hasScores ? 'iPLAS Data Ranking by Test Station' : 'iPLAS Data Result' }}
             </div>
             <div class="d-flex align-center gap-2 flex-wrap">
+                <!-- Export Selected Button -->
+                <v-btn v-if="selectedItems.length > 0" color="info" variant="outlined" size="small"
+                    prepend-icon="mdi-file-export-outline" :loading="exporting"
+                    @click="handleExport">
+                    Export Selected ({{ selectedItems.length }})
+                </v-btn>
                 <!-- Bulk Download Button -->
                 <v-btn v-if="selectedItems.length > 0" color="success" variant="outlined" size="small"
                     prepend-icon="mdi-download-multiple" :loading="bulkDownloading"
@@ -15,19 +21,13 @@
                 </v-btn>
                 <!-- UPDATED: Show Calculate/Re-calculate button -->
                 <v-btn v-if="!hasScores" color="primary" variant="outlined" size="small" prepend-icon="mdi-calculator"
-                    :loading="calculatingScores" @click="emit('calculate-scores')">
+                    :loading="calculatingScores" :disabled="loading" @click="emit('calculate-scores')">
                     Calculate Scores
                 </v-btn>
                 <v-btn v-else color="secondary" variant="outlined" size="small" prepend-icon="mdi-refresh"
-                    :loading="calculatingScores" @click="emit('calculate-scores')">
+                    :loading="calculatingScores" :disabled="loading" @click="emit('calculate-scores')">
                     Re-calculate
                 </v-btn>
-                <v-chip v-if="hasScores" size="small" color="success" variant="tonal" prepend-icon="mdi-check-circle">
-                    Scores Calculated
-                </v-chip>
-                <v-chip size="small" color="primary" variant="tonal" prepend-icon="mdi-factory">
-                    {{ Object.keys(rankingByStation).length }} Stations
-                </v-chip>
                 <v-chip size="small" color="success" variant="tonal" prepend-icon="mdi-barcode">
                     {{ totalRecords }} Records
                 </v-chip>
@@ -55,17 +55,12 @@
             <!-- Station Rankings -->
             <v-window v-model="selectedTab" class="pt-4">
                 <v-window-item v-for="(_, station) in rankingByStation" :key="station" :value="station">
-                    <!-- Filters Row 1: Search, Status, Device -->
+                    <!-- Filters Row: Search, Device, Score Filter -->
                     <v-row class="mb-2" dense>
                         <v-col cols="12" md="4">
                             <v-text-field v-model="searchQuery" label="Search Records" prepend-inner-icon="mdi-magnify"
                                 variant="outlined" density="compact" hide-details clearable
                                 placeholder="Search ISN, Device ID..." />
-                        </v-col>
-                        <v-col cols="12" md="2">
-                            <v-select v-model="statusFilter" :items="statusFilterOptions" item-title="title"
-                                item-value="value" label="Status" variant="outlined" density="compact" hide-details
-                                clearable />
                         </v-col>
                         <v-col cols="12" md="3">
                             <v-autocomplete v-model="deviceFilter" :items="getUniqueDevices(station)" label="Device ID"
@@ -76,49 +71,32 @@
                                 </template>
                             </v-autocomplete>
                         </v-col>
-                        <v-col cols="12" md="3" class="d-flex align-center justify-end">
+                        <!-- Score Filter (only shown when scores are calculated) -->
+                        <template v-if="hasScores">
+                            <v-col cols="12" md="2">
+                                <v-select v-model="scoreFilterType" :items="scoreFilterTypeOptions" item-title="title"
+                                    item-value="value" label="Score Filter" variant="outlined" density="compact" 
+                                    prepend-inner-icon="mdi-filter-variant" hide-details clearable
+                                    @update:model-value="() => { if (!scoreFilterType) { scoreFilterValue = null; scoreFilterValue2 = null; scoreRangeInput = '' } }" />
+                            </v-col>
+                            <v-col v-if="scoreFilterType === 'between'" cols="12" md="2">
+                                <v-text-field v-model="scoreRangeInput" label="Range (e.g. 8-10)" 
+                                    variant="outlined" density="compact" hide-details
+                                    placeholder="8-10" @update:model-value="parseScoreRange" />
+                            </v-col>
+                            <v-col v-else-if="scoreFilterType" cols="12" md="2">
+                                <v-text-field v-model.number="scoreFilterValue" label="Score Value" type="number"
+                                    variant="outlined" density="compact" hide-details
+                                    min="0" max="100" step="0.1" placeholder="0-100" />
+                            </v-col>
+                        </template>
+                        <v-col cols="12" :md="hasScores ? 1 : 5" class="d-flex align-center justify-end">
                             <v-btn v-if="hasActiveFilters" variant="text" size="small" color="primary"
                                 @click="clearAllFilters">
                                 <v-icon start size="small">mdi-filter-off</v-icon>
-                                Clear Filters
+                                Clear
                                 <v-chip size="x-small" color="primary" class="ml-1">{{ activeFilterCount }}</v-chip>
                             </v-btn>
-                        </v-col>
-                    </v-row>
-
-                    <!-- Filters Row 2: Score Filter (only shown when scores are calculated) -->
-                    <v-row v-if="hasScores" class="mb-2" dense>
-                        <v-col cols="12" md="3">
-                            <v-select v-model="scoreFilterType" :items="scoreFilterTypeOptions" item-title="title"
-                                item-value="value" label="Score Filter" variant="outlined" density="compact" 
-                                prepend-inner-icon="mdi-filter-variant" hide-details clearable
-                                @update:model-value="() => { if (!scoreFilterType) { scoreFilterValue = null; scoreFilterValue2 = null } }" />
-                        </v-col>
-                        <v-col cols="12" md="2">
-                            <v-text-field v-model.number="scoreFilterValue" label="Score Value" type="number"
-                                variant="outlined" density="compact" hide-details
-                                :disabled="!scoreFilterType" min="0" max="100" step="0.1"
-                                placeholder="0-100" />
-                        </v-col>
-                        <v-col v-if="scoreFilterType === 'between'" cols="12" md="2">
-                            <v-text-field v-model.number="scoreFilterValue2" label="To Value" type="number"
-                                variant="outlined" density="compact" hide-details
-                                min="0" max="100" step="0.1"
-                                placeholder="0-100" />
-                        </v-col>
-                        <v-col cols="12" :md="scoreFilterType === 'between' ? 5 : 7" class="d-flex align-center">
-                            <span v-if="scoreFilterType && scoreFilterValue !== null" class="text-caption text-medium-emphasis">
-                                <v-icon size="small" class="mr-1">mdi-information-outline</v-icon>
-                                Filtering scores 
-                                <template v-if="scoreFilterType === 'gt'">&gt; {{ scoreFilterValue }}</template>
-                                <template v-else-if="scoreFilterType === 'gte'">&ge; {{ scoreFilterValue }}</template>
-                                <template v-else-if="scoreFilterType === 'eq'">= {{ scoreFilterValue }}</template>
-                                <template v-else-if="scoreFilterType === 'lt'">&lt; {{ scoreFilterValue }}</template>
-                                <template v-else-if="scoreFilterType === 'lte'">&le; {{ scoreFilterValue }}</template>
-                                <template v-else-if="scoreFilterType === 'between' && scoreFilterValue2 !== null">
-                                    between {{ Math.min(scoreFilterValue, scoreFilterValue2) }} and {{ Math.max(scoreFilterValue, scoreFilterValue2) }}
-                                </template>
-                            </span>
                         </v-col>
                     </v-row>
 
@@ -227,6 +205,7 @@ interface Props {
     stationDisplayNames?: Record<string, string>
     scores?: Record<string, number> // Map of ISN+station+time to score
     calculatingScores?: boolean
+    loading?: boolean // Whether data is still being fetched
 }
 
 interface RankingItem {
@@ -251,6 +230,7 @@ const emit = defineEmits<{
     (e: 'row-click', payload: { record: CsvTestItemData; stationName: string }): void
     (e: 'download', payload: { record: CsvTestItemData; stationName: string }): void
     (e: 'bulk-download', payload: { records: CsvTestItemData[]; stationName: string }): void
+    (e: 'export', payload: { records: CsvTestItemData[]; stationName: string }): void
     (e: 'calculate-scores'): void
 }>()
 
@@ -258,17 +238,18 @@ const selectedTab = ref<string>('')
 const searchQuery = ref<string>('')
 // Debounced search query for performance - actual filtering uses this
 const debouncedSearchQuery = ref<string>('')
-const statusFilter = ref<string | null>(null)
 const deviceFilter = ref<string[]>([])
 
 // Score filter state
 const scoreFilterType = ref<string | null>(null)
 const scoreFilterValue = ref<number | null>(null)
 const scoreFilterValue2 = ref<number | null>(null) // For "between" filter
+const scoreRangeInput = ref<string>('') // For "between" filter input (e.g., "8-10")
 
 // Selection state for bulk actions
 const selectedItems = ref<RankingItem[]>([])
 const bulkDownloading = ref(false)
+const exporting = ref(false)
 
 // Debounce search query updates (300ms delay)
 const updateDebouncedSearch = useDebounceFn((value: string) => {
@@ -283,11 +264,26 @@ watch(selectedTab, () => {
     selectedItems.value = []
 })
 
-// Filter options
-const statusFilterOptions = [
-    { title: 'PASS', value: 'passed' },
-    { title: 'FAIL', value: 'failed' }
-]
+// Parse score range input (e.g., "8-10") into min/max values
+function parseScoreRange() {
+    const input = scoreRangeInput.value.trim()
+    if (!input) {
+        scoreFilterValue.value = null
+        scoreFilterValue2.value = null
+        return
+    }
+    
+    // Parse format like "8-10" or "8 - 10"
+    const match = input.match(/^\s*(\d+(?:\.\d+)?)\s*-\s*(\d+(?:\.\d+)?)\s*$/)
+    if (match && match[1] && match[2]) {
+        scoreFilterValue.value = parseFloat(match[1])
+        scoreFilterValue2.value = parseFloat(match[2])
+    } else {
+        // Invalid format, clear values
+        scoreFilterValue.value = null
+        scoreFilterValue2.value = null
+    }
+}
 
 // Score filter type options
 const scoreFilterTypeOptions = [
@@ -329,7 +325,7 @@ const rankingHeaders = computed(() => {
 const rankingByStation = computed(() => {
     const stationMap: Record<string, RankingItem[]> = {}
 
-    props.records.forEach(record => {
+    props.records.forEach((record, recordIndex) => {
         const stationName = record.station
 
         if (!stationMap[stationName]) {
@@ -346,8 +342,8 @@ const rankingByStation = computed(() => {
         const endTime = record['Test end Time']
         const duration = calculateDuration(startTime, endTime)
 
-        // Generate unique key for selection
-        const uniqueKey = `${record.ISN}_${stationName}_${record['Test Start Time']}`
+        // Generate unique key for selection (include index to guarantee uniqueness)
+        const uniqueKey = `${record.ISN}_${stationName}_${record['Test Start Time']}_${recordIndex}`
 
         stationMap[stationName].push({
             key: uniqueKey,
@@ -466,15 +462,6 @@ const filteredRanking = computed(() => {
         })
     }
 
-    // Apply status filter
-    if (statusFilter.value) {
-        if (statusFilter.value === 'passed') {
-            items = items.filter(item => !item.hasError)
-        } else if (statusFilter.value === 'failed') {
-            items = items.filter(item => item.hasError)
-        }
-    }
-
     // Apply device filter
     if (deviceFilter.value.length > 0) {
         items = items.filter(item => deviceFilter.value.includes(item.device))
@@ -520,13 +507,12 @@ const filteredRanking = computed(() => {
 })
 
 const hasActiveFilters = computed(() => {
-    return !!(debouncedSearchQuery.value || statusFilter.value || deviceFilter.value.length > 0 || (scoreFilterType.value && scoreFilterValue.value !== null))
+    return !!(debouncedSearchQuery.value || deviceFilter.value.length > 0 || (scoreFilterType.value && scoreFilterValue.value !== null))
 })
 
 const activeFilterCount = computed(() => {
     let count = 0
     if (debouncedSearchQuery.value) count++
-    if (statusFilter.value) count++
     if (deviceFilter.value.length > 0) count++
     if (scoreFilterType.value && scoreFilterValue.value !== null) count++
     return count
@@ -535,11 +521,11 @@ const activeFilterCount = computed(() => {
 function clearAllFilters() {
     searchQuery.value = ''
     debouncedSearchQuery.value = ''
-    statusFilter.value = null
     deviceFilter.value = []
     scoreFilterType.value = null
     scoreFilterValue.value = null
     scoreFilterValue2.value = null
+    scoreRangeInput.value = ''
 }
 
 function getRowProps({ item }: { item: RankingItem }) {
@@ -572,8 +558,12 @@ function calculateDuration(startTime: string, endTime: string): string {
     if (!startTime || !endTime) return '-'
     
     try {
-        const start = new Date(startTime).getTime()
-        const end = new Date(endTime).getTime()
+        // Clean up time strings - remove timezone markers like %:z or similar
+        const cleanStart = startTime.replace(/%:z/gi, '').replace(/T/, ' ').trim()
+        const cleanEnd = endTime.replace(/%:z/gi, '').replace(/T/, ' ').trim()
+        
+        const start = new Date(cleanStart).getTime()
+        const end = new Date(cleanEnd).getTime()
         
         if (isNaN(start) || isNaN(end)) return '-'
         
@@ -636,6 +626,21 @@ async function handleBulkDownload(): Promise<void> {
         emit('bulk-download', { records, stationName: selectedTab.value })
     } finally {
         bulkDownloading.value = false
+    }
+}
+
+/**
+ * Handle export of selected items
+ */
+async function handleExport(): Promise<void> {
+    if (selectedItems.value.length === 0) return
+    
+    exporting.value = true
+    try {
+        const records = selectedItems.value.map(item => item.originalRecord)
+        emit('export', { records, stationName: selectedTab.value })
+    } finally {
+        exporting.value = false
     }
 }
 </script>

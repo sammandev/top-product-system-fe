@@ -13,9 +13,10 @@
                     :loading="calculatingScores" @click="emit('calculate-scores')">
                     Calculate Scores
                 </v-btn>
-                <v-chip v-if="hasScores" size="small" color="success" variant="tonal" prepend-icon="mdi-check-circle">
-                    Scores Calculated
-                </v-chip>
+                <v-btn v-if="selectedRecords.length > 0" color="success" variant="tonal" size="small"
+                    prepend-icon="mdi-file-export" :loading="exporting" @click="handleExport">
+                    Export ({{ selectedRecords.length }})
+                </v-btn>
                 <v-btn v-if="selectedRecords.length > 0" color="primary" variant="tonal" size="small"
                     prepend-icon="mdi-download" :loading="loading" @click="handleDownloadSelected">
                     Download ({{ selectedRecords.length }})
@@ -110,9 +111,9 @@
                         <!-- Data Table -->
                         <v-data-table :headers="headers"
                             :items="getFilteredRecords(isnIndex, stationIndex, station.records)" :items-per-page="10"
-                            density="comfortable" hover class="ranking-table" item-value="test_end_time">
+                            density="comfortable" hover class="ranking-table">
                             <template #item="{ item, index }">
-                                <tr :class="getRowClass(item, index)" class="cursor-pointer"
+                                <tr :key="`${isnIndex}-${stationIndex}-${index}`" :class="getRowClass(item, index)" class="cursor-pointer"
                                     @click="handleRowClick(item)">
                                     <td class="text-center">
                                         <v-checkbox-btn v-model="selectedRecordsMap[getRecordKey(item)]" @click.stop
@@ -212,6 +213,7 @@ const emit = defineEmits<{
     (e: 'row-click', record: IsnSearchData): void
     (e: 'download-selected', records: IsnSearchData[]): void
     (e: 'calculate-scores'): void
+    (e: 'export', payload: { records: IsnSearchData[]; isnGroups: typeof isnGroups.value }): void
 }>()
 
 // State
@@ -222,6 +224,7 @@ const statusFilters = ref<Record<string, string | null>>({})
 const selectAllToggles = ref<Record<string, boolean>>({})
 const selectedRecordsMap = ref<Record<string, boolean>>({})
 const showCopySuccess = ref(false)
+const exporting = ref(false)
 
 // Status options
 const statusOptions = [
@@ -386,6 +389,11 @@ function handleRowClick(record: IsnSearchData): void {
 
 function handleDownloadSelected(): void {
     emit('download-selected', selectedRecords.value)
+}
+
+function handleExport(): void {
+    if (selectedRecords.value.length === 0) return
+    emit('export', { records: selectedRecords.value, isnGroups: isnGroups.value })
 }
 </script>
 
