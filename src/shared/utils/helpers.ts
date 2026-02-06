@@ -34,16 +34,16 @@ export function formatDateForAPI(date: Date | string): string {
  * @param tz - Target timezone (default: user's local timezone)
  */
 export function formatDate(
-  date: Date | string | null | undefined, 
+  date: Date | string | null | undefined,
   format = 'YYYY-MM-DD HH:mm:ss',
   showTimezone = false,
   tz: string = USER_TIMEZONE
 ): string {
   if (!date) return 'N/A'
-  
+
   // Parse as UTC and convert to target timezone
   const formatted = dayjs.utc(date).tz(tz).format(format)
-  
+
   if (showTimezone) {
     return `${formatted} (${getTimezoneOffset(tz)})`
   }
@@ -226,10 +226,10 @@ export function adjustIplasDisplayTime(dateStr: string | null | undefined, hours
     const cleanedTime = dateStr.replace('T', ' ').replace('%:z', '').split('.')[0] || ''
     const date = new Date(cleanedTime.replace(' ', 'T'))
     if (isNaN(date.getTime())) return dateStr
-    
+
     // Subtract hours
     date.setHours(date.getHours() - hoursToDeduct)
-    
+
     // Format back to the same format
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -237,7 +237,7 @@ export function adjustIplasDisplayTime(dateStr: string | null | undefined, hours
     const hours = String(date.getHours()).padStart(2, '0')
     const minutes = String(date.getMinutes()).padStart(2, '0')
     const seconds = String(date.getSeconds()).padStart(2, '0')
-    
+
     return `${year}/${month}/${day}, ${hours}:${minutes}:${seconds}`
   } catch {
     return dateStr

@@ -337,9 +337,9 @@ function getSiteTimezoneOffset(site: string): number {
 }
 
 /**
- * Format time for display in tables (dash format to match Station Search display)
+ * Format time for display in tables
  * Input: "2025-09-16 13:23:57%:z" (UTC+0 time from isn_search API)
- * Output: "2025-09-16 21:23:57" (local time with dashes for display)
+ * Output: "2025/09/16, 21:23:57" (local time in display format)
  * 
  * CRITICAL: isn_search API returns UTC+0 time. We need to convert to local time.
  */
@@ -358,7 +358,7 @@ function formatTimeForDisplay(timeStr: string, site: string): string {
     // Add timezone offset
     const localDate = new Date(utcDate.getTime() + offsetHours * 60 * 60 * 1000)
 
-    // Format as YYYY-MM-DD HH:mm:ss (dash format for display)
+    // Format as YYYY/MM/DD, HH:mm:ss (consistent with iPLAS display format)
     const year = localDate.getUTCFullYear()
     const month = String(localDate.getUTCMonth() + 1).padStart(2, '0')
     const day = String(localDate.getUTCDate()).padStart(2, '0')
@@ -366,7 +366,7 @@ function formatTimeForDisplay(timeStr: string, site: string): string {
     const minutes = String(localDate.getUTCMinutes()).padStart(2, '0')
     const seconds = String(localDate.getUTCSeconds()).padStart(2, '0')
 
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+    return `${year}/${month}/${day}, ${hours}:${minutes}:${seconds}`
 }
 
 // ============================================================================

@@ -399,7 +399,7 @@
                                                         <div class="d-flex align-center gap-2 mb-2">
                                                             <v-chip size="small" label color="default">
                                                                 <v-icon start size="small">mdi-calendar</v-icon>
-                                                                {{ formatShortTime(record.test_end_time) }}
+                                                                {{ formatShortTime(record.test_end_time, record.site) }}
                                                             </v-chip>
                                                             <v-chip size="small" label color="default">
                                                                 <v-icon start size="small">mdi-timer</v-icon>
@@ -479,7 +479,7 @@
                                                     <div class="d-flex align-center gap-2 mb-2">
                                                         <v-chip size="small" label color="default">
                                                             <v-icon start size="small">mdi-calendar</v-icon>
-                                                            {{ formatShortTime(record.test_end_time) }}
+                                                            {{ formatShortTime(record.test_end_time, record.site) }}
                                                         </v-chip>
                                                         <v-chip size="small" label color="default">
                                                             <v-icon start size="small">mdi-timer</v-icon>
@@ -581,7 +581,7 @@
                                                             }}
                                                         </v-chip>
                                                         <v-chip size="small" label color="default">
-                                                            {{ formatShortTime(record.test_end_time) }}
+                                                            {{ formatShortTime(record.test_end_time, record.site) }}
                                                         </v-chip>
                                                     </div>
                                                 </v-list-item-subtitle>
@@ -654,7 +654,7 @@
                                                     item.error_name || '-' }}</span>
                                             </template>
                                             <template #item.test_end_time="{ item }">
-                                                {{ formatShortTime(item.test_end_time) }}
+                                                {{ formatShortTime(item.test_end_time, item.site) }}
                                             </template>
                                             <template #item.actions="{ item }">
                                                 <div class="d-flex gap-1">
@@ -720,7 +720,7 @@
                                                         <div class="d-flex flex-wrap gap-2 mb-2">
                                                             <v-chip size="small" label color="default">
                                                                 <v-icon start size="small">mdi-calendar</v-icon>
-                                                                {{ formatShortTime(record.test_end_time) }}
+                                                                {{ formatShortTime(record.test_end_time, record.site) }}
                                                             </v-chip>
                                                             <v-chip size="small" label color="default">
                                                                 <v-icon start size="small">mdi-timer</v-icon>
@@ -785,6 +785,63 @@ import type { IsnSearchTestItem } from '@/features/dut_logs/api/iplasApi'
 import { adjustIplasDisplayTime, isStatusPass, isStatusFail } from '@/shared/utils/helpers'
 import { lookupIsn, lookupIsnsBatch, type SfistspIsnReferenceResponse } from '@/features/dut_logs/api/sfistspApi'
 import { iplasProxyApi } from '@/features/dut_logs/api/iplasProxyApi'
+
+// ============================================================================
+// Timezone Utilities for ISN Search API
+// ============================================================================
+
+/**
+ * Get timezone offset in hours based on site
+ * PTB (Vietnam), PVN (Vietnam) = UTC+8
+ * PSZ (China), PTY (Taiwan) = UTC+8
+ */
+function getSiteTimezoneOffset(site: string): number {
+    const siteUpper = (site || '').toUpperCase()
+    if (siteUpper === 'PTB' || siteUpper === 'PVN') {
+        return 8 // UTC+8
+    } else if (siteUpper === 'PSZ' || siteUpper === 'PTY') {
+        return 8 // UTC+8
+    }
+    // Default to UTC+8 for unknown sites
+    return 8
+}
+
+/**
+ * Format time for display in tables
+ * Input: "2025-09-16 13:23:57%:z" (UTC+0 time from isn_search API)
+ * Output: "2025/09/16, 21:23:57" (local time in display format)
+ * 
+ * CRITICAL: isn_search API returns UTC+0 time. We need to convert to local time.
+ */
+function formatTimeForDisplay(timeStr: string, site: string): string {
+    if (!timeStr) return ''
+
+    // Clean the time string: remove %:z suffix
+    const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
+
+    // Parse as UTC
+    const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
+
+    // Get timezone offset based on site
+    const offsetHours = getSiteTimezoneOffset(site)
+
+    // Add timezone offset
+    const localDate = new Date(utcDate.getTime() + offsetHours * 60 * 60 * 1000)
+
+    // Format as YYYY/MM/DD, HH:mm:ss (consistent with other iPLAS displays)
+    const year = localDate.getUTCFullYear()
+    const month = String(localDate.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(localDate.getUTCDate()).padStart(2, '0')
+    const hours = String(localDate.getUTCHours()).padStart(2, '0')
+    const minutes = String(localDate.getUTCMinutes()).padStart(2, '0')
+    const seconds = String(localDate.getUTCSeconds()).padStart(2, '0')
+
+    return `${year}/${month}/${day}, ${hours}:${minutes}:${seconds}`
+}
+
+// ============================================================================
+// Interfaces
+// ============================================================================
 
 interface StationGroup {
     stationName: string
@@ -939,10 +996,10 @@ function hasLatestStationError(stationGroup: StationGroup): boolean {
     return latestRecord ? (!isStatusPass(latestRecord.test_status) || !isStatusPass(latestRecord.error_code)) : false
 }
 
-// Alias for better naming consistency
-function formatShortTime(timeStr: string): string {
-    // Use the centralized helper to adjust time by -1 hour for display
-    return adjustIplasDisplayTime(timeStr, 1)
+// Format time for display using site-specific timezone
+// ISN search API returns UTC+0 time, need to convert to local time (UTC+8)
+function formatShortTime(timeStr: string, site: string = 'PTB'): string {
+    return formatTimeForDisplay(timeStr, site)
 }
 
 function calculateDuration(startStr: string, endStr: string): string {

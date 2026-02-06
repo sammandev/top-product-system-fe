@@ -68,6 +68,40 @@ const cachedStations: Map<string, IplasStation[]> = new Map()
 const CACHE_KEY_SEPARATOR = '::'
 
 /**
+ * Create a unique key for a test item record to enable deduplication.
+ * Uses ISN + station + test_end_time as the unique identifier.
+ * This prevents duplicate entries when:
+ * - Chunked fetching returns overlapping records at chunk boundaries
+ * - Multiple device IDs return the same record (rare but possible)
+ */
+function createRecordKey(record: CsvTestItemData | CompactCsvTestItemData): string {
+  const isn = record.ISN || record.DeviceId || ''
+  const station = record.station || record.TSP || ''
+  const endTime = record['Test end Time'] || record['Test Start Time'] || ''
+  return `${isn}_${station}_${endTime}`
+}
+
+/**
+ * Deduplicate test item records by unique key.
+ * Preserves the order of existing records and appends only new records.
+ */
+function deduplicateRecords<T extends CsvTestItemData | CompactCsvTestItemData>(
+  existingRecords: T[],
+  newRecords: T[]
+): T[] {
+  const existingKeys = new Set(existingRecords.map(createRecordKey))
+  const uniqueNewRecords = newRecords.filter(record => {
+    const key = createRecordKey(record)
+    if (existingKeys.has(key)) {
+      return false
+    }
+    existingKeys.add(key)
+    return true
+  })
+  return [...existingRecords, ...uniqueNewRecords]
+}
+
+/**
  * Composable for iPLAS API operations
  */
 export function useIplasApi() {
@@ -305,8 +339,8 @@ export function useIplasApi() {
         }
       }
 
-      // Append to existing data instead of replacing
-      testItemData.value = [...testItemData.value, ...response.data]
+      // Append to existing data with deduplication
+      testItemData.value = deduplicateRecords(testItemData.value, response.data as CsvTestItemData[])
       return response.data as CsvTestItemData[]
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch test items'
@@ -361,8 +395,8 @@ export function useIplasApi() {
         }
       }
 
-      // Append to existing data instead of replacing
-      compactTestItemData.value = [...compactTestItemData.value, ...response.data]
+      // Append to existing data with deduplication
+      compactTestItemData.value = deduplicateRecords(compactTestItemData.value, response.data as CompactCsvTestItemData[])
       return response.data
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch compact test items'
@@ -682,7 +716,7 @@ export function useIplasApi() {
 
       // Trigger download
       iplasProxyApi.downloadBatchFile(response)
-      
+
       return response
     } catch (err: any) {
       error.value = err.message || 'Failed to batch download logs'
@@ -851,8 +885,8 @@ export function useIplasApi() {
         token: getUserToken()
       })
 
-      // Append to existing data instead of replacing
-      testItemData.value = [...testItemData.value, ...response.data]
+      // Append to existing data with deduplication
+      testItemData.value = deduplicateRecords(testItemData.value, response.data as CsvTestItemData[])
       return response
     } catch (err: any) {
       error.value = err.message || 'Failed to fetch filtered test items'
