@@ -320,6 +320,55 @@ function generateExportFilename(): string {
     return `${site}_${project}_${dateStr}_${timeStr}`
 }
 
+/**
+ * Get timezone offset in hours based on site
+ * PTB (Vietnam), PVN (Vietnam) = UTC+8
+ * PSZ (China), PTY (Taiwan) = UTC+8
+ */
+function getSiteTimezoneOffset(site: string): number {
+    const siteUpper = (site || '').toUpperCase()
+    if (siteUpper === 'PTB' || siteUpper === 'PVN') {
+        return 8 // UTC+8
+    } else if (siteUpper === 'PSZ' || siteUpper === 'PTY') {
+        return 8 // UTC+8
+    }
+    // Default to UTC+8 for unknown sites
+    return 8
+}
+
+/**
+ * Format time for display in tables (dash format to match Station Search display)
+ * Input: "2025-09-16 13:23:57%:z" (UTC+0 time from isn_search API)
+ * Output: "2025-09-16 21:23:57" (local time with dashes for display)
+ * 
+ * CRITICAL: isn_search API returns UTC+0 time. We need to convert to local time.
+ */
+function formatTimeForDisplay(timeStr: string, site: string): string {
+    if (!timeStr) return ''
+
+    // Clean the time string: remove %:z suffix
+    const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
+
+    // Parse as UTC
+    const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
+
+    // Get timezone offset based on site
+    const offsetHours = getSiteTimezoneOffset(site)
+
+    // Add timezone offset
+    const localDate = new Date(utcDate.getTime() + offsetHours * 60 * 60 * 1000)
+
+    // Format as YYYY-MM-DD HH:mm:ss (dash format for display)
+    const year = localDate.getUTCFullYear()
+    const month = String(localDate.getUTCMonth() + 1).padStart(2, '0')
+    const day = String(localDate.getUTCDate()).padStart(2, '0')
+    const hours = String(localDate.getUTCHours()).padStart(2, '0')
+    const minutes = String(localDate.getUTCMinutes()).padStart(2, '0')
+    const seconds = String(localDate.getUTCSeconds()).padStart(2, '0')
+
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+}
+
 // ============================================================================
 // Helper Functions: Transform ISN Search Data to CsvTestItemData
 // ============================================================================
@@ -334,6 +383,11 @@ function transformIsnRecordToCsvData(record: IplasIsnSearchRecord): CsvTestItemD
         CYCLE: item.CYCLE || ''
     }))
 
+    // UPDATED: Convert UTC times from ISN API to local time for display
+    // ISN API returns UTC+0 time with %:z suffix, need to convert to local time
+    const localStartTime = formatTimeForDisplay(record.test_start_time, record.site)
+    const localEndTime = formatTimeForDisplay(record.test_end_time, record.site)
+
     return {
         Site: record.site,
         Project: record.project,
@@ -345,8 +399,8 @@ function transformIsnRecordToCsvData(record: IplasIsnSearchRecord): CsvTestItemD
         ISN: record.isn,
         DeviceId: record.device_id,
         'Test Status': record.test_status,
-        'Test Start Time': record.test_start_time,
-        'Test end Time': record.test_end_time,
+        'Test Start Time': localStartTime,
+        'Test end Time': localEndTime,
         ErrorCode: record.error_code,
         ErrorName: record.error_name || 'N/A',
         TestItem: testItems
@@ -1018,15 +1072,19 @@ async function handleDownloadRecord(payload: { record: CsvTestItemData; stationN
 
     const record = payload.record
     const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+    // UPDATED: Time is already in local time format (YYYY-MM-DD HH:mm:ss) from transformIsnRecordToCsvData
+    // Just need to convert dashes to slashes for the download attachment API
     const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
     const deviceid = record.DeviceId
-    const station = record.TSP || record.station
+    // UPDATED: Use display_station_name (record.station) first, as expected by iPLAS API
+    const station = record.station || record.TSP
 
     await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, [{ isn, time, deviceid, station }])
 
+    // Format time for CSV log download (needs .000 milliseconds)
     const testEndTime = record['Test end Time'] || ''
-    const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
-    const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
+    const formattedEndTime = testEndTime.replace(/-/g, '/').replace('T', ' ')
+    const apiEndTime = formattedEndTime.includes('.') ? formattedEndTime : `${formattedEndTime}.000`
 
     const csvLogInfo: IplasDownloadCsvLogInfo = {
         site: isnProjectInfo.value.site,
@@ -1048,9 +1106,11 @@ async function handleBulkDownloadRecords(payload: { records: CsvTestItemData[]; 
 
     const attachments = payload.records.map(record => {
         const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+        // UPDATED: Time is already in local time format from transformIsnRecordToCsvData
         const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
         const deviceid = record.DeviceId
-        const station = record.TSP || record.station
+        // UPDATED: Use display_station_name (record.station) first, as expected by iPLAS API
+        const station = record.station || record.TSP
         return { isn, time, deviceid, station }
     })
 
@@ -1059,10 +1119,11 @@ async function handleBulkDownloadRecords(payload: { records: CsvTestItemData[]; 
     const csvLogInfos: IplasDownloadCsvLogInfo[] = payload.records.map(record => {
         const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
         const deviceid = record.DeviceId
-        const station = record.TSP || record.station
+        // UPDATED: Use display_station_name (record.station) first
+        const station = record.station || record.TSP
         const testEndTime = record['Test end Time'] || ''
-        const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
-        const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
+        const formattedEndTime = testEndTime.replace(/-/g, '/').replace('T', ' ')
+        const apiEndTime = formattedEndTime.includes('.') ? formattedEndTime : `${formattedEndTime}.000`
 
         return {
             site: isnProjectInfo.value!.site,

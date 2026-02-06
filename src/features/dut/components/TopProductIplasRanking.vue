@@ -93,7 +93,7 @@
                             <v-col v-else-if="scoreFilterType" cols="12" md="2">
                                 <v-text-field v-model.number="scoreFilterValue" label="Score Value" type="number"
                                     variant="outlined" density="compact" hide-details
-                                    min="0" max="100" step="0.1" placeholder="0-100" />
+                                    min="0" max="10" step="0.1" placeholder="0-10" />
                             </v-col>
                         </template>
                         <v-col cols="12" :md="hasScores ? 1 : 5" class="d-flex align-center justify-end">
