@@ -821,6 +821,7 @@ const {
     downloading,
     error,
     searchByIsn,
+    searchByIsnBatch,
     downloadAttachments,
     downloadCsvLogs,
     clearIsnSearchData
@@ -1491,30 +1492,35 @@ async function handleSearch(): Promise<void> {
             console.log(`Unified search: expanded ${isnList.length} terms to ${searchTerms.length} unique identifiers`)
         }
 
-        // Fetch all ISNs - use parallel requests for better performance
+        // Fetch all ISNs - use batch endpoint for better performance (1 HTTP call instead of N)
         const allRecords: IsnSearchData[] = []
         const seenRecordKeys = new Set<string>() // Deduplicate records
 
-        // UPDATED: Parallelize search requests for better performance
-        const searchPromises = searchTerms.map(async (isn) => {
-            try {
-                return await searchByIsn(isn)
-            } catch (err) {
-                console.warn(`Failed to fetch records for ISN ${isn}:`, err)
-                return []
-            }
-        })
-
-        const searchResults = await Promise.all(searchPromises)
-
-        // Process results and deduplicate
-        for (const data of searchResults) {
-            for (const record of data) {
-                const recordKey = `${record.site}-${record.project}-${record.device_id}-${record.test_end_time}`
-                if (!seenRecordKeys.has(recordKey)) {
-                    seenRecordKeys.add(recordKey)
-                    allRecords.push(record)
+        // Use batch search for multiple search terms (significantly faster - 1 HTTP call vs N)
+        if (searchTerms.length > 1) {
+            const resultMap = await searchByIsnBatch(searchTerms)
+            for (const [_isn, records] of resultMap) {
+                for (const record of records) {
+                    const recordKey = `${record.site}-${record.project}-${record.device_id}-${record.test_end_time}`
+                    if (!seenRecordKeys.has(recordKey)) {
+                        seenRecordKeys.add(recordKey)
+                        allRecords.push(record)
+                    }
                 }
+            }
+        } else if (searchTerms.length === 1) {
+            // Single ISN - use regular search
+            try {
+                const data = await searchByIsn(searchTerms[0]!)
+                for (const record of data) {
+                    const recordKey = `${record.site}-${record.project}-${record.device_id}-${record.test_end_time}`
+                    if (!seenRecordKeys.has(recordKey)) {
+                        seenRecordKeys.add(recordKey)
+                        allRecords.push(record)
+                    }
+                }
+            } catch (err) {
+                console.warn(`Failed to fetch records for ISN ${searchTerms[0]}:`, err)
             }
         }
         // Fetch station order from iPLAS API

@@ -106,7 +106,7 @@
         <!-- Results Section with Ranking Table -->
         <TopProductIplasIsnRanking v-if="groupedByISN.length > 0" :isn-groups="groupedByISN" :loading="downloading"
             :scores="recordScores" :calculating-scores="calculatingScores" @row-click="handleRowClick"
-            @download-selected="handleDownloadSelected" @export="handleExportRecords" @calculate-scores="handleCalculateScores" />
+            @download-selected="handleDownloadSelected" @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores" />
 
         <!-- Copy Success Snackbar -->
         <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
@@ -167,6 +167,7 @@ const {
     downloading,
     error,
     searchByIsn,
+    searchByIsnBatch,
     downloadAttachments,
     clearIsnSearchData
 } = useIplasApi()
@@ -349,6 +350,53 @@ async function handleExportRecords(payload: { records: IsnSearchData[]; isnGroup
     }
 }
 
+// Handle export ALL records to XLSX (all ISNs and stations)
+async function handleExportAllRecords(payload: { records: IsnSearchData[]; isnGroups: any[] }): Promise<void> {
+    if (payload.records.length === 0) return
+
+    // Transform IsnSearchData to ExportRecord format
+    const exportRecords: ExportRecord[] = payload.records.map(record => {
+        // Build test items from the record's test_item array
+        const testItems: ExportTestItem[] = (record.test_item || []).map(item => ({
+            NAME: item.NAME,
+            STATUS: item.STATUS || '',
+            VALUE: item.VALUE || '',
+            UCL: item.UCL || '',
+            LCL: item.LCL || ''
+        }))
+
+        return {
+            ISN: record.isn,
+            Project: record.project || '',
+            Station: record.display_station_name || record.station_name,
+            DeviceId: record.device_id || '',
+            Line: record.line || 'NA',
+            ErrorCode: record.error_code || '',
+            ErrorName: record.error_name || '',
+            Type: 'ONLINE',
+            TestStartTime: record.test_start_time || '',
+            TestEndTime: record.test_end_time || '',
+            TestItems: testItems
+        }
+    })
+
+    try {
+        // Use a more descriptive filename for export all
+        const uniqueISNs = [...new Set(payload.records.map(r => r.isn))]
+        const fileName = `all_${uniqueISNs.length}_ISNs`
+
+        const response = await iplasProxyApi.exportTestItems({
+            records: exportRecords,
+            format: 'xlsx', // XLSX for multi-sheet support (each station is a sheet)
+            filename_prefix: fileName
+        })
+
+        iplasProxyApi.downloadExportFile(response)
+    } catch (error) {
+        console.error('Export all failed:', error)
+    }
+}
+
 /**
  * Get timezone offset hours based on site
  */
@@ -506,13 +554,16 @@ async function handleSearch(): Promise<void> {
     try {
         const allRecords: any[] = []
 
-        for (const isn of isnList) {
-            try {
-                const data = await searchByIsn(isn)
-                allRecords.push(...data)
-            } catch (err) {
-                console.warn(`Failed to fetch records for ISN ${isn}:`, err)
+        // Use batch search for multiple ISNs (significantly faster)
+        if (isnList.length > 1) {
+            const resultMap = await searchByIsnBatch(isnList)
+            for (const [_isn, records] of resultMap) {
+                allRecords.push(...records)
             }
+        } else {
+            // Single ISN - use regular search
+            const data = await searchByIsn(isnList[0]!)
+            allRecords.push(...data)
         }
 
         groupedByISN.value = groupDataByISN(allRecords)

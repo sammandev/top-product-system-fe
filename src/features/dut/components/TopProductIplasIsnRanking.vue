@@ -13,6 +13,10 @@
                     :loading="calculatingScores" @click="emit('calculate-scores')">
                     Calculate Scores
                 </v-btn>
+                <v-btn v-if="totalRecords > 0" color="primary" variant="tonal" size="small"
+                    prepend-icon="mdi-file-export" :loading="exportingAll" @click="handleExportAll">
+                    Export All ({{ totalRecords }})
+                </v-btn>
                 <v-btn v-if="selectedRecords.length > 0" color="success" variant="tonal" size="small"
                     prepend-icon="mdi-file-export" :loading="exporting" @click="handleExport">
                     Export ({{ selectedRecords.length }})
@@ -214,6 +218,7 @@ const emit = defineEmits<{
     (e: 'download-selected', records: IsnSearchData[]): void
     (e: 'calculate-scores'): void
     (e: 'export', payload: { records: IsnSearchData[]; isnGroups: typeof isnGroups.value }): void
+    (e: 'export-all', payload: { records: IsnSearchData[]; isnGroups: ISNGroup[] }): void
 }>()
 
 // State
@@ -225,6 +230,7 @@ const selectAllToggles = ref<Record<string, boolean>>({})
 const selectedRecordsMap = ref<Record<string, boolean>>({})
 const showCopySuccess = ref(false)
 const exporting = ref(false)
+const exportingAll = ref(false)
 
 // Status options
 const statusOptions = [
@@ -394,6 +400,22 @@ function handleDownloadSelected(): void {
 function handleExport(): void {
     if (selectedRecords.value.length === 0) return
     emit('export', { records: selectedRecords.value, isnGroups: isnGroups.value })
+}
+
+function handleExportAll(): void {
+    // Collect all records from all ISN groups
+    const allRecords: IsnSearchData[] = []
+    for (const group of props.isnGroups) {
+        allRecords.push(...group.records)
+    }
+    if (allRecords.length === 0) return
+    
+    exportingAll.value = true
+    try {
+        emit('export-all', { records: allRecords, isnGroups: props.isnGroups })
+    } finally {
+        exportingAll.value = false
+    }
 }
 </script>
 

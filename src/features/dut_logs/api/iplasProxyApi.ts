@@ -243,6 +243,29 @@ export interface IplasIsnSearchResponse {
   cached: boolean
 }
 
+/** Request for batch ISN search */
+export interface IplasIsnSearchBatchRequest {
+  isns: string[]
+  token?: string  // Optional user token override
+}
+
+/** Single ISN result in batch response */
+export interface IplasIsnSearchBatchItem {
+  isn: string
+  data: IplasIsnSearchRecord[]
+  cached: boolean
+  error?: string | null
+}
+
+/** Response for batch ISN search */
+export interface IplasIsnSearchBatchResponse {
+  results: IplasIsnSearchBatchItem[]
+  total_isns: number
+  total_records: number
+  successful_count: number
+  failed_count: number
+}
+
 // ============================================================================
 // Stations From ISN Types
 // ============================================================================
@@ -775,6 +798,24 @@ class IplasProxyApi {
   async searchByIsn(request: IplasIsnSearchRequest): Promise<IplasIsnSearchResponse> {
     const response = await apiClient.post<IplasIsnSearchResponse>(
       `${this.baseUrl}/isn-search`,
+      request
+    )
+    return response.data
+  }
+
+  /**
+   * Search for DUT test data by multiple ISNs in batch
+   * 
+   * This is significantly faster than making individual ISN search requests.
+   * Uses parallel HTTP requests on the backend to search up to 100 ISNs.
+   * Results are cached for 5 minutes per ISN.
+   * 
+   * @param request - Array of ISNs to search for (max 100)
+   * @returns Batch response with results for each ISN
+   */
+  async searchByIsnBatch(request: IplasIsnSearchBatchRequest): Promise<IplasIsnSearchBatchResponse> {
+    const response = await apiClient.post<IplasIsnSearchBatchResponse>(
+      `${this.baseUrl}/isn-search-batch`,
       request
     )
     return response.data

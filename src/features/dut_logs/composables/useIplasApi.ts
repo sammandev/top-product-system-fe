@@ -513,6 +513,40 @@ export function useIplasApi() {
   }
 
   /**
+   * Search DUT test data by multiple ISNs via backend proxy (batch)
+   * This is significantly faster than calling searchByIsn multiple times.
+   * Returns a Map of ISN -> IsnSearchData[] for easy lookup.
+   */
+  async function searchByIsnBatch(isns: string[]): Promise<Map<string, IsnSearchData[]>> {
+    if (isns.length === 0) {
+      return new Map()
+    }
+
+    loadingIsnSearch.value = true
+    error.value = null
+
+    try {
+      const response = await iplasProxyApi.searchByIsnBatch({
+        isns,
+        token: getUserToken()
+      })
+
+      // Build a map of ISN -> records
+      const resultMap = new Map<string, IsnSearchData[]>()
+      for (const item of response.results) {
+        resultMap.set(item.isn, item.data as unknown as IsnSearchData[])
+      }
+
+      return resultMap
+    } catch (err: any) {
+      error.value = err.message || 'Failed to batch search by ISN'
+      throw err
+    } finally {
+      loadingIsnSearch.value = false
+    }
+  }
+
+  /**
    * Clear ISN search data
    */
   function clearIsnSearchData(): void {
@@ -874,6 +908,7 @@ export function useIplasApi() {
     fetchTestItemNamesCached,
     fetchTestItemsFiltered,
     searchByIsn,
+    searchByIsnBatch,
     downloadAttachments,
     downloadCsvLogs,
     batchDownloadLogs,

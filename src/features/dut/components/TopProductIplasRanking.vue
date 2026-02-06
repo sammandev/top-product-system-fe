@@ -7,6 +7,12 @@
                 {{ hasScores ? 'iPLAS Data Ranking by Test Station' : 'iPLAS Data Result' }}
             </div>
             <div class="d-flex align-center gap-2 flex-wrap">
+                <!-- Export All Button -->
+                <v-btn v-if="totalRecords > 0" color="primary" variant="outlined" size="small"
+                    prepend-icon="mdi-file-export" :loading="exportingAll"
+                    @click="handleExportAll">
+                    Export All ({{ totalRecords }})
+                </v-btn>
                 <!-- Export Selected Button -->
                 <v-btn v-if="selectedItems.length > 0" color="info" variant="outlined" size="small"
                     prepend-icon="mdi-file-export-outline" :loading="exporting"
@@ -231,6 +237,7 @@ const emit = defineEmits<{
     (e: 'download', payload: { record: CsvTestItemData; stationName: string }): void
     (e: 'bulk-download', payload: { records: CsvTestItemData[]; stationName: string }): void
     (e: 'export', payload: { records: CsvTestItemData[]; stationName: string }): void
+    (e: 'export-all', payload: { records: CsvTestItemData[]; filenamePrefix: string }): void
     (e: 'calculate-scores'): void
 }>()
 
@@ -250,6 +257,7 @@ const scoreRangeInput = ref<string>('') // For "between" filter input (e.g., "8-
 const selectedItems = ref<RankingItem[]>([])
 const bulkDownloading = ref(false)
 const exporting = ref(false)
+const exportingAll = ref(false)
 
 // Debounce search query updates (300ms delay)
 const updateDebouncedSearch = useDebounceFn((value: string) => {
@@ -641,6 +649,21 @@ async function handleExport(): Promise<void> {
         emit('export', { records, stationName: selectedTab.value })
     } finally {
         exporting.value = false
+    }
+}
+
+/**
+ * Handle export of ALL records from all stations
+ */
+async function handleExportAll(): Promise<void> {
+    if (props.records.length === 0) return
+    
+    exportingAll.value = true
+    try {
+        // Export all records - backend will group by station into separate sheets
+        emit('export-all', { records: props.records, filenamePrefix: 'all_stations' })
+    } finally {
+        exportingAll.value = false
     }
 }
 </script>
