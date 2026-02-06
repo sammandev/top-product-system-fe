@@ -37,7 +37,7 @@
                         <v-btn color="secondary" size="large" :loading="loadingStationLookup"
                             :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify" block class="mb-5"
                             @click="handleLookupStations">
-                            Lookup Stations
+                            Search
                         </v-btn>
                     </v-col>
                 </v-row>
@@ -55,7 +55,7 @@
                                 <v-btn color="secondary" variant="flat" size="small" :loading="loadingStationLookup"
                                     :disabled="!selectedISNs || selectedISNs.length === 0" prepend-icon="mdi-magnify"
                                     @click="handleLookupStations">
-                                    Lookup Stations
+                                    Search
                                 </v-btn>
                             </template>
                         </v-combobox>
@@ -73,7 +73,7 @@
                                 <v-btn color="secondary" variant="flat" size="small" :loading="loadingStationLookup"
                                     :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify"
                                     @click="handleLookupStations">
-                                    Lookup Stations
+                                    Search
                                 </v-btn>
                             </template>
                         </v-textarea>
@@ -81,7 +81,7 @@
                 </v-row>
 
                 <!-- UPDATED: ISN Lookup Results - Site/Project Info -->
-                <v-card v-if="isnProjectInfo" variant="outlined" class="mt-4 bg-grey-lighten-5">
+                <v-card v-if="isnProjectInfo" variant="outlined" class="mt-4">
                     <v-card-text class="py-3">
                         <v-row align="center">
                             <v-col cols="auto">
@@ -111,23 +111,6 @@
                     </v-card-text>
                 </v-card>
 
-                <!-- UPDATED: Date Range Configuration (shown after ISN lookup) -->
-                <v-row v-if="isnProjectInfo" dense class="mt-4">
-                    <v-col cols="12" md="4">
-                        <v-select v-model="dateRangePreset" :items="dateRangePresets" item-value="value"
-                            label="Date Range Preset" variant="outlined" density="comfortable"
-                            prepend-inner-icon="mdi-calendar-clock" @update:model-value="applyDateRangePreset" />
-                    </v-col>
-                    <v-col cols="12" md="4">
-                        <v-text-field v-model="startTime" label="Start Time" type="datetime-local" variant="outlined"
-                            density="comfortable" prepend-inner-icon="mdi-calendar-start" />
-                    </v-col>
-                    <v-col cols="12" md="4">
-                        <v-text-field v-model="endTime" label="End Time" type="datetime-local" variant="outlined"
-                            density="comfortable" prepend-inner-icon="mdi-calendar-end" />
-                    </v-col>
-                </v-row>
-
                 <!-- UPDATED: Configure Stations Button (like Station Search) -->
                 <v-row v-if="isnProjectInfo" dense class="mt-2">
                     <v-col cols="12">
@@ -145,7 +128,7 @@
 
                 <!-- UPDATED: Configured Stations Summary (like Station Search) -->
                 <v-card v-if="configuredStationsCount > 0" variant="outlined" class="mt-4">
-                    <v-card-title class="text-subtitle-1 bg-grey-lighten-5">
+                    <v-card-title class="text-subtitle-1">
                         Configured Stations Summary
                     </v-card-title>
                     <v-card-text class="pa-2">
@@ -192,8 +175,8 @@
 
         <!-- Station Config Dialog -->
         <StationConfigDialog v-model:show="showStationConfigDialog" :station="selectedStationForConfig"
-            :site="isnProjectInfo?.site || ''" :project="isnProjectInfo?.project || ''" :start-time="startTime"
-            :end-time="endTime" :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
+            :site="isnProjectInfo?.site || ''" :project="isnProjectInfo?.project || ''"
+            :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
             :loading-devices="loadingCurrentStationDevices" :device-error="deviceError"
             :available-test-items="currentStationTestItems" :loading-test-items="loadingCurrentStationTestItems"
             :test-items-error="testItemsError" @save="handleStationConfigSave" @remove="handleStationConfigRemove"
@@ -210,8 +193,7 @@
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useIplasApi, type Station, type CsvTestItemData, type TestItem } from '@/features/dut_logs/composables/useIplasApi'
 import { useScoring } from '@/features/dut/composables/useScoring'
-import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
-import { iplasProxyApi, type IplasIsnProjectInfo, type IplasStation } from '@/features/dut_logs/api/iplasProxyApi'
+import { iplasProxyApi, type IplasIsnProjectInfo, type IplasIsnSearchRecord } from '@/features/dut_logs/api/iplasProxyApi'
 import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
@@ -233,6 +215,8 @@ const loadingStationLookup = ref(false)
 const isnProjectInfo = ref<IplasIsnProjectInfo | null>(null)
 const availableStations = ref<Station[]>([])
 const parsedIsns = ref<string[]>([])
+/** Raw ISN search records from the API - contains all test data */
+const isnSearchRecords = ref<IplasIsnSearchRecord[]>([])
 
 // ============================================================================
 // State: Configuration (like Station Search)
@@ -251,35 +235,20 @@ const testItemsError = ref<string | null>(null)
 const testItemNamesCache = ref<Map<string, TestItemInfo[]>>(new Map())
 
 // ============================================================================
-// State: Date Range
-// ============================================================================
-const dateRangePreset = ref<string>('current_shift')
-const dateRangePresets = [
-    { title: 'Current Shift', value: 'current_shift' },
-    { title: 'Today', value: 'today' },
-    { title: 'Yesterday', value: 'yesterday' },
-    { title: 'Last 7 Days', value: 'last_7_days' },
-    { title: 'Last 30 Days', value: 'last_30_days' }
-]
-const startTime = ref('')
-const endTime = ref('')
-
-// ============================================================================
 // State: Data Fetching & Results
 // ============================================================================
 const {
-    loading,
     loadingTestItems,
     error,
     testItemData,
-    fetchDeviceIds,
-    fetchTestItems: fetchTestItemsApi,
     fetchTestItemNamesCached,
-    fetchTestItemsFiltered,
     downloadAttachments,
     downloadCsvLogs,
     clearTestItemData
 } = useIplasApi()
+
+// Local loading state for ISN-based data processing
+const processingIsnData = ref(false)
 
 // ============================================================================
 // State: Scoring
@@ -315,66 +284,98 @@ const currentStationConfig = computed(() => {
 })
 
 const canFetchData = computed(() => {
-    return isnProjectInfo.value && configuredStationsCount.value > 0 && startTime.value && endTime.value
+    return isnProjectInfo.value && configuredStationsCount.value > 0
 })
 
 // ============================================================================
-// Date Range Functions
+// Helper Functions: Transform ISN Search Data to CsvTestItemData
 // ============================================================================
-function applyDateRangePreset(): void {
-    const now = new Date()
-    let start = new Date()
-    let end = new Date()
+function transformIsnRecordToCsvData(record: IplasIsnSearchRecord): CsvTestItemData {
+    // Transform test items from ISN format to standard TestItem format
+    const testItems: TestItem[] = (record.test_item || []).map(item => ({
+        NAME: item.NAME,
+        STATUS: item.STATUS,
+        VALUE: item.VALUE,
+        UCL: item.UCL || '',
+        LCL: item.LCL || '',
+        CYCLE: item.CYCLE || ''
+    }))
 
-    switch (dateRangePreset.value) {
-        case 'current_shift':
-            const currentHour = now.getHours()
-            if (currentHour >= 8 && currentHour < 20) {
-                start.setHours(8, 0, 0, 0)
-                end.setHours(20, 0, 0, 0)
-            } else if (currentHour >= 20) {
-                start.setHours(20, 0, 0, 0)
-                end.setDate(end.getDate() + 1)
-                end.setHours(8, 0, 0, 0)
-            } else {
-                start.setDate(start.getDate() - 1)
-                start.setHours(20, 0, 0, 0)
-                end.setHours(8, 0, 0, 0)
-            }
-            break
-        case 'today':
-            start.setHours(0, 0, 0, 0)
-            end.setHours(23, 59, 59, 999)
-            break
-        case 'yesterday':
-            start.setDate(start.getDate() - 1)
-            start.setHours(0, 0, 0, 0)
-            end.setDate(end.getDate() - 1)
-            end.setHours(23, 59, 59, 999)
-            break
-        case 'last_7_days':
-            start.setDate(start.getDate() - 7)
-            start.setHours(0, 0, 0, 0)
-            end.setHours(23, 59, 59, 999)
-            break
-        case 'last_30_days':
-            start.setDate(start.getDate() - 30)
-            start.setHours(0, 0, 0, 0)
-            end.setHours(23, 59, 59, 999)
-            break
+    return {
+        Site: record.site,
+        Project: record.project,
+        station: record.display_station_name,
+        TSP: record.station_name,
+        Model: '',
+        MO: record.mo || '',
+        Line: record.line,
+        ISN: record.isn,
+        DeviceId: record.device_id,
+        'Test Status': record.test_status,
+        'Test Start Time': record.test_start_time,
+        'Test end Time': record.test_end_time,
+        ErrorCode: record.error_code,
+        ErrorName: record.error_name || 'N/A',
+        TestItem: testItems
     }
-
-    startTime.value = formatDatetimeLocal(start)
-    endTime.value = formatDatetimeLocal(end)
 }
 
-function formatDatetimeLocal(date: Date): string {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    return `${year}-${month}-${day}T${hours}:${minutes}`
+/** Extract unique stations from ISN search records */
+function extractStationsFromIsnRecords(records: IplasIsnSearchRecord[]): Station[] {
+    const stationMap = new Map<string, Station>()
+    
+    for (const record of records) {
+        if (!stationMap.has(record.display_station_name)) {
+            stationMap.set(record.display_station_name, {
+                station_name: record.station_name,
+                display_station_name: record.display_station_name,
+                order: 0,
+                data_source: 'ISN Search'
+            })
+        }
+    }
+    
+    return Array.from(stationMap.values())
+}
+
+/** Extract unique device IDs from ISN search records for a specific station */
+function extractDeviceIdsFromRecords(records: IplasIsnSearchRecord[], stationName: string): string[] {
+    const deviceIds = new Set<string>()
+    
+    for (const record of records) {
+        if (record.display_station_name === stationName && record.device_id) {
+            deviceIds.add(record.device_id)
+        }
+    }
+    
+    return Array.from(deviceIds).sort()
+}
+
+/** Extract unique test item names from ISN search records for a specific station */
+function extractTestItemsFromRecords(records: IplasIsnSearchRecord[], stationName: string): TestItemInfo[] {
+    const testItemMap = new Map<string, TestItemInfo>()
+    
+    for (const record of records) {
+        if (record.display_station_name !== stationName) continue
+        
+        for (const item of record.test_item || []) {
+            if (!testItemMap.has(item.NAME)) {
+                // Determine if value or bin based on UCL/LCL presence
+                const hasLimits = Boolean(item.UCL || item.LCL)
+                const isBin = !hasLimits || ['PASS', 'FAIL', '1', '0', '-1'].includes(item.VALUE)
+                
+                testItemMap.set(item.NAME, {
+                    name: item.NAME,
+                    isValue: !isBin,
+                    isBin: isBin,
+                    hasUcl: Boolean(item.UCL),
+                    hasLcl: Boolean(item.LCL)
+                })
+            }
+        }
+    }
+    
+    return Array.from(testItemMap.values())
 }
 
 // ============================================================================
@@ -406,6 +407,7 @@ async function handleLookupStations(): Promise<void> {
     isnProjectInfo.value = null
     availableStations.value = []
     stationConfigs.value = {}
+    isnSearchRecords.value = []
     clearTestItemData()
     recordScores.value = {}
 
@@ -413,48 +415,34 @@ async function handleLookupStations(): Promise<void> {
     error.value = null
 
     try {
-        if (isnList.length === 1) {
-            // Single ISN lookup
-            const response = await iplasProxyApi.getStationsFromIsn({ isn: isnList[0]! })
-            if (!response.isn_info.found) {
-                error.value = `ISN "${isnList[0]}" not found in iPLAS database`
-                return
-            }
-            isnProjectInfo.value = response.isn_info
-            // Convert IplasStation to Station type
-            availableStations.value = response.stations.map((s: IplasStation): Station => ({
-                station_name: s.station_name,
-                display_station_name: s.display_station_name,
-                order: s.order,
-                data_source: s.data_source || ''
-            }))
-        } else {
-            // Batch ISN lookup
-            const response = await iplasProxyApi.getStationsFromIsnBatch({ isns: isnList.slice(0, 50) })
-            if (response.results.length === 0) {
-                error.value = 'No ISNs found in iPLAS database'
-                return
-            }
-            // Use first found ISN's info
-            const firstFound = response.results.find(r => r.isn_info.found)
-            if (!firstFound) {
-                error.value = 'No ISNs found in iPLAS database'
-                return
-            }
-            isnProjectInfo.value = firstFound.isn_info
-            availableStations.value = firstFound.stations.map((s: IplasStation): Station => ({
-                station_name: s.station_name,
-                display_station_name: s.display_station_name,
-                order: s.order,
-                data_source: s.data_source || ''
-            }))
+        // Use searchByIsn to get ALL test data directly (no date range needed)
+        // For multiple ISNs, use the first one (batch ISN search could be added later)
+        const firstIsn = isnList[0]!
+        const response = await iplasProxyApi.searchByIsn({ isn: firstIsn })
+        
+        if (response.data.length === 0) {
+            error.value = `ISN "${firstIsn}" not found in iPLAS database`
+            return
         }
-
-        // Apply default date range
-        applyDateRangePreset()
+        
+        // Store the raw ISN search records for later use
+        isnSearchRecords.value = response.data
+        
+        // Extract project info from first record
+        const firstRecord = response.data[0]!
+        isnProjectInfo.value = {
+            isn: firstRecord.isn,
+            site: firstRecord.site,
+            project: firstRecord.project,
+            found: true
+        }
+        
+        // Extract unique stations from ISN search results
+        availableStations.value = extractStationsFromIsnRecords(response.data)
+        
     } catch (err) {
-        console.error('Station lookup failed:', err)
-        error.value = err instanceof Error ? err.message : 'Failed to lookup stations'
+        console.error('ISN lookup failed:', err)
+        error.value = err instanceof Error ? err.message : 'Failed to lookup ISN'
     } finally {
         loadingStationLookup.value = false
     }
@@ -478,25 +466,20 @@ function handleStationClick(station: Station): void {
 }
 
 async function loadDeviceIdsForStation(station: Station): Promise<void> {
-    if (!isnProjectInfo.value || !startTime.value || !endTime.value) return
+    if (!isnProjectInfo.value || isnSearchRecords.value.length === 0) return
 
     loadingCurrentStationDevices.value = true
     deviceError.value = null
     currentStationDeviceIds.value = []
 
     try {
-        const start = new Date(startTime.value).toISOString()
-        const end = new Date(endTime.value).toISOString()
-        const deviceIds = await fetchDeviceIds(
-            isnProjectInfo.value.site,
-            isnProjectInfo.value.project,
-            station.display_station_name,
-            start,
-            end
+        // Extract device IDs from stored ISN search records (no API call needed)
+        currentStationDeviceIds.value = extractDeviceIdsFromRecords(
+            isnSearchRecords.value,
+            station.display_station_name
         )
-        currentStationDeviceIds.value = deviceIds
     } catch (err: any) {
-        deviceError.value = err.message || 'Failed to load device IDs'
+        deviceError.value = err.message || 'Failed to extract device IDs'
     } finally {
         loadingCurrentStationDevices.value = false
     }
@@ -527,6 +510,21 @@ async function loadTestItemsForStation(station: Station, forceRefresh = false): 
     currentStationTestItems.value = []
 
     try {
+        // First try to extract from ISN search records (no API call)
+        if (isnSearchRecords.value.length > 0) {
+            const testItemInfos = extractTestItemsFromRecords(
+                isnSearchRecords.value,
+                station.display_station_name
+            )
+            
+            if (testItemInfos.length > 0) {
+                currentStationTestItems.value = testItemInfos
+                testItemNamesCache.value.set(cacheKey, testItemInfos)
+                return
+            }
+        }
+        
+        // Fallback: fetch from cached API if ISN records don't have enough data
         const response = await fetchTestItemNamesCached(
             isnProjectInfo.value.site,
             isnProjectInfo.value.project,
@@ -585,61 +583,68 @@ function removeStationConfig(displayName: string): void {
 }
 
 // ============================================================================
-// Data Fetching (like Station Search)
+// Data Fetching - Using stored ISN search data (no additional API calls)
 // ============================================================================
 async function fetchTestItems(): Promise<void> {
-    if (!isnProjectInfo.value || configuredStationsCount.value === 0) return
+    if (!isnProjectInfo.value || configuredStationsCount.value === 0 || isnSearchRecords.value.length === 0) return
 
+    processingIsnData.value = true
     clearTestItemData()
     recordScores.value = {}
 
-    // Iterate through each configured station
-    for (const config of Object.values(stationConfigs.value)) {
-        let deviceIds = config.deviceIds
-
-        // When user leaves device ID empty, fetch all available device IDs
-        if (deviceIds.length === 0) {
-            try {
-                deviceIds = await fetchDeviceIds(
-                    isnProjectInfo.value.site,
-                    isnProjectInfo.value.project,
-                    config.displayName,
-                    new Date(startTime.value),
-                    new Date(endTime.value)
+    try {
+        // Filter ISN search records based on configured stations
+        const configuredStationNames = new Set(Object.keys(stationConfigs.value))
+        
+        let filteredRecords = isnSearchRecords.value.filter(record => 
+            configuredStationNames.has(record.display_station_name)
+        )
+        
+        // Apply additional filters from station configs
+        for (const config of Object.values(stationConfigs.value)) {
+            // Filter by device IDs if specified
+            if (config.deviceIds && config.deviceIds.length > 0) {
+                const deviceIdSet = new Set(config.deviceIds)
+                filteredRecords = filteredRecords.filter(record => 
+                    record.display_station_name !== config.displayName || 
+                    deviceIdSet.has(record.device_id)
                 )
-            } catch (err) {
-                console.warn(`Failed to fetch device IDs for ${config.displayName}, falling back to ALL`)
-                deviceIds = ['ALL']
             }
-        }
-
-        const hasTestItemFilters = config.selectedTestItems && config.selectedTestItems.length > 0
-
-        // Fetch data for each device ID
-        for (const deviceId of deviceIds) {
-            if (hasTestItemFilters) {
-                await fetchTestItemsFiltered(
-                    isnProjectInfo.value.site,
-                    isnProjectInfo.value.project,
-                    config.displayName,
-                    deviceId,
-                    new Date(startTime.value),
-                    new Date(endTime.value),
-                    config.testStatus,
-                    config.selectedTestItems
-                )
-            } else {
-                await fetchTestItemsApi(
-                    isnProjectInfo.value.site,
-                    isnProjectInfo.value.project,
-                    config.displayName,
-                    deviceId,
-                    new Date(startTime.value),
-                    new Date(endTime.value),
-                    config.testStatus
+            
+            // Filter by test status if not ALL
+            if (config.testStatus !== 'ALL') {
+                filteredRecords = filteredRecords.filter(record =>
+                    record.display_station_name !== config.displayName ||
+                    record.test_status.toUpperCase() === config.testStatus
                 )
             }
         }
+        
+        // Transform ISN records to CsvTestItemData format
+        const transformedRecords: CsvTestItemData[] = filteredRecords.map(record => {
+            const csvRecord = transformIsnRecordToCsvData(record)
+            
+            // Apply test item filters if configured
+            const config = stationConfigs.value[record.display_station_name]
+            if (config?.selectedTestItems && config.selectedTestItems.length > 0) {
+                const testItemSet = new Set(config.selectedTestItems)
+                csvRecord.TestItem = csvRecord.TestItem.filter(item => testItemSet.has(item.NAME))
+            }
+            
+            return csvRecord
+        })
+        
+        // Update testItemData using the composable's internal array
+        // Since we can't directly set, push to the reactive array after clearing
+        for (const record of transformedRecords) {
+            testItemData.value.push(record)
+        }
+        
+        // Trigger reactivity update
+        testItemData.value = [...testItemData.value]
+        
+    } finally {
+        processingIsnData.value = false
     }
 }
 
@@ -865,6 +870,7 @@ function handleClearAll(): void {
     parsedIsns.value = []
     isnProjectInfo.value = null
     availableStations.value = []
+    isnSearchRecords.value = []
     stationConfigs.value = {}
     clearTestItemData()
     recordScores.value = {}
@@ -872,7 +878,7 @@ function handleClearAll(): void {
 }
 
 onMounted(() => {
-    applyDateRangePreset()
+    // No initialization needed - ISN search data is fetched on demand
 })
 
 onUnmounted(() => {

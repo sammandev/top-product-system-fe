@@ -504,8 +504,8 @@ interface Props {
     station: Station | null
     site: string
     project: string
-    startTime: string
-    endTime: string
+    startTime?: string  // Optional - not needed for ISN search
+    endTime?: string    // Optional - not needed for ISN search
     existingConfig?: StationConfig
     availableDeviceIds: string[]
     loadingDevices: boolean
@@ -516,6 +516,8 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
+    startTime: '',
+    endTime: '',
     availableTestItems: () => [],
     loadingTestItems: false,
     testItemsError: null
