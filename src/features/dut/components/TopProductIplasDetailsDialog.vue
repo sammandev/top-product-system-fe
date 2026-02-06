@@ -538,23 +538,9 @@ function getValueClass(item: NormalizedTestItem): string {
 }
 
 function formatTime(timeStr: string): string {
-    if (!timeStr) return '-'
-    try {
-        // First adjust the time by deducting 1 hour (iPLAS time offset)
-        const adjustedTime = adjustIplasDisplayTime(timeStr, 1)
-        const cleanedTime = adjustedTime.replace('%:z', '').replace('T', ' ')
-        const date = new Date(cleanedTime.replace(' ', 'T'))
-        return date.toLocaleString(undefined, {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit'
-        })
-    } catch {
-        return timeStr
-    }
+    // Use the centralized helper to adjust time by -1 hour for display
+    // Returns format: YYYY-MM-DD HH:MM:SS (e.g., 2026-02-06 22:34:42)
+    return adjustIplasDisplayTime(timeStr, 1)
 }
 
 function calculateDuration(startStr: string, endStr: string): string {

@@ -238,7 +238,7 @@ export function adjustIplasDisplayTime(dateStr: string | null | undefined, hours
     const minutes = String(date.getMinutes()).padStart(2, '0')
     const seconds = String(date.getSeconds()).padStart(2, '0')
     
-    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+    return `${year}/${month}/${day}, ${hours}:${minutes}:${seconds}`
   } catch {
     return dateStr
   }
