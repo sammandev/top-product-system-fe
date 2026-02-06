@@ -424,21 +424,46 @@ async function handleLookupStations(): Promise<void> {
     error.value = null
 
     try {
-        // Use searchByIsn to get ALL test data directly (no date range needed)
-        // For multiple ISNs, use the first one (batch ISN search could be added later)
-        const firstIsn = isnList[0]!
-        const response = await iplasProxyApi.searchByIsn({ isn: firstIsn })
-
-        if (response.data.length === 0) {
-            error.value = `ISN "${firstIsn}" not found in iPLAS database`
+        // UPDATED: Search for ALL ISNs in parallel and aggregate results
+        const searchPromises = isnList.map(isn => 
+            iplasProxyApi.searchByIsn({ isn }).catch(err => {
+                console.warn(`Failed to search ISN "${isn}":`, err)
+                return { data: [] as IplasIsnSearchRecord[] }
+            })
+        )
+        
+        const responses = await Promise.all(searchPromises)
+        
+        // Aggregate all records from all ISN searches
+        const allRecords: IplasIsnSearchRecord[] = []
+        const notFoundIsns: string[] = []
+        
+        for (let i = 0; i < responses.length; i++) {
+            const response = responses[i]!
+            const isn = isnList[i]!
+            
+            if (response.data.length === 0) {
+                notFoundIsns.push(isn)
+            } else {
+                allRecords.push(...response.data)
+            }
+        }
+        
+        if (allRecords.length === 0) {
+            error.value = `No data found for ISN(s): ${isnList.join(', ')}`
             return
         }
+        
+        // Show warning if some ISNs were not found
+        if (notFoundIsns.length > 0) {
+            console.warn(`ISNs not found: ${notFoundIsns.join(', ')}`)
+        }
 
-        // Store the raw ISN search records for later use
-        isnSearchRecords.value = response.data
+        // Store the raw ISN search records for later use (aggregated from all ISNs)
+        isnSearchRecords.value = allRecords
 
-        // Extract project info from first record
-        const firstRecord = response.data[0]!
+        // Extract project info from first record (assume same project for all ISNs)
+        const firstRecord = allRecords[0]!
         isnProjectInfo.value = {
             isn: firstRecord.isn,
             site: firstRecord.site,
@@ -446,11 +471,11 @@ async function handleLookupStations(): Promise<void> {
             found: true
         }
 
-        // Extract unique stations from ISN search results
-        availableStations.value = extractStationsFromIsnRecords(response.data)
+        // Extract unique stations from ALL ISN search results
+        availableStations.value = extractStationsFromIsnRecords(allRecords)
 
         // Pre-cache test items and device IDs for all stations (performance optimization)
-        preCacheStationData(response.data, isnProjectInfo.value)
+        preCacheStationData(allRecords, isnProjectInfo.value)
 
     } catch (err) {
         console.error('ISN lookup failed:', err)
@@ -599,10 +624,37 @@ async function refreshCurrentStationTestItems(): Promise<void> {
 function handleStationSelectionConfirm(configs: Record<string, StationConfig>): void {
     stationConfigs.value = { ...configs }
     showStationSelectionDialog.value = false
+    
+    // UPDATED: Auto-fetch data and calculate scores after station selection confirmation
+    autoFetchAndScore()
 }
 
-function handleStationConfigSave(config: StationConfig): void {
+async function handleStationConfigSave(config: StationConfig): Promise<void> {
     stationConfigs.value[config.displayName] = { ...config }
+    
+    // UPDATED: Auto-fetch data and calculate scores after station config is saved
+    await autoFetchAndScore()
+}
+
+/** Automatically fetch data and calculate scores */
+async function autoFetchAndScore(): Promise<void> {
+    // Only auto-fetch if we have configured stations and project info
+    if (configuredStationsCount.value === 0 || !isnProjectInfo.value) {
+        return
+    }
+    
+    try {
+        // First, fetch the test item data
+        await fetchTestItems()
+        
+        // Then calculate scores if we have data
+        if (testItemData.value.length > 0) {
+            await handleCalculateScores()
+        }
+    } catch (err) {
+        console.error('Auto-fetch and score failed:', err)
+        // Don't show error - user can manually retry
+    }
 }
 
 function handleStationConfigRemove(displayName: string): void {

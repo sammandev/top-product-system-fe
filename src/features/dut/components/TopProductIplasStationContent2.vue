@@ -639,10 +639,37 @@ async function refreshCurrentStationTestItems(): Promise<void> {
 function handleStationSelectionConfirm(configs: Record<string, StationConfig>): void {
     stationConfigs.value = { ...configs }
     showStationSelectionDialog.value = false
+    
+    // UPDATED: Auto-fetch data and calculate scores after station selection confirmation
+    autoFetchAndScore()
 }
 
-function handleStationConfigSave(config: StationConfig): void {
+async function handleStationConfigSave(config: StationConfig): Promise<void> {
     stationConfigs.value[config.displayName] = { ...config }
+    
+    // UPDATED: Auto-fetch data and calculate scores after station config is saved
+    await autoFetchAndScore()
+}
+
+/** Automatically fetch data and calculate scores */
+async function autoFetchAndScore(): Promise<void> {
+    // Only auto-fetch if we have all required fields
+    if (!selectedSite.value || !selectedProject.value || configuredStationsCount.value === 0 || !startTime.value || !endTime.value) {
+        return
+    }
+    
+    try {
+        // First, fetch the test item data
+        await fetchTestItems()
+        
+        // Then calculate scores if we have data
+        if (testItemData.value.length > 0) {
+            await handleCalculateScores()
+        }
+    } catch (err) {
+        console.error('Auto-fetch and score failed:', err)
+        // Don't show error - user can manually retry
+    }
 }
 
 function handleStationConfigRemove(displayName: string): void {
