@@ -233,7 +233,7 @@ async function handleDownloadSelected(records: IsnSearchData[]) {
             isn: record.isn,
             time: formatTimeForDownloadWithTimezone(record.test_end_time, record.site),
             deviceid: record.device_id || '',
-            station: record.display_station_name || record.station_name
+            station: record.station_name  // Use station_name, not display_station_name - iPLAS API expects internal name
         })
     }
 

@@ -36,7 +36,7 @@
                             <span class="text-body-2">Unified Search</span>
                             <v-tooltip activator="parent" location="top" max-width="400">
                                 <span>When enabled, searches for all related identifiers (ISN, SSN, MAC) using SFISTSP
-                                    lookup.
+                                    lookup (Slower).
                                     This finds all test data from all stations that tested the same DUT, even if
                                     different identifiers were used.</span>
                             </v-tooltip>

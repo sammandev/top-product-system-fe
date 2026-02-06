@@ -219,7 +219,7 @@ const emit = defineEmits<{
     (e: 'row-click', record: IsnSearchData): void
     (e: 'download-selected', records: IsnSearchData[]): void
     (e: 'calculate-scores'): void
-    (e: 'export', payload: { records: IsnSearchData[]; isnGroups: typeof isnGroups.value }): void
+    (e: 'export', payload: { records: IsnSearchData[]; isnGroups: ISNGroup[] }): void
     (e: 'export-all', payload: { records: IsnSearchData[]; isnGroups: ISNGroup[] }): void
 }>()
 
@@ -400,7 +400,7 @@ function handleDownloadSelected(): void {
 
 function handleExport(): void {
     if (selectedRecords.value.length === 0) return
-    emit('export', { records: selectedRecords.value, isnGroups: isnGroups.value })
+    emit('export', { records: selectedRecords.value, isnGroups: props.isnGroups })
 }
 
 function handleExportAll(): void {
