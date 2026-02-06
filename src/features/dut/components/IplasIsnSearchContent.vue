@@ -93,7 +93,8 @@
                                             Look up ISN references (SSN, MAC) from SFISTSP
                                         </v-tooltip>
                                     </v-btn>
-                                    <v-btn color="primary" variant="flat" size="small" :loading="isSearching || loadingIsnSearch"
+                                    <v-btn color="primary" variant="flat" size="small"
+                                        :loading="isSearching || loadingIsnSearch"
                                         :disabled="!selectedISNs || selectedISNs.length === 0"
                                         prepend-icon="mdi-magnify" @click="handleSearch">
                                         Search
@@ -121,8 +122,9 @@
                                             Look up ISN references (SSN, MAC) from SFISTSP
                                         </v-tooltip>
                                     </v-btn>
-                                    <v-btn color="primary" variant="flat" size="small" :loading="isSearching || loadingIsnSearch"
-                                        :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify" @click="handleSearch">
+                                    <v-btn color="primary" variant="flat" size="small"
+                                        :loading="isSearching || loadingIsnSearch" :disabled="!searchIsn?.trim()"
+                                        prepend-icon="mdi-magnify" @click="handleSearch">
                                         Search
                                     </v-btn>
                                 </div>
@@ -1145,22 +1147,6 @@ function toggleExpandAll(): void {
             compactExpanded.value[currentTab] = currentGroup.stations.map((_, i) => i)
         }
     }
-}
-
-/**
- * Get timezone offset in hours based on site
- * PTB (Vietnam), PVN (Vietnam) = UTC+8
- * PSZ (China), PTY (Taiwan) = UTC+8
- */
-function getSiteTimezoneOffset(site: string): number {
-    const siteUpper = (site || '').toUpperCase()
-    if (siteUpper === 'PTB' || siteUpper === 'PVN') {
-        return 8 // UTC+8
-    } else if (siteUpper === 'PSZ' || siteUpper === 'PTY') {
-        return 8 // UTC+8
-    }
-    // Default to UTC+8 for unknown sites
-    return 8
 }
 
 /**

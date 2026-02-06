@@ -170,8 +170,9 @@
 
         <!-- UPDATED: Results Section with TopProductIplasRanking (like Station Search) -->
         <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
-            :calculating-scores="calculatingScores" :exporting-all="exportingAll" @row-click="handleRowClick" @download="handleDownloadRecord"
-            @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores" />
+            :calculating-scores="calculatingScores" :exporting-all="exportingAll" @row-click="handleRowClick"
+            @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords"
+            @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores" />
 
         <!-- Station Selection Dialog -->
         <StationSelectionDialog v-model:show="showStationSelectionDialog" :stations="(availableStations as any)"
