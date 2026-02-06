@@ -323,7 +323,7 @@ function transformIsnRecordToCsvData(record: IplasIsnSearchRecord): CsvTestItemD
 /** Extract unique stations from ISN search records */
 function extractStationsFromIsnRecords(records: IplasIsnSearchRecord[]): Station[] {
     const stationMap = new Map<string, Station>()
-    
+
     for (const record of records) {
         if (!stationMap.has(record.display_station_name)) {
             stationMap.set(record.display_station_name, {
@@ -334,47 +334,56 @@ function extractStationsFromIsnRecords(records: IplasIsnSearchRecord[]): Station
             })
         }
     }
-    
+
     return Array.from(stationMap.values())
 }
 
 /** Extract unique device IDs from ISN search records for a specific station */
 function extractDeviceIdsFromRecords(records: IplasIsnSearchRecord[], stationName: string): string[] {
     const deviceIds = new Set<string>()
-    
+
     for (const record of records) {
-        if (record.display_station_name === stationName && record.device_id) {
+        // Match by display_station_name (primary) or station_name (fallback)
+        const stationMatches = record.display_station_name === stationName || record.station_name === stationName
+        if (stationMatches && record.device_id) {
             deviceIds.add(record.device_id)
         }
     }
-    
+
     return Array.from(deviceIds).sort()
 }
 
 /** Extract unique test item names from ISN search records for a specific station */
 function extractTestItemsFromRecords(records: IplasIsnSearchRecord[], stationName: string): TestItemInfo[] {
     const testItemMap = new Map<string, TestItemInfo>()
-    
+
     for (const record of records) {
-        if (record.display_station_name !== stationName) continue
-        
+        // Match by display_station_name (primary) or station_name (fallback)
+        if (record.display_station_name !== stationName && record.station_name !== stationName) continue
+
         for (const item of record.test_item || []) {
             if (!testItemMap.has(item.NAME)) {
-                // Determine if value or bin based on UCL/LCL presence
-                const hasLimits = Boolean(item.UCL || item.LCL)
-                const isBin = !hasLimits || ['PASS', 'FAIL', '1', '0', '-1'].includes(item.VALUE)
-                
+                // Determine if value or bin based on UCL/LCL presence and value format
+                const hasUcl = Boolean(item.UCL && item.UCL.trim())
+                const hasLcl = Boolean(item.LCL && item.LCL.trim())
+                const hasLimits = hasUcl || hasLcl
+
+                // It's a BIN item if no limits and value is a pass/fail type string
+                const binValues = ['PASS', 'FAIL', 'FAILURE', '1', '0', '-1']
+                const isBinValue = binValues.includes(String(item.VALUE).toUpperCase())
+                const isBin = !hasLimits && isBinValue
+
                 testItemMap.set(item.NAME, {
                     name: item.NAME,
                     isValue: !isBin,
                     isBin: isBin,
-                    hasUcl: Boolean(item.UCL),
-                    hasLcl: Boolean(item.LCL)
+                    hasUcl: hasUcl,
+                    hasLcl: hasLcl
                 })
             }
         }
     }
-    
+
     return Array.from(testItemMap.values())
 }
 
@@ -419,15 +428,15 @@ async function handleLookupStations(): Promise<void> {
         // For multiple ISNs, use the first one (batch ISN search could be added later)
         const firstIsn = isnList[0]!
         const response = await iplasProxyApi.searchByIsn({ isn: firstIsn })
-        
+
         if (response.data.length === 0) {
             error.value = `ISN "${firstIsn}" not found in iPLAS database`
             return
         }
-        
+
         // Store the raw ISN search records for later use
         isnSearchRecords.value = response.data
-        
+
         // Extract project info from first record
         const firstRecord = response.data[0]!
         isnProjectInfo.value = {
@@ -436,16 +445,43 @@ async function handleLookupStations(): Promise<void> {
             project: firstRecord.project,
             found: true
         }
-        
+
         // Extract unique stations from ISN search results
         availableStations.value = extractStationsFromIsnRecords(response.data)
-        
+
+        // Pre-cache test items and device IDs for all stations (performance optimization)
+        preCacheStationData(response.data, isnProjectInfo.value)
+
     } catch (err) {
         console.error('ISN lookup failed:', err)
         error.value = err instanceof Error ? err.message : 'Failed to lookup ISN'
     } finally {
         loadingStationLookup.value = false
     }
+}
+
+/** Pre-cache test items and device IDs for all stations from ISN search data */
+function preCacheStationData(records: IplasIsnSearchRecord[], projectInfo: IplasIsnProjectInfo): void {
+    // Group records by station
+    const stationNames = new Set<string>()
+    for (const record of records) {
+        stationNames.add(record.display_station_name)
+    }
+
+    // Pre-cache for each station
+    for (const stationName of stationNames) {
+        const cacheKey = `${projectInfo.site}_${projectInfo.project}_${stationName}`
+
+        // Cache test items (only if not already cached)
+        if (!testItemNamesCache.value.has(cacheKey)) {
+            const testItems = extractTestItemsFromRecords(records, stationName)
+            if (testItems.length > 0) {
+                testItemNamesCache.value.set(cacheKey, testItems)
+            }
+        }
+    }
+
+    console.info(`Pre-cached data for ${stationNames.size} stations from ISN search`)
 }
 
 // ============================================================================
@@ -459,10 +495,11 @@ function openStationSelectionDialog(): void {
 function handleStationClick(station: Station): void {
     selectedStationForConfig.value = station
     showStationConfigDialog.value = true
-    // Load device IDs first, then test items
-    loadDeviceIdsForStation(station).then(() => {
+    // Load device IDs and test items in parallel (performance optimization)
+    Promise.all([
+        loadDeviceIdsForStation(station),
         loadTestItemsForStation(station)
-    })
+    ])
 }
 
 async function loadDeviceIdsForStation(station: Station): Promise<void> {
@@ -510,21 +547,22 @@ async function loadTestItemsForStation(station: Station, forceRefresh = false): 
     currentStationTestItems.value = []
 
     try {
-        // First try to extract from ISN search records (no API call)
+        // First try to extract from ISN search records (no API call needed)
         if (isnSearchRecords.value.length > 0) {
             const testItemInfos = extractTestItemsFromRecords(
                 isnSearchRecords.value,
                 station.display_station_name
             )
-            
+
             if (testItemInfos.length > 0) {
                 currentStationTestItems.value = testItemInfos
                 testItemNamesCache.value.set(cacheKey, testItemInfos)
+                loadingCurrentStationTestItems.value = false
                 return
             }
         }
-        
-        // Fallback: fetch from cached API if ISN records don't have enough data
+
+        // Fallback: fetch from cached API if ISN records don't have data for this station
         const response = await fetchTestItemNamesCached(
             isnProjectInfo.value.site,
             isnProjectInfo.value.project,
@@ -595,22 +633,22 @@ async function fetchTestItems(): Promise<void> {
     try {
         // Filter ISN search records based on configured stations
         const configuredStationNames = new Set(Object.keys(stationConfigs.value))
-        
-        let filteredRecords = isnSearchRecords.value.filter(record => 
+
+        let filteredRecords = isnSearchRecords.value.filter(record =>
             configuredStationNames.has(record.display_station_name)
         )
-        
+
         // Apply additional filters from station configs
         for (const config of Object.values(stationConfigs.value)) {
             // Filter by device IDs if specified
             if (config.deviceIds && config.deviceIds.length > 0) {
                 const deviceIdSet = new Set(config.deviceIds)
-                filteredRecords = filteredRecords.filter(record => 
-                    record.display_station_name !== config.displayName || 
+                filteredRecords = filteredRecords.filter(record =>
+                    record.display_station_name !== config.displayName ||
                     deviceIdSet.has(record.device_id)
                 )
             }
-            
+
             // Filter by test status if not ALL
             if (config.testStatus !== 'ALL') {
                 filteredRecords = filteredRecords.filter(record =>
@@ -619,30 +657,30 @@ async function fetchTestItems(): Promise<void> {
                 )
             }
         }
-        
+
         // Transform ISN records to CsvTestItemData format
         const transformedRecords: CsvTestItemData[] = filteredRecords.map(record => {
             const csvRecord = transformIsnRecordToCsvData(record)
-            
+
             // Apply test item filters if configured
             const config = stationConfigs.value[record.display_station_name]
             if (config?.selectedTestItems && config.selectedTestItems.length > 0) {
                 const testItemSet = new Set(config.selectedTestItems)
                 csvRecord.TestItem = csvRecord.TestItem.filter(item => testItemSet.has(item.NAME))
             }
-            
+
             return csvRecord
         })
-        
+
         // Update testItemData using the composable's internal array
         // Since we can't directly set, push to the reactive array after clearing
         for (const record of transformedRecords) {
             testItemData.value.push(record)
         }
-        
+
         // Trigger reactivity update
         testItemData.value = [...testItemData.value]
-        
+
     } finally {
         processingIsnData.value = false
     }
