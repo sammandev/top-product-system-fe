@@ -70,7 +70,7 @@
                             color="primary" variant="tonal" closable @click="editStationConfig(displayName)"
                             @click:close="removeStationConfig(displayName)">
                             {{ displayName }}
-                            <v-badge :content="config.deviceIds.length" color="success" inline class="ml-1" />
+                            <v-badge :content="config.deviceIds.length || config.totalDeviceCount || 'All'" color="success" inline class="ml-1" />
                             <v-chip size="x-small" class="ml-1" variant="outlined">{{ config.testStatus }}</v-chip>
                         </v-chip>
                     </v-card-text>
@@ -763,7 +763,12 @@ function handleStationSelectionConfirm(configs: Record<string, StationConfig>): 
 }
 
 async function handleStationConfigSave(config: StationConfig): Promise<void> {
-    stationConfigs.value[config.displayName] = { ...config }
+    // Store total device count if deviceIds is empty (user selected "All")
+    const configWithCount = { ...config }
+    if (configWithCount.deviceIds.length === 0 && currentStationDeviceIds.value.length > 0) {
+        configWithCount.totalDeviceCount = currentStationDeviceIds.value.length
+    }
+    stationConfigs.value[config.displayName] = configWithCount
     
     // UPDATED: Auto-fetch data and calculate scores after station config is saved
     await autoFetchAndScore()
