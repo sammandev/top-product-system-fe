@@ -67,6 +67,36 @@ let cachedSiteProjects: SiteProject[] | null = null
 const cachedStations: Map<string, IplasStation[]> = new Map()
 const CACHE_KEY_SEPARATOR = '::'
 
+// Retry configuration for ISN search operations
+const ISN_SEARCH_RETRY_ATTEMPTS = 3
+const ISN_SEARCH_RETRY_DELAY_MS = 1000
+
+/**
+ * Retry an async operation with exponential backoff.
+ * Useful for handling transient network failures during ISN search.
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxAttempts: number = ISN_SEARCH_RETRY_ATTEMPTS,
+  initialDelayMs: number = ISN_SEARCH_RETRY_DELAY_MS
+): Promise<T> {
+  let lastError: Error | null = null
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn()
+    } catch (err) {
+      lastError = err as Error
+      console.warn(`Attempt ${attempt}/${maxAttempts} failed:`, err)
+      if (attempt < maxAttempts) {
+        // Exponential backoff: 1s, 2s, 4s...
+        const delayMs = initialDelayMs * Math.pow(2, attempt - 1)
+        await new Promise(resolve => setTimeout(resolve, delayMs))
+      }
+    }
+  }
+  throw lastError
+}
+
 /**
  * Create a unique key for a test item record to enable deduplication.
  * Uses ISN + station + test_end_time as the unique identifier.
@@ -523,16 +553,20 @@ export function useIplasApi() {
 
   /**
    * Search DUT test data by ISN via backend proxy
-   * Returns data from all stations that tested the same ISN
+   * Returns data from all stations that tested the same ISN.
+   * Uses retry logic for better reliability against transient failures.
    */
   async function searchByIsn(isn: string): Promise<IsnSearchData[]> {
     loadingIsnSearch.value = true
     error.value = null
 
     try {
-      const response = await iplasProxyApi.searchByIsn({
-        isn,
-        token: getUserToken()
+      // UPDATED: Use retry logic for better reliability
+      const response = await withRetry(async () => {
+        return await iplasProxyApi.searchByIsn({
+          isn,
+          token: getUserToken()
+        })
       })
 
       // Map proxy response to IsnSearchData format
@@ -550,6 +584,7 @@ export function useIplasApi() {
    * Search DUT test data by multiple ISNs via backend proxy (batch)
    * This is significantly faster than calling searchByIsn multiple times.
    * Returns a Map of ISN -> IsnSearchData[] for easy lookup.
+   * Uses retry logic for better reliability against transient failures.
    */
   async function searchByIsnBatch(isns: string[]): Promise<Map<string, IsnSearchData[]>> {
     if (isns.length === 0) {
@@ -560,9 +595,12 @@ export function useIplasApi() {
     error.value = null
 
     try {
-      const response = await iplasProxyApi.searchByIsnBatch({
-        isns,
-        token: getUserToken()
+      // UPDATED: Use retry logic for better reliability
+      const response = await withRetry(async () => {
+        return await iplasProxyApi.searchByIsnBatch({
+          isns,
+          token: getUserToken()
+        })
       })
 
       // Build a map of ISN -> records

@@ -467,8 +467,8 @@
                                                     :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'bg-green-lighten-5 pa-3 rounded' : 'bg-red-lighten-5 pa-3 rounded'">
                                                     <!-- Row 1: ISN and DeviceID -->
                                                     <div class="d-flex align-center flex-wrap gap-2 mb-2">
-                                                        <v-chip color="primary" variant="outlined" class="text-body-1"
-                                                            label>
+                                                        <v-chip color="primary" variant="outlined"
+                                                            class="font-weight-bold text-body-1" label>
                                                             <v-icon start>mdi-barcode</v-icon>
                                                             {{ record.isn }}
                                                         </v-chip>
@@ -566,7 +566,7 @@
                                                     </v-icon>
                                                 </template>
                                                 <v-list-item-title>
-                                                    <strong>{{ record.device_id }}</strong> • {{ record.isn }}
+                                                    <strong>{{ record.device_id }}</strong> • <strong>{{ record.isn }}</strong>
                                                 </v-list-item-title>
                                                 <v-list-item-subtitle>
                                                     <div class="d-flex flex-wrap align-center gap-2 mt-1">
