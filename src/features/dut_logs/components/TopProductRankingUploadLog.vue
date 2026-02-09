@@ -220,12 +220,41 @@
                         </div>
                     </v-alert>
 
+                    <!-- Filter Row -->
+                    <v-row dense class="mb-4">
+                        <v-col cols="12" md="4">
+                            <v-select v-model="testItemFilterType" :items="testItemFilterOptions" label="Filter Items"
+                                variant="outlined" density="compact" prepend-inner-icon="mdi-filter" hide-details />
+                        </v-col>
+                        <v-col cols="12" md="4">
+                            <v-text-field v-model="testItemSearch" label="Search Test Items"
+                                variant="outlined" density="compact" prepend-inner-icon="mdi-magnify"
+                                hide-details clearable />
+                        </v-col>
+                        <v-col cols="12" md="4" class="d-flex align-center">
+                            <v-chip size="small" class="mr-2">{{ filteredTestItems.length }} / {{ selectedTestItems.length }}</v-chip>
+                            <v-btn v-if="testItemFilterType !== 'all' || testItemSearch" size="small" variant="text"
+                                color="primary" @click="resetTestItemFilters">
+                                <v-icon start size="small">mdi-filter-off</v-icon>
+                                Clear Filters
+                            </v-btn>
+                        </v-col>
+                    </v-row>
+
                     <!-- Test Items Table -->
-                    <v-data-table :headers="testItemHeaders" :items="selectedTestItems" :items-per-page="25"
+                    <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="25"
                         density="comfortable" class="elevation-1"
                         @click:row="(_event: any, data: any) => showScoreBreakdown(data.item)">
                         <template #item.test_item="{ item }">
                             <span class="font-weight-medium">{{ item.test_item }}</span>
+                        </template>
+                        <template #item.matched_criteria="{ item }">
+                            <v-chip v-if="item.matched_criteria" size="x-small" color="success" variant="tonal">
+                                Criteria
+                            </v-chip>
+                            <v-chip v-else size="x-small" color="grey" variant="tonal">
+                                Non-Criteria
+                            </v-chip>
                         </template>
                         <template #item.value="{ item }">
                             <span>{{ item.value }}</span>
@@ -335,9 +364,48 @@ const selectedTestItem = ref<ParsedTestItemEnhanced | null>(null)
 const showIplasCompareDialog = ref(false)
 const comparisonIsn = ref<string | null>(null)
 
+// Test items filter state
+const testItemFilterType = ref<string>('all')
+const testItemSearch = ref('')
+const testItemFilterOptions = [
+    { title: 'Show All', value: 'all' },
+    { title: 'Criteria Items', value: 'criteria' },
+    { title: 'Non-Criteria Items', value: 'non-criteria' },
+    { title: 'Bin Items', value: 'bin' }
+]
+
+// Filtered test items
+const filteredTestItems = computed(() => {
+    let items = selectedTestItems.value
+
+    // Filter by type
+    if (testItemFilterType.value === 'criteria') {
+        items = items.filter(item => item.matched_criteria)
+    } else if (testItemFilterType.value === 'non-criteria') {
+        items = items.filter(item => !item.matched_criteria)
+    } else if (testItemFilterType.value === 'bin') {
+        items = items.filter(item => item.test_item.toLowerCase().includes('bin'))
+    }
+
+    // Filter by search
+    if (testItemSearch.value) {
+        const query = testItemSearch.value.toLowerCase()
+        items = items.filter(item => item.test_item.toLowerCase().includes(query))
+    }
+
+    return items
+})
+
+// Reset test item filters
+const resetTestItemFilters = () => {
+    testItemFilterType.value = 'all'
+    testItemSearch.value = ''
+}
+
 // Test Items Headers
 const testItemHeaders = [
     { title: 'Test Item', key: 'test_item', sortable: true },
+    { title: 'Type', key: 'matched_criteria', sortable: true, width: '100px' },
     { title: 'Value', key: 'value', sortable: true, width: '120px' },
     { title: 'UCL', key: 'usl', sortable: true, width: '100px' },
     { title: 'LCL', key: 'lsl', sortable: true, width: '100px' },

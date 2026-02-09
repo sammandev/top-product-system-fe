@@ -96,22 +96,10 @@
             <v-card variant="outlined">
               <v-card-title class="text-subtitle-1 bg-grey-lighten-4 d-flex align-center">
                 <v-icon start size="small">mdi-eye</v-icon>
-                File Preview
-                <v-spacer />
-                <!-- UPDATED: Format toggle -->
-                <v-btn-toggle v-model="outputFormat" mandatory density="compact" color="primary">
-                  <v-btn value="json" size="small">
-                    <v-icon start size="small">mdi-code-json</v-icon>
-                    JSON
-                  </v-btn>
-                  <v-btn value="ini" size="small">
-                    <v-icon start size="small">mdi-file-settings</v-icon>
-                    INI
-                  </v-btn>
-                </v-btn-toggle>
+                JSON Preview
               </v-card-title>
               <v-card-text>
-                <v-textarea :model-value="filePreview" readonly variant="outlined" rows="25" class="monospace-font mt-2"
+                <v-textarea :model-value="jsonPreview" readonly variant="outlined" rows="25" class="monospace-font mt-2"
                   no-resize density="compact" />
               </v-card-text>
             </v-card>
@@ -123,7 +111,7 @@
 
       <v-card-actions class="pa-4">
         <v-btn color="success" prepend-icon="mdi-download" :disabled="rules.length === 0" @click="downloadFile">
-          Download {{ outputFormat.toUpperCase() }} File
+          Download JSON File
         </v-btn>
 
         <v-btn color="primary" prepend-icon="mdi-check" :disabled="rules.length === 0" @click="saveAndUse">
@@ -170,8 +158,6 @@ const currentRule = ref<CriteriaRule>({
   target: null
 })
 const editingIndex = ref<number | null>(null)
-// UPDATED: Default to JSON format
-const outputFormat = ref<'json' | 'ini'>('json')
 
 // Available test items for autocomplete
 const availableTestItems = computed(() => props.availableTestItems || [])
@@ -181,7 +167,7 @@ const canAddRule = computed(() => {
   return currentRule.value.testItem.trim().length > 0
 })
 
-// UPDATED: JSON preview
+// JSON preview
 const jsonPreview = computed(() => {
   const criteria = rules.value.map(rule => ({
     test_item: rule.testItem,
@@ -190,59 +176,6 @@ const jsonPreview = computed(() => {
     target: rule.target
   }))
   return JSON.stringify({ criteria }, null, 2)
-})
-
-// INI preview (legacy format)
-const iniPreview = computed(() => {
-  let content = `; Criteria file for test log filtering and scoring
-; =================================================
-; Format: "PATTERN" <UCL,LCL>  ===> "TargetValue"
-;
-; PATTERN - Test item pattern to match (supports simple text and regex)
-; UCL     - Upper Criteria Limit (leave empty if no upper limit)
-; LCL     - Lower Criteria Limit (leave empty if no lower limit)
-; Target  - Target value (leave empty to use median or (UCL+LCL)/2)
-;
-; =================================================
-; PATTERN MATCHING:
-; ----------------
-; 1. SIMPLE PATTERN (Auto-expands to match numbered variants):
-;    "WiFi_TX_FIXTURE_POW_6175_11AX_B20"
-;     Automatically matches: WiFi_TX_FIXTURE, WiFi_TX1_FIXTURE, WiFi_TX2_FIXTURE, etc.
-;
-; 2. REGEX PATTERN (Use for flexible matching):
-;    "WiFi_TX._FIXTURE_POW_.*_11AX_.*"
-;     Matches any character after TX and any text after POW
-;
-; Common regex symbols:
-;   .  = any single character
-;   .* = zero or more characters
-;   [0-9] = any digit
-;   [1-4] = match 1, 2, 3, or 4
-;
-; Auto-expansion for simple patterns (automatic - just use simple text):
-;   TX_  expands to match: _TX_, _TX1_, _TX2_, _TX3_, _TX4_, _TX16_, etc.
-;   RX_  expands to match: _RX_, _RX1_, _RX2_, etc.
-;   PA_  expands to match: _PA_, _PA1_, _PA2_, etc.
-;   ANT_ expands to match: _ANT_, _ANT1_, _ANT2_, etc.
-; =================================================
-
-[Test_Items]
-`
-
-  rules.value.forEach(rule => {
-    const ucl = rule.ucl !== null ? rule.ucl.toString() : ''
-    const lcl = rule.lcl !== null ? rule.lcl.toString() : ''
-    const target = rule.target !== null ? `"${rule.target}"` : ''
-    content += `"${rule.testItem}" <${ucl},${lcl}>  ===> ${target}\n`
-  })
-
-  return content
-})
-
-// UPDATED: Dynamic preview based on format
-const filePreview = computed(() => {
-  return outputFormat.value === 'json' ? jsonPreview.value : iniPreview.value
 })
 
 // Methods
@@ -302,33 +235,25 @@ const resetCurrentRule = () => {
   editingIndex.value = null
 }
 
-// UPDATED: Download based on selected format
+// Download JSON file
 const downloadFile = () => {
-  const isJson = outputFormat.value === 'json'
-  const content = isJson ? jsonPreview.value : iniPreview.value
-  const mimeType = isJson ? 'application/json' : 'text/plain'
-  const extension = isJson ? 'json' : 'ini'
-  
-  const blob = new Blob([content], { type: mimeType })
+  const content = jsonPreview.value
+  const blob = new Blob([content], { type: 'application/json' })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `criteria_upload_log.${extension}`
+  a.download = 'criteria_upload_log.json'
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
 
-// UPDATED: Save based on selected format
+// Save and use JSON file
 const saveAndUse = () => {
-  const isJson = outputFormat.value === 'json'
-  const content = isJson ? jsonPreview.value : iniPreview.value
-  const mimeType = isJson ? 'application/json' : 'text/plain'
-  const extension = isJson ? 'json' : 'ini'
-  
-  const blob = new Blob([content], { type: mimeType })
-  const file = new File([blob], `criteria_upload_log.${extension}`, { type: mimeType })
+  const content = jsonPreview.value
+  const blob = new Blob([content], { type: 'application/json' })
+  const file = new File([blob], 'criteria_upload_log.json', { type: 'application/json' })
   emit('criteria-created', file)
   handleClose()
 }
