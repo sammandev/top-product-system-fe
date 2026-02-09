@@ -78,11 +78,10 @@
                             </v-chip>
                         </template>
                         <template #item.score="{ item }">
-                            <v-chip :color="getScoreColor(item.score)" size="small" class="font-weight-bold cursor-pointer"
-                                @click.stop="showScoreBreakdownForIsn(item)">
+                            <v-chip :color="getScoreColor(item.score)" size="small"
+                                class="font-weight-bold cursor-pointer" @click.stop="showScoreBreakdownForIsn(item)">
                                 {{ item.score.toFixed(2) }}
                                 <v-icon size="x-small" end>mdi-information-outline</v-icon>
-                            </v-chip>
                             </v-chip>
                         </template>
                     </v-data-table>
@@ -203,7 +202,7 @@
                     <v-spacer />
                     <v-btn icon="mdi-close" variant="text" color="white" @click="showTestItemsDialog = false" />
                 </v-card-title>
-                
+
                 <v-card-text class="pa-4">
                     <!-- ISN Info -->
                     <v-alert type="info" variant="tonal" density="compact" class="mb-4">
@@ -213,7 +212,7 @@
                                 <span class="mx-2">|</span>
                                 <strong>Station:</strong> {{ selectedRankingItem.station }}
                                 <span class="mx-2">|</span>
-                                <strong>Overall Score:</strong> 
+                                <strong>Overall Score:</strong>
                                 <v-chip :color="getScoreColor(selectedRankingItem.score)" size="small" class="ml-1">
                                     {{ selectedRankingItem.score.toFixed(2) }}
                                 </v-chip>
@@ -222,8 +221,8 @@
                     </v-alert>
 
                     <!-- Test Items Table -->
-                    <v-data-table :headers="testItemHeaders" :items="selectedTestItems" 
-                        :items-per-page="25" density="comfortable" class="elevation-1"
+                    <v-data-table :headers="testItemHeaders" :items="selectedTestItems" :items-per-page="25"
+                        density="comfortable" class="elevation-1"
                         @click:row="(_event: any, data: any) => showScoreBreakdown(data.item)">
                         <template #item.test_item="{ item }">
                             <span class="font-weight-medium">{{ item.test_item }}</span>
@@ -238,7 +237,7 @@
                             <span class="text-medium-emphasis">{{ item.lsl ?? '-' }}</span>
                         </template>
                         <template #item.score="{ item }">
-                            <v-chip v-if="item.score !== null" :color="getScoreColor(item.score)" size="small" 
+                            <v-chip v-if="item.score !== null" :color="getScoreColor(item.score)" size="small"
                                 class="font-weight-bold cursor-pointer" @click.stop="showScoreBreakdown(item)">
                                 {{ item.score?.toFixed(2) }}
                                 <v-icon size="x-small" end>mdi-information-outline</v-icon>
@@ -252,7 +251,7 @@
 
                 <v-card-actions>
                     <!-- UPDATED: Added Compare with iPLAS button -->
-                    <v-btn v-if="selectedRankingItem?.isn" color="info" variant="outlined" 
+                    <v-btn v-if="selectedRankingItem?.isn" color="info" variant="outlined"
                         prepend-icon="mdi-compare-horizontal" @click="openIplasCompare">
                         Compare with iPLAS
                     </v-btn>
@@ -263,7 +262,7 @@
         </v-dialog>
 
         <!-- UPDATED: iPLAS Comparison Dialog -->
-        <IplasCompareDialog v-model="showIplasCompareDialog" :isn="comparisonIsn" 
+        <IplasCompareDialog v-model="showIplasCompareDialog" :isn="comparisonIsn"
             :upload-test-items="selectedTestItems" />
 
         <!-- UPDATED: Score Breakdown Dialog -->
@@ -542,7 +541,7 @@ const getScoreColor = (score: number): string => {
 const handleRowClick = (_event: any, data: { item: RankingItem }) => {
     const item = data.item
     selectedRankingItem.value = item
-    
+
     // Get test items for this ISN
     if (props.parseResult && props.parseResult.parsed_items_enhanced) {
         // Single parsing mode - show all test items
@@ -550,7 +549,7 @@ const handleRowClick = (_event: any, data: { item: RankingItem }) => {
     } else if (props.compareResult) {
         // Compare mode - get test items for this ISN from comparison data
         const isnTestItems: ParsedTestItemEnhanced[] = []
-        
+
         // Get value items
         if (props.compareResult.comparison_value_items) {
             props.compareResult.comparison_value_items.forEach(compareItem => {
@@ -573,7 +572,7 @@ const handleRowClick = (_event: any, data: { item: RankingItem }) => {
                 }
             })
         }
-        
+
         // Get non-value items
         if (props.compareResult.comparison_non_value_items) {
             props.compareResult.comparison_non_value_items.forEach(compareItem => {
@@ -596,10 +595,10 @@ const handleRowClick = (_event: any, data: { item: RankingItem }) => {
                 }
             })
         }
-        
+
         selectedTestItems.value = isnTestItems
     }
-    
+
     showTestItemsDialog.value = true
 }
 

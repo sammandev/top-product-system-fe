@@ -43,7 +43,7 @@
                                         <template #selection="{ fileNames }">
                                             <template v-for="(fileName, index) in fileNames" :key="fileName">
                                                 <v-chip v-if="index < 2" size="small" class="me-2">{{ fileName
-                                                    }}</v-chip>
+                                                }}</v-chip>
                                             </template>
                                             <span v-if="fileNames.length > 2" class="text-caption text-medium-emphasis">
                                                 +{{ fileNames.length - 2 }} {{ fileNames.length - 2 === 1 ? 'file' :
@@ -52,7 +52,9 @@
                                         </template>
                                     </v-file-input>
                                     <div v-if="logFiles" class="text-caption text-medium-emphasis mt-2">
-                                        {{ Array.isArray(logFiles) ? logFiles.length : 1 }} {{ (Array.isArray(logFiles) ? logFiles.length : 1) === 1 ? 'file' : 'files' }} selected
+                                        {{ Array.isArray(logFiles) ? logFiles.length : 1 }} {{ (Array.isArray(logFiles)
+                                            ? logFiles.length : 1) === 1 ?
+                                        'file' : 'files' }} selected
                                     </div>
                                 </v-card-text>
                             </v-card>
@@ -72,9 +74,9 @@
                                 </v-card-title>
                                 <v-card-text>
                                     <!-- UPDATED: Accept both .ini and .json files -->
-                                    <v-file-input v-model="criteriaFile" label="Criteria file (.json or .ini)" accept=".json,.ini"
-                                        prepend-icon="mdi-file-cog" show-size :clearable="true" :disabled="loading"
-                                        variant="outlined" />
+                                    <v-file-input v-model="criteriaFile" label="Criteria file (.json or .ini)"
+                                        accept=".json,.ini" prepend-icon="mdi-file-cog" show-size :clearable="true"
+                                        :disabled="loading" variant="outlined" />
 
                                     <v-checkbox v-model="showOnlyCriteria" label="Show only criteria items"
                                         :disabled="!criteriaFile || loading" density="compact" color="primary"
@@ -114,8 +116,7 @@
     <v-row v-if="hasResults">
         <v-col cols="12">
             <!-- Top Product Ranking - Only for Compare Mode -->
-            <TopProductRankingUploadLog v-if="mode === 'COMPARE' && compareResult"
-                :compare-result="compareResult" />
+            <TopProductRankingUploadLog v-if="mode === 'COMPARE' && compareResult" :compare-result="compareResult" />
 
             <!-- Detailed Results -->
             <ParsingResultView v-if="mode === 'PARSING' && parsingResult" :result="parsingResult" />
