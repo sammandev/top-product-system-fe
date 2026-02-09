@@ -133,54 +133,84 @@
                     <v-icon start color="info">mdi-compare</v-icon>
                     Test Item Comparison
                     <v-chip class="ml-2" size="small" color="info">{{ totalFiles }} files</v-chip>
+                    <v-spacer />
+                    <v-progress-circular v-if="iplasLoading" indeterminate size="20" width="2"
+                        color="primary" class="mr-2" />
+                    <v-chip v-if="iplasDataByIsn.size > 0" size="small" color="success" variant="tonal">
+                        iPLAS: {{ iplasDataByIsn.size }} ISN(s)
+                    </v-chip>
                 </v-card-title>
 
                 <v-card-text>
-                    <!-- Station Selection -->
+                    <!-- UPDATED: Controls Row with Station, ISN, Filter, Search -->
                     <v-row dense class="mb-4">
-                        <v-col cols="12" md="4">
-                            <v-select v-model="selectedStation" :items="stationOptions" label="Select Station"
-                                variant="outlined" density="compact" prepend-inner-icon="mdi-router-wireless"
-                                hide-details clearable />
+                        <v-col cols="12" md="3">
+                            <v-select v-model="selectedIplasStation" :items="iplasStationOptions"
+                                label="Station (iPLAS)" variant="outlined" density="compact"
+                                prepend-inner-icon="mdi-router-wireless" hide-details clearable
+                                :disabled="iplasDataByIsn.size === 0" />
                         </v-col>
-                        <v-col cols="12" md="4">
+                        <v-col cols="12" md="3">
+                            <v-select v-model="selectedCompareIsns" :items="allCompareIsns"
+                                label="ISNs to Compare" variant="outlined" density="compact"
+                                prepend-inner-icon="mdi-identifier" hide-details multiple chips
+                                closable-chips />
+                        </v-col>
+                        <v-col cols="12" md="3">
                             <v-select v-model="itemFilterType" :items="itemFilterOptions" label="Filter Items"
                                 variant="outlined" density="compact" prepend-inner-icon="mdi-filter"
                                 hide-details />
                         </v-col>
-                        <v-col cols="12" md="4">
+                        <v-col cols="12" md="3">
                             <v-text-field v-model="searchQuery" label="Search Test Items"
                                 variant="outlined" density="compact" prepend-inner-icon="mdi-magnify"
                                 hide-details clearable />
                         </v-col>
                     </v-row>
 
-                    <!-- Comparison Table -->
-                    <v-data-table :headers="comparisonHeaders" :items="filteredComparisonItems"
-                        :items-per-page="25" density="comfortable" class="elevation-1"
-                        @click:row="(_event: any, data: any) => showTestItemBreakdown(data.item)">
-                        <template #item.test_item="{ item }">
-                            <span class="font-weight-medium">{{ item.test_item }}</span>
+                    <!-- iPLAS Loading Indicator -->
+                    <v-alert v-if="iplasLoading" type="info" variant="tonal" density="compact" class="mb-3">
+                        <template #prepend>
+                            <v-progress-circular indeterminate size="18" width="2" />
                         </template>
-                        <template #item.baseline="{ item }">
-                            <span v-if="item.baseline !== null">{{ item.baseline }}</span>
-                            <span v-else class="text-medium-emphasis">-</span>
-                        </template>
-                        <template #item.avg_score="{ item }">
-                            <v-chip v-if="item.avg_score !== null" :color="getScoreColor(item.avg_score)" 
-                                size="small" class="font-weight-bold"
-                                @click.stop="showComparisonItemBreakdown(item)">
-                                {{ item.avg_score?.toFixed(2) }}
-                                <v-icon size="x-small" end>mdi-information-outline</v-icon>
-                            </v-chip>
-                            <span v-else class="text-medium-emphasis">-</span>
-                        </template>
-                        <template #item.avg_deviation="{ item }">
-                            <span v-if="item.avg_deviation !== null" 
-                                :class="Math.abs(item.avg_deviation) > 1 ? 'text-error' : ''">
-                                {{ item.avg_deviation?.toFixed(4) }}
-                            </span>
-                            <span v-else class="text-medium-emphasis">-</span>
+                        Fetching iPLAS data for {{ allCompareIsns.length }} ISN(s)...
+                    </v-alert>
+                    <v-alert v-else-if="iplasDataByIsn.size > 0" type="success" variant="tonal" density="compact"
+                        class="mb-3">
+                        iPLAS data loaded for {{ iplasDataByIsn.size }} ISN(s)
+                        <template v-if="selectedIplasStation"> — Station: {{ selectedIplasStation }}</template>
+                    </v-alert>
+
+                    <!-- UPDATED: Comparison Table with Parent-Children Headers per ISN -->
+                    <v-data-table :headers="comparisonHeaders" :items="comparisonTableItems"
+                        :items-per-page="25" density="comfortable" class="elevation-1">
+                        <!-- Custom row rendering for dynamic columns -->
+                        <template #item="{ item, columns }">
+                            <tr>
+                                <td v-for="column in (columns as any[])" :key="column.key"
+                                    :class="column.key === 'test_item' ? '' : 'text-center'">
+                                    <!-- Test Item name -->
+                                    <span v-if="column.key === 'test_item'" class="font-weight-medium">
+                                        {{ item.test_item }}
+                                    </span>
+                                    <!-- UCL / LCL -->
+                                    <span v-else-if="column.key === 'usl' || column.key === 'lsl'"
+                                        class="text-medium-emphasis">
+                                        {{ item[column.key] ?? '-' }}
+                                    </span>
+                                    <!-- Score columns (chips) -->
+                                    <template v-else-if="isScoreColumn(column.key)">
+                                        <v-chip v-if="item[column.key] != null"
+                                            :color="getScoreColor(Number(item[column.key]))"
+                                            size="x-small" class="font-weight-bold">
+                                            {{ Number(item[column.key]).toFixed(2) }}
+                                        </v-chip>
+                                        <span v-else class="text-medium-emphasis">-</span>
+                                    </template>
+                                    <!-- Value columns -->
+                                    <span v-else>{{ item[column.key] ?? '-' }}</span>
+                                </td>
+                            </tr>
                         </template>
                     </v-data-table>
                 </v-card-text>
@@ -319,6 +349,8 @@ import {
     type ParsedTestItemEnhanced,
     type RescoreScoringConfig
 } from '@/features/dut_logs/composables/useTestLogUpload'
+import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
+import type { IplasIsnSearchRecord } from '@/features/dut_logs/api/iplasProxyApi'
 
 // File inputs
 const logFiles = ref<File[] | null>(null)
@@ -337,9 +369,15 @@ const errorMessage = ref('')
 const criteriaBuilderOpen = ref(false)
 
 // Comparison section state
-const selectedStation = ref<string | null>(null)
 const itemFilterType = ref<string>('all')
 const searchQuery = ref('')
+
+// UPDATED: iPLAS comparison state
+const iplasDataByIsn = ref<Map<string, IplasIsnSearchRecord[]>>(new Map())
+const iplasLoading = ref(false)
+const selectedIplasStation = ref<string | null>(null)
+const selectedCompareIsns = ref<string[]>([])
+const iplasScoredByIsn = ref<Map<string, Map<string, { score: number }>>>(new Map())
 
 // Scoring config state
 const showScoringConfigDialog = ref(false)
@@ -352,7 +390,8 @@ const breakdownFullscreen = ref(false)
 const breakdownItem = ref<ParsedTestItemEnhanced | null>(null)
 
 // Composables
-const { parseLog, compareLogs } = useTestLogUpload()
+const { parseLog, compareLogs, rescoreItems } = useTestLogUpload()
+const { searchByIsnBatch } = useIplasApi()
 
 // Filter options for comparison section
 const itemFilterOptions = [
@@ -383,49 +422,132 @@ const totalFiles = computed(() => {
     return compareResult.value?.total_files || 0
 })
 
-// Station options for comparison
-const stationOptions = computed(() => {
+// UPDATED: All ISNs from comparison results
+const allCompareIsns = computed<string[]>(() => {
     if (!compareResult.value?.file_summaries) return []
+    return compareResult.value.file_summaries
+        .map((s: any) => s.isn)
+        .filter((isn: string | null): isn is string => isn !== null)
+})
+
+// ISNs currently displayed in the table columns
+const displayedIsns = computed(() => {
+    if (selectedCompareIsns.value.length > 0) return selectedCompareIsns.value
+    return allCompareIsns.value
+})
+
+// Available iPLAS stations across all fetched ISN data
+const iplasStationOptions = computed(() => {
     const stations = new Set<string>()
-    compareResult.value.file_summaries.forEach((summary: any) => {
-        if (summary.metadata?.station) {
-            stations.add(summary.metadata.station)
-        }
-    })
+    for (const [, records] of iplasDataByIsn.value) {
+        records.forEach(r => {
+            const name = r.display_station_name || r.station_name
+            if (name) stations.add(name)
+        })
+    }
     return Array.from(stations)
 })
 
-// Comparison table headers
-const comparisonHeaders = [
-    { title: 'Test Item', key: 'test_item', sortable: true },
-    { title: 'Baseline', key: 'baseline', sortable: true, width: '120px' },
-    { title: 'Avg Score', key: 'avg_score', sortable: true, width: '120px', align: 'center' as const },
-    { title: 'Avg Deviation', key: 'avg_deviation', sortable: true, width: '140px' }
-]
+// UPDATED: Dynamic parent-children headers for multi-ISN comparison
+const comparisonHeaders = computed(() => {
+    const isns = displayedIsns.value
+    const headers: any[] = [
+        { title: 'Test Item', key: 'test_item', sortable: true },
+        { title: 'UCL', key: 'usl', sortable: true, width: '80px', align: 'center' as const },
+        { title: 'LCL', key: 'lsl', sortable: true, width: '80px', align: 'center' as const },
+    ]
 
-// Filtered comparison items
-const filteredComparisonItems = computed(() => {
+    isns.forEach((isn, idx) => {
+        headers.push({
+            title: isn,
+            align: 'center' as const,
+            children: [
+                { title: 'Uploaded', key: `uploaded_val_${idx}`, sortable: true, width: '100px' },
+                { title: 'iPLAS', key: `iplas_val_${idx}`, sortable: true, width: '100px' },
+            ]
+        })
+    })
+
+    if (isns.length > 0) {
+        const scoreChildren: any[] = []
+        isns.forEach((isn, idx) => {
+            const label = isn.length > 10 ? '...' + isn.slice(-8) : isn
+            scoreChildren.push(
+                { title: `${label} (Upl)`, key: `uploaded_score_${idx}`, sortable: true, width: '100px', align: 'center' as const },
+                { title: `${label} (iPLAS)`, key: `iplas_score_${idx}`, sortable: true, width: '100px', align: 'center' as const },
+            )
+        })
+        headers.push({
+            title: 'Score',
+            align: 'center' as const,
+            children: scoreChildren,
+        })
+    }
+
+    return headers
+})
+
+// UPDATED: Comparison table items with per-ISN uploaded + iPLAS data
+const comparisonTableItems = computed(() => {
     if (!compareResult.value) return []
-    
+
     let items: CompareItemEnhanced[] = [
         ...(compareResult.value.comparison_value_items || []),
         ...(compareResult.value.comparison_non_value_items || [])
     ]
 
-    // Filter by type - Criteria = has USL or LSL, Non-Criteria = no USL and no LSL
+    // Apply filters
     if (itemFilterType.value === 'criteria') {
         items = items.filter(item => item.usl !== null || item.lsl !== null)
     } else if (itemFilterType.value === 'non-criteria') {
         items = items.filter(item => item.usl === null && item.lsl === null)
     }
-
-    // Filter by search
     if (searchQuery.value) {
         const query = searchQuery.value.toLowerCase()
         items = items.filter(item => item.test_item.toLowerCase().includes(query))
     }
 
-    return items
+    const isns = displayedIsns.value
+
+    return items.map(item => {
+        const row: Record<string, any> = {
+            test_item: item.test_item,
+            usl: item.usl,
+            lsl: item.lsl,
+        }
+
+        isns.forEach((isn, idx) => {
+            // Uploaded data from comparison result
+            const perIsn = item.per_isn_data.find(d => d.isn === isn)
+            row[`uploaded_val_${idx}`] = perIsn?.value ?? null
+            row[`uploaded_score_${idx}`] = perIsn?.score ?? null
+
+            // iPLAS data from fetched records
+            const iplasRecords = iplasDataByIsn.value.get(isn)
+            if (iplasRecords && iplasRecords.length > 0) {
+                const stationRecord = selectedIplasStation.value
+                    ? iplasRecords.find(r =>
+                        r.display_station_name === selectedIplasStation.value ||
+                        r.station_name === selectedIplasStation.value)
+                    : iplasRecords[0]
+                if (stationRecord) {
+                    const iplasItem = stationRecord.test_item.find(
+                        t => t.NAME.toLowerCase() === item.test_item.toLowerCase()
+                    )
+                    row[`iplas_val_${idx}`] = iplasItem?.VALUE ?? null
+                }
+            }
+
+            // iPLAS score from rescored data
+            const iplasScoredMap = iplasScoredByIsn.value.get(isn)
+            if (iplasScoredMap) {
+                const scored = iplasScoredMap.get(item.test_item.toLowerCase())
+                row[`iplas_score_${idx}`] = scored?.score ?? null
+            }
+        })
+
+        return row
+    })
 })
 
 // Methods
@@ -474,6 +596,83 @@ const handleScoringConfigApply = (configs: RescoreScoringConfig[]) => {
  */
 const clearScoringConfigs = () => {
     appliedScoringConfigs.value = []
+}
+
+// ============================================
+// iPLAS Comparison Data
+// ============================================
+
+/**
+ * Fetch iPLAS data for all ISNs in the comparison using batch search
+ */
+const fetchIplasForComparison = async () => {
+    const isns = allCompareIsns.value
+    if (isns.length === 0) return
+
+    iplasLoading.value = true
+    try {
+        const results = await searchByIsnBatch(isns)
+        iplasDataByIsn.value = results
+
+        // Auto-select first available station
+        const stations = iplasStationOptions.value
+        if (stations.length > 0 && !selectedIplasStation.value) {
+            selectedIplasStation.value = stations[0] ?? null
+        }
+
+        // Rescore iPLAS data with current scoring configs
+        await rescoreIplasData()
+    } catch (err: any) {
+        console.error('Failed to fetch iPLAS comparison data:', err)
+    } finally {
+        iplasLoading.value = false
+    }
+}
+
+/**
+ * Rescore iPLAS data for all ISNs using the applied scoring configs
+ */
+const rescoreIplasData = async () => {
+    const isns = allCompareIsns.value
+    iplasScoredByIsn.value = new Map()
+
+    for (const isn of isns) {
+        const records = iplasDataByIsn.value.get(isn) || []
+        const stationRecord = selectedIplasStation.value
+            ? records.find(r =>
+                r.display_station_name === selectedIplasStation.value ||
+                r.station_name === selectedIplasStation.value)
+            : records[0]
+
+        if (!stationRecord || !stationRecord.test_item.length) continue
+
+        const testItems = stationRecord.test_item.map(t => ({
+            test_item: t.NAME,
+            value: t.VALUE,
+            usl: t.UCL ? parseFloat(t.UCL) : null,
+            lsl: t.LCL ? parseFloat(t.LCL) : null,
+            status: t.STATUS || 'PASS',
+        }))
+
+        try {
+            const result = await rescoreItems(testItems, appliedScoringConfigs.value)
+            const scoreMap = new Map<string, { score: number }>()
+            result.test_item_scores.forEach((score: any) => {
+                scoreMap.set(score.test_item.toLowerCase(), { score: score.score })
+            })
+            iplasScoredByIsn.value.set(isn, scoreMap)
+        } catch (err: any) {
+            console.error(`Failed to rescore iPLAS data for ${isn}:`, err)
+        }
+    }
+}
+
+/**
+ * Check if a column key represents a score column (for chip rendering)
+ */
+function isScoreColumn(key: string | undefined): boolean {
+    if (!key) return false
+    return key.startsWith('uploaded_score_') || key.startsWith('iplas_score_')
 }
 
 const handleAnalyze = async () => {
@@ -525,11 +724,15 @@ const handleReset = () => {
     showOnlyCriteria.value = false
     parsingResult.value = null
     compareResult.value = null
-    selectedStation.value = null
     searchQuery.value = ''
     itemFilterType.value = 'all'
     extractedTestItems.value = []
     appliedScoringConfigs.value = []
+    // UPDATED: Clear iPLAS comparison state
+    iplasDataByIsn.value = new Map()
+    iplasScoredByIsn.value = new Map()
+    selectedIplasStation.value = null
+    selectedCompareIsns.value = []
 }
 
 const openCriteriaBuilder = () => {
@@ -613,13 +816,6 @@ const showTestItemBreakdown = (item: CompareItemEnhanced) => {
     }
 }
 
-/**
- * Show score breakdown when clicking on score chip in comparison table
- */
-const showComparisonItemBreakdown = (item: CompareItemEnhanced) => {
-    showTestItemBreakdown(item)
-}
-
 // Watch for showOnlyCriteria changes and re-analyze if results exist
 watch(showOnlyCriteria, async () => {
     if (hasResults.value && criteriaFile.value) {
@@ -630,6 +826,20 @@ watch(showOnlyCriteria, async () => {
 // When files change, clear extracted items so they get re-extracted
 watch(logFiles, () => {
     extractedTestItems.value = []
+})
+
+// UPDATED: Auto-fetch iPLAS data when comparison results are available
+watch(compareResult, async (newVal) => {
+    if (newVal) {
+        await fetchIplasForComparison()
+    }
+})
+
+// When iPLAS station changes, rescore iPLAS data
+watch(selectedIplasStation, async () => {
+    if (iplasDataByIsn.value.size > 0) {
+        await rescoreIplasData()
+    }
 })
 </script>
 

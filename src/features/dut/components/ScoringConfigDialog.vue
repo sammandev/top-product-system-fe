@@ -1,5 +1,5 @@
 <template>
-    <v-dialog v-model="internalShow" max-width="1000" scrollable persistent>
+    <v-dialog v-model="internalShow" max-width="650" scrollable persistent>
         <v-card>
             <!-- UPDATED: Added bg-info for distinct dialog header color -->
             <v-card-title class="d-flex align-center bg-info">
@@ -14,10 +14,7 @@
             <v-divider />
 
             <v-card-text class="pa-0">
-                <v-row no-gutters>
-                    <!-- Left Panel: Test Items List -->
-                    <v-col cols="5" class="border-e">
-                        <div class="pa-3">
+                <div class="pa-3">
                             <!-- Search and Filter -->
                             <v-text-field v-model="searchQuery" label="Search Test Items"
                                 prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details
@@ -47,9 +44,7 @@
                             <!-- Test Items List -->
                             <v-virtual-scroll :items="filteredTestItems" :height="400" item-height="48">
                                 <template #default="{ item }">
-                                    <v-list-item :key="item.testItemName" density="compact"
-                                        :class="{ 'bg-primary-lighten-5': selectedItem === item.testItemName }"
-                                        @click="selectItem(item.testItemName)">
+                                    <v-list-item :key="item.testItemName" density="compact">
                                         <template #prepend>
                                             <v-checkbox-btn :model-value="item.enabled" density="compact"
                                                 @update:model-value="toggleEnabled(item.testItemName, $event)"
@@ -74,132 +69,7 @@
                                 {{ filteredTestItems.length }} of {{ configList.length }} items shown
                             </div>
                         </div>
-                    </v-col>
 
-                    <!-- Right Panel: Selected Item Configuration -->
-                    <v-col cols="7">
-                        <div class="pa-4">
-                            <template v-if="selectedConfig">
-                                <div class="d-flex align-center mb-4">
-                                    <v-icon color="primary" class="mr-2">mdi-cog</v-icon>
-                                    <span class="text-h6">{{ selectedConfig.testItemName }}</span>
-                                </div>
-
-                                <!-- Scoring Type Selection -->
-                                <v-select v-model="selectedConfig.scoringType" :items="scoringTypeOptions"
-                                    item-title="label" item-value="type" label="Scoring Type" variant="outlined"
-                                    density="compact" class="mb-4" @update:model-value="onScoringTypeChange">
-                                    <template #prepend-inner>
-                                        <v-icon :color="getScoringTypeColor(selectedConfig.scoringType)">
-                                            {{ getScoringTypeIcon(selectedConfig.scoringType) }}
-                                        </v-icon>
-                                    </template>
-
-                                    <template #item="{ item, props: itemProps }">
-                                        <v-list-item v-bind="itemProps">
-                                            <template #prepend>
-                                                <v-icon :color="getScoringTypeColor(item.value)">
-                                                    {{ getScoringTypeIcon(item.value) }}
-                                                </v-icon>
-                                            </template>
-                                            <v-list-item-subtitle>
-                                                {{ item.raw.description }}
-                                            </v-list-item-subtitle>
-                                        </v-list-item>
-                                    </template>
-                                </v-select>
-
-                                <!-- Type Description -->
-                                <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-                                    <div class="text-body-2">
-                                        {{ SCORING_TYPE_INFO[selectedConfig.scoringType]?.description }}
-                                    </div>
-                                    <div class="text-caption text-medium-emphasis mt-1">
-                                        <strong>Use case:</strong>
-                                        {{ SCORING_TYPE_INFO[selectedConfig.scoringType]?.useCase }}
-                                    </div>
-                                </v-alert>
-
-                                <!-- Weight -->
-                                <v-text-field v-model.number="selectedConfig.weight" label="Weight" type="number"
-                                    min="0" max="10" step="0.1" variant="outlined" density="compact" class="mb-4"
-                                    hint="Weight for aggregate scoring (0-10)" persistent-hint>
-                                    <template #append-inner>
-                                        <v-chip size="x-small" color="primary">×{{
-                                            selectedConfig.weight.toFixed(1) }}</v-chip>
-                                    </template>
-                                </v-text-field>
-
-                                <!-- Type-Specific Parameters -->
-                                <div v-if="currentTypeParameters.length > 0">
-                                    <div class="text-subtitle-2 mb-2">Parameters</div>
-
-                                    <template v-for="param in currentTypeParameters" :key="param.key">
-                                        <!-- Slider Parameters -->
-                                        <div v-if="param.type === 'slider'" class="mb-4">
-                                            <v-label class="text-caption">
-                                                {{ param.label }}
-                                                <v-tooltip location="top">
-                                                    <template #activator="{ props: tooltipProps }">
-                                                        <v-icon v-bind="tooltipProps" size="x-small" class="ml-1">
-                                                            mdi-help-circle-outline
-                                                        </v-icon>
-                                                    </template>
-                                                    {{ param.description }}
-                                                </v-tooltip>
-                                            </v-label>
-                                            <v-slider
-                                                v-model="(selectedConfig as unknown as Record<string, number>)[param.key]"
-                                                :min="param.min" :max="param.max" :step="param.step" thumb-label
-                                                color="primary" class="mt-1">
-                                                <template #append>
-                                                    <v-text-field
-                                                        v-model.number="(selectedConfig as unknown as Record<string, number>)[param.key]"
-                                                        type="number" :min="param.min" :max="param.max"
-                                                        :step="param.step" variant="outlined" density="compact"
-                                                        hide-details style="width: 80px" />
-                                                </template>
-                                            </v-slider>
-                                        </div>
-
-                                        <!-- Number Parameters -->
-                                        <v-text-field v-else
-                                            v-model.number="(selectedConfig as unknown as Record<string, unknown>)[param.key]"
-                                            :label="param.label" type="number" :min="param.min" :max="param.max"
-                                            :step="param.step" variant="outlined" density="compact" class="mb-4"
-                                            :hint="param.description" persistent-hint />
-                                    </template>
-                                </div>
-
-                                <!-- No Parameters Message -->
-                                <v-alert v-else type="info" variant="tonal" density="compact">
-                                    This scoring type has no configurable parameters.
-                                </v-alert>
-
-                                <!-- Apply to Similar -->
-                                <v-divider class="my-4" />
-                                <v-btn variant="outlined" color="primary" block @click="applyToSimilar(selectedConfig)">
-                                    <v-icon start>mdi-content-copy</v-icon>
-                                    Apply Settings to All {{ getScoringTypeLabel(selectedConfig.scoringType) }} Items
-                                </v-btn>
-                            </template>
-
-                            <!-- No Selection Message -->
-                            <div v-else class="d-flex flex-column align-center justify-center" style="height: 100%;">
-                                <v-icon size="64" color="grey-lighten-1">mdi-gesture-tap</v-icon>
-                                <div class="text-body-1 text-medium-emphasis mt-4">
-                                    Select a test item to configure scoring
-                                </div>
-                                <div class="text-caption text-medium-emphasis mt-1">
-                                    Click on any test item from the list
-                                </div>
-                            </div>
-                        </div>
-                    </v-col>
-                </v-row>
-            </v-card-text>
-
-            <v-divider />
 
             <!-- Summary Stats -->
             <v-card-text class="py-2 bg-grey-lighten-4">
@@ -247,11 +117,9 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import {
-    type ScoringConfig,
     type ScoringType,
     SCORING_TYPE_INFO,
     createDefaultScoringConfig,
-    getUIScoringTypeOptions
 } from '../types/scoring.types'
 import { useScoring } from '../composables/useScoring'
 
@@ -284,16 +152,12 @@ const {
 // Local state
 const searchQuery = ref('')
 const typeFilter = ref('all')
-const selectedItem = ref<string | null>(null)
 
 // Computed
 const internalShow = computed({
     get: () => props.show,
     set: (value) => emit('update:show', value)
 })
-
-// UPDATED: Use simplified UI scoring types (only Symmetrical and Asymmetrical)
-const scoringTypeOptions = computed(() => getUIScoringTypeOptions())
 
 const filteredTestItems = computed(() => {
     let items = configList.value
@@ -312,16 +176,6 @@ const filteredTestItems = computed(() => {
     }
 
     return items
-})
-
-const selectedConfig = computed(() => {
-    if (!selectedItem.value) return null
-    return scoringConfigs.value.get(selectedItem.value) || null
-})
-
-const currentTypeParameters = computed(() => {
-    if (!selectedConfig.value) return []
-    return SCORING_TYPE_INFO[selectedConfig.value.scoringType]?.parameters || []
 })
 
 const enabledCount = computed(() =>
@@ -352,22 +206,8 @@ function getScoringTypeLabel(type: ScoringType): string {
     return SCORING_TYPE_INFO[type]?.label || type
 }
 
-function getScoringTypeIcon(type: ScoringType): string {
-    return SCORING_TYPE_INFO[type]?.icon || 'mdi-help'
-}
-
-function selectItem(testItemName: string): void {
-    selectedItem.value = testItemName
-}
-
 function toggleEnabled(testItemName: string, enabled: unknown): void {
     updateConfig(testItemName, { enabled: enabled as boolean })
-}
-
-function onScoringTypeChange(newType: ScoringType): void {
-    if (selectedItem.value) {
-        setScoringType(selectedItem.value, newType)
-    }
 }
 
 function enableAll(): void {
@@ -385,19 +225,6 @@ function autoDetectAll(): void {
         const existing = scoringConfigs.value.get(item.NAME)
         if (existing && existing.scoringType !== detected) {
             setScoringType(item.NAME, detected)
-        }
-    }
-}
-
-function applyToSimilar(config: ScoringConfig): void {
-    // Apply same settings to all items with the same scoring type
-    for (const [name, c] of scoringConfigs.value) {
-        if (c.scoringType === config.scoringType && name !== config.testItemName) {
-            scoringConfigs.value.set(name, {
-                ...c,
-                ...config,
-                testItemName: name  // Keep original name
-            })
         }
     }
 }

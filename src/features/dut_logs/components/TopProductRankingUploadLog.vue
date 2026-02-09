@@ -197,19 +197,24 @@
         <v-dialog v-model="showTestItemsDialog" :fullscreen="testItemsFullscreen"
             :max-width="testItemsFullscreen ? undefined : 1200" scrollable
             :transition="testItemsFullscreen ? 'dialog-bottom-transition' : undefined">
-            <v-card v-if="selectedRankingItem">
+            <v-card v-if="selectedRankingItem" class="d-flex flex-column"
+                :style="testItemsFullscreen ? 'height: 100vh; overflow: hidden;' : 'max-height: 90vh; overflow: hidden;'">
                 <v-card-title class="d-flex align-center bg-primary">
                     <v-icon start color="white">mdi-format-list-checks</v-icon>
                     <span class="text-white">Test Items Details - {{ selectedRankingItem.isn || 'N/A' }}</span>
                     <v-spacer />
+                    <v-btn v-if="selectedRankingItem?.isn" variant="tonal" color="white" size="small"
+                        prepend-icon="mdi-compare-horizontal" @click="openIplasCompare" class="mr-2">
+                        Compare with iPLAS
+                    </v-btn>
                     <v-btn :icon="testItemsFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
                         color="white" @click="testItemsFullscreen = !testItemsFullscreen" />
                     <v-btn icon="mdi-close" variant="text" color="white" @click="showTestItemsDialog = false" />
                 </v-card-title>
 
-                <v-card-text class="pa-4">
+                <v-card-text class="pa-4 flex-grow-1 d-flex flex-column" style="overflow: hidden;">
                     <!-- ISN Info -->
-                    <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+                    <v-alert type="info" variant="tonal" density="compact" class="mb-4 flex-shrink-0">
                         <div class="d-flex align-center justify-space-between flex-wrap">
                             <div>
                                 <strong>ISN:</strong> {{ selectedRankingItem.isn || 'N/A' }}
@@ -225,7 +230,7 @@
                     </v-alert>
 
                     <!-- Filter Row -->
-                    <v-row dense class="mb-4">
+                    <v-row dense class="mb-4 flex-shrink-0">
                         <v-col cols="12" md="4">
                             <v-select v-model="testItemFilterType" :items="testItemFilterOptions" label="Filter Items"
                                 variant="outlined" density="compact" prepend-inner-icon="mdi-filter" hide-details />
@@ -246,6 +251,7 @@
                     </v-row>
 
                     <!-- Test Items Table -->
+                    <div class="flex-grow-1" style="overflow: auto;">
                     <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="25"
                         density="comfortable" class="elevation-1"
                         @click:row="(_event: any, data: any) => showScoreBreakdown(data.item)">
@@ -270,25 +276,17 @@
                             <span v-else class="text-medium-emphasis">-</span>
                         </template>
                     </v-data-table>
+                    </div>
                 </v-card-text>
 
-                <v-divider />
 
-                <v-card-actions>
-                    <!-- UPDATED: Added Compare with iPLAS button -->
-                    <v-btn v-if="selectedRankingItem?.isn" color="info" variant="outlined"
-                        prepend-icon="mdi-compare-horizontal" @click="openIplasCompare">
-                        Compare with iPLAS
-                    </v-btn>
-                    <v-spacer />
-                    <v-btn color="primary" variant="text" @click="showTestItemsDialog = false">Close</v-btn>
-                </v-card-actions>
             </v-card>
         </v-dialog>
 
         <!-- UPDATED: iPLAS Comparison Dialog -->
+        <!-- UPDATED: Pass scoring configs for unified scoring between upload log and iPLAS -->
         <IplasCompareDialog v-model="showIplasCompareDialog" :isn="comparisonIsn"
-            :upload-test-items="selectedTestItems" />
+            :upload-test-items="selectedTestItems" :scoring-configs="scoringConfigs" />
 
         <!-- UPDATED: Score Breakdown Dialog (Universal Scoring) -->
         <v-dialog v-model="showBreakdownDialog" :fullscreen="breakdownFullscreen"
