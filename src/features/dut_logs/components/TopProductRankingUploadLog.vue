@@ -286,8 +286,106 @@
         <IplasCompareDialog v-model="showIplasCompareDialog" :isn="comparisonIsn"
             :upload-test-items="selectedTestItems" />
 
-        <!-- UPDATED: Score Breakdown Dialog -->
-        <ScoreBreakdownDialog v-model="showBreakdownDialog" :item="selectedTestItem" />
+        <!-- UPDATED: Score Breakdown Dialog (Universal Scoring) -->
+        <v-dialog v-model="showBreakdownDialog" max-width="650" scrollable>
+            <v-card v-if="selectedTestItem">
+                <v-card-title class="d-flex align-center bg-info">
+                    <v-icon start color="white">mdi-calculator-variant</v-icon>
+                    <span class="text-white">Score Breakdown</span>
+                    <v-spacer />
+                    <v-btn icon="mdi-close" variant="text" color="white" @click="showBreakdownDialog = false" />
+                </v-card-title>
+
+                <v-card-text class="pa-4">
+                    <!-- Test Item Info -->
+                    <v-card variant="tonal" class="mb-4">
+                        <v-card-text>
+                            <div class="text-h6 mb-2">{{ selectedTestItem.test_item }}</div>
+                            <v-row dense>
+                                <v-col cols="4">
+                                    <div class="text-caption text-medium-emphasis">Actual Value</div>
+                                    <div class="text-h6 font-weight-bold">{{ selectedTestItem.value }}</div>
+                                </v-col>
+                                <v-col cols="4">
+                                    <div class="text-caption text-medium-emphasis">Score</div>
+                                    <div class="text-h6 font-weight-bold">
+                                        <v-chip :color="getScoreColor(selectedTestItem.score ?? 0)" size="small">
+                                            {{ selectedTestItem.score?.toFixed(2) ?? 'N/A' }}
+                                        </v-chip>
+                                    </div>
+                                </v-col>
+                                <v-col cols="4">
+                                    <div class="text-caption text-medium-emphasis">Scoring Type</div>
+                                    <v-chip :color="getScoringTypeColor(selectedTestItem.score_breakdown?.scoring_type ?? '')"
+                                        size="small">
+                                        {{ selectedTestItem.score_breakdown?.scoring_type ?? 'N/A' }}
+                                    </v-chip>
+                                </v-col>
+                            </v-row>
+                        </v-card-text>
+                    </v-card>
+
+                    <!-- Breakdown Details Table -->
+                    <v-table density="compact">
+                        <tbody>
+                            <tr>
+                                <td class="font-weight-medium">Scoring Type</td>
+                                <td>
+                                    <v-chip size="small" :color="getScoringTypeColor(selectedTestItem.score_breakdown?.scoring_type ?? '')">
+                                        {{ selectedTestItem.score_breakdown?.scoring_type }}
+                                    </v-chip>
+                                </td>
+                            </tr>
+                            <tr v-if="selectedTestItem.score_breakdown?.ucl !== null && selectedTestItem.score_breakdown?.ucl !== undefined">
+                                <td class="font-weight-medium">UCL (Upper Limit)</td>
+                                <td>{{ selectedTestItem.score_breakdown.ucl }}</td>
+                            </tr>
+                            <tr v-if="selectedTestItem.score_breakdown?.lcl !== null && selectedTestItem.score_breakdown?.lcl !== undefined">
+                                <td class="font-weight-medium">LCL (Lower Limit)</td>
+                                <td>{{ selectedTestItem.score_breakdown.lcl }}</td>
+                            </tr>
+                            <tr v-if="selectedTestItem.score_breakdown?.target !== null && selectedTestItem.score_breakdown?.target !== undefined">
+                                <td class="font-weight-medium">Target</td>
+                                <td class="font-weight-bold text-primary">{{ selectedTestItem.score_breakdown.target?.toFixed(4) }}</td>
+                            </tr>
+                            <tr v-if="selectedTestItem.score_breakdown?.actual !== null && selectedTestItem.score_breakdown?.actual !== undefined">
+                                <td class="font-weight-medium">Actual Value</td>
+                                <td class="font-weight-bold">{{ selectedTestItem.score_breakdown.actual }}</td>
+                            </tr>
+                            <tr v-if="selectedTestItem.score_breakdown?.deviation !== null && selectedTestItem.score_breakdown?.deviation !== undefined">
+                                <td class="font-weight-medium">Deviation</td>
+                                <td :class="Math.abs(selectedTestItem.score_breakdown.deviation!) > 1 ? 'text-error font-weight-bold' : ''">
+                                    {{ selectedTestItem.score_breakdown.deviation?.toFixed(4) }}
+                                </td>
+                            </tr>
+                            <tr v-if="selectedTestItem.score_breakdown?.policy">
+                                <td class="font-weight-medium">Policy</td>
+                                <td>
+                                    <v-chip size="x-small" variant="tonal">{{ selectedTestItem.score_breakdown.policy }}</v-chip>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td class="font-weight-medium">Weight</td>
+                                <td>{{ selectedTestItem.score_breakdown?.weight ?? 1.0 }}</td>
+                            </tr>
+                            <tr class="bg-surface-variant">
+                                <td class="font-weight-bold">Score (0-10)</td>
+                                <td class="font-weight-bold">
+                                    <v-chip :color="getScoreColor(selectedTestItem.score_breakdown?.score ?? 0)" size="small">
+                                        {{ selectedTestItem.score_breakdown?.score?.toFixed(2) ?? 'N/A' }}
+                                    </v-chip>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </v-table>
+                </v-card-text>
+
+                <v-card-actions>
+                    <v-spacer />
+                    <v-btn color="primary" variant="text" @click="showBreakdownDialog = false">Close</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
 
         <!-- Custom Items Per Page Dialog -->
         <v-dialog v-model="showCustomInput" max-width="400">
@@ -313,8 +411,7 @@ import { ref, computed, watch } from 'vue'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
-import type { TestLogParseResponseEnhanced, CompareResponseEnhanced, ParsedTestItemEnhanced } from '@/features/dut_logs/composables/useTestLogUpload'
-import ScoreBreakdownDialog from './ScoreBreakdownDialog.vue'
+import type { TestLogParseResponseEnhanced, CompareResponseEnhanced, ParsedTestItemEnhanced, RescoreScoringConfig } from '@/features/dut_logs/composables/useTestLogUpload'
 import IplasCompareDialog from './IplasCompareDialog.vue'
 
 dayjs.extend(utc)
@@ -323,6 +420,7 @@ dayjs.extend(timezone)
 const props = defineProps<{
     parseResult?: TestLogParseResponseEnhanced | null
     compareResult?: CompareResponseEnhanced | null
+    scoringConfigs?: RescoreScoringConfig[]
 }>()
 
 interface RankingItem {
@@ -591,6 +689,18 @@ const getScoreColor = (score: number): string => {
     if (score >= 9) return 'success'
     if (score >= 7) return 'warning'
     return 'error'
+}
+
+const getScoringTypeColor = (type: string): string => {
+    switch (type) {
+        case 'symmetrical': return 'blue'
+        case 'asymmetrical': return 'purple'
+        case 'per_mask': return 'orange'
+        case 'evm': return 'teal'
+        case 'throughput': return 'green'
+        case 'binary': return 'grey'
+        default: return 'blue'
+    }
 }
 
 // UPDATED: Handle row click to show test items dialog

@@ -1,5 +1,5 @@
 <template>
-    <!-- Section 1: Upload and Customize Section -->
+    <!-- Section 1: Upload and Configure Section -->
     <v-row>
         <v-col cols="12">
             <v-card>
@@ -72,15 +72,39 @@
                     <!-- Action Buttons -->
                     <v-row class="mt-3">
                         <v-col cols="12">
-                            <div class="d-flex gap-2">
-                                <v-btn color="primary" size="large" :style="hasResults ? 'flex: 1' : 'flex: 1'"
+                            <div class="d-flex gap-2 flex-wrap">
+                                <!-- Configure Scoring Button -->
+                                <v-btn color="secondary" size="large" variant="outlined"
+                                    :loading="extractingItems" :disabled="!hasFiles || loading"
+                                    prepend-icon="mdi-cog-outline"
+                                    @click="handleConfigureScoring">
+                                    Configure Scoring
+                                    <v-chip v-if="appliedScoringConfigs.length > 0" size="x-small" color="success"
+                                        class="ml-2">
+                                        {{ appliedScoringConfigs.length }}
+                                    </v-chip>
+                                </v-btn>
+                                <!-- Analyze Button -->
+                                <v-btn color="primary" size="large" style="flex: 1"
                                     :loading="loading" :disabled="!canAnalyze" prepend-icon="mdi-play"
                                     @click="handleAnalyze">
                                     Analyze Logs
                                 </v-btn>
-                                <v-btn v-if="hasResults" variant="outlined" size="large" style="flex: 1"
+                                <!-- Reset Button -->
+                                <v-btn v-if="hasResults" variant="outlined" size="large"
                                     :disabled="loading" prepend-icon="mdi-refresh" @click="handleReset">
                                     Reset
+                                </v-btn>
+                            </div>
+
+                            <!-- Scoring Config Status -->
+                            <div v-if="appliedScoringConfigs.length > 0" class="mt-2">
+                                <v-chip size="small" color="success" variant="tonal" prepend-icon="mdi-check-circle">
+                                    Scoring configured: {{ appliedScoringConfigs.length }} items
+                                </v-chip>
+                                <v-btn size="x-small" variant="text" color="warning" class="ml-2"
+                                    @click="clearScoringConfigs">
+                                    Clear
                                 </v-btn>
                             </div>
                         </v-col>
@@ -95,7 +119,8 @@
         <v-col cols="12">
             <TopProductRankingUploadLog 
                 :parse-result="parsingResult" 
-                :compare-result="compareResult" 
+                :compare-result="compareResult"
+                :scoring-configs="appliedScoringConfigs"
             />
         </v-col>
     </v-row>
@@ -143,8 +168,10 @@
                         </template>
                         <template #item.avg_score="{ item }">
                             <v-chip v-if="item.avg_score !== null" :color="getScoreColor(item.avg_score)" 
-                                size="small" class="font-weight-bold">
+                                size="small" class="font-weight-bold"
+                                @click.stop="showComparisonItemBreakdown(item)">
                                 {{ item.avg_score?.toFixed(2) }}
+                                <v-icon size="x-small" end>mdi-information-outline</v-icon>
                             </v-chip>
                             <span v-else class="text-medium-emphasis">-</span>
                         </template>
@@ -161,6 +188,107 @@
         </v-col>
     </v-row>
 
+    <!-- Score Breakdown Dialog (new universal scoring) -->
+    <v-dialog v-model="showBreakdownDialog" max-width="650" scrollable>
+        <v-card v-if="breakdownItem">
+            <v-card-title class="d-flex align-center bg-info">
+                <v-icon start color="white">mdi-calculator-variant</v-icon>
+                <span class="text-white">Score Breakdown</span>
+                <v-spacer />
+                <v-btn icon="mdi-close" variant="text" color="white" @click="showBreakdownDialog = false" />
+            </v-card-title>
+
+            <v-card-text class="pa-4">
+                <!-- Test Item Info -->
+                <v-card variant="tonal" class="mb-4">
+                    <v-card-text>
+                        <div class="text-h6 mb-2">{{ breakdownItem.test_item }}</div>
+                        <v-row dense>
+                            <v-col cols="4">
+                                <div class="text-caption text-medium-emphasis">Actual Value</div>
+                                <div class="text-h6 font-weight-bold">{{ breakdownItem.value }}</div>
+                            </v-col>
+                            <v-col cols="4">
+                                <div class="text-caption text-medium-emphasis">Score</div>
+                                <div class="text-h6 font-weight-bold">
+                                    <v-chip :color="getScoreColor(breakdownItem.score ?? 0)" size="small">
+                                        {{ breakdownItem.score?.toFixed(2) ?? 'N/A' }}
+                                    </v-chip>
+                                </div>
+                            </v-col>
+                            <v-col cols="4">
+                                <div class="text-caption text-medium-emphasis">Scoring Type</div>
+                                <v-chip :color="getScoringTypeColor(breakdownItem.score_breakdown?.scoring_type ?? '')"
+                                    size="small">
+                                    {{ breakdownItem.score_breakdown?.scoring_type ?? 'N/A' }}
+                                </v-chip>
+                            </v-col>
+                        </v-row>
+                    </v-card-text>
+                </v-card>
+
+                <!-- Breakdown Details Table -->
+                <v-table density="compact">
+                    <tbody>
+                        <tr>
+                            <td class="font-weight-medium">Scoring Type</td>
+                            <td>
+                                <v-chip size="small" :color="getScoringTypeColor(breakdownItem.score_breakdown?.scoring_type ?? '')">
+                                    {{ breakdownItem.score_breakdown?.scoring_type }}
+                                </v-chip>
+                            </td>
+                        </tr>
+                        <tr v-if="breakdownItem.score_breakdown?.ucl !== null && breakdownItem.score_breakdown?.ucl !== undefined">
+                            <td class="font-weight-medium">UCL (Upper Limit)</td>
+                            <td>{{ breakdownItem.score_breakdown.ucl }}</td>
+                        </tr>
+                        <tr v-if="breakdownItem.score_breakdown?.lcl !== null && breakdownItem.score_breakdown?.lcl !== undefined">
+                            <td class="font-weight-medium">LCL (Lower Limit)</td>
+                            <td>{{ breakdownItem.score_breakdown.lcl }}</td>
+                        </tr>
+                        <tr v-if="breakdownItem.score_breakdown?.target !== null && breakdownItem.score_breakdown?.target !== undefined">
+                            <td class="font-weight-medium">Target</td>
+                            <td class="font-weight-bold text-primary">{{ breakdownItem.score_breakdown.target?.toFixed(4) }}</td>
+                        </tr>
+                        <tr v-if="breakdownItem.score_breakdown?.actual !== null && breakdownItem.score_breakdown?.actual !== undefined">
+                            <td class="font-weight-medium">Actual Value</td>
+                            <td class="font-weight-bold">{{ breakdownItem.score_breakdown.actual }}</td>
+                        </tr>
+                        <tr v-if="breakdownItem.score_breakdown?.deviation !== null && breakdownItem.score_breakdown?.deviation !== undefined">
+                            <td class="font-weight-medium">Deviation</td>
+                            <td :class="Math.abs(breakdownItem.score_breakdown.deviation!) > 1 ? 'text-error font-weight-bold' : ''">
+                                {{ breakdownItem.score_breakdown.deviation?.toFixed(4) }}
+                            </td>
+                        </tr>
+                        <tr v-if="breakdownItem.score_breakdown?.policy">
+                            <td class="font-weight-medium">Policy</td>
+                            <td>
+                                <v-chip size="x-small" variant="tonal">{{ breakdownItem.score_breakdown.policy }}</v-chip>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="font-weight-medium">Weight</td>
+                            <td>{{ breakdownItem.score_breakdown?.weight ?? 1.0 }}</td>
+                        </tr>
+                        <tr class="bg-surface-variant">
+                            <td class="font-weight-bold">Score (0-10)</td>
+                            <td class="font-weight-bold">
+                                <v-chip :color="getScoreColor(breakdownItem.score_breakdown?.score ?? 0)" size="small">
+                                    {{ breakdownItem.score_breakdown?.score?.toFixed(2) ?? 'N/A' }}
+                                </v-chip>
+                            </td>
+                        </tr>
+                    </tbody>
+                </v-table>
+            </v-card-text>
+
+            <v-card-actions>
+                <v-spacer />
+                <v-btn color="primary" variant="text" @click="showBreakdownDialog = false">Close</v-btn>
+            </v-card-actions>
+        </v-card>
+    </v-dialog>
+
     <!-- Error Display -->
     <v-snackbar v-model="errorSnackbar" color="error" :timeout="5000" location="bottom">
         {{ errorMessage }}
@@ -172,16 +300,22 @@
     <!-- Criteria Builder Dialog -->
     <CriteriaBuilderDialog v-model="criteriaBuilderOpen" @criteria-created="handleCriteriaCreated" />
 
-    <!-- Score Breakdown Dialog for comparison items -->
-    <ScoreBreakdownDialog v-model="showBreakdownDialog" :item="selectedBreakdownItem" />
+    <!-- UPDATED: Upload Scoring Config Dialog -->
+    <UploadScoringConfigDialog v-model="showScoringConfigDialog" :test-items="extractedTestItems"
+        :existing-configs="appliedScoringConfigs" @apply="handleScoringConfigApply" />
 </template>
 
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
 import CriteriaBuilderDialog from './CriteriaBuilderDialog.vue'
 import TopProductRankingUploadLog from './TopProductRankingUploadLog.vue'
-import ScoreBreakdownDialog from './ScoreBreakdownDialog.vue'
-import { useTestLogUpload, type CompareItemEnhanced, type ParsedTestItemEnhanced } from '@/features/dut_logs/composables/useTestLogUpload'
+import UploadScoringConfigDialog from './UploadScoringConfigDialog.vue'
+import {
+    useTestLogUpload,
+    type CompareItemEnhanced,
+    type ParsedTestItemEnhanced,
+    type RescoreScoringConfig
+} from '@/features/dut_logs/composables/useTestLogUpload'
 
 // File inputs
 const logFiles = ref<File[] | null>(null)
@@ -194,6 +328,7 @@ const compareResult = ref<any>(null)
 
 // UI state
 const loading = ref(false)
+const extractingItems = ref(false)
 const errorSnackbar = ref(false)
 const errorMessage = ref('')
 const criteriaBuilderOpen = ref(false)
@@ -203,9 +338,14 @@ const selectedStation = ref<string | null>(null)
 const itemFilterType = ref<string>('all')
 const searchQuery = ref('')
 
-// Score breakdown dialog
+// Scoring config state
+const showScoringConfigDialog = ref(false)
+const extractedTestItems = ref<ParsedTestItemEnhanced[]>([])
+const appliedScoringConfigs = ref<RescoreScoringConfig[]>([])
+
+// Score breakdown dialog (new universal scoring)
 const showBreakdownDialog = ref(false)
-const selectedBreakdownItem = ref<ParsedTestItemEnhanced | null>(null)
+const breakdownItem = ref<ParsedTestItemEnhanced | null>(null)
 
 // Composables
 const { parseLog, compareLogs } = useTestLogUpload()
@@ -218,6 +358,10 @@ const itemFilterOptions = [
 ]
 
 // Computed
+const hasFiles = computed(() => {
+    return logFiles.value && logFiles.value.length > 0
+})
+
 const canAnalyze = computed(() => {
     if (!logFiles.value) return false
     return logFiles.value.length >= 1
@@ -228,7 +372,6 @@ const hasResults = computed(() => {
 })
 
 const isMultipleFiles = computed(() => {
-    // Show comparison section when we have compare result with multiple files
     return compareResult.value?.total_files > 1
 })
 
@@ -282,6 +425,53 @@ const filteredComparisonItems = computed(() => {
 })
 
 // Methods
+
+/**
+ * Quick-parse the first file to extract test item names for scoring config dialog
+ */
+const extractTestItems = async (): Promise<void> => {
+    if (!logFiles.value || logFiles.value.length === 0) return
+
+    extractingItems.value = true
+    try {
+        const firstFile = logFiles.value[0]
+        if (!firstFile) return
+
+        const result = await parseLog(firstFile, criteriaFile.value, showOnlyCriteria.value)
+        extractedTestItems.value = result.parsed_items_enhanced || []
+    } catch (err: any) {
+        // If quick-parse fails, we can still open config dialog with empty items
+        console.warn('Failed to extract test items for scoring config:', err.message)
+        extractedTestItems.value = []
+    } finally {
+        extractingItems.value = false
+    }
+}
+
+/**
+ * Open scoring config dialog - extracts test items first if needed
+ */
+const handleConfigureScoring = async () => {
+    if (extractedTestItems.value.length === 0) {
+        await extractTestItems()
+    }
+    showScoringConfigDialog.value = true
+}
+
+/**
+ * Handle scoring config applied from dialog
+ */
+const handleScoringConfigApply = (configs: RescoreScoringConfig[]) => {
+    appliedScoringConfigs.value = configs
+}
+
+/**
+ * Clear scoring configs
+ */
+const clearScoringConfigs = () => {
+    appliedScoringConfigs.value = []
+}
+
 const handleAnalyze = async () => {
     loading.value = true
     errorSnackbar.value = false
@@ -298,16 +488,21 @@ const handleAnalyze = async () => {
             const result = await parseLog(
                 file,
                 criteriaFile.value,
-                showOnlyCriteria.value
+                showOnlyCriteria.value,
+                appliedScoringConfigs.value
             )
             parsingResult.value = result
             compareResult.value = null
+
+            // Also update extracted test items from latest parse
+            extractedTestItems.value = result.parsed_items_enhanced || []
         } else {
             // Multiple files - use compareLogs
             const result = await compareLogs(
                 files,
                 criteriaFile.value,
-                showOnlyCriteria.value
+                showOnlyCriteria.value,
+                appliedScoringConfigs.value
             )
             compareResult.value = result
             parsingResult.value = null
@@ -329,6 +524,8 @@ const handleReset = () => {
     selectedStation.value = null
     searchQuery.value = ''
     itemFilterType.value = 'all'
+    extractedTestItems.value = []
+    appliedScoringConfigs.value = []
 }
 
 const openCriteriaBuilder = () => {
@@ -376,12 +573,25 @@ const getScoreColor = (score: number): string => {
     return 'error'
 }
 
+const getScoringTypeColor = (type: string): string => {
+    switch (type) {
+        case 'symmetrical': return 'blue'
+        case 'asymmetrical': return 'purple'
+        case 'per_mask': return 'orange'
+        case 'evm': return 'teal'
+        case 'throughput': return 'green'
+        case 'binary': return 'grey'
+        default: return 'blue'
+    }
+}
+
+/**
+ * Show score breakdown for a comparison item (uses first ISN's data)
+ */
 const showTestItemBreakdown = (item: CompareItemEnhanced) => {
-    // Create a ParsedTestItemEnhanced-like object for the dialog
-    // Use the first ISN's data as representative
     const firstIsnData = item.per_isn_data?.[0]
-    if (firstIsnData?.score_breakdown) {
-        selectedBreakdownItem.value = {
+    if (firstIsnData) {
+        breakdownItem.value = {
             test_item: item.test_item,
             usl: item.usl,
             lsl: item.lsl,
@@ -399,11 +609,23 @@ const showTestItemBreakdown = (item: CompareItemEnhanced) => {
     }
 }
 
+/**
+ * Show score breakdown when clicking on score chip in comparison table
+ */
+const showComparisonItemBreakdown = (item: CompareItemEnhanced) => {
+    showTestItemBreakdown(item)
+}
+
 // Watch for showOnlyCriteria changes and re-analyze if results exist
 watch(showOnlyCriteria, async () => {
     if (hasResults.value && criteriaFile.value) {
         await handleAnalyze()
     }
+})
+
+// When files change, clear extracted items so they get re-extracted
+watch(logFiles, () => {
+    extractedTestItems.value = []
 })
 </script>
 

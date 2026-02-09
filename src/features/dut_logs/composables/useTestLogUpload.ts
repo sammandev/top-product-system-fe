@@ -19,15 +19,26 @@ export interface TestLogMetadata {
 }
 
 export interface ScoreBreakdown {
-  category: string
-  method: string
-  // Standard measurement fields
+  // UPDATED: Universal scoring fields (used by Upload Log tab)
+  scoring_type?: string // symmetrical, asymmetrical, per_mask, evm, binary, throughput
+  score?: number // 0-10 score
+  target?: number | null
+  deviation?: number | null
+  weight?: number
+  policy?: string | null // symmetrical, higher, lower
+  ucl?: number | null
+  lcl?: number | null
+  actual?: number | null
+  // Legacy fields (used by Station/ISN Search tabs via old scoring format)
+  category?: string
+  method?: string
   usl?: number | null
   lsl?: number | null
   target_used?: number
-  actual?: number
-  deviation?: number
-  // PA Trend specific fields
+  raw_score?: number
+  final_score?: number
+  formula_latex?: string
+  // PA Trend specific (legacy)
   comparison?: string
   threshold?: number
   current_value?: number
@@ -35,10 +46,6 @@ export interface ScoreBreakdown {
   deviation_from_mean?: number
   abs_deviation?: number
   interpretation?: string
-  // Common fields
-  raw_score: number
-  final_score: number
-  formula_latex: string
 }
 
 export interface ParsedTestItemEnhanced {
@@ -165,7 +172,8 @@ export function useTestLogUpload() {
   const parseLog = async (
     logFile: File,
     criteriaFile: File | null = null,
-    showOnlyCriteria: boolean = false
+    showOnlyCriteria: boolean = false,
+    scoringConfigs: RescoreScoringConfig[] = []
   ): Promise<TestLogParseResponseEnhanced> => {
     loading.value = true
     error.value = null
@@ -179,6 +187,10 @@ export function useTestLogUpload() {
       }
       
       formData.append('show_only_criteria', showOnlyCriteria.toString())
+
+      if (scoringConfigs.length > 0) {
+        formData.append('scoring_configs', JSON.stringify(scoringConfigs))
+      }
 
       const response = await axios.post(`${API_BASE_URL}/parse`, formData, {
         headers: {
@@ -204,7 +216,8 @@ export function useTestLogUpload() {
   const compareLogs = async (
     logFiles: File[],
     criteriaFile: File | null = null,
-    showOnlyCriteria: boolean = false
+    showOnlyCriteria: boolean = false,
+    scoringConfigs: RescoreScoringConfig[] = []
   ): Promise<CompareResponseEnhanced> => {
     if (logFiles.length < 1) {
       throw new Error('At least 1 file is required for comparison')
@@ -225,6 +238,10 @@ export function useTestLogUpload() {
       }
 
       formData.append('show_only_criteria', showOnlyCriteria.toString())
+
+      if (scoringConfigs.length > 0) {
+        formData.append('scoring_configs', JSON.stringify(scoringConfigs))
+      }
 
       const response = await axios.post(`${API_BASE_URL}/compare`, formData, {
         headers: {
