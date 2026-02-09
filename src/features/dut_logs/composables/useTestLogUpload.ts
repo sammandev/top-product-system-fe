@@ -113,6 +113,48 @@ export interface CompareResponseEnhanced {
   comparison_non_value_items: CompareItemEnhanced[]
 }
 
+// Rescore types - using same scoring as iPLAS API
+export interface RescoreTestItem {
+  test_item: string
+  value: string
+  usl: number | null
+  lsl: number | null
+  status?: string
+}
+
+export interface RescoreScoringConfig {
+  test_item_name: string
+  scoring_type: 'symmetrical' | 'asymmetrical' | 'per_mask' | 'evm' | 'binary' | 'symmetrical_nl' | 'throughput'
+  enabled: boolean
+  weight: number
+  target?: number
+  policy?: 'symmetrical' | 'higher' | 'lower'
+  limit_score?: number
+  alpha?: number
+}
+
+export interface RescoreItemResult {
+  test_item: string
+  value: number | null
+  usl: number | null
+  lsl: number | null
+  status: string
+  scoring_type: string
+  policy: string | null
+  score: number
+  deviation: number | null
+  weight: number
+  target: number | null
+}
+
+export interface RescoreResponse {
+  test_item_scores: RescoreItemResult[]
+  overall_score: number
+  value_items_score: number | null
+  total_items: number
+  scored_items: number
+}
+
 export function useTestLogUpload() {
   const loading = ref(false)
   const error = ref<string | null>(null)
@@ -202,10 +244,41 @@ export function useTestLogUpload() {
     }
   }
 
+  /**
+   * Rescore test log items using universal scoring system (same as iPLAS API)
+   */
+  const rescoreItems = async (
+    testItems: RescoreTestItem[],
+    scoringConfigs: RescoreScoringConfig[] = [],
+    includeBinaryInOverall: boolean = true
+  ): Promise<RescoreResponse> => {
+    loading.value = true
+    error.value = null
+
+    try {
+      const response = await axios.post(`${API_BASE_URL}/rescore`, {
+        test_items: testItems,
+        scoring_configs: scoringConfigs,
+        include_binary_in_overall: includeBinaryInOverall,
+      })
+
+      return response.data
+    } catch (err) {
+      const axiosError = err as AxiosError<{ detail: string }>
+      const detail = axiosError.response?.data?.detail || 'Failed to rescore items'
+      console.error('Rescore error:', detail, axiosError.response?.data)
+      error.value = detail
+      throw new Error(error.value)
+    } finally {
+      loading.value = false
+    }
+  }
+
   return {
     loading,
     error,
     parseLog,
     compareLogs,
+    rescoreItems,
   }
 }
