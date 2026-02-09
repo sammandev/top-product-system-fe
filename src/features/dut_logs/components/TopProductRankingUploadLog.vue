@@ -248,14 +248,6 @@
                         <template #item.test_item="{ item }">
                             <span class="font-weight-medium">{{ item.test_item }}</span>
                         </template>
-                        <template #item.matched_criteria="{ item }">
-                            <v-chip v-if="item.matched_criteria" size="x-small" color="success" variant="tonal">
-                                Criteria
-                            </v-chip>
-                            <v-chip v-else size="x-small" color="grey" variant="tonal">
-                                Non-Criteria
-                            </v-chip>
-                        </template>
                         <template #item.value="{ item }">
                             <span>{{ item.value }}</span>
                         </template>
@@ -370,21 +362,18 @@ const testItemSearch = ref('')
 const testItemFilterOptions = [
     { title: 'Show All', value: 'all' },
     { title: 'Criteria Items', value: 'criteria' },
-    { title: 'Non-Criteria Items', value: 'non-criteria' },
-    { title: 'Bin Items', value: 'bin' }
+    { title: 'Non-Criteria Items', value: 'non-criteria' }
 ]
 
 // Filtered test items
 const filteredTestItems = computed(() => {
     let items = selectedTestItems.value
 
-    // Filter by type
+    // Filter by type - Criteria = has UCL or LCL, Non-Criteria = no UCL and no LCL
     if (testItemFilterType.value === 'criteria') {
-        items = items.filter(item => item.matched_criteria)
+        items = items.filter(item => item.usl !== null || item.lsl !== null)
     } else if (testItemFilterType.value === 'non-criteria') {
-        items = items.filter(item => !item.matched_criteria)
-    } else if (testItemFilterType.value === 'bin') {
-        items = items.filter(item => item.test_item.toLowerCase().includes('bin'))
+        items = items.filter(item => item.usl === null && item.lsl === null)
     }
 
     // Filter by search
@@ -405,7 +394,6 @@ const resetTestItemFilters = () => {
 // Test Items Headers
 const testItemHeaders = [
     { title: 'Test Item', key: 'test_item', sortable: true },
-    { title: 'Type', key: 'matched_criteria', sortable: true, width: '100px' },
     { title: 'Value', key: 'value', sortable: true, width: '120px' },
     { title: 'UCL', key: 'usl', sortable: true, width: '100px' },
     { title: 'LCL', key: 'lsl', sortable: true, width: '100px' },

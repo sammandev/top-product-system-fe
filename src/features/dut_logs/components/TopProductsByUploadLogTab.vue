@@ -137,14 +137,6 @@
                         <template #item.test_item="{ item }">
                             <span class="font-weight-medium">{{ item.test_item }}</span>
                         </template>
-                        <template #item.matched_criteria="{ item }">
-                            <v-chip v-if="item.matched_criteria" size="x-small" color="success" variant="tonal">
-                                Criteria
-                            </v-chip>
-                            <v-chip v-else size="x-small" color="grey" variant="tonal">
-                                Non-Criteria
-                            </v-chip>
-                        </template>
                         <template #item.baseline="{ item }">
                             <span v-if="item.baseline !== null">{{ item.baseline }}</span>
                             <span v-else class="text-medium-emphasis">-</span>
@@ -222,8 +214,7 @@ const { parseLog, compareLogs } = useTestLogUpload()
 const itemFilterOptions = [
     { title: 'Show All', value: 'all' },
     { title: 'Criteria Items', value: 'criteria' },
-    { title: 'Non-Criteria Items', value: 'non-criteria' },
-    { title: 'Bin Items', value: 'bin' }
+    { title: 'Non-Criteria Items', value: 'non-criteria' }
 ]
 
 // Computed
@@ -260,7 +251,6 @@ const stationOptions = computed(() => {
 // Comparison table headers
 const comparisonHeaders = [
     { title: 'Test Item', key: 'test_item', sortable: true },
-    { title: 'Type', key: 'matched_criteria', sortable: true, width: '120px' },
     { title: 'Baseline', key: 'baseline', sortable: true, width: '120px' },
     { title: 'Avg Score', key: 'avg_score', sortable: true, width: '120px', align: 'center' as const },
     { title: 'Avg Deviation', key: 'avg_deviation', sortable: true, width: '140px' }
@@ -275,13 +265,11 @@ const filteredComparisonItems = computed(() => {
         ...(compareResult.value.comparison_non_value_items || [])
     ]
 
-    // Filter by type
+    // Filter by type - Criteria = has USL or LSL, Non-Criteria = no USL and no LSL
     if (itemFilterType.value === 'criteria') {
-        items = items.filter(item => item.matched_criteria)
+        items = items.filter(item => item.usl !== null || item.lsl !== null)
     } else if (itemFilterType.value === 'non-criteria') {
-        items = items.filter(item => !item.matched_criteria)
-    } else if (itemFilterType.value === 'bin') {
-        items = items.filter(item => item.test_item.toLowerCase().includes('bin'))
+        items = items.filter(item => item.usl === null && item.lsl === null)
     }
 
     // Filter by search

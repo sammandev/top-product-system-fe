@@ -27,27 +27,75 @@
 
         <!-- Comparison Table -->
         <template v-else>
-          <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-            <strong>{{ comparisonItems.length }}</strong> test items compared. 
-            <strong>{{ matchCount }}</strong> matching, 
-            <strong>{{ mismatchCount }}</strong> mismatched,
-            <strong>{{ uploadOnlyCount }}</strong> upload-only,
-            <strong>{{ iplasOnlyCount }}</strong> iPLAS-only.
-          </v-alert>
+          <!-- Controls Row: Search, Filter, Score Filter -->
+          <v-row dense class="mb-3">
+            <v-col cols="12" md="4">
+              <v-text-field
+                v-model="searchQuery"
+                label="Search (Regex)"
+                placeholder="e.g. ^RF.*|Power"
+                prepend-inner-icon="mdi-regex"
+                variant="outlined"
+                density="compact"
+                hide-details
+                clearable
+              />
+            </v-col>
+            <v-col cols="6" md="3">
+              <v-select
+                v-model="typeFilter"
+                :items="typeFilterOptions"
+                label="Filter"
+                variant="outlined"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+            <v-col cols="6" md="3">
+              <v-select
+                v-model="scoreFilter"
+                :items="scoreFilterOptions"
+                label="Score Filter"
+                variant="outlined"
+                density="compact"
+                hide-details
+              />
+            </v-col>
+            <v-col cols="12" md="2" class="d-flex align-center">
+              <v-btn
+                color="success"
+                variant="tonal"
+                prepend-icon="mdi-microsoft-excel"
+                block
+                @click="exportToExcel"
+                :loading="exporting"
+              >
+                Export
+              </v-btn>
+            </v-col>
+          </v-row>
 
-          <!-- Filter toggle -->
+          <!-- Filter Chips -->
           <v-chip-group v-model="comparisonFilter" mandatory class="mb-4">
-            <v-chip value="all" color="primary" variant="flat">All ({{ comparisonItems.length }})</v-chip>
-            <v-chip value="mismatch" color="error" variant="flat">Mismatch ({{ mismatchCount }})</v-chip>
             <v-chip value="match" color="success" variant="flat">Match ({{ matchCount }})</v-chip>
+            <v-chip value="mismatch" color="error" variant="flat">Mismatch ({{ mismatchCount }})</v-chip>
             <v-chip value="upload-only" color="warning" variant="flat">Upload Only ({{ uploadOnlyCount }})</v-chip>
             <v-chip value="iplas-only" color="info" variant="flat">iPLAS Only ({{ iplasOnlyCount }})</v-chip>
+            <v-chip value="all" color="primary" variant="outlined">All ({{ comparisonItems.length }})</v-chip>
           </v-chip-group>
 
           <v-data-table :headers="comparisonHeaders" :items="filteredComparisonItems" 
             :items-per-page="50" density="comfortable" class="elevation-1">
             <template #item.test_item="{ item }">
               <span class="font-weight-medium">{{ item.test_item }}</span>
+            </template>
+            <template #item.usl="{ item }">
+              <span v-if="item.usl !== null">{{ item.usl }}</span>
+              <span v-else class="text-medium-emphasis">-</span>
+            </template>
+            <template #item.lsl="{ item }">
+              <span v-if="item.lsl !== null">{{ item.lsl }}</span>
+              <span v-else class="text-medium-emphasis">-</span>
             </template>
             <template #item.upload_value="{ item }">
               <span v-if="item.upload_value !== null">{{ item.upload_value }}</span>
@@ -68,11 +116,6 @@
                 {{ item.iplas_score?.toFixed(2) }}
               </v-chip>
               <span v-else class="text-medium-emphasis">-</span>
-            </template>
-            <template #item.status="{ item }">
-              <v-chip :color="getStatusColor(item.status)" size="small" variant="tonal">
-                {{ item.status }}
-              </v-chip>
             </template>
           </v-data-table>
         </template>
@@ -106,6 +149,8 @@ const emit = defineEmits<{
 
 interface ComparisonItem {
   test_item: string
+  usl: number | null
+  lsl: number | null
   upload_value: string | null
   iplas_value: string | null
   upload_score: number | null
@@ -116,17 +161,37 @@ interface ComparisonItem {
 const { searchByIsn } = useIplasApi()
 
 const loading = ref(false)
+const exporting = ref(false)
 const errorMessage = ref<string | null>(null)
 const iplasTestItems = ref<IplasIsnTestItem[]>([])
-const comparisonFilter = ref('all')
+const comparisonFilter = ref('match')
+const searchQuery = ref('')
+const typeFilter = ref('all')
+const scoreFilter = ref('all')
+
+const typeFilterOptions = [
+  { title: 'Show All', value: 'all' },
+  { title: 'Criteria', value: 'criteria' },
+  { title: 'Non-Criteria', value: 'non-criteria' }
+]
+
+const scoreFilterOptions = [
+  { title: 'All Scores', value: 'all' },
+  { title: 'Score ≥ 9', value: 'gte9' },
+  { title: 'Score 7-9', value: '7to9' },
+  { title: 'Score < 7', value: 'lt7' },
+  { title: 'Has Score', value: 'hasScore' },
+  { title: 'No Score', value: 'noScore' }
+]
 
 const comparisonHeaders = [
   { title: 'Test Item', key: 'test_item', sortable: true },
-  { title: 'Uploaded Value', key: 'upload_value', sortable: true, width: '150px' },
-  { title: 'iPLAS Value', key: 'iplas_value', sortable: true, width: '150px' },
-  { title: 'Uploaded Score', key: 'upload_score', sortable: true, width: '130px', align: 'center' as const },
-  { title: 'iPLAS Score', key: 'iplas_score', sortable: true, width: '130px', align: 'center' as const },
-  { title: 'Status', key: 'status', sortable: true, width: '120px', align: 'center' as const }
+  { title: 'UCL', key: 'usl', sortable: true, width: '100px', align: 'center' as const },
+  { title: 'LCL', key: 'lsl', sortable: true, width: '100px', align: 'center' as const },
+  { title: 'Uploaded Value', key: 'upload_value', sortable: true, width: '130px' },
+  { title: 'iPLAS Value', key: 'iplas_value', sortable: true, width: '130px' },
+  { title: 'Uploaded Score', key: 'upload_score', sortable: true, width: '120px', align: 'center' as const },
+  { title: 'iPLAS Score', key: 'iplas_score', sortable: true, width: '120px', align: 'center' as const }
 ]
 
 // Build comparison items
@@ -169,6 +234,8 @@ const comparisonItems = computed<ComparisonItem[]>(() => {
 
     items.push({
       test_item: uploadItem?.test_item || iplasItem?.NAME || testItemKey,
+      usl: uploadItem?.usl ?? null,
+      lsl: uploadItem?.lsl ?? null,
       upload_value: uploadItem?.value ?? null,
       iplas_value: iplasItem?.VALUE ?? null,
       upload_score: uploadItem?.score ?? null,
@@ -182,10 +249,46 @@ const comparisonItems = computed<ComparisonItem[]>(() => {
 })
 
 const filteredComparisonItems = computed(() => {
-  if (comparisonFilter.value === 'all') {
-    return comparisonItems.value
+  let items = comparisonItems.value
+
+  // Filter by comparison status (chips)
+  if (comparisonFilter.value !== 'all') {
+    items = items.filter(item => item.status === comparisonFilter.value)
   }
-  return comparisonItems.value.filter(item => item.status === comparisonFilter.value)
+
+  // Filter by type (Criteria / Non-Criteria)
+  if (typeFilter.value === 'criteria') {
+    items = items.filter(item => item.usl !== null || item.lsl !== null)
+  } else if (typeFilter.value === 'non-criteria') {
+    items = items.filter(item => item.usl === null && item.lsl === null)
+  }
+
+  // Filter by score
+  if (scoreFilter.value === 'gte9') {
+    items = items.filter(item => item.upload_score !== null && item.upload_score >= 9)
+  } else if (scoreFilter.value === '7to9') {
+    items = items.filter(item => item.upload_score !== null && item.upload_score >= 7 && item.upload_score < 9)
+  } else if (scoreFilter.value === 'lt7') {
+    items = items.filter(item => item.upload_score !== null && item.upload_score < 7)
+  } else if (scoreFilter.value === 'hasScore') {
+    items = items.filter(item => item.upload_score !== null)
+  } else if (scoreFilter.value === 'noScore') {
+    items = items.filter(item => item.upload_score === null)
+  }
+
+  // Filter by search (regex)
+  if (searchQuery.value) {
+    try {
+      const regex = new RegExp(searchQuery.value, 'i')
+      items = items.filter(item => regex.test(item.test_item))
+    } catch {
+      // Invalid regex, fall back to simple includes
+      const query = searchQuery.value.toLowerCase()
+      items = items.filter(item => item.test_item.toLowerCase().includes(query))
+    }
+  }
+
+  return items
 })
 
 const matchCount = computed(() => comparisonItems.value.filter(i => i.status === 'match').length)
@@ -199,6 +302,11 @@ watch(() => props.modelValue, async (isOpen) => {
     loading.value = true
     errorMessage.value = null
     iplasTestItems.value = []
+    // Reset filters
+    searchQuery.value = ''
+    typeFilter.value = 'all'
+    scoreFilter.value = 'all'
+    comparisonFilter.value = 'match'
 
     try {
       const results = await searchByIsn(props.isn)
@@ -226,13 +334,37 @@ function getScoreColor(score: number): string {
   return 'error'
 }
 
-function getStatusColor(status: ComparisonItem['status']): string {
-  switch (status) {
-    case 'match': return 'success'
-    case 'mismatch': return 'error'
-    case 'upload-only': return 'warning'
-    case 'iplas-only': return 'info'
-    default: return 'grey'
+async function exportToExcel() {
+  exporting.value = true
+  try {
+    // Prepare data for export
+    const exportData = filteredComparisonItems.value.map(item => ({
+      'Test Item': item.test_item,
+      'UCL': item.usl ?? '',
+      'LCL': item.lsl ?? '',
+      'Uploaded Value': item.upload_value ?? '',
+      'iPLAS Value': item.iplas_value ?? '',
+      'Uploaded Score': item.upload_score ?? '',
+      'iPLAS Score': item.iplas_score ?? '',
+      'Status': item.status
+    }))
+
+    // Dynamic import for xlsx
+    const XLSX = await import('xlsx')
+    const worksheet = XLSX.utils.json_to_sheet(exportData)
+    const workbook = XLSX.utils.book_new()
+    XLSX.utils.book_append_sheet(workbook, worksheet, props.isn || 'Comparison')
+    
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    const filename = `iPLAS_Compare_${props.isn}_${timestamp}.xlsx`
+    
+    XLSX.writeFile(workbook, filename)
+  } catch (err: any) {
+    console.error('Export failed:', err)
+    errorMessage.value = 'Export failed: ' + (err.message || 'Unknown error')
+  } finally {
+    exporting.value = false
   }
 }
 </script>
