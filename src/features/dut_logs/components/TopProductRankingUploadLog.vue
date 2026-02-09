@@ -194,12 +194,16 @@
         </v-dialog>
 
         <!-- UPDATED: Test Items Detail Dialog -->
-        <v-dialog v-model="showTestItemsDialog" max-width="1200" scrollable>
+        <v-dialog v-model="showTestItemsDialog" :fullscreen="testItemsFullscreen"
+            :max-width="testItemsFullscreen ? undefined : 1200" scrollable
+            :transition="testItemsFullscreen ? 'dialog-bottom-transition' : undefined">
             <v-card v-if="selectedRankingItem">
                 <v-card-title class="d-flex align-center bg-primary">
                     <v-icon start color="white">mdi-format-list-checks</v-icon>
                     <span class="text-white">Test Items Details - {{ selectedRankingItem.isn || 'N/A' }}</span>
                     <v-spacer />
+                    <v-btn :icon="testItemsFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
+                        color="white" @click="testItemsFullscreen = !testItemsFullscreen" />
                     <v-btn icon="mdi-close" variant="text" color="white" @click="showTestItemsDialog = false" />
                 </v-card-title>
 
@@ -287,12 +291,16 @@
             :upload-test-items="selectedTestItems" />
 
         <!-- UPDATED: Score Breakdown Dialog (Universal Scoring) -->
-        <v-dialog v-model="showBreakdownDialog" max-width="650" scrollable>
+        <v-dialog v-model="showBreakdownDialog" :fullscreen="breakdownFullscreen"
+            :max-width="breakdownFullscreen ? undefined : 650" scrollable
+            :transition="breakdownFullscreen ? 'dialog-bottom-transition' : undefined">
             <v-card v-if="selectedTestItem">
                 <v-card-title class="d-flex align-center bg-info">
                     <v-icon start color="white">mdi-calculator-variant</v-icon>
                     <span class="text-white">Score Breakdown</span>
                     <v-spacer />
+                    <v-btn :icon="breakdownFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
+                        color="white" @click="breakdownFullscreen = !breakdownFullscreen" />
                     <v-btn icon="mdi-close" variant="text" color="white" @click="showBreakdownDialog = false" />
                 </v-card-title>
 
@@ -443,11 +451,13 @@ const fullscreen = ref(false)
 
 // UPDATED: Test items detail dialog state
 const showTestItemsDialog = ref(false)
+const testItemsFullscreen = ref(false)
 const selectedRankingItem = ref<RankingItem | null>(null)
 const selectedTestItems = ref<ParsedTestItemEnhanced[]>([])
 
 // UPDATED: Score breakdown dialog state
 const showBreakdownDialog = ref(false)
+const breakdownFullscreen = ref(false)
 const selectedTestItem = ref<ParsedTestItemEnhanced | null>(null)
 
 // UPDATED: iPLAS comparison dialog state

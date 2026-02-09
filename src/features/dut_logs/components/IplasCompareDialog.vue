@@ -1,10 +1,14 @@
 <template>
-  <v-dialog :model-value="modelValue" max-width="1400" scrollable @update:model-value="emit('update:modelValue', $event)">
+  <v-dialog :model-value="modelValue" :fullscreen="isFullscreen" :max-width="isFullscreen ? undefined : 1400" scrollable
+    @update:model-value="emit('update:modelValue', $event)"
+    :transition="isFullscreen ? 'dialog-bottom-transition' : undefined">
     <v-card v-if="isn">
       <v-card-title class="d-flex align-center bg-primary">
         <v-icon start color="white">mdi-compare-horizontal</v-icon>
         <span class="text-white">Compare with iPLAS - {{ isn }}</span>
         <v-spacer />
+        <v-btn :icon="isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text" color="white"
+          @click="isFullscreen = !isFullscreen" />
         <v-btn icon="mdi-close" variant="text" color="white" @click="emit('update:modelValue', false)" />
       </v-card-title>
 
@@ -94,10 +98,10 @@
 
           <!-- Filter Chips -->
           <v-chip-group v-model="comparisonFilter" mandatory class="mb-4">
-            <v-chip value="match" color="success" variant="flat">Match ({{ matchCount }})</v-chip>
-            <v-chip value="mismatch" color="error" variant="flat">Mismatch ({{ mismatchCount }})</v-chip>
-            <v-chip value="upload-only" color="warning" variant="flat">Upload Only ({{ uploadOnlyCount }})</v-chip>
-            <v-chip value="iplas-only" color="info" variant="flat">iPLAS Only ({{ iplasOnlyCount }})</v-chip>
+            <v-chip value="match" color="success" variant="flat">Match Items ({{ matchCount }})</v-chip>
+            <v-chip value="mismatch" color="error" variant="flat">Mismatch Items ({{ mismatchCount }})</v-chip>
+            <v-chip value="upload-only" color="warning" variant="flat">Uploaded Items ({{ uploadOnlyCount }})</v-chip>
+            <v-chip value="iplas-only" color="info" variant="flat">iPLAS Items ({{ iplasOnlyCount }})</v-chip>
             <v-chip value="all" color="primary" variant="outlined">All ({{ comparisonItems.length }})</v-chip>
           </v-chip-group>
 
@@ -160,12 +164,15 @@
   </v-dialog>
 
   <!-- Score Breakdown Dialog -->
-  <v-dialog v-model="showBreakdownDialog" max-width="600">
+  <v-dialog v-model="showBreakdownDialog" :fullscreen="breakdownFullscreen" :max-width="breakdownFullscreen ? undefined : 600"
+    :transition="breakdownFullscreen ? 'dialog-bottom-transition' : undefined">
     <v-card v-if="breakdownItem">
       <v-card-title class="d-flex align-center bg-info">
         <v-icon start color="white">mdi-calculator-variant</v-icon>
         <span class="text-white">Score Breakdown - {{ breakdownSource === 'upload' ? 'Uploaded' : 'iPLAS' }}</span>
         <v-spacer />
+        <v-btn :icon="breakdownFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text" color="white"
+          @click="breakdownFullscreen = !breakdownFullscreen" />
         <v-btn icon="mdi-close" variant="text" color="white" @click="showBreakdownDialog = false" />
       </v-card-title>
       <v-card-text class="pa-4">
@@ -225,12 +232,15 @@
   </v-dialog>
 
   <!-- Scoring Configuration Dialog -->
-  <v-dialog v-model="showScoringConfig" max-width="900" scrollable>
+  <v-dialog v-model="showScoringConfig" :fullscreen="scoringConfigFullscreen" :max-width="scoringConfigFullscreen ? undefined : 900" scrollable
+    :transition="scoringConfigFullscreen ? 'dialog-bottom-transition' : undefined">
     <v-card>
       <v-card-title class="d-flex align-center bg-info">
         <v-icon start color="white">mdi-tune-variant</v-icon>
         <span class="text-white">Configure Scoring</span>
         <v-spacer />
+        <v-btn :icon="scoringConfigFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text" color="white"
+          @click="scoringConfigFullscreen = !scoringConfigFullscreen" />
         <v-btn icon="mdi-close" variant="text" color="white" @click="showScoringConfig = false" />
       </v-card-title>
 
@@ -411,7 +421,8 @@ interface ComparisonItem {
   iplas_target?: number | null
   upload_deviation?: number | null
   iplas_deviation?: number | null
-  status: 'match' | 'mismatch' | 'upload-only' | 'iplas-only'
+  // UPDATED: 'mismatch' no longer a status - mismatch filter combines upload-only + iplas-only
+  status: 'match' | 'upload-only' | 'iplas-only'
 }
 
 const { searchByIsn } = useIplasApi()
@@ -419,6 +430,7 @@ const { rescoreItems } = useTestLogUpload()
 
 const loading = ref(false)
 const exporting = ref(false)
+const isFullscreen = ref(false)
 const errorMessage = ref<string | null>(null)
 const iplasTestItems = ref<IplasIsnTestItem[]>([])
 const comparisonFilter = ref('match')
@@ -428,6 +440,7 @@ const scoreFilter = ref('all')
 
 // Score breakdown dialog state
 const showBreakdownDialog = ref(false)
+const breakdownFullscreen = ref(false)
 const breakdownItem = ref<ComparisonItem | null>(null)
 const breakdownSource = ref<'upload' | 'iplas'>('upload')
 
@@ -437,6 +450,7 @@ const iplasScoredMap = ref<Map<string, RescoreItemResult>>(new Map())
 
 // Scoring configuration dialog state
 const showScoringConfig = ref(false)
+const scoringConfigFullscreen = ref(false)
 const scoringSearchQuery = ref('')
 const selectedScoringItem = ref<string | null>(null)
 const localScoringConfigs = ref<RescoreScoringConfig[]>([])
@@ -612,10 +626,8 @@ const comparisonItems = computed<ComparisonItem[]>(() => {
 
     let status: ComparisonItem['status']
     if (uploadItem && iplasItem) {
-      // Compare values
-      const uploadVal = uploadItem.value?.toString().trim()
-      const iplasVal = iplasItem.VALUE?.toString().trim()
-      status = uploadVal === iplasVal ? 'match' : 'mismatch'
+      // UPDATED: Match = test item name exists in both sources (regardless of value)
+      status = 'match'
     } else if (uploadItem) {
       status = 'upload-only'
     } else {
@@ -651,10 +663,21 @@ const comparisonItems = computed<ComparisonItem[]>(() => {
 const filteredComparisonItems = computed(() => {
   let items = comparisonItems.value
 
-  // Filter by comparison status (chips)
-  if (comparisonFilter.value !== 'all') {
-    items = items.filter(item => item.status === comparisonFilter.value)
+  // UPDATED: Filter by comparison status (chips)
+  if (comparisonFilter.value === 'match') {
+    // Match Items: test items that exist in BOTH upload and iPLAS (same name)
+    items = items.filter(item => item.status === 'match')
+  } else if (comparisonFilter.value === 'mismatch') {
+    // Mismatch Items: test items that do NOT exist in both (only in one source)
+    items = items.filter(item => item.status === 'upload-only' || item.status === 'iplas-only')
+  } else if (comparisonFilter.value === 'upload-only') {
+    // Uploaded Items: ALL test items from the uploaded test logs
+    items = items.filter(item => item.status === 'match' || item.status === 'upload-only')
+  } else if (comparisonFilter.value === 'iplas-only') {
+    // iPLAS Items: ALL test items from iPLAS data
+    items = items.filter(item => item.status === 'match' || item.status === 'iplas-only')
   }
+  // 'all' shows everything
 
   // Filter by type (Criteria / Non-Criteria)
   if (typeFilter.value === 'criteria') {
@@ -691,10 +714,11 @@ const filteredComparisonItems = computed(() => {
   return items
 })
 
+// UPDATED: Counts reflect new filter semantics
 const matchCount = computed(() => comparisonItems.value.filter(i => i.status === 'match').length)
-const mismatchCount = computed(() => comparisonItems.value.filter(i => i.status === 'mismatch').length)
-const uploadOnlyCount = computed(() => comparisonItems.value.filter(i => i.status === 'upload-only').length)
-const iplasOnlyCount = computed(() => comparisonItems.value.filter(i => i.status === 'iplas-only').length)
+const mismatchCount = computed(() => comparisonItems.value.filter(i => i.status === 'upload-only' || i.status === 'iplas-only').length)
+const uploadOnlyCount = computed(() => comparisonItems.value.filter(i => i.status === 'match' || i.status === 'upload-only').length)
+const iplasOnlyCount = computed(() => comparisonItems.value.filter(i => i.status === 'match' || i.status === 'iplas-only').length)
 
 // Show score breakdown dialog
 function showScoreBreakdown(item: ComparisonItem, source: 'upload' | 'iplas') {

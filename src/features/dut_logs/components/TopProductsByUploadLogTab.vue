@@ -189,12 +189,15 @@
     </v-row>
 
     <!-- Score Breakdown Dialog (new universal scoring) -->
-    <v-dialog v-model="showBreakdownDialog" max-width="650" scrollable>
+    <v-dialog v-model="showBreakdownDialog" :fullscreen="breakdownFullscreen" :max-width="breakdownFullscreen ? undefined : 650" scrollable
+        :transition="breakdownFullscreen ? 'dialog-bottom-transition' : undefined">
         <v-card v-if="breakdownItem">
             <v-card-title class="d-flex align-center bg-info">
                 <v-icon start color="white">mdi-calculator-variant</v-icon>
                 <span class="text-white">Score Breakdown</span>
                 <v-spacer />
+                <v-btn :icon="breakdownFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text" color="white"
+                    @click="breakdownFullscreen = !breakdownFullscreen" />
                 <v-btn icon="mdi-close" variant="text" color="white" @click="showBreakdownDialog = false" />
             </v-card-title>
 
@@ -345,6 +348,7 @@ const appliedScoringConfigs = ref<RescoreScoringConfig[]>([])
 
 // Score breakdown dialog (new universal scoring)
 const showBreakdownDialog = ref(false)
+const breakdownFullscreen = ref(false)
 const breakdownItem = ref<ParsedTestItemEnhanced | null>(null)
 
 // Composables
