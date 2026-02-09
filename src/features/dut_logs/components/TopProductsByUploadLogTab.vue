@@ -71,7 +71,8 @@
                                     </v-btn>
                                 </v-card-title>
                                 <v-card-text>
-                                    <v-file-input v-model="criteriaFile" label="Criteria file (.ini)" accept=".ini"
+                                    <!-- UPDATED: Accept both .ini and .json files -->
+                                    <v-file-input v-model="criteriaFile" label="Criteria file (.json or .ini)" accept=".json,.ini"
                                         prepend-icon="mdi-file-cog" show-size :clearable="true" :disabled="loading"
                                         variant="outlined" />
 
@@ -260,20 +261,31 @@ const handleCopyToClipboard = async () => {
 }
 
 const downloadCriteriaTemplate = () => {
-    const template = `[Test_Items]
-# Criteria Configuration Template for Test Log Parser
-# Format: "TEST_ITEM_PATTERN" <USL,LSL> ===> "TARGET_VALUE"
-# Example:
-# "WiFi_TX_POW" <20,10> ===> "15"
-# "BT_FREQ_KHZ" <2500000,2400000> ===> "2450000"
-
-# Add your criteria below:
-`
-    const blob = new Blob([template], { type: 'text/plain' })
+    // UPDATED: Use JSON format as default template
+    const template = {
+        "$schema": "https://json-schema.org/draft/2020-12/schema",
+        "$comment": "Criteria Configuration Template for Test Log Parser",
+        "criteria": [
+            {
+                "test_item": "WiFi_TX_POW_2462_11B_CCK11_B20",
+                "ucl": 20,
+                "lcl": 10,
+                "target": 15
+            },
+            {
+                "test_item": "BT_FREQ_KHZ",
+                "ucl": 2500000,
+                "lcl": 2400000,
+                "target": 2450000
+            }
+        ]
+    }
+    const templateJson = JSON.stringify(template, null, 2)
+    const blob = new Blob([templateJson], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = 'criteria_template.ini'
+    a.download = 'criteria_template.json'
     document.body.appendChild(a)
     a.click()
     document.body.removeChild(a)

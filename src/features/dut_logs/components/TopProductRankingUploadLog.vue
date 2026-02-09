@@ -45,8 +45,10 @@
                 </v-row>
 
                 <v-card-text class="pa-0">
+                    <!-- UPDATED: Added row click for test item details -->
                     <v-data-table :headers="headers" :items="paginatedRankings" :items-per-page="itemsPerPage"
-                        density="compact" fixed-header height="500" hide-default-footer striped="even">
+                        density="compact" fixed-header height="500" hide-default-footer striped="even"
+                        class="cursor-pointer" @click:row="handleRowClick">
                         <template #item.rank="{ index }">
                             <span class="font-weight-bold">{{ (currentPage - 1) * getPerPage() + index + 1 }}</span>
                         </template>
@@ -76,8 +78,11 @@
                             </v-chip>
                         </template>
                         <template #item.score="{ item }">
-                            <v-chip :color="getScoreColor(item.score)" size="small" class="font-weight-bold">
+                            <v-chip :color="getScoreColor(item.score)" size="small" class="font-weight-bold cursor-pointer"
+                                @click.stop="showScoreBreakdownForIsn(item)">
                                 {{ item.score.toFixed(2) }}
+                                <v-icon size="x-small" end>mdi-information-outline</v-icon>
+                            </v-chip>
                             </v-chip>
                         </template>
                     </v-data-table>
@@ -189,6 +194,81 @@
             </v-card>
         </v-dialog>
 
+        <!-- UPDATED: Test Items Detail Dialog -->
+        <v-dialog v-model="showTestItemsDialog" max-width="1200" scrollable>
+            <v-card v-if="selectedRankingItem">
+                <v-card-title class="d-flex align-center bg-primary">
+                    <v-icon start color="white">mdi-format-list-checks</v-icon>
+                    <span class="text-white">Test Items Details - {{ selectedRankingItem.isn || 'N/A' }}</span>
+                    <v-spacer />
+                    <v-btn icon="mdi-close" variant="text" color="white" @click="showTestItemsDialog = false" />
+                </v-card-title>
+                
+                <v-card-text class="pa-4">
+                    <!-- ISN Info -->
+                    <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+                        <div class="d-flex align-center justify-space-between flex-wrap">
+                            <div>
+                                <strong>ISN:</strong> {{ selectedRankingItem.isn || 'N/A' }}
+                                <span class="mx-2">|</span>
+                                <strong>Station:</strong> {{ selectedRankingItem.station }}
+                                <span class="mx-2">|</span>
+                                <strong>Overall Score:</strong> 
+                                <v-chip :color="getScoreColor(selectedRankingItem.score)" size="small" class="ml-1">
+                                    {{ selectedRankingItem.score.toFixed(2) }}
+                                </v-chip>
+                            </div>
+                        </div>
+                    </v-alert>
+
+                    <!-- Test Items Table -->
+                    <v-data-table :headers="testItemHeaders" :items="selectedTestItems" 
+                        :items-per-page="25" density="comfortable" class="elevation-1"
+                        @click:row="(_event: any, data: any) => showScoreBreakdown(data.item)">
+                        <template #item.test_item="{ item }">
+                            <span class="font-weight-medium">{{ item.test_item }}</span>
+                        </template>
+                        <template #item.value="{ item }">
+                            <span>{{ item.value }}</span>
+                        </template>
+                        <template #item.usl="{ item }">
+                            <span class="text-medium-emphasis">{{ item.usl ?? '-' }}</span>
+                        </template>
+                        <template #item.lsl="{ item }">
+                            <span class="text-medium-emphasis">{{ item.lsl ?? '-' }}</span>
+                        </template>
+                        <template #item.score="{ item }">
+                            <v-chip v-if="item.score !== null" :color="getScoreColor(item.score)" size="small" 
+                                class="font-weight-bold cursor-pointer" @click.stop="showScoreBreakdown(item)">
+                                {{ item.score?.toFixed(2) }}
+                                <v-icon size="x-small" end>mdi-information-outline</v-icon>
+                            </v-chip>
+                            <span v-else class="text-medium-emphasis">-</span>
+                        </template>
+                    </v-data-table>
+                </v-card-text>
+
+                <v-divider />
+
+                <v-card-actions>
+                    <!-- UPDATED: Added Compare with iPLAS button -->
+                    <v-btn v-if="selectedRankingItem?.isn" color="info" variant="outlined" 
+                        prepend-icon="mdi-compare-horizontal" @click="openIplasCompare">
+                        Compare with iPLAS
+                    </v-btn>
+                    <v-spacer />
+                    <v-btn color="primary" variant="text" @click="showTestItemsDialog = false">Close</v-btn>
+                </v-card-actions>
+            </v-card>
+        </v-dialog>
+
+        <!-- UPDATED: iPLAS Comparison Dialog -->
+        <IplasCompareDialog v-model="showIplasCompareDialog" :isn="comparisonIsn" 
+            :upload-test-items="selectedTestItems" />
+
+        <!-- UPDATED: Score Breakdown Dialog -->
+        <ScoreBreakdownDialog v-model="showBreakdownDialog" :item="selectedTestItem" />
+
         <!-- Custom Items Per Page Dialog -->
         <v-dialog v-model="showCustomInput" max-width="400">
             <v-card>
@@ -213,7 +293,9 @@ import { ref, computed, watch } from 'vue'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
-import type { TestLogParseResponseEnhanced, CompareResponseEnhanced } from '@/features/dut_logs/composables/useTestLogUpload'
+import type { TestLogParseResponseEnhanced, CompareResponseEnhanced, ParsedTestItemEnhanced } from '@/features/dut_logs/composables/useTestLogUpload'
+import ScoreBreakdownDialog from './ScoreBreakdownDialog.vue'
+import IplasCompareDialog from './IplasCompareDialog.vue'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -240,6 +322,28 @@ const scoreFilterType = ref<string | null>(null)
 const scoreFilterValue = ref<number | null>(null)
 const resultFilter = ref<string | null>(null)
 const fullscreen = ref(false)
+
+// UPDATED: Test items detail dialog state
+const showTestItemsDialog = ref(false)
+const selectedRankingItem = ref<RankingItem | null>(null)
+const selectedTestItems = ref<ParsedTestItemEnhanced[]>([])
+
+// UPDATED: Score breakdown dialog state
+const showBreakdownDialog = ref(false)
+const selectedTestItem = ref<ParsedTestItemEnhanced | null>(null)
+
+// UPDATED: iPLAS comparison dialog state
+const showIplasCompareDialog = ref(false)
+const comparisonIsn = ref<string | null>(null)
+
+// Test Items Headers
+const testItemHeaders = [
+    { title: 'Test Item', key: 'test_item', sortable: true },
+    { title: 'Value', key: 'value', sortable: true, width: '120px' },
+    { title: 'UCL', key: 'usl', sortable: true, width: '100px' },
+    { title: 'LCL', key: 'lsl', sortable: true, width: '100px' },
+    { title: 'Score', key: 'score', sortable: true, width: '120px', align: 'center' as const }
+]
 
 // Pagination
 const itemsPerPage = ref(10)
@@ -432,5 +536,93 @@ const getScoreColor = (score: number): string => {
     if (score >= 9) return 'success'
     if (score >= 7) return 'warning'
     return 'error'
+}
+
+// UPDATED: Handle row click to show test items dialog
+const handleRowClick = (_event: any, data: { item: RankingItem }) => {
+    const item = data.item
+    selectedRankingItem.value = item
+    
+    // Get test items for this ISN
+    if (props.parseResult && props.parseResult.parsed_items_enhanced) {
+        // Single parsing mode - show all test items
+        selectedTestItems.value = props.parseResult.parsed_items_enhanced
+    } else if (props.compareResult) {
+        // Compare mode - get test items for this ISN from comparison data
+        const isnTestItems: ParsedTestItemEnhanced[] = []
+        
+        // Get value items
+        if (props.compareResult.comparison_value_items) {
+            props.compareResult.comparison_value_items.forEach(compareItem => {
+                const perIsnData = compareItem.per_isn_data.find(d => d.isn === item.isn)
+                if (perIsnData) {
+                    isnTestItems.push({
+                        test_item: compareItem.test_item,
+                        usl: compareItem.usl,
+                        lsl: compareItem.lsl,
+                        value: perIsnData.value,
+                        is_value_type: perIsnData.is_value_type,
+                        numeric_value: perIsnData.numeric_value,
+                        is_hex: perIsnData.is_hex,
+                        hex_decimal: perIsnData.hex_decimal,
+                        matched_criteria: compareItem.matched_criteria,
+                        target: null,
+                        score: perIsnData.score,
+                        score_breakdown: perIsnData.score_breakdown
+                    })
+                }
+            })
+        }
+        
+        // Get non-value items
+        if (props.compareResult.comparison_non_value_items) {
+            props.compareResult.comparison_non_value_items.forEach(compareItem => {
+                const perIsnData = compareItem.per_isn_data.find(d => d.isn === item.isn)
+                if (perIsnData) {
+                    isnTestItems.push({
+                        test_item: compareItem.test_item,
+                        usl: compareItem.usl,
+                        lsl: compareItem.lsl,
+                        value: perIsnData.value,
+                        is_value_type: perIsnData.is_value_type,
+                        numeric_value: perIsnData.numeric_value,
+                        is_hex: perIsnData.is_hex,
+                        hex_decimal: perIsnData.hex_decimal,
+                        matched_criteria: compareItem.matched_criteria,
+                        target: null,
+                        score: perIsnData.score,
+                        score_breakdown: perIsnData.score_breakdown
+                    })
+                }
+            })
+        }
+        
+        selectedTestItems.value = isnTestItems
+    }
+    
+    showTestItemsDialog.value = true
+}
+
+// UPDATED: Show score breakdown for a test item
+const showScoreBreakdown = (item: ParsedTestItemEnhanced) => {
+    if (item.score_breakdown) {
+        selectedTestItem.value = item
+        showBreakdownDialog.value = true
+    }
+}
+
+// UPDATED: Show aggregated score breakdown info for an ISN (overall summary)
+const showScoreBreakdownForIsn = (_item: RankingItem) => {
+    // For now, just open the test items dialog
+    // The user can then click on individual test items to see breakdown
+    handleRowClick(null, { item: _item })
+}
+
+// UPDATED: Open iPLAS comparison dialog
+const openIplasCompare = () => {
+    if (selectedRankingItem.value?.isn) {
+        comparisonIsn.value = selectedRankingItem.value.isn
+        showIplasCompareDialog.value = true
+    }
 }
 </script>

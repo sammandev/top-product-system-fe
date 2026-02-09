@@ -24,19 +24,19 @@
                   hint="Enter test item name or regex pattern (e.g., WiFi_PA1_.*)" persistent-hint clearable
                   variant="outlined" density="comfortable" class="mt-4 mb-3" prepend-inner-icon="mdi-text-search" />
 
-                <!-- USL Input -->
-                <v-text-field v-model.number="currentRule.usl" type="number" label="USL (Upper Spec Limit)"
+                <!-- UCL Input -->
+                <v-text-field v-model.number="currentRule.ucl" type="number" label="UCL (Upper Criteria Limit)"
                   hint="Leave empty if no upper limit" persistent-hint clearable variant="outlined"
                   density="comfortable" class="mb-3" prepend-inner-icon="mdi-arrow-up-bold" />
 
-                <!-- LSL Input -->
-                <v-text-field v-model.number="currentRule.lsl" type="number" label="LSL (Lower Spec Limit)"
+                <!-- LCL Input -->
+                <v-text-field v-model.number="currentRule.lcl" type="number" label="LCL (Lower Criteria Limit)"
                   hint="Leave empty if no lower limit" persistent-hint clearable variant="outlined"
                   density="comfortable" class="mb-3" prepend-inner-icon="mdi-arrow-down-bold" />
 
                 <!-- Target Input -->
                 <v-text-field v-model.number="currentRule.target" type="number" label="Target Value"
-                  hint="Leave empty to use median or (USL+LSL)/2" persistent-hint clearable variant="outlined"
+                  hint="Leave empty to use median or (UCL+LCL)/2" persistent-hint clearable variant="outlined"
                   density="comfortable" class="mb-4" prepend-inner-icon="mdi-target" />
 
                 <!-- Action Buttons -->
@@ -73,7 +73,7 @@
                       {{ rule.testItem }}
                     </v-list-item-title>
                     <v-list-item-subtitle class="text-caption">
-                      USL: {{ formatValue(rule.usl) }} | LSL: {{ formatValue(rule.lsl) }} | Target: {{
+                      UCL: {{ formatValue(rule.ucl) }} | LCL: {{ formatValue(rule.lcl) }} | Target: {{
                         formatValue(rule.target) }}
                     </v-list-item-subtitle>
 
@@ -94,12 +94,24 @@
           <!-- Right Panel: Preview -->
           <v-col cols="12" md="6">
             <v-card variant="outlined">
-              <v-card-title class="text-subtitle-1 bg-grey-lighten-4">
+              <v-card-title class="text-subtitle-1 bg-grey-lighten-4 d-flex align-center">
                 <v-icon start size="small">mdi-eye</v-icon>
-                .INI File Preview
+                File Preview
+                <v-spacer />
+                <!-- UPDATED: Format toggle -->
+                <v-btn-toggle v-model="outputFormat" mandatory density="compact" color="primary">
+                  <v-btn value="json" size="small">
+                    <v-icon start size="small">mdi-code-json</v-icon>
+                    JSON
+                  </v-btn>
+                  <v-btn value="ini" size="small">
+                    <v-icon start size="small">mdi-file-settings</v-icon>
+                    INI
+                  </v-btn>
+                </v-btn-toggle>
               </v-card-title>
               <v-card-text>
-                <v-textarea :model-value="iniPreview" readonly variant="outlined" rows="25" class="monospace-font mt-2"
+                <v-textarea :model-value="filePreview" readonly variant="outlined" rows="25" class="monospace-font mt-2"
                   no-resize density="compact" />
               </v-card-text>
             </v-card>
@@ -110,8 +122,8 @@
       <v-divider />
 
       <v-card-actions class="pa-4">
-        <v-btn color="success" prepend-icon="mdi-download" :disabled="rules.length === 0" @click="downloadIniFile">
-          Download .INI File
+        <v-btn color="success" prepend-icon="mdi-download" :disabled="rules.length === 0" @click="downloadFile">
+          Download {{ outputFormat.toUpperCase() }} File
         </v-btn>
 
         <v-btn color="primary" prepend-icon="mdi-check" :disabled="rules.length === 0" @click="saveAndUse">
@@ -141,10 +153,11 @@ const emit = defineEmits<{
   'criteria-created': [file: File]
 }>()
 
+// UPDATED: Interface with UCL/LCL naming
 interface CriteriaRule {
   testItem: string
-  usl: number | null
-  lsl: number | null
+  ucl: number | null
+  lcl: number | null
   target: number | null
 }
 
@@ -152,11 +165,13 @@ interface CriteriaRule {
 const rules = ref<CriteriaRule[]>([])
 const currentRule = ref<CriteriaRule>({
   testItem: '',
-  usl: null,
-  lsl: null,
+  ucl: null,
+  lcl: null,
   target: null
 })
 const editingIndex = ref<number | null>(null)
+// UPDATED: Default to JSON format
+const outputFormat = ref<'json' | 'ini'>('json')
 
 // Available test items for autocomplete
 const availableTestItems = computed(() => props.availableTestItems || [])
@@ -166,15 +181,27 @@ const canAddRule = computed(() => {
   return currentRule.value.testItem.trim().length > 0
 })
 
+// UPDATED: JSON preview
+const jsonPreview = computed(() => {
+  const criteria = rules.value.map(rule => ({
+    test_item: rule.testItem,
+    ucl: rule.ucl,
+    lcl: rule.lcl,
+    target: rule.target
+  }))
+  return JSON.stringify({ criteria }, null, 2)
+})
+
+// INI preview (legacy format)
 const iniPreview = computed(() => {
   let content = `; Criteria file for test log filtering and scoring
 ; =================================================
-; Format: "PATTERN" <USL,LSL>  ===> "TargetValue"
+; Format: "PATTERN" <UCL,LCL>  ===> "TargetValue"
 ;
 ; PATTERN - Test item pattern to match (supports simple text and regex)
-; USL     - Upper Spec Limit (leave empty if no upper limit)
-; LSL     - Lower Spec Limit (leave empty if no lower limit)
-; Target  - Target value (leave empty to use median or (USL+LSL)/2)
+; UCL     - Upper Criteria Limit (leave empty if no upper limit)
+; LCL     - Lower Criteria Limit (leave empty if no lower limit)
+; Target  - Target value (leave empty to use median or (UCL+LCL)/2)
 ;
 ; =================================================
 ; PATTERN MATCHING:
@@ -204,13 +231,18 @@ const iniPreview = computed(() => {
 `
 
   rules.value.forEach(rule => {
-    const usl = rule.usl !== null ? rule.usl.toString() : ''
-    const lsl = rule.lsl !== null ? rule.lsl.toString() : ''
+    const ucl = rule.ucl !== null ? rule.ucl.toString() : ''
+    const lcl = rule.lcl !== null ? rule.lcl.toString() : ''
     const target = rule.target !== null ? `"${rule.target}"` : ''
-    content += `"${rule.testItem}" <${usl},${lsl}>  ===> ${target}\n`
+    content += `"${rule.testItem}" <${ucl},${lcl}>  ===> ${target}\n`
   })
 
   return content
+})
+
+// UPDATED: Dynamic preview based on format
+const filePreview = computed(() => {
+  return outputFormat.value === 'json' ? jsonPreview.value : iniPreview.value
 })
 
 // Methods
@@ -223,8 +255,8 @@ const addRule = () => {
 
   const rule: CriteriaRule = {
     testItem: currentRule.value.testItem.trim(),
-    usl: currentRule.value.usl,
-    lsl: currentRule.value.lsl,
+    ucl: currentRule.value.ucl,
+    lcl: currentRule.value.lcl,
     target: currentRule.value.target
   }
 
@@ -246,8 +278,8 @@ const editRule = (index: number) => {
 
   currentRule.value = {
     testItem: rule.testItem,
-    usl: rule.usl,
-    lsl: rule.lsl,
+    ucl: rule.ucl,
+    lcl: rule.lcl,
     target: rule.target
   }
   editingIndex.value = index
@@ -263,28 +295,40 @@ const removeRule = (index: number) => {
 const resetCurrentRule = () => {
   currentRule.value = {
     testItem: '',
-    usl: null,
-    lsl: null,
+    ucl: null,
+    lcl: null,
     target: null
   }
   editingIndex.value = null
 }
 
-const downloadIniFile = () => {
-  const blob = new Blob([iniPreview.value], { type: 'text/plain' })
+// UPDATED: Download based on selected format
+const downloadFile = () => {
+  const isJson = outputFormat.value === 'json'
+  const content = isJson ? jsonPreview.value : iniPreview.value
+  const mimeType = isJson ? 'application/json' : 'text/plain'
+  const extension = isJson ? 'json' : 'ini'
+  
+  const blob = new Blob([content], { type: mimeType })
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = 'criteria_upload_log.ini'
+  a.download = `criteria_upload_log.${extension}`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
 }
 
+// UPDATED: Save based on selected format
 const saveAndUse = () => {
-  const blob = new Blob([iniPreview.value], { type: 'text/plain' })
-  const file = new File([blob], 'criteria_upload_log.ini', { type: 'text/plain' })
+  const isJson = outputFormat.value === 'json'
+  const content = isJson ? jsonPreview.value : iniPreview.value
+  const mimeType = isJson ? 'application/json' : 'text/plain'
+  const extension = isJson ? 'json' : 'ini'
+  
+  const blob = new Blob([content], { type: mimeType })
+  const file = new File([blob], `criteria_upload_log.${extension}`, { type: mimeType })
   emit('criteria-created', file)
   handleClose()
 }
