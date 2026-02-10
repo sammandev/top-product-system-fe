@@ -28,7 +28,7 @@
               </v-col>
               <v-col cols="4">
                 <div class="text-caption text-medium-emphasis">Scoring Method</div>
-                <v-chip :color="getCategoryColor(item.score_breakdown.category)" size="small">
+                <v-chip :color="getCategoryColor(item.score_breakdown.category || '')" size="small">
                   {{ item.score_breakdown.method }}
                 </v-chip>
               </v-col>
@@ -123,7 +123,7 @@
               <!-- Standard: actual value -->
               <tr v-if="item.score_breakdown.actual !== undefined && item.score_breakdown.current_value === undefined">
                 <td class="font-weight-medium">Actual Value</td>
-                <td class="font-weight-bold">{{ item.score_breakdown.actual.toFixed(2) }}</td>
+                <td class="font-weight-bold">{{ item.score_breakdown.actual?.toFixed(2) }}</td>
               </tr>
               <!-- PA Trend: deviation_from_mean -->
               <tr v-if="item.score_breakdown.deviation_from_mean !== undefined">
@@ -144,10 +144,11 @@
               <tr
                 v-if="item.score_breakdown.deviation !== undefined && item.score_breakdown.deviation_from_mean === undefined">
                 <td class="font-weight-medium">Deviation</td>
-                <td :class="getDeviationColorClass(item.score_breakdown.deviation)">
-                  {{ Math.abs(item.score_breakdown.deviation).toFixed(2) }}
-                  <v-icon v-if="item.score_breakdown.deviation > 0" size="small" color="error">mdi-arrow-up</v-icon>
-                  <v-icon v-else-if="item.score_breakdown.deviation < 0" size="small"
+                <td :class="getDeviationColorClass(item.score_breakdown.deviation || 0)">
+                  {{ Math.abs(item.score_breakdown.deviation || 0).toFixed(2) }}
+                  <v-icon v-if="(item.score_breakdown.deviation || 0) > 0" size="small"
+                    color="error">mdi-arrow-up</v-icon>
+                  <v-icon v-else-if="(item.score_breakdown.deviation || 0) < 0" size="small"
                     color="success">mdi-arrow-down</v-icon>
                 </td>
               </tr>

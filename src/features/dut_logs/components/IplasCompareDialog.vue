@@ -265,20 +265,26 @@ const iplasScoredMap = ref<Map<string, RescoreItemResult>>(new Map())
 const showScoringConfig = ref(false)
 const localScoringConfigs = ref<RescoreScoringConfig[]>([])
 
-// UPDATED: Build test items for the shared UploadScoringConfigDialog
+// UPDATED: Build test items for the shared UploadScoringConfigDialog - preserving original order
 const scoringDialogTestItems = computed<ParsedTestItemEnhanced[]>(() => {
-    const itemMap = new Map<string, ParsedTestItemEnhanced>()
+    const items: ParsedTestItemEnhanced[] = []
+    const seenKeys = new Set<string>()
 
-    // Add upload test items
+    // Add upload test items first (preserve original order from uploaded data)
     props.uploadTestItems.forEach(item => {
-        itemMap.set(item.test_item.toLowerCase(), { ...item })
+        const key = item.test_item.toLowerCase()
+        if (!seenKeys.has(key)) {
+            seenKeys.add(key)
+            items.push({ ...item })
+        }
     })
 
     // Add iPLAS test items (only if not already from upload)
     iplasTestItems.value.forEach(iplasItem => {
         const key = iplasItem.NAME.toLowerCase()
-        if (!itemMap.has(key)) {
-            itemMap.set(key, {
+        if (!seenKeys.has(key)) {
+            seenKeys.add(key)
+            items.push({
                 test_item: iplasItem.NAME,
                 value: iplasItem.VALUE,
                 usl: iplasItem.UCL ? parseFloat(iplasItem.UCL) : null,
@@ -295,7 +301,7 @@ const scoringDialogTestItems = computed<ParsedTestItemEnhanced[]>(() => {
         }
     })
 
-    return Array.from(itemMap.values())
+    return items
 })
 
 // UPDATED: Handle scoring config apply from shared dialog
@@ -379,11 +385,12 @@ const breakdownDeviation = computed(() => {
 
 // Scoring config helper functions are now in UploadScoringConfigDialog
 
-// Build comparison items
+// Build comparison items - preserving original order from uploaded data
 const comparisonItems = computed<ComparisonItem[]>(() => {
     const items: ComparisonItem[] = []
     const uploadItemMap = new Map<string, ParsedTestItemEnhanced>()
     const iplasItemMap = new Map<string, IplasIsnTestItem>()
+    const processedKeys = new Set<string>()
 
     // Build upload map
     props.uploadTestItems.forEach(item => {
@@ -395,19 +402,13 @@ const comparisonItems = computed<ComparisonItem[]>(() => {
         iplasItemMap.set(item.NAME.toLowerCase(), item)
     })
 
-    // Get all unique test item names
-    const allTestItems = new Set([
-        ...Array.from(uploadItemMap.keys()),
-        ...Array.from(iplasItemMap.keys())
-    ])
-
-    allTestItems.forEach(testItemKey => {
+    // Helper function to build a comparison item
+    const buildComparisonItem = (testItemKey: string): ComparisonItem => {
         const uploadItem = uploadItemMap.get(testItemKey)
         const iplasItem = iplasItemMap.get(testItemKey)
 
         let status: ComparisonItem['status']
         if (uploadItem && iplasItem) {
-            // UPDATED: Match = test item name exists in both sources (regardless of value)
             status = 'match'
         } else if (uploadItem) {
             status = 'upload-only'
@@ -415,11 +416,10 @@ const comparisonItems = computed<ComparisonItem[]>(() => {
             status = 'iplas-only'
         }
 
-        // Get rescored data if available
         const uploadScored = uploadScoredMap.value.get(testItemKey)
         const iplasScored = iplasScoredMap.value.get(testItemKey)
 
-        items.push({
+        return {
             test_item: uploadItem?.test_item || iplasItem?.NAME || testItemKey,
             usl: uploadItem?.usl ?? (iplasItem?.UCL ? parseFloat(iplasItem.UCL) : null),
             lsl: uploadItem?.lsl ?? (iplasItem?.LCL ? parseFloat(iplasItem.LCL) : null),
@@ -434,11 +434,28 @@ const comparisonItems = computed<ComparisonItem[]>(() => {
             upload_deviation: uploadScored?.deviation ?? null,
             iplas_deviation: iplasScored?.deviation ?? null,
             status
-        })
+        }
+    }
+
+    // First, add items in the order they appear in uploaded data
+    props.uploadTestItems.forEach(item => {
+        const key = item.test_item.toLowerCase()
+        if (!processedKeys.has(key)) {
+            processedKeys.add(key)
+            items.push(buildComparisonItem(key))
+        }
     })
 
-    // Sort by test item name
-    return items.sort((a, b) => a.test_item.localeCompare(b.test_item))
+    // Then, add iPLAS-only items that weren't in uploaded data
+    iplasTestItems.value.forEach(item => {
+        const key = item.NAME.toLowerCase()
+        if (!processedKeys.has(key)) {
+            processedKeys.add(key)
+            items.push(buildComparisonItem(key))
+        }
+    })
+
+    return items
 })
 
 const filteredComparisonItems = computed(() => {
@@ -606,9 +623,10 @@ watch(() => props.modelValue, async (isOpen) => {
 // No longer need to watch props.scoringConfigs since we use local state
 
 function getScoreColor(score: number): string {
-    if (score >= 9) return 'success'
-    if (score >= 7) return 'warning'
-    return 'error'
+    if (score >= 9) return 'success'  // 9-10: green
+    if (score >= 7) return 'info'     // 7-8.99: blue
+    if (score >= 6) return 'warning'  // 6-6.99: yellow/orange
+    return 'error'                    // <6: red
 }
 
 async function exportToExcel() {

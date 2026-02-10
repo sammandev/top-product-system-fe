@@ -134,6 +134,10 @@
                     Test Item Comparison
                     <v-chip class="ml-2" size="small" color="info">{{ totalFiles }} files</v-chip>
                     <v-spacer />
+                    <v-btn variant="tonal" color="success" size="small" prepend-icon="mdi-microsoft-excel"
+                        :loading="exportingComparison" @click="exportComparisonToExcel" class="mr-2">
+                        Export to Excel
+                    </v-btn>
                     <v-progress-circular v-if="iplasLoading" indeterminate size="20" width="2"
                         color="primary" class="mr-2" />
                     <v-chip v-if="iplasDataByIsn.size > 0" size="small" color="success" variant="tonal">
@@ -183,7 +187,8 @@
 
                     <!-- UPDATED: Comparison Table with Parent-Children Headers per ISN -->
                     <v-data-table :headers="comparisonHeaders" :items="comparisonTableItems"
-                        :items-per-page="25" density="comfortable" class="elevation-1">
+                        :items-per-page="25" density="comfortable" class="elevation-1"
+                        fixed-header height="500">
                         <!-- Custom row rendering for dynamic columns -->
                         <template #item="{ item, columns }">
                             <tr>
@@ -281,7 +286,7 @@
                         </tr>
                         <tr v-if="breakdownItem.score_breakdown?.target !== null && breakdownItem.score_breakdown?.target !== undefined">
                             <td class="font-weight-medium">Target</td>
-                            <td class="font-weight-bold text-primary">{{ breakdownItem.score_breakdown.target?.toFixed(4) }}</td>
+                            <td class="font-weight-bold text-primary">{{ breakdownItem.score_breakdown.target?.toFixed(2) }}</td>
                         </tr>
                         <tr v-if="breakdownItem.score_breakdown?.actual !== null && breakdownItem.score_breakdown?.actual !== undefined">
                             <td class="font-weight-medium">Actual Value</td>
@@ -290,7 +295,7 @@
                         <tr v-if="breakdownItem.score_breakdown?.deviation !== null && breakdownItem.score_breakdown?.deviation !== undefined">
                             <td class="font-weight-medium">Deviation</td>
                             <td :class="Math.abs(breakdownItem.score_breakdown.deviation!) > 1 ? 'text-error font-weight-bold' : ''">
-                                {{ breakdownItem.score_breakdown.deviation?.toFixed(4) }}
+                                {{ breakdownItem.score_breakdown.deviation?.toFixed(2) }}
                             </td>
                         </tr>
                         <tr v-if="breakdownItem.score_breakdown?.policy">
@@ -371,6 +376,7 @@ const criteriaBuilderOpen = ref(false)
 // Comparison section state
 const itemFilterType = ref<string>('all')
 const searchQuery = ref('')
+const exportingComparison = ref(false)
 
 // UPDATED: iPLAS comparison state
 const iplasDataByIsn = ref<Map<string, IplasIsnSearchRecord[]>>(new Map())
@@ -632,9 +638,16 @@ const fetchIplasForComparison = async () => {
 /**
  * Rescore iPLAS data for all ISNs using the applied scoring configs
  */
+/**
+ * Rescore iPLAS data for all ISNs using the applied scoring configs
+ * UPDATED: Only score criteria items (with UCL or LCL) by default
+ */
 const rescoreIplasData = async () => {
     const isns = allCompareIsns.value
     iplasScoredByIsn.value = new Map()
+
+    // Build set of explicitly configured item names
+    const explicitlyConfigured = new Set(appliedScoringConfigs.value.map(c => c.test_item_name))
 
     for (const isn of isns) {
         const records = iplasDataByIsn.value.get(isn) || []
@@ -646,19 +659,30 @@ const rescoreIplasData = async () => {
 
         if (!stationRecord || !stationRecord.test_item.length) continue
 
-        const testItems = stationRecord.test_item.map(t => ({
-            test_item: t.NAME,
-            value: t.VALUE,
-            usl: t.UCL ? parseFloat(t.UCL) : null,
-            lsl: t.LCL ? parseFloat(t.LCL) : null,
-            status: t.STATUS || 'PASS',
-        }))
+        // UPDATED: Filter to only criteria items (with limits) or explicitly configured items
+        const testItems = stationRecord.test_item
+            .filter(t => {
+                const hasLimits = (t.UCL && t.UCL !== '') || (t.LCL && t.LCL !== '')
+                return hasLimits || explicitlyConfigured.has(t.NAME)
+            })
+            .map(t => ({
+                test_item: t.NAME,
+                value: t.VALUE,
+                usl: t.UCL ? parseFloat(t.UCL) : null,
+                lsl: t.LCL ? parseFloat(t.LCL) : null,
+                status: t.STATUS || 'PASS',
+            }))
+
+        if (testItems.length === 0) continue
 
         try {
             const result = await rescoreItems(testItems, appliedScoringConfigs.value)
             const scoreMap = new Map<string, { score: number }>()
             result.test_item_scores.forEach((score: any) => {
-                scoreMap.set(score.test_item.toLowerCase(), { score: score.score })
+                // Only add to map if score is not null
+                if (score.score !== null) {
+                    scoreMap.set(score.test_item.toLowerCase(), { score: score.score })
+                }
             })
             iplasScoredByIsn.value.set(isn, scoreMap)
         } catch (err: any) {
@@ -775,9 +799,57 @@ const downloadCriteriaTemplate = () => {
 }
 
 const getScoreColor = (score: number): string => {
-    if (score >= 9) return 'success'
-    if (score >= 7) return 'warning'
-    return 'error'
+    if (score >= 9) return 'success'  // 9-10: green
+    if (score >= 7) return 'info'     // 7-8.99: blue
+    if (score >= 6) return 'warning'  // 6-6.99: yellow/orange
+    return 'error'                    // <6: red
+}
+
+/**
+ * Export comparison table data to Excel
+ */
+async function exportComparisonToExcel() {
+    exportingComparison.value = true
+    try {
+        const items = comparisonTableItems.value
+        const isns = displayedIsns.value
+
+        // Build export data with dynamic columns
+        const exportData = items.map((item: Record<string, any>) => {
+            const row: Record<string, any> = {
+                'Test Item': item.test_item,
+                'UCL': item.usl ?? '',
+                'LCL': item.lsl ?? '',
+            }
+
+            isns.forEach((isn, idx) => {
+                row[`${isn} Uploaded Value`] = item[`uploaded_val_${idx}`] ?? ''
+                row[`${isn} iPLAS Value`] = item[`iplas_val_${idx}`] ?? ''
+                row[`${isn} Uploaded Score`] = item[`uploaded_score_${idx}`] ?? ''
+                row[`${isn} iPLAS Score`] = item[`iplas_score_${idx}`] ?? ''
+            })
+
+            return row
+        })
+
+        // Dynamic import for xlsx
+        const XLSX = await import('xlsx')
+        const worksheet = XLSX.utils.json_to_sheet(exportData)
+        const workbook = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Comparison')
+
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+        const filename = `Test_Item_Comparison_${timestamp}.xlsx`
+
+        XLSX.writeFile(workbook, filename)
+    } catch (err: any) {
+        console.error('Export failed:', err)
+        errorMessage.value = 'Export failed: ' + (err.message || 'Unknown error')
+        errorSnackbar.value = true
+    } finally {
+        exportingComparison.value = false
+    }
 }
 
 const getScoringTypeColor = (type: string): string => {

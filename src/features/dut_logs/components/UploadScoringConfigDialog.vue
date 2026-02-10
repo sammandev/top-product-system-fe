@@ -46,6 +46,10 @@
                     <!-- Bulk Actions -->
                     <div class="px-3 pb-2 d-flex gap-1 flex-wrap align-center">
                         <v-divider class="mb-1" />
+                        <v-btn size="x-small" variant="flat" color="primary" prepend-icon="mdi-playlist-check"
+                            @click="selectDisplayedAndConfigure" :disabled="filteredConfigs.length === 0">
+                            Select Displayed & Configure ({{ filteredConfigs.length }})
+                        </v-btn>
                         <v-btn size="x-small" variant="flat" color="secondary" prepend-icon="mdi-tune-variant"
                             @click="openBulkScoringConfig" :disabled="selectedItemNames.size === 0">
                             Bulk Config ({{ selectedItemNames.size }})
@@ -75,11 +79,11 @@
                                 </template>
                                 <template #default>
                                     <div class="d-flex align-center justify-space-between w-100">
-                                        <span class="text-body-2 text-truncate" style="max-width: 180px;"
+                                        <span class="text-body-2 text-truncate flex-grow-1 mr-2"
                                             :title="config.test_item_name">
                                             {{ config.test_item_name }}
                                         </span>
-                                        <div class="d-flex align-center gap-1">
+                                        <div class="d-flex align-center gap-1 flex-shrink-0">
                                             <!-- Scoring Type Button (opens per-item config) -->
                                             <v-btn size="x-small" variant="tonal"
                                                 :color="getScoringTypeColor(config.scoring_type)"
@@ -299,9 +303,9 @@ const bulkWeight = ref(1.0)
 const scoringTypeOptions = [
     { title: 'Symmetrical (Linear)', value: 'symmetrical' },
     { title: 'Asymmetrical (Custom Target)', value: 'asymmetrical' },
-    { title: 'PER / Mask (Near-Zero)', value: 'per_mask' },
-    { title: 'EVM (Lower-is-Better)', value: 'evm' },
-    { title: 'Throughput (Higher-is-Better)', value: 'throughput' },
+    { title: 'Near-Zero', value: 'per_mask' },
+    { title: 'EVM', value: 'evm' },
+    // { title: 'Throughput (Higher-is-Better)', value: 'throughput' },
     { title: 'Binary (PASS/FAIL)', value: 'binary' },
 ]
 
@@ -311,15 +315,22 @@ const policyOptions = [
     { title: 'Lower is Better', value: 'lower' },
 ]
 
-// Initialize scoring configs from test items
+// Initialize scoring configs from test items - preserving original order
 function initializeConfigs() {
     const existingMap = new Map<string, RescoreScoringConfig>()
     props.existingConfigs.forEach(cfg => existingMap.set(cfg.test_item_name, cfg))
 
-    const allNames = new Set<string>()
-    props.testItems.forEach(item => allNames.add(item.test_item))
+    // Use array to preserve original order from props.testItems
+    const seen = new Set<string>()
+    const orderedNames: string[] = []
+    props.testItems.forEach(item => {
+        if (!seen.has(item.test_item)) {
+            seen.add(item.test_item)
+            orderedNames.push(item.test_item)
+        }
+    })
 
-    scoringConfigs.value = Array.from(allNames).map(name => {
+    scoringConfigs.value = orderedNames.map(name => {
         if (existingMap.has(name)) {
             return { ...existingMap.get(name)! }
         }
@@ -405,6 +416,21 @@ function selectNonCriteriaItems() {
 
 function clearSelection() {
     selectedItemNames.value = new Set()
+}
+
+/**
+ * Select all displayed items and open bulk config dialog
+ */
+function selectDisplayedAndConfigure() {
+    // First, select all displayed items
+    const newSet = new Set<string>()
+    filteredConfigs.value.forEach(c => newSet.add(c.test_item_name))
+    selectedItemNames.value = newSet
+
+    // Then open bulk config dialog
+    if (newSet.size > 0) {
+        openBulkScoringConfig()
+    }
 }
 
 // ============================================

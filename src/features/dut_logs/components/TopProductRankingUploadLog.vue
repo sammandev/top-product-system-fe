@@ -5,6 +5,10 @@
                 <v-icon class="mr-2" color="warning">mdi-podium-gold</v-icon>
                 Top Product Ranking by Overall Score
             </div>
+            <v-btn variant="tonal" color="success" size="small" prepend-icon="mdi-microsoft-excel"
+                :loading="exportingRanking" @click="exportRankingToExcel">
+                Export{{ selectedRankingItems.length > 0 ? ` (${selectedRankingItems.length})` : '' }}
+            </v-btn>
         </v-card-title>
 
         <v-card-subtitle class="text-caption text-medium-emphasis pb-0">
@@ -45,10 +49,11 @@
                 </v-row>
 
                 <v-card-text class="pa-0">
-                    <!-- UPDATED: Added row click for test item details -->
+                    <!-- UPDATED: Added row click for test item details + checkbox selection -->
                     <v-data-table :headers="headers" :items="paginatedRankings" :items-per-page="itemsPerPage"
                         density="compact" fixed-header height="500" hide-default-footer striped="even"
-                        class="cursor-pointer" @click:row="handleRowClick">
+                        class="cursor-pointer" show-select v-model="selectedRankingItems"
+                        @click:row="handleRowClick">
                         <template #item.rank="{ index }">
                             <span class="font-weight-bold">{{ (currentPage - 1) * getPerPage() + index + 1 }}</span>
                         </template>
@@ -195,13 +200,13 @@
 
         <!-- UPDATED: Test Items Detail Dialog -->
         <v-dialog v-model="showTestItemsDialog" :fullscreen="testItemsFullscreen"
-            :max-width="testItemsFullscreen ? undefined : 1200" scrollable
+            :max-width="testItemsFullscreen ? undefined : 1200"
             :transition="testItemsFullscreen ? 'dialog-bottom-transition' : undefined">
             <v-card v-if="selectedRankingItem" class="d-flex flex-column"
                 :style="testItemsFullscreen ? 'height: 100vh; overflow: hidden;' : 'max-height: 90vh; overflow: hidden;'">
-                <v-card-title class="d-flex align-center bg-primary">
+                <v-card-title class="d-flex align-center bg-primary flex-shrink-0">
                     <v-icon start color="white">mdi-format-list-checks</v-icon>
-                    <span class="text-white">Test Items Details - {{ selectedRankingItem.isn || 'N/A' }}</span>
+                    <span class="text-white">Test Items Details</span>
                     <v-spacer />
                     <v-btn v-if="selectedRankingItem?.isn" variant="tonal" color="white" size="small"
                         prepend-icon="mdi-compare-horizontal" @click="openIplasCompare" class="mr-2">
@@ -212,48 +217,48 @@
                     <v-btn icon="mdi-close" variant="text" color="white" @click="showTestItemsDialog = false" />
                 </v-card-title>
 
-                <v-card-text class="pa-4 flex-grow-1 d-flex flex-column" style="overflow: hidden;">
-                    <!-- ISN Info -->
-                    <v-alert type="info" variant="tonal" density="compact" class="mb-4 flex-shrink-0">
-                        <div class="d-flex align-center justify-space-between flex-wrap">
-                            <div>
-                                <strong>ISN:</strong> {{ selectedRankingItem.isn || 'N/A' }}
-                                <span class="mx-2">|</span>
-                                <strong>Station:</strong> {{ selectedRankingItem.station }}
-                                <span class="mx-2">|</span>
-                                <strong>Overall Score:</strong>
-                                <v-chip :color="getScoreColor(selectedRankingItem.score)" size="small" class="ml-1">
-                                    {{ selectedRankingItem.score.toFixed(2) }}
-                                </v-chip>
-                            </div>
+                <!-- ISN Info Bar - Always visible -->
+                <v-alert type="info" variant="tonal" density="compact" class="ma-4 mb-0 flex-shrink-0">
+                    <div class="d-flex align-center justify-space-between flex-wrap">
+                        <div>
+                            <strong>ISN:</strong> {{ selectedRankingItem.isn || 'N/A' }}
+                            <span class="mx-2">|</span>
+                            <strong>Station:</strong> {{ selectedRankingItem.station }}
+                            <span class="mx-2">|</span>
+                            <strong>Overall Score:</strong>
+                            <v-chip :color="getScoreColor(selectedRankingItem.score)" size="small" class="ml-1">
+                                {{ selectedRankingItem.score.toFixed(2) }}
+                            </v-chip>
                         </div>
-                    </v-alert>
+                    </div>
+                </v-alert>
 
-                    <!-- Filter Row -->
-                    <v-row dense class="mb-4 flex-shrink-0">
-                        <v-col cols="12" md="4">
-                            <v-select v-model="testItemFilterType" :items="testItemFilterOptions" label="Filter Items"
-                                variant="outlined" density="compact" prepend-inner-icon="mdi-filter" hide-details />
-                        </v-col>
-                        <v-col cols="12" md="4">
-                            <v-text-field v-model="testItemSearch" label="Search Test Items"
-                                variant="outlined" density="compact" prepend-inner-icon="mdi-magnify"
-                                hide-details clearable />
-                        </v-col>
-                        <v-col cols="12" md="4" class="d-flex align-center">
-                            <v-chip size="small" class="mr-2">{{ filteredTestItems.length }} / {{ selectedTestItems.length }}</v-chip>
-                            <v-btn v-if="testItemFilterType !== 'all' || testItemSearch" size="small" variant="text"
-                                color="primary" @click="resetTestItemFilters">
-                                <v-icon start size="small">mdi-filter-off</v-icon>
-                                Clear Filters
-                            </v-btn>
-                        </v-col>
-                    </v-row>
+                <!-- Filter Row -->
+                <v-row dense class="ma-4 mb-0 flex-shrink-0">
+                    <v-col cols="12" md="4">
+                        <v-select v-model="testItemFilterType" :items="testItemFilterOptions" label="Filter Items"
+                            variant="outlined" density="compact" prepend-inner-icon="mdi-filter" hide-details />
+                    </v-col>
+                    <v-col cols="12" md="4">
+                        <v-text-field v-model="testItemSearch" label="Search Test Items"
+                            variant="outlined" density="compact" prepend-inner-icon="mdi-magnify"
+                            hide-details clearable />
+                    </v-col>
+                    <v-col cols="12" md="4" class="d-flex align-center">
+                        <v-chip size="small" class="mr-2">{{ filteredTestItems.length }} / {{ selectedTestItems.length }}</v-chip>
+                        <v-btn v-if="testItemFilterType !== 'all' || testItemSearch" size="small" variant="text"
+                            color="primary" @click="resetTestItemFilters">
+                            <v-icon start size="small">mdi-filter-off</v-icon>
+                            Clear Filters
+                        </v-btn>
+                    </v-col>
+                </v-row>
 
-                    <!-- Test Items Table -->
-                    <div class="flex-grow-1" style="overflow: auto;">
+                <!-- Test Items Table - Full width with sticky header -->
+                <v-card-text class="pa-4 flex-grow-1 d-flex flex-column" style="overflow: hidden;">
                     <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="25"
-                        density="comfortable" class="elevation-1"
+                        density="comfortable" class="elevation-1 flex-grow-1" fixed-header
+                        :height="testItemsFullscreen ? 'calc(100vh - 280px)' : undefined"
                         @click:row="(_event: any, data: any) => showScoreBreakdown(data.item)">
                         <template #item.test_item="{ item }">
                             <span class="font-weight-medium">{{ item.test_item }}</span>
@@ -276,10 +281,7 @@
                             <span v-else class="text-medium-emphasis">-</span>
                         </template>
                     </v-data-table>
-                    </div>
                 </v-card-text>
-
-
             </v-card>
         </v-dialog>
 
@@ -352,7 +354,7 @@
                             </tr>
                             <tr v-if="selectedTestItem.score_breakdown?.target !== null && selectedTestItem.score_breakdown?.target !== undefined">
                                 <td class="font-weight-medium">Target</td>
-                                <td class="font-weight-bold text-primary">{{ selectedTestItem.score_breakdown.target?.toFixed(4) }}</td>
+                                <td class="font-weight-bold text-primary">{{ selectedTestItem.score_breakdown.target?.toFixed(2) }}</td>
                             </tr>
                             <tr v-if="selectedTestItem.score_breakdown?.actual !== null && selectedTestItem.score_breakdown?.actual !== undefined">
                                 <td class="font-weight-medium">Actual Value</td>
@@ -361,7 +363,7 @@
                             <tr v-if="selectedTestItem.score_breakdown?.deviation !== null && selectedTestItem.score_breakdown?.deviation !== undefined">
                                 <td class="font-weight-medium">Deviation</td>
                                 <td :class="Math.abs(selectedTestItem.score_breakdown.deviation!) > 1 ? 'text-error font-weight-bold' : ''">
-                                    {{ selectedTestItem.score_breakdown.deviation?.toFixed(4) }}
+                                    {{ selectedTestItem.score_breakdown.deviation?.toFixed(2) }}
                                 </td>
                             </tr>
                             <tr v-if="selectedTestItem.score_breakdown?.policy">
@@ -446,6 +448,10 @@ const scoreFilterType = ref<string | null>(null)
 const scoreFilterValue = ref<number | null>(null)
 const resultFilter = ref<string | null>(null)
 const fullscreen = ref(false)
+
+// Checkbox selection and export state
+const selectedRankingItems = ref<RankingItem[]>([])
+const exportingRanking = ref(false)
 
 // UPDATED: Test items detail dialog state
 const showTestItemsDialog = ref(false)
@@ -694,9 +700,10 @@ const getResultColor = (result: string | null): string => {
 }
 
 const getScoreColor = (score: number): string => {
-    if (score >= 9) return 'success'
-    if (score >= 7) return 'warning'
-    return 'error'
+    if (score >= 9) return 'success'  // 9-10: green
+    if (score >= 7) return 'info'     // 7-8.99: blue
+    if (score >= 6) return 'warning'  // 6-6.99: yellow/orange
+    return 'error'                    // <6: red
 }
 
 const getScoringTypeColor = (type: string): string => {
@@ -796,6 +803,47 @@ const openIplasCompare = () => {
     if (selectedRankingItem.value?.isn) {
         comparisonIsn.value = selectedRankingItem.value.isn
         showIplasCompareDialog.value = true
+    }
+}
+
+/**
+ * Export ranking data to Excel
+ */
+async function exportRankingToExcel() {
+    exportingRanking.value = true
+    try {
+        // Use selected items if any, otherwise export all filtered rankings
+        const itemsToExport = selectedRankingItems.value.length > 0
+            ? selectedRankingItems.value
+            : filteredRankings.value
+
+        const exportData = itemsToExport.map((item, index) => ({
+            'Rank': index + 1,
+            'DUT ISN': item.isn || 'N/A',
+            'Test Date': formatTestDate(item.test_date),
+            'Duration (s)': item.duration_seconds ?? '',
+            'Test Station': item.station,
+            'Device': item.device || 'N/A',
+            'Status': item.status,
+            'Test Result': item.result || 'N/A',
+            'Overall Score': item.score.toFixed(2)
+        }))
+
+        // Dynamic import for xlsx
+        const XLSX = await import('xlsx')
+        const worksheet = XLSX.utils.json_to_sheet(exportData)
+        const workbook = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Ranking')
+
+        // Generate filename with timestamp
+        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+        const filename = `Top_Product_Ranking_${timestamp}.xlsx`
+
+        XLSX.writeFile(workbook, filename)
+    } catch (err: any) {
+        console.error('Export failed:', err)
+    } finally {
+        exportingRanking.value = false
     }
 }
 </script>
