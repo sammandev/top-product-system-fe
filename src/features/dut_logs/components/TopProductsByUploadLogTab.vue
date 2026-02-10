@@ -17,14 +17,14 @@
                                     <v-icon start size="small">mdi-file-document-multiple</v-icon>
                                     Upload Test Logs
                                 </v-card-title>
-                                <v-card-text class="mt-2">
+                                <v-card-text class="mt-4">
                                     <v-file-input v-model="logFiles" label="Test log files (.txt, .zip, .rar, .7z)"
                                         accept=".txt,.zip,.rar,.7z" multiple prepend-icon="mdi-file-document" show-size
                                         :clearable="true" :disabled="loading" variant="outlined">
                                         <template #selection="{ fileNames }">
                                             <template v-for="(fileName, index) in fileNames" :key="fileName">
                                                 <v-chip v-if="index < 3" size="small" class="me-2">{{ fileName
-                                                    }}</v-chip>
+                                                }}</v-chip>
                                             </template>
                                             <span v-if="fileNames.length > 3" class="text-caption text-medium-emphasis">
                                                 +{{ fileNames.length - 3 }} more {{ fileNames.length - 3 === 1 ? 'file'
@@ -52,7 +52,7 @@
                                         Template
                                     </v-btn>
                                 </v-card-title>
-                                <v-card-text class="mt-2">
+                                <v-card-text class="mt-4">
                                     <v-file-input v-model="criteriaFile" label="Criteria file (.json)" accept=".json"
                                         prepend-icon="mdi-file-cog" show-size :clearable="true" :disabled="loading"
                                         variant="outlined" density="compact" />
@@ -134,6 +134,8 @@
                         :loading="exportingComparison" @click="exportComparisonToExcel" class="mr-2">
                         Export
                     </v-btn>
+                    <v-icon size="large" color="primary" @click="comparisonFullscreen = true"
+                        class="mr-2">mdi-fullscreen</v-icon>
                     <v-progress-circular v-if="iplasLoading" indeterminate size="20" width="2" color="primary"
                         class="mr-2" />
                     <v-chip v-if="iplasDataByIsn.size > 0" size="small" color="success" variant="tonal">
@@ -142,9 +144,14 @@
                 </v-card-title>
 
                 <v-card-text>
-                    <!-- UPDATED: Controls Row with Station, ISN, Filter, Search -->
+                    <!-- UPDATED: Controls Row with Station filters, ISN filter, and Search -->
                     <v-row dense class="mb-4">
-                        <v-col cols="12" md="3">
+                        <v-col cols="6" md="2">
+                            <v-select v-model="selectedUploadedStation" :items="uploadedStationOptions"
+                                label="Station (Uploaded)" variant="outlined" density="compact"
+                                prepend-inner-icon="mdi-access-point" hide-details clearable />
+                        </v-col>
+                        <v-col cols="6" md="2">
                             <v-select v-model="selectedIplasStation" :items="iplasStationOptions"
                                 label="Station (iPLAS)" variant="outlined" density="compact"
                                 prepend-inner-icon="mdi-router-wireless" hide-details clearable
@@ -155,11 +162,11 @@
                                 variant="outlined" density="compact" prepend-inner-icon="mdi-identifier" hide-details
                                 multiple chips closable-chips />
                         </v-col>
-                        <v-col cols="12" md="3">
+                        <v-col cols="6" md="2">
                             <v-select v-model="itemFilterType" :items="itemFilterOptions" label="Filter Items"
                                 variant="outlined" density="compact" prepend-inner-icon="mdi-filter" hide-details />
                         </v-col>
-                        <v-col cols="12" md="3">
+                        <v-col cols="6" md="3">
                             <v-text-field v-model="searchQuery" label="Search Test Items" variant="outlined"
                                 density="compact" prepend-inner-icon="mdi-magnify" hide-details clearable />
                         </v-col>
@@ -214,6 +221,88 @@
             </v-card>
         </v-col>
     </v-row>
+
+    <!-- Comparison Fullscreen Dialog -->
+    <v-dialog v-model="comparisonFullscreen" fullscreen transition="dialog-bottom-transition">
+        <v-card class="d-flex flex-column" style="height: 100vh; overflow: hidden;">
+            <v-card-title class="d-flex align-center flex-shrink-0">
+                <v-icon start color="info">mdi-compare</v-icon>
+                Test Item Comparison
+                <v-chip class="ml-2" size="small" color="info">{{ totalFiles }} files</v-chip>
+                <v-spacer />
+                <v-btn variant="tonal" color="success" size="small" prepend-icon="mdi-microsoft-excel"
+                    :loading="exportingComparison" @click="exportComparisonToExcel" class="mr-2">
+                    Export
+                </v-btn>
+                <v-progress-circular v-if="iplasLoading" indeterminate size="20" width="2" color="primary"
+                    class="mr-2" />
+                <v-chip v-if="iplasDataByIsn.size > 0" size="small" color="success" variant="tonal" class="mr-3">
+                    iPLAS: {{ iplasDataByIsn.size }} ISN(s)
+                </v-chip>
+                <v-btn icon="mdi-close" variant="text" @click="comparisonFullscreen = false" />
+            </v-card-title>
+
+            <v-card-text class="pb-2 pt-3 flex-shrink-0">
+                <!-- Controls Row with Station filters, ISN filter, and Search -->
+                <v-row dense>
+                    <v-col cols="6" md="2">
+                        <v-select v-model="selectedUploadedStation" :items="uploadedStationOptions"
+                            label="Station (Uploaded)" variant="outlined" density="compact"
+                            prepend-inner-icon="mdi-access-point" hide-details clearable />
+                    </v-col>
+                    <v-col cols="6" md="2">
+                        <v-select v-model="selectedIplasStation" :items="iplasStationOptions" label="Station (iPLAS)"
+                            variant="outlined" density="compact" prepend-inner-icon="mdi-router-wireless" hide-details
+                            clearable :disabled="iplasDataByIsn.size === 0" />
+                    </v-col>
+                    <v-col cols="12" md="3">
+                        <v-select v-model="selectedCompareIsns" :items="allCompareIsns" label="ISNs to Compare"
+                            variant="outlined" density="compact" prepend-inner-icon="mdi-identifier" hide-details
+                            multiple chips closable-chips />
+                    </v-col>
+                    <v-col cols="6" md="2">
+                        <v-select v-model="itemFilterType" :items="itemFilterOptions" label="Filter Items"
+                            variant="outlined" density="compact" prepend-inner-icon="mdi-filter" hide-details />
+                    </v-col>
+                    <v-col cols="6" md="3">
+                        <v-text-field v-model="searchQuery" label="Search Test Items" variant="outlined"
+                            density="compact" prepend-inner-icon="mdi-magnify" hide-details clearable />
+                    </v-col>
+                </v-row>
+            </v-card-text>
+
+            <v-card-text class="pa-0 flex-grow-1" style="overflow: hidden;">
+                <!-- Comparison Table Fullscreen -->
+                <v-data-table :headers="comparisonHeaders" :items="comparisonTableItems" :items-per-page="-1"
+                    density="comfortable" class="elevation-1" fixed-header :height="'calc(100vh - 180px)'">
+                    <!-- Custom row rendering -->
+                    <template #item="{ item, columns }">
+                        <tr>
+                            <td v-for="column in (columns as any[])" :key="column.key"
+                                :class="column.key === 'test_item' ? '' : 'text-center'">
+                                <span v-if="column.key === 'test_item'" class="font-weight-medium">
+                                    {{ item.test_item }}
+                                </span>
+                                <span v-else-if="column.key === 'usl' || column.key === 'lsl'"
+                                    class="text-medium-emphasis">
+                                    {{ item[column.key] ?? '-' }}
+                                </span>
+                                <template v-else-if="isScoreColumn(column.key)">
+                                    <v-chip v-if="item[column.key] != null"
+                                        :color="getScoreColor(Number(item[column.key]))" size="x-small"
+                                        class="font-weight-bold">
+                                        {{ Number(item[column.key]).toFixed(2) }}
+                                    </v-chip>
+                                    <span v-else class="text-medium-emphasis">-</span>
+                                </template>
+                                <span v-else>{{ item[column.key] ?? '-' }}</span>
+                            </td>
+                        </tr>
+                    </template>
+                </v-data-table>
+            </v-card-text>
+        </v-card>
+    </v-dialog>
 
     <!-- Score Breakdown Dialog (new universal scoring) -->
     <v-dialog v-model="showBreakdownDialog" :fullscreen="breakdownFullscreen"
@@ -304,7 +393,7 @@
                             <td class="font-weight-medium">Policy</td>
                             <td>
                                 <v-chip size="x-small" variant="tonal">{{ breakdownItem.score_breakdown.policy
-                                    }}</v-chip>
+                                }}</v-chip>
                             </td>
                         </tr>
                         <tr>
@@ -343,7 +432,8 @@
 
     <!-- UPDATED: Upload Scoring Config Dialog -->
     <UploadScoringConfigDialog v-model="showScoringConfigDialog" :test-items="extractedTestItems"
-        :existing-configs="appliedScoringConfigs" :stations="extractedStations" @apply="handleScoringConfigApply" />
+        :existing-configs="appliedScoringConfigs" :stations="extractedStations"
+        :test-item-stations="testItemStationsMap" @apply="handleScoringConfigApply" />
 </template>
 
 <script setup lang="ts">
@@ -388,16 +478,23 @@ const selectedIplasStation = ref<string | null>(null)
 const selectedCompareIsns = ref<string[]>([])
 const iplasScoredByIsn = ref<Map<string, Map<string, { score: number }>>>(new Map())
 
+// Uploaded files station filter
+const selectedUploadedStation = ref<string | null>(null)
+
 // Scoring config state
 const showScoringConfigDialog = ref(false)
 const extractedTestItems = ref<ParsedTestItemEnhanced[]>([])
 const extractedStations = ref<string[]>([])
+const testItemStationsMap = ref<Map<string, Set<string>>>(new Map())  // Maps test item -> stations
 const appliedScoringConfigs = ref<RescoreScoringConfig[]>([])
 
 // Score breakdown dialog (new universal scoring)
 const showBreakdownDialog = ref(false)
 const breakdownFullscreen = ref(false)
 const breakdownItem = ref<ParsedTestItemEnhanced | null>(null)
+
+// Comparison section fullscreen
+const comparisonFullscreen = ref(false)
 
 // Composables
 const { parseLog, compareLogs, rescoreItems } = useTestLogUpload()
@@ -440,10 +537,37 @@ const allCompareIsns = computed<string[]>(() => {
         .filter((isn: string | null): isn is string => isn !== null)
 })
 
-// ISNs currently displayed in the table columns
+// Available stations from uploaded files
+const uploadedStationOptions = computed(() => {
+    if (!compareResult.value?.file_summaries) return []
+    const stations = new Set<string>()
+    compareResult.value.file_summaries.forEach((s: any) => {
+        if (s.metadata?.station) {
+            stations.add(s.metadata.station)
+        }
+    })
+    return Array.from(stations).sort()
+})
+
+// ISNs currently displayed in the table columns (with station filter support)
 const displayedIsns = computed(() => {
-    if (selectedCompareIsns.value.length > 0) return selectedCompareIsns.value
-    return allCompareIsns.value
+    // Start with manually selected ISNs, or all ISNs
+    let isns = selectedCompareIsns.value.length > 0
+        ? selectedCompareIsns.value
+        : allCompareIsns.value
+
+    // Filter by uploaded station if selected
+    if (selectedUploadedStation.value && compareResult.value?.file_summaries) {
+        const isnsFromStation = new Set(
+            compareResult.value.file_summaries
+                .filter((s: any) => s.metadata?.station === selectedUploadedStation.value)
+                .map((s: any) => s.isn)
+                .filter((isn: string | null): isn is string => isn !== null)
+        )
+        isns = isns.filter(isn => isnsFromStation.has(isn))
+    }
+
+    return isns
 })
 
 // Available iPLAS stations across all fetched ISN data
@@ -572,32 +696,103 @@ const extractTestItems = async (): Promise<void> => {
     try {
         const stations = new Set<string>()
         const itemsMap = new Map<string, ParsedTestItemEnhanced>()
+        const itemStationsMap = new Map<string, Set<string>>()  // Track which items appear in which stations
 
-        // Parse all files to get complete list of test items and stations
-        for (const file of logFiles.value) {
+        // Helper to check if file is archive
+        const isArchiveFile = (file: File) => {
+            const ext = file.name.toLowerCase()
+            return ext.endsWith('.zip') || ext.endsWith('.rar') || ext.endsWith('.7z')
+        }
+
+        const hasArchive = logFiles.value.some(isArchiveFile)
+
+        if (hasArchive || logFiles.value.length > 1) {
+            // Use compareLogs for archives or multiple files
             try {
-                const result = await parseLog(file, criteriaFile.value, showOnlyCriteria.value)
-                if (result.station) {
-                    stations.add(result.station)
-                }
-                // Merge items, keeping the first occurrence (preserves order)
-                for (const item of result.parsed_items_enhanced || []) {
+                const result = await compareLogs(logFiles.value, criteriaFile.value, showOnlyCriteria.value)
+
+                // Extract stations from file_summaries
+                result.file_summaries?.forEach((summary: any) => {
+                    const station = summary.metadata?.station || 'Unknown'
+                    stations.add(station)
+                })
+
+                // Extract items from comparison_value_items and comparison_non_value_items
+                const allItems = [
+                    ...(result.comparison_value_items || []),
+                    ...(result.comparison_non_value_items || [])
+                ]
+
+                // Build itemsMap and itemStationsMap from per_isn_data
+                allItems.forEach((item: any) => {
                     if (!itemsMap.has(item.test_item)) {
-                        itemsMap.set(item.test_item, item)
+                        const firstData = item.per_isn_data?.[0]
+                        itemsMap.set(item.test_item, {
+                            test_item: item.test_item,
+                            value: firstData?.value || '',
+                            usl: item.usl,
+                            lsl: item.lsl,
+                            is_value_type: firstData?.is_value_type ?? false,
+                            numeric_value: firstData?.numeric_value ?? null,
+                            is_hex: firstData?.is_hex ?? false,
+                            hex_decimal: firstData?.hex_decimal ?? null,
+                            matched_criteria: item.matched_criteria || false,
+                            target: item.baseline,
+                            score: item.avg_score,
+                            score_breakdown: firstData?.score_breakdown ?? null
+                        } as ParsedTestItemEnhanced)
                     }
-                }
+
+                    // Track stations per item from file_summaries + per_isn_data
+                    if (!itemStationsMap.has(item.test_item)) {
+                        itemStationsMap.set(item.test_item, new Set())
+                    }
+                    item.per_isn_data?.forEach((data: any) => {
+                        // Find the station for this ISN from file_summaries
+                        const summary = result.file_summaries?.find((s: any) => s.isn === data.isn)
+                        if (summary?.metadata?.station) {
+                            itemStationsMap.get(item.test_item)!.add(summary.metadata.station)
+                        }
+                    })
+                })
             } catch (err: any) {
-                console.warn(`Failed to parse file ${file.name}:`, err.message)
+                console.warn(`Failed to compare files:`, err.message)
+            }
+        } else {
+            // Single .txt file - use parseLog
+            for (const file of logFiles.value) {
+                try {
+                    const result = await parseLog(file, criteriaFile.value, showOnlyCriteria.value)
+                    const station = result.station || 'Unknown'
+                    stations.add(station)
+
+                    // Track items and their stations
+                    for (const item of result.parsed_items_enhanced || []) {
+                        // Keep first occurrence of each item
+                        if (!itemsMap.has(item.test_item)) {
+                            itemsMap.set(item.test_item, item)
+                        }
+                        // Track which stations have this item
+                        if (!itemStationsMap.has(item.test_item)) {
+                            itemStationsMap.set(item.test_item, new Set())
+                        }
+                        itemStationsMap.get(item.test_item)!.add(station)
+                    }
+                } catch (err: any) {
+                    console.warn(`Failed to parse file ${file.name}:`, err.message)
+                }
             }
         }
 
         extractedTestItems.value = Array.from(itemsMap.values())
         extractedStations.value = Array.from(stations).sort()
+        testItemStationsMap.value = itemStationsMap
     } catch (err: any) {
         // If quick-parse fails, we can still open config dialog with empty items
         console.warn('Failed to extract test items for scoring config:', err.message)
         extractedTestItems.value = []
         extractedStations.value = []
+        testItemStationsMap.value = new Map()
     } finally {
         extractingItems.value = false
     }
@@ -729,8 +924,17 @@ const handleAnalyze = async () => {
     try {
         const files = logFiles.value || []
 
-        if (files.length === 1) {
-            // Single file - use parseLog
+        // Helper to check if file is archive
+        const isArchiveFile = (file: File) => {
+            const ext = file.name.toLowerCase()
+            return ext.endsWith('.zip') || ext.endsWith('.rar') || ext.endsWith('.7z')
+        }
+
+        // Use compareLogs if multiple files OR single archive file
+        const hasArchive = files.some(isArchiveFile)
+
+        if (files.length === 1 && !hasArchive) {
+            // Single .txt file - use parseLog
             const file = files[0]
             if (!file) {
                 throw new Error('No file selected')
@@ -747,7 +951,7 @@ const handleAnalyze = async () => {
             // Also update extracted test items from latest parse
             extractedTestItems.value = result.parsed_items_enhanced || []
         } else {
-            // Multiple files - use compareLogs
+            // Multiple files OR archive file - use compareLogs
             const result = await compareLogs(
                 files,
                 criteriaFile.value,

@@ -33,17 +33,21 @@
                     <v-icon size="large" color="primary" @click="fullscreen = true">mdi-fullscreen</v-icon>
                 </v-card-title>
 
+                <!-- Station Tabs -->
+                <v-tabs v-model="stationTab" bg-color="grey-lighten-4" density="compact" show-arrows>
+                    <v-tab value="all">All Stations</v-tab>
+                    <v-tab v-for="station in availableStations" :key="station" :value="station">
+                        {{ station }}
+                        <v-chip class="ml-1" size="x-small" variant="tonal">{{ getStationCount(station) }}</v-chip>
+                    </v-tab>
+                </v-tabs>
+
                 <!-- Search and Filters -->
                 <v-row dense class="pa-2">
                     <v-col cols="12" md="4">
                         <v-text-field v-model="searchQuery" label="Search" placeholder="ISN, Device, Date..."
                             prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" clearable
                             hide-details />
-                    </v-col>
-                    <v-col cols="6" md="2">
-                        <v-select v-model="stationFilter" :items="availableStations" label="Station"
-                            variant="outlined" density="compact" clearable hide-details
-                            prepend-inner-icon="mdi-access-point" />
                     </v-col>
                     <v-col cols="6" md="2">
                         <v-select v-model="scoreFilterType" :items="scoreFilterTypes" label="Score Filter"
@@ -64,8 +68,8 @@
                     <!-- UPDATED: Added row click for test item details + checkbox selection -->
                     <v-data-table :headers="headers" :items="paginatedRankings" :items-per-page="itemsPerPage"
                         density="compact" fixed-header height="500" hide-default-footer striped="even"
-                        class="cursor-pointer" show-select v-model="selectedRankingItems"
-                        @click:row="handleRowClick">
+                        class="cursor-pointer" show-select v-model="selectedRankingItems" item-value="row_id"
+                        return-object @click:row="handleRowClick">
                         <template #item.rank="{ index }">
                             <span class="font-weight-bold">{{ (currentPage - 1) * getPerPage() + index + 1 }}</span>
                         </template>
@@ -129,19 +133,23 @@
                     </div>
                     <v-btn icon="mdi-close" variant="text" @click="fullscreen = false" />
                 </v-card-title>
+                <!-- Station Tabs (Fullscreen) -->
+                <v-tabs v-model="stationTab" bg-color="grey-lighten-4" density="compact" show-arrows class="flex-shrink-0">
+                    <v-tab value="all">All Stations</v-tab>
+                    <v-tab v-for="station in availableStations" :key="station" :value="station">
+                        {{ station }}
+                        <v-chip class="ml-1" size="x-small" variant="tonal">{{ getStationCount(station) }}</v-chip>
+                    </v-tab>
+                </v-tabs>
+
                 <v-card-text class="pb-2 pt-3 flex-shrink-0">
                     <v-row dense>
-                        <v-col cols="12" md="4">
+                        <v-col cols="12" md="5">
                             <v-text-field v-model="searchQuery" label="Search" placeholder="ISN, Device, Date..."
                                 prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" clearable
                                 hide-details />
                         </v-col>
-                        <v-col cols="6" md="2">
-                            <v-select v-model="stationFilter" :items="availableStations" label="Station"
-                                variant="outlined" density="compact" clearable hide-details
-                                prepend-inner-icon="mdi-access-point" />
-                        </v-col>
-                        <v-col cols="6" md="2">
+                        <v-col cols="6" md="3">
                             <v-select v-model="scoreFilterType" :items="scoreFilterTypes" label="Score Filter"
                                 variant="outlined" density="compact" clearable hide-details />
                         </v-col>
@@ -215,72 +223,163 @@
             </v-card>
         </v-dialog>
 
-        <!-- UPDATED: Test Items Detail Dialog -->
+        <!-- UPDATED: Test Items Detail Dialog - Matching TopProductIplasDetailsDialog pattern -->
         <v-dialog v-model="showTestItemsDialog" :fullscreen="testItemsFullscreen"
-            :max-width="testItemsFullscreen ? undefined : 1200" scrollable
-            :transition="testItemsFullscreen ? 'dialog-bottom-transition' : undefined">
+            :max-width="testItemsFullscreen ? undefined : 1200"
+            :transition="testItemsFullscreen ? 'dialog-bottom-transition' : 'dialog-transition'">
             <v-card v-if="selectedRankingItem" class="d-flex flex-column"
-                :style="testItemsFullscreen ? 'height: 100vh;' : 'height: 85vh;'">
-                <v-card-title class="d-flex align-center bg-primary flex-shrink-0">
-                    <v-icon start color="white">mdi-format-list-checks</v-icon>
-                    <span class="text-white">Test Items Details</span>
-                    <v-spacer />
-                    <v-btn variant="tonal" color="white" size="small"
-                        prepend-icon="mdi-database-plus" @click="saveSingleToDatabase"
-                        :loading="savingToDb" class="mr-2">
-                        Save to DB
-                    </v-btn>
-                    <v-btn v-if="selectedRankingItem?.isn" variant="tonal" color="white" size="small"
-                        prepend-icon="mdi-compare-horizontal" @click="openIplasCompare" class="mr-2">
-                        Compare with iPLAS
-                    </v-btn>
-                    <v-btn :icon="testItemsFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
-                        color="white" @click="testItemsFullscreen = !testItemsFullscreen" />
-                    <v-btn icon="mdi-close" variant="text" color="white" @click="showTestItemsDialog = false" />
-                </v-card-title>
+                :style="{ height: testItemsFullscreen ? '100vh' : '90vh', overflow: 'hidden' }">
+                <!-- Sticky Header Container -->
+                <div class="dialog-sticky-header flex-shrink-0"
+                    style="z-index: 10; background-color: rgb(var(--v-theme-surface));">
+                    <v-card-title class="d-flex justify-space-between align-center flex-shrink-0 bg-primary pa-2 py-1">
+                        <div class="d-flex align-center">
+                            <v-icon class="mr-2" color="white" size="small">mdi-format-list-checks</v-icon>
+                            <span class="text-white text-body-1">Test Items Details</span>
+                        </div>
+                        <div class="d-flex align-center gap-2">
+                            <v-btn variant="outlined" color="white" size="x-small"
+                                prepend-icon="mdi-database-plus" @click="saveSingleToDatabase"
+                                :loading="savingToDb">
+                                Save to DB
+                            </v-btn>
+                            <v-btn v-if="selectedRankingItem?.isn" variant="outlined" color="white" size="x-small"
+                                prepend-icon="mdi-compare-horizontal" @click="openIplasCompare">
+                                Compare iPLAS
+                            </v-btn>
+                            <v-btn :icon="testItemsFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
+                                color="white" size="small" @click="testItemsFullscreen = !testItemsFullscreen"
+                                :title="testItemsFullscreen ? 'Exit Fullscreen' : 'Fullscreen'" />
+                            <v-btn icon="mdi-close" variant="text" color="white" size="small"
+                                @click="showTestItemsDialog = false" />
+                        </div>
+                    </v-card-title>
 
-                <!-- ISN Info Bar - Always visible -->
-                <v-alert type="info" variant="tonal" density="compact" class="mx-4 mt-4 mb-0 flex-shrink-0">
-                    <div class="d-flex align-center justify-space-between flex-wrap">
-                        <div>
-                            <strong>ISN:</strong> {{ selectedRankingItem.isn || 'N/A' }}
-                            <span class="mx-2">|</span>
-                            <strong>Station:</strong> {{ selectedRankingItem.station }}
-                            <span class="mx-2">|</span>
-                            <strong>Overall Score:</strong>
-                            <v-chip :color="getScoreColor(selectedRankingItem.score)" size="small" class="ml-1">
-                                {{ selectedRankingItem.score.toFixed(2) }}
+                    <!-- DUT Information Section -->
+                    <div class="flex-shrink-0 px-3 py-2">
+                        <!-- Primary Information -->
+                        <v-card variant="tonal" color="primary" class="mb-3">
+                            <v-card-text class="py-3">
+                                <v-row dense>
+                                    <v-col cols="12" md="6">
+                                        <div class="d-flex align-center cursor-pointer"
+                                            @click="copyIsnToClipboard(selectedRankingItem.isn)">
+                                            <v-icon size="large" class="mr-3" color="primary">mdi-barcode</v-icon>
+                                            <div>
+                                                <div class="text-caption text-medium-emphasis">DUT ISN</div>
+                                                <div class="text-h6 font-weight-bold">{{ selectedRankingItem.isn || 'N/A' }}</div>
+                                            </div>
+                                            <v-tooltip activator="parent" location="top">Click to copy ISN</v-tooltip>
+                                        </div>
+                                    </v-col>
+                                    <v-col cols="12" md="6">
+                                        <div class="d-flex align-center">
+                                            <v-icon size="large" class="mr-3" color="primary">mdi-factory</v-icon>
+                                            <div>
+                                                <div class="text-caption text-medium-emphasis">Station</div>
+                                                <div class="text-h6 font-weight-bold">{{ selectedRankingItem.station }}</div>
+                                            </div>
+                                        </div>
+                                    </v-col>
+                                </v-row>
+                            </v-card-text>
+                        </v-card>
+
+                        <!-- Device & Identifiers -->
+                        <v-card variant="outlined" class="mb-3">
+                            <v-card-text class="py-2">
+                                <v-row dense>
+                                    <v-col cols="12" md="4">
+                                        <div class="d-flex align-center">
+                                            <v-icon size="small" class="mr-2">mdi-chip</v-icon>
+                                            <span class="text-body-2">
+                                                <strong>Device:</strong>
+                                                <span class="ml-2 font-mono">{{ selectedRankingItem.device || 'N/A' }}</span>
+                                            </span>
+                                        </div>
+                                    </v-col>
+                                    <v-col cols="12" md="4">
+                                        <div class="d-flex align-center">
+                                            <v-icon size="small" class="mr-2">mdi-calendar</v-icon>
+                                            <span class="text-body-2">
+                                                <strong>Test Date:</strong>
+                                                <span class="ml-2">{{ formatTestDate(selectedRankingItem.test_date) }}</span>
+                                            </span>
+                                        </div>
+                                    </v-col>
+                                    <v-col cols="12" md="4">
+                                        <div class="d-flex align-center">
+                                            <v-icon size="small" class="mr-2">mdi-timer</v-icon>
+                                            <span class="text-body-2">
+                                                <strong>Duration:</strong>
+                                                <span class="ml-2">{{ formatDuration(selectedRankingItem.duration_seconds) }}</span>
+                                            </span>
+                                        </div>
+                                    </v-col>
+                                </v-row>
+                            </v-card-text>
+                        </v-card>
+
+                        <!-- Status Chips & Score -->
+                        <div class="d-flex align-center flex-wrap gap-2 text-caption">
+                            <v-chip size="small" variant="tonal" color="info" prepend-icon="mdi-list-box" label>
+                                <span class="text-medium-emphasis mr-1">Test Items:</span>
+                                {{ selectedTestItems.length }}
+                            </v-chip>
+                            <v-chip size="small" :color="getStatusColor(selectedRankingItem.status)"
+                                :prepend-icon="selectedRankingItem.status === 'PASS' ? 'mdi-check-circle' : 'mdi-alert-circle'" label>
+                                <span class="text-medium-emphasis mr-1">SFIS Status:</span>
+                                {{ selectedRankingItem.status }}
+                            </v-chip>
+                            <v-chip size="small" :color="getResultColor(selectedRankingItem.result)"
+                                prepend-icon="mdi-flag-checkered" label>
+                                <span class="text-medium-emphasis mr-1">Result:</span>
+                                {{ selectedRankingItem.result || 'N/A' }}
+                            </v-chip>
+                            <v-spacer />
+                            <v-chip color="primary" variant="tonal" prepend-icon="mdi-chart-line">
+                                <strong>Overall Score:</strong>&nbsp;
+                                <v-chip :color="getScoreColor(selectedRankingItem.score)" size="x-small" class="ml-1">
+                                    {{ selectedRankingItem.score.toFixed(2) }}
+                                </v-chip>
                             </v-chip>
                         </div>
                     </div>
-                </v-alert>
 
-                <!-- Filter Row -->
-                <v-row dense class="mx-4 mt-4 mb-0 flex-shrink-0">
-                    <v-col cols="12" md="4">
-                        <v-select v-model="testItemFilterType" :items="testItemFilterOptions" label="Filter Items"
-                            variant="outlined" density="compact" prepend-inner-icon="mdi-filter" hide-details />
-                    </v-col>
-                    <v-col cols="12" md="4">
-                        <v-text-field v-model="testItemSearch" label="Search Test Items"
-                            variant="outlined" density="compact" prepend-inner-icon="mdi-magnify"
-                            hide-details clearable />
-                    </v-col>
-                    <v-col cols="12" md="4" class="d-flex align-center">
-                        <v-chip size="small" class="mr-2">{{ filteredTestItems.length }} / {{ selectedTestItems.length }}</v-chip>
-                        <v-btn v-if="testItemFilterType !== 'all' || testItemSearch" size="small" variant="text"
-                            color="primary" @click="resetTestItemFilters">
-                            <v-icon start size="small">mdi-filter-off</v-icon>
-                            Clear Filters
-                        </v-btn>
-                    </v-col>
-                </v-row>
+                    <v-divider class="flex-shrink-0" />
+                </div>
+                <!-- End Sticky Header Container -->
 
-                <!-- Test Items Table - Full width with sticky header -->
-                <v-card-text class="pa-4 flex-grow-1 d-flex flex-column" style="overflow: hidden; min-height: 0;">
-                    <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="25"
-                        density="comfortable" class="elevation-1 flex-grow-1" fixed-header
-                        style="height: 100%;"
+                <!-- Search and Filter Controls (Fixed, non-scrollable) -->
+                <v-card-text class="pb-2 pt-2 flex-shrink-0">
+                    <v-row dense>
+                        <v-col cols="12" md="4">
+                            <v-text-field v-model="testItemSearch" label="Search Test Items"
+                                prepend-inner-icon="mdi-magnify" variant="outlined" density="compact"
+                                hide-details clearable placeholder="Search by name..." />
+                        </v-col>
+                        <v-col cols="12" md="4">
+                            <v-select v-model="testItemFilterType" :items="testItemFilterOptions" label="Filter Items"
+                                variant="outlined" density="compact" prepend-inner-icon="mdi-filter" hide-details />
+                        </v-col>
+                        <v-col cols="12" md="4" class="d-flex align-center justify-space-between">
+                            <v-chip size="small" variant="tonal">
+                                {{ filteredTestItems.length }} / {{ selectedTestItems.length }} items
+                            </v-chip>
+                            <v-btn v-if="testItemFilterType !== 'all' || testItemSearch" size="small" variant="text"
+                                color="primary" @click="resetTestItemFilters">
+                                <v-icon start size="small">mdi-filter-off</v-icon>
+                                Clear Filters
+                            </v-btn>
+                        </v-col>
+                    </v-row>
+                </v-card-text>
+
+                <!-- Data Table Container -->
+                <div class="flex-grow-1" :style="{ minHeight: 0, overflow: testItemsFullscreen ? 'hidden' : 'auto' }">
+                    <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="50"
+                        density="comfortable" fixed-header fixed-footer style="height: 100%;"
+                        class="elevation-1 v-table--striped clickable-rows"
                         @click:row="(_event: any, data: any) => showScoreBreakdown(data.item)">
                         <template #item.test_item="{ item }">
                             <span class="font-weight-medium">{{ item.test_item }}</span>
@@ -303,7 +402,7 @@
                             <span v-else class="text-medium-emphasis">-</span>
                         </template>
                     </v-data-table>
-                </v-card-text>
+                </div>
             </v-card>
         </v-dialog>
 
@@ -458,6 +557,7 @@ const props = defineProps<{
 }>()
 
 interface RankingItem {
+    row_id: string  // Unique ID combining ISN and station
     isn: string | null
     test_date: string | null
     duration_seconds: number | null
@@ -470,7 +570,8 @@ interface RankingItem {
 
 // Search and filters
 const searchQuery = ref('')
-const stationFilter = ref<string | null>(null)
+const stationTab = ref('all')  // Station tabs: 'all' or specific station name
+const stationFilter = ref<string | null>(null)  // Keep for backward compatibility
 const scoreFilterType = ref<string | null>(null)
 const scoreFilterValue = ref<number | null>(null)
 const resultFilter = ref<string | null>(null)
@@ -587,11 +688,14 @@ const rankings = computed<RankingItem[]>(() => {
 
     if (props.parseResult && props.parseResult.metadata) {
         // Single file parsing mode
+        const isn = props.parseResult.isn || 'unknown'
+        const station = props.parseResult.station || 'Unknown'
         items.push({
+            row_id: `${isn}_${station}`,
             isn: props.parseResult.isn,
             test_date: props.parseResult.metadata.test_date,
             duration_seconds: props.parseResult.metadata.duration_seconds,
-            station: props.parseResult.station,
+            station: station,
             device: props.parseResult.metadata.device,
             status: props.parseResult.metadata.sfis_status || 'Unknown',
             result: props.parseResult.metadata.result,
@@ -601,11 +705,14 @@ const rankings = computed<RankingItem[]>(() => {
         // Multiple files comparison mode - use file_summaries for metadata
         if (props.compareResult.file_summaries) {
             props.compareResult.file_summaries.forEach(fileSummary => {
+                const isn = fileSummary.isn || 'unknown'
+                const station = fileSummary.metadata.station || 'Unknown'
                 items.push({
+                    row_id: `${isn}_${station}`,
                     isn: fileSummary.isn,
                     test_date: fileSummary.metadata.test_date,
                     duration_seconds: fileSummary.metadata.duration_seconds,
-                    station: fileSummary.metadata.station || 'Unknown',
+                    station: station,
                     device: fileSummary.metadata.device,
                     status: fileSummary.metadata.sfis_status || 'Unknown',
                     result: fileSummary.metadata.result,
@@ -630,13 +737,18 @@ const availableStations = computed(() => {
     return Array.from(stations).sort()
 })
 
+// Get count of items for a specific station
+function getStationCount(station: string): number {
+    return rankings.value.filter(item => item.station === station).length
+}
+
 // Filtered rankings
 const filteredRankings = computed(() => {
     let filtered = rankings.value
 
-    // Station filter
-    if (stationFilter.value) {
-        filtered = filtered.filter(item => item.station === stationFilter.value)
+    // Station tab filter (replaces dropdown filter)
+    if (stationTab.value && stationTab.value !== 'all') {
+        filtered = filtered.filter(item => item.station === stationTab.value)
     }
 
     // Search filter
@@ -759,6 +871,17 @@ const getScoringTypeColor = (type: string): string => {
         case 'throughput': return 'green'
         case 'binary': return 'grey'
         default: return 'blue'
+    }
+}
+
+// Copy ISN to clipboard with toast notification
+const copyIsnToClipboard = async (isn: string | null) => {
+    if (!isn) return
+    try {
+        await navigator.clipboard.writeText(isn)
+        showSuccess('ISN copied to clipboard')
+    } catch (err) {
+        console.error('Failed to copy ISN:', err)
     }
 }
 

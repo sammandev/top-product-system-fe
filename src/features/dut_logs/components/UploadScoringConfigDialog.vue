@@ -268,6 +268,7 @@ interface Props {
     testItems: ParsedTestItemEnhanced[]
     existingConfigs?: RescoreScoringConfig[]
     stations?: string[]
+    testItemStations?: Map<string, Set<string>>  // Maps test item name -> stations it appears in
 }
 
 interface Emits {
@@ -362,11 +363,25 @@ function detectScoringType(name: string): string {
     return 'symmetrical'
 }
 
-// Filtered configs based on search
+// Filtered configs based on search and station
 const filteredConfigs = computed(() => {
-    if (!searchQuery.value) return scoringConfigs.value
-    const query = searchQuery.value.toLowerCase()
-    return scoringConfigs.value.filter(c => c.test_item_name.toLowerCase().includes(query))
+    let configs = scoringConfigs.value
+
+    // Filter by station if selected and mapping is provided
+    if (selectedStation.value && props.testItemStations) {
+        configs = configs.filter(c => {
+            const itemStations = props.testItemStations?.get(c.test_item_name)
+            return itemStations?.has(selectedStation.value as string)
+        })
+    }
+
+    // Filter by search query
+    if (searchQuery.value) {
+        const query = searchQuery.value.toLowerCase()
+        configs = configs.filter(c => c.test_item_name.toLowerCase().includes(query))
+    }
+
+    return configs
 })
 
 // Helper: check if item is criteria (has UCL or LCL)
