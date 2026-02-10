@@ -20,9 +20,12 @@
             <v-card-text class="pa-0" :class="isFullscreen ? 'flex-grow-1' : ''"
                 :style="isFullscreen ? 'overflow: hidden;' : 'height: 600px;'">
                 <div style="height: 100%; overflow: hidden; display: flex; flex-direction: column;">
-                    <div class="pa-3 pb-2">
+                    <div class="pa-3 pb-2 d-flex gap-2">
                         <v-text-field v-model="searchQuery" label="Search test items" prepend-inner-icon="mdi-magnify"
-                            variant="outlined" density="compact" clearable hide-details />
+                            variant="outlined" density="compact" clearable hide-details style="flex: 2;" />
+                        <v-select v-if="stationOptions.length > 0" v-model="selectedStation" :items="stationOptions"
+                            label="Station" variant="outlined" density="compact" clearable hide-details
+                            style="flex: 1; min-width: 150px;" prepend-inner-icon="mdi-access-point" />
                     </div>
 
                     <!-- Quick Select Buttons -->
@@ -264,6 +267,7 @@ interface Props {
     modelValue: boolean
     testItems: ParsedTestItemEnhanced[]
     existingConfigs?: RescoreScoringConfig[]
+    stations?: string[]
 }
 
 interface Emits {
@@ -272,7 +276,8 @@ interface Emits {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    existingConfigs: () => []
+    existingConfigs: () => [],
+    stations: () => []
 })
 
 const emit = defineEmits<Emits>()
@@ -285,8 +290,12 @@ const dialogOpen = computed({
 // Local state
 const isFullscreen = ref(false)
 const searchQuery = ref('')
+const selectedStation = ref<string | null>(null)
 const selectedItemNames = ref<Set<string>>(new Set())
 const scoringConfigs = ref<RescoreScoringConfig[]>([])
+
+// Station options computed from props
+const stationOptions = computed(() => props.stations || [])
 
 // Single item scoring dialog (popup from clicking scoring type button)
 const singleItemScoringDialog = ref(false)
@@ -306,7 +315,7 @@ const scoringTypeOptions = [
     { title: 'Near-Zero', value: 'per_mask' },
     { title: 'EVM', value: 'evm' },
     // { title: 'Throughput (Higher-is-Better)', value: 'throughput' },
-    { title: 'Binary (PASS/FAIL)', value: 'binary' },
+    // { title: 'Binary (PASS/FAIL)', value: 'binary' },
 ]
 
 const policyOptions = [

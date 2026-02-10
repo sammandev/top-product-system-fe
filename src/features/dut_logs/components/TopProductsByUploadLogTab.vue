@@ -9,30 +9,31 @@
                 </v-card-title>
 
                 <v-card-text>
-                    <v-row>
+                    <v-row class="align-stretch">
                         <!-- Upload Log Field -->
-                        <v-col cols="12" md="6">
-                            <v-card variant="outlined">
+                        <v-col cols="12" md="6" class="d-flex">
+                            <v-card variant="outlined" class="flex-grow-1">
                                 <v-card-title class="text-subtitle-1 bg-grey-lighten-4">
                                     <v-icon start size="small">mdi-file-document-multiple</v-icon>
                                     Upload Test Logs
                                 </v-card-title>
-                                <v-card-text>
-                                    <v-file-input v-model="logFiles"
-                                        label="Test log files (.txt, .zip, .rar, .7z)"
-                                        accept=".txt,.zip,.rar,.7z" multiple
-                                        prepend-icon="mdi-file-document" show-size :clearable="true" :disabled="loading"
-                                        variant="outlined">
+                                <v-card-text class="mt-2">
+                                    <v-file-input v-model="logFiles" label="Test log files (.txt, .zip, .rar, .7z)"
+                                        accept=".txt,.zip,.rar,.7z" multiple prepend-icon="mdi-file-document" show-size
+                                        :clearable="true" :disabled="loading" variant="outlined">
                                         <template #selection="{ fileNames }">
                                             <template v-for="(fileName, index) in fileNames" :key="fileName">
-                                                <v-chip v-if="index < 3" size="small" class="me-2">{{ fileName }}</v-chip>
+                                                <v-chip v-if="index < 3" size="small" class="me-2">{{ fileName
+                                                    }}</v-chip>
                                             </template>
                                             <span v-if="fileNames.length > 3" class="text-caption text-medium-emphasis">
-                                                +{{ fileNames.length - 3 }} more {{ fileNames.length - 3 === 1 ? 'file' : 'files' }}
+                                                +{{ fileNames.length - 3 }} more {{ fileNames.length - 3 === 1 ? 'file'
+                                                    : 'files' }}
                                             </span>
                                         </template>
                                     </v-file-input>
-                                    <div v-if="logFiles && logFiles.length > 0" class="text-caption text-medium-emphasis mt-2">
+                                    <div v-if="logFiles && logFiles.length > 0"
+                                        class="text-caption text-medium-emphasis mt-2">
                                         {{ logFiles.length }} {{ logFiles.length === 1 ? 'file' : 'files' }} selected
                                     </div>
                                 </v-card-text>
@@ -40,8 +41,8 @@
                         </v-col>
 
                         <!-- Custom Criteria (Optional) -->
-                        <v-col cols="12" md="6">
-                            <v-card variant="outlined">
+                        <v-col cols="12" md="6" class="d-flex">
+                            <v-card variant="outlined" class="flex-grow-1">
                                 <v-card-title class="text-subtitle-1 bg-grey-lighten-4 d-flex align-center">
                                     <v-icon start size="small">mdi-filter-variant</v-icon>
                                     Custom Criteria (Optional)
@@ -51,10 +52,10 @@
                                         Template
                                     </v-btn>
                                 </v-card-title>
-                                <v-card-text>
-                                    <v-file-input v-model="criteriaFile" label="Criteria file (.json)"
-                                        accept=".json" prepend-icon="mdi-file-cog" show-size :clearable="true"
-                                        :disabled="loading" variant="outlined" density="compact" />
+                                <v-card-text class="mt-2">
+                                    <v-file-input v-model="criteriaFile" label="Criteria file (.json)" accept=".json"
+                                        prepend-icon="mdi-file-cog" show-size :clearable="true" :disabled="loading"
+                                        variant="outlined" density="compact" />
 
                                     <v-checkbox v-model="showOnlyCriteria" label="Show only criteria items"
                                         :disabled="!criteriaFile || loading" density="compact" color="primary"
@@ -74,9 +75,8 @@
                         <v-col cols="12">
                             <div class="d-flex gap-2 flex-wrap">
                                 <!-- Configure Scoring Button -->
-                                <v-btn color="secondary" size="large" variant="outlined"
-                                    :loading="extractingItems" :disabled="!hasFiles || loading"
-                                    prepend-icon="mdi-cog-outline"
+                                <v-btn color="secondary" size="large" variant="outlined" :loading="extractingItems"
+                                    :disabled="!hasFiles || loading" prepend-icon="mdi-cog-outline"
                                     @click="handleConfigureScoring">
                                     Configure Scoring
                                     <v-chip v-if="appliedScoringConfigs.length > 0" size="x-small" color="success"
@@ -85,14 +85,13 @@
                                     </v-chip>
                                 </v-btn>
                                 <!-- Analyze Button -->
-                                <v-btn color="primary" size="large" style="flex: 1"
-                                    :loading="loading" :disabled="!canAnalyze" prepend-icon="mdi-play"
-                                    @click="handleAnalyze">
+                                <v-btn color="primary" size="large" style="flex: 1" :loading="loading"
+                                    :disabled="!canAnalyze" prepend-icon="mdi-play" @click="handleAnalyze">
                                     Analyze Logs
                                 </v-btn>
                                 <!-- Reset Button -->
-                                <v-btn v-if="hasResults" variant="outlined" size="large"
-                                    :disabled="loading" prepend-icon="mdi-refresh" @click="handleReset">
+                                <v-btn v-if="hasResults" variant="outlined" size="large" :disabled="loading"
+                                    prepend-icon="mdi-refresh" @click="handleReset">
                                     Reset
                                 </v-btn>
                             </div>
@@ -117,11 +116,8 @@
     <!-- Section 2: Ranking Summary Section -->
     <v-row v-if="hasResults" class="mt-4">
         <v-col cols="12">
-            <TopProductRankingUploadLog 
-                :parse-result="parsingResult" 
-                :compare-result="compareResult"
-                :scoring-configs="appliedScoringConfigs"
-            />
+            <TopProductRankingUploadLog :parse-result="parsingResult" :compare-result="compareResult"
+                :scoring-configs="appliedScoringConfigs" />
         </v-col>
     </v-row>
 
@@ -136,10 +132,10 @@
                     <v-spacer />
                     <v-btn variant="tonal" color="success" size="small" prepend-icon="mdi-microsoft-excel"
                         :loading="exportingComparison" @click="exportComparisonToExcel" class="mr-2">
-                        Export to Excel
+                        Export
                     </v-btn>
-                    <v-progress-circular v-if="iplasLoading" indeterminate size="20" width="2"
-                        color="primary" class="mr-2" />
+                    <v-progress-circular v-if="iplasLoading" indeterminate size="20" width="2" color="primary"
+                        class="mr-2" />
                     <v-chip v-if="iplasDataByIsn.size > 0" size="small" color="success" variant="tonal">
                         iPLAS: {{ iplasDataByIsn.size }} ISN(s)
                     </v-chip>
@@ -155,20 +151,17 @@
                                 :disabled="iplasDataByIsn.size === 0" />
                         </v-col>
                         <v-col cols="12" md="3">
-                            <v-select v-model="selectedCompareIsns" :items="allCompareIsns"
-                                label="ISNs to Compare" variant="outlined" density="compact"
-                                prepend-inner-icon="mdi-identifier" hide-details multiple chips
-                                closable-chips />
+                            <v-select v-model="selectedCompareIsns" :items="allCompareIsns" label="ISNs to Compare"
+                                variant="outlined" density="compact" prepend-inner-icon="mdi-identifier" hide-details
+                                multiple chips closable-chips />
                         </v-col>
                         <v-col cols="12" md="3">
                             <v-select v-model="itemFilterType" :items="itemFilterOptions" label="Filter Items"
-                                variant="outlined" density="compact" prepend-inner-icon="mdi-filter"
-                                hide-details />
+                                variant="outlined" density="compact" prepend-inner-icon="mdi-filter" hide-details />
                         </v-col>
                         <v-col cols="12" md="3">
-                            <v-text-field v-model="searchQuery" label="Search Test Items"
-                                variant="outlined" density="compact" prepend-inner-icon="mdi-magnify"
-                                hide-details clearable />
+                            <v-text-field v-model="searchQuery" label="Search Test Items" variant="outlined"
+                                density="compact" prepend-inner-icon="mdi-magnify" hide-details clearable />
                         </v-col>
                     </v-row>
 
@@ -186,9 +179,8 @@
                     </v-alert>
 
                     <!-- UPDATED: Comparison Table with Parent-Children Headers per ISN -->
-                    <v-data-table :headers="comparisonHeaders" :items="comparisonTableItems"
-                        :items-per-page="25" density="comfortable" class="elevation-1"
-                        fixed-header height="500">
+                    <v-data-table :headers="comparisonHeaders" :items="comparisonTableItems" :items-per-page="25"
+                        density="comfortable" class="elevation-1" fixed-header height="840">
                         <!-- Custom row rendering for dynamic columns -->
                         <template #item="{ item, columns }">
                             <tr>
@@ -206,8 +198,8 @@
                                     <!-- Score columns (chips) -->
                                     <template v-else-if="isScoreColumn(column.key)">
                                         <v-chip v-if="item[column.key] != null"
-                                            :color="getScoreColor(Number(item[column.key]))"
-                                            size="x-small" class="font-weight-bold">
+                                            :color="getScoreColor(Number(item[column.key]))" size="x-small"
+                                            class="font-weight-bold">
                                             {{ Number(item[column.key]).toFixed(2) }}
                                         </v-chip>
                                         <span v-else class="text-medium-emphasis">-</span>
@@ -224,15 +216,16 @@
     </v-row>
 
     <!-- Score Breakdown Dialog (new universal scoring) -->
-    <v-dialog v-model="showBreakdownDialog" :fullscreen="breakdownFullscreen" :max-width="breakdownFullscreen ? undefined : 650" scrollable
+    <v-dialog v-model="showBreakdownDialog" :fullscreen="breakdownFullscreen"
+        :max-width="breakdownFullscreen ? undefined : 650" scrollable
         :transition="breakdownFullscreen ? 'dialog-bottom-transition' : undefined">
         <v-card v-if="breakdownItem">
             <v-card-title class="d-flex align-center bg-info">
                 <v-icon start color="white">mdi-calculator-variant</v-icon>
                 <span class="text-white">Score Breakdown</span>
                 <v-spacer />
-                <v-btn :icon="breakdownFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text" color="white"
-                    @click="breakdownFullscreen = !breakdownFullscreen" />
+                <v-btn :icon="breakdownFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
+                    color="white" @click="breakdownFullscreen = !breakdownFullscreen" />
                 <v-btn icon="mdi-close" variant="text" color="white" @click="showBreakdownDialog = false" />
             </v-card-title>
 
@@ -271,37 +264,47 @@
                         <tr>
                             <td class="font-weight-medium">Scoring Type</td>
                             <td>
-                                <v-chip size="small" :color="getScoringTypeColor(breakdownItem.score_breakdown?.scoring_type ?? '')">
+                                <v-chip size="small"
+                                    :color="getScoringTypeColor(breakdownItem.score_breakdown?.scoring_type ?? '')">
                                     {{ breakdownItem.score_breakdown?.scoring_type }}
                                 </v-chip>
                             </td>
                         </tr>
-                        <tr v-if="breakdownItem.score_breakdown?.ucl !== null && breakdownItem.score_breakdown?.ucl !== undefined">
+                        <tr
+                            v-if="breakdownItem.score_breakdown?.ucl !== null && breakdownItem.score_breakdown?.ucl !== undefined">
                             <td class="font-weight-medium">UCL (Upper Limit)</td>
                             <td>{{ breakdownItem.score_breakdown.ucl }}</td>
                         </tr>
-                        <tr v-if="breakdownItem.score_breakdown?.lcl !== null && breakdownItem.score_breakdown?.lcl !== undefined">
+                        <tr
+                            v-if="breakdownItem.score_breakdown?.lcl !== null && breakdownItem.score_breakdown?.lcl !== undefined">
                             <td class="font-weight-medium">LCL (Lower Limit)</td>
                             <td>{{ breakdownItem.score_breakdown.lcl }}</td>
                         </tr>
-                        <tr v-if="breakdownItem.score_breakdown?.target !== null && breakdownItem.score_breakdown?.target !== undefined">
+                        <tr
+                            v-if="breakdownItem.score_breakdown?.target !== null && breakdownItem.score_breakdown?.target !== undefined">
                             <td class="font-weight-medium">Target</td>
-                            <td class="font-weight-bold text-primary">{{ breakdownItem.score_breakdown.target?.toFixed(2) }}</td>
+                            <td class="font-weight-bold text-primary">{{
+                                breakdownItem.score_breakdown.target?.toFixed(2) }}
+                            </td>
                         </tr>
-                        <tr v-if="breakdownItem.score_breakdown?.actual !== null && breakdownItem.score_breakdown?.actual !== undefined">
+                        <tr
+                            v-if="breakdownItem.score_breakdown?.actual !== null && breakdownItem.score_breakdown?.actual !== undefined">
                             <td class="font-weight-medium">Actual Value</td>
                             <td class="font-weight-bold">{{ breakdownItem.score_breakdown.actual }}</td>
                         </tr>
-                        <tr v-if="breakdownItem.score_breakdown?.deviation !== null && breakdownItem.score_breakdown?.deviation !== undefined">
+                        <tr
+                            v-if="breakdownItem.score_breakdown?.deviation !== null && breakdownItem.score_breakdown?.deviation !== undefined">
                             <td class="font-weight-medium">Deviation</td>
-                            <td :class="Math.abs(breakdownItem.score_breakdown.deviation!) > 1 ? 'text-error font-weight-bold' : ''">
+                            <td
+                                :class="Math.abs(breakdownItem.score_breakdown.deviation!) > 1 ? 'text-error font-weight-bold' : ''">
                                 {{ breakdownItem.score_breakdown.deviation?.toFixed(2) }}
                             </td>
                         </tr>
                         <tr v-if="breakdownItem.score_breakdown?.policy">
                             <td class="font-weight-medium">Policy</td>
                             <td>
-                                <v-chip size="x-small" variant="tonal">{{ breakdownItem.score_breakdown.policy }}</v-chip>
+                                <v-chip size="x-small" variant="tonal">{{ breakdownItem.score_breakdown.policy
+                                    }}</v-chip>
                             </td>
                         </tr>
                         <tr>
@@ -340,7 +343,7 @@
 
     <!-- UPDATED: Upload Scoring Config Dialog -->
     <UploadScoringConfigDialog v-model="showScoringConfigDialog" :test-items="extractedTestItems"
-        :existing-configs="appliedScoringConfigs" @apply="handleScoringConfigApply" />
+        :existing-configs="appliedScoringConfigs" :stations="extractedStations" @apply="handleScoringConfigApply" />
 </template>
 
 <script setup lang="ts">
@@ -388,6 +391,7 @@ const iplasScoredByIsn = ref<Map<string, Map<string, { score: number }>>>(new Ma
 // Scoring config state
 const showScoringConfigDialog = ref(false)
 const extractedTestItems = ref<ParsedTestItemEnhanced[]>([])
+const extractedStations = ref<string[]>([])
 const appliedScoringConfigs = ref<RescoreScoringConfig[]>([])
 
 // Score breakdown dialog (new universal scoring)
@@ -559,22 +563,41 @@ const comparisonTableItems = computed(() => {
 // Methods
 
 /**
- * Quick-parse the first file to extract test item names for scoring config dialog
+ * Quick-parse files to extract test item names and stations for scoring config dialog
  */
 const extractTestItems = async (): Promise<void> => {
     if (!logFiles.value || logFiles.value.length === 0) return
 
     extractingItems.value = true
     try {
-        const firstFile = logFiles.value[0]
-        if (!firstFile) return
+        const stations = new Set<string>()
+        const itemsMap = new Map<string, ParsedTestItemEnhanced>()
 
-        const result = await parseLog(firstFile, criteriaFile.value, showOnlyCriteria.value)
-        extractedTestItems.value = result.parsed_items_enhanced || []
+        // Parse all files to get complete list of test items and stations
+        for (const file of logFiles.value) {
+            try {
+                const result = await parseLog(file, criteriaFile.value, showOnlyCriteria.value)
+                if (result.station) {
+                    stations.add(result.station)
+                }
+                // Merge items, keeping the first occurrence (preserves order)
+                for (const item of result.parsed_items_enhanced || []) {
+                    if (!itemsMap.has(item.test_item)) {
+                        itemsMap.set(item.test_item, item)
+                    }
+                }
+            } catch (err: any) {
+                console.warn(`Failed to parse file ${file.name}:`, err.message)
+            }
+        }
+
+        extractedTestItems.value = Array.from(itemsMap.values())
+        extractedStations.value = Array.from(stations).sort()
     } catch (err: any) {
         // If quick-parse fails, we can still open config dialog with empty items
         console.warn('Failed to extract test items for scoring config:', err.message)
         extractedTestItems.value = []
+        extractedStations.value = []
     } finally {
         extractingItems.value = false
     }
@@ -705,7 +728,7 @@ const handleAnalyze = async () => {
 
     try {
         const files = logFiles.value || []
-        
+
         if (files.length === 1) {
             // Single file - use parseLog
             const file = files[0]
@@ -751,6 +774,7 @@ const handleReset = () => {
     searchQuery.value = ''
     itemFilterType.value = 'all'
     extractedTestItems.value = []
+    extractedStations.value = []
     appliedScoringConfigs.value = []
     // UPDATED: Clear iPLAS comparison state
     iplasDataByIsn.value = new Map()
@@ -769,7 +793,6 @@ const handleCriteriaCreated = (file: File) => {
 
 const downloadCriteriaTemplate = () => {
     const template = {
-        "$schema": "https://json-schema.org/draft/2020-12/schema",
         "$comment": "Criteria Configuration Template for Test Log Parser",
         "criteria": [
             {

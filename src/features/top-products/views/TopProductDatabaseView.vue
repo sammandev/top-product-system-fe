@@ -580,7 +580,7 @@
                         <div class="d-flex flex-column gap-2">
                             <v-btn color="success" prepend-icon="mdi-file-excel" variant="tonal"
                                 @click="exportProduct('excel')" :loading="exporting" size="large">
-                                Export to Excel
+                                Export
                             </v-btn>
                             <v-btn color="error" prepend-icon="mdi-file-pdf-box" variant="tonal"
                                 @click="exportProduct('pdf')" :loading="exporting" size="large">

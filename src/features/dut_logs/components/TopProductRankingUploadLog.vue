@@ -5,10 +5,17 @@
                 <v-icon class="mr-2" color="warning">mdi-podium-gold</v-icon>
                 Top Product Ranking by Overall Score
             </div>
-            <v-btn variant="tonal" color="success" size="small" prepend-icon="mdi-microsoft-excel"
-                :loading="exportingRanking" @click="exportRankingToExcel">
-                Export{{ selectedRankingItems.length > 0 ? ` (${selectedRankingItems.length})` : '' }}
-            </v-btn>
+            <div class="d-flex gap-2">
+                <v-btn variant="tonal" color="primary" size="small" prepend-icon="mdi-database-plus"
+                    :loading="savingToDb" :disabled="selectedRankingItems.length === 0"
+                    @click="saveSelectedToDatabase">
+                    Save to DB{{ selectedRankingItems.length > 0 ? ` (${selectedRankingItems.length})` : '' }}
+                </v-btn>
+                <v-btn variant="tonal" color="success" size="small" prepend-icon="mdi-microsoft-excel"
+                    :loading="exportingRanking" @click="exportRankingToExcel">
+                    Export{{ selectedRankingItems.length > 0 ? ` (${selectedRankingItems.length})` : '' }}
+                </v-btn>
+            </div>
         </v-card-title>
 
         <v-card-subtitle class="text-caption text-medium-emphasis pb-0">
@@ -28,21 +35,26 @@
 
                 <!-- Search and Filters -->
                 <v-row dense class="pa-2">
-                    <v-col cols="12" md="6">
+                    <v-col cols="12" md="4">
                         <v-text-field v-model="searchQuery" label="Search" placeholder="ISN, Device, Date..."
                             prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" clearable
                             hide-details />
                     </v-col>
-                    <v-col cols="12" md="2">
+                    <v-col cols="6" md="2">
+                        <v-select v-model="stationFilter" :items="availableStations" label="Station"
+                            variant="outlined" density="compact" clearable hide-details
+                            prepend-inner-icon="mdi-access-point" />
+                    </v-col>
+                    <v-col cols="6" md="2">
                         <v-select v-model="scoreFilterType" :items="scoreFilterTypes" label="Score Filter"
                             variant="outlined" density="compact" clearable hide-details />
                     </v-col>
-                    <v-col cols="12" md="2">
+                    <v-col cols="6" md="2">
                         <v-text-field v-model.number="scoreFilterValue" label="Score Value" placeholder="e.g., 9"
                             type="number" variant="outlined" density="compact" clearable hide-details
                             :disabled="!scoreFilterType" />
                     </v-col>
-                    <v-col cols="12" md="2">
+                    <v-col cols="6" md="2">
                         <v-select v-model="resultFilter" :items="resultFilterOptions" label="Test Result"
                             variant="outlined" density="compact" clearable hide-details />
                     </v-col>
@@ -119,21 +131,26 @@
                 </v-card-title>
                 <v-card-text class="pb-2 pt-3 flex-shrink-0">
                     <v-row dense>
-                        <v-col cols="12" md="6">
+                        <v-col cols="12" md="4">
                             <v-text-field v-model="searchQuery" label="Search" placeholder="ISN, Device, Date..."
                                 prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" clearable
                                 hide-details />
                         </v-col>
-                        <v-col cols="12" md="2">
+                        <v-col cols="6" md="2">
+                            <v-select v-model="stationFilter" :items="availableStations" label="Station"
+                                variant="outlined" density="compact" clearable hide-details
+                                prepend-inner-icon="mdi-access-point" />
+                        </v-col>
+                        <v-col cols="6" md="2">
                             <v-select v-model="scoreFilterType" :items="scoreFilterTypes" label="Score Filter"
                                 variant="outlined" density="compact" clearable hide-details />
                         </v-col>
-                        <v-col cols="12" md="2">
+                        <v-col cols="6" md="2">
                             <v-text-field v-model.number="scoreFilterValue" label="Score Value" placeholder="e.g., 9"
                                 type="number" variant="outlined" density="compact" clearable hide-details
                                 :disabled="!scoreFilterType" />
                         </v-col>
-                        <v-col cols="12" md="2">
+                        <v-col cols="6" md="2">
                             <v-select v-model="resultFilter" :items="resultFilterOptions" label="Test Result"
                                 variant="outlined" density="compact" clearable hide-details />
                         </v-col>
@@ -200,14 +217,19 @@
 
         <!-- UPDATED: Test Items Detail Dialog -->
         <v-dialog v-model="showTestItemsDialog" :fullscreen="testItemsFullscreen"
-            :max-width="testItemsFullscreen ? undefined : 1200"
+            :max-width="testItemsFullscreen ? undefined : 1200" scrollable
             :transition="testItemsFullscreen ? 'dialog-bottom-transition' : undefined">
             <v-card v-if="selectedRankingItem" class="d-flex flex-column"
-                :style="testItemsFullscreen ? 'height: 100vh; overflow: hidden;' : 'max-height: 90vh; overflow: hidden;'">
+                :style="testItemsFullscreen ? 'height: 100vh;' : 'height: 85vh;'">
                 <v-card-title class="d-flex align-center bg-primary flex-shrink-0">
                     <v-icon start color="white">mdi-format-list-checks</v-icon>
                     <span class="text-white">Test Items Details</span>
                     <v-spacer />
+                    <v-btn variant="tonal" color="white" size="small"
+                        prepend-icon="mdi-database-plus" @click="saveSingleToDatabase"
+                        :loading="savingToDb" class="mr-2">
+                        Save to DB
+                    </v-btn>
                     <v-btn v-if="selectedRankingItem?.isn" variant="tonal" color="white" size="small"
                         prepend-icon="mdi-compare-horizontal" @click="openIplasCompare" class="mr-2">
                         Compare with iPLAS
@@ -218,7 +240,7 @@
                 </v-card-title>
 
                 <!-- ISN Info Bar - Always visible -->
-                <v-alert type="info" variant="tonal" density="compact" class="ma-4 mb-0 flex-shrink-0">
+                <v-alert type="info" variant="tonal" density="compact" class="mx-4 mt-4 mb-0 flex-shrink-0">
                     <div class="d-flex align-center justify-space-between flex-wrap">
                         <div>
                             <strong>ISN:</strong> {{ selectedRankingItem.isn || 'N/A' }}
@@ -234,7 +256,7 @@
                 </v-alert>
 
                 <!-- Filter Row -->
-                <v-row dense class="ma-4 mb-0 flex-shrink-0">
+                <v-row dense class="mx-4 mt-4 mb-0 flex-shrink-0">
                     <v-col cols="12" md="4">
                         <v-select v-model="testItemFilterType" :items="testItemFilterOptions" label="Filter Items"
                             variant="outlined" density="compact" prepend-inner-icon="mdi-filter" hide-details />
@@ -255,10 +277,10 @@
                 </v-row>
 
                 <!-- Test Items Table - Full width with sticky header -->
-                <v-card-text class="pa-4 flex-grow-1 d-flex flex-column" style="overflow: hidden;">
+                <v-card-text class="pa-4 flex-grow-1 d-flex flex-column" style="overflow: hidden; min-height: 0;">
                     <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="25"
                         density="comfortable" class="elevation-1 flex-grow-1" fixed-header
-                        :height="testItemsFullscreen ? 'calc(100vh - 280px)' : undefined"
+                        style="height: 100%;"
                         @click:row="(_event: any, data: any) => showScoreBreakdown(data.item)">
                         <template #item.test_item="{ item }">
                             <span class="font-weight-medium">{{ item.test_item }}</span>
@@ -421,9 +443,13 @@ import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
 import type { TestLogParseResponseEnhanced, CompareResponseEnhanced, ParsedTestItemEnhanced, RescoreScoringConfig } from '@/features/dut_logs/composables/useTestLogUpload'
 import IplasCompareDialog from './IplasCompareDialog.vue'
+import { createTopProduct, createTopProductsBulk, type TopProductCreate, type TopProductMeasurementCreate } from '@/features/top-products/api/topProductsApi'
+import { useNotification } from '@/shared/composables/useNotification'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
+
+const { showSuccess, showError } = useNotification()
 
 const props = defineProps<{
     parseResult?: TestLogParseResponseEnhanced | null
@@ -444,6 +470,7 @@ interface RankingItem {
 
 // Search and filters
 const searchQuery = ref('')
+const stationFilter = ref<string | null>(null)
 const scoreFilterType = ref<string | null>(null)
 const scoreFilterValue = ref<number | null>(null)
 const resultFilter = ref<string | null>(null)
@@ -452,6 +479,7 @@ const fullscreen = ref(false)
 // Checkbox selection and export state
 const selectedRankingItems = ref<RankingItem[]>([])
 const exportingRanking = ref(false)
+const savingToDb = ref(false)
 
 // UPDATED: Test items detail dialog state
 const showTestItemsDialog = ref(false)
@@ -591,9 +619,25 @@ const rankings = computed<RankingItem[]>(() => {
     return items.sort((a, b) => b.score - a.score)
 })
 
+// Available stations for filtering (derived from rankings)
+const availableStations = computed(() => {
+    const stations = new Set<string>()
+    rankings.value.forEach(item => {
+        if (item.station) {
+            stations.add(item.station)
+        }
+    })
+    return Array.from(stations).sort()
+})
+
 // Filtered rankings
 const filteredRankings = computed(() => {
     let filtered = rankings.value
+
+    // Station filter
+    if (stationFilter.value) {
+        filtered = filtered.filter(item => item.station === stationFilter.value)
+    }
 
     // Search filter
     if (searchQuery.value) {
@@ -642,7 +686,7 @@ const paginatedRankings = computed(() => {
 })
 
 // Watchers
-watch([searchQuery, scoreFilterType, scoreFilterValue, resultFilter], () => {
+watch([searchQuery, stationFilter, scoreFilterType, scoreFilterValue, resultFilter], () => {
     currentPage.value = 1
 })
 
@@ -844,6 +888,153 @@ async function exportRankingToExcel() {
         console.error('Export failed:', err)
     } finally {
         exportingRanking.value = false
+    }
+}
+
+/**
+ * Build TopProductCreate data from a RankingItem and its test items
+ */
+function buildTopProductData(rankingItem: RankingItem, testItems: ParsedTestItemEnhanced[]): TopProductCreate {
+    // Build measurements from test items
+    const measurements: TopProductMeasurementCreate[] = testItems.map(item => ({
+        test_item: item.test_item,
+        usl: item.usl,
+        lsl: item.lsl,
+        target_value: item.target ?? null,
+        actual_value: item.numeric_value,
+        deviation: item.score_breakdown?.deviation ?? null,
+    }))
+
+    return {
+        dut_isn: rankingItem.isn || 'UNKNOWN',
+        station_name: rankingItem.station,
+        device_name: rankingItem.device,
+        test_date: rankingItem.test_date ? new Date(rankingItem.test_date).toISOString() : null,
+        test_duration: rankingItem.duration_seconds ?? undefined,
+        pass_count: rankingItem.result === 'PASS' ? 1 : 0,
+        fail_count: rankingItem.result === 'FAIL' ? 1 : 0,
+        retest_count: 0,
+        score: rankingItem.score,
+        measurements,
+    }
+}
+
+/**
+ * Get test items for a specific ISN from compare/parse results
+ */
+function getTestItemsForIsn(isn: string | null): ParsedTestItemEnhanced[] {
+    if (!isn) return []
+
+    if (props.parseResult && props.parseResult.parsed_items_enhanced) {
+        return props.parseResult.parsed_items_enhanced
+    }
+
+    if (props.compareResult) {
+        const items: ParsedTestItemEnhanced[] = []
+
+        // Get value items
+        props.compareResult.comparison_value_items?.forEach(compareItem => {
+            const perIsnData = compareItem.per_isn_data.find(d => d.isn === isn)
+            if (perIsnData) {
+                items.push({
+                    test_item: compareItem.test_item,
+                    usl: compareItem.usl,
+                    lsl: compareItem.lsl,
+                    value: perIsnData.value,
+                    is_value_type: perIsnData.is_value_type,
+                    numeric_value: perIsnData.numeric_value,
+                    is_hex: perIsnData.is_hex,
+                    hex_decimal: perIsnData.hex_decimal,
+                    matched_criteria: compareItem.matched_criteria,
+                    target: null,
+                    score: perIsnData.score,
+                    score_breakdown: perIsnData.score_breakdown,
+                })
+            }
+        })
+
+        // Get non-value items
+        props.compareResult.comparison_non_value_items?.forEach(compareItem => {
+            const perIsnData = compareItem.per_isn_data.find(d => d.isn === isn)
+            if (perIsnData) {
+                items.push({
+                    test_item: compareItem.test_item,
+                    usl: compareItem.usl,
+                    lsl: compareItem.lsl,
+                    value: perIsnData.value,
+                    is_value_type: perIsnData.is_value_type,
+                    numeric_value: perIsnData.numeric_value,
+                    is_hex: perIsnData.is_hex,
+                    hex_decimal: perIsnData.hex_decimal,
+                    matched_criteria: compareItem.matched_criteria,
+                    target: null,
+                    score: perIsnData.score,
+                    score_breakdown: perIsnData.score_breakdown,
+                })
+            }
+        })
+
+        return items
+    }
+
+    return []
+}
+
+/**
+ * Save a single ISN to the Top Product Database (from the Test Items dialog)
+ */
+async function saveSingleToDatabase() {
+    if (!selectedRankingItem.value) {
+        showError('No item selected')
+        return
+    }
+
+    savingToDb.value = true
+    try {
+        const testItems = selectedTestItems.value.length > 0
+            ? selectedTestItems.value
+            : getTestItemsForIsn(selectedRankingItem.value.isn)
+
+        const productData = buildTopProductData(selectedRankingItem.value, testItems)
+        const response = await createTopProduct(productData)
+
+        if (response.success) {
+            showSuccess(`Saved ISN ${selectedRankingItem.value.isn || 'UNKNOWN'} to database`)
+        }
+    } catch (err: any) {
+        console.error('Failed to save to database:', err)
+        showError(err.response?.data?.detail || 'Failed to save to database')
+    } finally {
+        savingToDb.value = false
+    }
+}
+
+/**
+ * Save selected ISNs to the Top Product Database (bulk save)
+ */
+async function saveSelectedToDatabase() {
+    if (selectedRankingItems.value.length === 0) {
+        showError('No items selected')
+        return
+    }
+
+    savingToDb.value = true
+    try {
+        const products: TopProductCreate[] = selectedRankingItems.value.map(item => {
+            const testItems = getTestItemsForIsn(item.isn)
+            return buildTopProductData(item, testItems)
+        })
+
+        const response = await createTopProductsBulk({ products })
+
+        if (response.success) {
+            showSuccess(`Saved ${response.created_count} item(s) to database`)
+        }
+    } catch (err: any) {
+        console.error('Failed to save to database:', err)
+        showError(err.response?.data?.detail || 'Failed to save to database')
+    } finally {
+        savingToDb.value = false
     }
 }
 </script>
