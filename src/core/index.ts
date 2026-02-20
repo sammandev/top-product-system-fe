@@ -1,14 +1,13 @@
 /**
  * Core Module Barrel Export
- * 
+ *
  * Centralized export for all core infrastructure
  */
 
 // API
 export * from './api'
-
-// Configuration
-export * from './config'
+// Configuration (avoid re-exporting AppConfig which conflicts with types/app-config.types.ts)
+export { APP_CONFIG, envConfig } from './config'
 
 // Plugins
 export * from './plugins'

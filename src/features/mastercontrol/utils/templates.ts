@@ -16,40 +16,40 @@ export interface SpecRule {
 export function generateJsonSpecTemplate(): SpecRule[] {
   return [
     {
-      test_pattern: "TX_POW_2412_11B_CCK11_B20",
+      test_pattern: 'TX_POW_2412_11B_CCK11_B20',
       usl: 24.5,
       lsl: 21.5,
       target: 23,
-      gap: 0.5
+      gap: 0.5,
     },
     {
-      test_pattern: "TX_POW_2437_11B_CCK11_B20",
+      test_pattern: 'TX_POW_2437_11B_CCK11_B20',
       usl: 24.5,
       lsl: 21.5,
       target: 23,
-      gap: 0.5
+      gap: 0.5,
     },
     {
-      test_pattern: "TX_EVM_2412_11B_CCK11_B20",
+      test_pattern: 'TX_EVM_2412_11B_CCK11_B20',
       usl: -9.1,
       lsl: -60,
       target: 0,
-      gap: 1
+      gap: 1,
     },
     {
-      test_pattern: "RX_POW_.*_11N_MCS7",
+      test_pattern: 'RX_POW_.*_11N_MCS7',
       usl: -20,
       lsl: -90,
       target: 0,
-      gap: 2
+      gap: 2,
     },
     {
-      test_pattern: "PA_POW_.*_11AC_MCS8",
+      test_pattern: 'PA_POW_.*_11AC_MCS8',
       usl: 27,
       lsl: 19,
       target: 23,
-      gap: 1
-    }
+      gap: 1,
+    },
   ]
 }
 
@@ -128,7 +128,7 @@ export function generateMc2CsvTemplate(): string {
     'WiFi_PA1_POW_2412_11B_CCK11_B20',
     'WiFi_PA1_POW_5180_11AC_MCS7_B80',
     'WiFi_RX1_POW_2412_11B_CCK11_B20',
-    'WiFi_RX1_POW_5180_11AC_MCS7_B80'
+    'WiFi_RX1_POW_5180_11AC_MCS7_B80',
   ]
 
   const usl = [
@@ -146,7 +146,7 @@ export function generateMc2CsvTemplate(): string {
     '27',
     '25',
     '-20',
-    '-20'
+    '-20',
   ]
 
   const lsl = [
@@ -164,7 +164,7 @@ export function generateMc2CsvTemplate(): string {
     '19',
     '17',
     '-90',
-    '-90'
+    '-90',
   ]
 
   const sampleData = [
@@ -182,7 +182,7 @@ export function generateMc2CsvTemplate(): string {
     '24.5',
     '22.3',
     '-45',
-    '-48'
+    '-48',
   ]
 
   return `${headers.join(',')}\n${usl.join(',')}\n${lsl.join(',')}\n${sampleData.join(',')}\n`

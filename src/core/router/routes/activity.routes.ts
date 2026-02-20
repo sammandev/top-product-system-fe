@@ -7,7 +7,7 @@ export const activityRoutes: RouteRecordRaw[] = [
     component: () => import('@/features/activity/views/ActivityListView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'Activity History'
-    }
-  }
+      title: 'Activity History',
+    },
+  },
 ]

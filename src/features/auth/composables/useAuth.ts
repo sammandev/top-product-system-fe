@@ -1,22 +1,22 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import type { ExternalLoginRequest, LoginRequest } from '@/core/types'
 import { useAuthStore } from '../store'
-import type { LoginRequest, ExternalLoginRequest } from '@/core/types'
 
 /**
  * Auth Composable
- * 
+ *
  * Provides a convenient interface for authentication operations.
  * Wraps the auth store with additional business logic and router integration.
- * 
+ *
  * @example
  * ```typescript
  * const { isAuthenticated, login, logout } = useAuth()
- * 
+ *
  * if (isAuthenticated.value) {
  *   console.log('User is logged in')
  * }
- * 
+ *
  * await login({ username: 'user', password: 'pass' })
  * ```
  */
@@ -116,6 +116,6 @@ export function useAuth() {
     guestLogin,
     logout,
     refreshToken,
-    hasPermission
+    hasPermission,
   }
 }

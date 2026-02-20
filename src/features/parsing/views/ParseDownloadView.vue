@@ -274,16 +274,16 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import { parsingApi } from '../api/parsing.api'
+import { computed, ref } from 'vue'
 import type { UploadPreviewResponse } from '@/core/types/api.types'
+import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
+import { parsingApi } from '../api/parsing.api'
 
 // State
 const selectedFile = ref<File | File[] | null>(null)
 const uploadOptions = ref({
-    hasHeader: true,
-    delimiter: ''
+  hasHeader: true,
+  delimiter: '',
 })
 const uploading = ref(false)
 const uploadProgress = ref(0)
@@ -308,203 +308,204 @@ const columns = computed(() => preview.value?.columns || [])
 const previewRows = computed(() => preview.value?.preview || [])
 
 const previewHeaders = computed(() => {
-    if (!columns.value || columns.value.length === 0) return []
+  if (!columns.value || columns.value.length === 0) return []
 
-    const headers = [
-        {
-            title: '#',
-            key: '__rowNumber',
-            sortable: false,
-            width: 60,
-            align: 'center' as const
-        }
-    ]
+  const headers = [
+    {
+      title: '#',
+      key: '__rowNumber',
+      sortable: false,
+      width: 60,
+      align: 'center' as const,
+    },
+  ]
 
-    columns.value.forEach((col) => {
-        headers.push({
-            title: col,
-            key: col,
-            sortable: true,
-            width: 150,
-            align: 'center' as const
-        })
+  columns.value.forEach((col) => {
+    headers.push({
+      title: col,
+      key: col,
+      sortable: true,
+      width: 150,
+      align: 'center' as const,
     })
+  })
 
-    return headers
+  return headers
 })
 
 const previewRowsWithNumbers = computed(() => {
-    if (!previewRows.value || previewRows.value.length === 0) return []
-    return previewRows.value.map((row, index) => ({
-        ...row,
-        __rowNumber: index + 1
-    }))
+  if (!previewRows.value || previewRows.value.length === 0) return []
+  return previewRows.value.map((row, index) => ({
+    ...row,
+    __rowNumber: index + 1,
+  }))
 })
 
 const canProcess = computed(() => {
-    if (!hasPreview.value || processing.value) return false
+  if (!hasPreview.value || processing.value) return false
 
-    if (mode.value === 'columns' || mode.value === 'both') {
-        return selectedColumns.value.length > 0
-    }
+  if (mode.value === 'columns' || mode.value === 'both') {
+    return selectedColumns.value.length > 0
+  }
 
-    return true
+  return true
 })
 
 // Methods
 function handleFileChange() {
-    // Auto-detect CSV delimiter
-    if (selectedFile.value) {
-        const file = Array.isArray(selectedFile.value) ? selectedFile.value[0] : selectedFile.value
-        if (file && file.name && file.name.toLowerCase().endsWith('.csv')) {
-            uploadOptions.value.delimiter = ','
-        }
+  // Auto-detect CSV delimiter
+  if (selectedFile.value) {
+    const file = Array.isArray(selectedFile.value) ? selectedFile.value[0] : selectedFile.value
+    if (file?.name?.toLowerCase().endsWith('.csv')) {
+      uploadOptions.value.delimiter = ','
     }
+  }
 }
 
 async function handleUpload() {
-    if (!selectedFile.value) return
+  if (!selectedFile.value) return
 
-    const file = Array.isArray(selectedFile.value) ? selectedFile.value[0] : selectedFile.value
-    if (!file) return
+  const file = Array.isArray(selectedFile.value) ? selectedFile.value[0] : selectedFile.value
+  if (!file) return
 
-    uploading.value = true
-    uploadProgress.value = 0
-    error.value = ''
+  uploading.value = true
+  uploadProgress.value = 0
+  error.value = ''
 
-    try {
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('has_header', uploadOptions.value.hasHeader.toString())
-        if (uploadOptions.value.delimiter) {
-            formData.append('delimiter', uploadOptions.value.delimiter)
-        }
-        formData.append('persist', 'false') // Don't persist to disk for this workflow
-
-        // Simulate progress
-        const progressInterval = setInterval(() => {
-            if (uploadProgress.value < 90) {
-                uploadProgress.value += 10
-            }
-        }, 100)
-
-        const response = await parsingApi.uploadPreview(formData)
-        preview.value = response
-
-        clearInterval(progressInterval)
-        uploadProgress.value = 100
-
-        // Auto-select all columns by default
-        selectedColumns.value = [...columns.value]
-    } catch (err: any) {
-        error.value = err.response?.data?.detail || err.message || 'Upload failed'
-    } finally {
-        uploading.value = false
+  try {
+    const formData = new FormData()
+    formData.append('file', file)
+    formData.append('has_header', uploadOptions.value.hasHeader.toString())
+    if (uploadOptions.value.delimiter) {
+      formData.append('delimiter', uploadOptions.value.delimiter)
     }
+    formData.append('persist', 'false') // Don't persist to disk for this workflow
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      if (uploadProgress.value < 90) {
+        uploadProgress.value += 10
+      }
+    }, 100)
+
+    const response = await parsingApi.uploadPreview(formData)
+    preview.value = response
+
+    clearInterval(progressInterval)
+    uploadProgress.value = 100
+
+    // Auto-select all columns by default
+    selectedColumns.value = [...columns.value]
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Upload failed'
+  } finally {
+    uploading.value = false
+  }
 }
 
 function parseRowIndices(text: string): number[] {
-    if (!text.trim()) return []
-    return text.split(',')
-        .map(s => s.trim())
-        .filter(s => s.length > 0)
-        .map(s => parseInt(s, 10))
-        .filter(n => !isNaN(n))
+  if (!text.trim()) return []
+  return text
+    .split(',')
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0)
+    .map((s) => parseInt(s, 10))
+    .filter((n) => !Number.isNaN(n))
 }
 
 async function handleDownload() {
-    if (!canProcess.value || !preview.value) return
+  if (!canProcess.value || !preview.value) return
 
-    processing.value = true
-    progress.value = 0
-    error.value = ''
-    downloadCompleted.value = false
+  processing.value = true
+  progress.value = 0
+  error.value = ''
+  downloadCompleted.value = false
 
-    try {
-        const formData = new FormData()
-        formData.append('file_id', preview.value.file_id)
-        formData.append('mode', mode.value)
-        formData.append('format', format.value)
+  try {
+    const formData = new FormData()
+    formData.append('file_id', preview.value.file_id)
+    formData.append('mode', mode.value)
+    formData.append('format', format.value)
 
-        // Add column selections
-        if (mode.value === 'columns' || mode.value === 'both') {
-            if (selectedColumns.value.length > 0) {
-                formData.append('selected_columns', JSON.stringify(selectedColumns.value))
-            }
-            if (excludeColumns.value.length > 0) {
-                formData.append('exclude_columns', JSON.stringify(excludeColumns.value))
-            }
-        }
-
-        // Add row selections
-        if (mode.value === 'rows' || mode.value === 'both') {
-            const selectedRows = parseRowIndices(selectedRowsText.value)
-            const excludeRows = parseRowIndices(excludeRowsText.value)
-
-            if (selectedRows.length > 0) {
-                formData.append('selected_rows', JSON.stringify(selectedRows))
-            }
-            if (excludeRows.length > 0) {
-                formData.append('exclude_rows', JSON.stringify(excludeRows))
-            }
-        }
-
-        // Simulate progress
-        const progressInterval = setInterval(() => {
-            if (progress.value < 90) {
-                progress.value += 10
-            }
-        }, 100)
-
-        const blob = await parsingApi.parseDownloadFormat(formData)
-
-        clearInterval(progressInterval)
-        progress.value = 100
-
-        // Determine filename and extension
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
-        const baseName = preview.value.filename.replace(/\.[^/.]+$/, '')
-
-        let filename: string
-        if (format.value === 'csv') {
-            filename = `${baseName}_parsed_${timestamp}.csv`
-        } else if (format.value === 'xlsx') {
-            filename = `${baseName}_parsed_${timestamp}.xlsx`
-        } else {
-            filename = `${baseName}_parsed_${timestamp}.zip`
-        }
-
-        // Download the file
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = filename
-        link.click()
-        URL.revokeObjectURL(url)
-
-        downloadCompleted.value = true
-    } catch (err: any) {
-        error.value = err.response?.data?.detail || err.message || 'Download failed'
-    } finally {
-        processing.value = false
+    // Add column selections
+    if (mode.value === 'columns' || mode.value === 'both') {
+      if (selectedColumns.value.length > 0) {
+        formData.append('selected_columns', JSON.stringify(selectedColumns.value))
+      }
+      if (excludeColumns.value.length > 0) {
+        formData.append('exclude_columns', JSON.stringify(excludeColumns.value))
+      }
     }
+
+    // Add row selections
+    if (mode.value === 'rows' || mode.value === 'both') {
+      const selectedRows = parseRowIndices(selectedRowsText.value)
+      const excludeRows = parseRowIndices(excludeRowsText.value)
+
+      if (selectedRows.length > 0) {
+        formData.append('selected_rows', JSON.stringify(selectedRows))
+      }
+      if (excludeRows.length > 0) {
+        formData.append('exclude_rows', JSON.stringify(excludeRows))
+      }
+    }
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      if (progress.value < 90) {
+        progress.value += 10
+      }
+    }, 100)
+
+    const blob = await parsingApi.parseDownloadFormat(formData)
+
+    clearInterval(progressInterval)
+    progress.value = 100
+
+    // Determine filename and extension
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+    const baseName = preview.value.filename.replace(/\.[^/.]+$/, '')
+
+    let filename: string
+    if (format.value === 'csv') {
+      filename = `${baseName}_parsed_${timestamp}.csv`
+    } else if (format.value === 'xlsx') {
+      filename = `${baseName}_parsed_${timestamp}.xlsx`
+    } else {
+      filename = `${baseName}_parsed_${timestamp}.zip`
+    }
+
+    // Download the file
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    link.click()
+    URL.revokeObjectURL(url)
+
+    downloadCompleted.value = true
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Download failed'
+  } finally {
+    processing.value = false
+  }
 }
 
 function handleReset() {
-    selectedFile.value = null
-    preview.value = null
-    selectedColumns.value = []
-    excludeColumns.value = []
-    selectedRowsText.value = ''
-    excludeRowsText.value = ''
-    mode.value = 'both'
-    format.value = 'xlsx'
-    error.value = ''
-    downloadCompleted.value = false
-    uploadOptions.value = {
-        hasHeader: true,
-        delimiter: ''
-    }
+  selectedFile.value = null
+  preview.value = null
+  selectedColumns.value = []
+  excludeColumns.value = []
+  selectedRowsText.value = ''
+  excludeRowsText.value = ''
+  mode.value = 'both'
+  format.value = 'xlsx'
+  error.value = ''
+  downloadCompleted.value = false
+  uploadOptions.value = {
+    hasHeader: true,
+    delimiter: '',
+  }
 }
 </script>
 

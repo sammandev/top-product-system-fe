@@ -1,11 +1,11 @@
 /**
  * Pinia Plugin Configuration
- * 
+ *
  * State management store
  */
 
-import { createPinia } from 'pinia'
 import type { Pinia } from 'pinia'
+import { createPinia } from 'pinia'
 
 /**
  * Create Pinia instance

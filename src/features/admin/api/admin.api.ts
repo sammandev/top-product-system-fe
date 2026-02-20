@@ -1,6 +1,6 @@
 /**
  * Admin API Client
- * 
+ *
  * Unified API client for all administrative operations including user management and RBAC.
  * All endpoints require admin privileges.
  */
@@ -120,7 +120,7 @@ export interface UpdatePermissionRequest {
 
 export const adminApi = {
   // ==================== User Management ====================
-  
+
   /**
    * Get all users with statistics (admin only)
    */
@@ -155,7 +155,10 @@ export const adminApi = {
   /**
    * Change user password (admin only)
    */
-  async changeUserPassword(userId: number, newPassword: string): Promise<{
+  async changeUserPassword(
+    userId: number,
+    newPassword: string,
+  ): Promise<{
     user_id: number
     username: string
     changed: boolean
@@ -182,7 +185,7 @@ export const adminApi = {
   },
 
   // ==================== RBAC Management ====================
-  
+
   /**
    * Get all roles with statistics (admin only)
    */
@@ -255,22 +258,33 @@ export const adminApi = {
    * Get permission details (admin only)
    */
   async getPermissionDetails(permissionId: number): Promise<PermissionDetail> {
-    const { data } = await apiClient.get<PermissionDetail>(`/api/admin/rbac/permissions/${permissionId}`)
+    const { data } = await apiClient.get<PermissionDetail>(
+      `/api/admin/rbac/permissions/${permissionId}`,
+    )
     return data
   },
 
   /**
    * Update permission (admin only)
    */
-  async updatePermission(permissionId: number, request: UpdatePermissionRequest): Promise<Permission> {
-    const { data } = await apiClient.put<Permission>(`/api/admin/rbac/permissions/${permissionId}`, request)
+  async updatePermission(
+    permissionId: number,
+    request: UpdatePermissionRequest,
+  ): Promise<Permission> {
+    const { data } = await apiClient.put<Permission>(
+      `/api/admin/rbac/permissions/${permissionId}`,
+      request,
+    )
     return data
   },
 
   /**
    * Grant a permission to a role (admin only)
    */
-  async grantPermissionToRole(roleId: number, permissionId: number): Promise<{
+  async grantPermissionToRole(
+    roleId: number,
+    permissionId: number,
+  ): Promise<{
     role: string
     granted: string
   }> {
@@ -284,7 +298,10 @@ export const adminApi = {
   /**
    * Revoke a permission from a role (admin only)
    */
-  async revokePermissionFromRole(roleId: number, permissionId: number): Promise<{
+  async revokePermissionFromRole(
+    roleId: number,
+    permissionId: number,
+  ): Promise<{
     role: string
     revoked: string
   }> {
@@ -298,7 +315,10 @@ export const adminApi = {
   /**
    * Assign a role to a user (admin only)
    */
-  async assignRoleToUser(userId: number, roleId: number): Promise<{
+  async assignRoleToUser(
+    userId: number,
+    roleId: number,
+  ): Promise<{
     user: string
     role: string
     assigned: boolean
@@ -313,7 +333,10 @@ export const adminApi = {
   /**
    * Remove a role from a user (admin only)
    */
-  async removeRoleFromUser(userId: number, roleId: number): Promise<{
+  async removeRoleFromUser(
+    userId: number,
+    roleId: number,
+  ): Promise<{
     user: string
     role: string
     removed: boolean
@@ -323,5 +346,5 @@ export const adminApi = {
 
     const { data } = await apiClient.post(`/api/rbac/users/${userId}/remove-role`, formData)
     return data
-  }
+  },
 }

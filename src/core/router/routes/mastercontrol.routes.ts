@@ -1,6 +1,6 @@
 /**
  * MasterControl Tools Routes
- * 
+ *
  * Routes for MasterControl analysis and related tools
  */
 
@@ -18,8 +18,8 @@ export const mastercontrolRoutes: RouteRecordRaw[] = [
       breadcrumb: [
         { title: 'Dashboard', to: '/dashboard' },
         { title: 'Tools', disabled: true },
-        { title: 'MasterControl Analyze', disabled: true }
-      ]
-    }
-  }
+        { title: 'MasterControl Analyze', disabled: true },
+      ],
+    },
+  },
 ]

@@ -192,10 +192,8 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import { computed, ref } from 'vue'
 import { useFileParsing } from '../composables'
-import { ColumnSelector, RowSelector } from '../components'
 import type { RowSelection } from '../types'
 
 // Composable
@@ -211,14 +209,13 @@ const {
   previewRows,
   uploadFile,
   parseData,
-  downloadParsed,
   downloadParsedFormat,
   reset,
-  clearError
+  clearError,
 } = useFileParsing({
   hasHeader: true,
   delimiter: '',
-  persist: false
+  persist: false,
 })
 
 // Form state
@@ -230,7 +227,7 @@ const selectedFile = ref<File | File[] | null>(null)
 const uploadOptions = ref({
   hasHeader: true,
   delimiter: '',
-  persist: false
+  persist: false,
 })
 
 // Parse state
@@ -242,7 +239,7 @@ const downloadFormat = ref<'csv' | 'xlsx' | 'both'>('xlsx')
 const downloadFormatOptions = [
   { title: 'CSV', value: 'csv' },
   { title: 'XLSX', value: 'xlsx' },
-  { title: 'Both (ZIP)', value: 'both' }
+  { title: 'Both (ZIP)', value: 'both' },
 ]
 
 // Column types (mock data - can be enhanced later)
@@ -286,7 +283,7 @@ const rowSelectionSummary = computed(() => {
 
 // Validation rules
 const rules = {
-  required: (v: any) => {
+  required: (v: unknown) => {
     if (Array.isArray(v)) {
       return v.length > 0 || 'This field is required'
     }
@@ -311,7 +308,7 @@ const rules = {
     const validTypes = ['.csv', '.xlsx', '.xls']
     const isValid = validTypes.some((type) => v.name.toLowerCase().endsWith(type))
     return isValid || 'Only CSV and Excel files are allowed'
-  }
+  },
 }
 
 // Utility: Convert 0-based column index to Excel-style letter (A, B, C, ..., Z, AA, AB, ...)
@@ -338,8 +335,8 @@ const previewHeaders = computed(() => {
       key: '__rowNumber',
       sortable: false,
       width: 60,
-      align: 'center' as const
-    }
+      align: 'center' as const,
+    },
   ]
 
   // Add data columns with Excel-style alphabet letters
@@ -352,7 +349,7 @@ const previewHeaders = computed(() => {
       key: col,
       sortable: true,
       width: 100,
-      align: 'center' as const
+      align: 'center' as const,
     })
   })
 
@@ -363,7 +360,7 @@ const previewRowsWithNumbers = computed(() => {
   if (!previewRows.value || previewRows.value.length === 0) return []
   return previewRows.value.map((row, index) => ({
     ...row,
-    __rowNumber: index + 1
+    __rowNumber: index + 1,
   }))
 })
 
@@ -377,8 +374,8 @@ const parsedHeaders = computed(() => {
       key: '__rowNumber',
       sortable: false,
       width: 60,
-      align: 'center' as const
-    }
+      align: 'center' as const,
+    },
   ]
 
   // Add data columns with Excel-style alphabet letters
@@ -391,7 +388,7 @@ const parsedHeaders = computed(() => {
       key: col,
       sortable: true,
       width: 100,
-      align: 'center' as const
+      align: 'center' as const,
     })
   })
 
@@ -402,7 +399,7 @@ const parsedRowsWithNumbers = computed(() => {
   if (!parsedData.value?.rows || parsedData.value.rows.length === 0) return []
   return parsedData.value.rows.map((row, index) => ({
     ...row,
-    __rowNumber: index + 1
+    __rowNumber: index + 1,
   }))
 })
 
@@ -411,7 +408,7 @@ function handleFileSelect() {
   // Auto-fill some options based on file extension
   if (selectedFile.value) {
     const file = Array.isArray(selectedFile.value) ? selectedFile.value[0] : selectedFile.value
-    if (file && file.name && file.name.toLowerCase().endsWith('.csv')) {
+    if (file?.name?.toLowerCase().endsWith('.csv')) {
       uploadOptions.value.delimiter = ','
     }
   }
@@ -440,31 +437,27 @@ async function handleParse() {
   const columnSelection =
     parseMode.value === 'columns' || parseMode.value === 'both'
       ? {
-        selected: selectedColumns.value,
-        excluded: []
-      }
+          selected: selectedColumns.value,
+          excluded: [],
+        }
       : undefined
 
   const rowSelectionData =
-    parseMode.value === 'rows' || parseMode.value === 'both'
-      ? rowSelection.value
-      : undefined
+    parseMode.value === 'rows' || parseMode.value === 'both' ? rowSelection.value : undefined
 
   // Convert rowSelection to the format expected by parseData
-  let rowSelectionForAPI: any = undefined
+  let rowSelectionForAPI: { selected: number[]; excluded: number[] } | undefined
   if (rowSelectionData) {
     if (rowSelectionData.mode === 'range' && rowSelectionData.range) {
+      const { start, end } = rowSelectionData.range
       rowSelectionForAPI = {
-        selected: Array.from(
-          { length: rowSelectionData.range.end - rowSelectionData.range.start + 1 },
-          (_, i) => rowSelectionData.range!.start + i
-        ),
-        excluded: []
+        selected: Array.from({ length: end - start + 1 }, (_, i) => start + i),
+        excluded: [],
       }
     } else if (rowSelectionData.mode === 'exclude' && rowSelectionData.exclude) {
       rowSelectionForAPI = {
         selected: [],
-        excluded: rowSelectionData.exclude
+        excluded: rowSelectionData.exclude,
       }
     }
   }
@@ -476,31 +469,27 @@ async function handleDownload() {
   const columnSelection =
     parseMode.value === 'columns' || parseMode.value === 'both'
       ? {
-        selected: selectedColumns.value,
-        excluded: []
-      }
+          selected: selectedColumns.value,
+          excluded: [],
+        }
       : undefined
 
   const rowSelectionData =
-    parseMode.value === 'rows' || parseMode.value === 'both'
-      ? rowSelection.value
-      : undefined
+    parseMode.value === 'rows' || parseMode.value === 'both' ? rowSelection.value : undefined
 
   // Convert rowSelection to the format expected by downloadParsed
-  let rowSelectionForAPI: any = undefined
+  let rowSelectionForAPI: { selected: number[]; excluded: number[] } | undefined
   if (rowSelectionData) {
     if (rowSelectionData.mode === 'range' && rowSelectionData.range) {
+      const { start, end } = rowSelectionData.range
       rowSelectionForAPI = {
-        selected: Array.from(
-          { length: rowSelectionData.range.end - rowSelectionData.range.start + 1 },
-          (_, i) => rowSelectionData.range!.start + i
-        ),
-        excluded: []
+        selected: Array.from({ length: end - start + 1 }, (_, i) => start + i),
+        excluded: [],
       }
     } else if (rowSelectionData.mode === 'exclude' && rowSelectionData.exclude) {
       rowSelectionForAPI = {
         selected: [],
-        excluded: rowSelectionData.exclude
+        excluded: rowSelectionData.exclude,
       }
     }
   }
@@ -511,7 +500,7 @@ async function handleDownload() {
     rowSelectionForAPI,
     downloadFormat.value,
     'parsed',
-    uploadOptions.value.hasHeader
+    uploadOptions.value.hasHeader,
   )
 }
 
@@ -526,7 +515,7 @@ function handleReset() {
   uploadOptions.value = {
     hasHeader: true,
     delimiter: '',
-    persist: false
+    persist: false,
   }
 }
 </script>

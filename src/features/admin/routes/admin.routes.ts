@@ -1,4 +1,4 @@
-import type { RouteRecordRaw } from 'vue-router';
+import type { RouteRecordRaw } from 'vue-router'
 
 export const adminRoutes: RouteRecordRaw[] = [
   {
@@ -8,8 +8,8 @@ export const adminRoutes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       requiresAdmin: true,
-      title: 'RBAC Management'
-    }
+      title: 'RBAC Management',
+    },
   },
   {
     path: '/admin/users',
@@ -18,8 +18,8 @@ export const adminRoutes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       requiresAdmin: true,
-      title: 'User Management'
-    }
+      title: 'User Management',
+    },
   },
   {
     path: '/admin/cleanup',
@@ -28,8 +28,8 @@ export const adminRoutes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       requiresAdmin: true,
-      title: 'System Cleanup'
-    }
+      title: 'System Cleanup',
+    },
   },
   {
     path: '/admin/app-config',
@@ -38,8 +38,8 @@ export const adminRoutes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       requiresAdmin: true,
-      title: 'App Configuration'
-    }
+      title: 'App Configuration',
+    },
   },
   {
     path: '/admin/menu-access',
@@ -48,7 +48,7 @@ export const adminRoutes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       requiresAdmin: true,
-      title: 'Menu Access Control'
-    }
-  }
-];
+      title: 'Menu Access Control',
+    },
+  },
+]

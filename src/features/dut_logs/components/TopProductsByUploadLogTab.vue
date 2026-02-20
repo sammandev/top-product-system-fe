@@ -23,12 +23,10 @@
                                         :clearable="true" :disabled="loading" variant="outlined">
                                         <template #selection="{ fileNames }">
                                             <template v-for="(fileName, index) in fileNames" :key="fileName">
-                                                <v-chip v-if="index < 3" size="small" class="me-2">{{ fileName
-                                                }}</v-chip>
+                                                <v-chip v-if="index < 3" size="small" class="me-2">{{ fileName }}</v-chip>
                                             </template>
                                             <span v-if="fileNames.length > 3" class="text-caption text-medium-emphasis">
-                                                +{{ fileNames.length - 3 }} more {{ fileNames.length - 3 === 1 ? 'file'
-                                                    : 'files' }}
+                                                +{{ fileNames.length - 3 }} more {{ fileNames.length - 3 === 1 ? 'file' : 'files' }}
                                             </span>
                                         </template>
                                     </v-file-input>
@@ -372,8 +370,7 @@
                         <tr
                             v-if="breakdownItem.score_breakdown?.target !== null && breakdownItem.score_breakdown?.target !== undefined">
                             <td class="font-weight-medium">Target</td>
-                            <td class="font-weight-bold text-primary">{{
-                                breakdownItem.score_breakdown.target?.toFixed(2) }}
+                            <td class="font-weight-bold text-primary">{{ breakdownItem.score_breakdown.target?.toFixed(2) }}
                             </td>
                         </tr>
                         <tr
@@ -392,8 +389,7 @@
                         <tr v-if="breakdownItem.score_breakdown?.policy">
                             <td class="font-weight-medium">Policy</td>
                             <td>
-                                <v-chip size="x-small" variant="tonal">{{ breakdownItem.score_breakdown.policy
-                                }}</v-chip>
+                                <v-chip size="x-small" variant="tonal">{{ breakdownItem.score_breakdown.policy }}</v-chip>
                             </td>
                         </tr>
                         <tr>
@@ -433,22 +429,26 @@
     <!-- UPDATED: Upload Scoring Config Dialog -->
     <UploadScoringConfigDialog v-model="showScoringConfigDialog" :test-items="extractedTestItems"
         :existing-configs="appliedScoringConfigs" :stations="extractedStations"
-        :test-item-stations="testItemStationsMap" @apply="handleScoringConfigApply" />
+        :test-item-stations="testItemStationsMap" :default-station="selectedUploadedStation"
+        @apply="handleScoringConfigApply" />
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import CriteriaBuilderDialog from './CriteriaBuilderDialog.vue'
-import TopProductRankingUploadLog from './TopProductRankingUploadLog.vue'
-import UploadScoringConfigDialog from './UploadScoringConfigDialog.vue'
-import {
-    useTestLogUpload,
-    type CompareItemEnhanced,
-    type ParsedTestItemEnhanced,
-    type RescoreScoringConfig
-} from '@/features/dut_logs/composables/useTestLogUpload'
-import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
+import { computed, ref, watch } from 'vue'
 import type { IplasIsnSearchRecord } from '@/features/dut_logs/api/iplasProxyApi'
+import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
+import {
+  type CompareItemEnhanced,
+  type CompareResponseEnhanced,
+  type FileSummaryEnhanced,
+  type ParsedTestItemEnhanced,
+  type PerIsnData,
+  type RescoreItemResult,
+  type RescoreScoringConfig,
+  type TestLogParseResponseEnhanced,
+  useTestLogUpload,
+} from '@/features/dut_logs/composables/useTestLogUpload'
+import { getErrorMessage } from '@/shared/utils'
 
 // File inputs
 const logFiles = ref<File[] | null>(null)
@@ -456,8 +456,8 @@ const criteriaFile = ref<File | null>(null)
 const showOnlyCriteria = ref(false)
 
 // Results
-const parsingResult = ref<any>(null)
-const compareResult = ref<any>(null)
+const parsingResult = ref<TestLogParseResponseEnhanced | null>(null)
+const compareResult = ref<CompareResponseEnhanced | null>(null)
 
 // UI state
 const loading = ref(false)
@@ -485,7 +485,7 @@ const selectedUploadedStation = ref<string | null>(null)
 const showScoringConfigDialog = ref(false)
 const extractedTestItems = ref<ParsedTestItemEnhanced[]>([])
 const extractedStations = ref<string[]>([])
-const testItemStationsMap = ref<Map<string, Set<string>>>(new Map())  // Maps test item -> stations
+const testItemStationsMap = ref<Map<string, Set<string>>>(new Map()) // Maps test item -> stations
 const appliedScoringConfigs = ref<RescoreScoringConfig[]>([])
 
 // Score breakdown dialog (new universal scoring)
@@ -502,186 +502,206 @@ const { searchByIsnBatch } = useIplasApi()
 
 // Filter options for comparison section
 const itemFilterOptions = [
-    { title: 'Show All', value: 'all' },
-    { title: 'Criteria Items', value: 'criteria' },
-    { title: 'Non-Criteria Items', value: 'non-criteria' }
+  { title: 'Show All', value: 'all' },
+  { title: 'Criteria Items', value: 'criteria' },
+  { title: 'Non-Criteria Items', value: 'non-criteria' },
 ]
 
 // Computed
 const hasFiles = computed(() => {
-    return logFiles.value && logFiles.value.length > 0
+  return logFiles.value && logFiles.value.length > 0
 })
 
 const canAnalyze = computed(() => {
-    if (!logFiles.value) return false
-    return logFiles.value.length >= 1
+  if (!logFiles.value) return false
+  return logFiles.value.length >= 1
 })
 
 const hasResults = computed(() => {
-    return parsingResult.value !== null || compareResult.value !== null
+  return parsingResult.value !== null || compareResult.value !== null
 })
 
 const isMultipleFiles = computed(() => {
-    return compareResult.value?.total_files > 1
+  return (compareResult.value?.total_files ?? 0) > 1
 })
 
 const totalFiles = computed(() => {
-    return compareResult.value?.total_files || 0
+  return compareResult.value?.total_files || 0
 })
 
 // UPDATED: All ISNs from comparison results
 const allCompareIsns = computed<string[]>(() => {
-    if (!compareResult.value?.file_summaries) return []
-    return compareResult.value.file_summaries
-        .map((s: any) => s.isn)
-        .filter((isn: string | null): isn is string => isn !== null)
+  if (!compareResult.value?.file_summaries) return []
+  return compareResult.value.file_summaries
+    .map((s: FileSummaryEnhanced) => s.isn)
+    .filter((isn: string | null): isn is string => isn !== null)
 })
 
 // Available stations from uploaded files
 const uploadedStationOptions = computed(() => {
-    if (!compareResult.value?.file_summaries) return []
-    const stations = new Set<string>()
-    compareResult.value.file_summaries.forEach((s: any) => {
-        if (s.metadata?.station) {
-            stations.add(s.metadata.station)
-        }
-    })
-    return Array.from(stations).sort()
+  if (!compareResult.value?.file_summaries) return []
+  const stations = new Set<string>()
+  compareResult.value.file_summaries.forEach((s: FileSummaryEnhanced) => {
+    if (s.metadata?.station) {
+      stations.add(s.metadata.station)
+    }
+  })
+  return Array.from(stations).sort()
 })
 
 // ISNs currently displayed in the table columns (with station filter support)
 const displayedIsns = computed(() => {
-    // Start with manually selected ISNs, or all ISNs
-    let isns = selectedCompareIsns.value.length > 0
-        ? selectedCompareIsns.value
-        : allCompareIsns.value
+  // Start with manually selected ISNs, or all ISNs
+  let isns = selectedCompareIsns.value.length > 0 ? selectedCompareIsns.value : allCompareIsns.value
 
-    // Filter by uploaded station if selected
-    if (selectedUploadedStation.value && compareResult.value?.file_summaries) {
-        const isnsFromStation = new Set(
-            compareResult.value.file_summaries
-                .filter((s: any) => s.metadata?.station === selectedUploadedStation.value)
-                .map((s: any) => s.isn)
-                .filter((isn: string | null): isn is string => isn !== null)
-        )
-        isns = isns.filter(isn => isnsFromStation.has(isn))
-    }
+  // Filter by uploaded station if selected
+  if (selectedUploadedStation.value && compareResult.value?.file_summaries) {
+    const isnsFromStation = new Set(
+      compareResult.value.file_summaries
+        .filter((s: FileSummaryEnhanced) => s.metadata?.station === selectedUploadedStation.value)
+        .map((s: FileSummaryEnhanced) => s.isn)
+        .filter((isn: string | null): isn is string => isn !== null),
+    )
+    isns = isns.filter((isn) => isnsFromStation.has(isn))
+  }
 
-    return isns
+  return isns
 })
 
 // Available iPLAS stations across all fetched ISN data
 const iplasStationOptions = computed(() => {
-    const stations = new Set<string>()
-    for (const [, records] of iplasDataByIsn.value) {
-        records.forEach(r => {
-            const name = r.display_station_name || r.station_name
-            if (name) stations.add(name)
-        })
-    }
-    return Array.from(stations)
+  const stations = new Set<string>()
+  for (const [, records] of iplasDataByIsn.value) {
+    records.forEach((r) => {
+      const name = r.display_station_name || r.station_name
+      if (name) stations.add(name)
+    })
+  }
+  return Array.from(stations)
 })
 
 // UPDATED: Dynamic parent-children headers for multi-ISN comparison
 const comparisonHeaders = computed(() => {
-    const isns = displayedIsns.value
-    const headers: any[] = [
-        { title: 'Test Item', key: 'test_item', sortable: true },
-        { title: 'UCL', key: 'usl', sortable: true, width: '80px', align: 'center' as const },
-        { title: 'LCL', key: 'lsl', sortable: true, width: '80px', align: 'center' as const },
-    ]
+  const isns = displayedIsns.value
+  const headers: Record<string, unknown>[] = [
+    { title: 'Test Item', key: 'test_item', sortable: true },
+    { title: 'UCL', key: 'usl', sortable: true, width: '80px', align: 'center' as const },
+    { title: 'LCL', key: 'lsl', sortable: true, width: '80px', align: 'center' as const },
+  ]
 
-    isns.forEach((isn, idx) => {
-        headers.push({
-            title: isn,
-            align: 'center' as const,
-            children: [
-                { title: 'Uploaded', key: `uploaded_val_${idx}`, sortable: true, width: '100px' },
-                { title: 'iPLAS', key: `iplas_val_${idx}`, sortable: true, width: '100px' },
-            ]
-        })
+  isns.forEach((isn, idx) => {
+    headers.push({
+      title: isn,
+      align: 'center' as const,
+      children: [
+        { title: 'Uploaded', key: `uploaded_val_${idx}`, sortable: true, width: '100px' },
+        { title: 'iPLAS', key: `iplas_val_${idx}`, sortable: true, width: '100px' },
+      ],
     })
+  })
 
-    if (isns.length > 0) {
-        const scoreChildren: any[] = []
-        isns.forEach((isn, idx) => {
-            const label = isn.length > 10 ? '...' + isn.slice(-8) : isn
-            scoreChildren.push(
-                { title: `${label} (Upl)`, key: `uploaded_score_${idx}`, sortable: true, width: '100px', align: 'center' as const },
-                { title: `${label} (iPLAS)`, key: `iplas_score_${idx}`, sortable: true, width: '100px', align: 'center' as const },
-            )
-        })
-        headers.push({
-            title: 'Score',
-            align: 'center' as const,
-            children: scoreChildren,
-        })
-    }
+  if (isns.length > 0) {
+    const scoreChildren: Record<string, unknown>[] = []
+    isns.forEach((isn, idx) => {
+      const label = isn.length > 10 ? `...${isn.slice(-8)}` : isn
+      scoreChildren.push(
+        {
+          title: `${label} (Upl)`,
+          key: `uploaded_score_${idx}`,
+          sortable: true,
+          width: '100px',
+          align: 'center' as const,
+        },
+        {
+          title: `${label} (iPLAS)`,
+          key: `iplas_score_${idx}`,
+          sortable: true,
+          width: '100px',
+          align: 'center' as const,
+        },
+      )
+    })
+    headers.push({
+      title: 'Score',
+      align: 'center' as const,
+      children: scoreChildren,
+    })
+  }
 
-    return headers
+  return headers
 })
 
 // UPDATED: Comparison table items with per-ISN uploaded + iPLAS data
 const comparisonTableItems = computed(() => {
-    if (!compareResult.value) return []
+  if (!compareResult.value) return []
 
-    let items: CompareItemEnhanced[] = [
-        ...(compareResult.value.comparison_value_items || []),
-        ...(compareResult.value.comparison_non_value_items || [])
-    ]
+  let items: CompareItemEnhanced[] = [
+    ...(compareResult.value.comparison_value_items || []),
+    ...(compareResult.value.comparison_non_value_items || []),
+  ]
 
-    // Apply filters
-    if (itemFilterType.value === 'criteria') {
-        items = items.filter(item => item.usl !== null || item.lsl !== null)
-    } else if (itemFilterType.value === 'non-criteria') {
-        items = items.filter(item => item.usl === null && item.lsl === null)
+  const isns = displayedIsns.value
+
+  // Filter to only items that have data for at least one of the displayed ISNs
+  // This ensures station filter applies to test items as well
+  if (isns.length > 0) {
+    items = items.filter((item) =>
+      item.per_isn_data.some((d) => d.isn !== null && isns.includes(d.isn)),
+    )
+  }
+
+  // Apply criteria filters
+  if (itemFilterType.value === 'criteria') {
+    items = items.filter((item) => item.usl !== null || item.lsl !== null)
+  } else if (itemFilterType.value === 'non-criteria') {
+    items = items.filter((item) => item.usl === null && item.lsl === null)
+  }
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    items = items.filter((item) => item.test_item.toLowerCase().includes(query))
+  }
+
+  return items.map((item) => {
+    const row: Record<string, unknown> = {
+      test_item: item.test_item,
+      usl: item.usl,
+      lsl: item.lsl,
     }
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase()
-        items = items.filter(item => item.test_item.toLowerCase().includes(query))
-    }
 
-    const isns = displayedIsns.value
+    isns.forEach((isn, idx) => {
+      // Uploaded data from comparison result
+      const perIsn = item.per_isn_data.find((d) => d.isn === isn)
+      row[`uploaded_val_${idx}`] = perIsn?.value ?? null
+      row[`uploaded_score_${idx}`] = perIsn?.score ?? null
 
-    return items.map(item => {
-        const row: Record<string, any> = {
-            test_item: item.test_item,
-            usl: item.usl,
-            lsl: item.lsl,
+      // iPLAS data from fetched records
+      const iplasRecords = iplasDataByIsn.value.get(isn)
+      if (iplasRecords && iplasRecords.length > 0) {
+        const stationRecord = selectedIplasStation.value
+          ? iplasRecords.find(
+              (r) =>
+                r.display_station_name === selectedIplasStation.value ||
+                r.station_name === selectedIplasStation.value,
+            )
+          : iplasRecords[0]
+        if (stationRecord) {
+          const iplasItem = stationRecord.test_item.find(
+            (t) => t.NAME.toLowerCase() === item.test_item.toLowerCase(),
+          )
+          row[`iplas_val_${idx}`] = iplasItem?.VALUE ?? null
         }
+      }
 
-        isns.forEach((isn, idx) => {
-            // Uploaded data from comparison result
-            const perIsn = item.per_isn_data.find(d => d.isn === isn)
-            row[`uploaded_val_${idx}`] = perIsn?.value ?? null
-            row[`uploaded_score_${idx}`] = perIsn?.score ?? null
-
-            // iPLAS data from fetched records
-            const iplasRecords = iplasDataByIsn.value.get(isn)
-            if (iplasRecords && iplasRecords.length > 0) {
-                const stationRecord = selectedIplasStation.value
-                    ? iplasRecords.find(r =>
-                        r.display_station_name === selectedIplasStation.value ||
-                        r.station_name === selectedIplasStation.value)
-                    : iplasRecords[0]
-                if (stationRecord) {
-                    const iplasItem = stationRecord.test_item.find(
-                        t => t.NAME.toLowerCase() === item.test_item.toLowerCase()
-                    )
-                    row[`iplas_val_${idx}`] = iplasItem?.VALUE ?? null
-                }
-            }
-
-            // iPLAS score from rescored data
-            const iplasScoredMap = iplasScoredByIsn.value.get(isn)
-            if (iplasScoredMap) {
-                const scored = iplasScoredMap.get(item.test_item.toLowerCase())
-                row[`iplas_score_${idx}`] = scored?.score ?? null
-            }
-        })
-
-        return row
+      // iPLAS score from rescored data
+      const iplasScoredMap = iplasScoredByIsn.value.get(isn)
+      if (iplasScoredMap) {
+        const scored = iplasScoredMap.get(item.test_item.toLowerCase())
+        row[`iplas_score_${idx}`] = scored?.score ?? null
+      }
     })
+
+    return row
+  })
 })
 
 // Methods
@@ -690,136 +710,138 @@ const comparisonTableItems = computed(() => {
  * Quick-parse files to extract test item names and stations for scoring config dialog
  */
 const extractTestItems = async (): Promise<void> => {
-    if (!logFiles.value || logFiles.value.length === 0) return
+  if (!logFiles.value || logFiles.value.length === 0) return
 
-    extractingItems.value = true
-    try {
-        const stations = new Set<string>()
-        const itemsMap = new Map<string, ParsedTestItemEnhanced>()
-        const itemStationsMap = new Map<string, Set<string>>()  // Track which items appear in which stations
+  extractingItems.value = true
+  try {
+    const stations = new Set<string>()
+    const itemsMap = new Map<string, ParsedTestItemEnhanced>()
+    const itemStationsMap = new Map<string, Set<string>>() // Track which items appear in which stations
 
-        // Helper to check if file is archive
-        const isArchiveFile = (file: File) => {
-            const ext = file.name.toLowerCase()
-            return ext.endsWith('.zip') || ext.endsWith('.rar') || ext.endsWith('.7z')
-        }
-
-        const hasArchive = logFiles.value.some(isArchiveFile)
-
-        if (hasArchive || logFiles.value.length > 1) {
-            // Use compareLogs for archives or multiple files
-            try {
-                const result = await compareLogs(logFiles.value, criteriaFile.value, showOnlyCriteria.value)
-
-                // Extract stations from file_summaries
-                result.file_summaries?.forEach((summary: any) => {
-                    const station = summary.metadata?.station || 'Unknown'
-                    stations.add(station)
-                })
-
-                // Extract items from comparison_value_items and comparison_non_value_items
-                const allItems = [
-                    ...(result.comparison_value_items || []),
-                    ...(result.comparison_non_value_items || [])
-                ]
-
-                // Build itemsMap and itemStationsMap from per_isn_data
-                allItems.forEach((item: any) => {
-                    if (!itemsMap.has(item.test_item)) {
-                        const firstData = item.per_isn_data?.[0]
-                        itemsMap.set(item.test_item, {
-                            test_item: item.test_item,
-                            value: firstData?.value || '',
-                            usl: item.usl,
-                            lsl: item.lsl,
-                            is_value_type: firstData?.is_value_type ?? false,
-                            numeric_value: firstData?.numeric_value ?? null,
-                            is_hex: firstData?.is_hex ?? false,
-                            hex_decimal: firstData?.hex_decimal ?? null,
-                            matched_criteria: item.matched_criteria || false,
-                            target: item.baseline,
-                            score: item.avg_score,
-                            score_breakdown: firstData?.score_breakdown ?? null
-                        } as ParsedTestItemEnhanced)
-                    }
-
-                    // Track stations per item from file_summaries + per_isn_data
-                    if (!itemStationsMap.has(item.test_item)) {
-                        itemStationsMap.set(item.test_item, new Set())
-                    }
-                    item.per_isn_data?.forEach((data: any) => {
-                        // Find the station for this ISN from file_summaries
-                        const summary = result.file_summaries?.find((s: any) => s.isn === data.isn)
-                        if (summary?.metadata?.station) {
-                            itemStationsMap.get(item.test_item)!.add(summary.metadata.station)
-                        }
-                    })
-                })
-            } catch (err: any) {
-                console.warn(`Failed to compare files:`, err.message)
-            }
-        } else {
-            // Single .txt file - use parseLog
-            for (const file of logFiles.value) {
-                try {
-                    const result = await parseLog(file, criteriaFile.value, showOnlyCriteria.value)
-                    const station = result.station || 'Unknown'
-                    stations.add(station)
-
-                    // Track items and their stations
-                    for (const item of result.parsed_items_enhanced || []) {
-                        // Keep first occurrence of each item
-                        if (!itemsMap.has(item.test_item)) {
-                            itemsMap.set(item.test_item, item)
-                        }
-                        // Track which stations have this item
-                        if (!itemStationsMap.has(item.test_item)) {
-                            itemStationsMap.set(item.test_item, new Set())
-                        }
-                        itemStationsMap.get(item.test_item)!.add(station)
-                    }
-                } catch (err: any) {
-                    console.warn(`Failed to parse file ${file.name}:`, err.message)
-                }
-            }
-        }
-
-        extractedTestItems.value = Array.from(itemsMap.values())
-        extractedStations.value = Array.from(stations).sort()
-        testItemStationsMap.value = itemStationsMap
-    } catch (err: any) {
-        // If quick-parse fails, we can still open config dialog with empty items
-        console.warn('Failed to extract test items for scoring config:', err.message)
-        extractedTestItems.value = []
-        extractedStations.value = []
-        testItemStationsMap.value = new Map()
-    } finally {
-        extractingItems.value = false
+    // Helper to check if file is archive
+    const isArchiveFile = (file: File) => {
+      const ext = file.name.toLowerCase()
+      return ext.endsWith('.zip') || ext.endsWith('.rar') || ext.endsWith('.7z')
     }
+
+    const hasArchive = logFiles.value.some(isArchiveFile)
+
+    if (hasArchive || logFiles.value.length > 1) {
+      // Use compareLogs for archives or multiple files
+      try {
+        const result = await compareLogs(logFiles.value, criteriaFile.value, showOnlyCriteria.value)
+
+        // Extract stations from file_summaries
+        result.file_summaries?.forEach((summary: FileSummaryEnhanced) => {
+          const station = summary.metadata?.station || 'Unknown'
+          stations.add(station)
+        })
+
+        // Extract items from comparison_value_items and comparison_non_value_items
+        const allItems = [
+          ...(result.comparison_value_items || []),
+          ...(result.comparison_non_value_items || []),
+        ]
+
+        // Build itemsMap and itemStationsMap from per_isn_data
+        allItems.forEach((item: CompareItemEnhanced) => {
+          if (!itemsMap.has(item.test_item)) {
+            const firstData = item.per_isn_data?.[0]
+            itemsMap.set(item.test_item, {
+              test_item: item.test_item,
+              value: firstData?.value || '',
+              usl: item.usl,
+              lsl: item.lsl,
+              is_value_type: firstData?.is_value_type ?? false,
+              numeric_value: firstData?.numeric_value ?? null,
+              is_hex: firstData?.is_hex ?? false,
+              hex_decimal: firstData?.hex_decimal ?? null,
+              matched_criteria: item.matched_criteria || false,
+              target: item.baseline,
+              score: item.avg_score,
+              score_breakdown: firstData?.score_breakdown ?? null,
+            } as ParsedTestItemEnhanced)
+          }
+
+          // Track stations per item from file_summaries + per_isn_data
+          if (!itemStationsMap.has(item.test_item)) {
+            itemStationsMap.set(item.test_item, new Set())
+          }
+          item.per_isn_data?.forEach((data: PerIsnData) => {
+            // Find the station for this ISN from file_summaries
+            const summary = result.file_summaries?.find(
+              (s: FileSummaryEnhanced) => s.isn === data.isn,
+            )
+            if (summary?.metadata?.station) {
+              itemStationsMap.get(item.test_item)?.add(summary.metadata.station)
+            }
+          })
+        })
+      } catch (err: unknown) {
+        console.warn(`Failed to compare files:`, getErrorMessage(err))
+      }
+    } else {
+      // Single .txt file - use parseLog
+      for (const file of logFiles.value) {
+        try {
+          const result = await parseLog(file, criteriaFile.value, showOnlyCriteria.value)
+          const station = result.station || 'Unknown'
+          stations.add(station)
+
+          // Track items and their stations
+          for (const item of result.parsed_items_enhanced || []) {
+            // Keep first occurrence of each item
+            if (!itemsMap.has(item.test_item)) {
+              itemsMap.set(item.test_item, item)
+            }
+            // Track which stations have this item
+            if (!itemStationsMap.has(item.test_item)) {
+              itemStationsMap.set(item.test_item, new Set())
+            }
+            itemStationsMap.get(item.test_item)?.add(station)
+          }
+        } catch (err: unknown) {
+          console.warn(`Failed to parse file ${file.name}:`, getErrorMessage(err))
+        }
+      }
+    }
+
+    extractedTestItems.value = Array.from(itemsMap.values())
+    extractedStations.value = Array.from(stations).sort()
+    testItemStationsMap.value = itemStationsMap
+  } catch (err: unknown) {
+    // If quick-parse fails, we can still open config dialog with empty items
+    console.warn('Failed to extract test items for scoring config:', getErrorMessage(err))
+    extractedTestItems.value = []
+    extractedStations.value = []
+    testItemStationsMap.value = new Map()
+  } finally {
+    extractingItems.value = false
+  }
 }
 
 /**
  * Open scoring config dialog - extracts test items first if needed
  */
 const handleConfigureScoring = async () => {
-    if (extractedTestItems.value.length === 0) {
-        await extractTestItems()
-    }
-    showScoringConfigDialog.value = true
+  if (extractedTestItems.value.length === 0) {
+    await extractTestItems()
+  }
+  showScoringConfigDialog.value = true
 }
 
 /**
  * Handle scoring config applied from dialog
  */
 const handleScoringConfigApply = (configs: RescoreScoringConfig[]) => {
-    appliedScoringConfigs.value = configs
+  appliedScoringConfigs.value = configs
 }
 
 /**
  * Clear scoring configs
  */
 const clearScoringConfigs = () => {
-    appliedScoringConfigs.value = []
+  appliedScoringConfigs.value = []
 }
 
 // ============================================
@@ -830,27 +852,27 @@ const clearScoringConfigs = () => {
  * Fetch iPLAS data for all ISNs in the comparison using batch search
  */
 const fetchIplasForComparison = async () => {
-    const isns = allCompareIsns.value
-    if (isns.length === 0) return
+  const isns = allCompareIsns.value
+  if (isns.length === 0) return
 
-    iplasLoading.value = true
-    try {
-        const results = await searchByIsnBatch(isns)
-        iplasDataByIsn.value = results
+  iplasLoading.value = true
+  try {
+    const results = await searchByIsnBatch(isns)
+    iplasDataByIsn.value = results
 
-        // Auto-select first available station
-        const stations = iplasStationOptions.value
-        if (stations.length > 0 && !selectedIplasStation.value) {
-            selectedIplasStation.value = stations[0] ?? null
-        }
-
-        // Rescore iPLAS data with current scoring configs
-        await rescoreIplasData()
-    } catch (err: any) {
-        console.error('Failed to fetch iPLAS comparison data:', err)
-    } finally {
-        iplasLoading.value = false
+    // Auto-select first available station
+    const stations = iplasStationOptions.value
+    if (stations.length > 0 && !selectedIplasStation.value) {
+      selectedIplasStation.value = stations[0] ?? null
     }
+
+    // Rescore iPLAS data with current scoring configs
+    await rescoreIplasData()
+  } catch (err: unknown) {
+    console.error('Failed to fetch iPLAS comparison data:', err)
+  } finally {
+    iplasLoading.value = false
+  }
 }
 
 /**
@@ -861,284 +883,311 @@ const fetchIplasForComparison = async () => {
  * UPDATED: Only score criteria items (with UCL or LCL) by default
  */
 const rescoreIplasData = async () => {
-    const isns = allCompareIsns.value
-    iplasScoredByIsn.value = new Map()
+  const isns = allCompareIsns.value
+  iplasScoredByIsn.value = new Map()
 
-    // Build set of explicitly configured item names
-    const explicitlyConfigured = new Set(appliedScoringConfigs.value.map(c => c.test_item_name))
+  // Build set of explicitly configured item names
+  const explicitlyConfigured = new Set(appliedScoringConfigs.value.map((c) => c.test_item_name))
 
-    for (const isn of isns) {
-        const records = iplasDataByIsn.value.get(isn) || []
-        const stationRecord = selectedIplasStation.value
-            ? records.find(r =>
-                r.display_station_name === selectedIplasStation.value ||
-                r.station_name === selectedIplasStation.value)
-            : records[0]
+  for (const isn of isns) {
+    const records = iplasDataByIsn.value.get(isn) || []
+    const stationRecord = selectedIplasStation.value
+      ? records.find(
+          (r) =>
+            r.display_station_name === selectedIplasStation.value ||
+            r.station_name === selectedIplasStation.value,
+        )
+      : records[0]
 
-        if (!stationRecord || !stationRecord.test_item.length) continue
+    if (!stationRecord || !stationRecord.test_item.length) continue
 
-        // UPDATED: Filter to only criteria items (with limits) or explicitly configured items
-        const testItems = stationRecord.test_item
-            .filter(t => {
-                const hasLimits = (t.UCL && t.UCL !== '') || (t.LCL && t.LCL !== '')
-                return hasLimits || explicitlyConfigured.has(t.NAME)
-            })
-            .map(t => ({
-                test_item: t.NAME,
-                value: t.VALUE,
-                usl: t.UCL ? parseFloat(t.UCL) : null,
-                lsl: t.LCL ? parseFloat(t.LCL) : null,
-                status: t.STATUS || 'PASS',
-            }))
+    // UPDATED: Filter to only criteria items (with limits) or explicitly configured items
+    const testItems = stationRecord.test_item
+      .filter((t) => {
+        const hasLimits = (t.UCL && t.UCL !== '') || (t.LCL && t.LCL !== '')
+        return hasLimits || explicitlyConfigured.has(t.NAME)
+      })
+      .map((t) => ({
+        test_item: t.NAME,
+        value: t.VALUE,
+        usl: t.UCL ? parseFloat(t.UCL) : null,
+        lsl: t.LCL ? parseFloat(t.LCL) : null,
+        status: t.STATUS || 'PASS',
+      }))
 
-        if (testItems.length === 0) continue
+    if (testItems.length === 0) continue
 
-        try {
-            const result = await rescoreItems(testItems, appliedScoringConfigs.value)
-            const scoreMap = new Map<string, { score: number }>()
-            result.test_item_scores.forEach((score: any) => {
-                // Only add to map if score is not null
-                if (score.score !== null) {
-                    scoreMap.set(score.test_item.toLowerCase(), { score: score.score })
-                }
-            })
-            iplasScoredByIsn.value.set(isn, scoreMap)
-        } catch (err: any) {
-            console.error(`Failed to rescore iPLAS data for ${isn}:`, err)
+    try {
+      const result = await rescoreItems(testItems, appliedScoringConfigs.value)
+      const scoreMap = new Map<string, { score: number }>()
+      result.test_item_scores.forEach((score: RescoreItemResult) => {
+        // Only add to map if score is not null
+        if (score.score !== null) {
+          scoreMap.set(score.test_item.toLowerCase(), { score: score.score })
         }
+      })
+      iplasScoredByIsn.value.set(isn, scoreMap)
+    } catch (err: unknown) {
+      console.error(`Failed to rescore iPLAS data for ${isn}:`, err)
     }
+  }
 }
 
 /**
  * Check if a column key represents a score column (for chip rendering)
  */
 function isScoreColumn(key: string | undefined): boolean {
-    if (!key) return false
-    return key.startsWith('uploaded_score_') || key.startsWith('iplas_score_')
+  if (!key) return false
+  return key.startsWith('uploaded_score_') || key.startsWith('iplas_score_')
 }
 
 const handleAnalyze = async () => {
-    loading.value = true
-    errorSnackbar.value = false
+  loading.value = true
+  errorSnackbar.value = false
 
-    try {
-        const files = logFiles.value || []
+  try {
+    const files = logFiles.value || []
 
-        // Helper to check if file is archive
-        const isArchiveFile = (file: File) => {
-            const ext = file.name.toLowerCase()
-            return ext.endsWith('.zip') || ext.endsWith('.rar') || ext.endsWith('.7z')
-        }
-
-        // Use compareLogs if multiple files OR single archive file
-        const hasArchive = files.some(isArchiveFile)
-
-        if (files.length === 1 && !hasArchive) {
-            // Single .txt file - use parseLog
-            const file = files[0]
-            if (!file) {
-                throw new Error('No file selected')
-            }
-            const result = await parseLog(
-                file,
-                criteriaFile.value,
-                showOnlyCriteria.value,
-                appliedScoringConfigs.value
-            )
-            parsingResult.value = result
-            compareResult.value = null
-
-            // Also update extracted test items from latest parse
-            extractedTestItems.value = result.parsed_items_enhanced || []
-        } else {
-            // Multiple files OR archive file - use compareLogs
-            const result = await compareLogs(
-                files,
-                criteriaFile.value,
-                showOnlyCriteria.value,
-                appliedScoringConfigs.value
-            )
-            compareResult.value = result
-            parsingResult.value = null
-        }
-    } catch (error: any) {
-        errorMessage.value = error.message || 'Analysis failed. Please try again.'
-        errorSnackbar.value = true
-    } finally {
-        loading.value = false
+    // Helper to check if file is archive
+    const isArchiveFile = (file: File) => {
+      const ext = file.name.toLowerCase()
+      return ext.endsWith('.zip') || ext.endsWith('.rar') || ext.endsWith('.7z')
     }
+
+    // Use compareLogs if multiple files OR single archive file
+    const hasArchive = files.some(isArchiveFile)
+
+    if (files.length === 1 && !hasArchive) {
+      // Single .txt file - use parseLog
+      const file = files[0]
+      if (!file) {
+        throw new Error('No file selected')
+      }
+      const result = await parseLog(
+        file,
+        criteriaFile.value,
+        showOnlyCriteria.value,
+        appliedScoringConfigs.value,
+      )
+      parsingResult.value = result
+      compareResult.value = null
+
+      // Also update extracted test items from latest parse
+      extractedTestItems.value = result.parsed_items_enhanced || []
+    } else {
+      // Multiple files OR archive file - use compareLogs
+      const result = await compareLogs(
+        files,
+        criteriaFile.value,
+        showOnlyCriteria.value,
+        appliedScoringConfigs.value,
+      )
+      compareResult.value = result
+      parsingResult.value = null
+    }
+  } catch (error: unknown) {
+    errorMessage.value = getErrorMessage(error) || 'Analysis failed. Please try again.'
+    errorSnackbar.value = true
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleReset = () => {
-    logFiles.value = null
-    criteriaFile.value = null
-    showOnlyCriteria.value = false
-    parsingResult.value = null
-    compareResult.value = null
-    searchQuery.value = ''
-    itemFilterType.value = 'all'
-    extractedTestItems.value = []
-    extractedStations.value = []
-    appliedScoringConfigs.value = []
-    // UPDATED: Clear iPLAS comparison state
-    iplasDataByIsn.value = new Map()
-    iplasScoredByIsn.value = new Map()
-    selectedIplasStation.value = null
-    selectedCompareIsns.value = []
+  logFiles.value = null
+  criteriaFile.value = null
+  showOnlyCriteria.value = false
+  parsingResult.value = null
+  compareResult.value = null
+  searchQuery.value = ''
+  itemFilterType.value = 'all'
+  extractedTestItems.value = []
+  extractedStations.value = []
+  appliedScoringConfigs.value = []
+  // UPDATED: Clear iPLAS comparison state
+  iplasDataByIsn.value = new Map()
+  iplasScoredByIsn.value = new Map()
+  selectedIplasStation.value = null
+  selectedCompareIsns.value = []
 }
 
 const openCriteriaBuilder = () => {
-    criteriaBuilderOpen.value = true
+  criteriaBuilderOpen.value = true
 }
 
 const handleCriteriaCreated = (file: File) => {
-    criteriaFile.value = file
+  criteriaFile.value = file
 }
 
 const downloadCriteriaTemplate = () => {
-    const template = {
-        "$comment": "Criteria Configuration Template for Test Log Parser",
-        "criteria": [
-            {
-                "test_item": "WiFi_TX_POW_2462_11B_CCK11_B20",
-                "ucl": 20,
-                "lcl": 10,
-                "target": 15
-            },
-            {
-                "test_item": "BT_FREQ_KHZ",
-                "ucl": 2500000,
-                "lcl": 2400000,
-                "target": 2450000
-            }
-        ]
-    }
-    const templateJson = JSON.stringify(template, null, 2)
-    const blob = new Blob([templateJson], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = 'criteria_template.json'
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+  const template = {
+    $comment: 'Criteria Configuration Template for Test Log Parser',
+    criteria: [
+      {
+        test_item: 'WiFi_TX_POW_2462_11B_CCK11_B20',
+        ucl: 20,
+        lcl: 10,
+        target: 15,
+      },
+      {
+        test_item: 'BT_FREQ_KHZ',
+        ucl: 2500000,
+        lcl: 2400000,
+        target: 2450000,
+      },
+    ],
+  }
+  const templateJson = JSON.stringify(template, null, 2)
+  const blob = new Blob([templateJson], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = 'criteria_template.json'
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
 const getScoreColor = (score: number): string => {
-    if (score >= 9) return 'success'  // 9-10: green
-    if (score >= 7) return 'info'     // 7-8.99: blue
-    if (score >= 6) return 'warning'  // 6-6.99: yellow/orange
-    return 'error'                    // <6: red
+  if (score >= 9) return 'success' // 9-10: green
+  if (score >= 7) return 'info' // 7-8.99: blue
+  if (score >= 6) return 'warning' // 6-6.99: yellow/orange
+  return 'error' // <6: red
 }
 
 /**
  * Export comparison table data to Excel
  */
 async function exportComparisonToExcel() {
-    exportingComparison.value = true
-    try {
-        const items = comparisonTableItems.value
-        const isns = displayedIsns.value
+  exportingComparison.value = true
+  try {
+    const items = comparisonTableItems.value
+    const isns = displayedIsns.value
 
-        // Build export data with dynamic columns
-        const exportData = items.map((item: Record<string, any>) => {
-            const row: Record<string, any> = {
-                'Test Item': item.test_item,
-                'UCL': item.usl ?? '',
-                'LCL': item.lsl ?? '',
-            }
+    // Build export data with dynamic columns
+    const exportData = items.map((item: Record<string, unknown>) => {
+      const row: Record<string, unknown> = {
+        'Test Item': item.test_item,
+        UCL: item.usl ?? '',
+        LCL: item.lsl ?? '',
+      }
 
-            isns.forEach((isn, idx) => {
-                row[`${isn} Uploaded Value`] = item[`uploaded_val_${idx}`] ?? ''
-                row[`${isn} iPLAS Value`] = item[`iplas_val_${idx}`] ?? ''
-                row[`${isn} Uploaded Score`] = item[`uploaded_score_${idx}`] ?? ''
-                row[`${isn} iPLAS Score`] = item[`iplas_score_${idx}`] ?? ''
-            })
+      isns.forEach((isn, idx) => {
+        row[`${isn} Uploaded Value`] = item[`uploaded_val_${idx}`] ?? ''
+        row[`${isn} iPLAS Value`] = item[`iplas_val_${idx}`] ?? ''
+        row[`${isn} Uploaded Score`] = item[`uploaded_score_${idx}`] ?? ''
+        row[`${isn} iPLAS Score`] = item[`iplas_score_${idx}`] ?? ''
+      })
 
-            return row
-        })
+      return row
+    })
 
-        // Dynamic import for xlsx
-        const XLSX = await import('xlsx')
-        const worksheet = XLSX.utils.json_to_sheet(exportData)
-        const workbook = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Comparison')
+    const ExcelJS = await import('exceljs')
+    const workbook = new (ExcelJS.default || ExcelJS).Workbook()
+    const worksheet = workbook.addWorksheet('Comparison')
 
-        // Generate filename with timestamp
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-        const filename = `Test_Item_Comparison_${timestamp}.xlsx`
-
-        XLSX.writeFile(workbook, filename)
-    } catch (err: any) {
-        console.error('Export failed:', err)
-        errorMessage.value = 'Export failed: ' + (err.message || 'Unknown error')
-        errorSnackbar.value = true
-    } finally {
-        exportingComparison.value = false
+    if (exportData.length > 0) {
+      const rows = exportData as Array<Record<string, unknown>>
+      const headers = Object.keys(rows[0] ?? {})
+      worksheet.addRow(headers)
+      rows.forEach((item) => {
+        worksheet.addRow(headers.map((header) => item[header] ?? ''))
+      })
     }
+
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    const filename = `Test_Item_Comparison_${timestamp}.xlsx`
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  } catch (err: unknown) {
+    console.error('Export failed:', err)
+    errorMessage.value = `Export failed: ${getErrorMessage(err) || 'Unknown error'}`
+    errorSnackbar.value = true
+  } finally {
+    exportingComparison.value = false
+  }
 }
 
 const getScoringTypeColor = (type: string): string => {
-    switch (type) {
-        case 'symmetrical': return 'blue'
-        case 'asymmetrical': return 'purple'
-        case 'per_mask': return 'orange'
-        case 'evm': return 'teal'
-        case 'throughput': return 'green'
-        case 'binary': return 'grey'
-        default: return 'blue'
-    }
+  switch (type) {
+    case 'symmetrical':
+      return 'blue'
+    case 'asymmetrical':
+      return 'purple'
+    case 'per_mask':
+      return 'orange'
+    case 'evm':
+      return 'teal'
+    case 'throughput':
+      return 'green'
+    case 'binary':
+      return 'grey'
+    default:
+      return 'blue'
+  }
 }
 
 /**
  * Show score breakdown for a comparison item (uses first ISN's data)
  */
-const showTestItemBreakdown = (item: CompareItemEnhanced) => {
-    const firstIsnData = item.per_isn_data?.[0]
-    if (firstIsnData) {
-        breakdownItem.value = {
-            test_item: item.test_item,
-            usl: item.usl,
-            lsl: item.lsl,
-            value: firstIsnData.value,
-            is_value_type: firstIsnData.is_value_type,
-            numeric_value: firstIsnData.numeric_value,
-            is_hex: firstIsnData.is_hex,
-            hex_decimal: firstIsnData.hex_decimal,
-            matched_criteria: item.matched_criteria,
-            target: null,
-            score: firstIsnData.score,
-            score_breakdown: firstIsnData.score_breakdown
-        }
-        showBreakdownDialog.value = true
-    }
-}
+// const showTestItemBreakdown = (item: CompareItemEnhanced) => {
+//   const firstIsnData = item.per_isn_data?.[0]
+//   if (firstIsnData) {
+//     breakdownItem.value = {
+//       test_item: item.test_item,
+//       usl: item.usl,
+//       lsl: item.lsl,
+//       value: firstIsnData.value,
+//       is_value_type: firstIsnData.is_value_type,
+//       numeric_value: firstIsnData.numeric_value,
+//       is_hex: firstIsnData.is_hex,
+//       hex_decimal: firstIsnData.hex_decimal,
+//       matched_criteria: item.matched_criteria,
+//       target: null,
+//       score: firstIsnData.score,
+//       score_breakdown: firstIsnData.score_breakdown,
+//     }
+//     showBreakdownDialog.value = true
+//   }
+// }
 
 // Watch for showOnlyCriteria changes and re-analyze if results exist
 watch(showOnlyCriteria, async () => {
-    if (hasResults.value && criteriaFile.value) {
-        await handleAnalyze()
-    }
+  if (hasResults.value && criteriaFile.value) {
+    await handleAnalyze()
+  }
 })
 
 // When files change, clear extracted items so they get re-extracted
 watch(logFiles, () => {
-    extractedTestItems.value = []
+  extractedTestItems.value = []
 })
 
 // UPDATED: Auto-fetch iPLAS data when comparison results are available
 watch(compareResult, async (newVal) => {
-    if (newVal) {
-        await fetchIplasForComparison()
-    }
+  if (newVal) {
+    await fetchIplasForComparison()
+  }
 })
 
 // When iPLAS station changes, rescore iPLAS data
 watch(selectedIplasStation, async () => {
-    if (iplasDataByIsn.value.size > 0) {
-        await rescoreIplasData()
-    }
+  if (iplasDataByIsn.value.size > 0) {
+    await rescoreIplasData()
+  }
 })
 </script>
 

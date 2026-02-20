@@ -7,13 +7,15 @@
  * report missing fields.
  */
 
-import type { InternalAxiosRequestConfig, AxiosError } from 'axios'
+import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { useAuthStore } from '@/features/auth/store'
 
 /**
  * Request interceptor to inject JWT token into Authorization header
  */
-export function authRequestInterceptor(config: InternalAxiosRequestConfig): InternalAxiosRequestConfig {
+export function authRequestInterceptor(
+  config: InternalAxiosRequestConfig,
+): InternalAxiosRequestConfig {
   const authStore = useAuthStore()
   const token = authStore.accessToken
 
@@ -24,20 +26,20 @@ export function authRequestInterceptor(config: InternalAxiosRequestConfig): Inte
     if (isFormData && config.headers) {
       // header keys may be lowercased or normal-cased depending on axios version/runtime
       const headers = config.headers as Record<string, unknown>
-      if (Object.prototype.hasOwnProperty.call(headers, 'Content-Type')) {
+      if ('Content-Type' in headers) {
         delete headers['Content-Type']
       }
-      if (Object.prototype.hasOwnProperty.call(headers, 'content-type')) {
+      if ('content-type' in headers) {
         delete headers['content-type']
       }
     }
-  } catch (e) {
+  } catch (_e) {
     // defensive: if FormData isn't defined or check fails, continue normally
   }
 
   if (token && config.headers) {
     const headers = config.headers as Record<string, unknown>
-    headers['Authorization'] = `Bearer ${token}`
+    headers.Authorization = `Bearer ${token}`
   }
 
   return config

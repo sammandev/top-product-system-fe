@@ -87,10 +87,9 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, reactive, ref } from 'vue'
 import { storeToRefs } from 'pinia'
+import { computed, onMounted, reactive, ref } from 'vue'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
 
 const appConfigStore = useAppConfigStore()
 
@@ -100,11 +99,11 @@ const formValid = ref(false)
 const form = reactive({
   name: '',
   version: '',
-  description: ''
+  description: '',
 })
 
 const rules = {
-  required: (value: string) => !!value || 'Required field'
+  required: (value: string) => !!value || 'Required field',
 }
 
 const { appName, appVersion, appDescription, config } = storeToRefs(appConfigStore)
@@ -124,7 +123,7 @@ async function handleSave() {
   await appConfigStore.updateConfig({
     name: form.name.trim(),
     version: form.version.trim(),
-    description: form.description?.trim() || ''
+    description: form.description?.trim() || '',
   })
   populateForm()
   formRef.value?.resetValidation?.()

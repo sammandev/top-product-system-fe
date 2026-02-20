@@ -1,17 +1,17 @@
 /**
  * iPLAS IndexedDB Database
- * 
+ *
  * Provides persistent, disk-based storage for iPLAS test records.
  * This eliminates memory pressure from large datasets by storing
  * records in IndexedDB instead of JavaScript heap.
- * 
+ *
  * Schema Design:
  * - Primary key: composite of ISN + TestStartTime (unique per record)
  * - Indexes: station, status, testDate for efficient queries
  * - Optimized for cursor-based pagination and filtering
  */
 
-import { openDB, deleteDB, type DBSchema, type IDBPDatabase } from 'idb'
+import { type DBSchema, deleteDB, type IDBPDatabase, openDB } from 'idb'
 
 // ============================================================================
 // Types
@@ -118,7 +118,7 @@ let dbInitPromise: Promise<IDBPDatabase<IplasDbSchema>> | null = null
 
 /**
  * Initialize and get the IndexedDB database instance
- * 
+ *
  * Uses singleton pattern to ensure only one connection is maintained.
  * Thread-safe initialization with promise caching.
  */
@@ -146,7 +146,7 @@ export async function getDb(): Promise<IDBPDatabase<IplasDbSchema>> {
         store.createIndex('by-date', 'TestStartTime', { unique: false })
         store.createIndex('by-isn', 'ISN', { unique: false })
         store.createIndex('by-runId', 'runId', { unique: false })
-        
+
         // Compound index for station + date queries (most common)
         store.createIndex('by-station-date', ['Station', 'TestStartTime'], { unique: false })
 
@@ -166,12 +166,12 @@ export async function getDb(): Promise<IDBPDatabase<IplasDbSchema>> {
       console.error('[IplasDB] Database connection terminated unexpectedly')
       dbInstance = null
       dbInitPromise = null
-    }
+    },
   })
 
   dbInstance = await dbInitPromise
   dbInitPromise = null
-  
+
   console.log('[IplasDB] Database initialized')
   return dbInstance
 }
@@ -203,7 +203,7 @@ export async function deleteDatabase(): Promise<void> {
 
 /**
  * Open a write transaction with optional relaxed durability
- * 
+ *
  * Uses relaxed durability when supported for better write performance.
  * Falls back to standard transaction for browsers without support.
  */
@@ -227,17 +227,14 @@ export async function putRecord(record: IplasDbRecord): Promise<void> {
 
 /**
  * Add or update multiple records in a batch
- * 
+ *
  * Uses a single transaction for efficiency.
- * 
+ *
  * @param records - Records to upsert
  * @param runId - Run ID for cache invalidation checking
  * @returns Number of records written
  */
-export async function putRecordsBatch(
-  records: IplasDbRecord[],
-  runId: number
-): Promise<number> {
+export async function putRecordsBatch(records: IplasDbRecord[], runId: number): Promise<number> {
   if (records.length === 0) return 0
 
   const db = await getDb()
@@ -267,10 +264,10 @@ export async function clearAllRecords(): Promise<void> {
 
 /**
  * Clear records from a previous run
- * 
+ *
  * Removes all records with a runId different from the current one.
  * This is used for cache invalidation when starting a new stream.
- * 
+ *
  * @param currentRunId - The current run ID to keep
  */
 export async function clearStaleRecords(currentRunId: number): Promise<number> {
@@ -291,11 +288,11 @@ export async function clearStaleRecords(currentRunId: number): Promise<number> {
   }
 
   await tx.done
-  
+
   if (deleted > 0) {
     console.log(`[IplasDB] Cleared ${deleted} stale records`)
   }
-  
+
   return deleted
 }
 
@@ -316,9 +313,7 @@ export async function getTotalCount(): Promise<number> {
  */
 export async function getCountByStation(station: string): Promise<number> {
   const db = await getDb()
-  const index = db.transaction(STORE_NAME, 'readonly')
-    .objectStore(STORE_NAME)
-    .index('by-station')
+  const index = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).index('by-station')
   return index.count(station)
 }
 
@@ -327,9 +322,7 @@ export async function getCountByStation(station: string): Promise<number> {
  */
 export async function getCountByStatus(status: 'PASS' | 'FAIL'): Promise<number> {
   const db = await getDb()
-  const index = db.transaction(STORE_NAME, 'readonly')
-    .objectStore(STORE_NAME)
-    .index('by-status')
+  const index = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).index('by-status')
   return index.count(status)
 }
 
@@ -351,11 +344,11 @@ export async function getAllRecords(): Promise<IplasDbRecord[]> {
 
 /**
  * Get paginated records with filtering and sorting
- * 
+ *
  * Uses cursor-based pagination for memory efficiency.
  */
 export async function getPagedRecords(
-  options: IplasDbQueryOptions = {}
+  options: IplasDbQueryOptions = {},
 ): Promise<IplasDbPageResult> {
   const db = await getDb()
   const {
@@ -365,14 +358,14 @@ export async function getPagedRecords(
     limit = 25,
     offset = 0,
     sortBy = 'TestStartTime',
-    sortDesc = true
+    sortDesc = true,
   } = options
 
   const tx = db.transaction(STORE_NAME, 'readonly')
   const store = tx.objectStore(STORE_NAME)
 
   // Collect all matching records first (we need to count and sort)
-  let allRecords: IplasDbRecord[] = []
+  const allRecords: IplasDbRecord[] = []
 
   // Use appropriate index based on filters
   if (station && !status) {
@@ -423,7 +416,7 @@ export async function getPagedRecords(
   allRecords.sort((a, b) => {
     const aVal = a[sortBy] ?? ''
     const bVal = b[sortBy] ?? ''
-    
+
     if (aVal < bVal) return sortDesc ? 1 : -1
     if (aVal > bVal) return sortDesc ? -1 : 1
     return 0
@@ -435,7 +428,7 @@ export async function getPagedRecords(
   return {
     records: pageRecords,
     totalCount,
-    hasMore: offset + limit < totalCount
+    hasMore: offset + limit < totalCount,
   }
 }
 
@@ -444,9 +437,7 @@ export async function getPagedRecords(
  */
 export async function getRecordsByIsn(isn: string): Promise<IplasDbRecord[]> {
   const db = await getDb()
-  const index = db.transaction(STORE_NAME, 'readonly')
-    .objectStore(STORE_NAME)
-    .index('by-isn')
+  const index = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).index('by-isn')
   return index.getAll(isn)
 }
 
@@ -491,14 +482,14 @@ export async function getStorageStats(): Promise<{
   usageBytes: number
 }> {
   const recordCount = await getTotalCount()
-  
+
   // Estimate ~500 bytes per record
   const estimatedSizeBytes = recordCount * 500
 
   let quotaBytes = 0
   let usageBytes = 0
 
-  if (navigator.storage && navigator.storage.estimate) {
+  if (navigator.storage?.estimate) {
     try {
       const estimate = await navigator.storage.estimate()
       quotaBytes = estimate.quota || 0
@@ -512,7 +503,7 @@ export async function getStorageStats(): Promise<{
     recordCount,
     estimatedSizeBytes,
     quotaBytes,
-    usageBytes
+    usageBytes,
   }
 }
 

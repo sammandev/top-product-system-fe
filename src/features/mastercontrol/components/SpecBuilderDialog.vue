@@ -162,66 +162,68 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { downloadJsonSpecTemplate, downloadIniSpecTemplate } from '../utils/templates'
+import { computed, ref } from 'vue'
+import { downloadIniSpecTemplate, downloadJsonSpecTemplate } from '../utils/templates'
 
 defineProps<{
-    modelValue: boolean
+  modelValue: boolean
 }>()
 
 const emit = defineEmits<{
-    'update:modelValue': [value: boolean]
-    'spec-created': [file: File, format: 'json' | 'ini']
+  'update:modelValue': [value: boolean]
+  'spec-created': [file: File, format: 'json' | 'ini']
 }>()
 
 interface SpecRule {
-    testItem: string // test_pattern in JSON
-    usl: number | null
-    lsl: number | null
-    target: number | null
-    gap: number | null
+  testItem: string // test_pattern in JSON
+  usl: number | null
+  lsl: number | null
+  target: number | null
+  gap: number | null
 }
 
 // State
 const specFormat = ref<'json' | 'ini'>('json')
 const rules = ref<SpecRule[]>([])
 const currentRule = ref<SpecRule>({
-    testItem: '',
-    usl: null,
-    lsl: null,
-    target: null,
-    gap: null
+  testItem: '',
+  usl: null,
+  lsl: null,
+  target: null,
+  gap: null,
 })
 const editingIndex = ref<number | null>(null)
 
 // Computed
 const canAddRule = computed(() => {
-    return currentRule.value.testItem.trim().length > 0 &&
-        (currentRule.value.usl !== null || currentRule.value.lsl !== null)
+  return (
+    currentRule.value.testItem.trim().length > 0 &&
+    (currentRule.value.usl !== null || currentRule.value.lsl !== null)
+  )
 })
 
 const specPreview = computed(() => {
-    if (specFormat.value === 'json') {
-        return generateJsonPreview()
-    } else {
-        return generateIniPreview()
-    }
+  if (specFormat.value === 'json') {
+    return generateJsonPreview()
+  } else {
+    return generateIniPreview()
+  }
 })
 
 // Methods
 function generateJsonPreview(): string {
-    const spec = rules.value.map(rule => ({
-        test_pattern: rule.testItem,
-        usl: rule.usl ?? 0,
-        lsl: rule.lsl ?? 0,
-        target: rule.target ?? 0,
-        gap: rule.gap ?? 0
-    }))
-    return JSON.stringify(spec, null, 2)
+  const spec = rules.value.map((rule) => ({
+    test_pattern: rule.testItem,
+    usl: rule.usl ?? 0,
+    lsl: rule.lsl ?? 0,
+    target: rule.target ?? 0,
+    gap: rule.gap ?? 0,
+  }))
+  return JSON.stringify(spec, null, 2)
 }
 
 function generateIniPreview(): string {
-    let content = `; MasterControl Multi-DUT Analysis Criteria File
+  let content = `; MasterControl Multi-DUT Analysis Criteria File
 ; =================================================
 ; Format: "PATTERN" <USL,LSL,Target,Gap>
 ;
@@ -235,118 +237,118 @@ function generateIniPreview(): string {
 [Test_Items]
 `
 
-    rules.value.forEach(rule => {
-        const usl = rule.usl !== null ? rule.usl.toString() : ''
-        const lsl = rule.lsl !== null ? rule.lsl.toString() : ''
-        const target = rule.target !== null ? rule.target.toString() : '0'
-        const gap = (rule.gap !== null && rule.gap !== undefined) ? rule.gap.toString() : '0'
-        content += `"${rule.testItem}" <${usl},${lsl},${target},${gap}>\n`
-    })
+  rules.value.forEach((rule) => {
+    const usl = rule.usl !== null ? rule.usl.toString() : ''
+    const lsl = rule.lsl !== null ? rule.lsl.toString() : ''
+    const target = rule.target !== null ? rule.target.toString() : '0'
+    const gap = rule.gap !== null && rule.gap !== undefined ? rule.gap.toString() : '0'
+    content += `"${rule.testItem}" <${usl},${lsl},${target},${gap}>\n`
+  })
 
-    return content
+  return content
 }
 
 function formatValue(value: number | null | undefined): string {
-    return value !== null && value !== undefined ? value.toString() : 'N/A'
+  return value !== null && value !== undefined ? value.toString() : 'N/A'
 }
 
 function addRule() {
-    if (!canAddRule.value) return
+  if (!canAddRule.value) return
 
-    const rule: SpecRule = {
-        testItem: currentRule.value.testItem.trim(),
-        usl: currentRule.value.usl,
-        lsl: currentRule.value.lsl,
-        target: currentRule.value.target,
-        gap: currentRule.value.gap
-    }
+  const rule: SpecRule = {
+    testItem: currentRule.value.testItem.trim(),
+    usl: currentRule.value.usl,
+    lsl: currentRule.value.lsl,
+    target: currentRule.value.target,
+    gap: currentRule.value.gap,
+  }
 
-    if (editingIndex.value !== null) {
-        rules.value[editingIndex.value] = rule
-        editingIndex.value = null
-    } else {
-        rules.value.push(rule)
-    }
+  if (editingIndex.value !== null) {
+    rules.value[editingIndex.value] = rule
+    editingIndex.value = null
+  } else {
+    rules.value.push(rule)
+  }
 
-    resetCurrentRule()
+  resetCurrentRule()
 }
 
 function editRule(index: number) {
-    const rule = rules.value[index]
-    if (!rule) return
+  const rule = rules.value[index]
+  if (!rule) return
 
-    currentRule.value = {
-        testItem: rule.testItem,
-        usl: rule.usl,
-        lsl: rule.lsl,
-        target: rule.target,
-        gap: rule.gap
-    }
-    editingIndex.value = index
+  currentRule.value = {
+    testItem: rule.testItem,
+    usl: rule.usl,
+    lsl: rule.lsl,
+    target: rule.target,
+    gap: rule.gap,
+  }
+  editingIndex.value = index
 }
 
 function removeRule(index: number) {
-    rules.value.splice(index, 1)
-    if (editingIndex.value === index) {
-        resetCurrentRule()
-    }
+  rules.value.splice(index, 1)
+  if (editingIndex.value === index) {
+    resetCurrentRule()
+  }
 }
 
 function clearAllRules() {
-    if (confirm('Are you sure you want to clear all rules?')) {
-        rules.value = []
-        resetCurrentRule()
-    }
+  if (confirm('Are you sure you want to clear all rules?')) {
+    rules.value = []
+    resetCurrentRule()
+  }
 }
 
 function resetCurrentRule() {
-    currentRule.value = {
-        testItem: '',
-        usl: null,
-        lsl: null,
-        target: null,
-        gap: null
-    }
-    editingIndex.value = null
+  currentRule.value = {
+    testItem: '',
+    usl: null,
+    lsl: null,
+    target: null,
+    gap: null,
+  }
+  editingIndex.value = null
 }
 
 function downloadTemplate() {
-    if (specFormat.value === 'json') {
-        downloadJsonSpecTemplate()
-    } else {
-        downloadIniSpecTemplate()
-    }
+  if (specFormat.value === 'json') {
+    downloadJsonSpecTemplate()
+  } else {
+    downloadIniSpecTemplate()
+  }
 }
 
 function downloadSpecFile() {
-    const content = specPreview.value
-    const blob = new Blob([content], {
-        type: specFormat.value === 'json' ? 'application/json' : 'text/plain'
-    })
-    const url = URL.createObjectURL(blob)
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `custom_spec.${specFormat.value}`
-    document.body.appendChild(a)
-    a.click()
-    document.body.removeChild(a)
-    URL.revokeObjectURL(url)
+  const content = specPreview.value
+  const blob = new Blob([content], {
+    type: specFormat.value === 'json' ? 'application/json' : 'text/plain',
+  })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `custom_spec.${specFormat.value}`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
 
 function saveAndUse() {
-    const content = specPreview.value
-    const blob = new Blob([content], {
-        type: specFormat.value === 'json' ? 'application/json' : 'text/plain'
-    })
-    const file = new File([blob], `custom_spec.${specFormat.value}`, {
-        type: specFormat.value === 'json' ? 'application/json' : 'text/plain'
-    })
-    emit('spec-created', file, specFormat.value)
-    handleClose()
+  const content = specPreview.value
+  const blob = new Blob([content], {
+    type: specFormat.value === 'json' ? 'application/json' : 'text/plain',
+  })
+  const file = new File([blob], `custom_spec.${specFormat.value}`, {
+    type: specFormat.value === 'json' ? 'application/json' : 'text/plain',
+  })
+  emit('spec-created', file, specFormat.value)
+  handleClose()
 }
 
 function handleClose() {
-    emit('update:modelValue', false)
+  emit('update:modelValue', false)
 }
 </script>
 

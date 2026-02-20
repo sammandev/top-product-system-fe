@@ -380,7 +380,7 @@
                     <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="50"
                         density="comfortable" fixed-header fixed-footer style="height: 100%;"
                         class="elevation-1 v-table--striped clickable-rows"
-                        @click:row="(_event: any, data: any) => showScoreBreakdown(data.item)">
+                        @click:row="(_event: unknown, data: any) => showScoreBreakdown(data.item)">
                         <template #item.test_item="{ item }">
                             <span class="font-weight-medium">{{ item.test_item }}</span>
                         </template>
@@ -536,13 +536,23 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
 import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
-import type { TestLogParseResponseEnhanced, CompareResponseEnhanced, ParsedTestItemEnhanced, RescoreScoringConfig } from '@/features/dut_logs/composables/useTestLogUpload'
-import IplasCompareDialog from './IplasCompareDialog.vue'
-import { createTopProduct, createTopProductsBulk, type TopProductCreate, type TopProductMeasurementCreate } from '@/features/top-products/api/topProductsApi'
+import utc from 'dayjs/plugin/utc'
+import { computed, ref, watch } from 'vue'
+import type {
+  CompareResponseEnhanced,
+  ParsedTestItemEnhanced,
+  RescoreScoringConfig,
+  TestLogParseResponseEnhanced,
+} from '@/features/dut_logs/composables/useTestLogUpload'
+import {
+  createTopProduct,
+  createTopProductsBulk,
+  type TopProductCreate,
+  type TopProductMeasurementCreate,
+} from '@/features/top-products/api/topProductsApi'
+import { getApiErrorDetail } from '@/shared'
 import { useNotification } from '@/shared/composables/useNotification'
 
 dayjs.extend(utc)
@@ -551,27 +561,27 @@ dayjs.extend(timezone)
 const { showSuccess, showError } = useNotification()
 
 const props = defineProps<{
-    parseResult?: TestLogParseResponseEnhanced | null
-    compareResult?: CompareResponseEnhanced | null
-    scoringConfigs?: RescoreScoringConfig[]
+  parseResult?: TestLogParseResponseEnhanced | null
+  compareResult?: CompareResponseEnhanced | null
+  scoringConfigs?: RescoreScoringConfig[]
 }>()
 
 interface RankingItem {
-    row_id: string  // Unique ID combining ISN and station
-    isn: string | null
-    test_date: string | null
-    duration_seconds: number | null
-    station: string
-    device: string | null
-    status: string
-    result: string | null
-    score: number
+  row_id: string // Unique ID combining ISN and station
+  isn: string | null
+  test_date: string | null
+  duration_seconds: number | null
+  station: string
+  device: string | null
+  status: string
+  result: string | null
+  score: number
 }
 
 // Search and filters
 const searchQuery = ref('')
-const stationTab = ref('all')  // Station tabs: 'all' or specific station name
-const stationFilter = ref<string | null>(null)  // Keep for backward compatibility
+const stationTab = ref('all') // Station tabs: 'all' or specific station name
+const stationFilter = ref<string | null>(null) // Keep for backward compatibility
 const scoreFilterType = ref<string | null>(null)
 const scoreFilterValue = ref<number | null>(null)
 const resultFilter = ref<string | null>(null)
@@ -601,563 +611,605 @@ const comparisonIsn = ref<string | null>(null)
 const testItemFilterType = ref<string>('all')
 const testItemSearch = ref('')
 const testItemFilterOptions = [
-    { title: 'Show All', value: 'all' },
-    { title: 'Criteria Items', value: 'criteria' },
-    { title: 'Non-Criteria Items', value: 'non-criteria' }
+  { title: 'Show All', value: 'all' },
+  { title: 'Criteria Items', value: 'criteria' },
+  { title: 'Non-Criteria Items', value: 'non-criteria' },
 ]
 
 // Filtered test items
 const filteredTestItems = computed(() => {
-    let items = selectedTestItems.value
+  let items = selectedTestItems.value
 
-    // Filter by type - Criteria = has UCL or LCL, Non-Criteria = no UCL and no LCL
-    if (testItemFilterType.value === 'criteria') {
-        items = items.filter(item => item.usl !== null || item.lsl !== null)
-    } else if (testItemFilterType.value === 'non-criteria') {
-        items = items.filter(item => item.usl === null && item.lsl === null)
-    }
+  // Filter by type - Criteria = has UCL or LCL, Non-Criteria = no UCL and no LCL
+  if (testItemFilterType.value === 'criteria') {
+    items = items.filter((item) => item.usl !== null || item.lsl !== null)
+  } else if (testItemFilterType.value === 'non-criteria') {
+    items = items.filter((item) => item.usl === null && item.lsl === null)
+  }
 
-    // Filter by search
-    if (testItemSearch.value) {
-        const query = testItemSearch.value.toLowerCase()
-        items = items.filter(item => item.test_item.toLowerCase().includes(query))
-    }
+  // Filter by search
+  if (testItemSearch.value) {
+    const query = testItemSearch.value.toLowerCase()
+    items = items.filter((item) => item.test_item.toLowerCase().includes(query))
+  }
 
-    return items
+  return items
 })
 
 // Reset test item filters
 const resetTestItemFilters = () => {
-    testItemFilterType.value = 'all'
-    testItemSearch.value = ''
+  testItemFilterType.value = 'all'
+  testItemSearch.value = ''
 }
 
 // Test Items Headers
 const testItemHeaders = [
-    { title: 'Test Item', key: 'test_item', sortable: true },
-    { title: 'Value', key: 'value', sortable: true, width: '120px' },
-    { title: 'UCL', key: 'usl', sortable: true, width: '100px' },
-    { title: 'LCL', key: 'lsl', sortable: true, width: '100px' },
-    { title: 'Score', key: 'score', sortable: true, width: '120px', align: 'center' as const }
+  { title: 'Test Item', key: 'test_item', sortable: true },
+  { title: 'Value', key: 'value', sortable: true, width: '120px' },
+  { title: 'UCL', key: 'usl', sortable: true, width: '100px' },
+  { title: 'LCL', key: 'lsl', sortable: true, width: '100px' },
+  { title: 'Score', key: 'score', sortable: true, width: '120px', align: 'center' as const },
 ]
 
 // Pagination
 const itemsPerPage = ref(10)
 const currentPage = ref(1)
 const itemsPerPageOptions = [
-    { title: '5', value: 5 },
-    { title: '10', value: 10 },
-    { title: '25', value: 25 },
-    { title: '50', value: 50 },
-    { title: '100', value: 100 },
-    { title: 'All', value: -1 },
-    { title: 'Custom', value: 0 }
+  { title: '5', value: 5 },
+  { title: '10', value: 10 },
+  { title: '25', value: 25 },
+  { title: '50', value: 50 },
+  { title: '100', value: 100 },
+  { title: 'All', value: -1 },
+  { title: 'Custom', value: 0 },
 ]
 const showCustomInput = ref(false)
 const customItemsPerPage = ref(10)
 
 // Filter options
 const scoreFilterTypes = [
-    { title: 'Greater Than', value: 'gt' },
-    { title: 'Less Than', value: 'lt' },
-    { title: 'Equal To', value: 'eq' }
+  { title: 'Greater Than', value: 'gt' },
+  { title: 'Less Than', value: 'lt' },
+  { title: 'Equal To', value: 'eq' },
 ]
 
 const resultFilterOptions = [
-    { title: 'All', value: null },
-    { title: 'Pass Only', value: 'PASS' },
-    { title: 'Fail Only', value: 'FAIL' }
+  { title: 'All', value: null },
+  { title: 'Pass Only', value: 'PASS' },
+  { title: 'Fail Only', value: 'FAIL' },
 ]
 
 // Headers
 const headers = [
-    { title: 'Rank', key: 'rank', sortable: false, width: '100px', align: 'center' as const },
-    { title: 'DUT ISN', key: 'isn', sortable: true, width: '180px' },
-    { title: 'Test Date', key: 'test_date', sortable: true, width: '150px' },
-    { title: 'Duration', key: 'duration', sortable: true, width: '120px', align: 'center' as const },
-    { title: 'Test Station', key: 'station', sortable: true, width: '150px' },
-    { title: 'Device', key: 'device', sortable: true, width: '150px' },
-    { title: 'Status', key: 'status', sortable: true, width: '120px', align: 'center' as const },
-    { title: 'Test Result', key: 'result', sortable: true, width: '120px', align: 'center' as const },
-    { title: 'Overall Score', key: 'score', sortable: true, width: '150px', align: 'center' as const }
+  { title: 'Rank', key: 'rank', sortable: false, width: '100px', align: 'center' as const },
+  { title: 'DUT ISN', key: 'isn', sortable: true, width: '180px' },
+  { title: 'Test Date', key: 'test_date', sortable: true, width: '150px' },
+  { title: 'Duration', key: 'duration', sortable: true, width: '120px', align: 'center' as const },
+  { title: 'Test Station', key: 'station', sortable: true, width: '150px' },
+  { title: 'Device', key: 'device', sortable: true, width: '150px' },
+  { title: 'Status', key: 'status', sortable: true, width: '120px', align: 'center' as const },
+  { title: 'Test Result', key: 'result', sortable: true, width: '120px', align: 'center' as const },
+  {
+    title: 'Overall Score',
+    key: 'score',
+    sortable: true,
+    width: '150px',
+    align: 'center' as const,
+  },
 ]
 
 // Generate rankings from results
 const rankings = computed<RankingItem[]>(() => {
-    const items: RankingItem[] = []
+  const items: RankingItem[] = []
 
-    if (props.parseResult && props.parseResult.metadata) {
-        // Single file parsing mode
-        const isn = props.parseResult.isn || 'unknown'
-        const station = props.parseResult.station || 'Unknown'
+  if (props.parseResult?.metadata) {
+    // Single file parsing mode
+    const isn = props.parseResult.isn || 'unknown'
+    const station = props.parseResult.station || 'Unknown'
+    items.push({
+      row_id: `${isn}_${station}`,
+      isn: props.parseResult.isn,
+      test_date: props.parseResult.metadata.test_date,
+      duration_seconds: props.parseResult.metadata.duration_seconds,
+      station: station,
+      device: props.parseResult.metadata.device,
+      status: props.parseResult.metadata.sfis_status || 'Unknown',
+      result: props.parseResult.metadata.result,
+      score: props.parseResult.avg_score || 0,
+    })
+  } else if (props.compareResult) {
+    // Multiple files comparison mode - use file_summaries for metadata
+    if (props.compareResult.file_summaries) {
+      props.compareResult.file_summaries.forEach((fileSummary) => {
+        const isn = fileSummary.isn || 'unknown'
+        const station = fileSummary.metadata.station || 'Unknown'
         items.push({
-            row_id: `${isn}_${station}`,
-            isn: props.parseResult.isn,
-            test_date: props.parseResult.metadata.test_date,
-            duration_seconds: props.parseResult.metadata.duration_seconds,
-            station: station,
-            device: props.parseResult.metadata.device,
-            status: props.parseResult.metadata.sfis_status || 'Unknown',
-            result: props.parseResult.metadata.result,
-            score: props.parseResult.avg_score || 0
+          row_id: `${isn}_${station}`,
+          isn: fileSummary.isn,
+          test_date: fileSummary.metadata.test_date,
+          duration_seconds: fileSummary.metadata.duration_seconds,
+          station: station,
+          device: fileSummary.metadata.device,
+          status: fileSummary.metadata.sfis_status || 'Unknown',
+          result: fileSummary.metadata.result,
+          score: fileSummary.avg_score || 0,
         })
-    } else if (props.compareResult) {
-        // Multiple files comparison mode - use file_summaries for metadata
-        if (props.compareResult.file_summaries) {
-            props.compareResult.file_summaries.forEach(fileSummary => {
-                const isn = fileSummary.isn || 'unknown'
-                const station = fileSummary.metadata.station || 'Unknown'
-                items.push({
-                    row_id: `${isn}_${station}`,
-                    isn: fileSummary.isn,
-                    test_date: fileSummary.metadata.test_date,
-                    duration_seconds: fileSummary.metadata.duration_seconds,
-                    station: station,
-                    device: fileSummary.metadata.device,
-                    status: fileSummary.metadata.sfis_status || 'Unknown',
-                    result: fileSummary.metadata.result,
-                    score: fileSummary.avg_score || 0
-                })
-            })
-        }
+      })
     }
+  }
 
-    // Sort by score (descending)
-    return items.sort((a, b) => b.score - a.score)
+  // Sort by score (descending)
+  return items.sort((a, b) => b.score - a.score)
 })
 
 // Available stations for filtering (derived from rankings)
 const availableStations = computed(() => {
-    const stations = new Set<string>()
-    rankings.value.forEach(item => {
-        if (item.station) {
-            stations.add(item.station)
-        }
-    })
-    return Array.from(stations).sort()
+  const stations = new Set<string>()
+  rankings.value.forEach((item) => {
+    if (item.station) {
+      stations.add(item.station)
+    }
+  })
+  return Array.from(stations).sort()
 })
 
 // Get count of items for a specific station
 function getStationCount(station: string): number {
-    return rankings.value.filter(item => item.station === station).length
+  return rankings.value.filter((item) => item.station === station).length
 }
 
 // Filtered rankings
 const filteredRankings = computed(() => {
-    let filtered = rankings.value
+  let filtered = rankings.value
 
-    // Station tab filter (replaces dropdown filter)
-    if (stationTab.value && stationTab.value !== 'all') {
-        filtered = filtered.filter(item => item.station === stationTab.value)
-    }
+  // Station tab filter (replaces dropdown filter)
+  if (stationTab.value && stationTab.value !== 'all') {
+    filtered = filtered.filter((item) => item.station === stationTab.value)
+  }
 
-    // Search filter
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase()
-        filtered = filtered.filter(item =>
-            (item.isn?.toLowerCase().includes(query)) ||
-            (item.device?.toLowerCase().includes(query)) ||
-            (item.test_date?.toLowerCase().includes(query)) ||
-            (item.station.toLowerCase().includes(query))
-        )
-    }
+  // Search filter
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    filtered = filtered.filter(
+      (item) =>
+        item.isn?.toLowerCase().includes(query) ||
+        item.device?.toLowerCase().includes(query) ||
+        item.test_date?.toLowerCase().includes(query) ||
+        item.station.toLowerCase().includes(query),
+    )
+  }
 
-    // Score filter
-    if (scoreFilterType.value && scoreFilterValue.value !== null) {
-        filtered = filtered.filter(item => {
-            if (scoreFilterType.value === 'gt') return item.score > scoreFilterValue.value!
-            if (scoreFilterType.value === 'lt') return item.score < scoreFilterValue.value!
-            if (scoreFilterType.value === 'eq') return Math.abs(item.score - scoreFilterValue.value!) < 0.01
-            return true
-        })
-    }
+  // Score filter
+  if (scoreFilterType.value && scoreFilterValue.value !== null) {
+    filtered = filtered.filter((item) => {
+      // biome-ignore lint/style/noNonNullAssertion: scoreFilterValue !== null is checked in outer condition
+      if (scoreFilterType.value === 'gt') return item.score > scoreFilterValue.value!
+      // biome-ignore lint/style/noNonNullAssertion: scoreFilterValue !== null is checked in outer condition
+      if (scoreFilterType.value === 'lt') return item.score < scoreFilterValue.value!
+      if (scoreFilterType.value === 'eq')
+        // biome-ignore lint/style/noNonNullAssertion: scoreFilterValue !== null is checked in outer condition
+        return Math.abs(item.score - scoreFilterValue.value!) < 0.01
+      return true
+    })
+  }
 
-    // Result filter
-    if (resultFilter.value) {
-        filtered = filtered.filter(item => item.result === resultFilter.value)
-    }
+  // Result filter
+  if (resultFilter.value) {
+    filtered = filtered.filter((item) => item.result === resultFilter.value)
+  }
 
-    return filtered
+  return filtered
 })
 
 // Pagination
 const getPerPage = () => {
-    return itemsPerPage.value === -1 ? filteredRankings.value.length :
-        itemsPerPage.value === 0 ? 10 : itemsPerPage.value
+  return itemsPerPage.value === -1
+    ? filteredRankings.value.length
+    : itemsPerPage.value === 0
+      ? 10
+      : itemsPerPage.value
 }
 
 const totalPages = computed(() => {
-    return Math.ceil(filteredRankings.value.length / getPerPage())
+  return Math.ceil(filteredRankings.value.length / getPerPage())
 })
 
 const paginatedRankings = computed(() => {
-    const perPage = getPerPage()
-    const start = (currentPage.value - 1) * perPage
-    const end = start + perPage
-    return filteredRankings.value.slice(start, end)
+  const perPage = getPerPage()
+  const start = (currentPage.value - 1) * perPage
+  const end = start + perPage
+  return filteredRankings.value.slice(start, end)
 })
 
 // Watchers
 watch([searchQuery, stationFilter, scoreFilterType, scoreFilterValue, resultFilter], () => {
-    currentPage.value = 1
+  currentPage.value = 1
 })
 
 watch(itemsPerPage, (newVal) => {
-    if (newVal === 0) {
-        showCustomInput.value = true
-    } else {
-        showCustomInput.value = false
-        currentPage.value = 1
-    }
+  if (newVal === 0) {
+    showCustomInput.value = true
+  } else {
+    showCustomInput.value = false
+    currentPage.value = 1
+  }
 })
 
 // Methods
 const applyCustomItemsPerPage = () => {
-    if (customItemsPerPage.value > 0) {
-        itemsPerPage.value = customItemsPerPage.value
-    }
-    showCustomInput.value = false
+  if (customItemsPerPage.value > 0) {
+    itemsPerPage.value = customItemsPerPage.value
+  }
+  showCustomInput.value = false
 }
 
 const cancelCustomInput = () => {
-    itemsPerPage.value = 10
-    showCustomInput.value = false
+  itemsPerPage.value = 10
+  showCustomInput.value = false
 }
 
 const formatDuration = (seconds: number | null): string => {
-    if (!seconds) return 'N/A'
-    return `${seconds}s`
+  if (!seconds) return 'N/A'
+  return `${seconds}s`
 }
 
 const formatTestDate = (dateString: string | null): string => {
-    if (!dateString) return 'N/A'
-    try {
-        // Parse as UTC and convert to user's local timezone
-        return dayjs.utc(dateString).tz(dayjs.tz.guess()).format('DD/MM/YYYY, HH:mm:ss')
-    } catch {
-        return 'N/A'
-    }
+  if (!dateString) return 'N/A'
+  try {
+    // Parse as UTC and convert to user's local timezone
+    return dayjs.utc(dateString).tz(dayjs.tz.guess()).format('DD/MM/YYYY, HH:mm:ss')
+  } catch {
+    return 'N/A'
+  }
 }
 
 const getStatusColor = (status: string | null): string => {
-    if (!status) return 'grey'
-    const upper = status.toUpperCase()
-    if (upper === 'ONLINE' || upper === 'ON-LINE') return 'primary'
-    if (upper === 'OFFLINE' || upper === 'OFF-LINE') return 'secondary'
-    return 'grey'
+  if (!status) return 'grey'
+  const upper = status.toUpperCase()
+  if (upper === 'ONLINE' || upper === 'ON-LINE') return 'primary'
+  if (upper === 'OFFLINE' || upper === 'OFF-LINE') return 'secondary'
+  return 'grey'
 }
 
 const getResultColor = (result: string | null): string => {
-    if (!result) return 'grey'
-    const upper = result.toUpperCase()
-    if (upper === 'PASS') return 'success'
-    if (upper === 'FAIL') return 'error'
-    return 'warning'
+  if (!result) return 'grey'
+  const upper = result.toUpperCase()
+  if (upper === 'PASS') return 'success'
+  if (upper === 'FAIL') return 'error'
+  return 'warning'
 }
 
 const getScoreColor = (score: number): string => {
-    if (score >= 9) return 'success'  // 9-10: green
-    if (score >= 7) return 'info'     // 7-8.99: blue
-    if (score >= 6) return 'warning'  // 6-6.99: yellow/orange
-    return 'error'                    // <6: red
+  if (score >= 9) return 'success' // 9-10: green
+  if (score >= 7) return 'info' // 7-8.99: blue
+  if (score >= 6) return 'warning' // 6-6.99: yellow/orange
+  return 'error' // <6: red
 }
 
 const getScoringTypeColor = (type: string): string => {
-    switch (type) {
-        case 'symmetrical': return 'blue'
-        case 'asymmetrical': return 'purple'
-        case 'per_mask': return 'orange'
-        case 'evm': return 'teal'
-        case 'throughput': return 'green'
-        case 'binary': return 'grey'
-        default: return 'blue'
-    }
+  switch (type) {
+    case 'symmetrical':
+      return 'blue'
+    case 'asymmetrical':
+      return 'purple'
+    case 'per_mask':
+      return 'orange'
+    case 'evm':
+      return 'teal'
+    case 'throughput':
+      return 'green'
+    case 'binary':
+      return 'grey'
+    default:
+      return 'blue'
+  }
 }
 
 // Copy ISN to clipboard with toast notification
 const copyIsnToClipboard = async (isn: string | null) => {
-    if (!isn) return
-    try {
-        await navigator.clipboard.writeText(isn)
-        showSuccess('ISN copied to clipboard')
-    } catch (err) {
-        console.error('Failed to copy ISN:', err)
-    }
+  if (!isn) return
+  try {
+    await navigator.clipboard.writeText(isn)
+    showSuccess('ISN copied to clipboard')
+  } catch (err) {
+    console.error('Failed to copy ISN:', err)
+  }
 }
 
 // UPDATED: Handle row click to show test items dialog
-const handleRowClick = (_event: any, data: { item: RankingItem }) => {
-    const item = data.item
-    selectedRankingItem.value = item
+const handleRowClick = (_event: unknown, data: { item: RankingItem }) => {
+  const item = data.item
+  selectedRankingItem.value = item
 
-    // Get test items for this ISN
-    if (props.parseResult && props.parseResult.parsed_items_enhanced) {
-        // Single parsing mode - show all test items
-        selectedTestItems.value = props.parseResult.parsed_items_enhanced
-    } else if (props.compareResult) {
-        // Compare mode - get test items for this ISN from comparison data
-        const isnTestItems: ParsedTestItemEnhanced[] = []
+  // Get test items for this ISN
+  if (props.parseResult?.parsed_items_enhanced) {
+    // Single parsing mode - show all test items
+    selectedTestItems.value = props.parseResult.parsed_items_enhanced
+  } else if (props.compareResult) {
+    // Compare mode - get test items for this ISN from comparison data
+    const isnTestItems: ParsedTestItemEnhanced[] = []
 
-        // Get value items
-        if (props.compareResult.comparison_value_items) {
-            props.compareResult.comparison_value_items.forEach(compareItem => {
-                const perIsnData = compareItem.per_isn_data.find(d => d.isn === item.isn)
-                if (perIsnData) {
-                    isnTestItems.push({
-                        test_item: compareItem.test_item,
-                        usl: compareItem.usl,
-                        lsl: compareItem.lsl,
-                        value: perIsnData.value,
-                        is_value_type: perIsnData.is_value_type,
-                        numeric_value: perIsnData.numeric_value,
-                        is_hex: perIsnData.is_hex,
-                        hex_decimal: perIsnData.hex_decimal,
-                        matched_criteria: compareItem.matched_criteria,
-                        target: null,
-                        score: perIsnData.score,
-                        score_breakdown: perIsnData.score_breakdown
-                    })
-                }
-            })
+    // Get value items
+    if (props.compareResult.comparison_value_items) {
+      props.compareResult.comparison_value_items.forEach((compareItem) => {
+        const perIsnData = compareItem.per_isn_data.find((d) => d.isn === item.isn)
+        if (perIsnData) {
+          isnTestItems.push({
+            test_item: compareItem.test_item,
+            usl: compareItem.usl,
+            lsl: compareItem.lsl,
+            value: perIsnData.value,
+            is_value_type: perIsnData.is_value_type,
+            numeric_value: perIsnData.numeric_value,
+            is_hex: perIsnData.is_hex,
+            hex_decimal: perIsnData.hex_decimal,
+            matched_criteria: compareItem.matched_criteria,
+            target: null,
+            score: perIsnData.score,
+            score_breakdown: perIsnData.score_breakdown,
+          })
         }
-
-        // Get non-value items
-        if (props.compareResult.comparison_non_value_items) {
-            props.compareResult.comparison_non_value_items.forEach(compareItem => {
-                const perIsnData = compareItem.per_isn_data.find(d => d.isn === item.isn)
-                if (perIsnData) {
-                    isnTestItems.push({
-                        test_item: compareItem.test_item,
-                        usl: compareItem.usl,
-                        lsl: compareItem.lsl,
-                        value: perIsnData.value,
-                        is_value_type: perIsnData.is_value_type,
-                        numeric_value: perIsnData.numeric_value,
-                        is_hex: perIsnData.is_hex,
-                        hex_decimal: perIsnData.hex_decimal,
-                        matched_criteria: compareItem.matched_criteria,
-                        target: null,
-                        score: perIsnData.score,
-                        score_breakdown: perIsnData.score_breakdown
-                    })
-                }
-            })
-        }
-
-        selectedTestItems.value = isnTestItems
+      })
     }
 
-    showTestItemsDialog.value = true
+    // Get non-value items
+    if (props.compareResult.comparison_non_value_items) {
+      props.compareResult.comparison_non_value_items.forEach((compareItem) => {
+        const perIsnData = compareItem.per_isn_data.find((d) => d.isn === item.isn)
+        if (perIsnData) {
+          isnTestItems.push({
+            test_item: compareItem.test_item,
+            usl: compareItem.usl,
+            lsl: compareItem.lsl,
+            value: perIsnData.value,
+            is_value_type: perIsnData.is_value_type,
+            numeric_value: perIsnData.numeric_value,
+            is_hex: perIsnData.is_hex,
+            hex_decimal: perIsnData.hex_decimal,
+            matched_criteria: compareItem.matched_criteria,
+            target: null,
+            score: perIsnData.score,
+            score_breakdown: perIsnData.score_breakdown,
+          })
+        }
+      })
+    }
+
+    selectedTestItems.value = isnTestItems
+  }
+
+  showTestItemsDialog.value = true
 }
 
 // UPDATED: Show score breakdown for a test item
 const showScoreBreakdown = (item: ParsedTestItemEnhanced) => {
-    if (item.score_breakdown) {
-        selectedTestItem.value = item
-        showBreakdownDialog.value = true
-    }
+  if (item.score_breakdown) {
+    selectedTestItem.value = item
+    showBreakdownDialog.value = true
+  }
 }
 
 // UPDATED: Show aggregated score breakdown info for an ISN (overall summary)
 const showScoreBreakdownForIsn = (_item: RankingItem) => {
-    // For now, just open the test items dialog
-    // The user can then click on individual test items to see breakdown
-    handleRowClick(null, { item: _item })
+  // For now, just open the test items dialog
+  // The user can then click on individual test items to see breakdown
+  handleRowClick(null, { item: _item })
 }
 
 // UPDATED: Open iPLAS comparison dialog
 const openIplasCompare = () => {
-    if (selectedRankingItem.value?.isn) {
-        comparisonIsn.value = selectedRankingItem.value.isn
-        showIplasCompareDialog.value = true
-    }
+  if (selectedRankingItem.value?.isn) {
+    comparisonIsn.value = selectedRankingItem.value.isn
+    showIplasCompareDialog.value = true
+  }
 }
 
 /**
  * Export ranking data to Excel
  */
 async function exportRankingToExcel() {
-    exportingRanking.value = true
-    try {
-        // Use selected items if any, otherwise export all filtered rankings
-        const itemsToExport = selectedRankingItems.value.length > 0
-            ? selectedRankingItems.value
-            : filteredRankings.value
+  exportingRanking.value = true
+  try {
+    // Use selected items if any, otherwise export all filtered rankings
+    const itemsToExport =
+      selectedRankingItems.value.length > 0 ? selectedRankingItems.value : filteredRankings.value
 
-        const exportData = itemsToExport.map((item, index) => ({
-            'Rank': index + 1,
-            'DUT ISN': item.isn || 'N/A',
-            'Test Date': formatTestDate(item.test_date),
-            'Duration (s)': item.duration_seconds ?? '',
-            'Test Station': item.station,
-            'Device': item.device || 'N/A',
-            'Status': item.status,
-            'Test Result': item.result || 'N/A',
-            'Overall Score': item.score.toFixed(2)
-        }))
+    const exportData = itemsToExport.map((item, index) => ({
+      Rank: index + 1,
+      'DUT ISN': item.isn || 'N/A',
+      'Test Date': formatTestDate(item.test_date),
+      'Duration (s)': item.duration_seconds ?? '',
+      'Test Station': item.station,
+      Device: item.device || 'N/A',
+      Status: item.status,
+      'Test Result': item.result || 'N/A',
+      'Overall Score': item.score.toFixed(2),
+    }))
 
-        // Dynamic import for xlsx
-        const XLSX = await import('xlsx')
-        const worksheet = XLSX.utils.json_to_sheet(exportData)
-        const workbook = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(workbook, worksheet, 'Ranking')
+    const ExcelJS = await import('exceljs')
+    const workbook = new (ExcelJS.default || ExcelJS).Workbook()
+    const worksheet = workbook.addWorksheet('Ranking')
 
-        // Generate filename with timestamp
-        const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
-        const filename = `Top_Product_Ranking_${timestamp}.xlsx`
-
-        XLSX.writeFile(workbook, filename)
-    } catch (err: any) {
-        console.error('Export failed:', err)
-    } finally {
-        exportingRanking.value = false
+    if (exportData.length > 0) {
+      const rows = exportData as Array<Record<string, unknown>>
+      const headers = Object.keys(rows[0] ?? {})
+      worksheet.addRow(headers)
+      rows.forEach((item) => {
+        worksheet.addRow(headers.map((header) => item[header] ?? ''))
+      })
     }
+
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
+    const filename = `Top_Product_Ranking_${timestamp}.xlsx`
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  } catch (err: unknown) {
+    console.error('Export failed:', err)
+  } finally {
+    exportingRanking.value = false
+  }
 }
 
 /**
  * Build TopProductCreate data from a RankingItem and its test items
  */
-function buildTopProductData(rankingItem: RankingItem, testItems: ParsedTestItemEnhanced[]): TopProductCreate {
-    // Build measurements from test items
-    const measurements: TopProductMeasurementCreate[] = testItems.map(item => ({
-        test_item: item.test_item,
-        usl: item.usl,
-        lsl: item.lsl,
-        target_value: item.target ?? null,
-        actual_value: item.numeric_value,
-        deviation: item.score_breakdown?.deviation ?? null,
-    }))
+function buildTopProductData(
+  rankingItem: RankingItem,
+  testItems: ParsedTestItemEnhanced[],
+): TopProductCreate {
+  // Build measurements from test items
+  const measurements: TopProductMeasurementCreate[] = testItems.map((item) => ({
+    test_item: item.test_item,
+    usl: item.usl,
+    lsl: item.lsl,
+    target_value: item.target ?? null,
+    actual_value: item.numeric_value,
+    deviation: item.score_breakdown?.deviation ?? null,
+  }))
 
-    return {
-        dut_isn: rankingItem.isn || 'UNKNOWN',
-        station_name: rankingItem.station,
-        device_name: rankingItem.device,
-        test_date: rankingItem.test_date ? new Date(rankingItem.test_date).toISOString() : null,
-        test_duration: rankingItem.duration_seconds ?? undefined,
-        pass_count: rankingItem.result === 'PASS' ? 1 : 0,
-        fail_count: rankingItem.result === 'FAIL' ? 1 : 0,
-        retest_count: 0,
-        score: rankingItem.score,
-        measurements,
-    }
+  return {
+    dut_isn: rankingItem.isn || 'UNKNOWN',
+    station_name: rankingItem.station,
+    device_name: rankingItem.device,
+    test_date: rankingItem.test_date ? new Date(rankingItem.test_date).toISOString() : null,
+    test_duration: rankingItem.duration_seconds ?? undefined,
+    pass_count: rankingItem.result === 'PASS' ? 1 : 0,
+    fail_count: rankingItem.result === 'FAIL' ? 1 : 0,
+    retest_count: 0,
+    score: rankingItem.score,
+    measurements,
+  }
 }
 
 /**
  * Get test items for a specific ISN from compare/parse results
  */
 function getTestItemsForIsn(isn: string | null): ParsedTestItemEnhanced[] {
-    if (!isn) return []
+  if (!isn) return []
 
-    if (props.parseResult && props.parseResult.parsed_items_enhanced) {
-        return props.parseResult.parsed_items_enhanced
-    }
+  if (props.parseResult?.parsed_items_enhanced) {
+    return props.parseResult.parsed_items_enhanced
+  }
 
-    if (props.compareResult) {
-        const items: ParsedTestItemEnhanced[] = []
+  if (props.compareResult) {
+    const items: ParsedTestItemEnhanced[] = []
 
-        // Get value items
-        props.compareResult.comparison_value_items?.forEach(compareItem => {
-            const perIsnData = compareItem.per_isn_data.find(d => d.isn === isn)
-            if (perIsnData) {
-                items.push({
-                    test_item: compareItem.test_item,
-                    usl: compareItem.usl,
-                    lsl: compareItem.lsl,
-                    value: perIsnData.value,
-                    is_value_type: perIsnData.is_value_type,
-                    numeric_value: perIsnData.numeric_value,
-                    is_hex: perIsnData.is_hex,
-                    hex_decimal: perIsnData.hex_decimal,
-                    matched_criteria: compareItem.matched_criteria,
-                    target: null,
-                    score: perIsnData.score,
-                    score_breakdown: perIsnData.score_breakdown,
-                })
-            }
+    // Get value items
+    props.compareResult.comparison_value_items?.forEach((compareItem) => {
+      const perIsnData = compareItem.per_isn_data.find((d) => d.isn === isn)
+      if (perIsnData) {
+        items.push({
+          test_item: compareItem.test_item,
+          usl: compareItem.usl,
+          lsl: compareItem.lsl,
+          value: perIsnData.value,
+          is_value_type: perIsnData.is_value_type,
+          numeric_value: perIsnData.numeric_value,
+          is_hex: perIsnData.is_hex,
+          hex_decimal: perIsnData.hex_decimal,
+          matched_criteria: compareItem.matched_criteria,
+          target: null,
+          score: perIsnData.score,
+          score_breakdown: perIsnData.score_breakdown,
         })
+      }
+    })
 
-        // Get non-value items
-        props.compareResult.comparison_non_value_items?.forEach(compareItem => {
-            const perIsnData = compareItem.per_isn_data.find(d => d.isn === isn)
-            if (perIsnData) {
-                items.push({
-                    test_item: compareItem.test_item,
-                    usl: compareItem.usl,
-                    lsl: compareItem.lsl,
-                    value: perIsnData.value,
-                    is_value_type: perIsnData.is_value_type,
-                    numeric_value: perIsnData.numeric_value,
-                    is_hex: perIsnData.is_hex,
-                    hex_decimal: perIsnData.hex_decimal,
-                    matched_criteria: compareItem.matched_criteria,
-                    target: null,
-                    score: perIsnData.score,
-                    score_breakdown: perIsnData.score_breakdown,
-                })
-            }
+    // Get non-value items
+    props.compareResult.comparison_non_value_items?.forEach((compareItem) => {
+      const perIsnData = compareItem.per_isn_data.find((d) => d.isn === isn)
+      if (perIsnData) {
+        items.push({
+          test_item: compareItem.test_item,
+          usl: compareItem.usl,
+          lsl: compareItem.lsl,
+          value: perIsnData.value,
+          is_value_type: perIsnData.is_value_type,
+          numeric_value: perIsnData.numeric_value,
+          is_hex: perIsnData.is_hex,
+          hex_decimal: perIsnData.hex_decimal,
+          matched_criteria: compareItem.matched_criteria,
+          target: null,
+          score: perIsnData.score,
+          score_breakdown: perIsnData.score_breakdown,
         })
+      }
+    })
 
-        return items
-    }
+    return items
+  }
 
-    return []
+  return []
 }
 
 /**
  * Save a single ISN to the Top Product Database (from the Test Items dialog)
  */
 async function saveSingleToDatabase() {
-    if (!selectedRankingItem.value) {
-        showError('No item selected')
-        return
+  if (!selectedRankingItem.value) {
+    showError('No item selected')
+    return
+  }
+
+  savingToDb.value = true
+  try {
+    const testItems =
+      selectedTestItems.value.length > 0
+        ? selectedTestItems.value
+        : getTestItemsForIsn(selectedRankingItem.value.isn)
+
+    const productData = buildTopProductData(selectedRankingItem.value, testItems)
+    const response = await createTopProduct(productData)
+
+    if (response.success) {
+      showSuccess(`Saved ISN ${selectedRankingItem.value.isn || 'UNKNOWN'} to database`)
     }
-
-    savingToDb.value = true
-    try {
-        const testItems = selectedTestItems.value.length > 0
-            ? selectedTestItems.value
-            : getTestItemsForIsn(selectedRankingItem.value.isn)
-
-        const productData = buildTopProductData(selectedRankingItem.value, testItems)
-        const response = await createTopProduct(productData)
-
-        if (response.success) {
-            showSuccess(`Saved ISN ${selectedRankingItem.value.isn || 'UNKNOWN'} to database`)
-        }
-    } catch (err: any) {
-        console.error('Failed to save to database:', err)
-        showError(err.response?.data?.detail || 'Failed to save to database')
-    } finally {
-        savingToDb.value = false
-    }
+  } catch (err: unknown) {
+    console.error('Failed to save to database:', err)
+    showError(getApiErrorDetail(err, 'Failed to save to database'))
+  } finally {
+    savingToDb.value = false
+  }
 }
 
 /**
  * Save selected ISNs to the Top Product Database (bulk save)
  */
 async function saveSelectedToDatabase() {
-    if (selectedRankingItems.value.length === 0) {
-        showError('No items selected')
-        return
+  if (selectedRankingItems.value.length === 0) {
+    showError('No items selected')
+    return
+  }
+
+  savingToDb.value = true
+  try {
+    const products: TopProductCreate[] = selectedRankingItems.value.map((item) => {
+      const testItems = getTestItemsForIsn(item.isn)
+      return buildTopProductData(item, testItems)
+    })
+
+    const response = await createTopProductsBulk({ products })
+
+    if (response.success) {
+      showSuccess(`Saved ${response.created_count} item(s) to database`)
     }
-
-    savingToDb.value = true
-    try {
-        const products: TopProductCreate[] = selectedRankingItems.value.map(item => {
-            const testItems = getTestItemsForIsn(item.isn)
-            return buildTopProductData(item, testItems)
-        })
-
-        const response = await createTopProductsBulk({ products })
-
-        if (response.success) {
-            showSuccess(`Saved ${response.created_count} item(s) to database`)
-        }
-    } catch (err: any) {
-        console.error('Failed to save to database:', err)
-        showError(err.response?.data?.detail || 'Failed to save to database')
-    } finally {
-        savingToDb.value = false
-    }
+  } catch (err: unknown) {
+    console.error('Failed to save to database:', err)
+    showError(getApiErrorDetail(err, 'Failed to save to database'))
+  } finally {
+    savingToDb.value = false
+  }
 }
 </script>

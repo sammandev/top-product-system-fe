@@ -160,8 +160,7 @@
                                     <template #prepend>
                                         <v-icon :color="download.status === 'success' ? 'success' : 'error'"
                                             size="small">
-                                            {{ download.status === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle'
-                                            }}
+                                            {{ download.status === 'success' ? 'mdi-check-circle' : 'mdi-alert-circle' }}
                                         </v-icon>
                                     </template>
 
@@ -213,20 +212,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import { computed, onMounted, ref } from 'vue'
+import type { DownloadAttachmentInfo } from '@/features/dut_logs/composables/useIplasApi'
 import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
 import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
-import type { DownloadAttachmentInfo } from '@/features/dut_logs/composables/useIplasApi'
 
 const {
-    downloading,
-    error,
-    downloadAttachments,
-    fetchSiteProjects,
-    siteProjects,
-    uniqueSites,
-    projectsBySite
+  downloading,
+  error,
+  downloadAttachments,
+  fetchSiteProjects,
+  siteProjects,
+  uniqueSites,
+  projectsBySite,
 } = useIplasApi()
 
 // Form state
@@ -244,125 +242,129 @@ const checkingApi = ref(false)
 
 // Download history (stored in memory, could be moved to localStorage)
 interface DownloadRecord {
-    site: string
-    project: string
-    deviceIsn: string
-    deviceId: string
-    stationName: string
-    testTime: string
-    timestamp: string
-    status: 'success' | 'error'
+  site: string
+  project: string
+  deviceIsn: string
+  deviceId: string
+  stationName: string
+  testTime: string
+  timestamp: string
+  status: 'success' | 'error'
 }
 const recentDownloads = ref<DownloadRecord[]>([])
 
 // Validation rules
 const rules = {
-    required: (v: string) => !!v || 'This field is required'
+  required: (v: string) => !!v || 'This field is required',
 }
 
 // Computed available projects
 const availableProjects = computed(() => {
-    if (!selectedSite.value) return []
-    return projectsBySite.value[selectedSite.value] || []
+  if (!selectedSite.value) return []
+  return projectsBySite.value[selectedSite.value] || []
 })
 
 // Handle download
 async function handleDownload() {
-    if (!selectedSite.value || !selectedProject.value || !deviceIsn.value || !deviceId.value || !stationName.value || !testTime.value) return
+  if (
+    !selectedSite.value ||
+    !selectedProject.value ||
+    !deviceIsn.value ||
+    !deviceId.value ||
+    !stationName.value ||
+    !testTime.value
+  )
+    return
 
-    error.value = null
-    successMessage.value = null
+  error.value = null
+  successMessage.value = null
 
-    const attachmentInfo: DownloadAttachmentInfo = {
-        isn: deviceIsn.value,
-        time: testTime.value,
-        deviceid: deviceId.value,
-        station: stationName.value
+  const attachmentInfo: DownloadAttachmentInfo = {
+    isn: deviceIsn.value,
+    time: testTime.value,
+    deviceid: deviceId.value,
+    station: stationName.value,
+  }
+
+  try {
+    await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
+
+    const record: DownloadRecord = {
+      site: selectedSite.value,
+      project: selectedProject.value,
+      deviceIsn: deviceIsn.value,
+      deviceId: deviceId.value,
+      stationName: stationName.value,
+      testTime: testTime.value,
+      timestamp: new Date().toLocaleString(),
+      status: 'success',
     }
 
-    try {
-        await downloadAttachments(
-            selectedSite.value,
-            selectedProject.value,
-            [attachmentInfo]
-        )
-
-        const record: DownloadRecord = {
-            site: selectedSite.value,
-            project: selectedProject.value,
-            deviceIsn: deviceIsn.value,
-            deviceId: deviceId.value,
-            stationName: stationName.value,
-            testTime: testTime.value,
-            timestamp: new Date().toLocaleString(),
-            status: 'success'
-        }
-
-        recentDownloads.value.unshift(record)
-        if (recentDownloads.value.length > 10) {
-            recentDownloads.value.pop()
-        }
-
-        successMessage.value = `Successfully downloaded logs for device: ${deviceIsn.value}`
-    } catch {
-        const record: DownloadRecord = {
-            site: selectedSite.value,
-            project: selectedProject.value,
-            deviceIsn: deviceIsn.value,
-            deviceId: deviceId.value,
-            stationName: stationName.value,
-            testTime: testTime.value,
-            timestamp: new Date().toLocaleString(),
-            status: 'error'
-        }
-
-        recentDownloads.value.unshift(record)
-        if (recentDownloads.value.length > 10) {
-            recentDownloads.value.pop()
-        }
+    recentDownloads.value.unshift(record)
+    if (recentDownloads.value.length > 10) {
+      recentDownloads.value.pop()
     }
+
+    successMessage.value = `Successfully downloaded logs for device: ${deviceIsn.value}`
+  } catch {
+    const record: DownloadRecord = {
+      site: selectedSite.value,
+      project: selectedProject.value,
+      deviceIsn: deviceIsn.value,
+      deviceId: deviceId.value,
+      stationName: stationName.value,
+      testTime: testTime.value,
+      timestamp: new Date().toLocaleString(),
+      status: 'error',
+    }
+
+    recentDownloads.value.unshift(record)
+    if (recentDownloads.value.length > 10) {
+      recentDownloads.value.pop()
+    }
+  }
 }
 
 // Retry download
 function retryDownload(record: DownloadRecord) {
-    selectedSite.value = record.site
-    selectedProject.value = record.project
-    deviceIsn.value = record.deviceIsn
-    deviceId.value = record.deviceId
-    stationName.value = record.stationName
-    testTime.value = record.testTime
-    handleDownload()
+  selectedSite.value = record.site
+  selectedProject.value = record.project
+  deviceIsn.value = record.deviceIsn
+  deviceId.value = record.deviceId
+  stationName.value = record.stationName
+  testTime.value = record.testTime
+  handleDownload()
 }
 
 // Clear history
 function clearHistory() {
-    recentDownloads.value = []
+  recentDownloads.value = []
 }
 
 // Check API status
 async function checkApiStatus() {
-    checkingApi.value = true
-    try {
-        // Just verify that we can fetch site projects
-        await fetchSiteProjects()
-        apiReachable.value = siteProjects.value.length > 0
-    } catch {
-        apiReachable.value = false
-    } finally {
-        checkingApi.value = false
-    }
+  checkingApi.value = true
+  try {
+    // Just verify that we can fetch site projects
+    await fetchSiteProjects()
+    apiReachable.value = siteProjects.value.length > 0
+  } catch {
+    apiReachable.value = false
+  } finally {
+    checkingApi.value = false
+  }
 }
 
 // Initialize
 onMounted(async () => {
-    checkApiStatus()
-    await fetchSiteProjects()
+  checkApiStatus()
+  await fetchSiteProjects()
 
-    // UPDATED: Set default site based on connected iPLAS server
-    const { selectedServer } = useIplasSettings()
-    const serverId = selectedServer.value?.id?.toUpperCase()
-    if (serverId && uniqueSites.value.includes(serverId) && !selectedSite.value) {
-        selectedSite.value = serverId
-    }
+  // UPDATED: Set default site based on connected iPLAS server
+  const { selectedServer } = useIplasSettings()
+  const serverId = selectedServer.value?.id?.toUpperCase()
+  if (serverId && uniqueSites.value.includes(serverId) && !selectedSite.value) {
+    selectedSite.value = serverId
+  }
 })
 </script>

@@ -1,19 +1,19 @@
-import { defineConfig } from 'vite'
-import vue from '@vitejs/plugin-vue'
-import vuetify from 'vite-plugin-vuetify'
 import { fileURLToPath, URL } from 'node:url'
+import vue from '@vitejs/plugin-vue'
+import { defineConfig } from 'vite'
+import vuetify from 'vite-plugin-vuetify'
 
 // Vite configuration for Vue 3 + TypeScript + Vuetify
 // See: https://vite.dev/config/
 export default defineConfig({
   plugins: [
     vue(),
-    vuetify({ autoImport: true }) // Auto-import Vuetify components
+    vuetify({ autoImport: true }), // Auto-import Vuetify components
   ],
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url)) // Path alias: @/ → src/
-    }
+      '@': fileURLToPath(new URL('./src', import.meta.url)), // Path alias: @/ → src/
+    },
   },
   // UPDATED: Pre-bundle Vuetify components to avoid runtime optimization and HMR reloads
   optimizeDeps: {
@@ -84,7 +84,7 @@ export default defineConfig({
       'vuetify/components/transitions',
       'vuetify/components/VTable',
       'vuetify/components/VSkeletonLoader',
-      'vuetify/directives'
+      'vuetify/directives',
     ],
   },
   server: {
@@ -94,12 +94,12 @@ export default defineConfig({
       '/api': {
         target: 'http://127.0.0.1:7070',
         changeOrigin: true,
-        secure: false
-      }
-    }
+        secure: false,
+      },
+    },
   },
   build: {
     sourcemap: false, // Disable source maps in production
-    chunkSizeWarningLimit: 1000 // Increase chunk size warning limit
-  }
+    chunkSizeWarningLimit: 1000, // Increase chunk size warning limit
+  },
 })

@@ -1,4 +1,4 @@
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 // Formula template types
 export type FormulaType = 'linear' | 'exponential' | 'logarithmic' | 'step' | 'custom'
@@ -6,27 +6,27 @@ export type FormulaType = 'linear' | 'exponential' | 'logarithmic' | 'step' | 'c
 // Formula parameters for different types
 export interface FormulaParameters {
   // Linear parameters
-  tolerance?: number          // For linear: deviation tolerance
-  
+  tolerance?: number // For linear: deviation tolerance
+
   // Exponential parameters
-  decayRate?: number         // For exponential: e^(-x/rate)
-  baseline?: number          // Score baseline (default 5 or 10)
-  
+  decayRate?: number // For exponential: e^(-x/rate)
+  baseline?: number // Score baseline (default 5 or 10)
+
   // Logarithmic parameters
-  logBase?: number           // Logarithm base (default e)
-  scaleFactor?: number       // Scale multiplier
-  
+  logBase?: number // Logarithm base (default e)
+  scaleFactor?: number // Scale multiplier
+
   // Step parameters
-  thresholds?: number[]      // Step breakpoints
-  scores?: number[]          // Score at each step
-  
+  thresholds?: number[] // Step breakpoints
+  scores?: number[] // Score at each step
+
   // Bonus zones
-  bonusThreshold?: number    // Beyond this gets bonus
-  bonusRate?: number         // Bonus multiplier
-  
+  bonusThreshold?: number // Beyond this gets bonus
+  bonusRate?: number // Bonus multiplier
+
   // General bounds
-  minScore?: number          // Minimum score (default 0)
-  maxScore?: number          // Maximum score (default 10)
+  minScore?: number // Minimum score (default 0)
+  maxScore?: number // Maximum score (default 10)
 }
 
 // Enhanced custom formula interface
@@ -35,7 +35,7 @@ export interface CustomFormulaV2 {
   enabled: boolean
   formulaType: FormulaType
   parameters: FormulaParameters
-  customExpression?: string  // For 'custom' type
+  customExpression?: string // For 'custom' type
   description?: string
   calculate: (actual: number, usl: number | null, lsl: number | null, target: number) => number
 }
@@ -59,12 +59,12 @@ export interface ScoredMeasurement {
 
 // New interfaces for backend integration
 export interface ScoringResult {
-  systemScore: number        // From backend
-  customScore: number        // From frontend formula
-  difference: number         // customScore - systemScore
-  formula: string           // Formula name/description used
+  systemScore: number // From backend
+  customScore: number // From frontend formula
+  difference: number // customScore - systemScore
+  formula: string // Formula name/description used
   method: 'system' | 'custom' | 'both'
-  category?: string         // Detected category
+  category?: string // Detected category
 }
 
 export interface MeasurementWithScoring {
@@ -72,8 +72,8 @@ export interface MeasurementWithScoring {
   usl: number | null
   lsl: number | null
   actual: number
-  score_breakdown: ScoreBreakdownData  // From backend
-  custom_scoring?: ScoringResult       // From frontend
+  score_breakdown: ScoreBreakdownData // From backend
+  custom_scoring?: ScoringResult // From frontend
 }
 
 export interface ScoreBreakdownData {
@@ -90,18 +90,20 @@ export interface ScoreBreakdownData {
 }
 
 // Formula template creators
-const createLinearFormula = (params: FormulaParameters): ((a: number, u: number | null, l: number | null, t: number) => number) => {
+const createLinearFormula = (
+  params: FormulaParameters,
+): ((a: number, u: number | null, l: number | null, t: number) => number) => {
   const tolerance = params.tolerance ?? 1.0
   const minScore = params.minScore ?? 0
   const maxScore = params.maxScore ?? 10
-  
+
   return (actual: number, usl: number | null, lsl: number | null, target: number): number => {
     // Out of bounds check
     if (usl !== null && actual > usl) return minScore
     if (lsl !== null && actual < lsl) return minScore
-    
+
     const deviation = Math.abs(actual - target)
-    
+
     // Calculate span
     let span: number
     if (usl !== null && lsl !== null) {
@@ -113,21 +115,23 @@ const createLinearFormula = (params: FormulaParameters): ((a: number, u: number 
     } else {
       span = Math.max(Math.abs(target) * 0.1, 1)
     }
-    
+
     const effectiveTolerance = span * tolerance
     if (deviation >= effectiveTolerance) return minScore
-    
+
     const score = maxScore * (1 - deviation / effectiveTolerance)
     return Number(Math.max(minScore, Math.min(maxScore, score)).toFixed(2))
   }
 }
 
-const createExponentialFormula = (params: FormulaParameters): ((a: number, u: number | null, l: number | null, t: number) => number) => {
+const createExponentialFormula = (
+  params: FormulaParameters,
+): ((a: number, u: number | null, l: number | null, t: number) => number) => {
   const decayRate = params.decayRate ?? 2.0
   const baseline = params.baseline ?? 5
   const minScore = params.minScore ?? 0
   const maxScore = params.maxScore ?? 10
-  
+
   return (actual: number, usl: number | null, lsl: number | null, _target: number): number => {
     // Out of bounds = exponential decay
     if (usl !== null && actual > usl) {
@@ -135,50 +139,54 @@ const createExponentialFormula = (params: FormulaParameters): ((a: number, u: nu
       const penalty = baseline * Math.exp(-excess / decayRate)
       return Number(Math.max(minScore, penalty).toFixed(2))
     }
-    
+
     if (lsl !== null && actual < lsl) {
       const deficit = lsl - actual
       const penalty = baseline * Math.exp(-deficit / decayRate)
       return Number(Math.max(minScore, penalty).toFixed(2))
     }
-    
+
     // Within bounds = reward with margin bonus
-    const margin = usl !== null ? usl - actual : (lsl !== null ? actual - lsl : 0)
+    const margin = usl !== null ? usl - actual : lsl !== null ? actual - lsl : 0
     const reward = baseline + (maxScore - baseline) * (1 - Math.exp(-margin / decayRate))
     return Number(Math.min(maxScore, reward).toFixed(2))
   }
 }
 
-const createLogarithmicFormula = (params: FormulaParameters): ((a: number, u: number | null, l: number | null, t: number) => number) => {
+const createLogarithmicFormula = (
+  params: FormulaParameters,
+): ((a: number, u: number | null, l: number | null, t: number) => number) => {
   const scaleFactor = params.scaleFactor ?? 2.0
   const minScore = params.minScore ?? 0
   const maxScore = params.maxScore ?? 10
-  
+
   return (actual: number, usl: number | null, lsl: number | null, target: number): number => {
     // Out of bounds
     if (usl !== null && actual > usl) return minScore
     if (lsl !== null && actual < lsl) return minScore
-    
+
     const deviation = Math.abs(actual - target)
-    
+
     // Log scale: log(1 + x) grows slowly
     const score = maxScore - scaleFactor * Math.log1p(deviation)
     return Number(Math.max(minScore, Math.min(maxScore, score)).toFixed(2))
   }
 }
 
-const createStepFormula = (params: FormulaParameters): ((a: number, u: number | null, l: number | null, t: number) => number) => {
+const createStepFormula = (
+  params: FormulaParameters,
+): ((a: number, u: number | null, l: number | null, t: number) => number) => {
   const thresholds = params.thresholds ?? [0.5, 1.0, 2.0]
   const scores = params.scores ?? [10, 7, 4, 0]
   const minScore = params.minScore ?? 0
-  
+
   return (actual: number, usl: number | null, lsl: number | null, target: number): number => {
     // Out of bounds
     if (usl !== null && actual > usl) return minScore
     if (lsl !== null && actual < lsl) return minScore
-    
+
     const deviation = Math.abs(actual - target)
-    
+
     // Find appropriate step
     for (let i = 0; i < thresholds.length; i++) {
       const threshold = thresholds[i]
@@ -187,16 +195,19 @@ const createStepFormula = (params: FormulaParameters): ((a: number, u: number | 
         return score ?? minScore
       }
     }
-    
+
     // Beyond all thresholds
     return scores[scores.length - 1] ?? minScore
   }
 }
 
-const createCustomFormula = (expression: string, params: FormulaParameters): ((a: number, u: number | null, l: number | null, t: number) => number) => {
+const createCustomFormula = (
+  expression: string,
+  params: FormulaParameters,
+): ((a: number, u: number | null, l: number | null, t: number) => number) => {
   const minScore = params.minScore ?? 0
   const maxScore = params.maxScore ?? 10
-  
+
   return (actual: number, usl: number | null, lsl: number | null, target: number): number => {
     try {
       // Create safe evaluation context
@@ -215,17 +226,17 @@ const createCustomFormula = (expression: string, params: FormulaParameters): ((a
         sqrt: Math.sqrt,
         clamp01: (x: number) => Math.max(0, Math.min(1, x)),
       }
-      
+
       // Create function from expression
       const func = new Function(...Object.keys(context), `return ${expression}`)
       const result = func(...Object.values(context))
-      
+
       // Validate result
-      if (typeof result !== 'number' || !isFinite(result)) {
+      if (typeof result !== 'number' || !Number.isFinite(result)) {
         console.error('Formula returned invalid value:', result)
         return minScore
       }
-      
+
       return Number(Math.max(minScore, Math.min(maxScore, result)).toFixed(2))
     } catch (error) {
       console.error('Error evaluating custom formula:', error)
@@ -235,7 +246,9 @@ const createCustomFormula = (expression: string, params: FormulaParameters): ((a
 }
 
 // Build formula calculator based on type
-const buildFormulaCalculator = (formula: CustomFormulaV2): ((a: number, u: number | null, l: number | null, t: number) => number) => {
+const buildFormulaCalculator = (
+  formula: CustomFormulaV2,
+): ((a: number, u: number | null, l: number | null, t: number) => number) => {
   switch (formula.formulaType) {
     case 'linear':
       return createLinearFormula(formula.parameters)
@@ -287,7 +300,12 @@ const createUniversalFormula = (): CustomFormulaV2 => ({
     maxScore: 10,
   },
   description: 'Linear scoring with adjustable tolerance',
-  calculate: function(actual: number, usl: number | null, lsl: number | null, target: number): number {
+  calculate: function (
+    actual: number,
+    usl: number | null,
+    lsl: number | null,
+    target: number,
+  ): number {
     const calculator = buildFormulaCalculator(this)
     return calculator(actual, usl, lsl, target)
   },
@@ -305,7 +323,12 @@ const createCategoryFormulas = (): CategoryFormulasV2 => ({
       maxScore: 10,
     },
     description: 'Linear scoring with ±0.5 dB tolerance',
-    calculate: function(actual: number, usl: number | null, lsl: number | null, target: number): number {
+    calculate: function (
+      actual: number,
+      usl: number | null,
+      lsl: number | null,
+      target: number,
+    ): number {
       const calculator = buildFormulaCalculator(this)
       return calculator(actual, usl, lsl, target)
     },
@@ -324,7 +347,12 @@ const createCategoryFormulas = (): CategoryFormulasV2 => ({
       maxScore: 10,
     },
     description: 'Exponential penalty beyond USL, linear reward below',
-    calculate: function(actual: number, usl: number | null, _lsl: number | null, _target: number): number {
+    calculate: function (
+      actual: number,
+      usl: number | null,
+      _lsl: number | null,
+      _target: number,
+    ): number {
       const calculator = buildFormulaCalculator(this)
       return calculator(actual, usl, _lsl, _target)
     },
@@ -340,7 +368,12 @@ const createCategoryFormulas = (): CategoryFormulasV2 => ({
       maxScore: 10,
     },
     description: 'Symmetric tolerance around target (±25 kHz default)',
-    calculate: function(actual: number, usl: number | null, lsl: number | null, target: number): number {
+    calculate: function (
+      actual: number,
+      usl: number | null,
+      lsl: number | null,
+      target: number,
+    ): number {
       const calculator = buildFormulaCalculator(this)
       return calculator(actual, usl, lsl, target)
     },
@@ -356,7 +389,12 @@ const createCategoryFormulas = (): CategoryFormulasV2 => ({
       maxScore: 10,
     },
     description: 'Linear decay from 10 to 0 (lower is better)',
-    calculate: function(actual: number, usl: number | null, _lsl: number | null, _target: number): number {
+    calculate: (
+      actual: number,
+      usl: number | null,
+      _lsl: number | null,
+      _target: number,
+    ): number => {
       const uslActual = usl ?? 1
       if (actual <= 0) return 10
       if (actual >= uslActual) return 0
@@ -374,7 +412,12 @@ const createCategoryFormulas = (): CategoryFormulasV2 => ({
       maxScore: 10,
     },
     description: 'Linear scoring within USL/LSL bounds',
-    calculate: function(actual: number, usl: number | null, lsl: number | null, target: number): number {
+    calculate: function (
+      actual: number,
+      usl: number | null,
+      lsl: number | null,
+      target: number,
+    ): number {
       const calculator = buildFormulaCalculator(this)
       return calculator(actual, usl, lsl, target)
     },
@@ -391,7 +434,12 @@ const createCategoryFormulas = (): CategoryFormulasV2 => ({
       maxScore: 10,
     },
     description: 'Threshold-based with headroom bonus',
-    calculate: function(actual: number, usl: number | null, _lsl: number | null, _target: number): number {
+    calculate: function (
+      actual: number,
+      usl: number | null,
+      _lsl: number | null,
+      _target: number,
+    ): number {
       const calculator = buildFormulaCalculator(this)
       return calculator(actual, usl, _lsl, _target)
     },
@@ -407,7 +455,12 @@ const createCategoryFormulas = (): CategoryFormulasV2 => ({
       maxScore: 10,
     },
     description: 'Logarithmic scoring below threshold',
-    calculate: function(actual: number, usl: number | null, _lsl: number | null, _target: number): number {
+    calculate: function (
+      actual: number,
+      usl: number | null,
+      _lsl: number | null,
+      _target: number,
+    ): number {
       const calculator = buildFormulaCalculator(this)
       return calculator(actual, usl, _lsl, _target)
     },
@@ -423,7 +476,12 @@ const createCategoryFormulas = (): CategoryFormulasV2 => ({
       maxScore: 10,
     },
     description: 'Linear from zero with 5 dB threshold',
-    calculate: function(actual: number, usl: number | null, _lsl: number | null, _target: number): number {
+    calculate: (
+      actual: number,
+      usl: number | null,
+      _lsl: number | null,
+      _target: number,
+    ): number => {
       const threshold = usl && usl > 0 ? usl : 5
       const deviation = Math.abs(actual)
       if (deviation >= threshold) return 0
@@ -441,7 +499,12 @@ const createCategoryFormulas = (): CategoryFormulasV2 => ({
       maxScore: 10,
     },
     description: '5 dB threshold, linear scoring',
-    calculate: function(actual: number, _usl: number | null, _lsl: number | null, _target: number): number {
+    calculate: (
+      actual: number,
+      _usl: number | null,
+      _lsl: number | null,
+      _target: number,
+    ): number => {
       const threshold = 5
       const deviation = Math.abs(actual)
       if (deviation >= threshold) return 0
@@ -457,7 +520,7 @@ export const useCustomScoringV2 = () => {
 
   // Calculate custom score for a measurement
   const calculateCustomScore = (
-    measurement: ScoredMeasurement
+    measurement: ScoredMeasurement,
   ): { score: number; source: ScoreSource } => {
     // 1. Check if measurement has limits (required for custom scoring)
     const hasLimits = measurement.usl !== null || measurement.lsl !== null
@@ -477,7 +540,7 @@ export const useCustomScoringV2 = () => {
         measurement.actual,
         measurement.usl,
         measurement.lsl,
-        measurement.target
+        measurement.target,
       )
       return { score: customScore, source: 'category' }
     }
@@ -488,7 +551,7 @@ export const useCustomScoringV2 = () => {
         measurement.actual,
         measurement.usl,
         measurement.lsl,
-        measurement.target
+        measurement.target,
       )
       return { score: customScore, source: 'universal' }
     }
@@ -504,7 +567,12 @@ export const useCustomScoringV2 = () => {
       universalFormula.value = {
         ...universalFormula.value,
         ...updates,
-        calculate: function(actual: number, usl: number | null, lsl: number | null, target: number): number {
+        calculate: function (
+          actual: number,
+          usl: number | null,
+          lsl: number | null,
+          target: number,
+        ): number {
           const calculator = buildFormulaCalculator(this)
           return calculator(actual, usl, lsl, target)
         },
@@ -514,7 +582,12 @@ export const useCustomScoringV2 = () => {
       categoryFormulas.value[category] = {
         ...categoryFormulas.value[category],
         ...updates,
-        calculate: function(actual: number, usl: number | null, lsl: number | null, target: number): number {
+        calculate: function (
+          actual: number,
+          usl: number | null,
+          lsl: number | null,
+          target: number,
+        ): number {
           const calculator = buildFormulaCalculator(this)
           return calculator(actual, usl, lsl, target)
         },
@@ -533,7 +606,7 @@ export const useCustomScoringV2 = () => {
       categoryCount: Object.keys(categoryFormulas.value).length,
       enabledCount: enabledCategoryCount.value,
       categories: Object.keys(categoryFormulas.value).filter(
-        (key) => categoryFormulas.value[key]?.enabled === true
+        (key) => categoryFormulas.value[key]?.enabled === true,
       ),
     }
     return stats
@@ -556,9 +629,8 @@ export const useCustomScoringV2 = () => {
   }
 
   // NEW: Apply custom formula to a single measurement from backend
-  const applyCustomFormulaToMeasurement = (
-    measurement: any
-  ): MeasurementWithScoring => {
+  // biome-ignore lint/suspicious/noExplicitAny: Backend measurement data arrives in multiple formats (object or array)
+  const applyCustomFormulaToMeasurement = (measurement: any): MeasurementWithScoring => {
     // Handle both object and array formats from backend
     let test_item: string
     let usl: number | null
@@ -566,7 +638,11 @@ export const useCustomScoringV2 = () => {
     let actual: number
     let score_breakdown: ScoreBreakdownData
 
-    if (typeof measurement === 'object' && !Array.isArray(measurement) && 'test_item' in measurement) {
+    if (
+      typeof measurement === 'object' &&
+      !Array.isArray(measurement) &&
+      'test_item' in measurement
+    ) {
       // Object format: {test_item, usl, lsl, actual, score_breakdown}
       test_item = measurement.test_item
       usl = measurement.usl
@@ -592,7 +668,7 @@ export const useCustomScoringV2 = () => {
         usl,
         lsl,
         actual,
-        score_breakdown
+        score_breakdown,
       }
     }
 
@@ -607,7 +683,7 @@ export const useCustomScoringV2 = () => {
       lsl,
       actual,
       target,
-      systemScore
+      systemScore,
     }
 
     const customResult = calculateCustomScore(scoredMeasurement)
@@ -618,13 +694,14 @@ export const useCustomScoringV2 = () => {
       systemScore,
       customScore: customResult.score,
       difference: customResult.score - systemScore,
-      formula: customResult.source === 'category' && category
-        ? categoryFormulas.value[category]?.name || 'Category Formula'
-        : customResult.source === 'universal'
-        ? universalFormula.value.name
-        : 'System Formula',
+      formula:
+        customResult.source === 'category' && category
+          ? categoryFormulas.value[category]?.name || 'Category Formula'
+          : customResult.source === 'universal'
+            ? universalFormula.value.name
+            : 'System Formula',
       method: customResult.source === 'system' ? 'system' : 'custom',
-      category: category || undefined
+      category: category || undefined,
     }
 
     return {
@@ -633,31 +710,33 @@ export const useCustomScoringV2 = () => {
       lsl,
       actual,
       score_breakdown,
-      custom_scoring
+      custom_scoring,
     }
   }
 
   // NEW: Apply custom formulas to all measurements in results
+  // biome-ignore lint/suspicious/noExplicitAny: Complex nested backend response structure
   const applyCustomFormulasToResults = (results: any[]): any[] => {
     if (!customScoringEnabled.value) {
       return results
     }
 
-    return results.map(result => ({
+    return results.map((result) => ({
       ...result,
+      // biome-ignore lint/suspicious/noExplicitAny: Nested station object from backend response
       test_result: result.test_result.map((station: any) => ({
         ...station,
-        data: station.data.map((measurement: any) => 
-          applyCustomFormulaToMeasurement(measurement)
-        )
-      }))
+        // biome-ignore lint/suspicious/noExplicitAny: Measurement data passed to typed handler
+        data: station.data.map((measurement: any) => applyCustomFormulaToMeasurement(measurement)),
+      })),
     }))
   }
 
   // NEW: Computed property for enabled state
   const customScoringEnabled = computed(() => {
-    return universalFormula.value.enabled ||
-      Object.values(categoryFormulas.value).some(f => f.enabled)
+    return (
+      universalFormula.value.enabled || Object.values(categoryFormulas.value).some((f) => f.enabled)
+    )
   })
 
   return {

@@ -221,10 +221,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import { menuAccessApi } from '../api/menuAccess.api'
+import { computed, onMounted, ref } from 'vue'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
+import { getApiErrorDetail } from '@/shared/utils'
+import { menuAccessApi } from '../api/menuAccess.api'
 import type { MenuItemData } from '../types/menuAccess.types'
 
 // State
@@ -242,7 +242,7 @@ const activeTab = useTabPersistence('tab', 'guest')
 const roleMenuAccess = ref<Record<string, string[]>>({
   guest: [],
   user: [],
-  admin: []
+  admin: [],
 })
 
 // Track original state for change detection
@@ -256,13 +256,13 @@ const hasChanges = computed(() => {
 // Methods
 function getMenusBySection(section: string): MenuItemData[] {
   return menus.value
-    .filter(m => m.section === section)
+    .filter((m) => m.section === section)
     .sort((a, b) => a.sort_order - b.sort_order)
 }
 
 function getMenuDisplayName(menu: MenuItemData): string {
   if (menu.parent_key) {
-    const parent = menus.value.find(m => m.menu_key === menu.parent_key)
+    const parent = menus.value.find((m) => m.menu_key === menu.parent_key)
     return parent ? `${parent.title} → ${menu.title}` : menu.title
   }
   return menu.title
@@ -274,19 +274,27 @@ function formatRoleName(role: string): string {
 
 function getRoleIcon(role: string): string {
   switch (role) {
-    case 'guest': return 'mdi-account-question'
-    case 'user': return 'mdi-account'
-    case 'admin': return 'mdi-shield-account'
-    default: return 'mdi-account'
+    case 'guest':
+      return 'mdi-account-question'
+    case 'user':
+      return 'mdi-account'
+    case 'admin':
+      return 'mdi-shield-account'
+    default:
+      return 'mdi-account'
   }
 }
 
 function getRoleColor(role: string): string {
   switch (role) {
-    case 'guest': return 'warning'
-    case 'user': return 'primary'
-    case 'admin': return 'error'
-    default: return 'grey'
+    case 'guest':
+      return 'warning'
+    case 'user':
+      return 'primary'
+    case 'admin':
+      return 'error'
+    default:
+      return 'grey'
   }
 }
 
@@ -299,21 +307,21 @@ function isProtectedMenu(menuKey: string, role: string): boolean {
 function isSectionAllSelected(section: string, role: string): boolean {
   const sectionMenus = getMenusBySection(section)
   const roleAccess = roleMenuAccess.value[role] || []
-  return sectionMenus.every(m => roleAccess.includes(m.menu_key))
+  return sectionMenus.every((m) => roleAccess.includes(m.menu_key))
 }
 
 function toggleSection(section: string, role: string): void {
   const sectionMenus = getMenusBySection(section)
   const roleAccess = roleMenuAccess.value[role] || []
-  
+
   if (isSectionAllSelected(section, role)) {
     // Deselect all (except protected)
     roleMenuAccess.value[role] = roleAccess.filter(
-      key => !sectionMenus.some(m => m.menu_key === key) || isProtectedMenu(key, role)
+      (key) => !sectionMenus.some((m) => m.menu_key === key) || isProtectedMenu(key, role),
     )
   } else {
     // Select all
-    const newKeys = sectionMenus.map(m => m.menu_key)
+    const newKeys = sectionMenus.map((m) => m.menu_key)
     roleMenuAccess.value[role] = [...new Set([...roleAccess, ...newKeys])]
   }
 }
@@ -321,7 +329,7 @@ function toggleSection(section: string, role: string): void {
 function countMenusForRole(role: string, section: string): number {
   const sectionMenus = getMenusBySection(section)
   const roleAccess = roleMenuAccess.value[role] || []
-  return sectionMenus.filter(m => roleAccess.includes(m.menu_key)).length
+  return sectionMenus.filter((m) => roleAccess.includes(m.menu_key)).length
 }
 
 async function fetchMenus(): Promise<void> {
@@ -337,13 +345,13 @@ async function fetchMenus(): Promise<void> {
     const access: Record<string, string[]> = {}
     for (const role of availableRoles.value) {
       access[role] = response.menus
-        .filter(m => m.role_access.includes(role))
-        .map(m => m.menu_key)
+        .filter((m) => m.role_access.includes(role))
+        .map((m) => m.menu_key)
     }
     roleMenuAccess.value = access
     originalRoleMenuAccess.value = JSON.parse(JSON.stringify(access))
-  } catch (err: any) {
-    error.value = err.response?.data?.detail || 'Failed to load menu definitions'
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to load menu definitions')
   } finally {
     loading.value = false
   }
@@ -357,8 +365,8 @@ async function handleInitialize(): Promise<void> {
     const result = await menuAccessApi.initializeMenus()
     successMessage.value = result.message
     await fetchMenus()
-  } catch (err: any) {
-    error.value = err.response?.data?.detail || 'Failed to initialize menu definitions'
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to initialize menu definitions')
   } finally {
     initializing.value = false
   }
@@ -397,8 +405,8 @@ async function handleSave(): Promise<void> {
 
     successMessage.value = `Successfully updated ${updates.length} menu access entries`
     originalRoleMenuAccess.value = JSON.parse(JSON.stringify(roleMenuAccess.value))
-  } catch (err: any) {
-    error.value = err.response?.data?.detail || 'Failed to save menu access changes'
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to save menu access changes')
   } finally {
     saving.value = false
   }

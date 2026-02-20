@@ -1,9 +1,9 @@
 /**
  * iPLAS Stream Reader
- * 
+ *
  * Handles streaming NDJSON data from the backend and sinking it
  * directly to IndexedDB for memory-efficient large dataset handling.
- * 
+ *
  * Key Features:
  * - Stream race condition prevention via runId gating
  * - Single global AbortController for stream cancellation
@@ -12,11 +12,11 @@
  */
 
 import {
-  getDb,
-  putRecordsBatch,
   clearAllRecords,
   generateRecordId,
-  type IplasDbRecord
+  getDb,
+  type IplasDbRecord,
+  putRecordsBatch,
 } from '../db/iplasDb'
 import type { CompactCsvTestItemData } from './iplasProxyApi'
 
@@ -98,25 +98,23 @@ let currentRunId = 0
 
 /**
  * Fetch NDJSON stream and sink directly to IndexedDB
- * 
+ *
  * This function:
  * 1. Aborts any existing stream (single stream at a time)
  * 2. Clears existing data (hard reset for cache invalidation)
  * 3. Streams NDJSON from backend
  * 4. Batches records and writes to IndexedDB
  * 5. Provides progress callbacks for UI updates
- * 
+ *
  * Race condition handling:
  * - Each stream has a unique runId (epoch timestamp)
  * - Writes check if runId matches before committing
  * - If a new stream starts, old writes are silently dropped
- * 
+ *
  * @param options - Streaming options
  * @returns Number of records written, or 0 if aborted
  */
-export async function fetchAndSinkToDB(
-  options: StreamToDiskOptions
-): Promise<number> {
+export async function fetchAndSinkToDB(options: StreamToDiskOptions): Promise<number> {
   const {
     request,
     onProgress,
@@ -124,7 +122,7 @@ export async function fetchAndSinkToDB(
     onComplete,
     onError,
     batchSize = 100,
-    progressInterval = 100
+    progressInterval = 100,
   } = options
 
   // Abort any existing stream
@@ -197,7 +195,7 @@ export async function fetchAndSinkToDB(
         // Ignore parse errors
       }
     }
-    
+
     return {
       id: generateRecordId(apiRecord.ISN, apiRecord['Test Start Time']),
       ISN: apiRecord.ISN,
@@ -213,7 +211,7 @@ export async function fetchAndSinkToDB(
       ErrorName: apiRecord.ErrorName,
       Slot: undefined, // Not in CompactCsvTestItemData
       TestDuration: testDuration,
-      runId: thisRunId
+      runId: thisRunId,
     }
   }
 
@@ -227,7 +225,7 @@ export async function fetchAndSinkToDB(
       totalEstimated,
       bytesReceived,
       isComplete,
-      error
+      error,
     })
   }
 
@@ -236,10 +234,10 @@ export async function fetchAndSinkToDB(
     const response = await fetch(url, {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
       },
       body: JSON.stringify(request),
-      signal: currentController.signal
+      signal: currentController.signal,
     })
 
     if (!response.ok) {
@@ -307,7 +305,7 @@ export async function fetchAndSinkToDB(
               cached: parsed.cached,
               possiblyTruncated: parsed.possibly_truncated,
               chunksFetched: parsed.chunks_fetched,
-              totalChunks: parsed.total_chunks
+              totalChunks: parsed.total_chunks,
             }
             totalEstimated = metadata.totalRecords
             onMetadata?.(metadata)
@@ -328,7 +326,7 @@ export async function fetchAndSinkToDB(
           if (recordsProcessed % progressInterval === 0) {
             reportProgress()
           }
-        } catch (parseError) {
+        } catch (_parseError) {
           console.warn('[StreamReader] Failed to parse line:', trimmedLine)
         }
       }
@@ -386,7 +384,7 @@ export async function fetchAndSinkToDB(
 
 /**
  * Abort the current stream
- * 
+ *
  * Safe to call even if no stream is active.
  */
 export function abortCurrentStream(): void {
@@ -406,7 +404,7 @@ export function isStreaming(): boolean {
 
 /**
  * Get the current run ID
- * 
+ *
  * Useful for debugging and testing.
  */
 export function getCurrentRunId(): number {
@@ -419,7 +417,7 @@ export function getCurrentRunId(): number {
 
 /**
  * Parse stream metadata from a JSON line
- * 
+ *
  * @param line - Raw JSON line
  * @returns Metadata if line is metadata, null otherwise
  */
@@ -433,7 +431,7 @@ export function parseStreamMetadata(line: string): StreamMetadata | null {
         cached: parsed.cached,
         possiblyTruncated: parsed.possibly_truncated,
         chunksFetched: parsed.chunks_fetched,
-        totalChunks: parsed.total_chunks
+        totalChunks: parsed.total_chunks,
       }
     }
   } catch {

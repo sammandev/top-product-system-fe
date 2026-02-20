@@ -1,38 +1,46 @@
 /**
  * iPLAS API Composable
- * 
+ *
  * Provides reactive state and methods for interacting with iPLAS APIs
  * through the backend proxy for security and performance.
- * 
+ *
  * All methods now use the backend proxy by default. Tokens are securely
  * managed on the backend with optional user override via settings.
- * 
+ *
  * Memory Optimization:
  * - Uses shallowRef for large arrays to reduce Vue reactivity overhead
  * - Supports compact records (without TestItem arrays) for list views
  * - Supports lazy loading of TestItems for individual records
  */
 
-import { ref, shallowRef, computed } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
+import { getErrorMessage } from '@/shared/utils'
 import {
-  iplasProxyApi,
-  type SiteProject,
+  type CompactCsvTestItemData,
+  type CsvTestItemData,
+  type IplasBatchDownloadResponse,
+  type IplasCachedTestItemNamesResponse,
+  type IplasCsvTestItemResponse,
+  type IplasDownloadAttachmentInfo,
+  type IplasDownloadCsvLogInfo,
+  type IplasIsnSearchRecord,
   type IplasStation,
   type IplasTestItemInfo,
-  type IplasCsvTestItemResponse,
-  type IplasCachedTestItemNamesResponse,
-  type IplasBatchDownloadResponse,
-  type CsvTestItemData,
-  type CompactCsvTestItemData,
+  iplasProxyApi,
+  type SiteProject,
   type TestItem,
-  type IplasIsnSearchRecord,
-  type IplasDownloadAttachmentInfo,
-  type IplasDownloadCsvLogInfo
 } from '../api/iplasProxyApi'
 import { useIplasSettings } from './useIplasSettings'
 
 // Re-export types for backwards compatibility
-export type { SiteProject, IplasStation, CsvTestItemData, CompactCsvTestItemData, IplasIsnSearchRecord, TestItem }
+export type {
+  SiteProject,
+  IplasStation,
+  CsvTestItemData,
+  CompactCsvTestItemData,
+  IplasIsnSearchRecord,
+  TestItem,
+}
 
 // Type aliases for backwards compatibility
 export type Station = IplasStation
@@ -44,10 +52,10 @@ export type IsnSearchData = IplasIsnSearchRecord
  * Pagination options for server-side data tables
  */
 export interface PaginationOptions {
-  page: number        // 1-based page number
+  page: number // 1-based page number
   itemsPerPage: number // Items per page (e.g., 10, 25, 50)
-  sortBy?: string     // Field name to sort by
-  sortDesc?: boolean  // Sort in descending order
+  sortBy?: string // Field name to sort by
+  sortDesc?: boolean // Sort in descending order
 }
 
 /**
@@ -78,7 +86,7 @@ const ISN_SEARCH_RETRY_DELAY_MS = 1000
 async function withRetry<T>(
   fn: () => Promise<T>,
   maxAttempts: number = ISN_SEARCH_RETRY_ATTEMPTS,
-  initialDelayMs: number = ISN_SEARCH_RETRY_DELAY_MS
+  initialDelayMs: number = ISN_SEARCH_RETRY_DELAY_MS,
 ): Promise<T> {
   let lastError: Error | null = null
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
@@ -89,8 +97,8 @@ async function withRetry<T>(
       console.warn(`Attempt ${attempt}/${maxAttempts} failed:`, err)
       if (attempt < maxAttempts) {
         // Exponential backoff: 1s, 2s, 4s...
-        const delayMs = initialDelayMs * Math.pow(2, attempt - 1)
-        await new Promise(resolve => setTimeout(resolve, delayMs))
+        const delayMs = initialDelayMs * 2 ** (attempt - 1)
+        await new Promise((resolve) => setTimeout(resolve, delayMs))
       }
     }
   }
@@ -117,10 +125,10 @@ function createRecordKey(record: CsvTestItemData | CompactCsvTestItemData): stri
  */
 function deduplicateRecords<T extends CsvTestItemData | CompactCsvTestItemData>(
   existingRecords: T[],
-  newRecords: T[]
+  newRecords: T[],
 ): T[] {
   const existingKeys = new Set(existingRecords.map(createRecordKey))
-  const uniqueNewRecords = newRecords.filter(record => {
+  const uniqueNewRecords = newRecords.filter((record) => {
     const key = createRecordKey(record)
     if (existingKeys.has(key)) {
       return false
@@ -172,7 +180,7 @@ export function useIplasApi() {
 
   // Computed
   const uniqueSites = computed(() => {
-    const sites = new Set(siteProjects.value.map(sp => sp.site))
+    const sites = new Set(siteProjects.value.map((sp) => sp.site))
     return Array.from(sites).sort()
   })
 
@@ -182,11 +190,11 @@ export function useIplasApi() {
       if (!map[sp.site]) {
         map[sp.site] = []
       }
-      map[sp.site]!.push(sp.project)
+      map[sp.site]?.push(sp.project)
     }
     // Sort projects within each site
     for (const site of Object.keys(map)) {
-      map[site]!.sort()
+      map[site]?.sort()
     }
     return map
   })
@@ -197,7 +205,7 @@ export function useIplasApi() {
   function getUserToken(): string | undefined {
     const token = apiToken.value
     // Return undefined if token is empty (backend will use default)
-    return token && token.trim() ? token : undefined
+    return token?.trim() ? token : undefined
   }
 
   /**
@@ -208,7 +216,7 @@ export function useIplasApi() {
       const response = await iplasProxyApi.verifyAccess({
         site,
         project,
-        token: getUserToken()
+        token: getUserToken(),
       })
       return response.success
     } catch (err) {
@@ -234,8 +242,8 @@ export function useIplasApi() {
       cachedSiteProjects = response.data
       siteProjects.value = response.data
       return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch site/project list'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch site/project list'
       throw err
     } finally {
       loading.value = false
@@ -248,11 +256,12 @@ export function useIplasApi() {
   async function fetchStations(
     site: string,
     project: string,
-    forceRefresh = false
+    forceRefresh = false,
   ): Promise<Station[]> {
     const cacheKey = `${site}${CACHE_KEY_SEPARATOR}${project}`
 
     if (!forceRefresh && cachedStations.has(cacheKey)) {
+      // biome-ignore lint/style/noNonNullAssertion: Guarded by .has() check above
       stations.value = cachedStations.get(cacheKey)!
       return stations.value
     }
@@ -264,24 +273,26 @@ export function useIplasApi() {
       const response = await iplasProxyApi.getStations({
         site,
         project,
-        token: getUserToken()
+        token: getUserToken(),
       })
       // Convert proxy response to Station type
-      const stationData: Station[] = response.data.map(s => ({
-        display_station_name: s.display_station_name,
-        station_name: s.station_name,
-        order: s.order,
-        data_source: s.data_source
-      })).sort((a, b) => {
-        const aOrder = a.order ?? Number.MAX_SAFE_INTEGER
-        const bOrder = b.order ?? Number.MAX_SAFE_INTEGER
-        return aOrder - bOrder
-      })
+      const stationData: Station[] = response.data
+        .map((s) => ({
+          display_station_name: s.display_station_name,
+          station_name: s.station_name,
+          order: s.order,
+          data_source: s.data_source,
+        }))
+        .sort((a, b) => {
+          const aOrder = a.order ?? Number.MAX_SAFE_INTEGER
+          const bOrder = b.order ?? Number.MAX_SAFE_INTEGER
+          return aOrder - bOrder
+        })
       cachedStations.set(cacheKey, stationData)
       stations.value = stationData
       return stationData
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch station list'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch station list'
       throw err
     } finally {
       loadingStations.value = false
@@ -296,7 +307,7 @@ export function useIplasApi() {
     project: string,
     displayStationName: string,
     startTime: string | Date,
-    endTime: string | Date
+    endTime: string | Date,
   ): Promise<string[]> {
     loadingDevices.value = true
     error.value = null
@@ -312,12 +323,12 @@ export function useIplasApi() {
         station: displayStationName,
         start_time: start,
         end_time: end,
-        token: getUserToken()
+        token: getUserToken(),
       })
       deviceIds.value = response.data
       return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch device IDs'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch device IDs'
       throw err
     } finally {
       loadingDevices.value = false
@@ -327,7 +338,7 @@ export function useIplasApi() {
   /**
    * Get CSV test items for a device via backend proxy
    * Appends to existing testItemData instead of replacing
-   * 
+   *
    * @param begintime - Start time (Date object or ISO string)
    * @param endtime - End time (Date object or ISO string)
    */
@@ -338,7 +349,7 @@ export function useIplasApi() {
     deviceid: string,
     begintime: string | Date,
     endtime: string | Date,
-    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL'
+    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
   ): Promise<CsvTestItemData[]> {
     loadingTestItems.value = true
     error.value = null
@@ -353,7 +364,7 @@ export function useIplasApi() {
         begin_time: iplasProxyApi.formatDateForRequest(begintime),
         end_time: iplasProxyApi.formatDateForRequest(endtime),
         test_status: testStatus,
-        token: getUserToken()
+        token: getUserToken(),
       })
 
       // Track truncation warning (any chunk hit 5000 limit)
@@ -365,15 +376,18 @@ export function useIplasApi() {
       if (response.chunks_fetched && response.total_chunks) {
         chunkProgress.value = {
           fetched: response.chunks_fetched,
-          total: response.total_chunks
+          total: response.total_chunks,
         }
       }
 
       // Append to existing data with deduplication
-      testItemData.value = deduplicateRecords(testItemData.value, response.data as CsvTestItemData[])
+      testItemData.value = deduplicateRecords(
+        testItemData.value,
+        response.data as CsvTestItemData[],
+      )
       return response.data as CsvTestItemData[]
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch test items'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch test items'
       throw err
     } finally {
       loadingTestItems.value = false
@@ -383,7 +397,7 @@ export function useIplasApi() {
   /**
    * Get compact CSV test items (without TestItem arrays) for memory efficiency.
    * Use this for list views where you don't need test item details.
-   * 
+   *
    * @param begintime - Start time (Date object or ISO string)
    * @param endtime - End time (Date object or ISO string)
    */
@@ -394,7 +408,7 @@ export function useIplasApi() {
     deviceid: string,
     begintime: string | Date,
     endtime: string | Date,
-    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL'
+    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
   ): Promise<CompactCsvTestItemData[]> {
     loadingTestItems.value = true
     error.value = null
@@ -409,7 +423,7 @@ export function useIplasApi() {
         begin_time: iplasProxyApi.formatDateForRequest(begintime),
         end_time: iplasProxyApi.formatDateForRequest(endtime),
         test_status: testStatus,
-        token: getUserToken()
+        token: getUserToken(),
       })
 
       // Track truncation warning
@@ -421,15 +435,18 @@ export function useIplasApi() {
       if (response.chunks_fetched && response.total_chunks) {
         chunkProgress.value = {
           fetched: response.chunks_fetched,
-          total: response.total_chunks
+          total: response.total_chunks,
         }
       }
 
       // Append to existing data with deduplication
-      compactTestItemData.value = deduplicateRecords(compactTestItemData.value, response.data as CompactCsvTestItemData[])
+      compactTestItemData.value = deduplicateRecords(
+        compactTestItemData.value,
+        response.data as CompactCsvTestItemData[],
+      )
       return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch compact test items'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch compact test items'
       throw err
     } finally {
       loadingTestItems.value = false
@@ -439,7 +456,7 @@ export function useIplasApi() {
   /**
    * Fetch paginated compact test items for server-side data table.
    * Does NOT append to existing data - designed for page-by-page loading.
-   * 
+   *
    * @returns PaginatedResult with items, totalItems, and pagination metadata
    */
   async function fetchTestItemsPaginated(
@@ -450,7 +467,7 @@ export function useIplasApi() {
     begintime: string | Date,
     endtime: string | Date,
     testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
-    options: PaginationOptions = { page: 1, itemsPerPage: 25 }
+    options: PaginationOptions = { page: 1, itemsPerPage: 25 },
   ): Promise<PaginatedResult<CompactCsvTestItemData>> {
     loadingTestItems.value = true
     error.value = null
@@ -472,7 +489,7 @@ export function useIplasApi() {
         offset: offset,
         sort_by: options.sortBy,
         sort_desc: options.sortDesc ?? true,
-        token: getUserToken()
+        token: getUserToken(),
       })
 
       // Track truncation warning
@@ -486,7 +503,7 @@ export function useIplasApi() {
       if (response.chunks_fetched && response.total_chunks) {
         progress = {
           fetched: response.chunks_fetched,
-          total: response.total_chunks
+          total: response.total_chunks,
         }
         chunkProgress.value = progress
       }
@@ -497,10 +514,10 @@ export function useIplasApi() {
         page: options.page,
         itemsPerPage: options.itemsPerPage,
         possiblyTruncated: truncated,
-        chunkProgress: progress
+        chunkProgress: progress,
       }
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch paginated test items'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch paginated test items'
       throw err
     } finally {
       loadingTestItems.value = false
@@ -517,12 +534,13 @@ export function useIplasApi() {
     station: string,
     isn: string,
     testStartTime: string,
-    deviceId: string = 'ALL'
+    deviceId: string = 'ALL',
   ): Promise<TestItem[]> {
     const cacheKey = `${isn}_${testStartTime}`
 
     // Return cached if available
     if (testItemsCache.has(cacheKey)) {
+      // biome-ignore lint/style/noNonNullAssertion: Guarded by .has() check above
       return testItemsCache.get(cacheKey)!
     }
 
@@ -537,14 +555,14 @@ export function useIplasApi() {
         isn,
         test_start_time: testStartTime,
         device_id: deviceId,
-        token: getUserToken()
+        token: getUserToken(),
       })
 
       // Cache the result
       testItemsCache.set(cacheKey, response.test_items)
       return response.test_items
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch record test items'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch record test items'
       throw err
     } finally {
       loadingRecordTestItems.value = false
@@ -565,15 +583,15 @@ export function useIplasApi() {
       const response = await withRetry(async () => {
         return await iplasProxyApi.searchByIsn({
           isn,
-          token: getUserToken()
+          token: getUserToken(),
         })
       })
 
       // Map proxy response to IsnSearchData format
       isnSearchData.value = response.data as unknown as IsnSearchData[]
       return isnSearchData.value
-    } catch (err: any) {
-      error.value = err.message || 'Failed to search by ISN'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to search by ISN'
       throw err
     } finally {
       loadingIsnSearch.value = false
@@ -599,7 +617,7 @@ export function useIplasApi() {
       const response = await withRetry(async () => {
         return await iplasProxyApi.searchByIsnBatch({
           isns,
-          token: getUserToken()
+          token: getUserToken(),
         })
       })
 
@@ -610,8 +628,8 @@ export function useIplasApi() {
       }
 
       return resultMap
-    } catch (err: any) {
-      error.value = err.message || 'Failed to batch search by ISN'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to batch search by ISN'
       throw err
     } finally {
       loadingIsnSearch.value = false
@@ -631,37 +649,38 @@ export function useIplasApi() {
   async function downloadAttachments(
     site: string,
     project: string,
-    attachments: DownloadAttachmentInfo[]
+    attachments: DownloadAttachmentInfo[],
   ): Promise<void> {
     downloading.value = true
     error.value = null
 
     try {
       // Convert to proxy format
-      const proxyInfo: IplasDownloadAttachmentInfo[] = attachments.map(a => ({
+      const proxyInfo: IplasDownloadAttachmentInfo[] = attachments.map((a) => ({
         isn: a.isn,
         time: a.time,
         deviceid: a.deviceid,
-        station: a.station
+        station: a.station,
       }))
 
       const response = await iplasProxyApi.downloadAttachment({
         site,
         project,
         info: proxyInfo,
-        token: getUserToken()
+        token: getUserToken(),
       })
 
       // Generate filename if not provided
-      const filename = response.filename ||
+      const filename =
+        response.filename ||
         (attachments.length === 1 && attachments[0]
-          ? `${attachments[0].isn}_${attachments[0].time.replace(/[\/:]/g, '_')}.zip`
+          ? `${attachments[0].isn}_${attachments[0].time.replace(/[/:]/g, '_')}.zip`
           : `test_logs_${new Date().toISOString().slice(0, 10)}.zip`)
 
       // Trigger download
       iplasProxyApi.downloadBase64File(response.content, filename)
-    } catch (err: any) {
-      error.value = err.message || 'Failed to download attachments'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to download attachments'
       throw err
     } finally {
       downloading.value = false
@@ -670,18 +689,16 @@ export function useIplasApi() {
 
   /**
    * Download CSV test logs via backend proxy
-   * 
+   *
    * UPDATED: Added for downloading actual CSV test logs from iPLAS API
    */
-  async function downloadCsvLogs(
-    records: DownloadCsvLogInfo[]
-  ): Promise<void> {
+  async function downloadCsvLogs(records: DownloadCsvLogInfo[]): Promise<void> {
     downloading.value = true
     error.value = null
 
     try {
       const response = await iplasProxyApi.downloadCsvLog({
-        query_list: records.map(r => ({
+        query_list: records.map((r) => ({
           site: r.site,
           project: r.project,
           station: r.station,
@@ -690,21 +707,22 @@ export function useIplasApi() {
           deviceid: r.deviceid,
           isn: r.isn,
           test_end_time: r.test_end_time,
-          data_source: r.data_source ?? 0
+          data_source: r.data_source ?? 0,
         })),
-        token: getUserToken()
+        token: getUserToken(),
       })
 
       // Generate filename if not provided
-      const filename = response.filename ||
+      const filename =
+        response.filename ||
         (records.length === 1 && records[0]
-          ? `${records[0].isn}_${records[0].test_end_time.replace(/[\/:. ]/g, '_')}.csv`
+          ? `${records[0].isn}_${records[0].test_end_time.replace(/[/:. ]/g, '_')}.csv`
           : `test_logs_${new Date().toISOString().slice(0, 10)}.csv`)
 
       // Trigger download
       iplasProxyApi.downloadCsvFile(response.content, filename)
-    } catch (err: any) {
-      error.value = err.message || 'Failed to download CSV logs'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to download CSV logs'
       throw err
     } finally {
       downloading.value = false
@@ -713,12 +731,12 @@ export function useIplasApi() {
 
   /**
    * Batch download test logs (TXT, CSV, or both) as a zip archive
-   * 
+   *
    * This is the recommended method for downloading multiple logs as it:
    * - Uses parallel requests for faster downloads
    * - Properly packages files into a zip archive
    * - Organizes files in /txt/ and /csv/ folders
-   * 
+   *
    * @param site - Site identifier
    * @param project - Project identifier
    * @param records - List of records to download
@@ -728,7 +746,7 @@ export function useIplasApi() {
     site: string,
     project: string,
     records: DownloadCsvLogInfo[],
-    downloadType: 'txt' | 'csv' | 'all' = 'all'
+    downloadType: 'txt' | 'csv' | 'all' = 'all',
   ): Promise<IplasBatchDownloadResponse> {
     downloading.value = true
     error.value = null
@@ -737,7 +755,7 @@ export function useIplasApi() {
       const response = await iplasProxyApi.batchDownload({
         site,
         project,
-        items: records.map(r => ({
+        items: records.map((r) => ({
           site: r.site,
           project: r.project,
           station: r.station,
@@ -746,18 +764,18 @@ export function useIplasApi() {
           deviceid: r.deviceid,
           isn: r.isn,
           test_end_time: r.test_end_time,
-          data_source: r.data_source ?? 0
+          data_source: r.data_source ?? 0,
         })),
         download_type: downloadType,
-        token: getUserToken()
+        token: getUserToken(),
       })
 
       // Trigger download
       iplasProxyApi.downloadBatchFile(response)
 
       return response
-    } catch (err: any) {
-      error.value = err.message || 'Failed to batch download logs'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to batch download logs'
       throw err
     } finally {
       downloading.value = false
@@ -805,7 +823,7 @@ export function useIplasApi() {
   /**
    * Fetch unique test item names via backend proxy (lightweight)
    * Returns only test item names, not full data - reduces payload significantly
-   * 
+   *
    * UPDATED: Added excludeBin option to filter out BIN/PASS-FAIL test items
    */
   async function fetchTestItemNames(
@@ -816,7 +834,7 @@ export function useIplasApi() {
     beginTime: string | Date,
     endTime: string | Date,
     testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
-    excludeBin = false
+    excludeBin = false,
   ): Promise<IplasTestItemInfo[]> {
     loading.value = true
     error.value = null
@@ -831,11 +849,11 @@ export function useIplasApi() {
         end_time: iplasProxyApi.formatDateForRequest(endTime),
         test_status: testStatus,
         token: getUserToken(),
-        exclude_bin: excludeBin
+        exclude_bin: excludeBin,
       })
       return response.test_items
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch test item names'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch test item names'
       throw err
     } finally {
       loading.value = false
@@ -844,11 +862,11 @@ export function useIplasApi() {
 
   /**
    * Fetch cached test item names from database
-   * 
+   *
    * Optimized for Configure Station dialog where date ranges of 30+ days
    * would cause timeouts. Uses database cache with 7-day TTL.
    * Cache key: site + project + station (date range NOT included)
-   * 
+   *
    * @param site - Site code
    * @param project - Project name
    * @param station - Station name
@@ -864,7 +882,7 @@ export function useIplasApi() {
     excludeBin = false,
     forceRefresh = false,
     beginTime?: string | Date,
-    endTime?: string | Date
+    endTime?: string | Date,
   ): Promise<IplasCachedTestItemNamesResponse> {
     loading.value = true
     error.value = null
@@ -878,11 +896,11 @@ export function useIplasApi() {
         exclude_bin: excludeBin,
         force_refresh: forceRefresh,
         begin_time: beginTime ? iplasProxyApi.formatDateForRequest(beginTime) : undefined,
-        end_time: endTime ? iplasProxyApi.formatDateForRequest(endTime) : undefined
+        end_time: endTime ? iplasProxyApi.formatDateForRequest(endTime) : undefined,
       })
       return response
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch cached test item names'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch cached test item names'
       throw err
     } finally {
       loading.value = false
@@ -903,7 +921,7 @@ export function useIplasApi() {
     testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
     testItemFilters?: string[],
     limit?: number,
-    offset?: number
+    offset?: number,
   ): Promise<IplasCsvTestItemResponse> {
     loadingTestItems.value = true
     error.value = null
@@ -920,14 +938,17 @@ export function useIplasApi() {
         test_item_filters: testItemFilters,
         limit,
         offset,
-        token: getUserToken()
+        token: getUserToken(),
       })
 
       // Append to existing data with deduplication
-      testItemData.value = deduplicateRecords(testItemData.value, response.data as CsvTestItemData[])
+      testItemData.value = deduplicateRecords(
+        testItemData.value,
+        response.data as CsvTestItemData[],
+      )
       return response
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch filtered test items'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch filtered test items'
       throw err
     } finally {
       loadingTestItems.value = false
@@ -989,6 +1010,6 @@ export function useIplasApi() {
     formatDateForV1Api,
     clearTestItemData,
     clearIsnSearchData,
-    clearCache
+    clearCache,
   }
 }

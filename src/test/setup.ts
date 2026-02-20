@@ -1,16 +1,16 @@
-import { vi } from 'vitest'
 import { config } from '@vue/test-utils'
+import { vi } from 'vitest'
 
 /**
  * Test Setup File
- * 
+ *
  * Configures the testing environment with necessary mocks and global settings.
  */
 
 // Mock window.matchMedia (used by Vuetify responsive features)
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -23,8 +23,8 @@ Object.defineProperty(window, 'matchMedia', {
 })
 
 // Mock IntersectionObserver (used by Vuetify for lazy loading)
+// biome-ignore lint/suspicious/noExplicitAny: globalThis mock assignment requires any cast
 ;(globalThis as any).IntersectionObserver = class IntersectionObserver {
-  constructor() {}
   disconnect() {}
   observe() {}
   takeRecords() {
@@ -34,8 +34,8 @@ Object.defineProperty(window, 'matchMedia', {
 }
 
 // Mock ResizeObserver (used by Vuetify for responsive components)
+// biome-ignore lint/suspicious/noExplicitAny: globalThis mock assignment requires any cast
 ;(globalThis as any).ResizeObserver = class ResizeObserver {
-  constructor() {}
   disconnect() {}
   observe() {}
   unobserve() {}
@@ -62,12 +62,12 @@ const localStorageMock = (() => {
     key: (index: number) => {
       const keys = Object.keys(store)
       return keys[index] || null
-    }
+    },
   }
 })()
 
 Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock
+  value: localStorageMock,
 })
 
 // Configure Vue Test Utils globally
@@ -76,13 +76,14 @@ config.global.stubs = {
   Teleport: true,
   // Stub Vuetify icons to avoid loading MDI fonts in tests
   'v-icon': true,
-  VIcon: true
+  VIcon: true,
 }
 
 // Suppress Vuetify warnings in tests
 const originalConsole = globalThis.console
+// biome-ignore lint/suspicious/noExplicitAny: globalThis mock assignment requires any cast
 ;(globalThis as any).console = {
   ...originalConsole,
   warn: vi.fn(),
-  error: vi.fn()
+  error: vi.fn(),
 }

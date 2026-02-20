@@ -147,8 +147,7 @@
                                     <v-icon color="success">mdi-download</v-icon>
                                 </template>
                                 <v-list-item-title>Output File:</v-list-item-title>
-                                <v-list-item-subtitle>{{ lastAnalyzedFile.replace(/\.(csv|xlsx)$/i, '_Compiled.xlsx')
-                                }}</v-list-item-subtitle>
+                                <v-list-item-subtitle>{{ lastAnalyzedFile.replace(/\.(csv|xlsx)$/i, '_Compiled.xlsx') }}</v-list-item-subtitle>
                             </v-list-item>
                         </v-list>
 
@@ -287,19 +286,17 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import SpecBuilderDialog from '../components/SpecBuilderDialog.vue'
+import { computed, ref } from 'vue'
 import {
-    analyzeMultiDut,
-    downloadAnalysisResult,
-    validateMc2File,
-    validateSpecFile
+  analyzeMultiDut,
+  downloadAnalysisResult,
+  validateMc2File,
+  validateSpecFile,
 } from '../api/analyze'
 import {
-    downloadMc2CsvTemplate,
-    downloadJsonSpecTemplate,
-    downloadIniSpecTemplate
+  downloadIniSpecTemplate,
+  downloadJsonSpecTemplate,
+  downloadMc2CsvTemplate,
 } from '../utils/templates'
 
 // State
@@ -321,109 +318,112 @@ const mc2FileActual = computed(() => mc2File.value[0])
 const specFileActual = computed(() => specFile.value[0])
 
 const canAnalyze = computed(() => {
-    return !!mc2FileActual.value &&
-        !!specFileActual.value &&
-        !analyzing.value &&
-        !mc2FileError.value &&
-        !specFileError.value
+  return (
+    !!mc2FileActual.value &&
+    !!specFileActual.value &&
+    !analyzing.value &&
+    !mc2FileError.value &&
+    !specFileError.value
+  )
 })
 
 // Methods
 function formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`
 }
 
 function handleMc2FileChange() {
-    mc2FileError.value = ''
-    if (mc2FileActual.value) {
-        const validation = validateMc2File(mc2FileActual.value)
-        if (!validation.valid) {
-            mc2FileError.value = validation.error || 'Invalid file'
-        }
+  mc2FileError.value = ''
+  if (mc2FileActual.value) {
+    const validation = validateMc2File(mc2FileActual.value)
+    if (!validation.valid) {
+      mc2FileError.value = validation.error || 'Invalid file'
     }
+  }
 }
 
 function handleSpecFileChange() {
-    specFileError.value = ''
-    if (specFileActual.value) {
-        const validation = validateSpecFile(specFileActual.value)
-        if (!validation.valid) {
-            specFileError.value = validation.error || 'Invalid file'
-        }
+  specFileError.value = ''
+  if (specFileActual.value) {
+    const validation = validateSpecFile(specFileActual.value)
+    if (!validation.valid) {
+      specFileError.value = validation.error || 'Invalid file'
     }
+  }
 }
 
 function downloadMc2Template() {
-    downloadMc2CsvTemplate()
+  downloadMc2CsvTemplate()
 }
 
 function downloadSpecTemplate() {
-    showTemplateDialog.value = true
+  showTemplateDialog.value = true
 }
 
 function downloadTemplate(format: 'json' | 'ini') {
-    if (format === 'json') {
-        downloadJsonSpecTemplate()
-    } else {
-        downloadIniSpecTemplate()
-    }
-    showTemplateDialog.value = false
+  if (format === 'json') {
+    downloadJsonSpecTemplate()
+  } else {
+    downloadIniSpecTemplate()
+  }
+  showTemplateDialog.value = false
 }
 
 function openSpecBuilder() {
-    showSpecBuilder.value = true
+  showSpecBuilder.value = true
 }
 
 function handleSpecCreated(file: File, _format: 'json' | 'ini') {
-    specFile.value = [file]
-    handleSpecFileChange()
+  specFile.value = [file]
+  handleSpecFileChange()
 }
 
 async function handleAnalyze() {
-    if (!mc2FileActual.value || !specFileActual.value) return
+  if (!mc2FileActual.value || !specFileActual.value) return
 
-    analyzing.value = true
+  analyzing.value = true
+  uploadProgress.value = 0
+  analysisCompleted.value = false
+  showError.value = false
+
+  try {
+    const blob = await analyzeMultiDut({
+      mc2File: mc2FileActual.value,
+      specFile: specFileActual.value,
+      onUploadProgress: (progressEvent) => {
+        if (progressEvent.total) {
+          uploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total)
+        }
+      },
+    })
+
+    // Download the result
+    downloadAnalysisResult(blob, mc2FileActual.value.name)
+
+    lastAnalyzedFile.value = mc2FileActual.value.name
+    analysisCompleted.value = true
+  } catch (error) {
+    console.error('Analysis failed:', error)
+    errorMessage.value =
+      error instanceof Error ? error.message : 'Analysis failed. Please try again.'
+    showError.value = true
+  } finally {
+    analyzing.value = false
     uploadProgress.value = 0
-    analysisCompleted.value = false
-    showError.value = false
-
-    try {
-        const blob = await analyzeMultiDut({
-            mc2File: mc2FileActual.value,
-            specFile: specFileActual.value,
-            onUploadProgress: (progressEvent) => {
-                if (progressEvent.total) {
-                    uploadProgress.value = Math.round((progressEvent.loaded * 100) / progressEvent.total)
-                }
-            }
-        })
-
-        // Download the result
-        downloadAnalysisResult(blob, mc2FileActual.value.name)
-
-        lastAnalyzedFile.value = mc2FileActual.value.name
-        analysisCompleted.value = true
-    } catch (error) {
-        console.error('Analysis failed:', error)
-        errorMessage.value = error instanceof Error ? error.message : 'Analysis failed. Please try again.'
-        showError.value = true
-    } finally {
-        analyzing.value = false
-        uploadProgress.value = 0
-    }
+  }
 }
 
 function resetForm() {
-    mc2File.value = []
-    specFile.value = []
-    mc2FileError.value = ''
-    specFileError.value = ''
-    analysisCompleted.value = false
-    uploadProgress.value = 0
+  mc2File.value = []
+  specFile.value = []
+  mc2FileError.value = ''
+  specFileError.value = ''
+  analysisCompleted.value = false
+  uploadProgress.value = 0
 }
 </script>
 

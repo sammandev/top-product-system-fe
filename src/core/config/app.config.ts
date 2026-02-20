@@ -14,7 +14,7 @@ export const APP_CONFIG = {
     baseURL: import.meta.env.VITE_API_BASE_URL ?? '',
     timeout: 120000, // 120 seconds
     retryAttempts: 3,
-    retryDelay: 1000
+    retryDelay: 1000,
   },
 
   // Authentication
@@ -25,21 +25,21 @@ export const APP_CONFIG = {
     dutRefreshTokenKey: 'dut_refresh_token',
     loginTypeKey: 'login_type',
     tokenExpiry: 3600, // 1 hour in seconds
-    refreshBeforeExpiry: 300 // Refresh 5 minutes before expiry
+    refreshBeforeExpiry: 300, // Refresh 5 minutes before expiry
   },
 
   // Pagination
   pagination: {
     defaultPageSize: 10,
     pageSizeOptions: [10, 25, 50, 100],
-    maxPageSize: 100
+    maxPageSize: 100,
   },
 
   // File Upload
   upload: {
     maxFileSize: 50 * 1024 * 1024, // 50MB
     allowedFormats: ['.csv', '.xlsx', '.xls'],
-    chunkSize: 1024 * 1024 // 1MB chunks
+    chunkSize: 1024 * 1024, // 1MB chunks
   },
 
   // Date/Time
@@ -47,7 +47,7 @@ export const APP_CONFIG = {
     dateFormat: 'YYYY-MM-DD',
     timeFormat: 'HH:mm:ss',
     dateTimeFormat: 'YYYY-MM-DD HH:mm:ss',
-    timezone: 'UTC'
+    timezone: 'UTC',
   },
 
   // UI
@@ -56,13 +56,13 @@ export const APP_CONFIG = {
     toastDuration: 2000,
     animationDuration: 200,
     sidebarWidth: 256,
-    sidebarRailWidth: 72
+    sidebarRailWidth: 72,
   },
 
   // Theme
   theme: {
     defaultMode: 'light' as const,
-    storageKey: 'theme_mode'
+    storageKey: 'theme_mode',
   },
 
   // Features
@@ -71,15 +71,15 @@ export const APP_CONFIG = {
     enableDarkMode: true,
     enableNotifications: true,
     enableFileComparison: true,
-    enableDUTAnalysis: true
+    enableDUTAnalysis: true,
   },
 
   // Performance
   performance: {
     enableLazyLoading: true,
     enableCodeSplitting: true,
-    cacheTimeout: 5 * 60 * 1000 // 5 minutes
-  }
+    cacheTimeout: 5 * 60 * 1000, // 5 minutes
+  },
 } as const
 
 export type AppConfig = typeof APP_CONFIG

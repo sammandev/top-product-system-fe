@@ -135,8 +135,7 @@
                                                 </v-chip>
                                                 <v-chip v-if="statusFilter" size="small" closable
                                                     @click:close="statusFilter = null">
-                                                    Status: {{ statusFilter === 'passed' ? 'Passed Only' : 'Failed Only'
-                                                    }}
+                                                    Status: {{ statusFilter === 'passed' ? 'Passed Only' : 'Failed Only' }}
                                                 </v-chip>
                                                 <v-chip v-if="siteFilter" size="small" closable
                                                     @click:close="siteFilter = null">
@@ -170,7 +169,7 @@
                                 <v-data-table :headers="rankingHeaders" :items="filteredRanking" :items-per-page="10"
                                     density="comfortable" class="ranking-table cursor-pointer"
                                     :item-class="getRankingRowClass"
-                                    @click:row="(_event: any, data: any) => handleRowClick(data.item, station as string)">
+                                    @click:row="(_event: unknown, data: any) => handleRowClick(data.item, station as string)">
                                     <!-- Rank Column -->
                                     <template #item.rank="{ item }">
                                         <div class="d-flex align-center">
@@ -280,26 +279,24 @@ import { formatDate } from '@/shared/utils/helpers'
 import type { TopProductResult } from '../types/dutTopProduct.types'
 
 interface Props {
-    results: TopProductResult[]
+  results: TopProductResult[]
 }
 
 interface RankingItem {
-    rank: number
-    isn: string
-    device: string | null
-    testDate: string
-    score: number
-    site: string | null
-    model: string | null
-    hasError: boolean
-    errorItem: string | null
+  rank: number
+  isn: string
+  device: string | null
+  testDate: string
+  score: number
+  site: string | null
+  model: string | null
+  hasError: boolean
+  errorItem: string | null
 }
 
 const props = defineProps<Props>()
 
-const emit = defineEmits<{
-    (e: 'row-click', payload: { isn: string; stationName: string }): void
-}>()
+const emit = defineEmits<(e: 'row-click', payload: { isn: string; stationName: string }) => void>()
 
 const selectedTab = ref<string>('')
 const searchQuery = ref<string>('')
@@ -310,237 +307,238 @@ const siteFilter = ref<string | null>(null)
 
 // Filter options
 const scoreFilterTypes = [
-    { title: 'Greater than (>)', value: 'gt' },
-    { title: 'Greater or equal (≥)', value: 'gte' },
-    { title: 'Less than (<)', value: 'lt' },
-    { title: 'Less or equal (≤)', value: 'lte' },
-    { title: 'Equal (=)', value: 'eq' }
+  { title: 'Greater than (>)', value: 'gt' },
+  { title: 'Greater or equal (≥)', value: 'gte' },
+  { title: 'Less than (<)', value: 'lt' },
+  { title: 'Less or equal (≤)', value: 'lte' },
+  { title: 'Equal (=)', value: 'eq' },
 ]
 
 const statusFilterOptions = [
-    { title: 'Passed Only', value: 'passed' },
-    { title: 'Failed Only', value: 'failed' }
+  { title: 'Passed Only', value: 'passed' },
+  { title: 'Failed Only', value: 'failed' },
 ]
 
 // Compute rankings grouped by station
 const rankingByStation = computed(() => {
-    const stationMap: Record<string, RankingItem[]> = {}
+  const stationMap: Record<string, RankingItem[]> = {}
 
-    props.results.forEach(result => {
-        result.test_result.forEach(station => {
-            const stationName = station.station_name
+  props.results.forEach((result) => {
+    result.test_result.forEach((station) => {
+      const stationName = station.station_name
 
-            if (!stationMap[stationName]) {
-                stationMap[stationName] = []
-            }
+      if (!stationMap[stationName]) {
+        stationMap[stationName] = []
+      }
 
-            const hasError = station.error_item !== null && station.error_item.trim() !== ''
+      const hasError = station.error_item !== null && station.error_item.trim() !== ''
 
-            stationMap[stationName].push({
-                rank: 0, // Will be computed after sorting
-                isn: result.dut_isn,
-                device: station.device,
-                testDate: station.test_date,
-                score: station.overall_data_score,
-                site: result.site_name,
-                model: result.model_name,
-                hasError: hasError,
-                errorItem: station.error_item
-            })
-        })
+      stationMap[stationName].push({
+        rank: 0, // Will be computed after sorting
+        isn: result.dut_isn,
+        device: station.device,
+        testDate: station.test_date,
+        score: station.overall_data_score,
+        site: result.site_name,
+        model: result.model_name,
+        hasError: hasError,
+        errorItem: station.error_item,
+      })
+    })
+  })
+
+  // Sort and assign ranks for each station
+  Object.keys(stationMap).forEach((station) => {
+    const items = stationMap[station]
+
+    if (!items) return
+
+    // Separate passed and failed DUTs
+    const passed = items.filter((item) => !item.hasError)
+    const failed = items.filter((item) => item.hasError)
+
+    // Sort passed DUTs by score (descending)
+    passed.sort((a, b) => b.score - a.score)
+
+    // Assign ranks to passed DUTs
+    passed.forEach((item, index) => {
+      item.rank = index + 1
     })
 
-    // Sort and assign ranks for each station
-    Object.keys(stationMap).forEach(station => {
-        const items = stationMap[station]
-
-        if (!items) return
-
-        // Separate passed and failed DUTs
-        const passed = items.filter(item => !item.hasError)
-        const failed = items.filter(item => item.hasError)
-
-        // Sort passed DUTs by score (descending)
-        passed.sort((a, b) => b.score - a.score)
-
-        // Assign ranks to passed DUTs
-        passed.forEach((item, index) => {
-            item.rank = index + 1
-        })
-
-        // Failed DUTs don't get a rank (will show "Error" in table)
-        failed.forEach(item => {
-            item.rank = 999
-        })
-
-        // Combine: passed first, then failed
-        stationMap[station] = [...passed, ...failed]
+    // Failed DUTs don't get a rank (will show "Error" in table)
+    failed.forEach((item) => {
+      item.rank = 999
     })
 
-    // Set initial tab to first station
-    const firstStation = Object.keys(stationMap)[0]
-    if (selectedTab.value === '' && firstStation) {
-        selectedTab.value = firstStation
-    }
+    // Combine: passed first, then failed
+    stationMap[station] = [...passed, ...failed]
+  })
 
-    return stationMap
+  // Set initial tab to first station
+  const firstStation = Object.keys(stationMap)[0]
+  if (selectedTab.value === '' && firstStation) {
+    selectedTab.value = firstStation
+  }
+
+  return stationMap
 })
 
 const totalDUTs = computed(() => {
-    const uniqueISNs = new Set<string>()
-    props.results.forEach(result => {
-        uniqueISNs.add(result.dut_isn)
-    })
-    return uniqueISNs.size
+  const uniqueISNs = new Set<string>()
+  props.results.forEach((result) => {
+    uniqueISNs.add(result.dut_isn)
+  })
+  return uniqueISNs.size
 })
 
 // Get available sites for filter
 const availableSites = computed(() => {
-    const sites = new Set<string>()
-    props.results.forEach(result => {
-        if (result.site_name) {
-            sites.add(result.site_name)
-        }
-    })
-    return Array.from(sites)
+  const sites = new Set<string>()
+  props.results.forEach((result) => {
+    if (result.site_name) {
+      sites.add(result.site_name)
+    }
+  })
+  return Array.from(sites)
 })
 
 // Filtered ranking based on search and filters
 const filteredRanking = computed(() => {
-    const currentStation = selectedTab.value
-    if (!currentStation || !rankingByStation.value[currentStation]) {
-        return []
+  const currentStation = selectedTab.value
+  if (!currentStation || !rankingByStation.value[currentStation]) {
+    return []
+  }
+
+  let items = rankingByStation.value[currentStation]
+
+  // Apply search query
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    items = items.filter((item) => {
+      return (
+        item.isn.toLowerCase().includes(query) ||
+        item.device?.toLowerCase().includes(query) ||
+        item.testDate.toLowerCase().includes(query) ||
+        item.site?.toLowerCase().includes(query) ||
+        item.model?.toLowerCase().includes(query)
+      )
+    })
+  }
+
+  // Apply score filter
+  if (scoreFilterType.value && scoreFilterValue.value !== null) {
+    items = items.filter((item) => {
+      if (item.hasError) return true // Keep error items regardless of score filter
+
+      const score = item.score
+      // biome-ignore lint/style/noNonNullAssertion: guarded by scoreFilterValue.value !== null check above
+      const filterValue = scoreFilterValue.value!
+
+      switch (scoreFilterType.value) {
+        case 'gt':
+          return score > filterValue
+        case 'gte':
+          return score >= filterValue
+        case 'lt':
+          return score < filterValue
+        case 'lte':
+          return score <= filterValue
+        case 'eq':
+          return Math.abs(score - filterValue) < 0.01
+        default:
+          return true
+      }
+    })
+  }
+
+  // Apply status filter
+  if (statusFilter.value) {
+    if (statusFilter.value === 'passed') {
+      items = items.filter((item) => !item.hasError)
+    } else if (statusFilter.value === 'failed') {
+      items = items.filter((item) => item.hasError)
     }
+  }
 
-    let items = rankingByStation.value[currentStation]
+  // Apply site filter
+  if (siteFilter.value) {
+    items = items.filter((item) => item.site === siteFilter.value)
+  }
 
-    // Apply search query
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase()
-        items = items.filter(item => {
-            return (
-                item.isn.toLowerCase().includes(query) ||
-                (item.device && item.device.toLowerCase().includes(query)) ||
-                item.testDate.toLowerCase().includes(query) ||
-                (item.site && item.site.toLowerCase().includes(query)) ||
-                (item.model && item.model.toLowerCase().includes(query))
-            )
-        })
-    }
-
-    // Apply score filter
-    if (scoreFilterType.value && scoreFilterValue.value !== null) {
-        items = items.filter(item => {
-            if (item.hasError) return true // Keep error items regardless of score filter
-
-            const score = item.score
-            const filterValue = scoreFilterValue.value!
-
-            switch (scoreFilterType.value) {
-                case 'gt':
-                    return score > filterValue
-                case 'gte':
-                    return score >= filterValue
-                case 'lt':
-                    return score < filterValue
-                case 'lte':
-                    return score <= filterValue
-                case 'eq':
-                    return Math.abs(score - filterValue) < 0.01
-                default:
-                    return true
-            }
-        })
-    }
-
-    // Apply status filter
-    if (statusFilter.value) {
-        if (statusFilter.value === 'passed') {
-            items = items.filter(item => !item.hasError)
-        } else if (statusFilter.value === 'failed') {
-            items = items.filter(item => item.hasError)
-        }
-    }
-
-    // Apply site filter
-    if (siteFilter.value) {
-        items = items.filter(item => item.site === siteFilter.value)
-    }
-
-    return items
+  return items
 })
 
 // Check if there are active filters
 const hasActiveFilters = computed(() => {
-    return !!(searchQuery.value || scoreFilterType.value || statusFilter.value || siteFilter.value)
+  return !!(searchQuery.value || scoreFilterType.value || statusFilter.value || siteFilter.value)
 })
 
 // Count active filters
 const activeFilterCount = computed(() => {
-    let count = 0
-    if (searchQuery.value) count++
-    if (scoreFilterType.value && scoreFilterValue.value !== null) count++
-    if (statusFilter.value) count++
-    if (siteFilter.value) count++
-    return count
+  let count = 0
+  if (searchQuery.value) count++
+  if (scoreFilterType.value && scoreFilterValue.value !== null) count++
+  if (statusFilter.value) count++
+  if (siteFilter.value) count++
+  return count
 })
 
 const rankingHeaders = [
-    { title: 'Rank', key: 'rank', sortable: false, width: '100px' },
-    { title: 'DUT ISN', key: 'isn', sortable: true },
-    { title: 'Device', key: 'device', sortable: true },
-    { title: 'Test Date', key: 'testDate', sortable: true, width: '250px' },
-    { title: 'Score', key: 'score', sortable: true },
-    { title: 'Site', key: 'site', sortable: true },
-    { title: 'Model', key: 'model', sortable: true },
-    { title: 'Status', key: 'errorItem', sortable: false }
+  { title: 'Rank', key: 'rank', sortable: false, width: '100px' },
+  { title: 'DUT ISN', key: 'isn', sortable: true },
+  { title: 'Device', key: 'device', sortable: true },
+  { title: 'Test Date', key: 'testDate', sortable: true, width: '250px' },
+  { title: 'Score', key: 'score', sortable: true },
+  { title: 'Site', key: 'site', sortable: true },
+  { title: 'Model', key: 'model', sortable: true },
+  { title: 'Status', key: 'errorItem', sortable: false },
 ]
 
 function getScoreColor(score: number): string {
-    // Score color logic for 0-10 scale: lower scores should be red, higher scores should be green
-    if (score >= 9.5) return 'success'       // Green for excellent (9.5-10)
-    if (score >= 8.5) return 'light-green'   // Light green for very good (8.5-9.49)
-    if (score >= 7.5) return 'lime'          // Lime for good (7.5-8.49)
-    if (score >= 6.5) return 'warning'       // Yellow for acceptable (6.5-7.49)
-    if (score >= 5.0) return 'orange'        // Orange for poor (5.0-6.49)
-    return 'error'                           // Red for very poor (<5.0)
+  // Score color logic for 0-10 scale: lower scores should be red, higher scores should be green
+  if (score >= 9.5) return 'success' // Green for excellent (9.5-10)
+  if (score >= 8.5) return 'light-green' // Light green for very good (8.5-9.49)
+  if (score >= 7.5) return 'lime' // Lime for good (7.5-8.49)
+  if (score >= 6.5) return 'warning' // Yellow for acceptable (6.5-7.49)
+  if (score >= 5.0) return 'orange' // Orange for poor (5.0-6.49)
+  return 'error' // Red for very poor (<5.0)
 }
 
 function getScoreFilterLabel(): string {
-    switch (scoreFilterType.value) {
-        case 'gt':
-            return '>'
-        case 'gte':
-            return '≥'
-        case 'lt':
-            return '<'
-        case 'lte':
-            return '≤'
-        case 'eq':
-            return '='
-        default:
-            return ''
-    }
+  switch (scoreFilterType.value) {
+    case 'gt':
+      return '>'
+    case 'gte':
+      return '≥'
+    case 'lt':
+      return '<'
+    case 'lte':
+      return '≤'
+    case 'eq':
+      return '='
+    default:
+      return ''
+  }
 }
 
 function clearAllFilters() {
-    searchQuery.value = ''
-    scoreFilterType.value = null
-    scoreFilterValue.value = null
-    statusFilter.value = null
-    siteFilter.value = null
+  searchQuery.value = ''
+  scoreFilterType.value = null
+  scoreFilterValue.value = null
+  statusFilter.value = null
+  siteFilter.value = null
 }
 
 function getRankingRowClass(item: RankingItem): string {
-    if (item.hasError) return 'error-row'
-    if (item.rank === 1) return 'rank-1-row'
-    if (item.rank === 2) return 'rank-2-row'
-    if (item.rank === 3) return 'rank-3-row'
-    return ''
+  if (item.hasError) return 'error-row'
+  if (item.rank === 1) return 'rank-1-row'
+  if (item.rank === 2) return 'rank-2-row'
+  if (item.rank === 3) return 'rank-3-row'
+  return ''
 }
 
 function handleRowClick(item: RankingItem, stationName: string) {
-    emit('row-click', { isn: item.isn, stationName })
+  emit('row-click', { isn: item.isn, stationName })
 }
 </script>
 

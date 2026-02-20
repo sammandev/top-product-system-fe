@@ -1,10 +1,10 @@
 /**
  * Pagination Composable
- * 
+ *
  * Manages pagination state for data tables and lists
  */
 
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 export interface PaginationOptions {
   initialPage?: number
@@ -14,17 +14,17 @@ export interface PaginationOptions {
 
 /**
  * Pagination composable
- * 
+ *
  * @example
  * ```ts
  * const { page, perPage, totalItems, totalPages, paginatedItems, setTotalItems } = usePagination({
  *   initialPage: 1,
  *   initialPerPage: 25
  * })
- * 
+ *
  * // Set total after fetching data
  * setTotalItems(100)
- * 
+ *
  * // Use in v-data-table
  * <v-data-table
  *   :items="paginatedItems"
@@ -35,10 +35,7 @@ export interface PaginationOptions {
  * />
  * ```
  */
-export function usePagination<T>(
-  items: T[] | (() => T[]),
-  options: PaginationOptions = {}
-) {
+export function usePagination<T>(items: T[] | (() => T[]), options: PaginationOptions = {}) {
   const page = ref(options.initialPage || 1)
   const perPage = ref(options.initialPerPage || 25)
   const totalItems = ref(0)
@@ -113,6 +110,6 @@ export function usePagination<T>(
     prevPage,
     setPerPage,
     setTotalItems,
-    reset
+    reset,
   }
 }

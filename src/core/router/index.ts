@@ -1,6 +1,6 @@
 /**
  * Vue Router Configuration
- * 
+ *
  * Main router setup with:
  * - Feature-based route organization
  * - Authentication guards
@@ -8,23 +8,23 @@
  * - Navigation loading state
  */
 
-import { createRouter, createWebHistory } from 'vue-router'
 import type { Router } from 'vue-router'
+import { createRouter, createWebHistory } from 'vue-router'
+import { useAppConfigStore } from '@/core/stores/appConfig.store'
+import { authGuard } from './guards'
 import {
   activityRoutes,
+  adminRoutes,
   authRoutes,
+  commonRoutes,
+  comparisonRoutes,
+  conversionRoutes,
   dashboardRoutes,
   dutRoutes,
-  parsingRoutes,
-  comparisonRoutes,
-  topProductsRoutes,
-  adminRoutes,
-  commonRoutes,
   mastercontrolRoutes,
-  conversionRoutes
+  parsingRoutes,
+  topProductsRoutes,
 } from './routes'
-import { authGuard } from './guards'
-import { useAppConfigStore } from '@/core/stores/appConfig.store'
 
 /**
  * Combine all feature routes
@@ -40,7 +40,7 @@ const routes = [
   ...mastercontrolRoutes,
   ...conversionRoutes,
   ...adminRoutes,
-  ...dutRoutes
+  ...dutRoutes,
 ]
 
 /**
@@ -56,7 +56,7 @@ const router: Router = createRouter({
     }
     // Scroll to top for new routes
     return { top: 0 }
-  }
+  },
 })
 
 /**
@@ -66,7 +66,7 @@ router.beforeEach((to, from, next) => {
   // Set navigation loading state immediately
   const appConfigStore = useAppConfigStore()
   appConfigStore.isNavigating = true
-  
+
   // Call auth guard
   authGuard(to, from, next)
 })

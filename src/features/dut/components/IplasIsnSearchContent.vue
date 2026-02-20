@@ -243,8 +243,7 @@
                         Download Selected ({{ selectedRecordIndices.length }})
                     </v-btn>
                     <v-btn size="small" variant="outlined" color="white" @click="toggleExpandAll">
-                        <v-icon start>{{ allExpanded ? 'mdi-arrow-collapse-vertical' : 'mdi-arrow-expand-vertical'
-                            }}</v-icon>
+                        <v-icon start>{{ allExpanded ? 'mdi-arrow-collapse-vertical' : 'mdi-arrow-expand-vertical' }}</v-icon>
                         {{ allExpanded ? 'Collapse All' : 'Expand All' }}
                     </v-btn>
                 </div>
@@ -288,14 +287,12 @@
                                 <v-divider vertical />
                                 <div>
                                     <div class="text-caption text-medium-emphasis">Stations</div>
-                                    <div class="text-subtitle-1 font-weight-bold text-info">{{ isnGroup.stations.length
-                                    }}</div>
+                                    <div class="text-subtitle-1 font-weight-bold text-info">{{ isnGroup.stations.length }}</div>
                                 </div>
                                 <v-divider vertical />
                                 <div>
                                     <div class="text-caption text-medium-emphasis">Total Records</div>
-                                    <div class="text-subtitle-1 font-weight-bold text-info">{{ isnGroup.records.length
-                                    }}</div>
+                                    <div class="text-subtitle-1 font-weight-bold text-info">{{ isnGroup.records.length }}</div>
                                 </div>
                             </div>
 
@@ -362,8 +359,7 @@
                                                     class="font-weight-bold">
                                                     Record {{
                                                         (carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] ||
-                                                            0) + 1 }} / {{ getDisplayedStationRecords(isnGroup,
-                                                        stationGroup).length }}
+                                                            0) + 1 }} / {{ getDisplayedStationRecords(isnGroup, stationGroup).length }}
                                                 </v-chip>
                                                 <v-btn icon size="small" variant="text"
                                                     :disabled="(carouselModels[`${isnGroup.isn}-${stationGroup.stationName}`] || 0) >= getDisplayedStationRecords(isnGroup, stationGroup).length - 1"
@@ -405,8 +401,7 @@
                                                             </v-chip>
                                                             <v-chip size="small" label color="default">
                                                                 <v-icon start size="small">mdi-timer</v-icon>
-                                                                {{ calculateDuration(record.test_start_time,
-                                                                    record.test_end_time) }}
+                                                                {{ calculateDuration(record.test_start_time, record.test_end_time) }}
                                                             </v-chip>
                                                         </div>
                                                         <!-- Row 3: Status Icon and ErrorName -->
@@ -414,16 +409,12 @@
                                                             <v-icon
                                                                 :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'"
                                                                 size="small" class="flex-shrink-0 mt-1">
-                                                                {{ isStatusPass(record.test_status) &&
-                                                                    isStatusPass(record.error_code) ? 'mdi-check-circle' :
-                                                                    'mdi-alert-circle' }}
+                                                                {{ isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'mdi-check-circle' : 'mdi-alert-circle' }}
                                                             </v-icon>
                                                             <span
                                                                 :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'text-success' : 'text-error'"
                                                                 class="text-break" style="word-break: break-word;">
-                                                                {{ isStatusPass(record.test_status) &&
-                                                                    isStatusPass(record.error_code) ? 'PASS' :
-                                                                    (record.error_name || record.error_code || 'FAIL') }}
+                                                                {{ isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'PASS' : (record.error_name || record.error_code || 'FAIL') }}
                                                             </span>
                                                         </div>
                                                         <!-- Row 4: Action Buttons -->
@@ -485,8 +476,7 @@
                                                         </v-chip>
                                                         <v-chip size="small" label color="default">
                                                             <v-icon start size="small">mdi-timer</v-icon>
-                                                            {{ calculateDuration(record.test_start_time,
-                                                                record.test_end_time) }}
+                                                            {{ calculateDuration(record.test_start_time, record.test_end_time) }}
                                                         </v-chip>
                                                     </div>
                                                     <!-- Row 3: Status Icon and ErrorName -->
@@ -494,16 +484,12 @@
                                                         <v-icon
                                                             :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'"
                                                             size="small" class="flex-shrink-0 mt-1">
-                                                            {{ isStatusPass(record.test_status) &&
-                                                                isStatusPass(record.error_code) ? 'mdi-check-circle' :
-                                                                'mdi-alert-circle' }}
+                                                            {{ isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'mdi-check-circle' : 'mdi-alert-circle' }}
                                                         </v-icon>
                                                         <span
                                                             :class="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'text-success' : 'text-error'"
                                                             class="text-break" style="word-break: break-word;">
-                                                            {{ isStatusPass(record.test_status) &&
-                                                                isStatusPass(record.error_code) ? 'PASS' :
-                                                                (record.error_name || record.error_code || 'FAIL') }}
+                                                            {{ isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'PASS' : (record.error_name || record.error_code || 'FAIL') }}
                                                         </span>
                                                     </div>
                                                     <!-- Row 4: Action Buttons -->
@@ -560,9 +546,7 @@
                                                     <v-icon
                                                         :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'"
                                                         size="large">
-                                                        {{ isStatusPass(record.test_status) &&
-                                                            isStatusPass(record.error_code) ? 'mdi-check-circle' :
-                                                            'mdi-alert-circle' }}
+                                                        {{ isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'mdi-check-circle' : 'mdi-alert-circle' }}
                                                     </v-icon>
                                                 </template>
                                                 <v-list-item-title>
@@ -572,15 +556,10 @@
                                                     <div class="d-flex flex-wrap align-center gap-2 mt-1">
                                                         <v-chip size="small" label
                                                             :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'">
-                                                            {{ isStatusPass(record.test_status) &&
-                                                                isStatusPass(record.error_code) ? 'PASS' : record.error_name
-                                                                ||
-                                                                record.error_code || 'FAIL' }}
+                                                            {{ isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'PASS' : record.error_name || record.error_code || 'FAIL' }}
                                                         </v-chip>
                                                         <v-chip size="small" label color="default">
-                                                            {{ calculateDuration(record.test_start_time,
-                                                                record.test_end_time)
-                                                            }}
+                                                            {{ calculateDuration(record.test_start_time, record.test_end_time) }}
                                                         </v-chip>
                                                         <v-chip size="small" label color="default">
                                                             {{ formatShortTime(record.test_end_time, record.site) }}
@@ -643,17 +622,13 @@
                                                     :color="isStatusPass(item.test_status) && isStatusPass(item.error_code) ? 'success' : 'error'"
                                                     size="small" label>
                                                     <v-icon start size="small">
-                                                        {{ isStatusPass(item.test_status) &&
-                                                            isStatusPass(item.error_code) ? 'mdi-check-circle' :
-                                                            'mdi-alert-circle' }}
+                                                        {{ isStatusPass(item.test_status) && isStatusPass(item.error_code) ? 'mdi-check-circle' : 'mdi-alert-circle' }}
                                                     </v-icon>
-                                                    {{ isStatusPass(item.test_status) && isStatusPass(item.error_code) ?
-                                                        'PASS' : item.error_code }}
+                                                    {{ isStatusPass(item.test_status) && isStatusPass(item.error_code) ? 'PASS' : item.error_code }}
                                                 </v-chip>
                                             </template>
                                             <template #item.error_name="{ item }">
-                                                <span :class="!isStatusPass(item.error_code) ? 'text-error' : ''">{{
-                                                    item.error_name || '-' }}</span>
+                                                <span :class="!isStatusPass(item.error_code) ? 'text-error' : ''">{{ item.error_name || '-' }}</span>
                                             </template>
                                             <template #item.test_end_time="{ item }">
                                                 {{ formatShortTime(item.test_end_time, item.site) }}
@@ -714,10 +689,7 @@
                                                             :color="isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'success' : 'error'"
                                                             size="small" label class="mb-2"
                                                             style="white-space: normal; max-width: 100%;">
-                                                            {{ isStatusPass(record.test_status) &&
-                                                                isStatusPass(record.error_code) ? 'PASS' :
-                                                                (record.error_name ||
-                                                                    record.error_code || 'FAIL') }}
+                                                            {{ isStatusPass(record.test_status) && isStatusPass(record.error_code) ? 'PASS' : (record.error_name || record.error_code || 'FAIL') }}
                                                         </v-chip>
                                                         <div class="d-flex flex-wrap gap-2 mb-2">
                                                             <v-chip size="small" label color="default">
@@ -726,8 +698,7 @@
                                                             </v-chip>
                                                             <v-chip size="small" label color="default">
                                                                 <v-icon start size="small">mdi-timer</v-icon>
-                                                                {{ calculateDuration(record.test_start_time,
-                                                                    record.test_end_time) }}
+                                                                {{ calculateDuration(record.test_start_time, record.test_end_time) }}
                                                             </v-chip>
                                                         </div>
                                                         <div class="d-flex gap-1">
@@ -778,15 +749,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
-import IplasTestItemsFullscreenDialog from './IplasTestItemsFullscreenDialog.vue'
-import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
-import { type IsnSearchData, type DownloadAttachmentInfo, type DownloadCsvLogInfo } from '@/features/dut_logs/composables/useIplasApi'
-import type { IsnSearchTestItem } from '@/features/dut_logs/api/iplasApi'
-import { adjustIplasDisplayTime, isStatusPass, isStatusFail } from '@/shared/utils/helpers'
-import { lookupIsn, lookupIsnsBatch, type SfistspIsnReferenceResponse } from '@/features/dut_logs/api/sfistspApi'
+import { computed, ref } from 'vue'
 import { iplasProxyApi } from '@/features/dut_logs/api/iplasProxyApi'
+import {
+  lookupIsn,
+  lookupIsnsBatch,
+  type SfistspIsnReferenceResponse,
+} from '@/features/dut_logs/api/sfistspApi'
+import {
+  type DownloadAttachmentInfo,
+  type DownloadCsvLogInfo,
+  type IsnSearchData,
+  useIplasApi,
+} from '@/features/dut_logs/composables/useIplasApi'
+import { isStatusPass } from '@/shared/utils/helpers'
+import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 
 // ============================================================================
 // Timezone Utilities for ISN Search API
@@ -798,47 +775,47 @@ import { iplasProxyApi } from '@/features/dut_logs/api/iplasProxyApi'
  * PSZ (China), PTY (Taiwan) = UTC+8
  */
 function getSiteTimezoneOffset(site: string): number {
-    const siteUpper = (site || '').toUpperCase()
-    if (siteUpper === 'PTB' || siteUpper === 'PVN') {
-        return 8 // UTC+8
-    } else if (siteUpper === 'PSZ' || siteUpper === 'PTY') {
-        return 8 // UTC+8
-    }
-    // Default to UTC+8 for unknown sites
-    return 8
+  const siteUpper = (site || '').toUpperCase()
+  if (siteUpper === 'PTB' || siteUpper === 'PVN') {
+    return 8 // UTC+8
+  } else if (siteUpper === 'PSZ' || siteUpper === 'PTY') {
+    return 8 // UTC+8
+  }
+  // Default to UTC+8 for unknown sites
+  return 8
 }
 
 /**
  * Format time for display in tables
  * Input: "2025-09-16 13:23:57%:z" (UTC+0 time from isn_search API)
  * Output: "2025/09/16, 21:23:57" (local time in display format)
- * 
+ *
  * CRITICAL: isn_search API returns UTC+0 time. We need to convert to local time.
  */
 function formatTimeForDisplay(timeStr: string, site: string): string {
-    if (!timeStr) return ''
+  if (!timeStr) return ''
 
-    // Clean the time string: remove %:z suffix
-    const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
+  // Clean the time string: remove %:z suffix
+  const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
 
-    // Parse as UTC
-    const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
+  // Parse as UTC
+  const utcDate = new Date(`${cleanedTime.replace(' ', 'T')}Z`)
 
-    // Get timezone offset based on site
-    const offsetHours = getSiteTimezoneOffset(site)
+  // Get timezone offset based on site
+  const offsetHours = getSiteTimezoneOffset(site)
 
-    // Add timezone offset
-    const localDate = new Date(utcDate.getTime() + offsetHours * 60 * 60 * 1000)
+  // Add timezone offset
+  const localDate = new Date(utcDate.getTime() + offsetHours * 60 * 60 * 1000)
 
-    // Format as YYYY/MM/DD, HH:mm:ss (consistent with other iPLAS displays)
-    const year = localDate.getUTCFullYear()
-    const month = String(localDate.getUTCMonth() + 1).padStart(2, '0')
-    const day = String(localDate.getUTCDate()).padStart(2, '0')
-    const hours = String(localDate.getUTCHours()).padStart(2, '0')
-    const minutes = String(localDate.getUTCMinutes()).padStart(2, '0')
-    const seconds = String(localDate.getUTCSeconds()).padStart(2, '0')
+  // Format as YYYY/MM/DD, HH:mm:ss (consistent with other iPLAS displays)
+  const year = localDate.getUTCFullYear()
+  const month = String(localDate.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(localDate.getUTCDate()).padStart(2, '0')
+  const hours = String(localDate.getUTCHours()).padStart(2, '0')
+  const minutes = String(localDate.getUTCMinutes()).padStart(2, '0')
+  const seconds = String(localDate.getUTCSeconds()).padStart(2, '0')
 
-    return `${year}/${month}/${day}, ${hours}:${minutes}:${seconds}`
+  return `${year}/${month}/${day}, ${hours}:${minutes}:${seconds}`
 }
 
 // ============================================================================
@@ -846,44 +823,44 @@ function formatTimeForDisplay(timeStr: string, site: string): string {
 // ============================================================================
 
 interface StationGroup {
-    stationName: string
-    displayName: string
-    hasError: boolean
-    errorCount: number
-    records: IsnSearchData[]
-    order: number  // Station order from iPLAS API
+  stationName: string
+  displayName: string
+  hasError: boolean
+  errorCount: number
+  records: IsnSearchData[]
+  order: number // Station order from iPLAS API
 }
 
 interface ISNGroup {
-    isn: string
-    site: string
-    project: string
-    hasError: boolean
-    errorCount: number
-    records: IsnSearchData[]
-    stations: StationGroup[]
+  isn: string
+  site: string
+  project: string
+  hasError: boolean
+  errorCount: number
+  records: IsnSearchData[]
+  stations: StationGroup[]
 }
 
 // SFISTSP Reference interface
 interface SfistspReference {
-    isn_searched: string  // Original search term
-    isn: string           // Primary ISN from references
-    success: boolean
-    ssn?: string
-    mac?: string
-    errorMessage?: string
-    isn_references?: string[]
+  isn_searched: string // Original search term
+  isn: string // Primary ISN from references
+  success: boolean
+  ssn?: string
+  mac?: string
+  errorMessage?: string
+  isn_references?: string[]
 }
 
 const {
-    loadingIsnSearch,
-    downloading,
-    error,
-    searchByIsn,
-    searchByIsnBatch,
-    downloadAttachments,
-    downloadCsvLogs,
-    clearIsnSearchData
+  loadingIsnSearch,
+  downloading,
+  error,
+  searchByIsn,
+  searchByIsnBatch,
+  downloadAttachments,
+  downloadCsvLogs,
+  clearIsnSearchData,
 } = useIplasApi()
 
 // Input mode
@@ -908,8 +885,8 @@ const enableUnifiedSearch = ref(true)
 // Display controls
 const viewMode = ref<'grid' | 'list' | 'table' | 'compact'>('grid')
 const testItemFilters = ref<Record<string, 'all' | 'value' | 'non-value' | 'bin'>>({})
-const testItemStatusFilters = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({}) // Per-test item status filter
-const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
+// const testItemStatusFilters = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({}) // Per-test item status filter
+// const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
 const expandedPanels = ref<Record<number, number[]>>({}) // Key: isnIndex, Value: array of expanded station panel indices
 const testItemSearchTerms = ref<Record<string, string[]>>({})
 const carouselModels = ref<Record<string, number>>({}) // For grid view carousel navigation
@@ -926,7 +903,7 @@ const INITIAL_DISPLAY_LIMIT = 50
 const displayLimits = ref<Record<string, number>>({})
 
 function getDisplayLimit(isn: string): number {
-    return displayLimits.value[isn] || INITIAL_DISPLAY_LIMIT
+  return displayLimits.value[isn] || INITIAL_DISPLAY_LIMIT
 }
 
 // Fullscreen dialog controls
@@ -942,102 +919,112 @@ const fullscreenOriginalRecord = ref<IsnSearchData | null>(null)
 const selectedRecordIndices = ref<string[]>([]) // Format: "tabIndex-recordIndex"
 const downloadingKey = ref<string | null>(null)
 
-const testItemHeaders = [
-    { title: 'Test Item', key: 'NAME', sortable: true },
-    { title: 'Status', key: 'STATUS', sortable: true },
-    { title: 'Value', key: 'VALUE', sortable: true },
-    { title: 'UCL', key: 'UCL', sortable: true },
-    { title: 'LCL', key: 'LCL', sortable: true }
-]
+// const testItemHeaders = [
+//   { title: 'Test Item', key: 'NAME', sortable: true },
+//   { title: 'Status', key: 'STATUS', sortable: true },
+//   { title: 'Value', key: 'VALUE', sortable: true },
+//   { title: 'UCL', key: 'UCL', sortable: true },
+//   { title: 'LCL', key: 'LCL', sortable: true },
+// ]
 
 // Table headers for records table view (like InternalDataContent.vue)
 const recordTableHeaders = [
-    { title: '#', key: 'record_number', sortable: true },
-    { title: 'Test Time', key: 'test_end_time', sortable: true },
-    { title: 'Device ID', key: 'device_id', sortable: true },
-    { title: 'Status', key: 'status', sortable: false },
-    { title: 'Error Name', key: 'error_name', sortable: true },
-    { title: 'Duration', key: 'duration', sortable: true },
-    { title: 'Actions', key: 'actions', sortable: false }
+  { title: '#', key: 'record_number', sortable: true },
+  { title: 'Test Time', key: 'test_end_time', sortable: true },
+  { title: 'Device ID', key: 'device_id', sortable: true },
+  { title: 'Status', key: 'status', sortable: false },
+  { title: 'Error Name', key: 'error_name', sortable: true },
+  { title: 'Duration', key: 'duration', sortable: true },
+  { title: 'Actions', key: 'actions', sortable: false },
 ]
 
 // Computed
 const allExpanded = computed(() => {
-    const currentTab = activeISNTab.value
-    const currentGroup = groupedByISN.value[currentTab]
-    if (!currentGroup) return false
+  const currentTab = activeISNTab.value
+  const currentGroup = groupedByISN.value[currentTab]
+  if (!currentGroup) return false
 
-    // Check if all station expansion panels are expanded for current ISN
-    const stationsCount = currentGroup.stations.length
-    const expandedStations = expandedPanels.value[currentTab] || []
-    return expandedStations.length === stationsCount && stationsCount > 0
+  // Check if all station expansion panels are expanded for current ISN
+  const stationsCount = currentGroup.stations.length
+  const expandedStations = expandedPanels.value[currentTab] || []
+  return expandedStations.length === stationsCount && stationsCount > 0
 })
 
 // Helper to initialize carousel at latest record for grid view
 function initializeCarousel(key: string, dataLength: number): void {
-    if (!(key in carouselModels.value) && dataLength > 1) {
-        carouselModels.value[key] = dataLength - 1 // Start at last record
-    }
+  if (!(key in carouselModels.value) && dataLength > 1) {
+    carouselModels.value[key] = dataLength - 1 // Start at last record
+  }
 }
 
 // Helper to get error count for a station
 function getStationErrorCount(stationGroup: StationGroup): number {
-    return stationGroup.records.filter(r => !isStatusPass(r.test_status) || !isStatusPass(r.error_code)).length
+  return stationGroup.records.filter(
+    (r) => !isStatusPass(r.test_status) || !isStatusPass(r.error_code),
+  ).length
 }
 
 // Helper to check if latest record has error
 function hasLatestStationError(stationGroup: StationGroup): boolean {
-    if (stationGroup.records.length === 0) return false
-    // Sort by test_end_time descending and check the first one
-    const sortedRecords = [...stationGroup.records].sort((a, b) => {
-        const timeA = new Date(a.test_end_time.replace('%:z', '').replace(' ', 'T') + 'Z').getTime()
-        const timeB = new Date(b.test_end_time.replace('%:z', '').replace(' ', 'T') + 'Z').getTime()
-        return timeB - timeA
-    })
-    const latestRecord = sortedRecords[0]
-    return latestRecord ? (!isStatusPass(latestRecord.test_status) || !isStatusPass(latestRecord.error_code)) : false
+  if (stationGroup.records.length === 0) return false
+  // Sort by test_end_time descending and check the first one
+  const sortedRecords = [...stationGroup.records].sort((a, b) => {
+    const timeA = new Date(`${a.test_end_time.replace('%:z', '').replace(' ', 'T')}Z`).getTime()
+    const timeB = new Date(`${b.test_end_time.replace('%:z', '').replace(' ', 'T')}Z`).getTime()
+    return timeB - timeA
+  })
+  const latestRecord = sortedRecords[0]
+  return latestRecord
+    ? !isStatusPass(latestRecord.test_status) || !isStatusPass(latestRecord.error_code)
+    : false
 }
 
 // Format time for display using site-specific timezone
 // ISN search API returns UTC+0 time, need to convert to local time (UTC+8)
 function formatShortTime(timeStr: string, site: string = 'PTB'): string {
-    return formatTimeForDisplay(timeStr, site)
+  return formatTimeForDisplay(timeStr, site)
 }
 
 function calculateDuration(startStr: string, endStr: string): string {
-    if (!startStr || !endStr) return '-'
-    try {
-        const cleanStart = startStr.replace('%:z', '').replace('T', ' ')
-        const cleanEnd = endStr.replace('%:z', '').replace('T', ' ')
-        const start = new Date(cleanStart.replace(' ', 'T') + 'Z')
-        const end = new Date(cleanEnd.replace(' ', 'T') + 'Z')
-        // Add +8 hours offset to both times
-        const adjustedStart = new Date(start.getTime() + 8 * 60 * 60 * 1000)
-        const adjustedEnd = new Date(end.getTime() + 8 * 60 * 60 * 1000)
-        const diffMs = adjustedEnd.getTime() - adjustedStart.getTime()
-        const seconds = (diffMs / 1000).toFixed(2)
-        return `${seconds}s`
-    } catch {
-        return '-'
-    }
+  if (!startStr || !endStr) return '-'
+  try {
+    const cleanStart = startStr.replace('%:z', '').replace('T', ' ')
+    const cleanEnd = endStr.replace('%:z', '').replace('T', ' ')
+    const start = new Date(`${cleanStart.replace(' ', 'T')}Z`)
+    const end = new Date(`${cleanEnd.replace(' ', 'T')}Z`)
+    // Add +8 hours offset to both times
+    const adjustedStart = new Date(start.getTime() + 8 * 60 * 60 * 1000)
+    const adjustedEnd = new Date(end.getTime() + 8 * 60 * 60 * 1000)
+    const diffMs = adjustedEnd.getTime() - adjustedStart.getTime()
+    const seconds = (diffMs / 1000).toFixed(2)
+    return `${seconds}s`
+  } catch {
+    return '-'
+  }
 }
 
 // Get filtered station records (returns all records for the station)
-function getFilteredStationRecords(_isnGroup: ISNGroup, stationGroup: StationGroup): IsnSearchData[] {
-    return stationGroup.records
+function getFilteredStationRecords(
+  _isnGroup: ISNGroup,
+  stationGroup: StationGroup,
+): IsnSearchData[] {
+  return stationGroup.records
 }
 
 // Performance: Get limited records for display
-function getDisplayedStationRecords(isnGroup: ISNGroup, stationGroup: StationGroup): IsnSearchData[] {
-    const filtered = getFilteredStationRecords(isnGroup, stationGroup)
-    const limit = getDisplayLimit(`${isnGroup.isn}-${stationGroup.stationName}`)
-    // Sort by test_end_time ascending (oldest first, latest last)
-    const sorted = [...filtered].sort((a, b) => {
-        const timeA = new Date(a.test_end_time.replace('%:z', '').replace(' ', 'T') + 'Z').getTime()
-        const timeB = new Date(b.test_end_time.replace('%:z', '').replace(' ', 'T') + 'Z').getTime()
-        return timeA - timeB
-    })
-    return sorted.slice(0, limit)
+function getDisplayedStationRecords(
+  isnGroup: ISNGroup,
+  stationGroup: StationGroup,
+): IsnSearchData[] {
+  const filtered = getFilteredStationRecords(isnGroup, stationGroup)
+  const limit = getDisplayLimit(`${isnGroup.isn}-${stationGroup.stationName}`)
+  // Sort by test_end_time ascending (oldest first, latest last)
+  const sorted = [...filtered].sort((a, b) => {
+    const timeA = new Date(`${a.test_end_time.replace('%:z', '').replace(' ', 'T')}Z`).getTime()
+    const timeB = new Date(`${b.test_end_time.replace('%:z', '').replace(' ', 'T')}Z`).getTime()
+    return timeA - timeB
+  })
+  return sorted.slice(0, limit)
 }
 
 // Record search queries per station
@@ -1045,587 +1032,615 @@ const recordSearchQueries = ref<Record<string, string>>({})
 
 // Get total filtered records count for a station
 function getTotalFilteredStationRecords(isnGroup: ISNGroup, stationGroup: StationGroup): number {
-    return getFilteredStationRecords(isnGroup, stationGroup).length
+  return getFilteredStationRecords(isnGroup, stationGroup).length
 }
 
 async function copyToClipboard(text: string): Promise<void> {
-    if (!text) return
-    try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(text)
-        } else {
-            // Fallback for older browsers or non-HTTPS contexts
-            const textArea = document.createElement('textarea')
-            textArea.value = text
-            textArea.style.position = 'fixed'
-            textArea.style.left = '-9999px'
-            document.body.appendChild(textArea)
-            textArea.select()
-            document.execCommand('copy')
-            document.body.removeChild(textArea)
-        }
-        showCopySuccess.value = true
-    } catch (err) {
-        console.error('Failed to copy to clipboard:', err)
+  if (!text) return
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      // Fallback for older browsers or non-HTTPS contexts
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-9999px'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
     }
+    showCopySuccess.value = true
+  } catch (err) {
+    console.error('Failed to copy to clipboard:', err)
+  }
 }
 
 function normalizeIsnRecord(record: IsnSearchData): NormalizedRecord {
-    // UPDATED: Convert UTC+0 times from ISN API to local time for display
-    // ISN API returns UTC+0 time with %:z suffix, need to convert to local time
-    const localStartTime = formatTimeForDisplay(record.test_start_time, record.site)
-    const localEndTime = formatTimeForDisplay(record.test_end_time, record.site)
-    
-    return {
-        isn: record.isn,
-        deviceId: record.device_id,
-        stationName: record.station_name,
-        displayStationName: record.display_station_name,
-        tsp: record.display_station_name, // ISN Search doesn't have TSP, use display_station_name
-        site: record.site,
-        project: record.project,
-        line: record.line,
-        errorCode: record.error_code,
-        errorName: record.error_name || '',
-        testStatus: record.test_status,
-        testStartTime: localStartTime,
-        testEndTime: localEndTime,
-        testItems: record.test_item?.map(ti => ({
-            NAME: ti.NAME,
-            STATUS: ti.STATUS,
-            VALUE: ti.VALUE,
-            UCL: ti.UCL || '',
-            LCL: ti.LCL || '',
-            CYCLE: ti.CYCLE || ''
-        })) || []
-    }
+  // UPDATED: Convert UTC+0 times from ISN API to local time for display
+  // ISN API returns UTC+0 time with %:z suffix, need to convert to local time
+  const localStartTime = formatTimeForDisplay(record.test_start_time, record.site)
+  const localEndTime = formatTimeForDisplay(record.test_end_time, record.site)
+
+  return {
+    isn: record.isn,
+    deviceId: record.device_id,
+    stationName: record.station_name,
+    displayStationName: record.display_station_name,
+    tsp: record.display_station_name, // ISN Search doesn't have TSP, use display_station_name
+    site: record.site,
+    project: record.project,
+    line: record.line,
+    errorCode: record.error_code,
+    errorName: record.error_name || '',
+    testStatus: record.test_status,
+    testStartTime: localStartTime,
+    testEndTime: localEndTime,
+    testItems:
+      record.test_item?.map((ti) => ({
+        NAME: ti.NAME,
+        STATUS: ti.STATUS,
+        VALUE: ti.VALUE,
+        UCL: ti.UCL || '',
+        LCL: ti.LCL || '',
+        CYCLE: ti.CYCLE || '',
+      })) || [],
+  }
 }
 
 function openFullscreen(record: IsnSearchData): void {
-    fullscreenOriginalRecord.value = record
-    fullscreenRecord.value = normalizeIsnRecord(record)
-    showFullscreenDialog.value = true
+  fullscreenOriginalRecord.value = record
+  fullscreenRecord.value = normalizeIsnRecord(record)
+  showFullscreenDialog.value = true
 }
 
 async function downloadSingleRecordFromFullscreen(): Promise<void> {
-    if (!fullscreenOriginalRecord.value) return
-    fullscreenDownloading.value = true
-    try {
-        const attachmentInfo = createAttachmentInfo(fullscreenOriginalRecord.value)
-        const csvLogInfo = createCsvLogInfo(fullscreenOriginalRecord.value)
+  if (!fullscreenOriginalRecord.value) return
+  fullscreenDownloading.value = true
+  try {
+    const attachmentInfo = createAttachmentInfo(fullscreenOriginalRecord.value)
+    const csvLogInfo = createCsvLogInfo(fullscreenOriginalRecord.value)
 
-        // Download both CSV and TXT logs in parallel
-        await Promise.all([
-            downloadAttachments(fullscreenOriginalRecord.value.site, fullscreenOriginalRecord.value.project, [attachmentInfo]),
-            downloadCsvLogs([csvLogInfo])
-        ])
+    // Download both CSV and TXT logs in parallel
+    await Promise.all([
+      downloadAttachments(
+        fullscreenOriginalRecord.value.site,
+        fullscreenOriginalRecord.value.project,
+        [attachmentInfo],
+      ),
+      downloadCsvLogs([csvLogInfo]),
+    ])
 
-        showSuccess.value = true
-    } catch (err) {
-        console.error('Failed to download test log:', err)
-    } finally {
-        fullscreenDownloading.value = false
-    }
+    showSuccess.value = true
+  } catch (err) {
+    console.error('Failed to download test log:', err)
+  } finally {
+    fullscreenDownloading.value = false
+  }
 }
 
 function toggleExpandAll(): void {
-    const currentTab = activeISNTab.value
-    const currentGroup = groupedByISN.value[currentTab]
-    if (!currentGroup) return
+  const currentTab = activeISNTab.value
+  const currentGroup = groupedByISN.value[currentTab]
+  if (!currentGroup) return
 
-    const stationsCount = currentGroup.stations.length
+  const stationsCount = currentGroup.stations.length
 
-    // Toggle all station expansion panels
-    const currentExpanded = expandedPanels.value[currentTab] || []
-    if (currentExpanded.length === stationsCount && stationsCount > 0) {
-        expandedPanels.value[currentTab] = []
+  // Toggle all station expansion panels
+  const currentExpanded = expandedPanels.value[currentTab] || []
+  if (currentExpanded.length === stationsCount && stationsCount > 0) {
+    expandedPanels.value[currentTab] = []
+  } else {
+    expandedPanels.value[currentTab] = currentGroup.stations.map((_, i) => i)
+  }
+
+  // Also toggle compact expansion panels
+  if (viewMode.value === 'compact') {
+    const compactCurrentExpanded = compactExpanded.value[currentTab] || []
+    if (compactCurrentExpanded.length === stationsCount && stationsCount > 0) {
+      compactExpanded.value[currentTab] = []
     } else {
-        expandedPanels.value[currentTab] = currentGroup.stations.map((_, i) => i)
+      compactExpanded.value[currentTab] = currentGroup.stations.map((_, i) => i)
     }
-
-    // Also toggle compact expansion panels
-    if (viewMode.value === 'compact') {
-        const compactCurrentExpanded = compactExpanded.value[currentTab] || []
-        if (compactCurrentExpanded.length === stationsCount && stationsCount > 0) {
-            compactExpanded.value[currentTab] = []
-        } else {
-            compactExpanded.value[currentTab] = currentGroup.stations.map((_, i) => i)
-        }
-    }
+  }
 }
 
 /**
  * Format time for download_attachment API (ISN Search data)
  * Input: "2025-09-16 13:23:57%:z" (UTC+0 time from isn_search API)
  * Output: "2025/09/16 20:23:57" (local time for PTB/PVN) or "2025/09/16 21:23:57" (for PSZ/PTY)
- * 
+ *
  * CRITICAL: isn_search API returns UTC+0 time. We need to convert to local time:
  * - PTB, PVN sites: add +7 hours
  * - PSZ, PTY sites: add +8 hours
  */
 function formatTimeForDownloadWithTimezone(timeStr: string, site: string): string {
-    if (!timeStr) return ''
+  if (!timeStr) return ''
 
-    // Clean the time string: remove %:z suffix
-    const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
+  // Clean the time string: remove %:z suffix
+  const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
 
-    // Parse as UTC
-    const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
+  // Parse as UTC
+  const utcDate = new Date(`${cleanedTime.replace(' ', 'T')}Z`)
 
-    // Get timezone offset based on site
-    const offsetHours = getSiteTimezoneOffset(site)
+  // Get timezone offset based on site
+  const offsetHours = getSiteTimezoneOffset(site)
 
-    // Add timezone offset
-    const localDate = new Date(utcDate.getTime() + offsetHours * 60 * 60 * 1000)
+  // Add timezone offset
+  const localDate = new Date(utcDate.getTime() + offsetHours * 60 * 60 * 1000)
 
-    // Format as YYYY/MM/DD HH:mm:ss
-    const year = localDate.getUTCFullYear()
-    const month = String(localDate.getUTCMonth() + 1).padStart(2, '0')
-    const day = String(localDate.getUTCDate()).padStart(2, '0')
-    const hours = String(localDate.getUTCHours()).padStart(2, '0')
-    const minutes = String(localDate.getUTCMinutes()).padStart(2, '0')
-    const seconds = String(localDate.getUTCSeconds()).padStart(2, '0')
+  // Format as YYYY/MM/DD HH:mm:ss
+  const year = localDate.getUTCFullYear()
+  const month = String(localDate.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(localDate.getUTCDate()).padStart(2, '0')
+  const hours = String(localDate.getUTCHours()).padStart(2, '0')
+  const minutes = String(localDate.getUTCMinutes()).padStart(2, '0')
+  const seconds = String(localDate.getUTCSeconds()).padStart(2, '0')
 
-    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`
+  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`
 }
 
 function createAttachmentInfo(record: IsnSearchData): DownloadAttachmentInfo {
-    return {
-        isn: record.isn,
-        // CRITICAL: Use test_end_time with timezone adjustment based on site
-        time: formatTimeForDownloadWithTimezone(record.test_end_time, record.site),
-        deviceid: record.device_id || '',
-        // Use display_station_name as per API documentation
-        station: record.display_station_name || record.station_name
-    }
+  return {
+    isn: record.isn,
+    // CRITICAL: Use test_end_time with timezone adjustment based on site
+    time: formatTimeForDownloadWithTimezone(record.test_end_time, record.site),
+    deviceid: record.device_id || '',
+    // Use display_station_name as per API documentation
+    station: record.display_station_name || record.station_name,
+  }
 }
 
 /**
  * Create CSV log info from record for downloading CSV test logs
  */
 function createCsvLogInfo(record: IsnSearchData): DownloadCsvLogInfo {
-    // Format test_end_time with milliseconds for CSV download API
-    const testEndTime = formatTimeForDownloadWithTimezone(record.test_end_time, record.site)
-    // Add .000 milliseconds if not present
-    const testEndTimeWithMs = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+  // Format test_end_time with milliseconds for CSV download API
+  const testEndTime = formatTimeForDownloadWithTimezone(record.test_end_time, record.site)
+  // Add .000 milliseconds if not present
+  const testEndTimeWithMs = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
 
-    return {
-        site: record.site,
-        project: record.project,
-        station: record.display_station_name || record.station_name,
-        line: record.line || 'ALL',
-        model: 'ALL',
-        deviceid: record.device_id || '',
-        isn: record.isn,
-        test_end_time: testEndTimeWithMs,
-        data_source: 0
-    }
+  return {
+    site: record.site,
+    project: record.project,
+    station: record.display_station_name || record.station_name,
+    line: record.line || 'ALL',
+    model: 'ALL',
+    deviceid: record.device_id || '',
+    isn: record.isn,
+    test_end_time: testEndTimeWithMs,
+    data_source: 0,
+  }
 }
 
-async function downloadSingleRecord(record: IsnSearchData, stationKey: string, recordIndex: number): Promise<void> {
-    downloadingKey.value = `${stationKey}-${recordIndex}`
-    try {
-        const attachmentInfo = createAttachmentInfo(record)
-        const csvLogInfo = createCsvLogInfo(record)
-        console.log('Download attachment info:', attachmentInfo)
-        console.log('Download CSV log info:', csvLogInfo)
+async function downloadSingleRecord(
+  record: IsnSearchData,
+  stationKey: string,
+  recordIndex: number,
+): Promise<void> {
+  downloadingKey.value = `${stationKey}-${recordIndex}`
+  try {
+    const attachmentInfo = createAttachmentInfo(record)
+    const csvLogInfo = createCsvLogInfo(record)
+    console.log('Download attachment info:', attachmentInfo)
+    console.log('Download CSV log info:', csvLogInfo)
 
-        // Download both CSV and TXT logs in parallel
-        await Promise.all([
-            downloadAttachments(record.site, record.project, [attachmentInfo]),
-            downloadCsvLogs([csvLogInfo])
-        ])
+    // Download both CSV and TXT logs in parallel
+    await Promise.all([
+      downloadAttachments(record.site, record.project, [attachmentInfo]),
+      downloadCsvLogs([csvLogInfo]),
+    ])
 
-        showSuccess.value = true
-    } catch (err) {
-        console.error('Failed to download test log:', err)
-    } finally {
-        downloadingKey.value = null
-    }
+    showSuccess.value = true
+  } catch (err) {
+    console.error('Failed to download test log:', err)
+  } finally {
+    downloadingKey.value = null
+  }
 }
 
 async function downloadSelectedRecords(): Promise<void> {
-    if (selectedRecordIndices.value.length === 0) return
+  if (selectedRecordIndices.value.length === 0) return
 
-    try {
-        // Group by site and project
-        const groupedByProject: Record<string, { site: string; project: string; attachments: DownloadAttachmentInfo[] }> = {}
+  try {
+    // Group by site and project
+    const groupedByProject: Record<
+      string,
+      { site: string; project: string; attachments: DownloadAttachmentInfo[] }
+    > = {}
 
-        for (const key of selectedRecordIndices.value) {
-            const parts = key.split('-').map(Number)
-            const isnIdx = parts[0] as number
-            const stationIdx = parts[1] as number
-            const recordIdx = parts[2] as number
-            const isnGroup = groupedByISN.value[isnIdx]
-            if (!isnGroup) continue
-            const stationGroup = isnGroup.stations[stationIdx]
-            if (!stationGroup) continue
-            const displayedRecords = getDisplayedStationRecords(isnGroup, stationGroup)
-            const record = displayedRecords[recordIdx]
-            if (!record) continue
+    for (const key of selectedRecordIndices.value) {
+      const parts = key.split('-').map(Number)
+      const isnIdx = parts[0] as number
+      const stationIdx = parts[1] as number
+      const recordIdx = parts[2] as number
+      const isnGroup = groupedByISN.value[isnIdx]
+      if (!isnGroup) continue
+      const stationGroup = isnGroup.stations[stationIdx]
+      if (!stationGroup) continue
+      const displayedRecords = getDisplayedStationRecords(isnGroup, stationGroup)
+      const record = displayedRecords[recordIdx]
+      if (!record) continue
 
-            const projectKey = `${record.site}::${record.project}`
-            if (!groupedByProject[projectKey]) {
-                groupedByProject[projectKey] = {
-                    site: record.site,
-                    project: record.project,
-                    attachments: []
-                }
-            }
-            groupedByProject[projectKey].attachments.push(createAttachmentInfo(record))
+      const projectKey = `${record.site}::${record.project}`
+      if (!groupedByProject[projectKey]) {
+        groupedByProject[projectKey] = {
+          site: record.site,
+          project: record.project,
+          attachments: [],
         }
-
-        // Download from each site/project
-        for (const projectGroup of Object.values(groupedByProject)) {
-            await downloadAttachments(projectGroup.site, projectGroup.project, projectGroup.attachments)
-        }
-        showSuccess.value = true
-    } catch (err) {
-        console.error('Failed to download test logs:', err)
+      }
+      groupedByProject[projectKey].attachments.push(createAttachmentInfo(record))
     }
+
+    // Download from each site/project
+    for (const projectGroup of Object.values(groupedByProject)) {
+      await downloadAttachments(projectGroup.site, projectGroup.project, projectGroup.attachments)
+    }
+    showSuccess.value = true
+  } catch (err) {
+    console.error('Failed to download test logs:', err)
+  }
 }
 
 function groupDataByISN(
-    data: IsnSearchData[],
-    identifierToPrimaryIsn: Map<string, string> = new Map(),
-    stationOrderMap: Map<string, number> = new Map()
+  data: IsnSearchData[],
+  identifierToPrimaryIsn: Map<string, string> = new Map(),
+  stationOrderMap: Map<string, number> = new Map(),
 ): ISNGroup[] {
-    const groups: Record<string, ISNGroup> = {}
+  const groups: Record<string, ISNGroup> = {}
 
-    // Get the primary ISN for a record - uses the mapping if available, otherwise uses record's ISN
-    const getPrimaryIsn = (record: IsnSearchData): string => {
-        // Check if record's ISN has a mapped primary ISN
-        const primaryIsn = identifierToPrimaryIsn.get(record.isn)
-        return primaryIsn || record.isn
+  // Get the primary ISN for a record - uses the mapping if available, otherwise uses record's ISN
+  const getPrimaryIsn = (record: IsnSearchData): string => {
+    // Check if record's ISN has a mapped primary ISN
+    const primaryIsn = identifierToPrimaryIsn.get(record.isn)
+    return primaryIsn || record.isn
+  }
+
+  for (const record of data) {
+    const groupKey = getPrimaryIsn(record)
+    if (!groups[groupKey]) {
+      groups[groupKey] = {
+        isn: groupKey,
+        site: record.site,
+        project: record.project,
+        hasError: false,
+        errorCount: 0,
+        records: [],
+        stations: [],
+      }
+    }
+    const group = groups[groupKey]
+    if (group) {
+      group.records.push(record)
+      if (!isStatusPass(record.test_status) || !isStatusPass(record.error_code)) {
+        group.hasError = true
+        group.errorCount++
+      }
+    }
+  }
+
+  // Group records within each ISN by station
+  for (const isnGroup of Object.values(groups)) {
+    const stationMap: Record<string, StationGroup> = {}
+
+    for (const record of isnGroup.records) {
+      const stationKey = record.display_station_name || record.station_name
+      if (!stationMap[stationKey]) {
+        // Get station order from map, default to high number if not found
+        const order =
+          stationOrderMap.get(stationKey) ?? stationOrderMap.get(record.station_name) ?? 9999
+        stationMap[stationKey] = {
+          stationName: record.station_name,
+          displayName: record.display_station_name || record.station_name,
+          hasError: false,
+          errorCount: 0,
+          records: [],
+          order,
+        }
+      }
+      const station = stationMap[stationKey]
+      if (station) {
+        station.records.push(record)
+        if (!isStatusPass(record.test_status) || !isStatusPass(record.error_code)) {
+          station.hasError = true
+          station.errorCount++
+        }
+      }
     }
 
-    for (const record of data) {
-        const groupKey = getPrimaryIsn(record)
-        if (!groups[groupKey]) {
-            groups[groupKey] = {
-                isn: groupKey,
-                site: record.site,
-                project: record.project,
-                hasError: false,
-                errorCount: 0,
-                records: [],
-                stations: []
-            }
-        }
-        const group = groups[groupKey]
-        if (group) {
-            group.records.push(record)
-            if (!isStatusPass(record.test_status) || !isStatusPass(record.error_code)) {
-                group.hasError = true
-                group.errorCount++
-            }
-        }
-    }
+    // Sort stations by order
+    isnGroup.stations = Object.values(stationMap).sort((a, b) => a.order - b.order)
+  }
 
-    // Group records within each ISN by station
-    for (const isnGroup of Object.values(groups)) {
-        const stationMap: Record<string, StationGroup> = {}
-
-        for (const record of isnGroup.records) {
-            const stationKey = record.display_station_name || record.station_name
-            if (!stationMap[stationKey]) {
-                // Get station order from map, default to high number if not found
-                const order = stationOrderMap.get(stationKey) ?? stationOrderMap.get(record.station_name) ?? 9999
-                stationMap[stationKey] = {
-                    stationName: record.station_name,
-                    displayName: record.display_station_name || record.station_name,
-                    hasError: false,
-                    errorCount: 0,
-                    records: [],
-                    order
-                }
-            }
-            const station = stationMap[stationKey]
-            if (station) {
-                station.records.push(record)
-                if (!isStatusPass(record.test_status) || !isStatusPass(record.error_code)) {
-                    station.hasError = true
-                    station.errorCount++
-                }
-            }
-        }
-
-        // Sort stations by order
-        isnGroup.stations = Object.values(stationMap).sort((a, b) => a.order - b.order)
-    }
-
-    return Object.values(groups)
+  return Object.values(groups)
 }
 
 function clearAll(): void {
-    searchIsn.value = ''
-    selectedISNs.value = []
-    groupedByISN.value = []
-    hasSearched.value = false
-    isSearching.value = false
-    selectedRecordIndices.value = []
-    expandedPanels.value = {}
-    activeISNTab.value = 0
-    stationStatusFilters.value = {}
-    recordSearchQueries.value = {}
-    selectedFilterDeviceIds.value = {}
-    testItemFilters.value = {}
-    testItemSearchTerms.value = {}
-    sfistspReferences.value = []
-    carouselModels.value = {}
-    compactExpanded.value = {}
-    clearIsnSearchData()
+  searchIsn.value = ''
+  selectedISNs.value = []
+  groupedByISN.value = []
+  hasSearched.value = false
+  isSearching.value = false
+  selectedRecordIndices.value = []
+  expandedPanels.value = {}
+  activeISNTab.value = 0
+  stationStatusFilters.value = {}
+  recordSearchQueries.value = {}
+  selectedFilterDeviceIds.value = {}
+  testItemFilters.value = {}
+  testItemSearchTerms.value = {}
+  sfistspReferences.value = []
+  carouselModels.value = {}
+  compactExpanded.value = {}
+  clearIsnSearchData()
 }
 
 /**
  * Format MAC address with colons (e.g., "AABBCCDDEEFF" -> "AA:BB:CC:DD:EE:FF")
  */
 function formatMacAddress(mac: string | undefined): string {
-    if (!mac) return '-'
-    // Remove any existing separators and whitespace
-    const cleanMac = mac.replace(/[:\-\s]/g, '').toUpperCase()
-    if (cleanMac.length !== 12) return mac // Return original if not valid length
-    return cleanMac.match(/.{2}/g)?.join(':') || mac
+  if (!mac) return '-'
+  // Remove any existing separators and whitespace
+  const cleanMac = mac.replace(/[:\-\s]/g, '').toUpperCase()
+  if (cleanMac.length !== 12) return mac // Return original if not valid length
+  return cleanMac.match(/.{2}/g)?.join(':') || mac
 }
 
 /**
  * Handle SFISTSP ISN reference lookup
  */
 async function handleSfistspLookup(): Promise<void> {
-    // Determine ISN list based on input mode
-    let isnList: string[] = []
+  // Determine ISN list based on input mode
+  let isnList: string[] = []
 
-    if (inputMode.value === 'multiple') {
-        isnList = selectedISNs.value.map(isn => String(isn).trim()).filter(isn => isn.length > 0)
+  if (inputMode.value === 'multiple') {
+    isnList = selectedISNs.value.map((isn) => String(isn).trim()).filter((isn) => isn.length > 0)
+  } else {
+    if (!searchIsn.value?.trim()) return
+    isnList = searchIsn.value
+      .split(/[\n,\s]+/)
+      .map((isn) => isn.trim())
+      .filter((isn) => isn && isn.length > 0)
+  }
+
+  if (isnList.length === 0) {
+    error.value = 'Please enter at least one valid ISN for SFISTSP lookup'
+    return
+  }
+
+  loadingSfistspLookup.value = true
+  sfistspReferences.value = []
+
+  try {
+    if (isnList.length === 1) {
+      // Single ISN lookup
+      // biome-ignore lint/style/noNonNullAssertion: length === 1 guarantees index 0 exists
+      const response = await lookupIsn(isnList[0]!)
+      sfistspReferences.value = [
+        {
+          isn_searched: response.isn_searched,
+          isn: response.isn,
+          success: response.success,
+          ssn: response.ssn || undefined,
+          mac: response.mac || undefined,
+          errorMessage: response.error_message || undefined,
+          isn_references: response.isn_references,
+        },
+      ]
     } else {
-        if (!searchIsn.value?.trim()) return
-        isnList = searchIsn.value
-            .split(/[\n,\s]+/)
-            .map(isn => isn.trim())
-            .filter(isn => isn && isn.length > 0)
+      // Batch lookup
+      const response = await lookupIsnsBatch(isnList)
+      sfistspReferences.value = response.results.map((r: SfistspIsnReferenceResponse) => ({
+        isn_searched: r.isn_searched,
+        isn: r.isn,
+        success: r.success,
+        ssn: r.ssn || undefined,
+        mac: r.mac || undefined,
+        errorMessage: r.error_message || undefined,
+        isn_references: r.isn_references,
+      }))
     }
-
-    if (isnList.length === 0) {
-        error.value = 'Please enter at least one valid ISN for SFISTSP lookup'
-        return
-    }
-
-    loadingSfistspLookup.value = true
-    sfistspReferences.value = []
-
-    try {
-        if (isnList.length === 1) {
-            // Single ISN lookup
-            const response = await lookupIsn(isnList[0]!)
-            sfistspReferences.value = [{
-                isn_searched: response.isn_searched,
-                isn: response.isn,
-                success: response.success,
-                ssn: response.ssn || undefined,
-                mac: response.mac || undefined,
-                errorMessage: response.error_message || undefined,
-                isn_references: response.isn_references
-            }]
-        } else {
-            // Batch lookup
-            const response = await lookupIsnsBatch(isnList)
-            sfistspReferences.value = response.results.map((r: SfistspIsnReferenceResponse) => ({
-                isn_searched: r.isn_searched,
-                isn: r.isn,
-                success: r.success,
-                ssn: r.ssn || undefined,
-                mac: r.mac || undefined,
-                errorMessage: r.error_message || undefined,
-                isn_references: r.isn_references
-            }))
-        }
-    } catch (err: unknown) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error'
-        console.error('SFISTSP lookup failed:', err)
-        error.value = `SFISTSP lookup failed: ${errorMessage}`
-    } finally {
-        loadingSfistspLookup.value = false
-    }
+  } catch (err: unknown) {
+    const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+    console.error('SFISTSP lookup failed:', err)
+    error.value = `SFISTSP lookup failed: ${errorMessage}`
+  } finally {
+    loadingSfistspLookup.value = false
+  }
 }
 
 async function handleSearch(): Promise<void> {
-    // Determine ISN list based on input mode
-    let isnList: string[] = []
+  // Determine ISN list based on input mode
+  let isnList: string[] = []
 
-    if (inputMode.value === 'multiple') {
-        isnList = selectedISNs.value.map(isn => String(isn).trim()).filter(isn => isn.length > 0)
-    } else {
-        if (!searchIsn.value?.trim()) return
-        isnList = searchIsn.value
-            .split(/[\n,\s]+/)
-            .map(isn => isn.trim())
-            .filter(isn => isn && isn.length > 0)
+  if (inputMode.value === 'multiple') {
+    isnList = selectedISNs.value.map((isn) => String(isn).trim()).filter((isn) => isn.length > 0)
+  } else {
+    if (!searchIsn.value?.trim()) return
+    isnList = searchIsn.value
+      .split(/[\n,\s]+/)
+      .map((isn) => isn.trim())
+      .filter((isn) => isn && isn.length > 0)
+  }
+
+  if (isnList.length === 0) {
+    error.value = 'Please enter at least one valid ISN'
+    return
+  }
+
+  clearIsnSearchData()
+  selectedRecordIndices.value = []
+  expandedPanels.value = {}
+  isSearching.value = true
+  hasSearched.value = false // Will be set to true after search completes
+
+  try {
+    // Maps for unified search: identifier -> primary ISN
+    const identifierToPrimaryIsn = new Map<string, string>()
+    let searchTerms: string[] = [...isnList]
+
+    if (enableUnifiedSearch.value) {
+      // Collect all related identifiers from SFISTSP and map them to primary ISN
+      const allIdentifiers = new Set<string>(isnList)
+
+      try {
+        if (isnList.length === 1) {
+          // Single ISN lookup
+          // biome-ignore lint/style/noNonNullAssertion: length === 1 guarantees index 0 exists
+          const response = await lookupIsn(isnList[0]!)
+          if (response.success && response.isn) {
+            const primaryIsn = response.isn
+            // Map the searched term to primary ISN
+            // biome-ignore lint/style/noNonNullAssertion: length === 1 guarantees index 0 exists
+            identifierToPrimaryIsn.set(isnList[0]!, primaryIsn)
+            // Add and map primary ISN
+            allIdentifiers.add(primaryIsn)
+            identifierToPrimaryIsn.set(primaryIsn, primaryIsn)
+            // Add and map SSN if available
+            if (response.ssn) {
+              allIdentifiers.add(response.ssn)
+              identifierToPrimaryIsn.set(response.ssn, primaryIsn)
+            }
+            // Add and map MAC if available
+            if (response.mac) {
+              allIdentifiers.add(response.mac)
+              identifierToPrimaryIsn.set(response.mac, primaryIsn)
+            }
+          }
+        } else {
+          // Batch lookup
+          const response = await lookupIsnsBatch(isnList)
+          for (let i = 0; i < response.results.length; i++) {
+            // biome-ignore lint/style/noNonNullAssertion: index i is within bounds of response.results
+            const result = response.results[i]!
+            const searchedIsn = isnList[i]
+            if (result.success && result.isn) {
+              const primaryIsn = result.isn
+              // Map the searched term to primary ISN
+              if (searchedIsn) {
+                identifierToPrimaryIsn.set(searchedIsn, primaryIsn)
+              }
+              // Add and map primary ISN
+              allIdentifiers.add(primaryIsn)
+              identifierToPrimaryIsn.set(primaryIsn, primaryIsn)
+              // Add and map SSN if available
+              if (result.ssn) {
+                allIdentifiers.add(result.ssn)
+                identifierToPrimaryIsn.set(result.ssn, primaryIsn)
+              }
+              // Add and map MAC if available
+              if (result.mac) {
+                allIdentifiers.add(result.mac)
+                identifierToPrimaryIsn.set(result.mac, primaryIsn)
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn(
+          'SFISTSP lookup failed during unified search, proceeding with original terms:',
+          err,
+        )
+      }
+
+      searchTerms = Array.from(allIdentifiers).filter((term) => term && term.length > 0)
+      console.log(
+        `Unified search: expanded ${isnList.length} terms to ${searchTerms.length} unique identifiers`,
+      )
     }
 
-    if (isnList.length === 0) {
-        error.value = 'Please enter at least one valid ISN'
-        return
+    // Fetch all ISNs - use batch endpoint for better performance (1 HTTP call instead of N)
+    const allRecords: IsnSearchData[] = []
+    const seenRecordKeys = new Set<string>() // Deduplicate records
+
+    // Use batch search for multiple search terms (significantly faster - 1 HTTP call vs N)
+    if (searchTerms.length > 1) {
+      const resultMap = await searchByIsnBatch(searchTerms)
+      for (const [_isn, records] of resultMap) {
+        for (const record of records) {
+          const recordKey = `${record.site}-${record.project}-${record.device_id}-${record.test_end_time}`
+          if (!seenRecordKeys.has(recordKey)) {
+            seenRecordKeys.add(recordKey)
+            allRecords.push(record)
+          }
+        }
+      }
+    } else if (searchTerms.length === 1) {
+      // Single ISN - use regular search
+      try {
+        // biome-ignore lint/style/noNonNullAssertion: length === 1 guarantees index 0 exists
+        const data = await searchByIsn(searchTerms[0]!)
+        for (const record of data) {
+          const recordKey = `${record.site}-${record.project}-${record.device_id}-${record.test_end_time}`
+          if (!seenRecordKeys.has(recordKey)) {
+            seenRecordKeys.add(recordKey)
+            allRecords.push(record)
+          }
+        }
+      } catch (err) {
+        console.warn(`Failed to fetch records for ISN ${searchTerms[0]}:`, err)
+      }
+    }
+    // Fetch station order from iPLAS API
+    const stationOrderMap = new Map<string, number>()
+    if (allRecords.length > 0) {
+      try {
+        // Get unique ISNs from records to fetch station info
+        const uniqueIsns = [...new Set(allRecords.map((r) => r.isn))]
+        if (uniqueIsns.length === 1) {
+          // biome-ignore lint/style/noNonNullAssertion: length === 1 guarantees index 0 exists
+          const stationsResponse = await iplasProxyApi.getStationsFromIsn({ isn: uniqueIsns[0]! })
+          for (const station of stationsResponse.stations) {
+            stationOrderMap.set(station.display_station_name, station.order)
+            stationOrderMap.set(station.station_name, station.order)
+          }
+        } else if (uniqueIsns.length > 1) {
+          const stationsResponse = await iplasProxyApi.getStationsFromIsnBatch({
+            isns: uniqueIsns.slice(0, 50),
+          })
+          for (const result of stationsResponse.results) {
+            for (const station of result.stations) {
+              stationOrderMap.set(station.display_station_name, station.order)
+              stationOrderMap.set(station.station_name, station.order)
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to fetch station order, using default order:', err)
+      }
     }
 
-    clearIsnSearchData()
-    selectedRecordIndices.value = []
-    expandedPanels.value = {}
-    isSearching.value = true
-    hasSearched.value = false // Will be set to true after search completes
+    // Group by ISN with identifier mapping and station order
+    groupedByISN.value = groupDataByISN(allRecords, identifierToPrimaryIsn, stationOrderMap)
 
-    try {
-        // Maps for unified search: identifier -> primary ISN
-        const identifierToPrimaryIsn = new Map<string, string>()
-        let searchTerms: string[] = [...isnList]
+    // Initialize expanded panels for first tab
+    if (groupedByISN.value.length > 0) {
+      expandedPanels.value[0] = [0]
+      activeISNTab.value = 0
 
-        if (enableUnifiedSearch.value) {
-            // Collect all related identifiers from SFISTSP and map them to primary ISN
-            const allIdentifiers = new Set<string>(isnList)
-
-            try {
-                if (isnList.length === 1) {
-                    // Single ISN lookup
-                    const response = await lookupIsn(isnList[0]!)
-                    if (response.success && response.isn) {
-                        const primaryIsn = response.isn
-                        // Map the searched term to primary ISN
-                        identifierToPrimaryIsn.set(isnList[0]!, primaryIsn)
-                        // Add and map primary ISN
-                        allIdentifiers.add(primaryIsn)
-                        identifierToPrimaryIsn.set(primaryIsn, primaryIsn)
-                        // Add and map SSN if available
-                        if (response.ssn) {
-                            allIdentifiers.add(response.ssn)
-                            identifierToPrimaryIsn.set(response.ssn, primaryIsn)
-                        }
-                        // Add and map MAC if available
-                        if (response.mac) {
-                            allIdentifiers.add(response.mac)
-                            identifierToPrimaryIsn.set(response.mac, primaryIsn)
-                        }
-                    }
-                } else {
-                    // Batch lookup
-                    const response = await lookupIsnsBatch(isnList)
-                    for (let i = 0; i < response.results.length; i++) {
-                        const result = response.results[i]!
-                        const searchedIsn = isnList[i]
-                        if (result.success && result.isn) {
-                            const primaryIsn = result.isn
-                            // Map the searched term to primary ISN
-                            if (searchedIsn) {
-                                identifierToPrimaryIsn.set(searchedIsn, primaryIsn)
-                            }
-                            // Add and map primary ISN
-                            allIdentifiers.add(primaryIsn)
-                            identifierToPrimaryIsn.set(primaryIsn, primaryIsn)
-                            // Add and map SSN if available
-                            if (result.ssn) {
-                                allIdentifiers.add(result.ssn)
-                                identifierToPrimaryIsn.set(result.ssn, primaryIsn)
-                            }
-                            // Add and map MAC if available
-                            if (result.mac) {
-                                allIdentifiers.add(result.mac)
-                                identifierToPrimaryIsn.set(result.mac, primaryIsn)
-                            }
-                        }
-                    }
-                }
-            } catch (err) {
-                console.warn('SFISTSP lookup failed during unified search, proceeding with original terms:', err)
-            }
-
-            searchTerms = Array.from(allIdentifiers).filter(term => term && term.length > 0)
-            console.log(`Unified search: expanded ${isnList.length} terms to ${searchTerms.length} unique identifiers`)
+      // Initialize testItemFilters to 'value' for all records
+      for (let isnIndex = 0; isnIndex < groupedByISN.value.length; isnIndex++) {
+        const isnGroup = groupedByISN.value[isnIndex]
+        if (!isnGroup) continue
+        for (let stationIndex = 0; stationIndex < isnGroup.stations.length; stationIndex++) {
+          const station = isnGroup.stations[stationIndex]
+          if (!station) continue
+          for (let recordIndex = 0; recordIndex < station.records.length; recordIndex++) {
+            const key = `${isnGroup.isn}-${stationIndex}-${recordIndex}`
+            testItemFilters.value[key] = 'value'
+          }
         }
-
-        // Fetch all ISNs - use batch endpoint for better performance (1 HTTP call instead of N)
-        const allRecords: IsnSearchData[] = []
-        const seenRecordKeys = new Set<string>() // Deduplicate records
-
-        // Use batch search for multiple search terms (significantly faster - 1 HTTP call vs N)
-        if (searchTerms.length > 1) {
-            const resultMap = await searchByIsnBatch(searchTerms)
-            for (const [_isn, records] of resultMap) {
-                for (const record of records) {
-                    const recordKey = `${record.site}-${record.project}-${record.device_id}-${record.test_end_time}`
-                    if (!seenRecordKeys.has(recordKey)) {
-                        seenRecordKeys.add(recordKey)
-                        allRecords.push(record)
-                    }
-                }
-            }
-        } else if (searchTerms.length === 1) {
-            // Single ISN - use regular search
-            try {
-                const data = await searchByIsn(searchTerms[0]!)
-                for (const record of data) {
-                    const recordKey = `${record.site}-${record.project}-${record.device_id}-${record.test_end_time}`
-                    if (!seenRecordKeys.has(recordKey)) {
-                        seenRecordKeys.add(recordKey)
-                        allRecords.push(record)
-                    }
-                }
-            } catch (err) {
-                console.warn(`Failed to fetch records for ISN ${searchTerms[0]}:`, err)
-            }
-        }
-        // Fetch station order from iPLAS API
-        const stationOrderMap = new Map<string, number>()
-        if (allRecords.length > 0) {
-            try {
-                // Get unique ISNs from records to fetch station info
-                const uniqueIsns = [...new Set(allRecords.map(r => r.isn))]
-                if (uniqueIsns.length === 1) {
-                    const stationsResponse = await iplasProxyApi.getStationsFromIsn({ isn: uniqueIsns[0]! })
-                    for (const station of stationsResponse.stations) {
-                        stationOrderMap.set(station.display_station_name, station.order)
-                        stationOrderMap.set(station.station_name, station.order)
-                    }
-                } else if (uniqueIsns.length > 1) {
-                    const stationsResponse = await iplasProxyApi.getStationsFromIsnBatch({ isns: uniqueIsns.slice(0, 50) })
-                    for (const result of stationsResponse.results) {
-                        for (const station of result.stations) {
-                            stationOrderMap.set(station.display_station_name, station.order)
-                            stationOrderMap.set(station.station_name, station.order)
-                        }
-                    }
-                }
-            } catch (err) {
-                console.warn('Failed to fetch station order, using default order:', err)
-            }
-        }
-
-        // Group by ISN with identifier mapping and station order
-        groupedByISN.value = groupDataByISN(allRecords, identifierToPrimaryIsn, stationOrderMap)
-
-        // Initialize expanded panels for first tab
-        if (groupedByISN.value.length > 0) {
-            expandedPanels.value[0] = [0]
-            activeISNTab.value = 0
-
-            // Initialize testItemFilters to 'value' for all records
-            for (let isnIndex = 0; isnIndex < groupedByISN.value.length; isnIndex++) {
-                const isnGroup = groupedByISN.value[isnIndex]
-                if (!isnGroup) continue
-                for (let stationIndex = 0; stationIndex < isnGroup.stations.length; stationIndex++) {
-                    const station = isnGroup.stations[stationIndex]
-                    if (!station) continue
-                    for (let recordIndex = 0; recordIndex < station.records.length; recordIndex++) {
-                        const key = `${isnGroup.isn}-${stationIndex}-${recordIndex}`
-                        testItemFilters.value[key] = 'value'
-                    }
-                }
-            }
-        }
-    } catch (err) {
-        console.error('Search failed:', err)
-    } finally {
-        // Mark search as complete - this prevents premature "no results" alert
-        isSearching.value = false
-        hasSearched.value = true
+      }
     }
+  } catch (err) {
+    console.error('Search failed:', err)
+  } finally {
+    // Mark search as complete - this prevents premature "no results" alert
+    isSearching.value = false
+    hasSearched.value = true
+  }
 }
 </script>
 

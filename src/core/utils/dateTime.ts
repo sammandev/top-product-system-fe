@@ -1,6 +1,6 @@
 /**
  * Date and Time Utility Functions
- * 
+ *
  * Provides timezone-aware date formatting and conversion utilities.
  * All dates from backend are assumed to be in UTC and will be converted to user's local timezone.
  */
@@ -13,7 +13,7 @@
  */
 export function formatDateToLocal(
   utcDate: string | Date | null | undefined,
-  options?: Intl.DateTimeFormatOptions
+  options?: Intl.DateTimeFormatOptions,
 ): string {
   if (!utcDate) return 'N/A'
 
@@ -21,7 +21,7 @@ export function formatDateToLocal(
     const date = typeof utcDate === 'string' ? new Date(utcDate) : utcDate
 
     // Check if date is valid
-    if (isNaN(date.getTime())) {
+    if (Number.isNaN(date.getTime())) {
       console.warn('Invalid date:', utcDate)
       return 'Invalid Date'
     }
@@ -35,7 +35,7 @@ export function formatDateToLocal(
       minute: '2-digit',
       second: '2-digit',
       hour12: false,
-      ...options
+      ...options,
     }
 
     // Format using user's locale and timezone
@@ -55,8 +55,8 @@ export function formatDateTimeCompact(utcDate: string | Date | null | undefined)
 
   try {
     const date = typeof utcDate === 'string' ? new Date(utcDate) : utcDate
-    
-    if (isNaN(date.getTime())) {
+
+    if (Number.isNaN(date.getTime())) {
       return 'Invalid Date'
     }
 
@@ -82,7 +82,7 @@ export function formatDateOnly(utcDate: string | Date | null | undefined): strin
   return formatDateToLocal(utcDate, {
     year: 'numeric',
     month: '2-digit',
-    day: '2-digit'
+    day: '2-digit',
   })
 }
 
@@ -95,7 +95,7 @@ export function formatTimeOnly(utcDate: string | Date | null | undefined): strin
     hour: '2-digit',
     minute: '2-digit',
     second: '2-digit',
-    hour12: false
+    hour12: false,
   })
 }
 
@@ -108,8 +108,8 @@ export function formatDateWithTimezone(utcDate: string | Date | null | undefined
 
   try {
     const date = typeof utcDate === 'string' ? new Date(utcDate) : utcDate
-    
-    if (isNaN(date.getTime())) {
+
+    if (Number.isNaN(date.getTime())) {
       return 'Invalid Date'
     }
 
@@ -118,7 +118,7 @@ export function formatDateWithTimezone(utcDate: string | Date | null | undefined
     const sign = offset >= 0 ? '+' : '-'
     const hours = Math.floor(Math.abs(offset) / 60)
     const minutes = Math.abs(offset) % 60
-    const tz = `GMT${sign}${hours}${minutes > 0 ? ':' + String(minutes).padStart(2, '0') : ''}`
+    const tz = `GMT${sign}${hours}${minutes > 0 ? `:${String(minutes).padStart(2, '0')}` : ''}`
 
     return `${formatted} (${tz})`
   } catch (error) {
@@ -135,8 +135,8 @@ export function formatRelativeTime(utcDate: string | Date | null | undefined): s
 
   try {
     const date = typeof utcDate === 'string' ? new Date(utcDate) : utcDate
-    
-    if (isNaN(date.getTime())) {
+
+    if (Number.isNaN(date.getTime())) {
       return 'Invalid Date'
     }
 

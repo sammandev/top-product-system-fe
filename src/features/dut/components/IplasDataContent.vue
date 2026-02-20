@@ -144,9 +144,7 @@
                                 <v-btn color="primary" :loading="loadingTestItems || isStreaming"
                                     :disabled="isStreaming" @click="fetchTestItems">
                                     <v-icon start>mdi-download</v-icon>
-                                    {{ useIndexedDbMode ? 'Stream' : 'Search' }} Test Data ({{ selectedStations.length
-                                    }} station{{
-                                        selectedStations.length > 1 ? 's' : '' }})
+                                    {{ useIndexedDbMode ? 'Stream' : 'Search' }} Test Data ({{ selectedStations.length }} station{{ selectedStations.length > 1 ? 's' : '' }})
                                 </v-btn>
 
                                 <!-- Abort Stream Button -->
@@ -229,9 +227,7 @@
                                 :value="index">
                                 <v-icon start size="small">mdi-router-wireless</v-icon>
                                 {{ stationGroup.displayName }}
-                                <v-chip size="x-small" color="info" class="ml-2">{{
-                                    getFilteredStationRecords(stationGroup).length
-                                    }}</v-chip>
+                                <v-chip size="x-small" color="info" class="ml-2">{{ getFilteredStationRecords(stationGroup).length }}</v-chip>
                             </v-tab>
                         </v-tabs>
 
@@ -271,10 +267,10 @@
                                     :selectable="true"
                                     :selected-keys="getSelectedKeysForStation(stationGroup.stationName)"
                                     :server-side="false"
-                                    @update:selected-keys="(keys) => handleTableSelectionChange(stationGroup.stationName, keys)"
+                                    @update:selected-keys="handleTableSelectionChange(stationGroup.stationName, $event)"
                                     @row-click="openFullscreen"
-                                    @download="(record) => downloadSingleRecord(record, stationGroup.stationName, 0)"
-                                    @download-csv="(record) => downloadCsvRecord(record, stationGroup.stationName, 0)" />
+                                    @download="downloadSingleRecord($event, stationGroup.stationName, 0)"
+                                    @download-csv="downloadCsvRecord($event, stationGroup.stationName, 0)" />
                             </v-window-item>
                         </v-window>
                     </v-card-text>
@@ -361,8 +357,7 @@
 
                             <!-- Test End Time Column -->
                             <template #item.TestEndTime="{ item }">
-                                {{ item.TestEndTime ? adjustIplasDisplayTime(item.TestEndTime, 1) :
-                                    adjustIplasDisplayTime(item.TestStartTime, 1) }}
+                                {{ item.TestEndTime ? adjustIplasDisplayTime(item.TestEndTime, 1) : adjustIplasDisplayTime(item.TestStartTime, 1) }}
                             </template>
 
                             <!-- Duration Column -->
@@ -471,61 +466,62 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch, onUnmounted } from 'vue'
 import { useDebounceFn } from '@vueuse/core'
-import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
-import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
-import { useIplasLocalData } from '@/features/dut_logs/composables/useIplasLocalData'
-import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
-import IplasIsnSearchContent from './IplasIsnSearchContent.vue'
-import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
-import IplasRecordTable from './IplasRecordTable.vue'
-import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
-import type { Station, TestItem, CsvTestItemData, DownloadAttachmentInfo } from '@/features/dut_logs/api/iplasApi'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import type {
+  CsvTestItemData,
+  DownloadAttachmentInfo,
+  Station,
+  TestItem,
+} from '@/features/dut_logs/api/iplasApi'
 import type { CompactCsvTestItemData } from '@/features/dut_logs/api/iplasProxyApi'
 import type { DownloadCsvLogInfo } from '@/features/dut_logs/composables/useIplasApi'
+import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
+import { useIplasLocalData } from '@/features/dut_logs/composables/useIplasLocalData'
+import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
+import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
+import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 
 // UPDATED: Define emits for iPLAS Settings button
-const emit = defineEmits<{
-    (e: 'show-settings'): void
-}>()
+const emit = defineEmits<(e: 'show-settings') => void>()
 
 // Station group - now supports both full and compact records
 interface StationGroup {
-    stationName: string
-    displayName: string
-    records: (CsvTestItemData | CompactCsvTestItemData)[]
+  stationName: string
+  displayName: string
+  records: (CsvTestItemData | CompactCsvTestItemData)[]
 }
 
 // Search mode tab - persisted in URL
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
+
 const searchMode = useTabPersistence<'station' | 'isn'>('subTab', 'station')
 
 const {
-    loading,
-    loadingStations,
-    loadingTestItems,
-    downloading,
-    error,
-    chunkProgress,
-    possiblyTruncated,
-    siteProjects,
-    stations,
-    testItemData,
-    compactTestItemData,
-    uniqueSites,
-    projectsBySite,
-    fetchSiteProjects,
-    fetchStations,
-    fetchDeviceIds,
-    fetchTestItems: fetchTestItemsApi,
-    fetchTestItemsCompact,
-    fetchTestItemsPaginated,
-    fetchRecordTestItems,
-    downloadAttachments,
-    downloadCsvLogs,
-    batchDownloadLogs,
-    clearTestItemData
+  loading,
+  loadingStations,
+  loadingTestItems,
+  downloading,
+  error,
+  chunkProgress,
+  possiblyTruncated,
+  siteProjects,
+  stations,
+  testItemData,
+  compactTestItemData,
+  uniqueSites,
+  projectsBySite,
+  fetchSiteProjects,
+  fetchStations,
+  fetchDeviceIds,
+  fetchTestItems: fetchTestItemsApi,
+  fetchTestItemsCompact,
+  fetchTestItemsPaginated,
+  fetchRecordTestItems,
+  downloadAttachments,
+  downloadCsvLogs,
+  batchDownloadLogs,
+  clearTestItemData,
 } = useIplasApi()
 
 // Selection state
@@ -540,13 +536,13 @@ const loadingDevicesByStation = ref<Record<string, boolean>>({})
 // Date range preset
 const dateRangePreset = ref<string>('current_shift')
 const dateRangePresets = [
-    { title: 'Current Shift', value: 'current_shift' },
-    { title: 'Today', value: 'today' },
-    { title: 'Yesterday', value: 'yesterday' },
-    { title: 'This Week', value: 'week' },
-    { title: 'Last Week', value: 'last_week' },
-    { title: 'This Month', value: 'month' },
-    { title: 'Custom Date Range', value: 'custom' }
+  { title: 'Current Shift', value: 'current_shift' },
+  { title: 'Today', value: 'today' },
+  { title: 'Yesterday', value: 'yesterday' },
+  { title: 'This Week', value: 'week' },
+  { title: 'Last Week', value: 'last_week' },
+  { title: 'This Month', value: 'month' },
+  { title: 'Custom Date Range', value: 'custom' },
 ]
 
 // Device IDs grouped by station
@@ -558,14 +554,14 @@ const useCompactMode = ref(true)
 
 // Computed: Check if there's regular mode data (either testItemData or compactTestItemData)
 const hasRegularModeData = computed(() => {
-    return testItemData.value.length > 0 || compactTestItemData.value.length > 0
+  return testItemData.value.length > 0 || compactTestItemData.value.length > 0
 })
 
 // Computed: Get the total count of regular mode records
 const regularModeRecordCount = computed(() => {
-    return useCompactMode.value && compactTestItemData.value.length > 0
-        ? compactTestItemData.value.length
-        : testItemData.value.length
+  return useCompactMode.value && compactTestItemData.value.length > 0
+    ? compactTestItemData.value.length
+    : testItemData.value.length
 })
 
 // IndexedDB Mode: Stream data directly to disk instead of keeping in memory
@@ -578,33 +574,38 @@ const useIndexedDbMode = ref(false)
 
 // Initialize the local data composable for IndexedDB table integration
 const {
-    items: indexedDbItems,
-    totalItems: indexedDbTotalItems,
-    loading: indexedDbLoading,
-    tableOptions: indexedDbTableOptions,
-    streamStatus,
-    isStreaming,
-    streamProgress,
-    loadItems: loadIndexedDbItems,
-    loadAllItems: loadAllIndexedDbItems,
-    streamData: streamToIndexedDb,
-    abortStream: abortIndexedDbStream,
-    updateFilter: updateIndexedDbFilter
+  items: indexedDbItems,
+  totalItems: indexedDbTotalItems,
+  loading: indexedDbLoading,
+  tableOptions: indexedDbTableOptions,
+  streamStatus,
+  isStreaming,
+  streamProgress,
+  loadItems: loadIndexedDbItems,
+  loadAllItems: loadAllIndexedDbItems,
+  streamData: streamToIndexedDb,
+  abortStream: abortIndexedDbStream,
+  updateFilter: updateIndexedDbFilter,
 } = useIplasLocalData({
-    initialItemsPerPage: 25,
-    filterDebounceMs: 300
+  initialItemsPerPage: 25,
+  filterDebounceMs: 300,
 })
 
 // Server-side pagination state (for table view mode)
-const serverPaginationState = ref<Record<string, {
-    page: number
-    itemsPerPage: number
-    sortBy: string
-    sortDesc: boolean
-    items: (CsvTestItemData | CompactCsvTestItemData)[]
-    totalItems: number
-    loading: boolean
-}>>({})
+const serverPaginationState = ref<
+  Record<
+    string,
+    {
+      page: number
+      itemsPerPage: number
+      sortBy: string
+      sortDesc: boolean
+      items: (CsvTestItemData | CompactCsvTestItemData)[]
+      totalItems: number
+      loading: boolean
+    }
+  >
+>({})
 
 // Local cache for lazy-loaded test items (keyed by ISN_TestStartTime)
 const lazyLoadedTestItems = ref<Map<string, TestItem[]>>(new Map())
@@ -612,12 +613,12 @@ const lazyLoadedTestItems = ref<Map<string, TestItem[]>>(new Map())
 const loadingTestItemsForRecord = ref<Set<string>>(new Set())
 // Helper function to format date for datetime-local input
 function getLocalTimeString(date: Date): string {
-    const year = date.getFullYear()
-    const month = String(date.getMonth() + 1).padStart(2, '0')
-    const day = String(date.getDate()).padStart(2, '0')
-    const hours = String(date.getHours()).padStart(2, '0')
-    const minutes = String(date.getMinutes()).padStart(2, '0')
-    return `${year}-${month}-${day}T${hours}:${minutes}`
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
 /**
@@ -630,107 +631,107 @@ function getLocalTimeString(date: Date): string {
  * Month: Current month
  */
 function getDateRangeForPreset(preset: string): { start: Date; end: Date } {
-    const now = new Date()
-    const currentHour = now.getHours()
-    const currentMinutes = now.getMinutes()
+  const now = new Date()
+  const currentHour = now.getHours()
+  const currentMinutes = now.getMinutes()
 
-    switch (preset) {
-        case 'current_shift': {
-            // Day Shift: 06:50:00 - 20:00:00
-            // Night Shift: 20:00:00 - 06:50:00 (next day)
-            const isDayShift = currentHour > 6 || (currentHour === 6 && currentMinutes >= 50)
-            const isBeforeNightEnd = currentHour < 6 || (currentHour === 6 && currentMinutes < 50)
+  switch (preset) {
+    case 'current_shift': {
+      // Day Shift: 06:50:00 - 20:00:00
+      // Night Shift: 20:00:00 - 06:50:00 (next day)
+      const isDayShift = currentHour > 6 || (currentHour === 6 && currentMinutes >= 50)
+      const isBeforeNightEnd = currentHour < 6 || (currentHour === 6 && currentMinutes < 50)
 
-            if (isDayShift && currentHour < 20) {
-                // Currently in day shift
-                const start = new Date(now)
-                start.setHours(6, 50, 0, 0)
-                const end = new Date(now)
-                end.setHours(20, 0, 0, 0)
-                return { start, end }
-            } else if (isBeforeNightEnd) {
-                // Currently in night shift (before 06:50 AM)
-                const start = new Date(now)
-                start.setDate(start.getDate() - 1)
-                start.setHours(20, 0, 0, 0)
-                const end = new Date(now)
-                end.setHours(6, 50, 0, 0)
-                return { start, end }
-            } else {
-                // After 20:00 - start of night shift
-                const start = new Date(now)
-                start.setHours(20, 0, 0, 0)
-                const end = new Date(now)
-                end.setDate(end.getDate() + 1)
-                end.setHours(6, 50, 0, 0)
-                return { start, end }
-            }
-        }
-        case 'today': {
-            const start = new Date(now)
-            start.setHours(0, 0, 1, 0)
-            const end = new Date(now)
-            end.setHours(23, 59, 59, 0)
-            return { start, end }
-        }
-        case 'yesterday': {
-            const start = new Date(now)
-            start.setDate(start.getDate() - 1)
-            start.setHours(0, 0, 1, 0)
-            const end = new Date(now)
-            end.setDate(end.getDate() - 1)
-            end.setHours(23, 59, 59, 0)
-            return { start, end }
-        }
-        case 'week': {
-            // Start from Monday of current week
-            const dayOfWeek = now.getDay()
-            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek // Sunday is 0, Monday is 1
-            const start = new Date(now)
-            start.setDate(start.getDate() + diff)
-            start.setHours(0, 0, 1, 0)
-            const end = new Date(now)
-            end.setHours(23, 59, 59, 0)
-            return { start, end }
-        }
-        case 'last_week': {
-            // Last Monday to Last Sunday
-            const dayOfWeek = now.getDay()
-            const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
-            const start = new Date(now)
-            start.setDate(start.getDate() + diff - 7) // Last Monday
-            start.setHours(0, 0, 1, 0)
-            const end = new Date(start)
-            end.setDate(end.getDate() + 6) // Last Sunday
-            end.setHours(23, 59, 59, 0)
-            return { start, end }
-        }
-        case 'month': {
-            const start = new Date(now.getFullYear(), now.getMonth(), 1)
-            start.setHours(0, 0, 1, 0)
-            const end = new Date(now)
-            end.setHours(23, 59, 59, 0)
-            return { start, end }
-        }
-        default: {
-            // Custom - return current values
-            return { start: now, end: now }
-        }
+      if (isDayShift && currentHour < 20) {
+        // Currently in day shift
+        const start = new Date(now)
+        start.setHours(6, 50, 0, 0)
+        const end = new Date(now)
+        end.setHours(20, 0, 0, 0)
+        return { start, end }
+      } else if (isBeforeNightEnd) {
+        // Currently in night shift (before 06:50 AM)
+        const start = new Date(now)
+        start.setDate(start.getDate() - 1)
+        start.setHours(20, 0, 0, 0)
+        const end = new Date(now)
+        end.setHours(6, 50, 0, 0)
+        return { start, end }
+      } else {
+        // After 20:00 - start of night shift
+        const start = new Date(now)
+        start.setHours(20, 0, 0, 0)
+        const end = new Date(now)
+        end.setDate(end.getDate() + 1)
+        end.setHours(6, 50, 0, 0)
+        return { start, end }
+      }
     }
+    case 'today': {
+      const start = new Date(now)
+      start.setHours(0, 0, 1, 0)
+      const end = new Date(now)
+      end.setHours(23, 59, 59, 0)
+      return { start, end }
+    }
+    case 'yesterday': {
+      const start = new Date(now)
+      start.setDate(start.getDate() - 1)
+      start.setHours(0, 0, 1, 0)
+      const end = new Date(now)
+      end.setDate(end.getDate() - 1)
+      end.setHours(23, 59, 59, 0)
+      return { start, end }
+    }
+    case 'week': {
+      // Start from Monday of current week
+      const dayOfWeek = now.getDay()
+      const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek // Sunday is 0, Monday is 1
+      const start = new Date(now)
+      start.setDate(start.getDate() + diff)
+      start.setHours(0, 0, 1, 0)
+      const end = new Date(now)
+      end.setHours(23, 59, 59, 0)
+      return { start, end }
+    }
+    case 'last_week': {
+      // Last Monday to Last Sunday
+      const dayOfWeek = now.getDay()
+      const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
+      const start = new Date(now)
+      start.setDate(start.getDate() + diff - 7) // Last Monday
+      start.setHours(0, 0, 1, 0)
+      const end = new Date(start)
+      end.setDate(end.getDate() + 6) // Last Sunday
+      end.setHours(23, 59, 59, 0)
+      return { start, end }
+    }
+    case 'month': {
+      const start = new Date(now.getFullYear(), now.getMonth(), 1)
+      start.setHours(0, 0, 1, 0)
+      const end = new Date(now)
+      end.setHours(23, 59, 59, 0)
+      return { start, end }
+    }
+    default: {
+      // Custom - return current values
+      return { start: now, end: now }
+    }
+  }
 }
 
 /**
  * Apply selected date range preset
  */
 function applyDateRangePreset(preset: string): void {
-    if (preset === 'custom') {
-        // Don't change times for custom selection
-        return
-    }
+  if (preset === 'custom') {
+    // Don't change times for custom selection
+    return
+  }
 
-    const { start, end } = getDateRangeForPreset(preset)
-    startTime.value = getLocalTimeString(start)
-    endTime.value = getLocalTimeString(end)
+  const { start, end } = getDateRangeForPreset(preset)
+  startTime.value = getLocalTimeString(start)
+  endTime.value = getLocalTimeString(end)
 }
 
 // Time range - initialize with current shift
@@ -758,18 +759,22 @@ const debouncedRecordSearchQueries = ref<Record<string, string>>({})
 
 // Debounce search query updates (300ms delay)
 const updateDebouncedSearch = useDebounceFn((stationName: string, value: string) => {
-    debouncedRecordSearchQueries.value = {
-        ...debouncedRecordSearchQueries.value,
-        [stationName]: value
-    }
+  debouncedRecordSearchQueries.value = {
+    ...debouncedRecordSearchQueries.value,
+    [stationName]: value,
+  }
 }, 300)
 
 // Watch for search query changes and debounce
-watch(recordSearchQueries, (newQueries) => {
+watch(
+  recordSearchQueries,
+  (newQueries) => {
     Object.entries(newQueries).forEach(([stationName, value]) => {
-        updateDebouncedSearch(stationName, value)
+      updateDebouncedSearch(stationName, value)
     })
-}, { deep: true })
+  },
+  { deep: true },
+)
 
 // Copy success snackbar
 const showCopySuccess = ref(false)
@@ -780,35 +785,35 @@ const selectedFilterDeviceIds = ref<Record<string, string[]>>({})
 
 // Copy to clipboard function
 async function copyToClipboard(text: string): Promise<void> {
-    if (!text) return
-    try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(text)
-        } else {
-            // Fallback for older browsers or non-HTTPS contexts
-            const textArea = document.createElement('textarea')
-            textArea.value = text
-            textArea.style.position = 'fixed'
-            textArea.style.left = '-9999px'
-            document.body.appendChild(textArea)
-            textArea.select()
-            document.execCommand('copy')
-            document.body.removeChild(textArea)
-        }
-        showCopySuccess.value = true
-    } catch (err) {
-        console.error('Failed to copy:', err)
+  if (!text) return
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      // Fallback for older browsers or non-HTTPS contexts
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-9999px'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
     }
+    showCopySuccess.value = true
+  } catch (err) {
+    console.error('Failed to copy:', err)
+  }
 }
 
 // Helper functions for per-station device IDs
 function getDeviceIdsForStation(stationValue: string): string[] {
-    return deviceIdsByStation.value[stationValue] || []
+  return deviceIdsByStation.value[stationValue] || []
 }
 
 function getStationDisplayName(stationValue: string): string {
-    const station = stations.value.find((s: Station) => s.display_station_name === stationValue)
-    return station?.display_station_name || stationValue
+  const station = stations.value.find((s: Station) => s.display_station_name === stationValue)
+  return station?.display_station_name || stationValue
 }
 
 // Download controls
@@ -826,86 +831,79 @@ const loadingFullscreenTestItems = ref(false)
 
 // Computed
 const availableProjects = computed(() => {
-    if (!selectedSite.value) return []
-    return projectsBySite.value[selectedSite.value] || []
+  if (!selectedSite.value) return []
+  return projectsBySite.value[selectedSite.value] || []
 })
 
 const stationOptions = computed(() => {
-    return stations.value
-        .sort((a: Station, b: Station) => a.order - b.order)
-        .map((s: Station) => ({
-            displayName: s.display_station_name,
-            stationName: s.station_name,
-            displayText: `${s.display_station_name} - ${s.station_name}`,
-            chipText: s.display_station_name,
-            value: s.display_station_name,
-            order: s.order,
-            dataSource: s.data_source
-        }))
+  return stations.value
+    .sort((a: Station, b: Station) => a.order - b.order)
+    .map((s: Station) => ({
+      displayName: s.display_station_name,
+      stationName: s.station_name,
+      displayText: `${s.display_station_name} - ${s.station_name}`,
+      chipText: s.display_station_name,
+      value: s.display_station_name,
+      order: s.order,
+      dataSource: s.data_source,
+    }))
 })
 
 const totalDeviceCount = computed(() => {
-    let count = 0
-    for (const deviceList of Object.values(deviceIdsByStation.value)) {
-        count += deviceList.length
-    }
-    return count
+  let count = 0
+  for (const deviceList of Object.values(deviceIdsByStation.value)) {
+    count += deviceList.length
+  }
+  return count
 })
 
 const selectedRecordIndices = computed(() => {
-    return Array.from(selectedRecordKeys.value)
+  return Array.from(selectedRecordKeys.value)
 })
 
 const groupedByStation = computed<StationGroup[]>(() => {
-    const groups: Record<string, StationGroup> = {}
+  const groups: Record<string, StationGroup> = {}
 
-    // Choose data source based on mode
-    const sourceData = useCompactMode.value && compactTestItemData.value.length > 0
-        ? compactTestItemData.value
-        : testItemData.value
+  // Choose data source based on mode
+  const sourceData =
+    useCompactMode.value && compactTestItemData.value.length > 0
+      ? compactTestItemData.value
+      : testItemData.value
 
-    for (const record of sourceData) {
-        const stationName = record.station
-        if (!groups[stationName]) {
-            const stationInfo = stations.value.find((s: Station) => s.station_name === stationName)
-            groups[stationName] = {
-                stationName,
-                displayName: stationInfo?.display_station_name || stationName,
-                records: []
-            }
-        }
-        groups[stationName].records.push(record)
+  for (const record of sourceData) {
+    const stationName = record.station
+    if (!groups[stationName]) {
+      const stationInfo = stations.value.find((s: Station) => s.station_name === stationName)
+      groups[stationName] = {
+        stationName,
+        displayName: stationInfo?.display_station_name || stationName,
+        records: [],
+      }
     }
+    groups[stationName].records.push(record)
+  }
 
-    // Sort records within each group by Test end Time descending (latest first)
-    for (const group of Object.values(groups)) {
-        group.records.sort((a, b) => {
-            const timeA = new Date(a['Test end Time']).getTime()
-            const timeB = new Date(b['Test end Time']).getTime()
-            return timeB - timeA // Latest first
-        })
-    }
+  // Sort records within each group by Test end Time descending (latest first)
+  for (const group of Object.values(groups)) {
+    group.records.sort((a, b) => {
+      const timeA = new Date(a['Test end Time']).getTime()
+      const timeB = new Date(b['Test end Time']).getTime()
+      return timeB - timeA // Latest first
+    })
+  }
 
-    return Object.values(groups)
+  return Object.values(groups)
 })
-
-const testItemHeaders = [
-    { title: 'Test Item', key: 'NAME', sortable: true },
-    { title: 'Status', key: 'STATUS', sortable: true },
-    { title: 'Value', key: 'VALUE', sortable: true },
-    { title: 'UCL', key: 'UCL', sortable: true },
-    { title: 'LCL', key: 'LCL', sortable: true }
-]
 
 // Headers for IndexedDB table - User requested columns:
 // Checkbox (via show-select), ISN, Device ID, Test End, Duration, Status, Actions
 const indexedDbHeaders = [
-    { title: 'ISN', key: 'ISN', sortable: true, width: '180px' },
-    { title: 'Device ID', key: 'DeviceId', sortable: true, width: '100px' },
-    { title: 'Test End', key: 'TestEndTime', sortable: true, width: '160px' },
-    { title: 'Duration', key: 'Duration', sortable: false, width: '90px' },
-    { title: 'Status', key: 'TestStatus', sortable: true, width: '90px' },
-    { title: 'Actions', key: 'actions', sortable: false, width: '100px' }
+  { title: 'ISN', key: 'ISN', sortable: true, width: '180px' },
+  { title: 'Device ID', key: 'DeviceId', sortable: true, width: '100px' },
+  { title: 'Test End', key: 'TestEndTime', sortable: true, width: '160px' },
+  { title: 'Duration', key: 'Duration', sortable: false, width: '90px' },
+  { title: 'Status', key: 'TestStatus', sortable: true, width: '90px' },
+  { title: 'Actions', key: 'actions', sortable: false, width: '100px' },
 ]
 
 // Selected keys for IndexedDB table (for bulk download)
@@ -916,457 +914,481 @@ const indexedDbActiveStationTab = ref(0)
 
 // Get distinct stations from IndexedDB data
 const indexedDbStationList = computed(() => {
-    const stations = new Set<string>()
-    for (const item of indexedDbItems.value) {
-        if (item.Station) {
-            stations.add(item.Station)
-        }
+  const stations = new Set<string>()
+  for (const item of indexedDbItems.value) {
+    if (item.Station) {
+      stations.add(item.Station)
     }
-    return Array.from(stations).sort()
+  }
+  return Array.from(stations).sort()
 })
 
 // Calculate duration for IndexedDB records
-function calculateIndexedDbDuration(record: typeof indexedDbItems.value[0]): string {
-    // First try to use pre-calculated TestDuration
-    if (record.TestDuration && record.TestDuration > 0) {
-        const mins = Math.floor(record.TestDuration / 60)
-        const secs = record.TestDuration % 60
-        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
-    }
+function calculateIndexedDbDuration(record: (typeof indexedDbItems.value)[0]): string {
+  // First try to use pre-calculated TestDuration
+  if (record.TestDuration && record.TestDuration > 0) {
+    const mins = Math.floor(record.TestDuration / 60)
+    const secs = record.TestDuration % 60
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
+  }
 
-    // Fallback: calculate from TestStartTime and TestEndTime
-    const startTime = record.TestStartTime
-    const endTime = record.TestEndTime
-    if (startTime && endTime) {
-        try {
-            const start = new Date(startTime).getTime()
-            const end = new Date(endTime).getTime()
-            const diffSecs = Math.floor((end - start) / 1000)
-            if (diffSecs >= 0) {
-                const mins = Math.floor(diffSecs / 60)
-                const secs = diffSecs % 60
-                return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
-            }
-        } catch {
-            // Ignore parse errors
-        }
+  // Fallback: calculate from TestStartTime and TestEndTime
+  const startTime = record.TestStartTime
+  const endTime = record.TestEndTime
+  if (startTime && endTime) {
+    try {
+      const start = new Date(startTime).getTime()
+      const end = new Date(endTime).getTime()
+      const diffSecs = Math.floor((end - start) / 1000)
+      if (diffSecs >= 0) {
+        const mins = Math.floor(diffSecs / 60)
+        const secs = diffSecs % 60
+        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
+      }
+    } catch {
+      // Ignore parse errors
     }
-    return '-'
+  }
+  return '-'
 }
 
 // Get record key for IndexedDB records
-function getIndexedDbRecordKey(record: typeof indexedDbItems.value[0]): string {
-    return record.id || `${record.ISN}_${record.TestStartTime}`
+function getIndexedDbRecordKey(record: (typeof indexedDbItems.value)[0]): string {
+  return record.id || `${record.ISN}_${record.TestStartTime}`
 }
 
 // Handle IndexedDB row click to show details dialog
-async function handleIndexedDbRowClick(_event: Event, { item }: { item: typeof indexedDbItems.value[0] }): Promise<void> {
-    if (!selectedSite.value || !selectedProject.value) return
+async function handleIndexedDbRowClick(
+  _event: Event,
+  { item }: { item: (typeof indexedDbItems.value)[0] },
+): Promise<void> {
+  if (!selectedSite.value || !selectedProject.value) return
 
-    // Get station from record - use Station field for API calls (not TSP)
-    // Per iPLAS API docs: "station" is used to make requests, "TSP" is display only
-    const station = item.Station || (indexedDbStationList.value[indexedDbActiveStationTab.value - 1] ?? '')
+  // Get station from record - use Station field for API calls (not TSP)
+  // Per iPLAS API docs: "station" is used to make requests, "TSP" is display only
+  const station =
+    item.Station || (indexedDbStationList.value[indexedDbActiveStationTab.value - 1] ?? '')
 
-    if (!station) {
-        console.error('Cannot fetch record test items: station is undefined')
-        return
-    }
+  if (!station) {
+    console.error('Cannot fetch record test items: station is undefined')
+    return
+  }
 
-    // Fetch test items for this record
-    const testItems = await fetchRecordTestItems(
-        selectedSite.value,
-        selectedProject.value,
-        station,
-        item.ISN,
-        item.TestStartTime,
-        item.DeviceId
-    )
+  // Fetch test items for this record
+  const testItems = await fetchRecordTestItems(
+    selectedSite.value,
+    selectedProject.value,
+    station,
+    item.ISN,
+    item.TestStartTime,
+    item.DeviceId,
+  )
 
-    // Create normalized record for dialog
-    const normalizedRecord: NormalizedRecord = {
-        isn: item.ISN,
-        deviceId: item.DeviceId,
-        stationName: item.Station,
-        displayStationName: item.Station,
-        tsp: item.Station,
-        site: item.Site,
-        project: item.Project,
-        line: item.Slot || '',
-        errorCode: item.ErrorCode || '',
-        errorName: item.ErrorName || '',
-        testStatus: item.TestStatus,
-        testStartTime: item.TestStartTime,
-        testEndTime: item.TestStartTime, // Will be computed from duration
-        testItems: testItems || []
-    }
+  // Create normalized record for dialog
+  const normalizedRecord: NormalizedRecord = {
+    isn: item.ISN,
+    deviceId: item.DeviceId,
+    stationName: item.Station,
+    displayStationName: item.Station,
+    tsp: item.Station,
+    site: item.Site,
+    project: item.Project,
+    line: item.Slot || '',
+    errorCode: item.ErrorCode || '',
+    errorName: item.ErrorName || '',
+    testStatus: item.TestStatus,
+    testStartTime: item.TestStartTime,
+    testEndTime: item.TestStartTime, // Will be computed from duration
+    testItems: testItems || [],
+  }
 
-    fullscreenRecord.value = normalizedRecord
-    showFullscreenDialog.value = true
+  fullscreenRecord.value = normalizedRecord
+  showFullscreenDialog.value = true
 }
 
 // Download selected IndexedDB records
 async function downloadIndexedDbSelectedRecords(): Promise<void> {
-    if (!selectedSite.value || !selectedProject.value || indexedDbSelectedKeys.value.length === 0) return
+  if (!selectedSite.value || !selectedProject.value || indexedDbSelectedKeys.value.length === 0)
+    return
 
-    try {
-        const attachments: DownloadAttachmentInfo[] = []
+  try {
+    const attachments: DownloadAttachmentInfo[] = []
 
-        for (const item of indexedDbItems.value) {
-            const key = getIndexedDbRecordKey(item)
-            if (indexedDbSelectedKeys.value.includes(key)) {
-                // Use ISN if available, otherwise use DeviceId
-                const isn = item.ISN && item.ISN.trim() !== '' ? item.ISN : item.DeviceId
-                // Use TestEndTime for download API (required format), fallback to TestStartTime
-                const timeField = item.TestEndTime || item.TestStartTime
-                attachments.push({
-                    isn,
-                    time: formatTimeForDownload(timeField),
-                    deviceid: item.DeviceId,
-                    station: item.Station || ''
-                })
-            }
-        }
-
-        if (attachments.length > 0) {
-            console.log('Download IndexedDB attachments:', attachments)
-            await downloadAttachments(selectedSite.value, selectedProject.value, attachments)
-        }
-    } catch (err) {
-        console.error('Failed to download IndexedDB test logs:', err)
+    for (const item of indexedDbItems.value) {
+      const key = getIndexedDbRecordKey(item)
+      if (indexedDbSelectedKeys.value.includes(key)) {
+        // Use ISN if available, otherwise use DeviceId
+        const isn = item.ISN && item.ISN.trim() !== '' ? item.ISN : item.DeviceId
+        // Use TestEndTime for download API (required format), fallback to TestStartTime
+        const timeField = item.TestEndTime || item.TestStartTime
+        attachments.push({
+          isn,
+          time: formatTimeForDownload(timeField),
+          deviceid: item.DeviceId,
+          station: item.Station || '',
+        })
+      }
     }
+
+    if (attachments.length > 0) {
+      console.log('Download IndexedDB attachments:', attachments)
+      await downloadAttachments(selectedSite.value, selectedProject.value, attachments)
+    }
+  } catch (err) {
+    console.error('Failed to download IndexedDB test logs:', err)
+  }
 }
 
 // Download selected IndexedDB records as CSV files
 async function downloadIndexedDbSelectedRecordsCsv(): Promise<void> {
-    if (!selectedSite.value || !selectedProject.value || indexedDbSelectedKeys.value.length === 0) return
+  if (!selectedSite.value || !selectedProject.value || indexedDbSelectedKeys.value.length === 0)
+    return
 
-    downloadingCsv.value = true
+  downloadingCsv.value = true
 
-    try {
-        const csvContents: { content: string; filename: string }[] = []
+  try {
+    const csvContents: { content: string; filename: string }[] = []
 
-        for (const item of indexedDbItems.value) {
-            const key = getIndexedDbRecordKey(item)
-            if (!indexedDbSelectedKeys.value.includes(key)) continue
+    for (const item of indexedDbItems.value) {
+      const key = getIndexedDbRecordKey(item)
+      if (!indexedDbSelectedKeys.value.includes(key)) continue
 
-            // Get station from indexedDbStationList if not available
-            // Use Station field for API calls (not TSP) per iPLAS API docs
-            const station = item.Station || indexedDbStationList.value[indexedDbActiveStationTab.value - 1] || ''
+      // Get station from indexedDbStationList if not available
+      // Use Station field for API calls (not TSP) per iPLAS API docs
+      const station =
+        item.Station || indexedDbStationList.value[indexedDbActiveStationTab.value - 1] || ''
 
-            // Fetch test items
-            const testItems = await fetchRecordTestItems(
-                selectedSite.value,
-                selectedProject.value,
-                station,
-                item.DeviceId,
-                item.TestStartTime,
-                item.TestEndTime || item.TestStartTime
-            )
+      // Fetch test items
+      const testItems = await fetchRecordTestItems(
+        selectedSite.value,
+        selectedProject.value,
+        station,
+        item.DeviceId,
+        item.TestStartTime,
+        item.TestEndTime || item.TestStartTime,
+      )
 
-            if (testItems && testItems.length > 0) {
-                // Create a mock record for CSV conversion
-                const mockRecord: CsvTestItemData = {
-                    Site: selectedSite.value,
-                    Project: selectedProject.value,
-                    station,
-                    TSP: station,
-                    Model: '',
-                    MO: '',
-                    Line: '',
-                    ISN: item.ISN || item.DeviceId,
-                    DeviceId: item.DeviceId,
-                    'Test Status': item.TestStatus,
-                    'Test Start Time': item.TestStartTime,
-                    'Test end Time': item.TestEndTime || item.TestStartTime,
-                    ErrorCode: item.ErrorCode || '',
-                    ErrorName: item.ErrorName || '',
-                    TestItem: testItems
-                }
-
-                const csvContent = convertTestItemsToCsv(mockRecord, testItems)
-                const timestamp = item.TestStartTime.replace(/[\/:]/g, '_').replace(/ /g, '_')
-                const filename = `${item.ISN || item.DeviceId}_${timestamp}_test_items.csv`
-                csvContents.push({ content: csvContent, filename })
-            }
+      if (testItems && testItems.length > 0) {
+        // Create a mock record for CSV conversion
+        const mockRecord: CsvTestItemData = {
+          Site: selectedSite.value,
+          Project: selectedProject.value,
+          station,
+          TSP: station,
+          Model: '',
+          MO: '',
+          Line: '',
+          ISN: item.ISN || item.DeviceId,
+          DeviceId: item.DeviceId,
+          'Test Status': item.TestStatus,
+          'Test Start Time': item.TestStartTime,
+          'Test end Time': item.TestEndTime || item.TestStartTime,
+          ErrorCode: item.ErrorCode || '',
+          ErrorName: item.ErrorName || '',
+          TestItem: testItems,
         }
 
-        // Download all CSVs
-        for (const { content, filename } of csvContents) {
-            downloadCsvFile(content, filename)
-            await new Promise(resolve => setTimeout(resolve, 100))
-        }
-
-        console.log(`Downloaded ${csvContents.length} CSV files from IndexedDB`)
-    } catch (err) {
-        console.error('Failed to download IndexedDB CSV files:', err)
-    } finally {
-        downloadingCsv.value = false
+        const csvContent = convertTestItemsToCsv(mockRecord, testItems)
+        const timestamp = item.TestStartTime.replace(/[/:]/g, '_').replace(/ /g, '_')
+        const filename = `${item.ISN || item.DeviceId}_${timestamp}_test_items.csv`
+        csvContents.push({ content: csvContent, filename })
+      }
     }
+
+    // Download all CSVs
+    for (const { content, filename } of csvContents) {
+      downloadCsvFile(content, filename)
+      await new Promise((resolve) => setTimeout(resolve, 100))
+    }
+
+    console.log(`Downloaded ${csvContents.length} CSV files from IndexedDB`)
+  } catch (err) {
+    console.error('Failed to download IndexedDB CSV files:', err)
+  } finally {
+    downloadingCsv.value = false
+  }
 }
 
 // Download single IndexedDB record
-async function downloadIndexedDbRecord(record: typeof indexedDbItems.value[0]): Promise<void> {
-    if (!selectedSite.value || !selectedProject.value) return
+async function downloadIndexedDbRecord(record: (typeof indexedDbItems.value)[0]): Promise<void> {
+  if (!selectedSite.value || !selectedProject.value) return
 
-    try {
-        const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-        // Use TestEndTime for download API (required format), fallback to TestStartTime
-        const timeField = record.TestEndTime || record.TestStartTime
-        const attachmentInfo: DownloadAttachmentInfo = {
-            isn,
-            time: formatTimeForDownload(timeField),
-            deviceid: record.DeviceId,
-            station: record.Station || ''
-        }
-        console.log('Download IndexedDB attachment:', attachmentInfo)
-        await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
-    } catch (err) {
-        console.error('Failed to download IndexedDB test log:', err)
+  try {
+    const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+    // Use TestEndTime for download API (required format), fallback to TestStartTime
+    const timeField = record.TestEndTime || record.TestStartTime
+    const attachmentInfo: DownloadAttachmentInfo = {
+      isn,
+      time: formatTimeForDownload(timeField),
+      deviceid: record.DeviceId,
+      station: record.Station || '',
     }
+    console.log('Download IndexedDB attachment:', attachmentInfo)
+    await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
+  } catch (err) {
+    console.error('Failed to download IndexedDB test log:', err)
+  }
 }
 
 // Helper functions for station sub-tabs and device ID filtering
 function getUniqueDeviceIdsForStation(stationGroup: StationGroup): string[] {
-    return [...new Set(stationGroup.records.map(r => r.DeviceId))]
+  return [...new Set(stationGroup.records.map((r) => r.DeviceId))]
 }
 
-function getFilteredStationRecords(stationGroup: StationGroup): (CsvTestItemData | CompactCsvTestItemData)[] {
-    let records = stationGroup.records
+function getFilteredStationRecords(
+  stationGroup: StationGroup,
+): (CsvTestItemData | CompactCsvTestItemData)[] {
+  let records = stationGroup.records
 
-    // Apply per-station status filter (ALL/PASS/FAIL)
-    const statusFilter = stationStatusFilters.value[stationGroup.stationName] || 'ALL'
-    if (statusFilter !== 'ALL') {
-        records = records.filter(r => r['Test Status'] === statusFilter)
-    }
+  // Apply per-station status filter (ALL/PASS/FAIL)
+  const statusFilter = stationStatusFilters.value[stationGroup.stationName] || 'ALL'
+  if (statusFilter !== 'ALL') {
+    records = records.filter((r) => r['Test Status'] === statusFilter)
+  }
 
-    // Apply device ID filter
-    const filterIds = selectedFilterDeviceIds.value[stationGroup.stationName]
-    if (filterIds && filterIds.length > 0) {
-        records = records.filter(r => filterIds.includes(r.DeviceId))
-    }
+  // Apply device ID filter
+  const filterIds = selectedFilterDeviceIds.value[stationGroup.stationName]
+  if (filterIds && filterIds.length > 0) {
+    records = records.filter((r) => filterIds.includes(r.DeviceId))
+  }
 
-    // Apply record search filter (debounced for performance)
-    const searchQuery = debouncedRecordSearchQueries.value[stationGroup.stationName]?.toLowerCase().trim()
-    if (searchQuery) {
-        records = records.filter(r =>
-            (r.ISN?.toLowerCase() || '').includes(searchQuery) ||
-            (r.DeviceId?.toLowerCase() || '').includes(searchQuery) ||
-            (r.ErrorCode?.toLowerCase() || '').includes(searchQuery) ||
-            (r.ErrorName?.toLowerCase() || '').includes(searchQuery)
-        )
-    }
+  // Apply record search filter (debounced for performance)
+  const searchQuery = debouncedRecordSearchQueries.value[stationGroup.stationName]
+    ?.toLowerCase()
+    .trim()
+  if (searchQuery) {
+    records = records.filter(
+      (r) =>
+        (r.ISN?.toLowerCase() || '').includes(searchQuery) ||
+        (r.DeviceId?.toLowerCase() || '').includes(searchQuery) ||
+        (r.ErrorCode?.toLowerCase() || '').includes(searchQuery) ||
+        (r.ErrorName?.toLowerCase() || '').includes(searchQuery),
+    )
+  }
 
-    return records
+  return records
 }
 
 /**
  * Generate a unique key for a record (used for caching test items)
  */
 function getRecordKey(record: CsvTestItemData | CompactCsvTestItemData): string {
-    return `${record.ISN}_${record['Test Start Time']}`
+  return `${record.ISN}_${record['Test Start Time']}`
 }
 
 /**
  * Check if a record is a compact record (without TestItem array)
  */
-function isCompactRecord(record: CsvTestItemData | CompactCsvTestItemData): record is CompactCsvTestItemData {
-    return 'TestItemCount' in record && !('TestItem' in record)
+function isCompactRecord(
+  record: CsvTestItemData | CompactCsvTestItemData,
+): record is CompactCsvTestItemData {
+  return 'TestItemCount' in record && !('TestItem' in record)
 }
 
 /**
  * Get test items for a record - returns from local cache, full record, or undefined if not loaded
  */
-function getTestItemsForRecord(record: CsvTestItemData | CompactCsvTestItemData): TestItem[] | undefined {
-    // If it's a full record with TestItem array, return it directly
-    if (!isCompactRecord(record) && record.TestItem) {
-        return record.TestItem
-    }
+function getTestItemsForRecord(
+  record: CsvTestItemData | CompactCsvTestItemData,
+): TestItem[] | undefined {
+  // If it's a full record with TestItem array, return it directly
+  if (!isCompactRecord(record) && record.TestItem) {
+    return record.TestItem
+  }
 
-    // Otherwise check local cache for lazy-loaded items
-    const key = getRecordKey(record)
-    return lazyLoadedTestItems.value.get(key)
+  // Otherwise check local cache for lazy-loaded items
+  const key = getRecordKey(record)
+  return lazyLoadedTestItems.value.get(key)
 }
 
 // Watch for station selection changes to fetch device IDs
-watch(selectedStations, async (newStations, oldStations) => {
+watch(
+  selectedStations,
+  async (newStations, oldStations) => {
     // Find newly added stations
-    const addedStations = newStations.filter(s => !oldStations.includes(s))
+    const addedStations = newStations.filter((s) => !oldStations.includes(s))
     // Find removed stations
-    const removedStations = oldStations.filter(s => !newStations.includes(s))
+    const removedStations = oldStations.filter((s) => !newStations.includes(s))
 
     // Remove device IDs and selections for removed stations
     for (const station of removedStations) {
-        delete deviceIdsByStation.value[station]
-        delete stationDeviceIds.value[station]
-        delete loadingDevicesByStation.value[station]
+      delete deviceIdsByStation.value[station]
+      delete stationDeviceIds.value[station]
+      delete loadingDevicesByStation.value[station]
     }
 
     // Fetch device IDs for newly added stations
     if (selectedSite.value && selectedProject.value && startTime.value && endTime.value) {
-        for (const station of addedStations) {
-            try {
-                loadingDevicesByStation.value[station] = true
-                const start = new Date(startTime.value).toISOString()
-                const end = new Date(endTime.value).toISOString()
-                const devices = await fetchDeviceIds(
-                    selectedSite.value,
-                    selectedProject.value,
-                    station,
-                    start,
-                    end
-                )
-                deviceIdsByStation.value[station] = devices
-                // Initialize with empty selection (will use 'ALL' if empty)
-                if (!stationDeviceIds.value[station]) {
-                    stationDeviceIds.value[station] = []
-                }
-            } catch (error) {
-                console.error(`Failed to fetch device IDs for ${station}:`, error)
-                deviceIdsByStation.value[station] = []
-                stationDeviceIds.value[station] = []
-            } finally {
-                loadingDevicesByStation.value[station] = false
-            }
+      for (const station of addedStations) {
+        try {
+          loadingDevicesByStation.value[station] = true
+          const start = new Date(startTime.value).toISOString()
+          const end = new Date(endTime.value).toISOString()
+          const devices = await fetchDeviceIds(
+            selectedSite.value,
+            selectedProject.value,
+            station,
+            start,
+            end,
+          )
+          deviceIdsByStation.value[station] = devices
+          // Initialize with empty selection (will use 'ALL' if empty)
+          if (!stationDeviceIds.value[station]) {
+            stationDeviceIds.value[station] = []
+          }
+        } catch (error) {
+          console.error(`Failed to fetch device IDs for ${station}:`, error)
+          deviceIdsByStation.value[station] = []
+          stationDeviceIds.value[station] = []
+        } finally {
+          loadingDevicesByStation.value[station] = false
         }
+      }
     }
-}, { deep: true })
+  },
+  { deep: true },
+)
 
 // Initialize testItemFilters when records change - ensure 'value' is selected by default
-watch(groupedByStation, (groups) => {
+watch(
+  groupedByStation,
+  (groups) => {
     for (const group of groups) {
-        const filteredRecords = getFilteredStationRecords(group)
-        for (let i = 0; i < filteredRecords.length; i++) {
-            const key = `${group.stationName}-${i}`
-            // Only set if not already set
-            if (testItemFilters.value[key] === undefined) {
-                testItemFilters.value[key] = ['value']
-            }
+      const filteredRecords = getFilteredStationRecords(group)
+      for (let i = 0; i < filteredRecords.length; i++) {
+        const key = `${group.stationName}-${i}`
+        // Only set if not already set
+        if (testItemFilters.value[key] === undefined) {
+          testItemFilters.value[key] = ['value']
         }
+      }
     }
-}, { immediate: true })
+  },
+  { immediate: true },
+)
 
 /**
  * Get selected record keys for a specific station (used by IplasRecordTable)
  */
 function getSelectedKeysForStation(stationName: string): string[] {
-    const stationGroup = groupedByStation.value.find(g => g.stationName === stationName)
-    if (!stationGroup) return []
+  const stationGroup = groupedByStation.value.find((g) => g.stationName === stationName)
+  if (!stationGroup) return []
 
-    const stationRecordKeys = stationGroup.records.map(
-        r => `${r.ISN}_${r['Test Start Time']}`
-    )
+  const stationRecordKeys = stationGroup.records.map((r) => `${r.ISN}_${r['Test Start Time']}`)
 
-    return Array.from(selectedRecordKeys.value).filter(key =>
-        stationRecordKeys.includes(key)
-    )
+  return Array.from(selectedRecordKeys.value).filter((key) => stationRecordKeys.includes(key))
 }
 
 /**
  * Handle selection changes from IplasRecordTable
  */
 function handleTableSelectionChange(stationName: string, newSelectedKeys: string[]): void {
-    const stationGroup = groupedByStation.value.find(g => g.stationName === stationName)
-    if (!stationGroup) return
+  const stationGroup = groupedByStation.value.find((g) => g.stationName === stationName)
+  if (!stationGroup) return
 
-    // Get all record keys for this station
-    const stationRecordKeys = new Set(
-        stationGroup.records.map(r => `${r.ISN}_${r['Test Start Time']}`)
-    )
+  // Get all record keys for this station
+  const stationRecordKeys = new Set(
+    stationGroup.records.map((r) => `${r.ISN}_${r['Test Start Time']}`),
+  )
 
-    // Remove old selections for this station
-    for (const key of selectedRecordKeys.value) {
-        if (stationRecordKeys.has(key)) {
-            selectedRecordKeys.value.delete(key)
-        }
+  // Remove old selections for this station
+  for (const key of selectedRecordKeys.value) {
+    if (stationRecordKeys.has(key)) {
+      selectedRecordKeys.value.delete(key)
     }
+  }
 
-    // Add new selections
-    for (const key of newSelectedKeys) {
-        selectedRecordKeys.value.add(key)
-    }
+  // Add new selections
+  for (const key of newSelectedKeys) {
+    selectedRecordKeys.value.add(key)
+  }
 }
 
 // Fullscreen functions
 function normalizeStationRecord(record: CsvTestItemData): NormalizedRecord {
-    return {
-        isn: record.ISN,
-        deviceId: record.DeviceId,
-        stationName: record.station,
-        displayStationName: record.TSP || record.station,
-        tsp: record.TSP,
-        site: record.Site,
-        project: record.Project,
-        line: record.Line,
-        errorCode: record.ErrorCode,
-        errorName: record.ErrorName,
-        testStatus: record['Test Status'],
-        testStartTime: record['Test Start Time'],
-        testEndTime: record['Test end Time'],
-        testItems: record.TestItem || []
-    }
+  return {
+    isn: record.ISN,
+    deviceId: record.DeviceId,
+    stationName: record.station,
+    displayStationName: record.TSP || record.station,
+    tsp: record.TSP,
+    site: record.Site,
+    project: record.Project,
+    line: record.Line,
+    errorCode: record.ErrorCode,
+    errorName: record.ErrorName,
+    testStatus: record['Test Status'],
+    testStartTime: record['Test Start Time'],
+    testEndTime: record['Test end Time'],
+    testItems: record.TestItem || [],
+  }
 }
 
 async function openFullscreen(record: CsvTestItemData | CompactCsvTestItemData): Promise<void> {
-    // Show dialog immediately with loading state for compact records
-    showFullscreenDialog.value = true
+  // Show dialog immediately with loading state for compact records
+  showFullscreenDialog.value = true
 
-    // For compact records, we need to fetch test items
-    if (isCompactRecord(record)) {
-        let testItems = getTestItemsForRecord(record)
+  // For compact records, we need to fetch test items
+  if (isCompactRecord(record)) {
+    let testItems = getTestItemsForRecord(record)
 
-        if (!testItems) {
-            // Show loading and fetch test items
-            loadingFullscreenTestItems.value = true
-            fullscreenRecord.value = normalizeStationRecord({ ...record, TestItem: [] } as CsvTestItemData)
-            fullscreenOriginalRecord.value = null
+    if (!testItems) {
+      // Show loading and fetch test items
+      loadingFullscreenTestItems.value = true
+      fullscreenRecord.value = normalizeStationRecord({
+        ...record,
+        TestItem: [],
+      } as CsvTestItemData)
+      fullscreenOriginalRecord.value = null
 
-            try {
-                // Fetch test items from server
-                if (selectedSite.value && selectedProject.value) {
-                    // Use station field for API calls (not TSP) per iPLAS API docs
-                    testItems = await fetchRecordTestItems(
-                        selectedSite.value,
-                        selectedProject.value,
-                        record.station,
-                        record.ISN || record.DeviceId, // ISN as identifier
-                        record['Test Start Time'],
-                        record.DeviceId // deviceId as last parameter
-                    ) || []
+      try {
+        // Fetch test items from server
+        if (selectedSite.value && selectedProject.value) {
+          // Use station field for API calls (not TSP) per iPLAS API docs
+          testItems =
+            (await fetchRecordTestItems(
+              selectedSite.value,
+              selectedProject.value,
+              record.station,
+              record.ISN || record.DeviceId, // ISN as identifier
+              record['Test Start Time'],
+              record.DeviceId, // deviceId as last parameter
+            )) || []
 
-                    // Note: The composable already caches test items internally
-                }
-            } catch (err) {
-                console.error('Failed to fetch test items:', err)
-                testItems = []
-            } finally {
-                loadingFullscreenTestItems.value = false
-            }
+          // Note: The composable already caches test items internally
         }
-
-        // Create a synthetic full record with test items
-        const fullRecord: CsvTestItemData = {
-            ...record,
-            TestItem: testItems || []
-        }
-        fullscreenOriginalRecord.value = fullRecord
-        fullscreenRecord.value = normalizeStationRecord(fullRecord)
-    } else {
-        fullscreenOriginalRecord.value = record
-        fullscreenRecord.value = normalizeStationRecord(record)
+      } catch (err) {
+        console.error('Failed to fetch test items:', err)
+        testItems = []
+      } finally {
+        loadingFullscreenTestItems.value = false
+      }
     }
+
+    // Create a synthetic full record with test items
+    const fullRecord: CsvTestItemData = {
+      ...record,
+      TestItem: testItems || [],
+    }
+    fullscreenOriginalRecord.value = fullRecord
+    fullscreenRecord.value = normalizeStationRecord(fullRecord)
+  } else {
+    fullscreenOriginalRecord.value = record
+    fullscreenRecord.value = normalizeStationRecord(record)
+  }
 }
 
 async function downloadFromFullscreen(): Promise<void> {
-    if (!fullscreenOriginalRecord.value || !selectedSite.value || !selectedProject.value) return
-    fullscreenDownloading.value = true
-    try {
-        const attachmentInfo = createAttachmentInfo(fullscreenOriginalRecord.value)
-        await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
-    } catch (err) {
-        console.error('Failed to download test log:', err)
-    } finally {
-        fullscreenDownloading.value = false
-    }
+  if (!fullscreenOriginalRecord.value || !selectedSite.value || !selectedProject.value) return
+  fullscreenDownloading.value = true
+  try {
+    const attachmentInfo = createAttachmentInfo(fullscreenOriginalRecord.value)
+    await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
+  } catch (err) {
+    console.error('Failed to download test log:', err)
+  } finally {
+    fullscreenDownloading.value = false
+  }
 }
 
 /**
@@ -1376,168 +1398,183 @@ async function downloadFromFullscreen(): Promise<void> {
  * Note: get_csv_testitem returns local time, so no timezone conversion needed
  */
 function formatTimeForDownload(timeStr: string): string {
-    if (!timeStr) return ''
-    // Replace dashes with slashes for the date part
-    // Handle both "YYYY-MM-DD HH:mm:ss" and ISO formats
-    return timeStr.replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+  if (!timeStr) return ''
+  // Replace dashes with slashes for the date part
+  // Handle both "YYYY-MM-DD HH:mm:ss" and ISO formats
+  return timeStr.replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
 }
 
-function createAttachmentInfo(record: CsvTestItemData | CompactCsvTestItemData): DownloadAttachmentInfo {
-    // Use ISN if available, otherwise use DeviceId
-    const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-    // CRITICAL: Use 'Test end Time' for download_attachment API
-    const time = formatTimeForDownload(record['Test end Time'])
-    const deviceid = record.DeviceId
-    // Use TSP as per API documentation - TSP corresponds to display_station_name
-    const station = record.TSP || record.station
+function createAttachmentInfo(
+  record: CsvTestItemData | CompactCsvTestItemData,
+): DownloadAttachmentInfo {
+  // Use ISN if available, otherwise use DeviceId
+  const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+  // CRITICAL: Use 'Test end Time' for download_attachment API
+  const time = formatTimeForDownload(record['Test end Time'])
+  const deviceid = record.DeviceId
+  // Use TSP as per API documentation - TSP corresponds to display_station_name
+  const station = record.TSP || record.station
 
-    return { isn, time, deviceid, station }
+  return { isn, time, deviceid, station }
 }
 
-async function downloadSingleRecord(record: CsvTestItemData | CompactCsvTestItemData, stationName: string, recordIndex: number): Promise<void> {
-    if (!selectedSite.value || !selectedProject.value) return
+async function downloadSingleRecord(
+  record: CsvTestItemData | CompactCsvTestItemData,
+  stationName: string,
+  recordIndex: number,
+): Promise<void> {
+  if (!selectedSite.value || !selectedProject.value) return
 
-    downloadingKey.value = `${stationName}-${recordIndex}`
-    try {
-        const attachmentInfo = createAttachmentInfo(record)
-        console.log('Download attachment info:', attachmentInfo)
-        await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
-    } catch (err) {
-        console.error('Failed to download test log:', err)
-    } finally {
-        downloadingKey.value = null
-    }
+  downloadingKey.value = `${stationName}-${recordIndex}`
+  try {
+    const attachmentInfo = createAttachmentInfo(record)
+    console.log('Download attachment info:', attachmentInfo)
+    await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
+  } catch (err) {
+    console.error('Failed to download test log:', err)
+  } finally {
+    downloadingKey.value = null
+  }
 }
 
 /**
  * Download CSV test log from iPLAS API for a single record
  * UPDATED: Uses the actual iPLAS API endpoint to get official CSV test logs
  */
-async function downloadCsvRecord(record: CsvTestItemData | CompactCsvTestItemData, stationName: string, recordIndex: number): Promise<void> {
-    if (!selectedSite.value || !selectedProject.value) return
+async function downloadCsvRecord(
+  record: CsvTestItemData | CompactCsvTestItemData,
+  stationName: string,
+  recordIndex: number,
+): Promise<void> {
+  if (!selectedSite.value || !selectedProject.value) return
 
-    downloadingCsvKey.value = `${stationName}-${recordIndex}`
+  downloadingCsvKey.value = `${stationName}-${recordIndex}`
 
-    try {
-        // Format test_end_time with .000 milliseconds as required by iPLAS API
-        const testEndTime = record['Test end Time']
-        const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
-        // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
-        const apiEndTime = formattedEndTime.replace(/-/g, '/')
+  try {
+    // Format test_end_time with .000 milliseconds as required by iPLAS API
+    const testEndTime = record['Test end Time']
+    const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+    // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
+    const apiEndTime = formattedEndTime.replace(/-/g, '/')
 
-        await downloadCsvLogs([{
-            site: selectedSite.value,
-            project: selectedProject.value,
-            station: record.TSP || record.station || stationName,
-            line: record.Line || 'NA',
-            model: record.Model || 'ALL',
-            deviceid: record.DeviceId,
-            isn: record.ISN,
-            test_end_time: apiEndTime,
-            data_source: 0
-        }])
-    } catch (err) {
-        console.error('Failed to download CSV:', err)
-    } finally {
-        downloadingCsvKey.value = null
-    }
+    await downloadCsvLogs([
+      {
+        site: selectedSite.value,
+        project: selectedProject.value,
+        station: record.TSP || record.station || stationName,
+        line: record.Line || 'NA',
+        model: record.Model || 'ALL',
+        deviceid: record.DeviceId,
+        isn: record.ISN,
+        test_end_time: apiEndTime,
+        data_source: 0,
+      },
+    ])
+  } catch (err) {
+    console.error('Failed to download CSV:', err)
+  } finally {
+    downloadingCsvKey.value = null
+  }
 }
 
 /**
  * Convert test items to CSV format
  */
-function convertTestItemsToCsv(record: CsvTestItemData | CompactCsvTestItemData, testItems: TestItem[]): string {
-    // Header row with record info
-    const headerInfo = [
-        `# ISN: ${record.ISN}`,
-        `# Device ID: ${record.DeviceId}`,
-        `# Station: ${record.station || ''}`,
-        `# Test Status: ${record['Test Status']}`,
-        `# Test Start: ${record['Test Start Time']}`,
-        `# Test End: ${record['Test end Time']}`,
-        ''
-    ].join('\n')
+function convertTestItemsToCsv(
+  record: CsvTestItemData | CompactCsvTestItemData,
+  testItems: TestItem[],
+): string {
+  // Header row with record info
+  const headerInfo = [
+    `# ISN: ${record.ISN}`,
+    `# Device ID: ${record.DeviceId}`,
+    `# Station: ${record.station || ''}`,
+    `# Test Status: ${record['Test Status']}`,
+    `# Test Start: ${record['Test Start Time']}`,
+    `# Test End: ${record['Test end Time']}`,
+    '',
+  ].join('\n')
 
-    // CSV header
-    const csvHeader = 'NAME,STATUS,VALUE,UCL,LCL,CYCLE'
+  // CSV header
+  const csvHeader = 'NAME,STATUS,VALUE,UCL,LCL,CYCLE'
 
-    // CSV rows
-    const csvRows = testItems.map(item => {
-        const name = escapeCSVField(item.NAME || '')
-        const status = escapeCSVField(item.STATUS || '')
-        const value = escapeCSVField(item.VALUE || '')
-        const ucl = escapeCSVField(item.UCL || '')
-        const lcl = escapeCSVField(item.LCL || '')
-        // Handle both CYCLE (correct) and possible typo from API
-        const cycle = escapeCSVField(item.CYCLE || (item as any).CYCLE || '')
-        return `${name},${status},${value},${ucl},${lcl},${cycle}`
-    })
+  // CSV rows
+  const csvRows = testItems.map((item) => {
+    const name = escapeCSVField(item.NAME || '')
+    const status = escapeCSVField(item.STATUS || '')
+    const value = escapeCSVField(item.VALUE || '')
+    const ucl = escapeCSVField(item.UCL || '')
+    const lcl = escapeCSVField(item.LCL || '')
+    // Handle CYCLE field from API
+    const cycle = escapeCSVField(item.CYCLE || '')
+    return `${name},${status},${value},${ucl},${lcl},${cycle}`
+  })
 
-    return headerInfo + csvHeader + '\n' + csvRows.join('\n')
+  return `${headerInfo + csvHeader}\n${csvRows.join('\n')}`
 }
 
 /**
  * Escape CSV field value
  */
 function escapeCSVField(value: string): string {
-    if (value.includes(',') || value.includes('"') || value.includes('\n')) {
-        return `"${value.replace(/"/g, '""')}"`
-    }
-    return value
+  if (value.includes(',') || value.includes('"') || value.includes('\n')) {
+    return `"${value.replace(/"/g, '""')}"`
+  }
+  return value
 }
 
 /**
  * Download string content as a CSV file
  */
 function downloadCsvFile(content: string, filename: string): void {
-    const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+  const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 
 async function downloadSelectedRecords(): Promise<void> {
-    if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
+  if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
 
-    // UPDATED: Use batch download for multiple TXT files
-    if (selectedRecordKeys.value.size > 1) {
-        await downloadSelectedBatch('txt')
-        return
+  // UPDATED: Use batch download for multiple TXT files
+  if (selectedRecordKeys.value.size > 1) {
+    await downloadSelectedBatch('txt')
+    return
+  }
+
+  // Single file download - use original method
+  try {
+    const attachments: DownloadAttachmentInfo[] = []
+
+    // Build a map of recordKey -> record for quick lookup
+    const recordMap = new Map<string, CsvTestItemData | CompactCsvTestItemData>()
+    for (const group of groupedByStation.value) {
+      for (const record of group.records) {
+        const recordKey = `${record.ISN}_${record['Test Start Time']}`
+        recordMap.set(recordKey, record)
+      }
     }
 
-    // Single file download - use original method
-    try {
-        const attachments: DownloadAttachmentInfo[] = []
-
-        // Build a map of recordKey -> record for quick lookup
-        const recordMap = new Map<string, CsvTestItemData | CompactCsvTestItemData>()
-        for (const group of groupedByStation.value) {
-            for (const record of group.records) {
-                const recordKey = `${record.ISN}_${record['Test Start Time']}`
-                recordMap.set(recordKey, record)
-            }
-        }
-
-        // Find selected records and create attachment info
-        for (const key of selectedRecordKeys.value) {
-            const record = recordMap.get(key)
-            if (record) {
-                attachments.push(createAttachmentInfo(record))
-            }
-        }
-
-        if (attachments.length > 0) {
-            console.log('Download attachments:', attachments)
-            await downloadAttachments(selectedSite.value, selectedProject.value, attachments)
-        }
-    } catch (err) {
-        console.error('Failed to download test logs:', err)
+    // Find selected records and create attachment info
+    for (const key of selectedRecordKeys.value) {
+      const record = recordMap.get(key)
+      if (record) {
+        attachments.push(createAttachmentInfo(record))
+      }
     }
+
+    if (attachments.length > 0) {
+      console.log('Download attachments:', attachments)
+      await downloadAttachments(selectedSite.value, selectedProject.value, attachments)
+    }
+  } catch (err) {
+    console.error('Failed to download test logs:', err)
+  }
 }
 
 /**
@@ -1545,64 +1582,69 @@ async function downloadSelectedRecords(): Promise<void> {
  * UPDATED: Uses batch download for multiple files to create proper zip archive
  */
 async function downloadSelectedRecordsCsv(): Promise<void> {
-    if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
+  if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
 
-    // UPDATED: Use batch download for multiple CSV files
-    if (selectedRecordKeys.value.size > 1) {
-        await downloadSelectedBatch('csv')
-        return
+  // UPDATED: Use batch download for multiple CSV files
+  if (selectedRecordKeys.value.size > 1) {
+    await downloadSelectedBatch('csv')
+    return
+  }
+
+  // Single file download - use original method
+  downloadingCsv.value = true
+
+  try {
+    // Build a map of recordKey -> record for quick lookup
+    const recordMap = new Map<
+      string,
+      { record: CsvTestItemData | CompactCsvTestItemData; stationName: string }
+    >()
+    for (const group of groupedByStation.value) {
+      for (const record of group.records) {
+        const recordKey = `${record.ISN}_${record['Test Start Time']}`
+        recordMap.set(recordKey, { record, stationName: group.stationName })
+      }
     }
 
-    // Single file download - use original method
-    downloadingCsv.value = true
+    // Collect all CSV log info for selected records
+    const csvLogInfos: DownloadCsvLogInfo[] = []
 
-    try {
-        // Build a map of recordKey -> record for quick lookup
-        const recordMap = new Map<string, { record: CsvTestItemData | CompactCsvTestItemData; stationName: string }>()
-        for (const group of groupedByStation.value) {
-            for (const record of group.records) {
-                const recordKey = `${record.ISN}_${record['Test Start Time']}`
-                recordMap.set(recordKey, { record, stationName: group.stationName })
-            }
-        }
+    for (const key of selectedRecordKeys.value) {
+      const entry = recordMap.get(key)
+      if (!entry) continue
 
-        // Collect all CSV log info for selected records
-        const csvLogInfos: DownloadCsvLogInfo[] = []
+      const { record, stationName } = entry
 
-        for (const key of selectedRecordKeys.value) {
-            const entry = recordMap.get(key)
-            if (!entry) continue
+      // Format test_end_time with .000 milliseconds as required by iPLAS API
+      const testEndTime = record['Test end Time']
+      const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+      // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
+      const apiEndTime = formattedEndTime.replace(/-/g, '/')
 
-            const { record, stationName } = entry
-
-            // Format test_end_time with .000 milliseconds as required by iPLAS API
-            const testEndTime = record['Test end Time']
-            const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
-            // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
-            const apiEndTime = formattedEndTime.replace(/-/g, '/')
-
-            csvLogInfos.push({
-                site: selectedSite.value!,
-                project: selectedProject.value!,
-                station: record.TSP || record.station || stationName,
-                line: record.Line || 'NA',
-                model: record.Model || 'ALL',
-                deviceid: record.DeviceId,
-                isn: record.ISN,
-                test_end_time: apiEndTime,
-                data_source: 0
-            })
-        }
-
-        if (csvLogInfos.length > 0) {
-            console.log(`Downloading ${csvLogInfos.length} CSV logs via iPLAS API`)
-            await downloadCsvLogs(csvLogInfos)
-        }
-    } catch (err) {
-        console.error('Failed to download CSV files:', err)
-    } finally {
-        downloadingCsv.value = false
+      csvLogInfos.push({
+        // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+        site: selectedSite.value!,
+        // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+        project: selectedProject.value!,
+        station: record.TSP || record.station || stationName,
+        line: record.Line || 'NA',
+        model: record.Model || 'ALL',
+        deviceid: record.DeviceId,
+        isn: record.ISN,
+        test_end_time: apiEndTime,
+        data_source: 0,
+      })
     }
+
+    if (csvLogInfos.length > 0) {
+      console.log(`Downloading ${csvLogInfos.length} CSV logs via iPLAS API`)
+      await downloadCsvLogs(csvLogInfos)
+    }
+  } catch (err) {
+    console.error('Failed to download CSV files:', err)
+  } finally {
+    downloadingCsv.value = false
+  }
 }
 
 /**
@@ -1610,65 +1652,70 @@ async function downloadSelectedRecordsCsv(): Promise<void> {
  * Creates a proper zip archive with organized folder structure
  */
 async function downloadSelectedBatch(downloadType: 'txt' | 'csv' | 'all'): Promise<void> {
-    if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
+  if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
 
-    if (downloadType === 'csv') {
-        downloadingCsv.value = true
+  if (downloadType === 'csv') {
+    downloadingCsv.value = true
+  }
+
+  try {
+    // Build a map of recordKey -> record for quick lookup
+    const recordMap = new Map<
+      string,
+      { record: CsvTestItemData | CompactCsvTestItemData; stationName: string }
+    >()
+    for (const group of groupedByStation.value) {
+      for (const record of group.records) {
+        const recordKey = `${record.ISN}_${record['Test Start Time']}`
+        recordMap.set(recordKey, { record, stationName: group.stationName })
+      }
     }
 
-    try {
-        // Build a map of recordKey -> record for quick lookup
-        const recordMap = new Map<string, { record: CsvTestItemData | CompactCsvTestItemData; stationName: string }>()
-        for (const group of groupedByStation.value) {
-            for (const record of group.records) {
-                const recordKey = `${record.ISN}_${record['Test Start Time']}`
-                recordMap.set(recordKey, { record, stationName: group.stationName })
-            }
-        }
+    // Collect all log info for selected records
+    const logInfos: DownloadCsvLogInfo[] = []
 
-        // Collect all log info for selected records
-        const logInfos: DownloadCsvLogInfo[] = []
+    for (const key of selectedRecordKeys.value) {
+      const entry = recordMap.get(key)
+      if (!entry) continue
 
-        for (const key of selectedRecordKeys.value) {
-            const entry = recordMap.get(key)
-            if (!entry) continue
+      const { record, stationName } = entry
 
-            const { record, stationName } = entry
+      // Format test_end_time with .000 milliseconds as required by iPLAS API
+      const testEndTime = record['Test end Time']
+      const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+      // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
+      const apiEndTime = formattedEndTime.replace(/-/g, '/')
 
-            // Format test_end_time with .000 milliseconds as required by iPLAS API
-            const testEndTime = record['Test end Time']
-            const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
-            // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
-            const apiEndTime = formattedEndTime.replace(/-/g, '/')
-
-            logInfos.push({
-                site: selectedSite.value!,
-                project: selectedProject.value!,
-                station: record.TSP || record.station || stationName,
-                line: record.Line || 'NA',
-                model: record.Model || 'ALL',
-                deviceid: record.DeviceId,
-                isn: record.ISN,
-                test_end_time: apiEndTime,
-                data_source: 0
-            })
-        }
-
-        if (logInfos.length > 0) {
-            console.log(`Batch downloading ${logInfos.length} ${downloadType} logs`)
-            const response = await batchDownloadLogs(
-                selectedSite.value,
-                selectedProject.value,
-                logInfos,
-                downloadType
-            )
-            console.log(`Downloaded: ${response.txt_count} TXT + ${response.csv_count} CSV files`)
-        }
-    } catch (err) {
-        console.error(`Failed to batch download ${downloadType} files:`, err)
-    } finally {
-        downloadingCsv.value = false
+      logInfos.push({
+        // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+        site: selectedSite.value!,
+        // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+        project: selectedProject.value!,
+        station: record.TSP || record.station || stationName,
+        line: record.Line || 'NA',
+        model: record.Model || 'ALL',
+        deviceid: record.DeviceId,
+        isn: record.ISN,
+        test_end_time: apiEndTime,
+        data_source: 0,
+      })
     }
+
+    if (logInfos.length > 0) {
+      console.log(`Batch downloading ${logInfos.length} ${downloadType} logs`)
+      const response = await batchDownloadLogs(
+        selectedSite.value,
+        selectedProject.value,
+        logInfos,
+        downloadType,
+      )
+      console.log(`Downloaded: ${response.txt_count} TXT + ${response.csv_count} CSV files`)
+    }
+  } catch (err) {
+    console.error(`Failed to batch download ${downloadType} files:`, err)
+  } finally {
+    downloadingCsv.value = false
+  }
 }
 
 /**
@@ -1676,184 +1723,216 @@ async function downloadSelectedBatch(downloadType: 'txt' | 'csv' | 'all'): Promi
  * UPDATED: Uses batch download to create a single zip with both types
  */
 async function downloadAllSelectedRecords(): Promise<void> {
-    if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
+  if (!selectedSite.value || !selectedProject.value || selectedRecordKeys.value.size === 0) return
 
-    // UPDATED: Use batch download with 'all' type to get both TXT and CSV in one zip
-    await downloadSelectedBatch('all')
+  // UPDATED: Use batch download with 'all' type to get both TXT and CSV in one zip
+  await downloadSelectedBatch('all')
 }
 
 // Handlers
 function handleSiteChange() {
-    selectedProject.value = null
-    selectedStations.value = []
-    stationDeviceIds.value = {}
-    deviceIdsByStation.value = {}
-    loadingDevicesByStation.value = {}
-    stations.value = []
-    clearTestItemData()
-    selectedRecordKeys.value.clear()
+  selectedProject.value = null
+  selectedStations.value = []
+  stationDeviceIds.value = {}
+  deviceIdsByStation.value = {}
+  loadingDevicesByStation.value = {}
+  stations.value = []
+  clearTestItemData()
+  selectedRecordKeys.value.clear()
 }
 
 async function handleProjectChange() {
-    selectedStations.value = []
-    stationDeviceIds.value = {}
-    deviceIdsByStation.value = {}
-    loadingDevicesByStation.value = {}
-    clearTestItemData()
-    selectedRecordKeys.value.clear()
+  selectedStations.value = []
+  stationDeviceIds.value = {}
+  deviceIdsByStation.value = {}
+  loadingDevicesByStation.value = {}
+  clearTestItemData()
+  selectedRecordKeys.value.clear()
 
-    if (selectedSite.value && selectedProject.value) {
-        await fetchStations(selectedSite.value, selectedProject.value)
-    }
+  if (selectedSite.value && selectedProject.value) {
+    await fetchStations(selectedSite.value, selectedProject.value)
+  }
 }
 
 function handleStationChange() {
-    clearTestItemData()
-    selectedRecordKeys.value.clear()
+  clearTestItemData()
+  selectedRecordKeys.value.clear()
 }
 
 async function fetchTestItems() {
-    if (!selectedSite.value || !selectedProject.value || selectedStations.value.length === 0) return
+  if (!selectedSite.value || !selectedProject.value || selectedStations.value.length === 0) return
 
-    // Pass Date objects - the composable handles ISO format conversion
-    const begintime = new Date(startTime.value)
-    const endtime = new Date(endTime.value)
+  // Pass Date objects - the composable handles ISO format conversion
+  const begintime = new Date(startTime.value)
+  const endtime = new Date(endTime.value)
 
-    clearTestItemData()
-    selectedRecordKeys.value.clear()
-    lazyLoadedTestItems.value.clear()
-    loadingTestItemsForRecord.value.clear()
-    // Clear IndexedDB selection when fetching new data
-    indexedDbSelectedKeys.value = []
+  clearTestItemData()
+  selectedRecordKeys.value.clear()
+  lazyLoadedTestItems.value.clear()
+  loadingTestItemsForRecord.value.clear()
+  // Clear IndexedDB selection when fetching new data
+  indexedDbSelectedKeys.value = []
 
-    // =========================================================================
-    // IndexedDB Mode: Stream directly to disk for large datasets
-    // =========================================================================
-    if (useIndexedDbMode.value) {
-        // Stream data for ALL selected stations
-        let totalRecords = 0
-
-        // STEP 1: Collect all stations and identify which need device ID fetching
-        const stationInfoList: { stationInfo: Station; stationDisplayName: string; deviceIds: string[] }[] = []
-        for (const stationDisplayName of selectedStations.value) {
-            const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationDisplayName)
-            if (!stationInfo) continue
-            const deviceIds = stationDeviceIds.value[stationDisplayName] || []
-            stationInfoList.push({ stationInfo, stationDisplayName, deviceIds })
-        }
-
-        // STEP 2: Fetch device IDs in parallel for stations that don't have them
-        const deviceIdPromises = stationInfoList.map(async (entry) => {
-            if (entry.deviceIds.length === 0) {
-                try {
-                    entry.deviceIds = await fetchDeviceIds(
-                        selectedSite.value!,
-                        selectedProject.value!,
-                        entry.stationInfo.display_station_name,
-                        begintime,
-                        endtime
-                    )
-                } catch (err) {
-                    console.warn(`Failed to fetch device IDs for ${entry.stationDisplayName}, falling back to ALL`)
-                    entry.deviceIds = ['ALL']
-                }
-            }
-            return entry
-        })
-        const resolvedStations = await Promise.all(deviceIdPromises)
-
-        // STEP 3: Build list of all station+device combinations and fetch data in parallel
-        const streamPromises: Promise<void>[] = []
-        for (const { stationInfo, deviceIds } of resolvedStations) {
-            for (const deviceId of deviceIds) {
-                streamPromises.push(
-                    (async () => {
-                        try {
-                            const recordCount = await streamToIndexedDb({
-                                site: selectedSite.value!,
-                                project: selectedProject.value!,
-                                station: stationInfo.display_station_name,
-                                deviceId,
-                                beginTime: begintime,
-                                endTime: endtime,
-                                testStatus: testStatusFilter.value
-                            })
-                            console.log(`[IndexedDB] Streamed ${recordCount} records for station ${stationInfo.display_station_name} device ${deviceId}`)
-                            totalRecords += recordCount
-                        } catch (err) {
-                            console.error(`[IndexedDB] Stream failed for station ${stationInfo.display_station_name} device ${deviceId}:`, err)
-                            error.value = err instanceof Error ? err.message : 'Failed to stream data to IndexedDB'
-                        }
-                    })()
-                )
-            }
-        }
-        await Promise.all(streamPromises)
-
-        console.log(`[IndexedDB] Total: Streamed ${totalRecords} records from ${selectedStations.value.length} stations`)
-
-        // Reset station tab to "All Stations" and clear filter
-        indexedDbActiveStationTab.value = 0
-        updateIndexedDbFilter({ station: undefined })
-
-        // Load the first page
-        await loadIndexedDbItems(indexedDbTableOptions.value)
-        return
-    }
-
-    // =========================================================================
-    // Regular Mode: Fetch to memory
-    // =========================================================================
-    // Choose fetch method based on mode
-    const fetchMethod = useCompactMode.value ? fetchTestItemsCompact : fetchTestItemsApi
+  // =========================================================================
+  // IndexedDB Mode: Stream directly to disk for large datasets
+  // =========================================================================
+  if (useIndexedDbMode.value) {
+    // Stream data for ALL selected stations
+    let totalRecords = 0
 
     // STEP 1: Collect all stations and identify which need device ID fetching
-    const stationInfoList: { stationInfo: Station; stationDisplayName: string; deviceIds: string[] }[] = []
+    const stationInfoList: {
+      stationInfo: Station
+      stationDisplayName: string
+      deviceIds: string[]
+    }[] = []
     for (const stationDisplayName of selectedStations.value) {
-        const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationDisplayName)
-        if (!stationInfo) continue
-        const deviceIds = stationDeviceIds.value[stationDisplayName] || []
-        stationInfoList.push({ stationInfo, stationDisplayName, deviceIds })
+      const stationInfo = stations.value.find(
+        (s: Station) => s.display_station_name === stationDisplayName,
+      )
+      if (!stationInfo) continue
+      const deviceIds = stationDeviceIds.value[stationDisplayName] || []
+      stationInfoList.push({ stationInfo, stationDisplayName, deviceIds })
     }
 
     // STEP 2: Fetch device IDs in parallel for stations that don't have them
     const deviceIdPromises = stationInfoList.map(async (entry) => {
-        if (entry.deviceIds.length === 0) {
-            try {
-                entry.deviceIds = await fetchDeviceIds(
-                    selectedSite.value!,
-                    selectedProject.value!,
-                    entry.stationInfo.display_station_name,
-                    begintime,
-                    endtime
-                )
-            } catch (err) {
-                console.warn(`Failed to fetch device IDs for ${entry.stationDisplayName}, falling back to ALL`)
-                entry.deviceIds = ['ALL']
-            }
+      if (entry.deviceIds.length === 0) {
+        try {
+          entry.deviceIds = await fetchDeviceIds(
+            // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+            selectedSite.value!,
+            // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+            selectedProject.value!,
+            entry.stationInfo.display_station_name,
+            begintime,
+            endtime,
+          )
+        } catch (_err) {
+          console.warn(
+            `Failed to fetch device IDs for ${entry.stationDisplayName}, falling back to ALL`,
+          )
+          entry.deviceIds = ['ALL']
         }
-        return entry
+      }
+      return entry
     })
     const resolvedStations = await Promise.all(deviceIdPromises)
 
     // STEP 3: Build list of all station+device combinations and fetch data in parallel
-    const fetchPromises: Promise<unknown>[] = []
+    const streamPromises: Promise<void>[] = []
     for (const { stationInfo, deviceIds } of resolvedStations) {
-        for (const deviceId of deviceIds) {
-            fetchPromises.push(
-                fetchMethod(
-                    selectedSite.value!,
-                    selectedProject.value!,
-                    stationInfo.display_station_name,
-                    deviceId,
-                    begintime,
-                    endtime,
-                    testStatusFilter.value
-                )
-            )
-        }
+      for (const deviceId of deviceIds) {
+        streamPromises.push(
+          (async () => {
+            try {
+              const recordCount = await streamToIndexedDb({
+                // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+                site: selectedSite.value!,
+                // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+                project: selectedProject.value!,
+                station: stationInfo.display_station_name,
+                deviceId,
+                beginTime: begintime,
+                endTime: endtime,
+                testStatus: testStatusFilter.value,
+              })
+              console.log(
+                `[IndexedDB] Streamed ${recordCount} records for station ${stationInfo.display_station_name} device ${deviceId}`,
+              )
+              totalRecords += recordCount
+            } catch (err) {
+              console.error(
+                `[IndexedDB] Stream failed for station ${stationInfo.display_station_name} device ${deviceId}:`,
+                err,
+              )
+              error.value =
+                err instanceof Error ? err.message : 'Failed to stream data to IndexedDB'
+            }
+          })(),
+        )
+      }
     }
-    await Promise.all(fetchPromises)
+    await Promise.all(streamPromises)
+
+    console.log(
+      `[IndexedDB] Total: Streamed ${totalRecords} records from ${selectedStations.value.length} stations`,
+    )
+
+    // Reset station tab to "All Stations" and clear filter
+    indexedDbActiveStationTab.value = 0
+    updateIndexedDbFilter({ station: undefined })
+
+    // Load the first page
+    await loadIndexedDbItems(indexedDbTableOptions.value)
+    return
+  }
+
+  // =========================================================================
+  // Regular Mode: Fetch to memory
+  // =========================================================================
+  // Choose fetch method based on mode
+  const fetchMethod = useCompactMode.value ? fetchTestItemsCompact : fetchTestItemsApi
+
+  // STEP 1: Collect all stations and identify which need device ID fetching
+  const stationInfoList: {
+    stationInfo: Station
+    stationDisplayName: string
+    deviceIds: string[]
+  }[] = []
+  for (const stationDisplayName of selectedStations.value) {
+    const stationInfo = stations.value.find(
+      (s: Station) => s.display_station_name === stationDisplayName,
+    )
+    if (!stationInfo) continue
+    const deviceIds = stationDeviceIds.value[stationDisplayName] || []
+    stationInfoList.push({ stationInfo, stationDisplayName, deviceIds })
+  }
+
+  // STEP 2: Fetch device IDs in parallel for stations that don't have them
+  const deviceIdPromises = stationInfoList.map(async (entry) => {
+    if (entry.deviceIds.length === 0) {
+      try {
+        entry.deviceIds = await fetchDeviceIds(
+          // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+          selectedSite.value!,
+          // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+          selectedProject.value!,
+          entry.stationInfo.display_station_name,
+          begintime,
+          endtime,
+        )
+      } catch (_err) {
+        console.warn(
+          `Failed to fetch device IDs for ${entry.stationDisplayName}, falling back to ALL`,
+        )
+        entry.deviceIds = ['ALL']
+      }
+    }
+    return entry
+  })
+  const resolvedStations = await Promise.all(deviceIdPromises)
+
+  // STEP 3: Build list of all station+device combinations and fetch data in parallel
+  const fetchPromises: Promise<unknown>[] = []
+  for (const { stationInfo, deviceIds } of resolvedStations) {
+    for (const deviceId of deviceIds) {
+      fetchPromises.push(
+        fetchMethod(
+          // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+          selectedSite.value!,
+          // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+          selectedProject.value!,
+          stationInfo.display_station_name,
+          deviceId,
+          begintime,
+          endtime,
+          testStatusFilter.value,
+        ),
+      )
+    }
+  }
+  await Promise.all(fetchPromises)
 }
 
 /**
@@ -1861,165 +1940,170 @@ async function fetchTestItems() {
  * Called when user changes page, sort, or items per page.
  */
 async function handleTableOptionsUpdate(
-    stationName: string,
-    options: { page: number; itemsPerPage: number; sortBy: { key: string; order: 'asc' | 'desc' }[] }
+  stationName: string,
+  options: { page: number; itemsPerPage: number; sortBy: { key: string; order: 'asc' | 'desc' }[] },
 ) {
-    if (!selectedSite.value || !selectedProject.value) return
+  if (!selectedSite.value || !selectedProject.value) return
 
-    const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationName)
-    if (!stationInfo) return
+  const stationInfo = stations.value.find((s: Station) => s.display_station_name === stationName)
+  if (!stationInfo) return
 
-    // Initialize state for this station if needed
-    if (!serverPaginationState.value[stationName]) {
-        serverPaginationState.value[stationName] = {
-            page: 1,
-            itemsPerPage: 25,
-            sortBy: 'TestStartTime',
-            sortDesc: true,
-            items: [],
-            totalItems: 0,
-            loading: false
-        }
+  // Initialize state for this station if needed
+  if (!serverPaginationState.value[stationName]) {
+    serverPaginationState.value[stationName] = {
+      page: 1,
+      itemsPerPage: 25,
+      sortBy: 'TestStartTime',
+      sortDesc: true,
+      items: [],
+      totalItems: 0,
+      loading: false,
     }
+  }
 
-    const state = serverPaginationState.value[stationName]!
-    state.loading = true
+  // biome-ignore lint/style/noNonNullAssertion: initialized in the block above
+  const state = serverPaginationState.value[stationName]!
+  state.loading = true
 
-    // Get sort info
-    const sortInfo = options.sortBy[0]
-    const sortBy = sortInfo?.key || 'TestStartTime'
-    const sortDesc = sortInfo?.order === 'desc'
+  // Get sort info
+  const sortInfo = options.sortBy[0]
+  const sortBy = sortInfo?.key || 'TestStartTime'
+  const sortDesc = sortInfo?.order === 'desc'
 
-    // Get device IDs for this station - use filter if set, otherwise ALL
-    const filterDeviceIds = selectedFilterDeviceIds.value[stationName]
-    let deviceId: string = 'ALL'
-    if (filterDeviceIds && filterDeviceIds.length === 1 && filterDeviceIds[0]) {
-        // If only one device ID is selected in filter, use it for server-side filtering
-        deviceId = filterDeviceIds[0]
-    }
+  // Get device IDs for this station - use filter if set, otherwise ALL
+  const filterDeviceIds = selectedFilterDeviceIds.value[stationName]
+  let deviceId: string = 'ALL'
+  if (filterDeviceIds && filterDeviceIds.length === 1 && filterDeviceIds[0]) {
+    // If only one device ID is selected in filter, use it for server-side filtering
+    deviceId = filterDeviceIds[0]
+  }
 
-    // Get status filter for this station (use per-station filter, fallback to global)
-    const statusFilter = stationStatusFilters.value[stationName] || testStatusFilter.value || 'ALL'
+  // Get status filter for this station (use per-station filter, fallback to global)
+  const statusFilter = stationStatusFilters.value[stationName] || testStatusFilter.value || 'ALL'
 
-    try {
-        const result = await fetchTestItemsPaginated(
-            selectedSite.value,
-            selectedProject.value,
-            stationInfo.display_station_name,
-            deviceId,
-            new Date(startTime.value),
-            new Date(endTime.value),
-            statusFilter,
-            {
-                page: options.page,
-                itemsPerPage: options.itemsPerPage,
-                sortBy,
-                sortDesc
-            }
-        )
+  try {
+    const result = await fetchTestItemsPaginated(
+      selectedSite.value,
+      selectedProject.value,
+      stationInfo.display_station_name,
+      deviceId,
+      new Date(startTime.value),
+      new Date(endTime.value),
+      statusFilter,
+      {
+        page: options.page,
+        itemsPerPage: options.itemsPerPage,
+        sortBy,
+        sortDesc,
+      },
+    )
 
-        // Update state
-        state.page = result.page
-        state.itemsPerPage = result.itemsPerPage
-        state.sortBy = sortBy
-        state.sortDesc = sortDesc
-        state.items = result.items
-        state.totalItems = result.totalItems
-    } catch (err) {
-        console.error('Failed to fetch paginated data:', err)
-    } finally {
-        state.loading = false
-    }
+    // Update state
+    state.page = result.page
+    state.itemsPerPage = result.itemsPerPage
+    state.sortBy = sortBy
+    state.sortDesc = sortDesc
+    state.items = result.items
+    state.totalItems = result.totalItems
+  } catch (err) {
+    console.error('Failed to fetch paginated data:', err)
+  } finally {
+    state.loading = false
+  }
 }
 
 /**
  * Initialize server-side pagination for a station (called when switching to table view).
  */
 async function initializeServerPagination(stationName: string) {
-    await handleTableOptionsUpdate(stationName, {
-        page: 1,
-        itemsPerPage: 25,
-        sortBy: [{ key: 'TestStartTime', order: 'desc' }]
-    })
+  await handleTableOptionsUpdate(stationName, {
+    page: 1,
+    itemsPerPage: 25,
+    sortBy: [{ key: 'TestStartTime', order: 'desc' }],
+  })
 }
 
 async function handleRefresh() {
-    await fetchSiteProjects(true)
+  await fetchSiteProjects(true)
 }
 
 // Watch for station data changes - initialize server pagination
-watch(groupedByStation, async (groups) => {
+watch(
+  groupedByStation,
+  async (groups) => {
     if (groups.length > 0) {
-        // Initialize pagination for the active station tab
-        const activeStation = groups[activeStationTab.value]
-        if (activeStation && !serverPaginationState.value[activeStation.stationName]) {
-            await initializeServerPagination(activeStation.stationName)
-        }
+      // Initialize pagination for the active station tab
+      const activeStation = groups[activeStationTab.value]
+      if (activeStation && !serverPaginationState.value[activeStation.stationName]) {
+        await initializeServerPagination(activeStation.stationName)
+      }
     }
-}, { immediate: true })
+  },
+  { immediate: true },
+)
 
 // UPDATED: Watch for streaming completion to load all items for client-side table
 watch(isStreaming, async (streaming, wasStreaming) => {
-    if (wasStreaming && !streaming && streamStatus.recordsWritten > 0) {
-        // Streaming completed - load all items for v-data-table client-side pagination
-        await loadAllIndexedDbItems()
-    }
+  if (wasStreaming && !streaming && streamStatus.recordsWritten > 0) {
+    // Streaming completed - load all items for v-data-table client-side pagination
+    await loadAllIndexedDbItems()
+  }
 })
 
 // Watch for active station tab changes - initialize pagination if needed
 watch(activeStationTab, async (newTab) => {
-    if (groupedByStation.value.length > newTab) {
-        const station = groupedByStation.value[newTab]
-        if (station && !serverPaginationState.value[station.stationName]) {
-            await initializeServerPagination(station.stationName)
-        }
+  if (groupedByStation.value.length > newTab) {
+    const station = groupedByStation.value[newTab]
+    if (station && !serverPaginationState.value[station.stationName]) {
+      await initializeServerPagination(station.stationName)
     }
+  }
 })
 
 // Watch for IndexedDB station tab changes - update filter
 watch(indexedDbActiveStationTab, async (newTab) => {
-    if (newTab === 0) {
-        // All stations - clear station filter
-        updateIndexedDbFilter({ station: undefined })
-    } else {
-        // Specific station selected
-        const stationName = indexedDbStationList.value[newTab - 1]
-        if (stationName) {
-            updateIndexedDbFilter({ station: stationName })
-        }
+  if (newTab === 0) {
+    // All stations - clear station filter
+    updateIndexedDbFilter({ station: undefined })
+  } else {
+    // Specific station selected
+    const stationName = indexedDbStationList.value[newTab - 1]
+    if (stationName) {
+      updateIndexedDbFilter({ station: stationName })
     }
-    // Reset to page 1 when changing tabs
-    indexedDbTableOptions.value.page = 1
-    // UPDATED: Load all items for client-side pagination with v-data-table
-    await loadAllIndexedDbItems()
+  }
+  // Reset to page 1 when changing tabs
+  indexedDbTableOptions.value.page = 1
+  // UPDATED: Load all items for client-side pagination with v-data-table
+  await loadAllIndexedDbItems()
 })
 
 // Initialize
 onMounted(async () => {
-    await fetchSiteProjects()
-    // UPDATED: Load all IndexedDB items on mount for client-side table pagination
-    await loadAllIndexedDbItems()
+  await fetchSiteProjects()
+  // UPDATED: Load all IndexedDB items on mount for client-side table pagination
+  await loadAllIndexedDbItems()
 
-    // UPDATED: Set default site based on connected iPLAS server
-    const { selectedServer } = useIplasSettings()
-    const serverId = selectedServer.value?.id?.toUpperCase()
-    if (serverId && uniqueSites.value.includes(serverId) && !selectedSite.value) {
-        selectedSite.value = serverId
-    }
+  // UPDATED: Set default site based on connected iPLAS server
+  const { selectedServer } = useIplasSettings()
+  const serverId = selectedServer.value?.id?.toUpperCase()
+  if (serverId && uniqueSites.value.includes(serverId) && !selectedSite.value) {
+    selectedSite.value = serverId
+  }
 })
 
 // Cleanup on unmount to free memory
 onUnmounted(() => {
-    clearTestItemData()
-    lazyLoadedTestItems.value.clear()
-    loadingTestItemsForRecord.value.clear()
-    recordSearchQueries.value = {}
-    debouncedRecordSearchQueries.value = {}
-    testItemFilters.value = {}
-    testItemStatusFilters.value = {}
-    testItemSearchTerms.value = {}
-    serverPaginationState.value = {}
-    selectedRecordKeys.value.clear()
+  clearTestItemData()
+  lazyLoadedTestItems.value.clear()
+  loadingTestItemsForRecord.value.clear()
+  recordSearchQueries.value = {}
+  debouncedRecordSearchQueries.value = {}
+  testItemFilters.value = {}
+  testItemStatusFilters.value = {}
+  testItemSearchTerms.value = {}
+  serverPaginationState.value = {}
+  selectedRecordKeys.value.clear()
 })
 </script>
 

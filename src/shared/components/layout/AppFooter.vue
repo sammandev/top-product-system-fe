@@ -26,8 +26,8 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
+import { computed } from 'vue'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 
 const currentYear = computed(() => new Date().getFullYear())
@@ -38,23 +38,23 @@ const footerLinks = [
   {
     title: 'Documentation',
     icon: 'mdi-book-open-variant',
-    href: '#'
+    href: '#',
   },
   {
     title: 'Support',
     icon: 'mdi-help-circle',
-    href: '#'
+    href: '#',
   },
   {
     title: 'GitHub',
     icon: 'mdi-github',
-    href: '#'
+    href: '#',
   },
   {
     title: 'Settings',
     icon: 'mdi-cog',
-    href: '#'
-  }
+    href: '#',
+  },
 ]
 </script>
 

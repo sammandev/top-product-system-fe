@@ -204,31 +204,29 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import type { StationFilterConfig, TestItem } from '../types/dutTopProduct.types'
 
 // Props
 interface Props {
-    stationIdentifier: string
-    stationName?: string
-    availableTestItems?: TestItem[]
-    availableDevices?: string[]
-    modelValue?: StationFilterConfig
-    loading?: boolean
+  stationIdentifier: string
+  stationName?: string
+  availableTestItems?: TestItem[]
+  availableDevices?: string[]
+  modelValue?: StationFilterConfig
+  loading?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    stationName: undefined,
-    availableTestItems: () => [],
-    availableDevices: () => [],
-    modelValue: undefined,
-    loading: false
+  stationName: undefined,
+  availableTestItems: () => [],
+  availableDevices: () => [],
+  modelValue: undefined,
+  loading: false,
 })
 
 // Emits
-const emit = defineEmits<{
-    (e: 'update:modelValue', value: StationFilterConfig | undefined): void
-}>()
+const emit = defineEmits<(e: 'update:modelValue', value: StationFilterConfig | undefined) => void>()
 
 // Local state
 const localDeviceIdentifiers = ref<string[]>(props.modelValue?.device_identifiers || [])
@@ -243,217 +241,218 @@ const isUpdatingFromProps = ref(false)
 
 // Computed
 const testItemSuggestions = computed(() => {
-    if (!props.availableTestItems || props.availableTestItems.length === 0) {
-        return []
-    }
+  if (!props.availableTestItems || props.availableTestItems.length === 0) {
+    return []
+  }
 
-    // Extract unique test item names (preserve original order)
-    const seen = new Set<string>()
-    const itemNames = props.availableTestItems
-        .map(item => item.name)
-        .filter(name => {
-            if (seen.has(name)) return false
-            seen.add(name)
-            return true
-        })
-
-    // When user is not searching (empty search), show only individual items
-    const isSearching = searchInput.value && searchInput.value.trim().length > 0
-
-    // Group items by pattern (e.g., TX1, TX2, TX3 -> TX)
-    const groups = new Map<string, string[]>()
-
-    itemNames.forEach(name => {
-        // Pattern 1: WiFi_TX1_..., WiFi_TX2_... -> WiFi_TX_...
-        // Pattern 2: BT_RX1_..., BT_RX2_... -> BT_RX_...
-        // Pattern: Match anything with _TX1_, _TX2_, _RX1_, _RX2_, etc. followed by underscore
-        const antennaMatch = name.match(/^(.+_)(TX|RX|PA)(\d+)(_.*?)$/)
-
-        if (antennaMatch) {
-            const [, prefix, type, , suffix] = antennaMatch
-            const groupKey = `${prefix}${type}${suffix}`
-
-            if (!groups.has(groupKey)) {
-                groups.set(groupKey, [])
-            }
-            groups.get(groupKey)!.push(name)
-        }
+  // Extract unique test item names (preserve original order)
+  const seen = new Set<string>()
+  const itemNames = props.availableTestItems
+    .map((item) => item.name)
+    .filter((name) => {
+      if (seen.has(name)) return false
+      seen.add(name)
+      return true
     })
 
-    // Create grouped suggestions - organized with groups first, then individual items
-    const suggestions: string[] = []
-    const addedGroups = new Set<string>()
-    const groupedItemNames = new Set<string>()
+  // When user is not searching (empty search), show only individual items
+  const isSearching = searchInput.value && searchInput.value.trim().length > 0
 
-    // First pass: Add grouped patterns only when user is searching
-    if (isSearching) {
-        itemNames.forEach(name => {
-            // Check if this item belongs to a group
-            for (const [groupKey, members] of groups.entries()) {
-                if (members.includes(name) && members.length >= 2) {
-                    // Mark this item as part of a group
-                    members.forEach(m => groupedItemNames.add(m))
+  // Group items by pattern (e.g., TX1, TX2, TX3 -> TX)
+  const groups = new Map<string, string[]>()
 
-                    // Only add the group once
-                    if (!addedGroups.has(groupKey)) {
-                        // Create regex pattern that matches all group members
-                        const firstMember = members[0]
-                        if (firstMember) {
-                            const match = firstMember.match(/^(.+_)(TX|RX|PA)(\d+)(_.*?)$/)
-                            if (match) {
-                                const prefix = match[1]
-                                const type = match[2]
-                                const suffix = match[4]
-                                if (prefix && type && suffix) {
-                                    const groupPattern = `${prefix}${type}.*${suffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`
-                                    suggestions.push(`${groupPattern} (Grouped - ${members.length} items)`)
-                                    addedGroups.add(groupKey)
-                                }
-                            }
-                        }
-                    }
-                    break
+  itemNames.forEach((name) => {
+    // Pattern 1: WiFi_TX1_..., WiFi_TX2_... -> WiFi_TX_...
+    // Pattern 2: BT_RX1_..., BT_RX2_... -> BT_RX_...
+    // Pattern: Match anything with _TX1_, _TX2_, _RX1_, _RX2_, etc. followed by underscore
+    const antennaMatch = name.match(/^(.+_)(TX|RX|PA)(\d+)(_.*?)$/)
+
+    if (antennaMatch) {
+      const [, prefix, type, , suffix] = antennaMatch
+      const groupKey = `${prefix}${type}${suffix}`
+
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, [])
+      }
+      groups.get(groupKey)?.push(name)
+    }
+  })
+
+  // Create grouped suggestions - organized with groups first, then individual items
+  const suggestions: string[] = []
+  const addedGroups = new Set<string>()
+  const groupedItemNames = new Set<string>()
+
+  // First pass: Add grouped patterns only when user is searching
+  if (isSearching) {
+    itemNames.forEach((name) => {
+      // Check if this item belongs to a group
+      for (const [groupKey, members] of groups.entries()) {
+        if (members.includes(name) && members.length >= 2) {
+          // Mark this item as part of a group
+          members.forEach((m) => groupedItemNames.add(m))
+
+          // Only add the group once
+          if (!addedGroups.has(groupKey)) {
+            // Create regex pattern that matches all group members
+            const firstMember = members[0]
+            if (firstMember) {
+              const match = firstMember.match(/^(.+_)(TX|RX|PA)(\d+)(_.*?)$/)
+              if (match) {
+                const prefix = match[1]
+                const type = match[2]
+                const suffix = match[4]
+                if (prefix && type && suffix) {
+                  const groupPattern = `${prefix}${type}.*${suffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`
+                  suggestions.push(`${groupPattern} (Grouped - ${members.length} items)`)
+                  addedGroups.add(groupKey)
                 }
+              }
             }
-        })
-    }
-
-    // Second pass: Add all individual items (both grouped and non-grouped)
-    itemNames.forEach(name => {
-        suggestions.push(name)
+          }
+          break
+        }
+      }
     })
+  }
 
-    // Return unsorted to maintain individual-first order (or groups-first when searching)
-    return suggestions
-    return suggestions
+  // Second pass: Add all individual items (both grouped and non-grouped)
+  itemNames.forEach((name) => {
+    suggestions.push(name)
+  })
+
+  // Return unsorted to maintain individual-first order (or groups-first when searching)
+  return suggestions
 })
 
 // Get expanded form of grouped patterns to check for duplicates
 function getExpandedPatterns(pattern: string): string[] {
-    if (!props.availableTestItems || props.availableTestItems.length === 0) {
-        return [pattern]
-    }
+  if (!props.availableTestItems || props.availableTestItems.length === 0) {
+    return [pattern]
+  }
 
-    // Check if this is a grouped pattern
-    const groupMatch = pattern.match(/^(.+_)(TX|RX|PA)\.\*(_.*?)\s+\(Grouped - \d+ items\)$/i)
-    if (!groupMatch) {
-        return [pattern] // Not a grouped pattern, return as-is
-    }
+  // Check if this is a grouped pattern
+  const groupMatch = pattern.match(/^(.+_)(TX|RX|PA)\.\*(_.*?)\s+\(Grouped - \d+ items\)$/i)
+  if (!groupMatch) {
+    return [pattern] // Not a grouped pattern, return as-is
+  }
 
-    const [, prefix, type, suffix] = groupMatch
+  const [, prefix, type, suffix] = groupMatch
 
-    // Find all items matching this pattern
-    const itemNames = props.availableTestItems.map(item => item.name)
-    const matchingItems = itemNames.filter(name => {
-        const match = name.match(/^(.+_)(TX|RX|PA)(\d+)(_.*?)$/)
-        if (!match) return false
-        const [, itemPrefix, itemType, , itemSuffix] = match
-        return itemPrefix === prefix && itemType === type && itemSuffix === suffix
-    })
+  // Find all items matching this pattern
+  const itemNames = props.availableTestItems.map((item) => item.name)
+  const matchingItems = itemNames.filter((name) => {
+    const match = name.match(/^(.+_)(TX|RX|PA)(\d+)(_.*?)$/)
+    if (!match) return false
+    const [, itemPrefix, itemType, , itemSuffix] = match
+    return itemPrefix === prefix && itemType === type && itemSuffix === suffix
+  })
 
-    return matchingItems.length > 0 ? matchingItems : [pattern]
+  return matchingItems.length > 0 ? matchingItems : [pattern]
 }
 
 // Check if an item is selected (accounting for grouped patterns)
 function isItemSelected(item: string, filterType: 'include' | 'exclude'): boolean {
-    const selectedItems = filterType === 'include'
-        ? localTestItemFilters.value
-        : localExcludeTestItemFilters.value
+  const selectedItems =
+    filterType === 'include' ? localTestItemFilters.value : localExcludeTestItemFilters.value
 
-    // Direct match
-    if (selectedItems.includes(item)) {
-        return true
-    }
+  // Direct match
+  if (selectedItems.includes(item)) {
+    return true
+  }
 
-    // Check if item is part of a grouped pattern
-    const expandedItem = getExpandedPatterns(item)
-    const expandedSelected = selectedItems.flatMap(getExpandedPatterns)
+  // Check if item is part of a grouped pattern
+  const expandedItem = getExpandedPatterns(item)
+  const expandedSelected = selectedItems.flatMap(getExpandedPatterns)
 
-    return expandedItem.some(exp => expandedSelected.includes(exp))
+  return expandedItem.some((exp) => expandedSelected.includes(exp))
 }
 
 // Handle checkbox click - prevent event propagation issues
 function handleCheckboxClick(item: string, filterType: 'include' | 'exclude', event: Event) {
-    event.preventDefault()
-    event.stopPropagation()
-    toggleItemSelection(item, filterType)
+  event.preventDefault()
+  event.stopPropagation()
+  toggleItemSelection(item, filterType)
 }
 
 // Handle list item click - ensure it triggers selection
 function handleItemClick(item: string, filterType: 'include' | 'exclude', event: Event) {
-    event.preventDefault()
-    event.stopPropagation()
-    toggleItemSelection(item, filterType)
+  event.preventDefault()
+  event.stopPropagation()
+  toggleItemSelection(item, filterType)
 }
 
 // Toggle item selection (add or remove from filter list)
 function toggleItemSelection(item: string, filterType: 'include' | 'exclude') {
-    const selectedItems = filterType === 'include'
-        ? localTestItemFilters.value
-        : localExcludeTestItemFilters.value
+  const selectedItems =
+    filterType === 'include' ? localTestItemFilters.value : localExcludeTestItemFilters.value
 
-    const expandedItem = getExpandedPatterns(item)
-    const expandedSelected = selectedItems.flatMap(getExpandedPatterns)
+  const expandedItem = getExpandedPatterns(item)
+  const expandedSelected = selectedItems.flatMap(getExpandedPatterns)
 
-    // Check if item or its expanded patterns are already selected
-    const isAlreadySelected = selectedItems.includes(item) ||
-        expandedItem.some(exp => expandedSelected.includes(exp))
+  // Check if item or its expanded patterns are already selected
+  const isAlreadySelected =
+    selectedItems.includes(item) || expandedItem.some((exp) => expandedSelected.includes(exp))
 
-    console.log(`${filterType === 'include' ? '➕' : '➖'} Toggle [${filterType}]:`, item, isAlreadySelected ? '(removing)' : '(adding)')
+  console.log(
+    `${filterType === 'include' ? '➕' : '➖'} Toggle [${filterType}]:`,
+    item,
+    isAlreadySelected ? '(removing)' : '(adding)',
+  )
 
-    if (isAlreadySelected) {
-        // Remove the item from selection
-        if (filterType === 'include') {
-            // Remove direct match or find and remove grouped pattern
-            if (selectedItems.includes(item)) {
-                localTestItemFilters.value = selectedItems.filter(i => i !== item)
-            } else {
-                // Find and remove grouped pattern or individual items that cover this item
-                localTestItemFilters.value = selectedItems.filter(selectedItem => {
-                    const expanded = getExpandedPatterns(selectedItem)
-                    return !expandedItem.some(exp => expanded.includes(exp))
-                })
-            }
-        } else {
-            if (selectedItems.includes(item)) {
-                localExcludeTestItemFilters.value = selectedItems.filter(i => i !== item)
-            } else {
-                localExcludeTestItemFilters.value = selectedItems.filter(selectedItem => {
-                    const expanded = getExpandedPatterns(selectedItem)
-                    return !expandedItem.some(exp => expanded.includes(exp))
-                })
-            }
-        }
-    } else {
-        // Before adding, remove any overlapping items
-        const newItems = selectedItems.filter(selectedItem => {
-            const expanded = getExpandedPatterns(selectedItem)
-            return !expandedItem.some(exp => expanded.includes(exp))
+  if (isAlreadySelected) {
+    // Remove the item from selection
+    if (filterType === 'include') {
+      // Remove direct match or find and remove grouped pattern
+      if (selectedItems.includes(item)) {
+        localTestItemFilters.value = selectedItems.filter((i) => i !== item)
+      } else {
+        // Find and remove grouped pattern or individual items that cover this item
+        localTestItemFilters.value = selectedItems.filter((selectedItem) => {
+          const expanded = getExpandedPatterns(selectedItem)
+          return !expandedItem.some((exp) => expanded.includes(exp))
         })
-
-        // Add the item to selection
-        if (filterType === 'include') {
-            localTestItemFilters.value = [...newItems, item]
-        } else {
-            localExcludeTestItemFilters.value = [...newItems, item]
-        }
+      }
+    } else {
+      if (selectedItems.includes(item)) {
+        localExcludeTestItemFilters.value = selectedItems.filter((i) => i !== item)
+      } else {
+        localExcludeTestItemFilters.value = selectedItems.filter((selectedItem) => {
+          const expanded = getExpandedPatterns(selectedItem)
+          return !expandedItem.some((exp) => expanded.includes(exp))
+        })
+      }
     }
+  } else {
+    // Before adding, remove any overlapping items
+    const newItems = selectedItems.filter((selectedItem) => {
+      const expanded = getExpandedPatterns(selectedItem)
+      return !expandedItem.some((exp) => expanded.includes(exp))
+    })
+
+    // Add the item to selection
+    if (filterType === 'include') {
+      localTestItemFilters.value = [...newItems, item]
+    } else {
+      localExcludeTestItemFilters.value = [...newItems, item]
+    }
+  }
 }
 
 // Custom filter function for combobox search - searches on display value (without .*)
 function customFilterFunction(itemValue: string, queryText: string): boolean {
-    if (!queryText) return true
+  if (!queryText) return true
 
-    // Remove .* from the item value for search matching
-    const displayValue = itemValue.replace(/\.\*/g, '').toLowerCase()
-    const query = queryText.toLowerCase()
+  // Remove .* from the item value for search matching
+  const displayValue = itemValue.replace(/\.\*/g, '').toLowerCase()
+  const query = queryText.toLowerCase()
 
-    return displayValue.includes(query)
+  return displayValue.includes(query)
 }
 
 // Handle search input updates to control grouped item visibility
 function handleSearchInput(value: string | undefined) {
-    searchInput.value = value || ''
+  searchInput.value = value || ''
 }
 
 // Test Item Dialog State
@@ -468,244 +467,251 @@ const lastAvailableItemsCount = ref(0)
 
 // Dialog Computed Properties - Optimized with caching
 const dialogAllItems = computed(() => {
-    if (!props.availableTestItems || props.availableTestItems.length === 0) {
-        return []
+  if (!props.availableTestItems || props.availableTestItems.length === 0) {
+    return []
+  }
+
+  // Use cached version if available items haven't changed
+  if (
+    cachedDialogItems.value.length > 0 &&
+    lastAvailableItemsCount.value === props.availableTestItems.length
+  ) {
+    return cachedDialogItems.value
+  }
+
+  // Extract unique test item names (preserve original order)
+  const seen = new Set<string>()
+  const itemNames = props.availableTestItems
+    .map((item) => item.name)
+    .filter((name) => {
+      if (seen.has(name)) return false
+      seen.add(name)
+      return true
+    })
+
+  // Group items by pattern
+  const groups = new Map<string, string[]>()
+
+  itemNames.forEach((name) => {
+    const antennaMatch = name.match(/^(.+_)(TX|RX|PA)(\d+)(_.*?)$/)
+    if (antennaMatch) {
+      const [, prefix, type, , suffix] = antennaMatch
+      const groupKey = `${prefix}${type}${suffix}`
+
+      if (!groups.has(groupKey)) {
+        groups.set(groupKey, [])
+      }
+      groups.get(groupKey)?.push(name)
     }
+  })
 
-    // Use cached version if available items haven't changed
-    if (cachedDialogItems.value.length > 0 && lastAvailableItemsCount.value === props.availableTestItems.length) {
-        return cachedDialogItems.value
+  // Build all suggestions (individual + grouped items for dialog)
+  const allItems: string[] = []
+  const addedGroups = new Set<string>()
+
+  // Add grouped patterns for items with 2+ members
+  itemNames.forEach((name) => {
+    for (const [groupKey, members] of groups.entries()) {
+      if (members.includes(name) && members.length >= 2 && !addedGroups.has(groupKey)) {
+        const firstMember = members[0]
+        if (firstMember) {
+          const match = firstMember.match(/^(.+_)(TX|RX|PA)(\d+)(_.*?)$/)
+          if (match) {
+            const prefix = match[1]
+            const type = match[2]
+            const suffix = match[4]
+            if (prefix && type && suffix) {
+              const groupPattern = `${prefix}${type}.*${suffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`
+              allItems.push(`${groupPattern} (Grouped - ${members.length} items)`)
+              addedGroups.add(groupKey)
+            }
+          }
+        }
+        break
+      }
     }
+  })
 
-    // Extract unique test item names (preserve original order)
-    const seen = new Set<string>()
-    const itemNames = props.availableTestItems
-        .map(item => item.name)
-        .filter(name => {
-            if (seen.has(name)) return false
-            seen.add(name)
-            return true
-        })
+  // Add all individual items
+  itemNames.forEach((name) => {
+    allItems.push(name)
+  })
 
-    // Group items by pattern
-    const groups = new Map<string, string[]>()
+  // Cache the result
+  cachedDialogItems.value = allItems
+  lastAvailableItemsCount.value = props.availableTestItems.length
 
-    itemNames.forEach(name => {
-        const antennaMatch = name.match(/^(.+_)(TX|RX|PA)(\d+)(_.*?)$/)
-        if (antennaMatch) {
-            const [, prefix, type, , suffix] = antennaMatch
-            const groupKey = `${prefix}${type}${suffix}`
-
-            if (!groups.has(groupKey)) {
-                groups.set(groupKey, [])
-            }
-            groups.get(groupKey)!.push(name)
-        }
-    })
-
-    // Build all suggestions (individual + grouped items for dialog)
-    const allItems: string[] = []
-    const addedGroups = new Set<string>()
-
-    // Add grouped patterns for items with 2+ members
-    itemNames.forEach(name => {
-        for (const [groupKey, members] of groups.entries()) {
-            if (members.includes(name) && members.length >= 2 && !addedGroups.has(groupKey)) {
-                const firstMember = members[0]
-                if (firstMember) {
-                    const match = firstMember.match(/^(.+_)(TX|RX|PA)(\d+)(_.*?)$/)
-                    if (match) {
-                        const prefix = match[1]
-                        const type = match[2]
-                        const suffix = match[4]
-                        if (prefix && type && suffix) {
-                            const groupPattern = `${prefix}${type}.*${suffix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`
-                            allItems.push(`${groupPattern} (Grouped - ${members.length} items)`)
-                            addedGroups.add(groupKey)
-                        }
-                    }
-                }
-                break
-            }
-        }
-    })
-
-    // Add all individual items
-    itemNames.forEach(name => {
-        allItems.push(name)
-    })
-
-    // Cache the result
-    cachedDialogItems.value = allItems
-    lastAvailableItemsCount.value = props.availableTestItems.length
-
-    return allItems
+  return allItems
 })
 
 const dialogFilteredItems = computed(() => {
-    const allItems = dialogAllItems.value
+  const allItems = dialogAllItems.value
 
-    // Filter by search if present
-    if (!dialogSearch.value || dialogSearch.value.trim().length === 0) {
-        return allItems
-    }
+  // Filter by search if present
+  if (!dialogSearch.value || dialogSearch.value.trim().length === 0) {
+    return allItems
+  }
 
-    const query = dialogSearch.value.toLowerCase()
-    return allItems.filter(item => item.toLowerCase().includes(query))
+  const query = dialogSearch.value.toLowerCase()
+  return allItems.filter((item) => item.toLowerCase().includes(query))
 })
 
 const dialogSelectedCount = computed(() => dialogSelectedItems.value.size)
 
 // Dialog Functions
 function openTestItemDialog(filterType: 'include' | 'exclude') {
-    dialogFilterType.value = filterType
-    dialogSearch.value = ''
+  dialogFilterType.value = filterType
+  dialogSearch.value = ''
 
-    // Pre-select items from current selection
-    const currentItems = filterType === 'include'
-        ? localTestItemFilters.value
-        : localExcludeTestItemFilters.value
+  // Pre-select items from current selection
+  const currentItems =
+    filterType === 'include' ? localTestItemFilters.value : localExcludeTestItemFilters.value
 
-    dialogSelectedItems.value = new Set(currentItems)
-    testItemDialog.value = true
+  dialogSelectedItems.value = new Set(currentItems)
+  testItemDialog.value = true
 }
 
 function isDialogItemSelected(item: string): boolean {
-    return dialogSelectedItems.value.has(item)
+  return dialogSelectedItems.value.has(item)
 }
 
 function toggleDialogItem(item: string) {
-    if (dialogSelectedItems.value.has(item)) {
-        dialogSelectedItems.value.delete(item)
-    } else {
-        dialogSelectedItems.value.add(item)
-    }
+  if (dialogSelectedItems.value.has(item)) {
+    dialogSelectedItems.value.delete(item)
+  } else {
+    dialogSelectedItems.value.add(item)
+  }
 }
 
 function selectAllDialogItems() {
-    dialogFilteredItems.value.forEach(item => {
-        dialogSelectedItems.value.add(item)
-    })
+  dialogFilteredItems.value.forEach((item) => {
+    dialogSelectedItems.value.add(item)
+  })
 }
 
 function deselectAllDialogItems() {
-    dialogFilteredItems.value.forEach(item => {
-        dialogSelectedItems.value.delete(item)
-    })
+  dialogFilteredItems.value.forEach((item) => {
+    dialogSelectedItems.value.delete(item)
+  })
 }
 
 function invertDialogSelection() {
-    dialogFilteredItems.value.forEach(item => {
-        if (dialogSelectedItems.value.has(item)) {
-            dialogSelectedItems.value.delete(item)
-        } else {
-            dialogSelectedItems.value.add(item)
-        }
-    })
+  dialogFilteredItems.value.forEach((item) => {
+    if (dialogSelectedItems.value.has(item)) {
+      dialogSelectedItems.value.delete(item)
+    } else {
+      dialogSelectedItems.value.add(item)
+    }
+  })
 }
 
 function applyDialogSelection() {
-    const selectedArray = Array.from(dialogSelectedItems.value)
+  const selectedArray = Array.from(dialogSelectedItems.value)
 
-    if (dialogFilterType.value === 'include') {
-        localTestItemFilters.value = selectedArray
-    } else {
-        localExcludeTestItemFilters.value = selectedArray
-    }
+  if (dialogFilterType.value === 'include') {
+    localTestItemFilters.value = selectedArray
+  } else {
+    localExcludeTestItemFilters.value = selectedArray
+  }
 
-    testItemDialog.value = false
+  testItemDialog.value = false
 }
 
 const hasFilters = computed(() => {
-    return localDeviceIdentifiers.value.length > 0 ||
-        localTestItemFilters.value.length > 0 ||
-        localExcludeTestItemFilters.value.length > 0
+  return (
+    localDeviceIdentifiers.value.length > 0 ||
+    localTestItemFilters.value.length > 0 ||
+    localExcludeTestItemFilters.value.length > 0
+  )
 })
 
 // Helper function to clean up grouped patterns for API submission
 function cleanupTestItemPattern(pattern: string): string {
-    // Check if this is a grouped pattern with the suffix
-    const isGroupedPattern = /\(Grouped - \d+ items\)$/i.test(pattern)
+  // Check if this is a grouped pattern with the suffix
+  const isGroupedPattern = /\(Grouped - \d+ items\)$/i.test(pattern)
 
-    if (isGroupedPattern) {
-        // For grouped patterns: Remove suffix and convert to regex pattern
-        // "WiFi_TX.*_POW_5300 (Grouped - 4 items)" -> "WiFi_TX.*_POW_5300"
-        return pattern.replace(/\s+\(Grouped - \d+ items\)$/i, '')
-    } else {
-        // For individual items: Return as-is
-        // "WiFi_TX1_POW_5300" -> "WiFi_TX1_POW_5300"
-        return pattern
-    }
+  if (isGroupedPattern) {
+    // For grouped patterns: Remove suffix and convert to regex pattern
+    // "WiFi_TX.*_POW_5300 (Grouped - 4 items)" -> "WiFi_TX.*_POW_5300"
+    return pattern.replace(/\s+\(Grouped - \d+ items\)$/i, '')
+  } else {
+    // For individual items: Return as-is
+    // "WiFi_TX1_POW_5300" -> "WiFi_TX1_POW_5300"
+    return pattern
+  }
 }
 
 // Watch for changes and emit
 watch(
-    [localDeviceIdentifiers, localTestItemFilters, localExcludeTestItemFilters],
-    () => {
-        // Don't emit if we're updating from props
-        if (isUpdatingFromProps.value) {
-            return
-        }
+  [localDeviceIdentifiers, localTestItemFilters, localExcludeTestItemFilters],
+  () => {
+    // Don't emit if we're updating from props
+    if (isUpdatingFromProps.value) {
+      return
+    }
 
-        if (!hasFilters.value) {
-            // No filters configured, emit undefined to remove station from config
-            emit('update:modelValue', undefined)
-            return
-        }
+    if (!hasFilters.value) {
+      // No filters configured, emit undefined to remove station from config
+      emit('update:modelValue', undefined)
+      return
+    }
 
-        // Clean up test item patterns before sending to API
-        const cleanedIncludeFilters = localTestItemFilters.value.length > 0
-            ? localTestItemFilters.value.map(cleanupTestItemPattern)
-            : undefined
+    // Clean up test item patterns before sending to API
+    const cleanedIncludeFilters =
+      localTestItemFilters.value.length > 0
+        ? localTestItemFilters.value.map(cleanupTestItemPattern)
+        : undefined
 
-        const cleanedExcludeFilters = localExcludeTestItemFilters.value.length > 0
-            ? localExcludeTestItemFilters.value.map(cleanupTestItemPattern)
-            : undefined
+    const cleanedExcludeFilters =
+      localExcludeTestItemFilters.value.length > 0
+        ? localExcludeTestItemFilters.value.map(cleanupTestItemPattern)
+        : undefined
 
-        // Build filter config
-        const config: StationFilterConfig = {
-            station_identifier: props.stationIdentifier,
-            device_identifiers: localDeviceIdentifiers.value.length > 0 ? localDeviceIdentifiers.value : undefined,
-            test_item_filters: cleanedIncludeFilters,
-            exclude_test_item_filters: cleanedExcludeFilters
-        }
+    // Build filter config
+    const config: StationFilterConfig = {
+      station_identifier: props.stationIdentifier,
+      device_identifiers:
+        localDeviceIdentifiers.value.length > 0 ? localDeviceIdentifiers.value : undefined,
+      test_item_filters: cleanedIncludeFilters,
+      exclude_test_item_filters: cleanedExcludeFilters,
+    }
 
-        emit('update:modelValue', config)
-    },
-    { deep: true }
+    emit('update:modelValue', config)
+  },
+  { deep: true },
 )
 
 // Watch for external changes to modelValue (only update if different)
 watch(
-    () => props.modelValue,
-    async (newValue) => {
-        // Set flag to prevent emitting during prop updates
-        isUpdatingFromProps.value = true
+  () => props.modelValue,
+  async (newValue) => {
+    // Set flag to prevent emitting during prop updates
+    isUpdatingFromProps.value = true
 
-        await nextTick()
+    await nextTick()
 
-        if (newValue) {
-            localDeviceIdentifiers.value = newValue.device_identifiers || []
-            localTestItemFilters.value = newValue.test_item_filters || []
-            localExcludeTestItemFilters.value = newValue.exclude_test_item_filters || []
-        } else {
-            localDeviceIdentifiers.value = []
-            localTestItemFilters.value = []
-            localExcludeTestItemFilters.value = []
-        }
+    if (newValue) {
+      localDeviceIdentifiers.value = newValue.device_identifiers || []
+      localTestItemFilters.value = newValue.test_item_filters || []
+      localExcludeTestItemFilters.value = newValue.exclude_test_item_filters || []
+    } else {
+      localDeviceIdentifiers.value = []
+      localTestItemFilters.value = []
+      localExcludeTestItemFilters.value = []
+    }
 
-        // Reset flag after DOM updates
-        await nextTick()
-        isUpdatingFromProps.value = false
-    },
-    { deep: true }
+    // Reset flag after DOM updates
+    await nextTick()
+    isUpdatingFromProps.value = false
+  },
+  { deep: true },
 )
 
 // Methods
 function clearFilters() {
-    localDeviceIdentifiers.value = []
-    localTestItemFilters.value = []
-    localExcludeTestItemFilters.value = []
+  localDeviceIdentifiers.value = []
+  localTestItemFilters.value = []
+  localExcludeTestItemFilters.value = []
 }
 </script>
 

@@ -1,13 +1,14 @@
 /**
  * File Parsing Composable
- * 
+ *
  * Handles file upload, preview, column/row selection, and download operations.
  * Provides reactive state and helper methods for parsing workflows.
  */
 
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
+import type { ParseDataResponse, UploadPreviewResponse } from '@/core/types/api.types'
+import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
 import { parsingApi } from '../api'
-import type { UploadPreviewResponse, ParseDataResponse } from '@/core/types/api.types'
 
 export interface UseFileParsingOptions {
   hasHeader?: boolean
@@ -27,10 +28,10 @@ export interface RowSelection {
 
 /**
  * File parsing composable for upload, preview, and data extraction
- * 
+ *
  * @param options - Default upload options (header, delimiter, persist)
  * @returns Parsing state and operations
- * 
+ *
  * @example
  * ```ts
  * const {
@@ -42,14 +43,14 @@ export interface RowSelection {
  *   parseData,
  *   downloadParsed
  * } = useFileParsing({ hasHeader: true, delimiter: ',' })
- * 
+ *
  * // Upload and preview
  * await uploadFile(selectedFile)
  * console.log(preview.value.columns)
- * 
+ *
  * // Parse with selections
  * const result = await parseData('columns', { selected: ['col1', 'col3'] })
- * 
+ *
  * // Download as CSV
  * await downloadParsed('rows', { selected: [0, 2, 4] })
  * ```
@@ -67,7 +68,7 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
   const defaultOptions = {
     hasHeader: options.hasHeader ?? true,
     delimiter: options.delimiter ?? ',',
-    persist: options.persist ?? false
+    persist: options.persist ?? false,
   }
 
   // Computed
@@ -80,14 +81,14 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
 
   /**
    * Upload file and get preview
-   * 
+   *
    * @param selectedFile - File to upload
    * @param uploadOptions - Override default upload options
    * @returns Upload preview response
    */
   async function uploadFile(
     selectedFile: File,
-    uploadOptions?: Partial<UseFileParsingOptions>
+    uploadOptions?: Partial<UseFileParsingOptions>,
   ): Promise<UploadPreviewResponse | null> {
     try {
       loading.value = true
@@ -97,10 +98,7 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
 
       const formData = new FormData()
       formData.append('file', selectedFile)
-      formData.append(
-        'has_header',
-        String(uploadOptions?.hasHeader ?? defaultOptions.hasHeader)
-      )
+      formData.append('has_header', String(uploadOptions?.hasHeader ?? defaultOptions.hasHeader))
       if (uploadOptions?.delimiter || defaultOptions.delimiter) {
         formData.append('delimiter', uploadOptions?.delimiter || defaultOptions.delimiter)
       }
@@ -115,8 +113,8 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
       uploadProgress.value = 100
 
       return response
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || err.message || 'Upload failed'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Upload failed'
       return null
     } finally {
       loading.value = false
@@ -125,7 +123,7 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
 
   /**
    * Parse data with column/row selections
-   * 
+   *
    * @param mode - Selection mode ('columns', 'rows', 'both')
    * @param columnSelection - Column selections (selected/excluded)
    * @param rowSelection - Row selections (selected/excluded)
@@ -134,7 +132,7 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
   async function parseData(
     mode: 'columns' | 'rows' | 'both',
     columnSelection?: Partial<ColumnSelection>,
-    rowSelection?: Partial<RowSelection>
+    rowSelection?: Partial<RowSelection>,
   ): Promise<ParseDataResponse | null> {
     if (!fileId.value) {
       error.value = 'No file uploaded. Please upload a file first.'
@@ -166,8 +164,8 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
       parsedData.value = response
 
       return response
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || err.message || 'Parsing failed'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Parsing failed'
       return null
     } finally {
       loading.value = false
@@ -176,7 +174,7 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
 
   /**
    * Parse and download as CSV
-   * 
+   *
    * @param mode - Selection mode ('columns', 'rows', 'both')
    * @param columnSelection - Column selections (selected/excluded)
    * @param rowSelection - Row selections (selected/excluded)
@@ -186,7 +184,7 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
     mode: 'columns' | 'rows' | 'both',
     columnSelection?: Partial<ColumnSelection>,
     rowSelection?: Partial<RowSelection>,
-    filename = 'parsed.csv'
+    filename = 'parsed.csv',
   ): Promise<void> {
     if (!fileId.value) {
       error.value = 'No file uploaded. Please upload a file first.'
@@ -225,8 +223,8 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || err.message || 'Download failed'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Download failed'
     } finally {
       loading.value = false
     }
@@ -234,7 +232,7 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
 
   /**
    * Parse and download with format selection (CSV, XLSX, or both as ZIP)
-   * 
+   *
    * @param mode - Selection mode ('columns', 'rows', 'both')
    * @param columnSelection - Column selections (selected/excluded)
    * @param rowSelection - Row selections (selected/excluded)
@@ -248,7 +246,7 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
     rowSelection?: Partial<RowSelection>,
     format: 'csv' | 'xlsx' | 'both' = 'csv',
     filename = 'parsed',
-    hasHeader: boolean = true
+    hasHeader: boolean = true,
   ): Promise<void> {
     if (!fileId.value) {
       error.value = 'No file uploaded. Please upload a file first.'
@@ -309,8 +307,8 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || err.message || 'Download failed'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Download failed'
     } finally {
       loading.value = false
     }
@@ -358,6 +356,6 @@ export function useFileParsing(options: UseFileParsingOptions = {}) {
     downloadParsed,
     downloadParsedFormat,
     reset,
-    clearError
+    clearError,
   }
 }

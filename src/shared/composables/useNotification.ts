@@ -1,6 +1,6 @@
 /**
  * Notification Composable
- * 
+ *
  * Provides a simple interface for displaying toast notifications
  * using Vuetify's snackbar system
  */
@@ -20,11 +20,11 @@ const isVisible = ref(false)
 
 /**
  * Display notification composable
- * 
+ *
  * @example
  * ```ts
  * const { showSuccess, showError, showWarning, showInfo } = useNotification()
- * 
+ *
  * showSuccess('File uploaded successfully!')
  * showError('Failed to process file')
  * showWarning('This action cannot be undone')
@@ -38,7 +38,7 @@ export function useNotification() {
       timeout: 3000,
       position: 'bottom',
       closable: true,
-      ...options
+      ...options,
     }
     isVisible.value = true
   }
@@ -71,6 +71,6 @@ export function useNotification() {
     showError,
     showWarning,
     showInfo,
-    hide
+    hide,
   }
 }

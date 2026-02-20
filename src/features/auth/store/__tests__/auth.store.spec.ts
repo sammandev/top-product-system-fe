@@ -1,8 +1,8 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
-import { useAuthStore } from '../index' // Changed from ../auth.store
-import { authApi } from '../../api/auth.api'
+import { createPinia, setActivePinia } from 'pinia'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LoginResponse, User } from '@/core/types'
+import { authApi } from '../../api/auth.api'
+import { useAuthStore } from '../index' // Changed from ../auth.store
 
 // Mock the auth API
 vi.mock('../../api/auth.api', () => ({
@@ -10,18 +10,18 @@ vi.mock('../../api/auth.api', () => ({
     login: vi.fn(),
     externalLogin: vi.fn(),
     refreshToken: vi.fn(),
-    me: vi.fn()
-  }
+    me: vi.fn(),
+  },
 }))
 
 describe('Auth Store', () => {
   beforeEach(() => {
     // Create fresh Pinia instance
     setActivePinia(createPinia())
-    
+
     // Clear localStorage
     localStorage.clear()
-    
+
     // Clear all mocks
     vi.clearAllMocks()
   })
@@ -33,7 +33,7 @@ describe('Auth Store', () => {
   describe('Initial State', () => {
     it('should have null values by default', () => {
       const store = useAuthStore()
-      
+
       expect(store.accessToken).toBeNull()
       expect(store.refreshTokenValue).toBeNull()
       expect(store.dutAccessToken).toBeNull()
@@ -48,9 +48,9 @@ describe('Auth Store', () => {
       localStorage.setItem('access_token', 'stored-access-token')
       localStorage.setItem('refresh_token', 'stored-refresh-token')
       localStorage.setItem('login_type', 'external')
-      
+
       const store = useAuthStore()
-      
+
       expect(store.accessToken).toBe('stored-access-token')
       expect(store.refreshTokenValue).toBe('stored-refresh-token')
       expect(store.loginType).toBe('external')
@@ -86,7 +86,7 @@ describe('Auth Store', () => {
       access_token: 'test-access-token',
       refresh_token: 'test-refresh-token',
       token_type: 'Bearer',
-      expires_in: 3600
+      expires_in: 3600,
     }
 
     const mockUser: User = {
@@ -98,19 +98,19 @@ describe('Auth Store', () => {
       is_active: true,
       is_admin: false,
       created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      updated_at: '2024-01-01T00:00:00Z',
     }
 
     it('should login successfully with valid credentials', async () => {
       vi.mocked(authApi.login).mockResolvedValue(mockLoginResponse)
       vi.mocked(authApi.me).mockResolvedValue(mockUser)
-      
+
       const store = useAuthStore()
       const result = await store.login({ username: 'test', password: 'password' })
-      
+
       expect(authApi.login).toHaveBeenCalledWith({
         username: 'test',
-        password: 'password'
+        password: 'password',
       })
       expect(store.accessToken).toBe('test-access-token')
       expect(store.refreshTokenValue).toBe('test-refresh-token')
@@ -124,10 +124,10 @@ describe('Auth Store', () => {
     it('should store tokens in localStorage', async () => {
       vi.mocked(authApi.login).mockResolvedValue(mockLoginResponse)
       vi.mocked(authApi.me).mockResolvedValue(mockUser)
-      
+
       const store = useAuthStore()
       await store.login({ username: 'test', password: 'password' })
-      
+
       expect(localStorage.getItem('access_token')).toBe('test-access-token')
       expect(localStorage.getItem('refresh_token')).toBe('test-refresh-token')
       expect(localStorage.getItem('login_type')).toBe('local')
@@ -137,16 +137,16 @@ describe('Auth Store', () => {
       // Set some DUT tokens first
       localStorage.setItem('dut_access_token', 'dut-token')
       localStorage.setItem('dut_refresh_token', 'dut-refresh')
-      
+
       vi.mocked(authApi.login).mockResolvedValue(mockLoginResponse)
       vi.mocked(authApi.me).mockResolvedValue(mockUser)
-      
+
       const store = useAuthStore()
       store.dutAccessToken = 'dut-token'
       store.dutRefreshToken = 'dut-refresh'
-      
+
       await store.login({ username: 'test', password: 'password' })
-      
+
       expect(store.dutAccessToken).toBeNull()
       expect(store.dutRefreshToken).toBeNull()
       expect(localStorage.getItem('dut_access_token')).toBeNull()
@@ -155,20 +155,20 @@ describe('Auth Store', () => {
 
     it('should set error on login failure', async () => {
       const errorResponse = {
-        response: { 
+        response: {
           data: { detail: 'Invalid username or password' },
-          status: 401
-        }
+          status: 401,
+        },
       }
-      
+
       vi.mocked(authApi.login).mockRejectedValue(errorResponse)
-      
+
       const store = useAuthStore()
-      
-      await expect(
-        store.login({ username: 'wrong', password: 'wrong' })
-      ).rejects.toEqual(errorResponse)
-      
+
+      await expect(store.login({ username: 'wrong', password: 'wrong' })).rejects.toEqual(
+        errorResponse,
+      )
+
       expect(store.error).toBe('Invalid username or password')
       expect(store.accessToken).toBeNull()
       expect(store.loading).toBe(false)
@@ -176,33 +176,29 @@ describe('Auth Store', () => {
 
     it('should set default error message when detail not provided', async () => {
       vi.mocked(authApi.login).mockRejectedValue(new Error('Network error'))
-      
+
       const store = useAuthStore()
-      
-      await expect(
-        store.login({ username: 'test', password: 'test' })
-      ).rejects.toThrow()
-      
+
+      await expect(store.login({ username: 'test', password: 'test' })).rejects.toThrow()
+
       expect(store.error).toBe('Login failed')
     })
 
     it('should clear error on successful login after failed attempt', async () => {
       const store = useAuthStore()
-      
+
       // First: failed login
       vi.mocked(authApi.login).mockRejectedValueOnce({
-        response: { data: { detail: 'Invalid credentials' } }
+        response: { data: { detail: 'Invalid credentials' } },
       })
-      
-      await expect(
-        store.login({ username: 'wrong', password: 'wrong' })
-      ).rejects.toThrow()
+
+      await expect(store.login({ username: 'wrong', password: 'wrong' })).rejects.toThrow()
       expect(store.error).toBe('Invalid credentials')
-      
+
       // Second: successful login
       vi.mocked(authApi.login).mockResolvedValue(mockLoginResponse)
       vi.mocked(authApi.me).mockResolvedValue(mockUser)
-      
+
       await store.login({ username: 'correct', password: 'correct' })
       expect(store.error).toBeNull()
     })
@@ -215,7 +211,7 @@ describe('Auth Store', () => {
       dut_access_token: 'dut-access-token',
       dut_refresh_token: 'dut-refresh-token',
       token_type: 'Bearer',
-      expires_in: 3600
+      expires_in: 3600,
     }
 
     const mockUser: User = {
@@ -227,19 +223,19 @@ describe('Auth Store', () => {
       is_active: true,
       is_admin: false,
       created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      updated_at: '2024-01-01T00:00:00Z',
     }
 
     it('should login with external credentials', async () => {
       vi.mocked(authApi.externalLogin).mockResolvedValue(mockExternalLoginResponse)
       vi.mocked(authApi.me).mockResolvedValue(mockUser)
-      
+
       const store = useAuthStore()
       await store.externalLogin({
         username: 'test',
-        password: 'password'
+        password: 'password',
       })
-      
+
       expect(store.accessToken).toBe('ext-access-token')
       expect(store.refreshTokenValue).toBe('ext-refresh-token')
       expect(store.loginType).toBe('external')
@@ -251,13 +247,13 @@ describe('Auth Store', () => {
     it('should store DUT tokens in localStorage', async () => {
       vi.mocked(authApi.externalLogin).mockResolvedValue(mockExternalLoginResponse)
       vi.mocked(authApi.me).mockResolvedValue(mockUser)
-      
+
       const store = useAuthStore()
       await store.externalLogin({
         username: 'test',
-        password: 'password'
+        password: 'password',
       })
-      
+
       expect(localStorage.getItem('dut_access_token')).toBe('dut-access-token')
       expect(localStorage.getItem('dut_refresh_token')).toBe('dut-refresh-token')
       expect(localStorage.getItem('login_type')).toBe('external')
@@ -268,18 +264,18 @@ describe('Auth Store', () => {
         access_token: 'ext-access-token',
         refresh_token: 'ext-refresh-token',
         token_type: 'Bearer',
-        expires_in: 3600
+        expires_in: 3600,
       }
-      
+
       vi.mocked(authApi.externalLogin).mockResolvedValue(responseWithoutDUT)
       vi.mocked(authApi.me).mockResolvedValue(mockUser)
-      
+
       const store = useAuthStore()
       await store.externalLogin({
         username: 'test',
-        password: 'password'
+        password: 'password',
       })
-      
+
       expect(store.accessToken).toBe('ext-access-token')
       expect(store.dutAccessToken).toBeNull()
       expect(store.dutRefreshToken).toBeNull()
@@ -287,20 +283,20 @@ describe('Auth Store', () => {
 
     it('should set error on external login failure', async () => {
       const errorResponse = {
-        response: { 
+        response: {
           data: { detail: 'External login failed' },
-          status: 401
-        }
+          status: 401,
+        },
       }
-      
+
       vi.mocked(authApi.externalLogin).mockRejectedValue(errorResponse)
-      
+
       const store = useAuthStore()
-      
-      await expect(
-        store.externalLogin({ username: 'test', password: 'test' })
-      ).rejects.toEqual(errorResponse)
-      
+
+      await expect(store.externalLogin({ username: 'test', password: 'test' })).rejects.toEqual(
+        errorResponse,
+      )
+
       expect(store.error).toBe('External login failed')
     })
   })
@@ -311,16 +307,16 @@ describe('Auth Store', () => {
         access_token: 'new-access-token',
         refresh_token: 'new-refresh-token',
         token_type: 'Bearer',
-        expires_in: 3600
+        expires_in: 3600,
       }
-      
+
       vi.mocked(authApi.refreshToken).mockResolvedValue(mockRefreshResponse)
-      
+
       const store = useAuthStore()
       store.refreshTokenValue = 'old-refresh-token'
-      
+
       await store.refreshToken()
-      
+
       expect(authApi.refreshToken).toHaveBeenCalledWith('old-refresh-token')
       expect(store.accessToken).toBe('new-access-token')
       expect(store.refreshTokenValue).toBe('new-refresh-token')
@@ -331,19 +327,19 @@ describe('Auth Store', () => {
     it('should throw error when no refresh token available', async () => {
       const store = useAuthStore()
       store.refreshTokenValue = null
-      
+
       await expect(store.refreshToken()).rejects.toThrow('No refresh token available')
     })
 
     it('should logout on refresh failure', async () => {
       vi.mocked(authApi.refreshToken).mockRejectedValue(new Error('Refresh failed'))
-      
+
       const store = useAuthStore()
       store.accessToken = 'access-token'
       store.refreshTokenValue = 'refresh-token'
-      
+
       await expect(store.refreshToken()).rejects.toThrow()
-      
+
       expect(store.accessToken).toBeNull()
       expect(store.refreshTokenValue).toBeNull()
     })
@@ -352,7 +348,7 @@ describe('Auth Store', () => {
   describe('logout', () => {
     it('should clear all tokens and user data', () => {
       const store = useAuthStore()
-      
+
       // Set some data
       store.accessToken = 'token'
       store.refreshTokenValue = 'refresh'
@@ -367,11 +363,11 @@ describe('Auth Store', () => {
         is_active: true,
         is_admin: false,
         created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z'
+        updated_at: '2024-01-01T00:00:00Z',
       }
-      
+
       store.logout()
-      
+
       expect(store.accessToken).toBeNull()
       expect(store.refreshTokenValue).toBeNull()
       expect(store.dutAccessToken).toBeNull()
@@ -385,10 +381,10 @@ describe('Auth Store', () => {
       localStorage.setItem('dut_access_token', 'dut-token')
       localStorage.setItem('dut_refresh_token', 'dut-refresh')
       localStorage.setItem('login_type', 'external')
-      
+
       const store = useAuthStore()
       store.logout()
-      
+
       expect(localStorage.getItem('access_token')).toBeNull()
       expect(localStorage.getItem('refresh_token')).toBeNull()
       expect(localStorage.getItem('dut_access_token')).toBeNull()
@@ -407,17 +403,17 @@ describe('Auth Store', () => {
       is_active: true,
       is_admin: false,
       created_at: '2024-01-01T00:00:00Z',
-      updated_at: '2024-01-01T00:00:00Z'
+      updated_at: '2024-01-01T00:00:00Z',
     }
 
     it('should fetch user info when access token exists', async () => {
       vi.mocked(authApi.me).mockResolvedValue(mockUser)
-      
+
       const store = useAuthStore()
       store.accessToken = 'test-token'
-      
+
       await store.fetchUser()
-      
+
       expect(authApi.me).toHaveBeenCalled()
       expect(store.user).toEqual(mockUser)
     })
@@ -425,23 +421,23 @@ describe('Auth Store', () => {
     it('should not fetch user when no access token', async () => {
       const store = useAuthStore()
       store.accessToken = null
-      
+
       await store.fetchUser()
-      
+
       expect(authApi.me).not.toHaveBeenCalled()
       expect(store.user).toBeNull()
     })
 
     it('should logout on 401 error', async () => {
       vi.mocked(authApi.me).mockRejectedValue({
-        response: { status: 401 }
+        response: { status: 401 },
       })
-      
+
       const store = useAuthStore()
       store.accessToken = 'invalid-token'
-      
+
       await store.fetchUser()
-      
+
       expect(store.accessToken).toBeNull()
       expect(store.user).toBeNull()
     })
@@ -458,16 +454,16 @@ describe('Auth Store', () => {
         is_active: true,
         is_admin: false,
         created_at: '2024-01-01T00:00:00Z',
-        updated_at: '2024-01-01T00:00:00Z'
+        updated_at: '2024-01-01T00:00:00Z',
       }
-      
+
       vi.mocked(authApi.me).mockResolvedValue(mockUser)
-      
+
       localStorage.setItem('access_token', 'stored-token')
-      
+
       const store = useAuthStore()
       await store.initialize()
-      
+
       expect(authApi.me).toHaveBeenCalled()
       expect(store.user).toEqual(mockUser)
     })
@@ -475,7 +471,7 @@ describe('Auth Store', () => {
     it('should not fetch user if no access token', async () => {
       const store = useAuthStore()
       await store.initialize()
-      
+
       expect(authApi.me).not.toHaveBeenCalled()
     })
   })

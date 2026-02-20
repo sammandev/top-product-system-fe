@@ -150,14 +150,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useComparison } from '../composables'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import ColumnMapper from '../components/ColumnMapper.vue'
-import ComparisonModeSelector from '../components/ComparisonModeSelector.vue'
-import ComparisonResults from '../components/ComparisonResults.vue'
+import { computed, ref } from 'vue'
 import type { ColumnMapping } from '../components/ColumnMapper.vue'
 import type { ComparisonConfig } from '../components/ComparisonModeSelector.vue'
+import { useComparison } from '../composables'
 
 // Composable
 const {
@@ -183,7 +179,7 @@ const {
   compareFiles,
   downloadComparison,
   reset,
-  clearError
+  clearError,
 } = useComparison()
 
 // Form state
@@ -195,7 +191,7 @@ const comparisonConfig = ref<ComparisonConfig>({
   joinKeyA: '',
   joinKeyB: '',
   caseSensitive: false,
-  numericTolerance: 0.0001
+  numericTolerance: 0.0001,
 })
 
 // Validation rules
@@ -212,9 +208,7 @@ const fileRules = {
       const file = v[0]
       if (!file || !file.name) return 'Invalid file'
       const validExtensions = ['.csv', '.xlsx']
-      const hasValidExtension = validExtensions.some(ext =>
-        file.name.toLowerCase().endsWith(ext)
-      )
+      const hasValidExtension = validExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))
       if (!hasValidExtension) {
         return 'File must be CSV or XLSX format'
       }
@@ -223,14 +217,12 @@ const fileRules = {
     // Single file
     if (!v.name) return 'Invalid file'
     const validExtensions = ['.csv', '.xlsx']
-    const hasValidExtension = validExtensions.some(ext =>
-      v.name.toLowerCase().endsWith(ext)
-    )
+    const hasValidExtension = validExtensions.some((ext) => v.name.toLowerCase().endsWith(ext))
     if (!hasValidExtension) {
       return 'File must be CSV or XLSX format'
     }
     return true
-  }
+  },
 }
 
 // Computed
@@ -238,7 +230,8 @@ const canCompare = computed(() => {
   if (!hasBothPreviews.value) return false
 
   // Check if join keys are required and set
-  const needsJoinKeys = comparisonConfig.value.mode === 'rows' || comparisonConfig.value.mode === 'both'
+  const needsJoinKeys =
+    comparisonConfig.value.mode === 'rows' || comparisonConfig.value.mode === 'both'
   if (needsJoinKeys) {
     if (!comparisonConfig.value.joinKeyA || !comparisonConfig.value.joinKeyB) {
       return false
@@ -251,7 +244,8 @@ const canCompare = computed(() => {
 const validationMessage = computed(() => {
   if (!hasBothPreviews.value) return null
 
-  const needsJoinKeys = comparisonConfig.value.mode === 'rows' || comparisonConfig.value.mode === 'both'
+  const needsJoinKeys =
+    comparisonConfig.value.mode === 'rows' || comparisonConfig.value.mode === 'both'
   if (needsJoinKeys) {
     if (!comparisonConfig.value.joinKeyA || !comparisonConfig.value.joinKeyB) {
       return 'Please select join keys for both files to compare rows'
@@ -277,48 +271,43 @@ function handleFileBChange(event: Event) {
 }
 
 async function handleUploadFileA() {
-  const file = Array.isArray(selectedFileA.value)
-    ? selectedFileA.value[0]
-    : selectedFileA.value
+  const file = Array.isArray(selectedFileA.value) ? selectedFileA.value[0] : selectedFileA.value
 
   if (!file) return
 
   await uploadFileA(file, {
     hasHeader: true,
     delimiter: ',',
-    persist: false
+    persist: false,
   })
 }
 
 async function handleUploadFileB() {
-  const file = Array.isArray(selectedFileB.value)
-    ? selectedFileB.value[0]
-    : selectedFileB.value
+  const file = Array.isArray(selectedFileB.value) ? selectedFileB.value[0] : selectedFileB.value
 
   if (!file) return
 
   await uploadFileB(file, {
     hasHeader: true,
     delimiter: ',',
-    persist: false
+    persist: false,
   })
 }
 
 async function handleCompare() {
   // Build column selections based on mappings
-  const selectedColumnsA = columnMappings.value.map(m => m.a)
-  const selectedColumnsB = columnMappings.value.map(m => m.b)
+  const selectedColumnsA = columnMappings.value.map((m) => m.a)
+  const selectedColumnsB = columnMappings.value.map((m) => m.b)
 
   const selections = {
-    aColumns: selectedColumnsA.length > 0
-      ? { selected: selectedColumnsA, excluded: [] }
-      : undefined,
-    bColumns: selectedColumnsB.length > 0
-      ? { selected: selectedColumnsB, excluded: [] }
-      : undefined,
-    joinOn: comparisonConfig.value.joinKeyA && comparisonConfig.value.joinKeyB
-      ? { a: [comparisonConfig.value.joinKeyA], b: [comparisonConfig.value.joinKeyB] }
-      : undefined
+    aColumns:
+      selectedColumnsA.length > 0 ? { selected: selectedColumnsA, excluded: [] } : undefined,
+    bColumns:
+      selectedColumnsB.length > 0 ? { selected: selectedColumnsB, excluded: [] } : undefined,
+    joinOn:
+      comparisonConfig.value.joinKeyA && comparisonConfig.value.joinKeyB
+        ? { a: [comparisonConfig.value.joinKeyA], b: [comparisonConfig.value.joinKeyB] }
+        : undefined,
   }
 
   await compareFiles(comparisonConfig.value.mode, selections)
@@ -326,19 +315,18 @@ async function handleCompare() {
 
 async function handleDownload() {
   // Build column selections based on mappings
-  const selectedColumnsA = columnMappings.value.map(m => m.a)
-  const selectedColumnsB = columnMappings.value.map(m => m.b)
+  const selectedColumnsA = columnMappings.value.map((m) => m.a)
+  const selectedColumnsB = columnMappings.value.map((m) => m.b)
 
   const selections = {
-    aColumns: selectedColumnsA.length > 0
-      ? { selected: selectedColumnsA, excluded: [] }
-      : undefined,
-    bColumns: selectedColumnsB.length > 0
-      ? { selected: selectedColumnsB, excluded: [] }
-      : undefined,
-    joinOn: comparisonConfig.value.joinKeyA && comparisonConfig.value.joinKeyB
-      ? { a: [comparisonConfig.value.joinKeyA], b: [comparisonConfig.value.joinKeyB] }
-      : undefined
+    aColumns:
+      selectedColumnsA.length > 0 ? { selected: selectedColumnsA, excluded: [] } : undefined,
+    bColumns:
+      selectedColumnsB.length > 0 ? { selected: selectedColumnsB, excluded: [] } : undefined,
+    joinOn:
+      comparisonConfig.value.joinKeyA && comparisonConfig.value.joinKeyB
+        ? { a: [comparisonConfig.value.joinKeyA], b: [comparisonConfig.value.joinKeyB] }
+        : undefined,
   }
 
   const fileNameA = fileA.value?.name.replace(/\.[^/.]+$/, '') || 'fileA'
@@ -358,7 +346,7 @@ function handleReset() {
     joinKeyA: '',
     joinKeyB: '',
     caseSensitive: false,
-    numericTolerance: 0.0001
+    numericTolerance: 0.0001,
   }
   reset()
 }

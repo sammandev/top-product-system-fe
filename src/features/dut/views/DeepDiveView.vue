@@ -213,17 +213,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import { computed, ref, watch } from 'vue'
+import type { GroupScores, HierarchicalError, HierarchicalRequest } from '@/core/types/dut.types'
 import { useHierarchicalStore } from '../store'
-import {
-  DUTISNInput,
-  AdvancedFiltersPanel,
-  HierarchicalScoreTree,
-  SubgroupComparisonChart,
-  CategoryHeatmap
-} from '../components'
-import type { HierarchicalError, GroupScores } from '@/core/types/dut.types'
 
 // Store
 const hierarchicalStore = useHierarchicalStore()
@@ -237,7 +229,7 @@ const filters = ref({
   model: '',
   include_patterns: [] as string[],
   exclude_patterns: [] as string[],
-  criteria_file: null as File | null
+  criteria_file: null as File | null,
 })
 const selectedTab = ref<string>()
 const expandedStations = ref<number[]>([])
@@ -271,8 +263,8 @@ async function performAnalysis() {
   if (!canAnalyze.value) return
 
   // Build request
-  const request: any = {
-    dut_isns: dutISNs.value
+  const request: HierarchicalRequest = {
+    dut_isns: dutISNs.value,
   }
 
   // Add optional filters
@@ -280,19 +272,19 @@ async function performAnalysis() {
     request.stations = filters.value.stations
   }
   if (filters.value.devices.length > 0) {
-    request.devices = filters.value.devices
+    request.device_identifiers = filters.value.devices
   }
   if (filters.value.site) {
-    request.site = filters.value.site
+    request.site_identifier = filters.value.site
   }
   if (filters.value.model) {
-    request.model = filters.value.model
+    request.model_identifier = filters.value.model
   }
   if (filters.value.include_patterns.length > 0) {
-    request.include_patterns = filters.value.include_patterns
+    request.test_item_filters = filters.value.include_patterns
   }
   if (filters.value.exclude_patterns.length > 0) {
-    request.exclude_patterns = filters.value.exclude_patterns
+    request.exclude_test_item_filters = filters.value.exclude_patterns
   }
   if (filters.value.criteria_file) {
     request.criteria_file = filters.value.criteria_file
@@ -321,7 +313,7 @@ function clearAll() {
     model: '',
     include_patterns: [],
     exclude_patterns: [],
-    criteria_file: null
+    criteria_file: null,
   }
   hierarchicalStore.clearData()
   selectedTab.value = undefined
@@ -333,7 +325,7 @@ function clearError() {
 }
 
 function getDUTError(dutISN: string): HierarchicalError | undefined {
-  return errors.value.find(e => e.dut_isn === dutISN)
+  return errors.value.find((e) => e.dut_isn === dutISN)
 }
 
 function performExport() {
@@ -354,7 +346,7 @@ function exportJSON() {
     dut_isns: dutISNs.value,
     filters: filters.value,
     results: results.value,
-    errors: errors.value
+    errors: errors.value,
   }
 
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' })
@@ -373,7 +365,8 @@ function exportCSV() {
   rows.push('DUT_ISN,Station,Group,Subgroup,Antenna,Category,Bayesian_Score,Average_Score')
 
   // Data rows
-  results.value.forEach(result => {
+  results.value.forEach((result) => {
+    // biome-ignore lint/suspicious/noExplicitAny: station object has dynamic nested group_scores structure
     result.test_result?.forEach((station: any) => {
       if (!station.group_scores) return
 
@@ -393,22 +386,27 @@ function exportCSV() {
 
             Object.entries(categoriesData).forEach(([categoryKey, scoreData]) => {
               // Skip score fields at category level
-              if (categoryKey.endsWith('_score') || categoryKey.endsWith('_group_score') || categoryKey.endsWith('_avg_score')) return
-              
+              if (
+                categoryKey.endsWith('_score') ||
+                categoryKey.endsWith('_group_score') ||
+                categoryKey.endsWith('_avg_score')
+              )
+                return
+
               // Handle both old format (number) and new format (object)
               let bayesScore = ''
               let avgScore = ''
-              
+
               if (typeof scoreData === 'number') {
                 bayesScore = scoreData.toString()
               } else if (typeof scoreData === 'object') {
                 bayesScore = scoreData.category_bayes_score?.toString() || ''
                 avgScore = scoreData.category_avg_score?.toString() || ''
               }
-              
+
               if (bayesScore) {
                 rows.push(
-                  `${result.dut_isn},${station.station_name},${groupKey},${subgroupKey},${antennaKey},${categoryKey},${bayesScore},${avgScore}`
+                  `${result.dut_isn},${station.station_name},${groupKey},${subgroupKey},${antennaKey},${categoryKey},${bayesScore},${avgScore}`,
                 )
               }
             })

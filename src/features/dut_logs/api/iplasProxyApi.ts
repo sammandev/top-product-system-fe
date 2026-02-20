@@ -1,9 +1,9 @@
 /**
  * iPLAS Proxy API Client
- * 
+ *
  * Provides access to the backend iPLAS proxy endpoints with Redis caching
  * and server-side filtering for better performance.
- * 
+ *
  * Features:
  * - Request cancellation support via AbortController
  * - Automatic request deduplication on backend
@@ -71,15 +71,15 @@ export interface IplasCsvTestItemRequest {
   project: string
   station: string
   device_id: string
-  begin_time: string  // ISO format
-  end_time: string    // ISO format
+  begin_time: string // ISO format
+  end_time: string // ISO format
   test_status: 'ALL' | 'PASS' | 'FAIL'
   test_item_filters?: string[]
   limit?: number
   offset?: number
-  sort_by?: string   // Field name to sort by (e.g., 'TestStartTime', 'ISN')
+  sort_by?: string // Field name to sort by (e.g., 'TestStartTime', 'ISN')
   sort_desc?: boolean // Sort in descending order (default true)
-  token?: string  // Optional user token override
+  token?: string // Optional user token override
 }
 
 export interface IplasCsvTestItemResponse {
@@ -101,10 +101,10 @@ export interface IplasTestItemNamesRequest {
   project: string
   station: string
   device_id: string
-  begin_time: string  // ISO format
-  end_time: string    // ISO format
+  begin_time: string // ISO format
+  end_time: string // ISO format
   test_status: 'ALL' | 'PASS' | 'FAIL'
-  token?: string  // Optional user token override
+  token?: string // Optional user token override
   // UPDATED: Option to exclude BIN/PASS-FAIL test items
   exclude_bin?: boolean
 }
@@ -175,7 +175,7 @@ export interface IplasStation {
 export interface IplasStationListRequest {
   site: string
   project: string
-  token?: string  // Optional user token override
+  token?: string // Optional user token override
 }
 
 export interface IplasStationListResponse {
@@ -188,20 +188,20 @@ export interface IplasDeviceListRequest {
   site: string
   project: string
   station: string
-  start_time: string  // ISO format
-  end_time: string    // ISO format
-  token?: string  // Optional user token override
+  start_time: string // ISO format
+  end_time: string // ISO format
+  token?: string // Optional user token override
 }
 
 export interface IplasDeviceListResponse {
-  data: string[]  // Device IDs
+  data: string[] // Device IDs
   total_count: number
   cached: boolean
 }
 
 export interface IplasIsnSearchRequest {
   isn: string
-  token?: string  // Optional user token override
+  token?: string // Optional user token override
 }
 
 /** Test item from ISN search result */
@@ -246,7 +246,7 @@ export interface IplasIsnSearchResponse {
 /** Request for batch ISN search */
 export interface IplasIsnSearchBatchRequest {
   isns: string[]
-  token?: string  // Optional user token override
+  token?: string // Optional user token override
 }
 
 /** Single ISN result in batch response */
@@ -273,13 +273,13 @@ export interface IplasIsnSearchBatchResponse {
 /** Request to get station list from a single ISN */
 export interface IplasStationsFromIsnRequest {
   isn: string
-  token?: string  // Optional user token override
+  token?: string // Optional user token override
 }
 
 /** Request to get station lists from multiple ISNs */
 export interface IplasStationsFromIsnBatchRequest {
   isns: string[]
-  token?: string  // Optional user token override
+  token?: string // Optional user token override
 }
 
 /** Information about an ISN's project discovered from ISN search */
@@ -320,7 +320,7 @@ export interface IplasStationsFromIsnBatchResponse {
 
 export interface IplasDownloadAttachmentInfo {
   isn: string
-  time: string  // Format: "YYYY/MM/DD HH:mm:ss"
+  time: string // Format: "YYYY/MM/DD HH:mm:ss"
   deviceid: string
   station: string
 }
@@ -329,12 +329,12 @@ export interface IplasDownloadAttachmentRequest {
   site: string
   project: string
   info: IplasDownloadAttachmentInfo[]
-  token?: string  // Optional user token override
+  token?: string // Optional user token override
 }
 
 export interface IplasDownloadAttachmentResponse {
-  content: string  // Base64 encoded file content
-  filename?: string  // Only when single file
+  content: string // Base64 encoded file content
+  filename?: string // Only when single file
 }
 
 // ============================================================================
@@ -346,21 +346,21 @@ export interface IplasDownloadCsvLogInfo {
   project: string
   station: string
   line: string
-  model: string  // Usually "ALL"
+  model: string // Usually "ALL"
   deviceid: string
   isn: string
-  test_end_time: string  // Format: "YYYY/MM/DD HH:mm:ss.000" (MUST include .000)
-  data_source: number  // Usually 0
+  test_end_time: string // Format: "YYYY/MM/DD HH:mm:ss.000" (MUST include .000)
+  data_source: number // Usually 0
 }
 
 export interface IplasDownloadCsvLogRequest {
   query_list: IplasDownloadCsvLogInfo[]
-  token?: string  // Optional user token override
+  token?: string // Optional user token override
 }
 
 export interface IplasDownloadCsvLogResponse {
-  content: string  // CSV file content as string
-  filename?: string  // Filename from response header
+  content: string // CSV file content as string
+  filename?: string // Filename from response header
 }
 
 // ============================================================================
@@ -371,16 +371,16 @@ export interface IplasBatchDownloadRequest {
   site: string
   project: string
   items: IplasDownloadCsvLogInfo[]
-  download_type: 'txt' | 'csv' | 'all'  // 'txt' for attachments, 'csv' for CSV logs, 'all' for both
-  token?: string  // Optional user token override
+  download_type: 'txt' | 'csv' | 'all' // 'txt' for attachments, 'csv' for CSV logs, 'all' for both
+  token?: string // Optional user token override
 }
 
 export interface IplasBatchDownloadResponse {
-  content: string  // Base64 encoded zip file content
-  filename: string  // Suggested filename
-  file_count: number  // Total files in archive
-  txt_count: number  // Number of TXT files
-  csv_count: number  // Number of CSV files
+  content: string // Base64 encoded zip file content
+  filename: string // Suggested filename
+  file_count: number // Total files in archive
+  txt_count: number // Number of TXT files
+  csv_count: number // Number of CSV files
 }
 
 // ============================================================================
@@ -390,7 +390,7 @@ export interface IplasBatchDownloadResponse {
 export interface IplasVerifyRequest {
   site: string
   project: string
-  token?: string  // Optional user token override
+  token?: string // Optional user token override
 }
 
 export interface IplasVerifyResponse {
@@ -406,19 +406,19 @@ export interface IplasTestItemByIsnRequest {
   site: string
   project: string
   isn: string
-  station?: string   // Optional station filter (empty = search all stations)
-  device?: string    // Optional device ID filter (empty = search all devices)
+  station?: string // Optional station filter (empty = search all stations)
+  device?: string // Optional device ID filter (empty = search all devices)
   begin_time: string // ISO format
-  end_time: string   // ISO format
-  token?: string     // Optional user token override
+  end_time: string // ISO format
+  token?: string // Optional user token override
 }
 
 export interface IplasTestItemByIsnTestItem {
   name: string
   Status: string
-  LSL: string   // Lower Spec Limit (same as LCL)
+  LSL: string // Lower Spec Limit (same as LCL)
   Value: string
-  USL: string   // Upper Spec Limit (same as UCL)
+  USL: string // Upper Spec Limit (same as UCL)
   CYCLE: string
 }
 
@@ -577,7 +577,7 @@ export interface ExportTestItemsResponse {
 
 /**
  * iPLAS Proxy API Service
- * 
+ *
  * Uses the backend proxy endpoints for cached and filtered iPLAS data access.
  * Supports request cancellation to prevent redundant API calls.
  */
@@ -587,118 +587,118 @@ class IplasProxyApi {
   /**
    * Get filtered CSV test items from iPLAS with caching
    * Supports request cancellation via signal.
-   * 
+   *
    * @param request - Request parameters including filters
    * @param options - Optional configuration including signal for cancellation
    * @returns Filtered test item data with cache metadata
    */
   async getCsvTestItems(
     request: IplasCsvTestItemRequest,
-    options?: { signal?: AbortSignal }
+    options?: { signal?: AbortSignal },
   ): Promise<IplasCsvTestItemResponse> {
     const response = await apiClient.post<IplasCsvTestItemResponse>(
       `${this.baseUrl}/csv-test-items`,
       request,
-      { signal: options?.signal }
+      { signal: options?.signal },
     )
     return response.data
   }
 
   /**
    * Get compact CSV test items (without TestItem arrays) for memory efficiency
-   * 
+   *
    * Use this for:
    * - Record list views where you don't need test item details
    * - Initial page load to show record summaries
    * - Performance-critical scenarios
-   * 
+   *
    * Supports request cancellation via signal.
-   * 
+   *
    * @param request - Request parameters including filters
    * @param options - Optional configuration including signal for cancellation
    * @returns Compact test item data (60-80% smaller than full data)
    */
   async getCsvTestItemsCompact(
     request: IplasCsvTestItemRequest,
-    options?: { signal?: AbortSignal }
+    options?: { signal?: AbortSignal },
   ): Promise<CompactCsvTestItemResponse> {
     const response = await apiClient.post<CompactCsvTestItemResponse>(
       `${this.baseUrl}/csv-test-items/compact`,
       request,
-      { signal: options?.signal }
+      { signal: options?.signal },
     )
     return response.data
   }
 
   /**
    * Get test items for a specific record (lazy loading)
-   * 
+   *
    * Use this to load TestItem details on-demand when user expands a record,
    * instead of loading all test items upfront.
-   * 
+   *
    * @param request - Record identification parameters
    * @returns Test items for the specific record
    */
   async getRecordTestItems(request: RecordTestItemsRequest): Promise<RecordTestItemsResponse> {
     const response = await apiClient.post<RecordTestItemsResponse>(
       `${this.baseUrl}/record-test-items`,
-      request
+      request,
     )
     return response.data
   }
 
   /**
    * Get unique test item names for the selection dialog
-   * 
+   *
    * This is a lightweight endpoint that returns only test item names,
    * reducing payload from ~500KB to ~5KB.
-   * 
+   *
    * @param request - Request parameters
    * @returns List of unique test item names with type info
    */
   async getTestItemNames(request: IplasTestItemNamesRequest): Promise<IplasTestItemNamesResponse> {
     const response = await apiClient.post<IplasTestItemNamesResponse>(
       `${this.baseUrl}/test-item-names`,
-      request
+      request,
     )
     return response.data
   }
 
   /**
    * Get cached test item names from database
-   * 
+   *
    * This is optimized for the "Configure Station" dialog where loading
    * test items for long date ranges (30+ days) often times out.
-   * 
+   *
    * Cache key: site + project + station (date range NOT included)
    * Cache TTL: 7 days in database
-   * 
+   *
    * @param request - Request parameters (no date range needed)
    * @returns List of unique test item names with cache info
    */
-  async getTestItemNamesCached(request: IplasCachedTestItemNamesRequest): Promise<IplasCachedTestItemNamesResponse> {
+  async getTestItemNamesCached(
+    request: IplasCachedTestItemNamesRequest,
+  ): Promise<IplasCachedTestItemNamesResponse> {
     const response = await apiClient.post<IplasCachedTestItemNamesResponse>(
       `${this.baseUrl}/test-item-names-cached`,
-      request
+      request,
     )
     return response.data
   }
 
   /**
    * Check iPLAS proxy health and cache status
-   * 
+   *
    * @returns Health status including Redis and iPLAS API status
    */
   async healthCheck(): Promise<IplasProxyHealthResponse> {
-    const response = await apiClient.get<IplasProxyHealthResponse>(
-      `${this.baseUrl}/health`
-    )
+    const response = await apiClient.get<IplasProxyHealthResponse>(`${this.baseUrl}/health`)
     return response.data
   }
 
   /**
    * Helper to format date for API request
-   * 
+   *
    * @param date - Date object or string
    * @returns ISO format string
    */
@@ -713,73 +713,73 @@ class IplasProxyApi {
 
   /**
    * Get all site/project pairs from iPLAS v2 API
-   * 
+   *
    * This endpoint aggregates site/project data from all configured iPLAS sites.
    * Results are cached for 24 hours.
-   * 
+   *
    * @param dataType - Filter type: 'simple' or 'strict'
    * @returns List of site/project pairs
    */
-  async getSiteProjects(dataType: 'simple' | 'strict' = 'simple'): Promise<IplasSiteProjectListResponse> {
+  async getSiteProjects(
+    dataType: 'simple' | 'strict' = 'simple',
+  ): Promise<IplasSiteProjectListResponse> {
     const response = await apiClient.get<IplasSiteProjectListResponse>(
       `${this.baseUrl}/site-projects`,
-      { params: { data_type: dataType } }
+      { params: { data_type: dataType } },
     )
     return response.data
   }
 
   /**
    * Get station list for a specific site/project
-   * 
+   *
    * Results are cached for 1 hour.
-   * 
+   *
    * @param request - Site and project to query
    * @returns List of stations with IP addresses
    */
   async getStations(request: IplasStationListRequest): Promise<IplasStationListResponse> {
     const response = await apiClient.post<IplasStationListResponse>(
       `${this.baseUrl}/stations`,
-      request
+      request,
     )
     return response.data
   }
 
   /**
    * Get device list for a specific station within a time range
-   * 
+   *
    * Results are cached for 5 minutes.
    * Supports request cancellation - previous requests for same station are auto-cancelled.
-   * 
+   *
    * @param request - Station and time range parameters
    * @param options - Optional configuration including signal for cancellation
    * @returns List of device IDs
    */
   async getDevices(
     request: IplasDeviceListRequest,
-    options?: { signal?: AbortSignal; cancelPrevious?: boolean }
+    options?: { signal?: AbortSignal; cancelPrevious?: boolean },
   ): Promise<IplasDeviceListResponse> {
     const endpoint = `${this.baseUrl}/devices`
-    const requestKey = getRequestKey(endpoint, { 
-      site: request.site, 
-      project: request.project, 
-      station: request.station 
+    const requestKey = getRequestKey(endpoint, {
+      site: request.site,
+      project: request.project,
+      station: request.station,
     })
-    
+
     // Cancel previous request for the same station if requested
     if (options?.cancelPrevious !== false) {
       cancelRequest(requestKey)
     }
-    
+
     // Create new abort controller
     const controller = new AbortController()
     pendingRequests.set(requestKey, controller)
-    
+
     try {
-      const response = await apiClient.post<IplasDeviceListResponse>(
-        endpoint,
-        request,
-        { signal: options?.signal || controller.signal }
-      )
+      const response = await apiClient.post<IplasDeviceListResponse>(endpoint, request, {
+        signal: options?.signal || controller.signal,
+      })
       return response.data
     } finally {
       pendingRequests.delete(requestKey)
@@ -788,35 +788,37 @@ class IplasProxyApi {
 
   /**
    * Search for DUT test data by ISN
-   * 
+   *
    * This endpoint queries all configured iPLAS sites to find the ISN.
    * Results are cached for 5 minutes.
-   * 
+   *
    * @param request - ISN to search for
    * @returns List of matching test records
    */
   async searchByIsn(request: IplasIsnSearchRequest): Promise<IplasIsnSearchResponse> {
     const response = await apiClient.post<IplasIsnSearchResponse>(
       `${this.baseUrl}/isn-search`,
-      request
+      request,
     )
     return response.data
   }
 
   /**
    * Search for DUT test data by multiple ISNs in batch
-   * 
+   *
    * This is significantly faster than making individual ISN search requests.
    * Uses parallel HTTP requests on the backend to search up to 100 ISNs.
    * Results are cached for 5 minutes per ISN.
-   * 
+   *
    * @param request - Array of ISNs to search for (max 100)
    * @returns Batch response with results for each ISN
    */
-  async searchByIsnBatch(request: IplasIsnSearchBatchRequest): Promise<IplasIsnSearchBatchResponse> {
+  async searchByIsnBatch(
+    request: IplasIsnSearchBatchRequest,
+  ): Promise<IplasIsnSearchBatchResponse> {
     const response = await apiClient.post<IplasIsnSearchBatchResponse>(
       `${this.baseUrl}/isn-search-batch`,
-      request
+      request,
     )
     return response.data
   }
@@ -827,45 +829,49 @@ class IplasProxyApi {
 
   /**
    * Get station list from a single ISN
-   * 
+   *
    * Looks up the ISN to find its site/project, then returns all stations
    * for that project.
-   * 
+   *
    * Cache TTL:
    * - ISN lookup: 5 minutes
    * - Station list: 1 hour
-   * 
+   *
    * @param request - ISN to look up
    * @returns Station list for the ISN's project
    */
-  async getStationsFromIsn(request: IplasStationsFromIsnRequest): Promise<IplasStationsFromIsnResponse> {
+  async getStationsFromIsn(
+    request: IplasStationsFromIsnRequest,
+  ): Promise<IplasStationsFromIsnResponse> {
     const response = await apiClient.post<IplasStationsFromIsnResponse>(
       `${this.baseUrl}/isn/stations`,
-      request
+      request,
     )
     return response.data
   }
 
   /**
    * Get station lists from multiple ISNs
-   * 
+   *
    * Looks up multiple ISNs and returns station lists for each unique project.
    * Results are deduplicated - if multiple ISNs belong to the same project,
    * the station list is only fetched once.
-   * 
+   *
    * Limits: Maximum 50 ISNs per request
-   * 
+   *
    * Cache TTL:
    * - ISN lookup: 5 minutes
    * - Station list: 1 hour
-   * 
+   *
    * @param request - ISNs to look up
    * @returns Station lists for each ISN's project
    */
-  async getStationsFromIsnBatch(request: IplasStationsFromIsnBatchRequest): Promise<IplasStationsFromIsnBatchResponse> {
+  async getStationsFromIsnBatch(
+    request: IplasStationsFromIsnBatchRequest,
+  ): Promise<IplasStationsFromIsnBatchResponse> {
     const response = await apiClient.post<IplasStationsFromIsnBatchResponse>(
       `${this.baseUrl}/isn-batch/stations`,
-      request
+      request,
     )
     return response.data
   }
@@ -876,23 +882,25 @@ class IplasProxyApi {
 
   /**
    * Download test log attachments from iPLAS
-   * 
+   *
    * Supports multiple downloads in a single request.
-   * 
+   *
    * @param request - Download request with attachment info
    * @returns Base64-encoded file content
    */
-  async downloadAttachment(request: IplasDownloadAttachmentRequest): Promise<IplasDownloadAttachmentResponse> {
+  async downloadAttachment(
+    request: IplasDownloadAttachmentRequest,
+  ): Promise<IplasDownloadAttachmentResponse> {
     const response = await apiClient.post<IplasDownloadAttachmentResponse>(
       `${this.baseUrl}/download-attachment`,
-      request
+      request,
     )
     return response.data
   }
 
   /**
    * Helper to decode base64 content and trigger download
-   * 
+   *
    * @param base64Content - Base64 encoded file content
    * @param filename - Filename for the download
    */
@@ -921,25 +929,25 @@ class IplasProxyApi {
 
   /**
    * Download CSV test logs from iPLAS
-   * 
+   *
    * Uses the iPLAS endpoint: POST /raw/get_test_log
-   * 
+   *
    * **Important**: The test_end_time field MUST include milliseconds (e.g., '2026/01/22 18:57:05.000')
-   * 
+   *
    * @param request - Download request with query list
    * @returns CSV file content as string with optional filename
    */
   async downloadCsvLog(request: IplasDownloadCsvLogRequest): Promise<IplasDownloadCsvLogResponse> {
     const response = await apiClient.post<IplasDownloadCsvLogResponse>(
       `${this.baseUrl}/download-csv-log`,
-      request
+      request,
     )
     return response.data
   }
 
   /**
    * Helper to download CSV content as a file
-   * 
+   *
    * @param csvContent - CSV file content as string
    * @param filename - Filename for the download
    */
@@ -962,26 +970,26 @@ class IplasProxyApi {
 
   /**
    * Batch download test logs (TXT, CSV, or both) as a zip archive
-   * 
+   *
    * This is optimized for downloading multiple logs at once, packaging them
    * into a single zip file with proper structure:
    * - /txt/ folder contains TXT attachment files
    * - /csv/ folder contains CSV test log files
-   * 
+   *
    * @param request - Batch download request with items and download type
    * @returns Base64 encoded zip file with file counts
    */
   async batchDownload(request: IplasBatchDownloadRequest): Promise<IplasBatchDownloadResponse> {
     const response = await apiClient.post<IplasBatchDownloadResponse>(
       `${this.baseUrl}/batch-download`,
-      request
+      request,
     )
     return response.data
   }
 
   /**
    * Helper to download batch download response as a file
-   * 
+   *
    * @param response - Batch download response from API
    */
   downloadBatchFile(response: IplasBatchDownloadResponse): void {
@@ -994,26 +1002,26 @@ class IplasProxyApi {
 
   /**
    * Export selected test items to CSV or XLSX format
-   * 
+   *
    * Creates a combined export with:
    * - Metadata rows (ISN, Project, DeviceId, etc.) as columns
    * - Selected test items with their values for each record
    * - For XLSX: separate sheets per station
-   * 
+   *
    * @param request - Export request with records and selected test items
    * @returns Base64 encoded file content
    */
   async exportTestItems(request: ExportTestItemsRequest): Promise<ExportTestItemsResponse> {
     const response = await apiClient.post<ExportTestItemsResponse>(
       `${this.baseUrl}/export-test-items`,
-      request
+      request,
     )
     return response.data
   }
 
   /**
    * Helper to download export response as a file
-   * 
+   *
    * @param response - Export response from API
    */
   downloadExportFile(response: ExportTestItemsResponse): void {
@@ -1041,17 +1049,14 @@ class IplasProxyApi {
 
   /**
    * Verify token access for a site/project
-   * 
+   *
    * This is useful for validating user-provided tokens.
-   * 
+   *
    * @param request - Site, project, and optional token
    * @returns Verification result
    */
   async verifyAccess(request: IplasVerifyRequest): Promise<IplasVerifyResponse> {
-    const response = await apiClient.post<IplasVerifyResponse>(
-      `${this.baseUrl}/verify`,
-      request
-    )
+    const response = await apiClient.post<IplasVerifyResponse>(`${this.baseUrl}/verify`, request)
     return response.data
   }
 
@@ -1061,23 +1066,23 @@ class IplasProxyApi {
 
   /**
    * Get test items by ISN from iPLAS v1 API (cross-station search)
-   * 
+   *
    * This endpoint searches for an ISN across all related test stations within a date range.
    * More flexible than V2 isn_search because it supports date filtering and returns
    * test items from ALL stations that processed this ISN.
-   * 
+   *
    * **Use Cases:**
    * - Track a DUT through the entire production flow
    * - Find all test records for a specific serial number
    * - Compare test results across different stations for the same ISN
-   * 
+   *
    * @param request - ISN search parameters with optional date range
    * @returns List of matching records across all related stations
    */
   async getTestItemByIsn(request: IplasTestItemByIsnRequest): Promise<IplasTestItemByIsnResponse> {
     const response = await apiClient.post<IplasTestItemByIsnResponse>(
       `${this.baseUrl}/test-item-by-isn`,
-      request
+      request,
     )
     return response.data
   }
@@ -1099,7 +1104,7 @@ class IplasProxyApi {
           cached: parsed.cached,
           possiblyTruncated: parsed.possibly_truncated,
           chunksFetched: parsed.chunks_fetched,
-          totalChunks: parsed.total_chunks
+          totalChunks: parsed.total_chunks,
         }
       }
     } catch {
@@ -1110,12 +1115,12 @@ class IplasProxyApi {
 
   /**
    * Stream CSV test items as NDJSON for memory-efficient large dataset handling
-   * 
+   *
    * Benefits:
    * - Frontend can process records as they arrive (progressive rendering)
    * - Reduced peak memory usage
    * - Better UX for large datasets (users see data immediately)
-   * 
+   *
    * @param request - Request parameters
    * @param onRecord - Callback for each record received
    * @param onMetadata - Callback for stream metadata (first line)
@@ -1128,10 +1133,10 @@ class IplasProxyApi {
     onRecord: (record: CompactCsvTestItemData) => void,
     onMetadata?: (metadata: StreamMetadata) => void,
     onError?: (error: Error) => void,
-    signal?: AbortSignal
+    signal?: AbortSignal,
   ): Promise<number> {
     const url = `${import.meta.env.VITE_API_URL || ''}/api/iplas/csv-test-items/stream`
-    
+
     try {
       const response = await fetch(url, {
         method: 'POST',
@@ -1139,7 +1144,7 @@ class IplasProxyApi {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(request),
-        signal
+        signal,
       })
 
       if (!response.ok) {
@@ -1157,11 +1162,11 @@ class IplasProxyApi {
 
       while (true) {
         const { done, value } = await reader.read()
-        
+
         if (done) break
 
         buffer += decoder.decode(value, { stream: true })
-        
+
         // Process complete lines
         const lines = buffer.split('\n')
         buffer = lines.pop() || '' // Keep incomplete line in buffer
@@ -1181,7 +1186,7 @@ class IplasProxyApi {
             const record = JSON.parse(line) as CompactCsvTestItemData
             onRecord(record)
             recordCount++
-          } catch (parseError) {
+          } catch (_parseError) {
             console.warn('Failed to parse NDJSON line:', line)
           }
         }

@@ -25,8 +25,8 @@ export interface ParseResponse {
   format: string
   rows_count: number
   columns: string[]
-  preview_data: any[]
-  metadata?: Record<string, any>
+  preview_data: unknown[]
+  metadata?: Record<string, unknown>
 }
 
 // Upload Preview Types (used by /api/upload-preview)
@@ -41,7 +41,7 @@ export interface UploadPreviewResponse {
   file_id: string
   filename: string
   columns: string[]
-  preview: Record<string, any>[]
+  preview: Record<string, unknown>[]
 }
 
 // Parse Data Types (used by /api/parse)
@@ -56,7 +56,7 @@ export interface ParseDataRequest {
 
 export interface ParseDataResponse {
   columns: string[]
-  rows: Record<string, any>[]
+  rows: Record<string, unknown>[]
 }
 
 // Compare Data Types (used by /api/compare)
@@ -77,7 +77,7 @@ export interface CompareDataRequest {
 }
 
 export interface CompareDataResponse {
-  rows: Record<string, any>[]
+  rows: Record<string, unknown>[]
   summary?: {
     total_rows: number
     matching_rows?: number
@@ -88,7 +88,7 @@ export interface CompareDataResponse {
 
 export interface ParsedData {
   headers: string[]
-  rows: any[]
+  rows: unknown[]
   total_rows: number
   parsed_rows: number
   errors?: ParseError[]
@@ -130,8 +130,8 @@ export interface Difference {
   type: 'added' | 'removed' | 'modified'
   row_number: number
   column?: string
-  file1_value?: any
-  file2_value?: any
+  file1_value?: unknown
+  file2_value?: unknown
   key?: string
 }
 
@@ -161,7 +161,7 @@ export interface MultiDUTAnalysisRequest {
 export interface AnalysisOptions {
   include_charts?: boolean
   export_format?: 'xlsx' | 'csv' | 'json'
-  filters?: Record<string, any>
+  filters?: Record<string, unknown>
 }
 
 export interface MultiDUTAnalysisResponse {
@@ -178,7 +178,7 @@ export interface AnalysisResult {
   pass_rate: number
   fail_rate: number
   average_score: number
-  details: any[]
+  details: unknown[]
 }
 
 export interface AnalysisSummary {
@@ -194,7 +194,7 @@ export interface ChartData {
   title: string
   labels: string[]
   datasets: ChartDataset[]
-  options?: any
+  options?: Record<string, unknown>
 }
 
 export interface ChartDataset {
@@ -220,7 +220,7 @@ export interface DownloadResponse {
 }
 
 // Batch Operations
-export interface BatchOperation<T = any> {
+export interface BatchOperation<T = unknown> {
   operation: 'create' | 'update' | 'delete'
   data: T
   id?: string | number
@@ -237,7 +237,7 @@ export interface BatchError {
   index: number
   operation: string
   error: string
-  data?: any
+  data?: unknown
 }
 
 // Upload Types
@@ -261,12 +261,12 @@ export interface UploadResponse {
 // Search Types
 export interface SearchRequest {
   query: string
-  filters?: Record<string, any>
+  filters?: Record<string, unknown>
   pagination?: PaginationParams
   fields?: string[]
 }
 
-export interface SearchResponse<T = any> {
+export interface SearchResponse<T = unknown> {
   results: T[]
   total: number
   query: string
@@ -277,8 +277,8 @@ export interface SearchResponse<T = any> {
 // Export types
 export interface ExportRequest {
   format: 'xlsx' | 'csv' | 'json' | 'pdf'
-  data?: any[]
-  filters?: Record<string, any>
+  data?: unknown[]
+  filters?: Record<string, unknown>
   options?: ExportOptions
 }
 

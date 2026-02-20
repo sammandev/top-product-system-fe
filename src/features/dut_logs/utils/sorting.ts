@@ -30,7 +30,7 @@ export function getTestItemSortKey(item: TestItemLike): string {
   // Extract antenna number (TX1, TX2, RX1, PA1, etc.)
   const antennaMatch = testItem.match(/(TX|RX|PA|ANT)(\d+)/)
   const antennaType = antennaMatch ? antennaMatch[1] : ''
-  const antennaNum = antennaMatch && antennaMatch[2] ? parseInt(antennaMatch[2], 10) : 0
+  const antennaNum = antennaMatch?.[2] ? parseInt(antennaMatch[2], 10) : 0
 
   // Define criteria family ordering
   // Order matters - check more specific patterns first to avoid false matches

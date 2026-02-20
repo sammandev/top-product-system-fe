@@ -96,110 +96,114 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
+import type { ScoringPolicy, ScoringType } from '@/features/dut/types/scoring.types'
 import type { Station } from '@/features/dut_logs/composables/useIplasApi'
-import type { ScoringType, ScoringPolicy } from '@/features/dut/types/scoring.types'
 
 // Per-test-item scoring configuration
 export interface TestItemScoringConfig {
-    scoringType: ScoringType
-    target?: number  // Required for asymmetrical
-    policy?: ScoringPolicy  // Policy for asymmetrical (symmetrical/higher/lower)
-    weight?: number  // Weight for scoring (default: 1.0)
+  scoringType: ScoringType
+  target?: number // Required for asymmetrical
+  policy?: ScoringPolicy // Policy for asymmetrical (symmetrical/higher/lower)
+  weight?: number // Weight for scoring (default: 1.0)
 }
 
 export interface StationConfig {
-    displayName: string
-    stationName: string
-    deviceIds: string[]
-    totalDeviceCount?: number  // Total available device count (used when deviceIds is empty)
-    testStatus: 'ALL' | 'PASS' | 'FAIL'
-    selectedTestItems: string[] // Empty means all test items
-    testItemScoringConfigs?: Record<string, TestItemScoringConfig> // Per-test-item scoring config
+  displayName: string
+  stationName: string
+  deviceIds: string[]
+  totalDeviceCount?: number // Total available device count (used when deviceIds is empty)
+  testStatus: 'ALL' | 'PASS' | 'FAIL'
+  selectedTestItems: string[] // Empty means all test items
+  testItemScoringConfigs?: Record<string, TestItemScoringConfig> // Per-test-item scoring config
 }
 
 interface Props {
-    show: boolean
-    site: string
-    project: string
-    stations: Station[]
-    selectedConfigs: Record<string, StationConfig>
+  show: boolean
+  site: string
+  project: string
+  stations: Station[]
+  selectedConfigs: Record<string, StationConfig>
 }
 
 const props = defineProps<Props>()
 
 const emit = defineEmits<{
-    (e: 'update:show', value: boolean): void
-    (e: 'station-click', station: Station): void
-    (e: 'confirm', configs: Record<string, StationConfig>): void
-    (e: 'clear-all'): void
+  (e: 'update:show', value: boolean): void
+  (e: 'station-click', station: Station): void
+  (e: 'confirm', configs: Record<string, StationConfig>): void
+  (e: 'clear-all'): void
 }>()
 
 const internalShow = computed({
-    get: () => props.show,
-    set: (value) => emit('update:show', value)
+  get: () => props.show,
+  set: (value) => emit('update:show', value),
 })
 
 const searchQuery = ref('')
 
 const filteredStations = computed(() => {
-    if (!searchQuery.value) return props.stations
+  if (!searchQuery.value) return props.stations
 
-    const query = searchQuery.value.toLowerCase()
-    return props.stations.filter(station =>
-        station.display_station_name.toLowerCase().includes(query) ||
-        station.station_name.toLowerCase().includes(query)
-    )
+  const query = searchQuery.value.toLowerCase()
+  return props.stations.filter(
+    (station) =>
+      station.display_station_name.toLowerCase().includes(query) ||
+      station.station_name.toLowerCase().includes(query),
+  )
 })
 
 const configuredStationsCount = computed(() => {
-    return Object.keys(props.selectedConfigs).length
+  return Object.keys(props.selectedConfigs).length
 })
 
 function isStationConfigured(displayName: string): boolean {
-    return !!props.selectedConfigs[displayName]
+  return !!props.selectedConfigs[displayName]
 }
 
 function getStationConfig(displayName: string): StationConfig | undefined {
-    return props.selectedConfigs[displayName]
+  return props.selectedConfigs[displayName]
 }
 
 function getTestItemsLabel(displayName: string): string {
-    const config = props.selectedConfigs[displayName]
-    if (!config || config.selectedTestItems.length === 0) {
-        return 'All Items'
-    }
-    return `${config.selectedTestItems.length} Item(s)`
+  const config = props.selectedConfigs[displayName]
+  if (!config || config.selectedTestItems.length === 0) {
+    return 'All Items'
+  }
+  return `${config.selectedTestItems.length} Item(s)`
 }
 
 function getScoringConfigsCount(displayName: string): number {
-    const config = props.selectedConfigs[displayName]
-    if (!config?.testItemScoringConfigs) return 0
-    return Object.keys(config.testItemScoringConfigs).length
+  const config = props.selectedConfigs[displayName]
+  if (!config?.testItemScoringConfigs) return 0
+  return Object.keys(config.testItemScoringConfigs).length
 }
 
 function handleStationClick(station: Station): void {
-    emit('station-click', station)
+  emit('station-click', station)
 }
 
 function handleConfirm(): void {
-    emit('confirm', props.selectedConfigs)
+  emit('confirm', props.selectedConfigs)
 }
 
 function handleClearAll(): void {
-    emit('clear-all')
+  emit('clear-all')
 }
 
 function handleClose(): void {
-    internalShow.value = false
+  internalShow.value = false
 }
 
 // Reset search when dialog closes
-watch(() => props.show, (newShow) => {
+watch(
+  () => props.show,
+  (newShow) => {
     if (!newShow) {
-        searchQuery.value = ''
+      searchQuery.value = ''
     }
-})
+  },
+)
 </script>
 
 <style scoped>

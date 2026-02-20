@@ -9,7 +9,7 @@ export const HTTP_METHODS = {
   POST: 'POST',
   PUT: 'PUT',
   PATCH: 'PATCH',
-  DELETE: 'DELETE'
+  DELETE: 'DELETE',
 } as const
 
 // HTTP Status Codes
@@ -29,7 +29,7 @@ export const HTTP_STATUS = {
   INTERNAL_SERVER_ERROR: 500,
   BAD_GATEWAY: 502,
   SERVICE_UNAVAILABLE: 503,
-  GATEWAY_TIMEOUT: 504
+  GATEWAY_TIMEOUT: 504,
 } as const
 
 // API Endpoints
@@ -40,7 +40,7 @@ export const API_ENDPOINTS = {
     EXTERNAL_LOGIN: '/api/auth/external-login',
     LOGOUT: '/api/auth/logout',
     REFRESH: '/api/auth/refresh',
-    ME: '/api/auth/me'
+    ME: '/api/auth/me',
   },
 
   // Users
@@ -48,7 +48,7 @@ export const API_ENDPOINTS = {
     BASE: '/api/users',
     BY_ID: (id: number) => `/api/users/${id}`,
     PROFILE: '/api/users/profile',
-    CHANGE_PASSWORD: '/api/users/change-password'
+    CHANGE_PASSWORD: '/api/users/change-password',
   },
 
   // DUT Management
@@ -63,29 +63,29 @@ export const API_ENDPOINTS = {
       ISNS: '/api/dut/history/isns',
       IDENTIFIERS: '/api/dut/history/identifiers',
       PROGRESSION: '/api/dut/history/progression',
-      RESULTS: '/api/dut/history/results'
+      RESULTS: '/api/dut/history/results',
     },
-    SUMMARY: '/api/dut/summary'
+    SUMMARY: '/api/dut/summary',
   },
 
   // File Parsing
   PARSING: {
     UPLOAD_PREVIEW: '/api/upload-preview',
     PARSE: '/api/parse',
-    PARSE_DOWNLOAD: '/api/parse-download'
+    PARSE_DOWNLOAD: '/api/parse-download',
   },
 
   // File Comparison
   COMPARISON: {
     COMPARE: '/api/compare',
-    COMPARE_DOWNLOAD: '/api/compare-download'
+    COMPARE_DOWNLOAD: '/api/compare-download',
   },
 
   // Analysis
   ANALYSIS: {
     MULTI_DUT: '/api/analyze-multi-dut',
-    DOWNLOAD: '/api/analysis/download'
-  }
+    DOWNLOAD: '/api/analysis/download',
+  },
 } as const
 
 // Request Headers
@@ -93,7 +93,7 @@ export const HEADERS = {
   CONTENT_TYPE: 'Content-Type',
   AUTHORIZATION: 'Authorization',
   ACCEPT: 'Accept',
-  X_REQUESTED_WITH: 'X-Requested-With'
+  X_REQUESTED_WITH: 'X-Requested-With',
 } as const
 
 // Content Types
@@ -105,7 +105,7 @@ export const CONTENT_TYPES = {
   HTML: 'text/html',
   XML: 'application/xml',
   CSV: 'text/csv',
-  XLSX: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+  XLSX: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
 } as const
 
 // Error Codes
@@ -117,7 +117,7 @@ export const ERROR_CODES = {
   NOT_FOUND: 'NOT_FOUND',
   VALIDATION_ERROR: 'VALIDATION_ERROR',
   SERVER_ERROR: 'SERVER_ERROR',
-  UNKNOWN_ERROR: 'UNKNOWN_ERROR'
+  UNKNOWN_ERROR: 'UNKNOWN_ERROR',
 } as const
 
 // API Response Types
@@ -125,5 +125,5 @@ export const RESPONSE_TYPES = {
   JSON: 'json',
   BLOB: 'blob',
   TEXT: 'text',
-  ARRAY_BUFFER: 'arraybuffer'
+  ARRAY_BUFFER: 'arraybuffer',
 } as const

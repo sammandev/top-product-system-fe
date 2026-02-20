@@ -1,4 +1,4 @@
-import type { RouteRecordRaw } from 'vue-router';
+import type { RouteRecordRaw } from 'vue-router'
 
 export const topProductsRoutes: RouteRecordRaw[] = [
   {
@@ -7,7 +7,7 @@ export const topProductsRoutes: RouteRecordRaw[] = [
     component: () => import('../views/TopProductDatabaseView.vue'),
     meta: {
       requiresAuth: true,
-      title: 'Top Product Database'
-    }
-  }
-];
+      title: 'Top Product Database',
+    },
+  },
+]

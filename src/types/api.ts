@@ -92,7 +92,7 @@ export interface ParseResponse {
   filename: string
   format: string
   rows_count: number
-  preview_data: any[]
+  preview_data: unknown[]
 }
 
 // Comparison Types
@@ -104,7 +104,7 @@ export interface CompareRequest {
 
 export interface CompareResponse {
   comparison_id: string
-  differences: any[]
+  differences: unknown[]
   summary: {
     total_records: number
     matching_records: number
@@ -120,8 +120,8 @@ export interface MultiDUTAnalysisRequest {
 
 export interface MultiDUTAnalysisResponse {
   analysis_id: string
-  results: any[]
-  summary: any
+  results: unknown[]
+  summary: Record<string, unknown>
 }
 
 // Common Types

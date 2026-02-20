@@ -1,14 +1,14 @@
-import { mount, VueWrapper } from '@vue/test-utils'
+import type { ComponentMountingOptions } from '@vue/test-utils'
+import { mount, type VueWrapper } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
-import { createRouter, createMemoryHistory, type RouteRecordRaw } from 'vue-router'
+import { createMemoryHistory, createRouter, type RouteRecordRaw } from 'vue-router'
 import { createVuetify } from 'vuetify'
 import * as components from 'vuetify/components'
 import * as directives from 'vuetify/directives'
-import type { ComponentMountingOptions } from '@vue/test-utils'
 
 /**
  * Test Utilities
- * 
+ *
  * Helper functions for component testing with Vue Test Utils.
  */
 
@@ -23,17 +23,24 @@ export function createTestPinia() {
 
 /**
  * Create a test router with memory history
- * 
+ *
  * @param routes - Optional routes to include
  */
 export function createTestRouter(routes: RouteRecordRaw[] = []) {
   return createRouter({
     history: createMemoryHistory(),
-    routes: routes.length > 0 ? routes : [
-      { path: '/', name: 'home', component: { template: '<div>Home</div>' } },
-      { path: '/login', name: 'login', component: { template: '<div>Login</div>' } },
-      { path: '/dashboard', name: 'dashboard', component: { template: '<div>Dashboard</div>' } },
-    ]
+    routes:
+      routes.length > 0
+        ? routes
+        : [
+            { path: '/', name: 'home', component: { template: '<div>Home</div>' } },
+            { path: '/login', name: 'login', component: { template: '<div>Login</div>' } },
+            {
+              path: '/dashboard',
+              name: 'dashboard',
+              component: { template: '<div>Dashboard</div>' },
+            },
+          ],
   })
 }
 
@@ -45,32 +52,32 @@ export function createTestVuetify() {
     components,
     directives,
     theme: {
-      defaultTheme: 'light'
-    }
+      defaultTheme: 'light',
+    },
   })
 }
 
 /**
  * Mount a component with common test setup (Pinia, Router, Vuetify)
- * 
+ *
  * @param component - The component to mount
  * @param options - Additional mounting options
  * @returns VueWrapper instance
  */
-export function mountWithPlugins<T>(
-  component: T,
-  options: ComponentMountingOptions<any> = {}
-): VueWrapper<any> {
+export function mountWithPlugins(
+  component: Parameters<typeof mount>[0],
+  options: ComponentMountingOptions<unknown> = {},
+): VueWrapper<unknown> {
   const pinia = createTestPinia()
   const router = createTestRouter()
   const vuetify = createTestVuetify()
 
-  return mount(component as any, {
+  return mount(component, {
     global: {
       plugins: [pinia, router, vuetify],
-      ...options.global
+      ...options.global,
     },
-    ...options
+    ...options,
   })
 }
 
@@ -79,22 +86,22 @@ export function mountWithPlugins<T>(
  * Useful for waiting for Vue updates and async operations
  */
 export async function flushPromises() {
-  return new Promise(resolve => setTimeout(resolve, 0))
+  return new Promise((resolve) => setTimeout(resolve, 0))
 }
 
 /**
  * Wait for a specific amount of time
- * 
+ *
  * @param ms - Milliseconds to wait
  */
 export function wait(ms: number) {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
  * Find element by test ID
  * Convention: use data-testid attribute in components
- * 
+ *
  * @param wrapper - Component wrapper
  * @param testId - Test ID value
  */
@@ -104,7 +111,7 @@ export function findByTestId(wrapper: VueWrapper, testId: string) {
 
 /**
  * Check if element with test ID exists
- * 
+ *
  * @param wrapper - Component wrapper
  * @param testId - Test ID value
  */
@@ -114,7 +121,7 @@ export function existsByTestId(wrapper: VueWrapper, testId: string): boolean {
 
 /**
  * Mock successful API response
- * 
+ *
  * @param data - Response data
  */
 export function mockApiSuccess<T>(data: T) {
@@ -123,7 +130,7 @@ export function mockApiSuccess<T>(data: T) {
 
 /**
  * Mock API error response
- * 
+ *
  * @param message - Error message
  * @param status - HTTP status code
  */
@@ -132,8 +139,8 @@ export function mockApiError(message: string, status = 400) {
     response: {
       status,
       data: {
-        detail: message
-      }
-    }
+        detail: message,
+      },
+    },
   })
 }

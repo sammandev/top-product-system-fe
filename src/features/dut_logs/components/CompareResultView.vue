@@ -376,10 +376,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import type { CompareResponseEnhanced, CompareItemEnhanced, ParsedTestItemEnhanced } from '@/features/dut_logs/composables/useTestLogUpload'
+import { computed, ref, watch } from 'vue'
+import type {
+  CompareItemEnhanced,
+  CompareResponseEnhanced,
+  ParsedTestItemEnhanced,
+} from '@/features/dut_logs/composables/useTestLogUpload'
 import { sortTestItems } from '@/features/dut_logs/utils/sorting'
-import ScoreBreakdownDialog from '@/features/dut_logs/components/ScoreBreakdownDialog.vue'
 
 const props = defineProps<{
   result: CompareResponseEnhanced
@@ -401,7 +404,7 @@ const itemsPerPageOptions = [
   { title: '50', value: 50 },
   { title: '100', value: 100 },
   { title: 'All', value: -1 },
-  { title: 'Custom', value: 0 }
+  { title: 'Custom', value: 0 },
 ]
 const showCustomInput = ref(false)
 const customItemsPerPage = ref(10)
@@ -428,13 +431,13 @@ const scoreFilterOptions = [
   { title: 'All Scores', value: null },
   { title: 'Score >= 9', value: 'high' },
   { title: 'Score 7-9', value: 'medium' },
-  { title: 'Score < 7', value: 'low' }
+  { title: 'Score < 7', value: 'low' },
 ]
 
 const limitFilterOptions = [
   { title: 'All', value: null },
   { title: 'Within Limits', value: 'within' },
-  { title: 'Out of Limits', value: 'out' }
+  { title: 'Out of Limits', value: 'out' },
 ]
 
 // Headers
@@ -446,7 +449,7 @@ const valueHeaders = computed(() => {
     { title: 'Test Item', key: 'test_item', sortable: true, width: '250px', fixed: true },
     { title: 'USL', key: 'usl', sortable: true, align: 'center' as const, width: '80px' },
     { title: 'LSL', key: 'lsl', sortable: true, align: 'center' as const, width: '80px' },
-    { title: 'Target', key: 'target', sortable: true, align: 'center' as const, width: '100px' }
+    { title: 'Target', key: 'target', sortable: true, align: 'center' as const, width: '100px' },
   ]
 
   const isnHeaders = firstItem.per_isn_data.map((isnData, index) => ({
@@ -454,14 +457,38 @@ const valueHeaders = computed(() => {
     key: `isn_${index}`,
     sortable: false,
     align: 'center' as const,
-    width: '120px'
+    width: '120px',
   }))
 
   const aggregateHeaders = [
-    { title: 'Max. Meas.', key: 'max_meas', sortable: false, align: 'center' as const, width: '100px' },
-    { title: 'Min. Meas.', key: 'min_meas', sortable: false, align: 'center' as const, width: '100px' },
-    { title: 'Avg. Dev', key: 'avg_deviation', sortable: true, align: 'center' as const, width: '100px' },
-    { title: 'Avg. Score', key: 'avg_score', sortable: true, align: 'center' as const, width: '100px' }
+    {
+      title: 'Max. Meas.',
+      key: 'max_meas',
+      sortable: false,
+      align: 'center' as const,
+      width: '100px',
+    },
+    {
+      title: 'Min. Meas.',
+      key: 'min_meas',
+      sortable: false,
+      align: 'center' as const,
+      width: '100px',
+    },
+    {
+      title: 'Avg. Dev',
+      key: 'avg_deviation',
+      sortable: true,
+      align: 'center' as const,
+      width: '100px',
+    },
+    {
+      title: 'Avg. Score',
+      key: 'avg_score',
+      sortable: true,
+      align: 'center' as const,
+      width: '100px',
+    },
   ]
 
   return [...baseHeaders, ...isnHeaders, ...aggregateHeaders]
@@ -471,16 +498,14 @@ const nonValueHeaders = computed(() => {
   const firstItem = reclassifiedNonValueItems.value[0]
   if (!firstItem) return []
 
-  const baseHeaders = [
-    { title: 'Test Item', key: 'test_item', sortable: true, width: '300px' }
-  ]
+  const baseHeaders = [{ title: 'Test Item', key: 'test_item', sortable: true, width: '300px' }]
 
   const isnHeaders = firstItem.per_isn_data.map((isnData, index) => ({
     title: isnData.isn || 'N/A',
     key: `isn_${index}`,
     sortable: false,
     align: 'center' as const,
-    width: '150px'
+    width: '150px',
   }))
 
   return [...baseHeaders, ...isnHeaders]
@@ -488,14 +513,14 @@ const nonValueHeaders = computed(() => {
 
 // Reclassify items: move ADJUSTED_POW from value to non-value
 const reclassifiedValueItems = computed(() => {
-  return props.result.comparison_value_items.filter(item => 
-    !item.test_item.includes('ADJUSTED_POW')
+  return props.result.comparison_value_items.filter(
+    (item) => !item.test_item.includes('ADJUSTED_POW'),
   )
 })
 
 const reclassifiedNonValueItems = computed(() => {
-  const adjustedPowItems = props.result.comparison_value_items.filter(item => 
-    item.test_item.includes('ADJUSTED_POW')
+  const adjustedPowItems = props.result.comparison_value_items.filter((item) =>
+    item.test_item.includes('ADJUSTED_POW'),
   )
   return [...props.result.comparison_non_value_items, ...adjustedPowItems]
 })
@@ -507,12 +532,12 @@ const filteredValueItems = computed(() => {
   // Search filter
   if (valueSearch.value) {
     const searchLower = valueSearch.value.toLowerCase()
-    items = items.filter(item => item.test_item.toLowerCase().includes(searchLower))
+    items = items.filter((item) => item.test_item.toLowerCase().includes(searchLower))
   }
 
   // Score filter
   if (valueScoreFilter.value) {
-    items = items.filter(item => {
+    items = items.filter((item) => {
       const avgScore = item.avg_score
       if (avgScore === null) return false
       if (valueScoreFilter.value === 'high') return avgScore >= 9
@@ -524,16 +549,16 @@ const filteredValueItems = computed(() => {
 
   // Limit filter
   if (valueLimitFilter.value) {
-    items = items.filter(item => {
-      const hasData = item.per_isn_data.some(isn => isn.numeric_value !== null)
+    items = items.filter((item) => {
+      const hasData = item.per_isn_data.some((isn) => isn.numeric_value !== null)
       if (!hasData) return false
 
-      const measurements = item.per_isn_data.map(isn => isn.numeric_value ?? 0)
+      const measurements = item.per_isn_data.map((isn) => isn.numeric_value ?? 0)
       const maxVal = Math.max(...measurements)
       const minVal = Math.min(...measurements)
 
-      const withinLimits = (item.usl === null || maxVal <= item.usl) &&
-        (item.lsl === null || minVal >= item.lsl)
+      const withinLimits =
+        (item.usl === null || maxVal <= item.usl) && (item.lsl === null || minVal >= item.lsl)
 
       return valueLimitFilter.value === 'within' ? withinLimits : !withinLimits
     })
@@ -546,33 +571,49 @@ const filteredNonValueItems = computed(() => {
   const sorted = sortTestItems(reclassifiedNonValueItems.value)
   if (!nonValueSearch.value) return sorted
   const searchLower = nonValueSearch.value.toLowerCase()
-  return sorted.filter(item => item.test_item.toLowerCase().includes(searchLower))
+  return sorted.filter((item) => item.test_item.toLowerCase().includes(searchLower))
 })
 
 // Pagination
 const valueTotalPages = computed(() => {
-  const perPage = valueItemsPerPage.value === -1 ? filteredValueItems.value.length :
-    valueItemsPerPage.value === 0 ? 10 : valueItemsPerPage.value
+  const perPage =
+    valueItemsPerPage.value === -1
+      ? filteredValueItems.value.length
+      : valueItemsPerPage.value === 0
+        ? 10
+        : valueItemsPerPage.value
   return Math.ceil(filteredValueItems.value.length / perPage)
 })
 
 const nonValueTotalPages = computed(() => {
-  const perPage = nonValueItemsPerPage.value === -1 ? filteredNonValueItems.value.length :
-    nonValueItemsPerPage.value === 0 ? 10 : nonValueItemsPerPage.value
+  const perPage =
+    nonValueItemsPerPage.value === -1
+      ? filteredNonValueItems.value.length
+      : nonValueItemsPerPage.value === 0
+        ? 10
+        : nonValueItemsPerPage.value
   return Math.ceil(filteredNonValueItems.value.length / perPage)
 })
 
 const paginatedValueItems = computed(() => {
-  const perPage = valueItemsPerPage.value === -1 ? filteredValueItems.value.length :
-    valueItemsPerPage.value === 0 ? 10 : valueItemsPerPage.value
+  const perPage =
+    valueItemsPerPage.value === -1
+      ? filteredValueItems.value.length
+      : valueItemsPerPage.value === 0
+        ? 10
+        : valueItemsPerPage.value
   const start = (valueCurrentPage.value - 1) * perPage
   const end = start + perPage
   return filteredValueItems.value.slice(start, end)
 })
 
 const paginatedNonValueItems = computed(() => {
-  const perPage = nonValueItemsPerPage.value === -1 ? filteredNonValueItems.value.length :
-    nonValueItemsPerPage.value === 0 ? 10 : nonValueItemsPerPage.value
+  const perPage =
+    nonValueItemsPerPage.value === -1
+      ? filteredNonValueItems.value.length
+      : nonValueItemsPerPage.value === 0
+        ? 10
+        : nonValueItemsPerPage.value
   const start = (nonValueCurrentPage.value - 1) * perPage
   const end = start + perPage
   return filteredNonValueItems.value.slice(start, end)
@@ -680,13 +721,13 @@ const getIsnCount = (): number => {
 }
 
 const getMaxMeasurement = (item: CompareItemEnhanced): string => {
-  const measurements = item.per_isn_data.map(isn => isn.numeric_value ?? 0)
+  const measurements = item.per_isn_data.map((isn) => isn.numeric_value ?? 0)
   if (measurements.length === 0) return 'N/A'
   return Math.max(...measurements).toFixed(2)
 }
 
 const getMinMeasurement = (item: CompareItemEnhanced): string => {
-  const measurements = item.per_isn_data.map(isn => isn.numeric_value ?? 0)
+  const measurements = item.per_isn_data.map((isn) => isn.numeric_value ?? 0)
   if (measurements.length === 0) return 'N/A'
   return Math.min(...measurements).toFixed(2)
 }
@@ -697,7 +738,9 @@ const getNonValueIsnCount = (): number => {
 }
 
 const openScoreBreakdown = (testItem: string, isnIndex: number) => {
-  const compareItem = props.result.comparison_value_items.find(item => item.test_item === testItem)
+  const compareItem = props.result.comparison_value_items.find(
+    (item) => item.test_item === testItem,
+  )
   if (!compareItem || !compareItem.per_isn_data[isnIndex]) return
 
   const isnData = compareItem.per_isn_data[isnIndex]
@@ -715,7 +758,7 @@ const openScoreBreakdown = (testItem: string, isnIndex: number) => {
     matched_criteria: compareItem.matched_criteria,
     target: null,
     score: isnData.score,
-    score_breakdown: isnData.score_breakdown
+    score_breakdown: isnData.score_breakdown,
   }
 
   scoreDialogOpen.value = true

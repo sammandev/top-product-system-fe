@@ -1,20 +1,20 @@
 import { computed } from 'vue'
-import { useDUTStore } from '../store'
 import type { TopProductsRequest } from '@/core/types'
+import { useDUTStore } from '../store'
 
 /**
  * DUT Composable
- * 
+ *
  * Provides a convenient interface for DUT operations.
  * Wraps the DUT store with additional business logic.
- * 
+ *
  * @example
  * ```typescript
  * const { sites, models, stations, fetchSites, loading } = useDUT()
- * 
+ *
  * // Load sites
  * await fetchSites()
- * 
+ *
  * // Load models for a site
  * await fetchModels(sites.value[0].id)
  * ```
@@ -73,21 +73,21 @@ export function useDUT() {
    * Get site by ID or name
    */
   function getSiteById(id: string | number) {
-    return sites.value.find(s => s.site_id === id || s.site_name === id)
+    return sites.value.find((s) => s.id === id || s.name === id)
   }
 
   /**
    * Get model by ID or name
    */
   function getModelById(id: string | number) {
-    return models.value.find(m => m.model_id === id || m.model_name === id)
+    return models.value.find((m) => m.id === id || m.name === id)
   }
 
   /**
    * Get station by ID or name
    */
   function getStationById(id: string | number) {
-    return stations.value.find(s => s.station_id === id || s.station_name === id)
+    return stations.value.find((s) => s.id === id || s.name === id)
   }
 
   return {
@@ -109,6 +109,6 @@ export function useDUT() {
     // Utilities
     getSiteById,
     getModelById,
-    getStationById
+    getStationById,
   }
 }

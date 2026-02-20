@@ -1,6 +1,6 @@
 /**
  * Authentication Guard
- * 
+ *
  * Navigation guard that protects routes requiring authentication
  * Optimized to prevent redundant API calls during navigation
  */
@@ -10,22 +10,22 @@ import { useAuthStore } from '@/features/auth/store'
 
 /**
  * Check if route requires authentication and handle accordingly
- * 
+ *
  * Behavior:
  * - If route requires auth and user is not authenticated → redirect to login
  * - If route requires admin and user is not admin → redirect to dashboard
  * - If route is login and user is authenticated → redirect to dashboard
  * - Otherwise → allow navigation
- * 
+ *
  * Performance: Deferred to auth store's fetchUser() which handles deduplication
  */
 export async function authGuard(
   to: RouteLocationNormalized,
   _from: RouteLocationNormalized,
-  next: NavigationGuardNext
+  next: NavigationGuardNext,
 ): Promise<void> {
   const authStore = useAuthStore()
-  
+
   // Ensure user data is loaded if we have a token
   // The store handles deduplication - if a fetch is in progress, it returns the same promise
   if (authStore.accessToken && !authStore.user) {
@@ -40,7 +40,7 @@ export async function authGuard(
     // User not authenticated, redirect to login with return path
     next({
       name: 'Login',
-      query: { redirect: to.fullPath }
+      query: { redirect: to.fullPath },
     })
     return
   }
@@ -50,7 +50,7 @@ export async function authGuard(
     // User not admin, redirect to dashboard
     next({
       name: 'Dashboard',
-      query: { error: 'unauthorized' }
+      query: { error: 'unauthorized' },
     })
     return
   }

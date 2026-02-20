@@ -1,11 +1,12 @@
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
+import type { ExternalLoginRequest, LoginRequest, User } from '@/core/types'
+import { getApiErrorDetail, getErrorStatus } from '@/shared/utils'
 import { authApi } from '../api/auth.api'
-import type { LoginRequest, ExternalLoginRequest, User } from '@/core/types'
 
 /**
  * Authentication Store
- * 
+ *
  * Manages user authentication state, tokens, and login flows.
  * Supports dual authentication: local (file features only) and external (full DUT API access).
  */
@@ -19,7 +20,7 @@ export const useAuthStore = defineStore('auth', () => {
   const loading = ref(false)
   const error = ref<string | null>(null)
   const loginType = ref<'local' | 'external'>(
-    (localStorage.getItem('login_type') as 'local' | 'external') || 'local'
+    (localStorage.getItem('login_type') as 'local' | 'external') || 'local',
   )
   const isGuestMode = ref<boolean>(localStorage.getItem('is_guest_mode') === 'true')
 
@@ -27,13 +28,13 @@ export const useAuthStore = defineStore('auth', () => {
   const isAuthenticated = computed(() => !!accessToken.value)
   const hasDUTAccess = computed(() => !!dutAccessToken.value)
   const isGuest = computed(() => isGuestMode.value)
-  
+
   // Display name - shows 'Guest' for guest mode, otherwise actual username
-  const displayName = computed(() => isGuestMode.value ? 'Guest' : (user.value?.username || 'User'))
-  
+  const displayName = computed(() => (isGuestMode.value ? 'Guest' : user.value?.username || 'User'))
+
   // Display role - shows 'Guest' for guest mode, otherwise actual roles
-  const displayRole = computed(() => isGuestMode.value ? 'Guest' : formatRoles(user.value?.roles))
-  
+  const displayRole = computed(() => (isGuestMode.value ? 'Guest' : formatRoles(user.value?.roles)))
+
   const isAdmin = computed(() => {
     // Check is_admin field first (from backend)
     if (user.value?.is_admin === true) return true
@@ -45,14 +46,14 @@ export const useAuthStore = defineStore('auth', () => {
     // Fallback to checking roles
     if (!user.value?.roles) return false
     const roles = Array.isArray(user.value.roles) ? user.value.roles : [user.value.roles]
-    return roles.some(role => role.toLowerCase() === 'admin')
+    return roles.some((role) => role.toLowerCase() === 'admin')
   })
 
   // Helper to check if user has specific role
   const hasRole = (roleName: string): boolean => {
     if (!user.value?.roles) return false
     const roles = Array.isArray(user.value.roles) ? user.value.roles : [user.value.roles]
-    return roles.some(role => role.toLowerCase() === roleName.toLowerCase())
+    return roles.some((role) => role.toLowerCase() === roleName.toLowerCase())
   }
 
   // Helper to format roles for display
@@ -88,8 +89,8 @@ export const useAuthStore = defineStore('auth', () => {
       await fetchUser()
 
       return response
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Login failed'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err, 'Login failed')
       throw err
     } finally {
       loading.value = false
@@ -125,8 +126,8 @@ export const useAuthStore = defineStore('auth', () => {
       await fetchUser()
 
       return response
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || 'External login failed'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err, 'External login failed')
       throw err
     } finally {
       loading.value = false
@@ -152,7 +153,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const response = await authApi.externalLogin({
         username: guestUsername,
-        password: guestPassword
+        password: guestPassword,
       })
 
       accessToken.value = response.access_token
@@ -180,8 +181,8 @@ export const useAuthStore = defineStore('auth', () => {
       await fetchUser()
 
       return response
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Guest login failed'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err, 'Guest login failed')
       throw err
     } finally {
       loading.value = false
@@ -232,7 +233,7 @@ export const useAuthStore = defineStore('auth', () => {
   async function initialize() {
     if (isInitialized) return
     isInitialized = true
-    
+
     if (accessToken.value && !user.value) {
       await fetchUser()
     }
@@ -258,9 +259,9 @@ export const useAuthStore = defineStore('auth', () => {
     fetchUserPromise = (async () => {
       try {
         user.value = await authApi.me()
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.error('Failed to fetch user:', err)
-        if (err.response?.status === 401) {
+        if (getErrorStatus(err) === 401) {
           logout()
         }
       } finally {
@@ -299,6 +300,6 @@ export const useAuthStore = defineStore('auth', () => {
     refreshToken,
     fetchUser,
     logout,
-    initialize
+    initialize,
   }
 })

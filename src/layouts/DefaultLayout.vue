@@ -35,8 +35,7 @@
                 <template #activator="{ props }">
                     <v-btn v-bind="props" variant="text" class="text-none">
                         <v-avatar size="32" :color="authStore.isGuest ? 'warning' : 'secondary'" class="mr-2">
-                            <v-icon size="small">{{ authStore.isGuest ? 'mdi-account-question' : 'mdi-account'
-                                }}</v-icon>
+                            <v-icon size="small">{{ authStore.isGuest ? 'mdi-account-question' : 'mdi-account' }}</v-icon>
                         </v-avatar>
                         <span v-if="$vuetify.display.smAndUp" style="color: white;">
                             {{ authStore.displayName }}
@@ -224,14 +223,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
 import { storeToRefs } from 'pinia'
-import { useRouter, useRoute } from 'vue-router'
-import { useAuthStore } from '@/features/auth/store'
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { useTheme } from 'vuetify'
-import { useDrawerState, useThemeState } from '@/shared/composables'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useMenuAccessStore } from '@/features/admin/stores/menuAccess.store'
+import { useAuthStore } from '@/features/auth/store'
+import { useDrawerState, useThemeState } from '@/shared/composables'
 
 const router = useRouter()
 const route = useRoute()
@@ -252,137 +251,140 @@ const isDark = computed(() => theme.global.current.value.dark)
 
 // Helper function to check if any child route is active (reactive with route)
 function isChildActive(item: MenuItem): boolean {
-    if (!item.children) return false
-    const currentPath = route.path
-    return item.children.some(child => child.path === currentPath)
+  if (!item.children) return false
+  const currentPath = route.path
+  return item.children.some((child) => child.path === currentPath)
 }
 
 function toggleTheme() {
-    const newTheme = theme.global.current.value.dark ? 'customLightTheme' : 'customDarkTheme'
-    theme.change(newTheme)
-    saveTheme(newTheme)
+  const newTheme = theme.global.current.value.dark ? 'customLightTheme' : 'customDarkTheme'
+  theme.change(newTheme)
+  saveTheme(newTheme)
 }
 
 // Load saved theme on mount
 const savedTheme = loadTheme()
 if (savedTheme) {
-    theme.change(savedTheme)
+  theme.change(savedTheme)
 }
 
 // Navigation Items - Main Section
 interface MenuItem {
-    title: string
-    icon: string
-    path?: string
-    children?: MenuItem[]
+  title: string
+  icon: string
+  path?: string
+  children?: MenuItem[]
 }
 
 // Static fallback menus (used when DB menus not loaded yet)
 const staticMainItems: MenuItem[] = [
-    { title: 'Dashboard', icon: 'mdi-view-dashboard', path: '/dashboard' },
-    {
-        title: 'Top Products',
-        icon: 'mdi-trophy',
-        children: [
-            { title: 'Analysis', icon: 'mdi-circle-small', path: '/dut/top-products/analysis' },
-            { title: 'Database', icon: 'mdi-circle-small', path: '/dut/top-products/data' },
-        ]
-    },
-    { title: 'Data Explorer', icon: 'mdi-download-box', path: '/dut/data-explorer' },
+  { title: 'Dashboard', icon: 'mdi-view-dashboard', path: '/dashboard' },
+  {
+    title: 'Top Products',
+    icon: 'mdi-trophy',
+    children: [
+      { title: 'Analysis', icon: 'mdi-circle-small', path: '/dut/top-products/analysis' },
+      { title: 'Database', icon: 'mdi-circle-small', path: '/dut/top-products/data' },
+    ],
+  },
+  { title: 'Data Explorer', icon: 'mdi-download-box', path: '/dut/data-explorer' },
 ]
 
 const staticToolsItems: MenuItem[] = [
-    {
-        title: 'File Upload',
-        icon: 'mdi-file-upload',
-        children: [
-            { title: 'Upload File', icon: 'mdi-circle-small', path: '/parsing' },
-            { title: 'Parse & Download', icon: 'mdi-circle-small', path: '/parsing/download-format' }
-        ]
-    },
-    {
-        title: 'Compare Files',
-        icon: 'mdi-compare',
-        children: [
-            { title: 'Compare Files', icon: 'mdi-circle-small', path: '/compare' },
-            { title: 'DVT-MC2 Compare', icon: 'mdi-circle-small', path: '/compare/dvt-mc2' }
-        ]
-    },
-    { title: 'MasterControl Analyze', icon: 'mdi-file-chart', path: '/mastercontrol/analyze' },
-    { title: 'DVT to MC2 Converter', icon: 'mdi-file-swap', path: '/conversion/dvt-to-mc2' }
+  {
+    title: 'File Upload',
+    icon: 'mdi-file-upload',
+    children: [
+      { title: 'Upload File', icon: 'mdi-circle-small', path: '/parsing' },
+      { title: 'Parse & Download', icon: 'mdi-circle-small', path: '/parsing/download-format' },
+    ],
+  },
+  {
+    title: 'Compare Files',
+    icon: 'mdi-compare',
+    children: [
+      { title: 'Compare Files', icon: 'mdi-circle-small', path: '/compare' },
+      { title: 'DVT-MC2 Compare', icon: 'mdi-circle-small', path: '/compare/dvt-mc2' },
+    ],
+  },
+  { title: 'MasterControl Analyze', icon: 'mdi-file-chart', path: '/mastercontrol/analyze' },
+  { title: 'DVT to MC2 Converter', icon: 'mdi-file-swap', path: '/conversion/dvt-to-mc2' },
 ]
 
 const staticSystemItems: MenuItem[] = [
-    {
-        title: 'Access Control',
-        icon: 'mdi-shield-lock',
-        children: [
-            { title: 'User Management', icon: 'mdi-circle-small', path: '/admin/users' },
-            { title: 'Roles & Permissions', icon: 'mdi-circle-small', path: '/admin/rbac' },
-            { title: 'Menu Access', icon: 'mdi-circle-small', path: '/admin/menu-access' }
-        ]
-    },
-    { title: 'System Cleanup', icon: 'mdi-delete-sweep', path: '/admin/cleanup' },
-    { title: 'App Configuration', icon: 'mdi-cog', path: '/admin/app-config' },
+  {
+    title: 'Access Control',
+    icon: 'mdi-shield-lock',
+    children: [
+      { title: 'User Management', icon: 'mdi-circle-small', path: '/admin/users' },
+      { title: 'Roles & Permissions', icon: 'mdi-circle-small', path: '/admin/rbac' },
+      { title: 'Menu Access', icon: 'mdi-circle-small', path: '/admin/menu-access' },
+    ],
+  },
+  { title: 'System Cleanup', icon: 'mdi-delete-sweep', path: '/admin/cleanup' },
+  { title: 'App Configuration', icon: 'mdi-cog', path: '/admin/app-config' },
 ]
 
 // Dynamic menus from database (use static as fallback)
 const mainItems = computed(() => {
-    if (dynamicMenusLoaded.value && menuAccessStore.initialized) {
-        const tree = menuAccessStore.buildMenuTree()
-        return tree.main.length > 0 ? tree.main : staticMainItems
-    }
-    return staticMainItems
+  if (dynamicMenusLoaded.value && menuAccessStore.initialized) {
+    const tree = menuAccessStore.buildMenuTree()
+    return tree.main.length > 0 ? tree.main : staticMainItems
+  }
+  return staticMainItems
 })
 
 const toolsItems = computed(() => {
-    if (dynamicMenusLoaded.value && menuAccessStore.initialized) {
-        const tree = menuAccessStore.buildMenuTree()
-        return tree.tools.length > 0 ? tree.tools : staticToolsItems
-    }
-    return staticToolsItems
+  if (dynamicMenusLoaded.value && menuAccessStore.initialized) {
+    const tree = menuAccessStore.buildMenuTree()
+    return tree.tools.length > 0 ? tree.tools : staticToolsItems
+  }
+  return staticToolsItems
 })
 
 const systemItems = computed(() => {
-    if (dynamicMenusLoaded.value && menuAccessStore.initialized) {
-        const tree = menuAccessStore.buildMenuTree()
-        return tree.system.length > 0 ? tree.system : staticSystemItems
-    }
-    return staticSystemItems
+  if (dynamicMenusLoaded.value && menuAccessStore.initialized) {
+    const tree = menuAccessStore.buildMenuTree()
+    return tree.system.length > 0 ? tree.system : staticSystemItems
+  }
+  return staticSystemItems
 })
 
 // Filtered navigation items based on search
 const filteredMainItems = computed(() => {
-    if (!searchQuery.value) return mainItems.value
-    const query = searchQuery.value.toLowerCase()
-    return mainItems.value.filter(item =>
-        item.title.toLowerCase().includes(query) ||
-        item.children?.some(child => child.title.toLowerCase().includes(query))
-    )
+  if (!searchQuery.value) return mainItems.value
+  const query = searchQuery.value.toLowerCase()
+  return mainItems.value.filter(
+    (item) =>
+      item.title.toLowerCase().includes(query) ||
+      item.children?.some((child) => child.title.toLowerCase().includes(query)),
+  )
 })
 
 const filteredToolsItems = computed(() => {
-    if (!searchQuery.value) return toolsItems.value
-    const query = searchQuery.value.toLowerCase()
-    return toolsItems.value.filter(item =>
-        item.title.toLowerCase().includes(query) ||
-        item.children?.some(child => child.title.toLowerCase().includes(query))
-    )
+  if (!searchQuery.value) return toolsItems.value
+  const query = searchQuery.value.toLowerCase()
+  return toolsItems.value.filter(
+    (item) =>
+      item.title.toLowerCase().includes(query) ||
+      item.children?.some((child) => child.title.toLowerCase().includes(query)),
+  )
 })
 
 const filteredSystemItems = computed(() => {
-    if (!searchQuery.value) return systemItems.value
-    const query = searchQuery.value.toLowerCase()
-    return systemItems.value.filter(item =>
-        item.title.toLowerCase().includes(query) ||
-        item.children?.some(child => child.title.toLowerCase().includes(query))
-    )
+  if (!searchQuery.value) return systemItems.value
+  const query = searchQuery.value.toLowerCase()
+  return systemItems.value.filter(
+    (item) =>
+      item.title.toLowerCase().includes(query) ||
+      item.children?.some((child) => child.title.toLowerCase().includes(query)),
+  )
 })
 
 function handleLogout() {
-    authStore.logout()
-    menuAccessStore.clearCache()
-    router.push('/login')
+  authStore.logout()
+  menuAccessStore.clearCache()
+  router.push('/login')
 }
 
 const currentYear = new Date().getFullYear()
@@ -391,34 +393,37 @@ const { appName, appVersion } = storeToRefs(appConfigStore)
 
 // Fetch user's accessible menus on mount (non-blocking, uses cache)
 onMounted(() => {
-    // Don't block rendering - fetch menus in background with timeout
-    // Use Promise.race to ensure quick fallback to static menus
-    const fetchWithTimeout = Promise.race([
-        menuAccessStore.fetchMenus(authStore.isGuest),
-        new Promise<void>((resolve) => setTimeout(() => resolve(), 3000)) // 3 second timeout
-    ])
+  // Don't block rendering - fetch menus in background with timeout
+  // Use Promise.race to ensure quick fallback to static menus
+  const fetchWithTimeout = Promise.race([
+    menuAccessStore.fetchMenus(authStore.isGuest),
+    new Promise<void>((resolve) => setTimeout(() => resolve(), 3000)), // 3 second timeout
+  ])
 
-    fetchWithTimeout
-        .then(() => {
-            if (menuAccessStore.initialized) {
-                dynamicMenusLoaded.value = true
-            }
-        })
-        .catch(() => {
-            // Static menus will be used as fallback - fail silently
-        })
+  fetchWithTimeout
+    .then(() => {
+      if (menuAccessStore.initialized) {
+        dynamicMenusLoaded.value = true
+      }
+    })
+    .catch(() => {
+      // Static menus will be used as fallback - fail silently
+    })
 })
 
 // Watch for auth changes to refresh menus
-watch(() => authStore.isAuthenticated, async (isAuth) => {
+watch(
+  () => authStore.isAuthenticated,
+  async (isAuth) => {
     if (isAuth) {
-        menuAccessStore.fetchMenus(authStore.isGuest)
-        dynamicMenusLoaded.value = true
+      menuAccessStore.fetchMenus(authStore.isGuest)
+      dynamicMenusLoaded.value = true
     } else {
-        menuAccessStore.clearCache()
-        dynamicMenusLoaded.value = false
+      menuAccessStore.clearCache()
+      dynamicMenusLoaded.value = false
     }
-})
+  },
+)
 </script>
 
 <style scoped>

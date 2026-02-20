@@ -1,6 +1,6 @@
 /**
  * Dashboard Routes
- * 
+ *
  * Routes for the main dashboard
  */
 
@@ -14,7 +14,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Dashboard',
-      icon: 'mdi-view-dashboard'
-    }
-  }
+      icon: 'mdi-view-dashboard',
+    },
+  },
 ]

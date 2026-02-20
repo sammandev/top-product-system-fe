@@ -188,17 +188,21 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, onMounted, nextTick } from 'vue'
-import type { ParsedTestItemEnhanced } from '@/features/dut_logs/composables/useTestLogUpload'
 import katex from 'katex'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
+import type {
+  CategoryFormulaSelections,
+  FormulaSelection,
+} from '@/features/dut/composables/useFormulaSelector'
+import type { ParsedTestItemEnhanced } from '@/features/dut_logs/composables/useTestLogUpload'
 import 'katex/dist/katex.min.css'
 
 const props = defineProps<{
   modelValue: boolean
   item: ParsedTestItemEnhanced | null
   customScoringEnabled?: boolean
-  universalFormula?: any  // FormulaSelection
-  categoryFormulas?: any  // CategoryFormulaSelections
+  universalFormula?: FormulaSelection
+  categoryFormulas?: CategoryFormulaSelections
 }>()
 
 const emit = defineEmits<{
@@ -207,7 +211,7 @@ const emit = defineEmits<{
 
 const dialogOpen = computed({
   get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
+  set: (value) => emit('update:modelValue', value),
 })
 
 const formulaEl = ref<HTMLElement | null>(null)
@@ -302,13 +306,13 @@ const getSelectedFormulaLatex = (): string => {
 // Helper to get formula LaTeX by type (simplified version)
 const getFormulaLatexByType = (type: string): string => {
   const formulas: Record<string, string> = {
-    'LINEAR': '\\text{Score} = a \\times x + b',
-    'EXPONENTIAL': '\\text{Score} = a \\times e^{b \\times x}',
-    'LOGARITHMIC': '\\text{Score} = a \\times \\ln(b \\times x + c)',
-    'POLYNOMIAL': '\\text{Score} = a \\times x^2 + b \\times x + c',
-    'INVERSE': '\\text{Score} = \\frac{a}{b \\times x + c}',
-    'SIGMOID': '\\text{Score} = \\frac{L}{1 + e^{-k \\times (x - x_0)}}',
-    'CUSTOM': '\\text{Custom Formula}'
+    LINEAR: '\\text{Score} = a \\times x + b',
+    EXPONENTIAL: '\\text{Score} = a \\times e^{b \\times x}',
+    LOGARITHMIC: '\\text{Score} = a \\times \\ln(b \\times x + c)',
+    POLYNOMIAL: '\\text{Score} = a \\times x^2 + b \\times x + c',
+    INVERSE: '\\text{Score} = \\frac{a}{b \\times x + c}',
+    SIGMOID: '\\text{Score} = \\frac{L}{1 + e^{-k \\times (x - x_0)}}',
+    CUSTOM: '\\text{Custom Formula}',
   }
   return formulas[type] || '\\text{Unknown Formula}'
 }
@@ -352,12 +356,13 @@ const renderFormula = () => {
     katex.render(formula, formulaEl.value, {
       displayMode: true,
       throwOnError: false,
-      output: 'html'
+      output: 'html',
     })
   } catch (error) {
     console.error('KaTeX rendering error:', error)
     if (formulaEl.value) {
-      formulaEl.value.textContent = props.item.score_breakdown.formula_latex || 'Error rendering formula'
+      formulaEl.value.textContent =
+        props.item.score_breakdown.formula_latex || 'Error rendering formula'
     }
   }
 }
@@ -380,7 +385,7 @@ const renderCustomFormula = () => {
     katex.render(formula, customFormulaEl.value, {
       displayMode: true,
       throwOnError: false,
-      output: 'html'
+      output: 'html',
     })
   } catch (error) {
     console.error('KaTeX custom formula rendering error:', error)
@@ -402,11 +407,11 @@ const formatNumberSafe = (value: number | null | undefined): string => {
 
 const getCategoryColor = (category: string): string => {
   const colors: Record<string, string> = {
-    'EVM': 'purple',
-    'Frequency': 'blue',
-    'PER': 'orange',
+    EVM: 'purple',
+    Frequency: 'blue',
+    PER: 'orange',
     'PA Power': 'green',
-    'General': 'grey'
+    General: 'grey',
   }
   return colors[category] || 'grey'
 }

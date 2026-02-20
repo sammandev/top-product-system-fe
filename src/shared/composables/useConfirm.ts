@@ -1,6 +1,6 @@
 /**
  * Confirmation Dialog Composable
- * 
+ *
  * Provides a simple interface for displaying confirmation dialogs
  */
 
@@ -20,24 +20,24 @@ const options = ref<ConfirmOptions>({
   message: 'Are you sure?',
   confirmText: 'Confirm',
   cancelText: 'Cancel',
-  type: 'warning'
+  type: 'warning',
 })
 
 let resolvePromise: ((value: boolean) => void) | null = null
 
 /**
  * Confirmation dialog composable
- * 
+ *
  * @example
  * ```ts
  * const { confirm } = useConfirm()
- * 
+ *
  * const result = await confirm({
  *   title: 'Delete File',
  *   message: 'Are you sure you want to delete this file?',
  *   type: 'danger'
  * })
- * 
+ *
  * if (result) {
  *   // User confirmed
  *   await deleteFile()
@@ -51,7 +51,7 @@ export function useConfirm() {
       confirmText: 'Confirm',
       cancelText: 'Cancel',
       type: 'warning',
-      ...confirmOptions
+      ...confirmOptions,
     }
 
     isOpen.value = true
@@ -82,6 +82,6 @@ export function useConfirm() {
     options,
     confirm,
     handleConfirm,
-    handleCancel
+    handleCancel,
   }
 }

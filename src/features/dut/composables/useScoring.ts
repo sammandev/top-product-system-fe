@@ -1,19 +1,19 @@
 /**
  * useScoring Composable
- * 
+ *
  * Provides reactive state and methods for the iPLAS scoring system.
  */
-import { ref, shallowRef, computed } from 'vue'
+import { computed, ref, shallowRef } from 'vue'
 import { scoringApi } from '../api/scoring.api'
 import {
+  createDefaultScoringConfig,
+  formatScore,
+  getScoreColor,
+  type RecordScoreResult,
+  SCORING_TYPE_INFO,
+  type ScoreSummary,
   type ScoringConfig,
   type ScoringType,
-  type RecordScoreResult,
-  type ScoreSummary,
-  SCORING_TYPE_INFO,
-  createDefaultScoringConfig,
-  getScoreColor,
-  formatScore
 } from '../types/scoring.types'
 
 // Module-level state (shared across components)
@@ -30,14 +30,12 @@ const error = ref<string | null>(null)
 export function useScoring() {
   // Computed properties
   const configList = computed(() => Array.from(scoringConfigs.value.values()))
-  
+
   const hasConfigs = computed(() => scoringConfigs.value.size > 0)
-  
+
   const hasScores = computed(() => scoredRecords.value.length > 0)
-  
-  const enabledConfigs = computed(() => 
-    configList.value.filter(c => c.enabled)
-  )
+
+  const enabledConfigs = computed(() => configList.value.filter((c) => c.enabled))
 
   /**
    * Detect scoring type based on test item NAME patterns
@@ -45,17 +43,17 @@ export function useScoring() {
    */
   function detectScoringTypeByName(itemName: string): ScoringType | null {
     const upperName = itemName.toUpperCase()
-    
+
     // EVM scoring for test items containing "EVM" in their name
     if (upperName.includes('EVM')) {
       return 'evm'
     }
-    
+
     // PER/MASK scoring for test items containing "PER" or "MASK" in their name
     if (upperName.includes('PER') || upperName.includes('MASK')) {
       return 'per_mask'
     }
-    
+
     return null // No name-based detection, use value-based detection
   }
 
@@ -65,17 +63,17 @@ export function useScoring() {
    */
   function getDefaultWeightByName(itemName: string): number {
     const upperName = itemName.toUpperCase()
-    
+
     // Weight 3 for test items containing "POW_OLD"
     if (upperName.includes('POW_OLD')) {
       return 3.0
     }
-    
+
     // Weight 2 for test items containing "FIXTURE_OR_DUT_PROBLEM_POW"
     if (upperName.includes('FIXTURE_OR_DUT_PROBLEM_POW')) {
       return 2.0
     }
-    
+
     return 1.0 // Default weight
   }
 
@@ -101,36 +99,36 @@ export function useScoring() {
     const ucl = parseFloat(testItem.UCL || '')
     const lcl = parseFloat(testItem.LCL || '')
     const numValue = parseFloat(testItem.VALUE || '')
-    
+
     // Check if binary (PASS/FAIL)
     if (value === 'PASS' || value === 'FAIL' || value === '-999') {
       return 'binary'
     }
-    
+
     // Check if non-numeric
-    if (isNaN(numValue)) {
+    if (Number.isNaN(numValue)) {
       return 'binary'
     }
-    
+
     // Only UCL defined (no LCL)
-    if (!isNaN(ucl) && isNaN(lcl)) {
+    if (!Number.isNaN(ucl) && Number.isNaN(lcl)) {
       // Negative values suggest EVM-like
       if (numValue < 0) return 'evm'
       // Values near 0 suggest PER/MASK
       if (Math.abs(numValue) < ucl * 0.5) return 'per_mask'
       return 'evm'
     }
-    
+
     // Only LCL defined (throughput-like)
-    if (isNaN(ucl) && !isNaN(lcl)) {
+    if (Number.isNaN(ucl) && !Number.isNaN(lcl)) {
       return 'throughput'
     }
-    
+
     // Both limits defined - default to symmetrical
-    if (!isNaN(ucl) && !isNaN(lcl)) {
+    if (!Number.isNaN(ucl) && !Number.isNaN(lcl)) {
       return 'symmetrical'
     }
-    
+
     // No limits - treat as binary
     return 'binary'
   }
@@ -140,20 +138,22 @@ export function useScoring() {
    * Uses auto-detection for scoring type, defaults to symmetrical for value items
    * UPDATED: Also applies name-based weight assignments
    */
-  function initializeConfigs(testItems: { NAME: string; VALUE?: string; UCL?: string; LCL?: string; STATUS?: string }[]): void {
+  function initializeConfigs(
+    testItems: { NAME: string; VALUE?: string; UCL?: string; LCL?: string; STATUS?: string }[],
+  ): void {
     const seen = new Set<string>()
-    
+
     for (const item of testItems) {
       const name = item.NAME
       if (!name || seen.has(name)) continue
       seen.add(name)
-      
+
       const scoringType = detectScoringType(item)
       const config = createDefaultScoringConfig(name, scoringType)
-      
+
       // UPDATED: Apply name-based weight assignment
       config.weight = getDefaultWeightByName(name)
-      
+
       scoringConfigs.value.set(name, config)
     }
   }
@@ -220,10 +220,7 @@ export function useScoring() {
   /**
    * Calculate scores for records using the backend API
    */
-  async function calculateScores(
-    records: unknown[],
-    includeBinaryInOverall = true
-  ): Promise<void> {
+  async function calculateScores(records: unknown[], includeBinaryInOverall = true): Promise<void> {
     loading.value = true
     error.value = null
 
@@ -231,7 +228,7 @@ export function useScoring() {
       const result = await scoringApi.calculateScores(
         records,
         configList.value,
-        includeBinaryInOverall
+        includeBinaryInOverall,
       )
 
       scoredRecords.value = result.scoredRecords
@@ -254,15 +251,15 @@ export function useScoring() {
 
     try {
       const detectedTypes = await scoringApi.detectScoringTypes(sampleRecord)
-      
+
       for (const item of detectedTypes) {
         const config = createDefaultScoringConfig(item.testItemName, item.detectedType)
-        
+
         // Apply default params from backend
         if (item.defaultParams) {
           Object.assign(config, item.defaultParams)
         }
-        
+
         scoringConfigs.value.set(item.testItemName, config)
       }
     } catch (err: unknown) {
@@ -278,15 +275,15 @@ export function useScoring() {
    * Get score for a specific record by ISN
    */
   function getRecordScore(isn: string): RecordScoreResult | undefined {
-    return scoredRecords.value.find(r => r.isn === isn)
+    return scoredRecords.value.find((r) => r.isn === isn)
   }
 
   /**
    * Get sorted records by score (descending)
    */
   function getSortedRecords(ascending = false): RecordScoreResult[] {
-    return [...scoredRecords.value].sort((a, b) => 
-      ascending ? a.overallScore - b.overallScore : b.overallScore - a.overallScore
+    return [...scoredRecords.value].sort((a, b) =>
+      ascending ? a.overallScore - b.overallScore : b.overallScore - a.overallScore,
     )
   }
 
@@ -294,7 +291,7 @@ export function useScoring() {
    * Filter records by score threshold
    */
   function filterByScoreThreshold(minScore: number): RecordScoreResult[] {
-    return scoredRecords.value.filter(r => r.overallScore >= minScore)
+    return scoredRecords.value.filter((r) => r.overallScore >= minScore)
   }
 
   /**
@@ -305,12 +302,12 @@ export function useScoring() {
     avgScore: number
     configs: ScoringConfig[]
   } {
-    const configs = configList.value.filter(c => c.scoringType === scoringType)
-    
+    const configs = configList.value.filter((c) => c.scoringType === scoringType)
+
     // Calculate average score for items of this type
     let totalScore = 0
     let scoreCount = 0
-    
+
     for (const record of scoredRecords.value) {
       for (const itemScore of record.testItemScores) {
         if (itemScore.scoringType === scoringType) {
@@ -319,11 +316,11 @@ export function useScoring() {
         }
       }
     }
-    
+
     return {
       count: configs.length,
       avgScore: scoreCount > 0 ? totalScore / scoreCount : 0,
-      configs
+      configs,
     }
   }
 
@@ -411,7 +408,7 @@ export function useScoring() {
     // Utilities (re-exported for convenience)
     getScoreColor,
     formatScore,
-    SCORING_TYPE_INFO
+    SCORING_TYPE_INFO,
   }
 }
 

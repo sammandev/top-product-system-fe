@@ -82,19 +82,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/features/auth/store'
+import { computed, ref } from 'vue'
+// import { useRouter } from 'vue-router'
+// import { useAuthStore } from '@/features/auth/store'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import TopProductsByStationTab from '../components/TopProductsByStationTab.vue'
-import TopProductsByISNTab from '../components/TopProductsByISNTab.vue'
-import TopProductsByIplasDataTab from '../components/TopProductsByIplasDataTab.vue'
-import TopProductsByUploadLogTab from '@/features/dut_logs/components/TopProductsByUploadLogTab.vue'
 
 // Stores
-const router = useRouter()
-const authStore = useAuthStore()
+// const router = useRouter()
+// const authStore = useAuthStore()
 
 // Tab State - persisted in URL
 const activeTab = useTabPersistence('tab', 'dut-isn')
@@ -103,7 +98,7 @@ const activeTab = useTabPersistence('tab', 'dut-isn')
 const error = ref<string>('')
 
 // Computed
-const hasDUTAccess = computed(() => authStore.hasDUTAccess)
+// const hasDUTAccess = computed(() => authStore.hasDUTAccess)
 const hasResults = computed(() => false) // TODO: Get from active tab
 
 // Methods
@@ -116,9 +111,9 @@ function clearError() {
   error.value = ''
 }
 
-function goToLogin() {
-  router.push({ path: '/login', query: { redirect: '/dut/top-products' } })
-}
+// function goToLogin() {
+//   router.push({ path: '/login', query: { redirect: '/dut/top-products' } })
+// }
 </script>
 
 <style scoped>

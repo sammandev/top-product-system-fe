@@ -253,9 +253,9 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import { computed, ref } from 'vue'
 import { comparisonApi } from '@/features/comparison/api/comparison.api'
+import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
 
 // State
 const masterFile = ref<File | File[] | null>(null)
@@ -271,185 +271,199 @@ const downloading = ref(false)
 const progress = ref(0)
 const error = ref('')
 const downloadCompleted = ref(false)
-const comparisonResult = ref<any>(null)
+interface ComparisonResultData {
+  summary?: { pass?: number; fail?: number }
+  rows?: Record<string, unknown>[]
+}
+
+const comparisonResult = ref<ComparisonResultData | null>(null)
 
 // Options
 const outputFormatOptions = [
-    { title: 'JSON (View in Browser)', value: 'json' },
-    { title: 'CSV', value: 'csv' },
-    { title: 'XLSX', value: 'xlsx' }
+  { title: 'JSON (View in Browser)', value: 'json' },
+  { title: 'CSV', value: 'csv' },
+  { title: 'XLSX', value: 'xlsx' },
 ]
 
 // Computed
 const canCompare = computed(() => {
-    const master = Array.isArray(masterFile.value) ? masterFile.value[0] : masterFile.value
-    const dvt = Array.isArray(dvtFile.value) ? dvtFile.value[0] : dvtFile.value
-    return master && dvt && !processing.value && outputFormat.value === 'json'
+  const master = Array.isArray(masterFile.value) ? masterFile.value[0] : masterFile.value
+  const dvt = Array.isArray(dvtFile.value) ? dvtFile.value[0] : dvtFile.value
+  return master && dvt && !processing.value && outputFormat.value === 'json'
 })
 
 const canDownload = computed(() => {
-    const master = Array.isArray(masterFile.value) ? masterFile.value[0] : masterFile.value
-    const dvt = Array.isArray(dvtFile.value) ? dvtFile.value[0] : dvtFile.value
-    return master && dvt && !downloading.value && (outputFormat.value === 'csv' || outputFormat.value === 'xlsx')
+  const master = Array.isArray(masterFile.value) ? masterFile.value[0] : masterFile.value
+  const dvt = Array.isArray(dvtFile.value) ? dvtFile.value[0] : dvtFile.value
+  return (
+    master &&
+    dvt &&
+    !downloading.value &&
+    (outputFormat.value === 'csv' || outputFormat.value === 'xlsx')
+  )
 })
 
 const hasComparisonResult = computed(() => comparisonResult.value !== null)
 
 const resultHeaders = computed(() => [
-    { title: 'Antenna', key: 'antenna_dvt', sortable: true, align: 'center' as const },
-    { title: 'Metric', key: 'metric', sortable: true, align: 'center' as const },
-    { title: 'Freq', key: 'freq', sortable: true, align: 'center' as const },
-    { title: 'Standard', key: 'standard', sortable: true, align: 'center' as const },
-    { title: 'Data Rate', key: 'datarate', sortable: true, align: 'center' as const },
-    { title: 'BW', key: 'bandwidth', sortable: true, align: 'center' as const },
-    { title: 'MC2 Value', key: 'mc2_value', sortable: true, align: 'center' as const },
-    { title: 'MC2 Result', key: 'mc2_result', sortable: true, align: 'center' as const },
-    { title: 'DVT Value', key: 'dvt_value', sortable: true, align: 'center' as const },
-    { title: 'DVT Result', key: 'dvt_result', sortable: true, align: 'center' as const },
-    { title: 'Diff', key: 'mc2_dvt_diff', sortable: true, align: 'center' as const }
+  { title: 'Antenna', key: 'antenna_dvt', sortable: true, align: 'center' as const },
+  { title: 'Metric', key: 'metric', sortable: true, align: 'center' as const },
+  { title: 'Freq', key: 'freq', sortable: true, align: 'center' as const },
+  { title: 'Standard', key: 'standard', sortable: true, align: 'center' as const },
+  { title: 'Data Rate', key: 'datarate', sortable: true, align: 'center' as const },
+  { title: 'BW', key: 'bandwidth', sortable: true, align: 'center' as const },
+  { title: 'MC2 Value', key: 'mc2_value', sortable: true, align: 'center' as const },
+  { title: 'MC2 Result', key: 'mc2_result', sortable: true, align: 'center' as const },
+  { title: 'DVT Value', key: 'dvt_value', sortable: true, align: 'center' as const },
+  { title: 'DVT Result', key: 'dvt_result', sortable: true, align: 'center' as const },
+  { title: 'Diff', key: 'mc2_dvt_diff', sortable: true, align: 'center' as const },
 ])
 
 // Methods
 function getFileName(file: File | File[] | null): string {
-    if (!file) return ''
-    const f = Array.isArray(file) ? file[0] : file
-    return f?.name || ''
+  if (!file) return ''
+  const f = Array.isArray(file) ? file[0] : file
+  return f?.name || ''
 }
 
 function getResultColor(result: string): string {
-    if (!result) return 'grey'
-    const upper = result.toUpperCase()
-    if (upper.includes('PASS')) return 'success'
-    if (upper.includes('FAIL')) return 'error'
-    return 'info'
+  if (!result) return 'grey'
+  const upper = result.toUpperCase()
+  if (upper.includes('PASS')) return 'success'
+  if (upper.includes('FAIL')) return 'error'
+  return 'info'
 }
 
 async function handleCompare() {
-    if (!canCompare.value) return
+  if (!canCompare.value) return
 
-    processing.value = true
-    progress.value = 0
-    error.value = ''
-    comparisonResult.value = null
+  processing.value = true
+  progress.value = 0
+  error.value = ''
+  comparisonResult.value = null
 
-    try {
-        const formData = new FormData()
-        const master = (Array.isArray(masterFile.value) ? masterFile.value[0] : masterFile.value) as File
-        const dvt = (Array.isArray(dvtFile.value) ? dvtFile.value[0] : dvtFile.value) as File
-        
-        formData.append('master_file', master)
-        formData.append('dvt_file', dvt)
-        
-        if (specFile.value) {
-            const spec = (Array.isArray(specFile.value) ? specFile.value[0] : specFile.value) as File
-            formData.append('spec_file', spec)
-        }
-        
-        if (threshold.value !== null) {
-            formData.append('threshold', threshold.value.toString())
-        }
-        
-        if (marginThreshold.value !== null) {
-            formData.append('margin_threshold', marginThreshold.value.toString())
-        }
-        
-        formData.append('freq_tol', freqTolerance.value.toString())
-        formData.append('human', 'false')
+  try {
+    const formData = new FormData()
+    const master = (
+      Array.isArray(masterFile.value) ? masterFile.value[0] : masterFile.value
+    ) as File
+    const dvt = (Array.isArray(dvtFile.value) ? dvtFile.value[0] : dvtFile.value) as File
 
-        // Simulate progress
-        const progressInterval = setInterval(() => {
-            if (progress.value < 90) {
-                progress.value += 10
-            }
-        }, 100)
+    formData.append('master_file', master)
+    formData.append('dvt_file', dvt)
 
-        const result = await comparisonApi.compareFormats(formData, false)
-        comparisonResult.value = result
-
-        clearInterval(progressInterval)
-        progress.value = 100
-    } catch (err: any) {
-        error.value = err.response?.data?.detail || err.message || 'Comparison failed'
-    } finally {
-        processing.value = false
+    if (specFile.value) {
+      const spec = (Array.isArray(specFile.value) ? specFile.value[0] : specFile.value) as File
+      formData.append('spec_file', spec)
     }
+
+    if (threshold.value !== null) {
+      formData.append('threshold', threshold.value.toString())
+    }
+
+    if (marginThreshold.value !== null) {
+      formData.append('margin_threshold', marginThreshold.value.toString())
+    }
+
+    formData.append('freq_tol', freqTolerance.value.toString())
+    formData.append('human', 'false')
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      if (progress.value < 90) {
+        progress.value += 10
+      }
+    }, 100)
+
+    const result = await comparisonApi.compareFormats(formData, false)
+    comparisonResult.value = result as ComparisonResultData
+
+    clearInterval(progressInterval)
+    progress.value = 100
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Comparison failed'
+  } finally {
+    processing.value = false
+  }
 }
 
 async function handleDownload() {
-    if (!canDownload.value) return
+  if (!canDownload.value) return
 
-    downloading.value = true
-    progress.value = 0
-    error.value = ''
-    downloadCompleted.value = false
+  downloading.value = true
+  progress.value = 0
+  error.value = ''
+  downloadCompleted.value = false
 
-    try {
-        const formData = new FormData()
-        const master = (Array.isArray(masterFile.value) ? masterFile.value[0] : masterFile.value) as File
-        const dvt = (Array.isArray(dvtFile.value) ? dvtFile.value[0] : dvtFile.value) as File
-        
-        formData.append('master_file', master)
-        formData.append('dvt_file', dvt)
-        
-        if (specFile.value) {
-            const spec = (Array.isArray(specFile.value) ? specFile.value[0] : specFile.value) as File
-            formData.append('spec_file', spec)
-        }
-        
-        if (threshold.value !== null) {
-            formData.append('threshold', threshold.value.toString())
-        }
-        
-        if (marginThreshold.value !== null) {
-            formData.append('margin_threshold', marginThreshold.value.toString())
-        }
-        
-        formData.append('freq_tol', freqTolerance.value.toString())
-        formData.append('human', 'true')
-        
-        if (outputFormat.value === 'xlsx') {
-            formData.append('return_xlsx', 'true')
-        }
+  try {
+    const formData = new FormData()
+    const master = (
+      Array.isArray(masterFile.value) ? masterFile.value[0] : masterFile.value
+    ) as File
+    const dvt = (Array.isArray(dvtFile.value) ? dvtFile.value[0] : dvtFile.value) as File
 
-        // Simulate progress
-        const progressInterval = setInterval(() => {
-            if (progress.value < 90) {
-                progress.value += 10
-            }
-        }, 100)
+    formData.append('master_file', master)
+    formData.append('dvt_file', dvt)
 
-        const blob = await comparisonApi.compareFormats(formData, true)
-
-        clearInterval(progressInterval)
-        progress.value = 100
-
-        // Download the file
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = `comparison_${new Date().getTime()}.${outputFormat.value}`
-        link.click()
-        URL.revokeObjectURL(url)
-
-        downloadCompleted.value = true
-    } catch (err: any) {
-        error.value = err.response?.data?.detail || err.message || 'Download failed'
-    } finally {
-        downloading.value = false
+    if (specFile.value) {
+      const spec = (Array.isArray(specFile.value) ? specFile.value[0] : specFile.value) as File
+      formData.append('spec_file', spec)
     }
+
+    if (threshold.value !== null) {
+      formData.append('threshold', threshold.value.toString())
+    }
+
+    if (marginThreshold.value !== null) {
+      formData.append('margin_threshold', marginThreshold.value.toString())
+    }
+
+    formData.append('freq_tol', freqTolerance.value.toString())
+    formData.append('human', 'true')
+
+    if (outputFormat.value === 'xlsx') {
+      formData.append('return_xlsx', 'true')
+    }
+
+    // Simulate progress
+    const progressInterval = setInterval(() => {
+      if (progress.value < 90) {
+        progress.value += 10
+      }
+    }, 100)
+
+    const blob = (await comparisonApi.compareFormats(formData, true)) as Blob
+
+    clearInterval(progressInterval)
+    progress.value = 100
+
+    // Download the file
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `comparison_${Date.now()}.${outputFormat.value}`
+    link.click()
+    URL.revokeObjectURL(url)
+
+    downloadCompleted.value = true
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Download failed'
+  } finally {
+    downloading.value = false
+  }
 }
 
 function handleReset() {
-    masterFile.value = null
-    dvtFile.value = null
-    specFile.value = null
-    threshold.value = null
-    marginThreshold.value = null
-    freqTolerance.value = 2.0
-    outputFormat.value = 'json'
-    comparisonResult.value = null
-    error.value = ''
-    downloadCompleted.value = false
+  masterFile.value = null
+  dvtFile.value = null
+  specFile.value = null
+  threshold.value = null
+  marginThreshold.value = null
+  freqTolerance.value = 2.0
+  outputFormat.value = 'json'
+  comparisonResult.value = null
+  error.value = ''
+  downloadCompleted.value = false
 }
 </script>
 

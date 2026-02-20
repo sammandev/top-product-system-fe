@@ -86,7 +86,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 // Props
 interface Props {
@@ -97,7 +97,7 @@ interface Props {
 
 const props = withDefaults(defineProps<Props>(), {
   modelValue: () => [],
-  columnTypes: () => ({})
+  columnTypes: () => ({}),
 })
 
 // Emits
@@ -118,9 +118,7 @@ const filteredColumns = computed(() => {
   }
 
   const query = searchQuery.value.toLowerCase()
-  return props.columns.filter((col) =>
-    col.toLowerCase().includes(query)
-  )
+  return props.columns.filter((col) => col.toLowerCase().includes(query))
 })
 
 // Methods
@@ -132,7 +130,10 @@ function toggleColumn(column: string) {
   const currentSelection = props.modelValue || []
   if (currentSelection.includes(column)) {
     // Remove column
-    emit('update:modelValue', currentSelection.filter((c) => c !== column))
+    emit(
+      'update:modelValue',
+      currentSelection.filter((c) => c !== column),
+    )
   } else {
     // Add column
     emit('update:modelValue', [...currentSelection, column])
@@ -197,7 +198,7 @@ function getSelectedColumnsSummary(): string {
   if (!props.modelValue || props.modelValue.length === 0) return ''
 
   return props.modelValue
-    .map(col => {
+    .map((col) => {
       const index = props.columns.indexOf(col)
       const letter = getColumnLetter(index)
       const name = formatColumnName(col)
@@ -208,12 +209,15 @@ function getSelectedColumnsSummary(): string {
 
 function parseQuickSelectInput(input: string): number[] {
   const indices: number[] = []
-  const parts = input.split(',').map(p => p.trim()).filter(p => p)
+  const parts = input
+    .split(',')
+    .map((p) => p.trim())
+    .filter((p) => p)
 
   for (const part of parts) {
     if (part.includes('-')) {
       // Range like "A-Z" or "1-30"
-      const rangeParts = part.split('-').map(p => p.trim())
+      const rangeParts = part.split('-').map((p) => p.trim())
       const startStr = rangeParts[0] || ''
       const endStr = rangeParts[1] || ''
 
@@ -232,10 +236,10 @@ function parseQuickSelectInput(input: string): number[] {
         }
       } else {
         // Number-based range
-        const start = parseInt(startStr)
-        const end = parseInt(endStr)
+        const start = parseInt(startStr, 10)
+        const end = parseInt(endStr, 10)
 
-        if (!isNaN(start) && !isNaN(end) && start <= end) {
+        if (!Number.isNaN(start) && !Number.isNaN(end) && start <= end) {
           for (let i = start; i <= end; i++) {
             if (i > 0 && i <= props.columns.length && !indices.includes(i)) {
               indices.push(i)
@@ -253,8 +257,13 @@ function parseQuickSelectInput(input: string): number[] {
         }
       } else {
         // Number-based
-        const num = parseInt(part)
-        if (!isNaN(num) && num > 0 && num <= props.columns.length && !indices.includes(num)) {
+        const num = parseInt(part, 10)
+        if (
+          !Number.isNaN(num) &&
+          num > 0 &&
+          num <= props.columns.length &&
+          !indices.includes(num)
+        ) {
           indices.push(num)
         }
       }
@@ -269,13 +278,12 @@ function applyQuickSelect() {
 
   const indices = parseQuickSelectInput(quickSelectInput.value)
   const selectedColumns = indices
-    .map(idx => props.columns[idx - 1]) // Convert 1-based to 0-based
+    .map((idx) => props.columns[idx - 1]) // Convert 1-based to 0-based
     .filter((col): col is string => col !== undefined)
 
   emit('update:modelValue', selectedColumns)
   quickSelectInput.value = ''
 }
-
 </script>
 
 <style scoped>

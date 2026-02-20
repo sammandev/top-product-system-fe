@@ -2,8 +2,8 @@
  * Composable for test log upload and API interaction
  */
 
-import { ref } from 'vue'
 import axios, { type AxiosError } from 'axios'
+import { ref } from 'vue'
 
 const API_BASE_URL = '/api/test-log'
 
@@ -131,7 +131,14 @@ export interface RescoreTestItem {
 
 export interface RescoreScoringConfig {
   test_item_name: string
-  scoring_type: 'symmetrical' | 'asymmetrical' | 'per_mask' | 'evm' | 'binary' | 'symmetrical_nl' | 'throughput'
+  scoring_type:
+    | 'symmetrical'
+    | 'asymmetrical'
+    | 'per_mask'
+    | 'evm'
+    | 'binary'
+    | 'symmetrical_nl'
+    | 'throughput'
   enabled: boolean
   weight: number
   target?: number
@@ -173,7 +180,7 @@ export function useTestLogUpload() {
     logFile: File,
     criteriaFile: File | null = null,
     showOnlyCriteria: boolean = false,
-    scoringConfigs: RescoreScoringConfig[] = []
+    scoringConfigs: RescoreScoringConfig[] = [],
   ): Promise<TestLogParseResponseEnhanced> => {
     loading.value = true
     error.value = null
@@ -181,11 +188,11 @@ export function useTestLogUpload() {
     try {
       const formData = new FormData()
       formData.append('file', logFile)
-      
+
       if (criteriaFile) {
         formData.append('criteria_file', criteriaFile)
       }
-      
+
       formData.append('show_only_criteria', showOnlyCriteria.toString())
 
       if (scoringConfigs.length > 0) {
@@ -217,7 +224,7 @@ export function useTestLogUpload() {
     logFiles: File[],
     criteriaFile: File | null = null,
     showOnlyCriteria: boolean = false,
-    scoringConfigs: RescoreScoringConfig[] = []
+    scoringConfigs: RescoreScoringConfig[] = [],
   ): Promise<CompareResponseEnhanced> => {
     if (logFiles.length < 1) {
       throw new Error('At least 1 file is required for comparison')
@@ -228,7 +235,7 @@ export function useTestLogUpload() {
 
     try {
       const formData = new FormData()
-      
+
       logFiles.forEach((file) => {
         formData.append('files', file)
       })
@@ -267,7 +274,7 @@ export function useTestLogUpload() {
   const rescoreItems = async (
     testItems: RescoreTestItem[],
     scoringConfigs: RescoreScoringConfig[] = [],
-    includeBinaryInOverall: boolean = true
+    includeBinaryInOverall: boolean = true,
   ): Promise<RescoreResponse> => {
     loading.value = true
     error.value = null

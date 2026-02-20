@@ -248,266 +248,268 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, inject } from 'vue'
-import FormulaEditor from './FormulaEditor.vue'
-import type { CustomFormulaV2, CategoryFormulasV2, FormulaType, FormulaParameters } from '../composables/useCustomScoringV2'
+import { computed, inject, ref } from 'vue'
+import type {
+  CategoryFormulasV2,
+  CustomFormulaV2,
+  FormulaParameters,
+  FormulaType,
+} from '../composables/useCustomScoringV2'
 import { extractCategory } from '../composables/useCustomScoringV2'
 import type { TopProductBatchResponse } from '../types/dutTopProduct.types'
 
 interface Props {
-    modelValue: boolean
-    universalFormula: CustomFormulaV2
-    categoryFormulas: CategoryFormulasV2
+  modelValue: boolean
+  universalFormula: CustomFormulaV2
+  categoryFormulas: CategoryFormulasV2
 }
 
 interface Emits {
-    (e: 'update:modelValue', value: boolean): void
-    (e: 'update:universalFormula', value: CustomFormulaV2): void
-    (e: 'update:categoryFormulas', value: CategoryFormulasV2): void
-    (e: 'reset'): void
-    (e: 'apply'): void
+  (e: 'update:modelValue', value: boolean): void
+  (e: 'update:universalFormula', value: CustomFormulaV2): void
+  (e: 'update:categoryFormulas', value: CategoryFormulasV2): void
+  (e: 'reset'): void
+  (e: 'apply'): void
 }
 
 interface TestMeasurement {
-    test_item: string
-    category: string | null
-    actual: number
-    target: number | null
-    usl: number | null
-    lsl: number | null
-    systemScore: number
+  test_item: string
+  category: string | null
+  actual: number
+  target: number | null
+  usl: number | null
+  lsl: number | null
+  systemScore: number
 }
 
 const props = defineProps<Props>()
 const emit = defineEmits<Emits>()
 
 // Try to inject results from parent (TopProductsByISNTab provides this)
-const injectedResults = inject<{ value: TopProductBatchResponse | null }>('topProductResults', { value: null })
+const injectedResults = inject<{ value: TopProductBatchResponse | null }>('topProductResults', {
+  value: null,
+})
 
 // State for testing
 const testMeasurement = ref<TestMeasurement | null>(null)
 
 // Extract measurements from current results for testing
 const availableMeasurements = computed<TestMeasurement[]>(() => {
-    if (!injectedResults.value) return []
-    
-    const measurements: TestMeasurement[] = []
-    
-    injectedResults.value.results?.forEach(result => {
-        result.test_result?.forEach(station => {
-            station.data?.forEach((item: any) => {
-                // Handle both object and array formats
-                let test_item: string
-                let actual: number
-                let target: number | null
-                let usl: number | null
-                let lsl: number | null
-                let systemScore: number
-                
-                if (typeof item === 'object' && !Array.isArray(item) && 'test_item' in item) {
-                    // Object format
-                    test_item = item.test_item
-                    actual = item.actual
-                    usl = item.usl
-                    lsl = item.lsl
-                    const breakdown = item.score_breakdown
-                    target = breakdown?.target_used ?? null
-                    systemScore = breakdown?.final_score ?? 0
-                } else if (Array.isArray(item) && item.length >= 7) {
-                    // Array format: [test_item, usl, lsl, actual, target, score, breakdown]
-                    test_item = String(item[0])
-                    usl = item[1]
-                    lsl = item[2]
-                    actual = Number(item[3])
-                    target = item[4]
-                    systemScore = Number(item[5])
-                } else {
-                    return
-                }
-                
-                const category = extractCategory(test_item)
-                
-                measurements.push({
-                    test_item,
-                    category,
-                    actual,
-                    target,
-                    usl,
-                    lsl,
-                    systemScore
-                })
-            })
+  if (!injectedResults.value) return []
+
+  const measurements: TestMeasurement[] = []
+
+  injectedResults.value.results?.forEach((result) => {
+    result.test_result?.forEach((station) => {
+      // biome-ignore lint/suspicious/noExplicitAny: item can be object or array format, typed dynamically
+      station.data?.forEach((item: any) => {
+        // Handle both object and array formats
+        let test_item: string
+        let actual: number
+        let target: number | null
+        let usl: number | null
+        let lsl: number | null
+        let systemScore: number
+
+        if (typeof item === 'object' && !Array.isArray(item) && 'test_item' in item) {
+          // Object format
+          test_item = item.test_item
+          actual = item.actual
+          usl = item.usl
+          lsl = item.lsl
+          const breakdown = item.score_breakdown
+          target = breakdown?.target_used ?? null
+          systemScore = breakdown?.final_score ?? 0
+        } else if (Array.isArray(item) && item.length >= 7) {
+          // Array format: [test_item, usl, lsl, actual, target, score, breakdown]
+          test_item = String(item[0])
+          usl = item[1]
+          lsl = item[2]
+          actual = Number(item[3])
+          target = item[4]
+          systemScore = Number(item[5])
+        } else {
+          return
+        }
+
+        const category = extractCategory(test_item)
+
+        measurements.push({
+          test_item,
+          category,
+          actual,
+          target,
+          usl,
+          lsl,
+          systemScore,
         })
+      })
     })
-    
-    // Return unique measurements (by test_item)
-    const unique = measurements.filter((m, index, self) => 
-        index === self.findIndex(t => t.test_item === m.test_item)
-    )
-    
-    return unique.slice(0, 50) // Limit to first 50 for performance
+  })
+
+  // Return unique measurements (by test_item)
+  const unique = measurements.filter(
+    (m, index, self) => index === self.findIndex((t) => t.test_item === m.test_item),
+  )
+
+  return unique.slice(0, 50) // Limit to first 50 for performance
 })
 
 // Calculate custom score for test measurement
 const testResult = computed(() => {
-    if (!testMeasurement.value) {
-        return {
-            customScore: 0,
-            difference: 0,
-            formulaName: 'N/A'
-        }
-    }
-    
-    const m = testMeasurement.value
-    const category = m.category
-    
-    // Determine which formula to use
-    let formula: CustomFormulaV2 | null = null
-    let formulaName = 'System Formula'
-    
-    if (category && props.categoryFormulas[category]?.enabled) {
-        formula = props.categoryFormulas[category]
-        formulaName = `${category} Formula`
-    } else if (props.universalFormula.enabled) {
-        formula = props.universalFormula
-        formulaName = 'Universal Formula'
-    }
-    
-    // Calculate custom score
-    let customScore = m.systemScore
-    
-    if (formula) {
-        try {
-            customScore = formula.calculate(
-                m.actual,
-                m.usl,
-                m.lsl,
-                m.target ?? 0
-            )
-        } catch (error) {
-            console.error('Formula calculation error:', error)
-            customScore = 0
-        }
-    }
-    
+  if (!testMeasurement.value) {
     return {
-        customScore,
-        difference: customScore - m.systemScore,
-        formulaName
+      customScore: 0,
+      difference: 0,
+      formulaName: 'N/A',
     }
+  }
+
+  const m = testMeasurement.value
+  const category = m.category
+
+  // Determine which formula to use
+  let formula: CustomFormulaV2 | null = null
+  let formulaName = 'System Formula'
+
+  if (category && props.categoryFormulas[category]?.enabled) {
+    formula = props.categoryFormulas[category]
+    formulaName = `${category} Formula`
+  } else if (props.universalFormula.enabled) {
+    formula = props.universalFormula
+    formulaName = 'Universal Formula'
+  }
+
+  // Calculate custom score
+  let customScore = m.systemScore
+
+  if (formula) {
+    try {
+      customScore = formula.calculate(m.actual, m.usl, m.lsl, m.target ?? 0)
+    } catch (error) {
+      console.error('Formula calculation error:', error)
+      customScore = 0
+    }
+  }
+
+  return {
+    customScore,
+    difference: customScore - m.systemScore,
+    formulaName,
+  }
 })
 
 // Score color helper (matching parent component)
 const getScoreColor = (score: number): string => {
-    if (score >= 9) return 'success'
-    if (score >= 7) return 'info'
-    if (score >= 5) return 'warning'
-    return 'error'
+  if (score >= 9) return 'success'
+  if (score >= 7) return 'info'
+  if (score >= 5) return 'warning'
+  return 'error'
 }
 
 const enabledCategoryCount = computed(() => {
-    return Object.values(props.categoryFormulas).filter((f) => f.enabled).length
+  return Object.values(props.categoryFormulas).filter((f) => f.enabled).length
 })
 
 const enabledCount = computed(() => {
-    let count = 0
-    if (props.universalFormula.enabled) count++
-    count += enabledCategoryCount.value
-    return count
+  let count = 0
+  if (props.universalFormula.enabled) count++
+  count += enabledCategoryCount.value
+  return count
 })
 
 // Universal formula updates
 const updateUniversalEnabled = (enabled: boolean) => {
-    emit('update:universalFormula', {
-        ...props.universalFormula,
-        enabled,
-    })
+  emit('update:universalFormula', {
+    ...props.universalFormula,
+    enabled,
+  })
 }
 
 const updateUniversalType = (formulaType: FormulaType) => {
-    emit('update:universalFormula', {
-        ...props.universalFormula,
-        formulaType,
-    })
+  emit('update:universalFormula', {
+    ...props.universalFormula,
+    formulaType,
+  })
 }
 
 const updateUniversalParameters = (parameters: FormulaParameters) => {
-    emit('update:universalFormula', {
-        ...props.universalFormula,
-        parameters,
-    })
+  emit('update:universalFormula', {
+    ...props.universalFormula,
+    parameters,
+  })
 }
 
 const updateUniversalExpression = (customExpression: string) => {
-    emit('update:universalFormula', {
-        ...props.universalFormula,
-        customExpression,
-    })
+  emit('update:universalFormula', {
+    ...props.universalFormula,
+    customExpression,
+  })
 }
 
 // Category formula updates
 const updateCategoryEnabled = (category: string, enabled: boolean) => {
-    const updated = { ...props.categoryFormulas }
-    if (updated[category]) {
-        updated[category] = {
-            ...updated[category],
-            enabled,
-        }
-        emit('update:categoryFormulas', updated)
+  const updated = { ...props.categoryFormulas }
+  if (updated[category]) {
+    updated[category] = {
+      ...updated[category],
+      enabled,
     }
+    emit('update:categoryFormulas', updated)
+  }
 }
 
 const updateCategoryType = (category: string, formulaType: FormulaType) => {
-    const updated = { ...props.categoryFormulas }
-    if (updated[category]) {
-        updated[category] = {
-            ...updated[category],
-            formulaType,
-        }
-        emit('update:categoryFormulas', updated)
+  const updated = { ...props.categoryFormulas }
+  if (updated[category]) {
+    updated[category] = {
+      ...updated[category],
+      formulaType,
     }
+    emit('update:categoryFormulas', updated)
+  }
 }
 
 const updateCategoryParameters = (category: string, parameters: FormulaParameters) => {
-    const updated = { ...props.categoryFormulas }
-    if (updated[category]) {
-        updated[category] = {
-            ...updated[category],
-            parameters,
-        }
-        emit('update:categoryFormulas', updated)
+  const updated = { ...props.categoryFormulas }
+  if (updated[category]) {
+    updated[category] = {
+      ...updated[category],
+      parameters,
     }
+    emit('update:categoryFormulas', updated)
+  }
 }
 
 const updateCategoryExpression = (category: string, customExpression: string) => {
-    const updated = { ...props.categoryFormulas }
-    if (updated[category]) {
-        updated[category] = {
-            ...updated[category],
-            customExpression,
-        }
-        emit('update:categoryFormulas', updated)
+  const updated = { ...props.categoryFormulas }
+  if (updated[category]) {
+    updated[category] = {
+      ...updated[category],
+      customExpression,
     }
+    emit('update:categoryFormulas', updated)
+  }
 }
 
 const handleToggleAll = (enabled: boolean) => {
-    const updated = { ...props.categoryFormulas }
-    Object.keys(updated).forEach((category) => {
-        const formula = updated[category]
-        if (formula) {
-            formula.enabled = enabled
-        }
-    })
-    emit('update:categoryFormulas', updated)
+  const updated = { ...props.categoryFormulas }
+  Object.keys(updated).forEach((category) => {
+    const formula = updated[category]
+    if (formula) {
+      formula.enabled = enabled
+    }
+  })
+  emit('update:categoryFormulas', updated)
 }
 
 const handleReset = () => {
-    emit('reset')
+  emit('reset')
 }
 
 const handleApply = () => {
-    emit('apply')
-    emit('update:modelValue', false)
+  emit('apply')
+  emit('update:modelValue', false)
 }
 </script>
 

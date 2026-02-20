@@ -191,15 +191,15 @@ interface ColumnComparisonResult {
 interface RowComparisonResult {
   joinKey: string | number
   status: 'match' | 'different' | 'only-in-a' | 'only-in-b'
-  valueA?: any
-  valueB?: any
-  difference?: any
-  [key: string]: any
+  valueA?: unknown
+  valueB?: unknown
+  difference?: unknown
+  [key: string]: unknown
 }
 
 // Use the actual backend response type
 export interface CompareDataResponse {
-  rows: Record<string, any>[]
+  rows: Record<string, unknown>[]
   summary?: {
     total_rows: number
     matching_rows?: number
@@ -239,13 +239,13 @@ const columnResults = computed(() => {
   return props.results?.columnComparison || null
 })
 
-const rowResults = computed(() => {
+const rowResults = computed((): RowComparisonResult[] => {
   // If there's a dedicated rowComparison field, use it
   if (props.results?.rowComparison) {
     return props.results.rowComparison
   }
   // Otherwise use the general rows field
-  return props.results?.rows || []
+  return (props.results?.rows || []) as RowComparisonResult[]
 })
 
 const summary = computed(() => {
@@ -255,7 +255,8 @@ const summary = computed(() => {
 const isEmpty = computed(() => {
   if (!hasResults.value) return false
 
-  const hasColumnDiff = columnResults.value &&
+  const hasColumnDiff =
+    columnResults.value &&
     ((columnResults.value.onlyInA?.length || 0) > 0 ||
       (columnResults.value.onlyInB?.length || 0) > 0)
 
@@ -273,11 +274,11 @@ const rowHeaders = computed(() => {
     { title: 'Join Key', key: 'joinKey', sortable: true },
     { title: 'Status', key: 'status', sortable: true },
     { title: 'Value in A', key: 'valueA', sortable: false },
-    { title: 'Value in B', key: 'valueB', sortable: false }
+    { title: 'Value in B', key: 'valueB', sortable: false },
   ]
 
   // Add difference column if there are any numeric comparisons
-  const hasDifferences = rowResults.value.some(r => r.difference !== undefined)
+  const hasDifferences = rowResults.value.some((r) => r.difference !== undefined)
   if (hasDifferences) {
     headers.push({ title: 'Difference', key: 'difference', sortable: false })
   }
@@ -339,7 +340,7 @@ function getValueClass(status: string, file: 'A' | 'B'): string {
   return 'text-medium-emphasis'
 }
 
-function formatValue(value: any): string {
+function formatValue(value: unknown): string {
   if (value === null || value === undefined) {
     return '—'
   }

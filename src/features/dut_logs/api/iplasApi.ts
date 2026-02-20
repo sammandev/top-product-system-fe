@@ -1,8 +1,8 @@
 /**
  * iPLAS External API Service
- * 
+ *
  * Provides access to iPLAS v1 (External2) and v2 (External3) APIs
- * 
+ *
  * v1 API: Token in request body
  * v2 API: Token in Authorization header
  */
@@ -15,7 +15,9 @@ const STORAGE_KEY = 'iplas_settings'
 // API Configuration from environment or localStorage
 function getIplasConfig(): { baseIp: string; port: number; token: string } {
   const defaultPort = Number(import.meta.env.VITE_IPLAS_API_PORT) || 32678
-  const defaultBaseIp = (import.meta.env.VITE_IPLAS_API_PTB_BASE_URL || 'http://10.176.33.89').replace(/^https?:\/\//, '')
+  const defaultBaseIp = (
+    import.meta.env.VITE_IPLAS_API_PTB_BASE_URL || 'http://10.176.33.89'
+  ).replace(/^https?:\/\//, '')
   const defaultToken = import.meta.env.VITE_IPLAS_API_TOKEN_PTB || ''
 
   try {
@@ -29,7 +31,7 @@ function getIplasConfig(): { baseIp: string; port: number; token: string } {
         return {
           baseIp: server.baseIp || defaultBaseIp,
           port: server.port || defaultPort,
-          token: server.token || defaultToken
+          token: server.token || defaultToken,
         }
       }
     }
@@ -40,13 +42,15 @@ function getIplasConfig(): { baseIp: string; port: number; token: string } {
   return {
     baseIp: defaultBaseIp,
     port: defaultPort,
-    token: defaultToken
+    token: defaultToken,
   }
 }
 
 const config = getIplasConfig()
-const IPLAS_V1_API_BASE_URL = import.meta.env.VITE_IPLAS_V1_API_BASE_URL || `http://${config.baseIp}:${config.port}/api/v1`
-const IPLAS_V2_API_BASE_URL = import.meta.env.VITE_IPLAS_V2_API_BASE_URL || `http://${config.baseIp}:${config.port}/api/v2`
+const IPLAS_V1_API_BASE_URL =
+  import.meta.env.VITE_IPLAS_V1_API_BASE_URL || `http://${config.baseIp}:${config.port}/api/v1`
+const IPLAS_V2_API_BASE_URL =
+  import.meta.env.VITE_IPLAS_V2_API_BASE_URL || `http://${config.baseIp}:${config.port}/api/v2`
 const IPLAS_API_TOKEN = config.token
 const IPLAS_API_TIMEOUT = Number(import.meta.env.VITE_IPLAS_API_TIMEOUT || 60) * 1000
 
@@ -87,7 +91,7 @@ export interface GetCsvTestItemRequest {
 
 export interface TestItem {
   NAME: string
-  STATUS: string  // Can be PASS, FAIL, or other values from iPLAS
+  STATUS: string // Can be PASS, FAIL, or other values from iPLAS
   VALUE: string // Float as string or "PASS"/"FAIL" for bin data
   UCL: string // Upper Criteria Limit
   LCL: string // Lower Criteria Limit
@@ -192,8 +196,8 @@ class IplasV1Api {
       baseURL,
       timeout,
       headers: {
-        'Content-Type': 'application/json'
-      }
+        'Content-Type': 'application/json',
+      },
     })
   }
 
@@ -204,16 +208,16 @@ class IplasV1Api {
   async downloadAttachment(
     site: string,
     project: string,
-    info: DownloadAttachmentInfo[]
+    info: DownloadAttachmentInfo[],
   ): Promise<DownloadAttachmentResponse> {
     const payload: DownloadAttachmentRequest = {
       info,
-      token: this.token
+      token: this.token,
     }
 
     const response = await this.client.post<DownloadAttachmentResponse>(
       `/file/${site}/${project}/download_attachment`,
-      payload
+      payload,
     )
     return response.data
   }
@@ -231,7 +235,7 @@ class IplasV1Api {
       test_status?: 'PASS' | 'FAIL' | 'ALL'
       begintime: string
       endtime: string
-    }
+    },
   ): Promise<GetCsvTestItemResponse> {
     const payload: GetCsvTestItemRequest = {
       station: params.station,
@@ -241,12 +245,12 @@ class IplasV1Api {
       test_status: params.test_status || 'ALL',
       begintime: params.begintime,
       endtime: params.endtime,
-      token: this.token
+      token: this.token,
     }
 
     const response = await this.client.post<GetCsvTestItemResponse>(
       `/raw/${site}/${project}/get_csv_testitem`,
-      payload
+      payload,
     )
     return response.data
   }
@@ -287,8 +291,8 @@ class IplasV2Api {
       timeout,
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${token}`
-      }
+        Authorization: `Bearer ${token}`,
+      },
     })
   }
 
@@ -297,7 +301,7 @@ class IplasV2Api {
    */
   async verify(site: string, project: string): Promise<VerifyResponse> {
     const response = await this.client.get<VerifyResponse>('/verify', {
-      params: { site, project }
+      params: { site, project },
     })
     return response.data
   }
@@ -308,7 +312,7 @@ class IplasV2Api {
    */
   async getSiteProjectList(dataType: 'simple' | 'strict' = 'simple'): Promise<SiteProject[]> {
     const response = await this.client.get<SiteProject[]>('/site_project_list', {
-      params: { data_type: dataType }
+      params: { data_type: dataType },
     })
     return response.data
   }
@@ -333,16 +337,16 @@ class IplasV2Api {
     project: string,
     displayStationName: string,
     startTime: string,
-    endTime: string
+    endTime: string,
   ): Promise<string[]> {
     const response = await this.client.get<string[]>(
       `/${site}/${project}/${encodeURIComponent(displayStationName)}/test_station_device_list`,
       {
         params: {
           start_time: startTime,
-          end_time: endTime
-        }
-      }
+          end_time: endTime,
+        },
+      },
     )
     return response.data
   }
@@ -353,7 +357,7 @@ class IplasV2Api {
    */
   async searchByIsn(isn: string): Promise<IsnSearchResponse> {
     const response = await this.client.get<IsnSearchResponse>('/isn_search', {
-      params: { isn }
+      params: { isn },
     })
     return response.data
   }
@@ -367,24 +371,16 @@ class IplasV2Api {
  * iPLAS v1 API instance (External2)
  * For downloading attachments and getting test items
  */
-export const iplasV1Api = new IplasV1Api(
-  IPLAS_V1_API_BASE_URL,
-  IPLAS_API_TOKEN,
-  IPLAS_API_TIMEOUT
-)
+export const iplasV1Api = new IplasV1Api(IPLAS_V1_API_BASE_URL, IPLAS_API_TOKEN, IPLAS_API_TIMEOUT)
 
 /**
  * iPLAS v2 API instance (External3)
  * For metadata queries (sites, projects, stations, devices)
  */
-export const iplasV2Api = new IplasV2Api(
-  IPLAS_V2_API_BASE_URL,
-  IPLAS_API_TOKEN,
-  IPLAS_API_TIMEOUT
-)
+export const iplasV2Api = new IplasV2Api(IPLAS_V2_API_BASE_URL, IPLAS_API_TOKEN, IPLAS_API_TIMEOUT)
 
 // Export a combined API object for convenience
 export const iplasApi = {
   v1: iplasV1Api,
-  v2: iplasV2Api
+  v2: iplasV2Api,
 }

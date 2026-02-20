@@ -1,6 +1,6 @@
 /**
  * Comparison Routes
- * 
+ *
  * Routes for file comparison features
  */
 
@@ -17,9 +17,9 @@ export const comparisonRoutes: RouteRecordRaw[] = [
       icon: 'mdi-file-compare',
       breadcrumb: [
         { title: 'Dashboard', to: '/dashboard' },
-        { title: 'File Comparison', disabled: true }
-      ]
-    }
+        { title: 'File Comparison', disabled: true },
+      ],
+    },
   },
   {
     path: '/compare/dvt-mc2',
@@ -31,8 +31,8 @@ export const comparisonRoutes: RouteRecordRaw[] = [
       icon: 'mdi-file-compare',
       breadcrumb: [
         { title: 'Dashboard', to: '/dashboard' },
-        { title: 'DVT-MC2 Compare', disabled: true }
-      ]
-    }
-  }
+        { title: 'DVT-MC2 Compare', disabled: true },
+      ],
+    },
+  },
 ]

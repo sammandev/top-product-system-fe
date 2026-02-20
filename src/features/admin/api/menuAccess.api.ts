@@ -1,15 +1,15 @@
 /**
  * Menu Access API Service
- * 
+ *
  * Handles menu access management for role-based menu visibility
  */
 
 import apiClient from '@/core/api/client'
 import type {
+  BulkUpdateMenuAccessRequest,
   MenuListResponse,
-  UserMenusResponse,
   UpdateMenuAccessRequest,
-  BulkUpdateMenuAccessRequest
+  UserMenusResponse,
 } from '../types/menuAccess.types'
 
 const BASE_URL = '/api/admin/menu-access'
@@ -23,7 +23,7 @@ export const menuAccessApi = {
    */
   async initializeMenus(): Promise<{ message: string; count: number }> {
     const response = await apiClient.post<{ message: string; count: number }>(
-      `${BASE_URL}/initialize`
+      `${BASE_URL}/initialize`,
     )
     return response.data
   },
@@ -40,10 +40,7 @@ export const menuAccessApi = {
    * Update menu access for a specific role (Superadmin only)
    */
   async updateMenuAccess(request: UpdateMenuAccessRequest): Promise<{ message: string }> {
-    const response = await apiClient.put<{ message: string }>(
-      `${BASE_URL}/access`,
-      request
-    )
+    const response = await apiClient.put<{ message: string }>(`${BASE_URL}/access`, request)
     return response.data
   },
 
@@ -51,10 +48,7 @@ export const menuAccessApi = {
    * Bulk update menu access (Superadmin only)
    */
   async bulkUpdateMenuAccess(request: BulkUpdateMenuAccessRequest): Promise<{ message: string }> {
-    const response = await apiClient.put<{ message: string }>(
-      `${BASE_URL}/access/bulk`,
-      request
-    )
+    const response = await apiClient.put<{ message: string }>(`${BASE_URL}/access/bulk`, request)
     return response.data
   },
 
@@ -72,5 +66,5 @@ export const menuAccessApi = {
   async getGuestMenus(): Promise<UserMenusResponse> {
     const response = await apiClient.get<UserMenusResponse>(`${BASE_URL}/guest-menus`)
     return response.data
-  }
+  },
 }

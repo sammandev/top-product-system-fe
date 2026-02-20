@@ -1,6 +1,6 @@
 /**
  * API Client
- * 
+ *
  * Configured Axios instance with interceptors for:
  * - Authentication (JWT token injection)
  * - Error handling (token refresh, logout on failure)
@@ -10,10 +10,10 @@
 import axios, { type AxiosInstance } from 'axios'
 import { APP_CONFIG } from '@/core/config'
 import {
-  authRequestInterceptor,
   authRequestErrorInterceptor,
+  authRequestInterceptor,
+  createErrorResponseInterceptor,
   errorResponseSuccessInterceptor,
-  createErrorResponseInterceptor
 } from './interceptors'
 
 /**
@@ -24,26 +24,23 @@ function createApiClient(): AxiosInstance {
     baseURL: APP_CONFIG.api.baseURL,
     timeout: APP_CONFIG.api.timeout,
     headers: {
-      'Content-Type': 'application/json'
+      'Content-Type': 'application/json',
     },
     // Serialize array parameters correctly for FastAPI
     // FastAPI expects: ?stations=value1&stations=value2
     // Not: ?stations[0]=value1&stations[1]=value2
     paramsSerializer: {
-      indexes: null // This tells axios to use repeated params for arrays
-    }
+      indexes: null, // This tells axios to use repeated params for arrays
+    },
   })
 
   // Request interceptors
-  client.interceptors.request.use(
-    authRequestInterceptor,
-    authRequestErrorInterceptor
-  )
+  client.interceptors.request.use(authRequestInterceptor, authRequestErrorInterceptor)
 
   // Response interceptors
   client.interceptors.response.use(
     errorResponseSuccessInterceptor,
-    createErrorResponseInterceptor(client)
+    createErrorResponseInterceptor(client),
   )
 
   return client
@@ -51,11 +48,11 @@ function createApiClient(): AxiosInstance {
 
 /**
  * Main API client instance
- * 
+ *
  * Usage:
  * ```typescript
  * import apiClient from '@/core/api/client'
- * 
+ *
  * const response = await apiClient.get('/api/endpoint')
  * const data = await apiClient.post('/api/endpoint', payload)
  * ```

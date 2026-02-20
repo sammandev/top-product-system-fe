@@ -91,28 +91,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
 import dayjs from 'dayjs'
+import { computed, ref, watch } from 'vue'
 
 // Props
 interface Props {
-    modelValue: {
-        startDate: string
-        endDate: string
-    }
-    maxDays?: number
-    showValidation?: boolean
+  modelValue: {
+    startDate: string
+    endDate: string
+  }
+  maxDays?: number
+  showValidation?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    maxDays: 7,
-    showValidation: false
+  maxDays: 7,
+  showValidation: false,
 })
 
 // Emits
 interface Emits {
-    (e: 'update:modelValue', value: { startDate: string; endDate: string }): void
-    (e: 'change', value: { startDate: string; endDate: string; valid: boolean }): void
+  (e: 'update:modelValue', value: { startDate: string; endDate: string }): void
+  (e: 'change', value: { startDate: string; endDate: string; valid: boolean }): void
 }
 
 const emit = defineEmits<Emits>()
@@ -127,144 +127,148 @@ const endDateError = ref<string>('')
 const today = computed(() => dayjs().format('YYYY-MM-DD'))
 
 const maxStartDate = computed(() => {
-    if (endDate.value) {
-        return dayjs(endDate.value).format('YYYY-MM-DD')
-    }
-    return today.value
+  if (endDate.value) {
+    return dayjs(endDate.value).format('YYYY-MM-DD')
+  }
+  return today.value
 })
 
 const minEndDate = computed(() => {
-    if (startDate.value) {
-        return dayjs(startDate.value).format('YYYY-MM-DD')
-    }
-    return ''
+  if (startDate.value) {
+    return dayjs(startDate.value).format('YYYY-MM-DD')
+  }
+  return ''
 })
 
 const rangeDays = computed(() => {
-    if (!startDate.value || !endDate.value) return 0
+  if (!startDate.value || !endDate.value) return 0
 
-    const start = dayjs(startDate.value)
-    const end = dayjs(endDate.value)
-    return end.diff(start, 'day') + 1 // Include both start and end days
+  const start = dayjs(startDate.value)
+  const end = dayjs(endDate.value)
+  return end.diff(start, 'day') + 1 // Include both start and end days
 })
 
 const rangeExceeded = computed(() => {
-    if (!startDate.value || !endDate.value) return false
-    return rangeDays.value > props.maxDays
+  if (!startDate.value || !endDate.value) return false
+  return rangeDays.value > props.maxDays
 })
 
 const isValidRange = computed(() => {
-    if (!startDate.value || !endDate.value) return false
+  if (!startDate.value || !endDate.value) return false
 
-    const start = dayjs(startDate.value)
-    const end = dayjs(endDate.value)
+  const start = dayjs(startDate.value)
+  const end = dayjs(endDate.value)
 
-    // End date must be after or equal to start date
-    if (end.isBefore(start)) return false
+  // End date must be after or equal to start date
+  if (end.isBefore(start)) return false
 
-    // Range must not exceed max days
-    if (rangeDays.value > props.maxDays) return false
+  // Range must not exceed max days
+  if (rangeDays.value > props.maxDays) return false
 
-    return true
+  return true
 })
 
 // Methods
 function setToday() {
-    const todayStr = dayjs().format('YYYY-MM-DD')
-    startDate.value = todayStr
-    endDate.value = todayStr
-    validateAndEmit()
+  const todayStr = dayjs().format('YYYY-MM-DD')
+  startDate.value = todayStr
+  endDate.value = todayStr
+  validateAndEmit()
 }
 
 function setLast7Days() {
-    endDate.value = dayjs().format('YYYY-MM-DD')
-    startDate.value = dayjs().subtract(6, 'day').format('YYYY-MM-DD') // 6 days ago + today = 7 days
-    validateAndEmit()
+  endDate.value = dayjs().format('YYYY-MM-DD')
+  startDate.value = dayjs().subtract(6, 'day').format('YYYY-MM-DD') // 6 days ago + today = 7 days
+  validateAndEmit()
 }
 
 function setLast30Days() {
-    endDate.value = dayjs().format('YYYY-MM-DD')
-    startDate.value = dayjs().subtract(29, 'day').format('YYYY-MM-DD') // 29 days ago + today = 30 days
-    validateAndEmit()
+  endDate.value = dayjs().format('YYYY-MM-DD')
+  startDate.value = dayjs().subtract(29, 'day').format('YYYY-MM-DD') // 29 days ago + today = 30 days
+  validateAndEmit()
 }
 
 function clearDates() {
-    startDate.value = ''
-    endDate.value = ''
-    startDateError.value = ''
-    endDateError.value = ''
-    validateAndEmit()
+  startDate.value = ''
+  endDate.value = ''
+  startDateError.value = ''
+  endDateError.value = ''
+  validateAndEmit()
 }
 
 function handleStartDateChange() {
-    startDateError.value = ''
+  startDateError.value = ''
 
-    // If end date is set and would exceed max range, adjust end date
-    if (endDate.value) {
-        const maxEnd = dayjs(startDate.value).add(props.maxDays - 1, 'day')
-        if (dayjs(endDate.value).isAfter(maxEnd)) {
-            endDate.value = maxEnd.format('YYYY-MM-DD')
-        }
+  // If end date is set and would exceed max range, adjust end date
+  if (endDate.value) {
+    const maxEnd = dayjs(startDate.value).add(props.maxDays - 1, 'day')
+    if (dayjs(endDate.value).isAfter(maxEnd)) {
+      endDate.value = maxEnd.format('YYYY-MM-DD')
     }
+  }
 
-    validateAndEmit()
+  validateAndEmit()
 }
 
 function handleEndDateChange() {
-    endDateError.value = ''
+  endDateError.value = ''
 
-    // If start date is set and would exceed max range, adjust start date
-    if (startDate.value) {
-        const minStart = dayjs(endDate.value).subtract(props.maxDays - 1, 'day')
-        if (dayjs(startDate.value).isBefore(minStart)) {
-            startDate.value = minStart.format('YYYY-MM-DD')
-        }
+  // If start date is set and would exceed max range, adjust start date
+  if (startDate.value) {
+    const minStart = dayjs(endDate.value).subtract(props.maxDays - 1, 'day')
+    if (dayjs(startDate.value).isBefore(minStart)) {
+      startDate.value = minStart.format('YYYY-MM-DD')
     }
+  }
 
-    validateAndEmit()
+  validateAndEmit()
 }
 
 function validateAndEmit() {
-    // Clear previous errors
-    startDateError.value = ''
-    endDateError.value = ''
+  // Clear previous errors
+  startDateError.value = ''
+  endDateError.value = ''
 
-    // Validate
-    if (startDate.value && endDate.value) {
-        const start = dayjs(startDate.value)
-        const end = dayjs(endDate.value)
+  // Validate
+  if (startDate.value && endDate.value) {
+    const start = dayjs(startDate.value)
+    const end = dayjs(endDate.value)
 
-        if (end.isBefore(start)) {
-            endDateError.value = 'End date must be after start date'
-        } else if (rangeDays.value > props.maxDays) {
-            endDateError.value = `Range cannot exceed ${props.maxDays} days`
-        }
+    if (end.isBefore(start)) {
+      endDateError.value = 'End date must be after start date'
+    } else if (rangeDays.value > props.maxDays) {
+      endDateError.value = `Range cannot exceed ${props.maxDays} days`
     }
+  }
 
-    // Emit update
-    emit('update:modelValue', {
-        startDate: startDate.value,
-        endDate: endDate.value
-    })
+  // Emit update
+  emit('update:modelValue', {
+    startDate: startDate.value,
+    endDate: endDate.value,
+  })
 
-    // Emit detailed change event
-    emit('change', {
-        startDate: startDate.value,
-        endDate: endDate.value,
-        valid: isValidRange.value
-    })
+  // Emit detailed change event
+  emit('change', {
+    startDate: startDate.value,
+    endDate: endDate.value,
+    valid: isValidRange.value,
+  })
 }
 
 function formatDate(dateStr: string): string {
-    if (!dateStr) return ''
-    return dayjs(dateStr).format('MMM DD, YYYY')
+  if (!dateStr) return ''
+  return dayjs(dateStr).format('MMM DD, YYYY')
 }
 
 // Watch for external changes
-watch(() => props.modelValue, (newValue) => {
+watch(
+  () => props.modelValue,
+  (newValue) => {
     startDate.value = newValue.startDate
     endDate.value = newValue.endDate
-}, { deep: true })
+  },
+  { deep: true },
+)
 </script>
 
 <style scoped>

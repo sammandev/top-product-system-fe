@@ -1,6 +1,6 @@
 /**
  * iPLAS Data Store
- * 
+ *
  * Centralized Pinia store for iPLAS data management.
  * Provides shared state across components with memory optimization:
  * - Uses shallowRef for large arrays to reduce reactivity overhead
@@ -11,35 +11,44 @@
  */
 
 import { defineStore } from 'pinia'
-import { ref, shallowRef, computed, reactive } from 'vue'
+import { computed, reactive, ref, shallowRef } from 'vue'
+import { getErrorMessage } from '@/shared/utils'
 import {
+  type CompactCsvTestItemData,
+  type CsvTestItemData,
+  type IplasIsnSearchRecord,
+  type IplasStation,
   iplasProxyApi,
   type SiteProject,
-  type IplasStation,
-  type CsvTestItemData,
-  type CompactCsvTestItemData,
   type TestItem,
-  type IplasIsnSearchRecord
 } from '../api/iplasProxyApi'
-import { useIplasSettings } from '../composables/useIplasSettings'
 import {
-  fetchAndSinkToDB,
   abortCurrentStream,
   isStreaming as checkIsStreaming,
+  fetchAndSinkToDB,
   type StreamMetadata,
-  type StreamProgress
+  type StreamProgress,
 } from '../api/streamReader'
+import { useIplasSettings } from '../composables/useIplasSettings'
 import {
-  getPagedRecords,
-  getTotalCount,
   clearAllRecords,
+  getPagedRecords,
   getStorageStats,
+  getTotalCount,
+  type IplasDbQueryOptions,
   type IplasDbRecord,
-  type IplasDbQueryOptions
 } from '../db/iplasDb'
 
 // Re-export types for convenience
-export type { SiteProject, IplasStation, CsvTestItemData, CompactCsvTestItemData, TestItem, IplasIsnSearchRecord, IplasDbRecord }
+export type {
+  SiteProject,
+  IplasStation,
+  CsvTestItemData,
+  CompactCsvTestItemData,
+  TestItem,
+  IplasIsnSearchRecord,
+  IplasDbRecord,
+}
 
 /**
  * Pagination options for server-side data tables
@@ -119,10 +128,10 @@ export const useIplasDataStore = defineStore('iplasData', () => {
   // Settings
   // ============================================================================
   const { apiToken } = useIplasSettings()
-  
+
   function getUserToken(): string | undefined {
     const token = apiToken.value
-    return token && token.trim() ? token : undefined
+    return token?.trim() ? token : undefined
   }
 
   // ============================================================================
@@ -139,7 +148,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
   // Error State
   // ============================================================================
   const error = ref<string | null>(null)
-  
+
   // ============================================================================
   // Warning States
   // ============================================================================
@@ -158,7 +167,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     lastRefreshAt: 0,
     runId: 0,
     error: null,
-    metadata: null
+    metadata: null,
   })
 
   // ============================================================================
@@ -167,7 +176,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
   const siteProjects = ref<SiteProject[]>([])
   const stations = ref<IplasStation[]>([])
   const deviceIds = ref<string[]>([])
-  
+
   // Cache status
   let siteProjectsCached = false
   const stationsCache = new Map<string, IplasStation[]>()
@@ -175,23 +184,23 @@ export const useIplasDataStore = defineStore('iplasData', () => {
   // ============================================================================
   // Data States (using shallowRef for large arrays)
   // ============================================================================
-  
+
   // Full records - used when detailed test items are needed immediately
   const testItemData = shallowRef<CsvTestItemData[]>([])
-  
+
   // Compact records - for memory-efficient list views
   const compactTestItemData = shallowRef<CompactCsvTestItemData[]>([])
-  
+
   // ISN search results
   const isnSearchData = shallowRef<IplasIsnSearchRecord[]>([])
 
   // ============================================================================
   // Test Items Cache (non-reactive for memory efficiency)
   // ============================================================================
-  
+
   // Lazy-loaded TestItems cache (key: `${ISN}_${TestStartTime}`)
   const testItemsCache = new Map<string, TestItem[]>()
-  
+
   // Track which records are currently loading test items
   const loadingTestItemsForRecord = new Set<string>()
 
@@ -203,9 +212,9 @@ export const useIplasDataStore = defineStore('iplasData', () => {
   // ============================================================================
   // Computed Properties
   // ============================================================================
-  
+
   const uniqueSites = computed(() => {
-    const sites = new Set(siteProjects.value.map(sp => sp.site))
+    const sites = new Set(siteProjects.value.map((sp) => sp.site))
     return Array.from(sites).sort()
   })
 
@@ -215,17 +224,15 @@ export const useIplasDataStore = defineStore('iplasData', () => {
       if (!map[sp.site]) {
         map[sp.site] = []
       }
-      map[sp.site]!.push(sp.project)
+      map[sp.site]?.push(sp.project)
     }
     for (const site of Object.keys(map)) {
-      map[site]!.sort()
+      map[site]?.sort()
     }
     return map
   })
 
-  const totalRecords = computed(() => 
-    testItemData.value.length + compactTestItemData.value.length
-  )
+  const totalRecords = computed(() => testItemData.value.length + compactTestItemData.value.length)
 
   // ============================================================================
   // Metadata Actions
@@ -244,8 +251,8 @@ export const useIplasDataStore = defineStore('iplasData', () => {
       siteProjects.value = response.data
       siteProjectsCached = true
       return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch site projects'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch site projects'
       throw err
     } finally {
       loading.value = false
@@ -255,11 +262,12 @@ export const useIplasDataStore = defineStore('iplasData', () => {
   async function fetchStations(
     site: string,
     project: string,
-    forceRefresh = false
+    forceRefresh = false,
   ): Promise<IplasStation[]> {
     const cacheKey = `${site}::${project}`
-    
+
     if (!forceRefresh && stationsCache.has(cacheKey)) {
+      // biome-ignore lint/style/noNonNullAssertion: checked via stationsCache.has(cacheKey) above
       stations.value = stationsCache.get(cacheKey)!
       return stations.value
     }
@@ -271,13 +279,13 @@ export const useIplasDataStore = defineStore('iplasData', () => {
       const response = await iplasProxyApi.getStations({
         site,
         project,
-        token: getUserToken()
+        token: getUserToken(),
       })
       stations.value = response.data
       stationsCache.set(cacheKey, response.data)
       return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch stations'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch stations'
       throw err
     } finally {
       loadingStations.value = false
@@ -289,7 +297,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     project: string,
     station: string,
     startTime: Date | string,
-    endTime: Date | string
+    endTime: Date | string,
   ): Promise<string[]> {
     loadingDevices.value = true
     error.value = null
@@ -301,12 +309,12 @@ export const useIplasDataStore = defineStore('iplasData', () => {
         station,
         start_time: iplasProxyApi.formatDateForRequest(startTime),
         end_time: iplasProxyApi.formatDateForRequest(endTime),
-        token: getUserToken()
+        token: getUserToken(),
       })
       deviceIds.value = response.data
       return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch device IDs'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch device IDs'
       throw err
     } finally {
       loadingDevices.value = false
@@ -324,7 +332,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     deviceId: string,
     beginTime: Date | string,
     endTime: Date | string,
-    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL'
+    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
   ): Promise<CompactCsvTestItemData[]> {
     loadingTestItems.value = true
     error.value = null
@@ -339,7 +347,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
         begin_time: iplasProxyApi.formatDateForRequest(beginTime),
         end_time: iplasProxyApi.formatDateForRequest(endTime),
         test_status: testStatus,
-        token: getUserToken()
+        token: getUserToken(),
       })
 
       if (response.possibly_truncated) {
@@ -349,15 +357,15 @@ export const useIplasDataStore = defineStore('iplasData', () => {
       if (response.chunks_fetched && response.total_chunks) {
         chunkProgress.value = {
           fetched: response.chunks_fetched,
-          total: response.total_chunks
+          total: response.total_chunks,
         }
       }
 
       // Append to existing data
       compactTestItemData.value = [...compactTestItemData.value, ...response.data]
       return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch compact test items'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch compact test items'
       throw err
     } finally {
       loadingTestItems.value = false
@@ -372,7 +380,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     beginTime: Date | string,
     endTime: Date | string,
     testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
-    options: PaginationOptions = { page: 1, itemsPerPage: 25 }
+    options: PaginationOptions = { page: 1, itemsPerPage: 25 },
   ): Promise<PaginatedResult<CompactCsvTestItemData>> {
     loadingTestItems.value = true
     error.value = null
@@ -393,7 +401,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
         offset,
         sort_by: options.sortBy,
         sort_desc: options.sortDesc ?? true,
-        token: getUserToken()
+        token: getUserToken(),
       })
 
       const truncated = response.possibly_truncated ?? false
@@ -405,7 +413,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
       if (response.chunks_fetched && response.total_chunks) {
         progress = {
           fetched: response.chunks_fetched,
-          total: response.total_chunks
+          total: response.total_chunks,
         }
         chunkProgress.value = progress
       }
@@ -416,10 +424,10 @@ export const useIplasDataStore = defineStore('iplasData', () => {
         page: options.page,
         itemsPerPage: options.itemsPerPage,
         possiblyTruncated: truncated,
-        chunkProgress: progress
+        chunkProgress: progress,
       }
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch paginated test items'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch paginated test items'
       throw err
     } finally {
       loadingTestItems.value = false
@@ -432,12 +440,13 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     station: string,
     isn: string,
     testStartTime: string,
-    deviceId: string = 'ALL'
+    deviceId: string = 'ALL',
   ): Promise<TestItem[]> {
     const cacheKey = `${isn}_${testStartTime}`
 
     // Return cached if available
     if (testItemsCache.has(cacheKey)) {
+      // biome-ignore lint/style/noNonNullAssertion: checked via testItemsCache.has(cacheKey) above
       return testItemsCache.get(cacheKey)!
     }
 
@@ -452,14 +461,14 @@ export const useIplasDataStore = defineStore('iplasData', () => {
         isn,
         test_start_time: testStartTime,
         device_id: deviceId,
-        token: getUserToken()
+        token: getUserToken(),
       })
 
       const testItems = response.test_items as TestItem[]
       testItemsCache.set(cacheKey, testItems)
       return testItems
-    } catch (err: any) {
-      error.value = err.message || 'Failed to fetch record test items'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch record test items'
       throw err
     } finally {
       loadingTestItemsForRecord.delete(cacheKey)
@@ -473,12 +482,12 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     try {
       const response = await iplasProxyApi.searchByIsn({
         isn,
-        token: getUserToken()
+        token: getUserToken(),
       })
       isnSearchData.value = response.data
       return response.data
-    } catch (err: any) {
-      error.value = err.message || 'Failed to search by ISN'
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to search by ISN'
       throw err
     } finally {
       loadingIsnSearch.value = false
@@ -498,9 +507,10 @@ export const useIplasDataStore = defineStore('iplasData', () => {
         sortDesc: true,
         items: [],
         totalItems: 0,
-        loading: false
+        loading: false,
       }
     }
+    // biome-ignore lint/style/noNonNullAssertion: station entry is initialized above if missing
     return paginationByStation.value[stationName]!
   }
 
@@ -512,7 +522,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     beginTime: Date | string,
     endTime: Date | string,
     testStatus: 'PASS' | 'FAIL' | 'ALL',
-    options: { page: number; itemsPerPage: number; sortBy?: string; sortDesc?: boolean }
+    options: { page: number; itemsPerPage: number; sortBy?: string; sortDesc?: boolean },
   ): Promise<void> {
     const state = getStationPaginationState(stationName)
     state.loading = true
@@ -530,8 +540,8 @@ export const useIplasDataStore = defineStore('iplasData', () => {
           page: options.page,
           itemsPerPage: options.itemsPerPage,
           sortBy: options.sortBy || 'TestStartTime',
-          sortDesc: options.sortDesc ?? true
-        }
+          sortDesc: options.sortDesc ?? true,
+        },
       )
 
       state.page = result.page
@@ -554,7 +564,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
 
   /**
    * Stream test items using NDJSON for memory-efficient loading
-   * 
+   *
    * @param options - Streaming options
    * @returns Total records streamed
    */
@@ -591,13 +601,13 @@ export const useIplasDataStore = defineStore('iplasData', () => {
           begin_time: iplasProxyApi.formatDateForRequest(options.beginTime),
           end_time: iplasProxyApi.formatDateForRequest(options.endTime),
           test_status: options.testStatus,
-          token: getUserToken()
+          token: getUserToken(),
         },
         (record) => {
           collectedRecords.push(record)
           recordCount++
           options.onRecord?.(record)
-          
+
           // Update progress periodically
           if (recordCount % 100 === 0) {
             options.onProgress?.(recordCount, chunkProgress.value?.total || recordCount)
@@ -610,24 +620,25 @@ export const useIplasDataStore = defineStore('iplasData', () => {
           if (metadata.chunksFetched && metadata.totalChunks) {
             chunkProgress.value = {
               fetched: metadata.chunksFetched,
-              total: metadata.totalChunks
+              total: metadata.totalChunks,
             }
           }
         },
         (err) => {
-          error.value = err.message || 'Streaming failed'
+          error.value = getErrorMessage(err) || 'Streaming failed'
         },
-        activeStreamController.signal
+        activeStreamController.signal,
       )
 
       // Update store with all collected records
       compactTestItemData.value = [...compactTestItemData.value, ...collectedRecords]
-      
+
       return count
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        error.value = err.message || 'Streaming failed'
+    } catch (err: unknown) {
+      if (err instanceof Error && err.name === 'AbortError') {
+        throw err
       }
+      error.value = getErrorMessage(err) || 'Streaming failed'
       throw err
     } finally {
       loadingTestItems.value = false
@@ -666,15 +677,15 @@ export const useIplasDataStore = defineStore('iplasData', () => {
 
   /**
    * Stream test items directly to IndexedDB for memory-efficient storage
-   * 
+   *
    * This is the primary method for loading large datasets.
    * Data flows: Network → IndexedDB (disk) instead of Network → Memory
-   * 
+   *
    * Benefits:
    * - Constant memory usage regardless of dataset size
    * - Survives page refreshes (data persisted)
    * - Better performance for large datasets (50k+ records)
-   * 
+   *
    * @param request - Stream request parameters
    * @returns Number of records written to IndexedDB
    */
@@ -696,7 +707,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
           begin_time: iplasProxyApi.formatDateForRequest(request.beginTime),
           end_time: iplasProxyApi.formatDateForRequest(request.endTime),
           test_status: request.testStatus,
-          token: getUserToken()
+          token: getUserToken(),
         },
         onProgress: (progress: StreamProgress) => {
           streamStatus.recordsProcessed = progress.recordsProcessed
@@ -720,7 +731,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
           if (metadata.chunksFetched && metadata.totalChunks) {
             chunkProgress.value = {
               fetched: metadata.chunksFetched,
-              total: metadata.totalChunks
+              total: metadata.totalChunks,
             }
           }
         },
@@ -730,19 +741,19 @@ export const useIplasDataStore = defineStore('iplasData', () => {
           console.log(`[IplasStore] Streamed ${total} records to IndexedDB`)
         },
         onError: (err: Error) => {
-          streamStatus.error = err.message
+          streamStatus.error = getErrorMessage(err)
           streamStatus.isStreaming = false
-          error.value = err.message
+          error.value = getErrorMessage(err)
         },
         batchSize: 100,
-        progressInterval: 50
+        progressInterval: 50,
       })
 
       return recordsWritten
-    } catch (err: any) {
-      if (err.name !== 'AbortError') {
-        streamStatus.error = err.message || 'Streaming failed'
-        error.value = err.message || 'Streaming failed'
+    } catch (err: unknown) {
+      if (!(err instanceof Error && err.name === 'AbortError')) {
+        streamStatus.error = getErrorMessage(err) || 'Streaming failed'
+        error.value = getErrorMessage(err) || 'Streaming failed'
       }
       streamStatus.isStreaming = false
       throw err
@@ -759,10 +770,10 @@ export const useIplasDataStore = defineStore('iplasData', () => {
 
   /**
    * Query records from IndexedDB with pagination and filtering
-   * 
+   *
    * This replaces network-based pagination with local IndexedDB queries.
    * Much faster for filtering/sorting since data is already on disk.
-   * 
+   *
    * @param options - Query options (station, status, pagination, sorting)
    * @returns Paginated records from IndexedDB
    */
@@ -918,6 +929,6 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     clearPaginationState,
     clearAllData,
     isRecordLoading,
-    getTestItemsFromCache
+    getTestItemsFromCache,
   }
 })

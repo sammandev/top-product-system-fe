@@ -197,17 +197,30 @@
 
 <script setup lang="ts">
 // UPDATED: Complete rewrite of script section for new UX flow
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useIplasApi, type Station, type CsvTestItemData, type TestItem } from '@/features/dut_logs/composables/useIplasApi'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useScoring } from '@/features/dut/composables/useScoring'
-import { iplasProxyApi, type IplasIsnProjectInfo, type IplasIsnSearchRecord, type ExportRecord, type ExportTestItem } from '@/features/dut_logs/api/iplasProxyApi'
-import { lookupIsnsBatch, type SfistspIsnReferenceResponse } from '@/features/dut_logs/api/sfistspApi'
-import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
-import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
-import TopProductIplasRanking from './TopProductIplasRanking.vue'
-import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
-import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
 import type { IplasDownloadCsvLogInfo } from '@/features/dut_logs/api/iplasProxyApi'
+import {
+  type ExportRecord,
+  type ExportTestItem,
+  type IplasIsnProjectInfo,
+  type IplasIsnSearchRecord,
+  iplasProxyApi,
+} from '@/features/dut_logs/api/iplasProxyApi'
+import {
+  lookupIsnsBatch,
+  type SfistspIsnReferenceResponse,
+} from '@/features/dut_logs/api/sfistspApi'
+import {
+  type CsvTestItemData,
+  type Station,
+  type TestItem,
+  useIplasApi,
+} from '@/features/dut_logs/composables/useIplasApi'
+import { getErrorMessage } from '@/shared/utils'
+import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
+import type { TestItemInfo } from './StationConfigDialog.vue'
+import type { StationConfig } from './StationSelectionDialog.vue'
 
 // ============================================================================
 // State: ISN Input
@@ -258,13 +271,13 @@ const testItemNamesCache = ref<Map<string, TestItemInfo[]>>(new Map())
 // State: Data Fetching & Results
 // ============================================================================
 const {
-    loadingTestItems,
-    error,
-    testItemData,
-    fetchTestItemNamesCached,
-    downloadAttachments,
-    downloadCsvLogs,
-    clearTestItemData
+  loadingTestItems,
+  error,
+  testItemData,
+  fetchTestItemNamesCached,
+  downloadAttachments,
+  downloadCsvLogs,
+  clearTestItemData,
 } = useIplasApi()
 
 // Local loading state for ISN-based data processing
@@ -274,12 +287,12 @@ const processingIsnData = ref(false)
 // State: Scoring
 // ============================================================================
 const {
-    initializeConfigs,
-    calculateScores,
-    scoredRecords,
-    error: scoringError,
-    updateConfig: updateScoringConfig,
-    setScoringType
+  initializeConfigs,
+  calculateScores,
+  scoredRecords,
+  error: scoringError,
+  updateConfig: updateScoringConfig,
+  setScoringType,
 } = useScoring()
 const recordScores = ref<Record<string, number>>({})
 const calculatingScores = ref(false)
@@ -300,12 +313,12 @@ const exportingAll = ref(false)
 // Computed
 // ============================================================================
 const configuredStationsCount = computed(() => {
-    return Object.keys(stationConfigs.value).length
+  return Object.keys(stationConfigs.value).length
 })
 
 const currentStationConfig = computed(() => {
-    if (!selectedStationForConfig.value) return undefined
-    return stationConfigs.value[selectedStationForConfig.value.display_station_name]
+  if (!selectedStationForConfig.value) return undefined
+  return stationConfigs.value[selectedStationForConfig.value.display_station_name]
 })
 
 // ============================================================================
@@ -313,12 +326,12 @@ const currentStationConfig = computed(() => {
 // ============================================================================
 /** Generate export filename in format: {Site}_{Project}_{YYYYMMDD}_{hhmmss} */
 function generateExportFilename(): string {
-    const site = isnProjectInfo.value?.site || 'Unknown'
-    const project = isnProjectInfo.value?.project || 'Unknown'
-    const now = new Date()
-    const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
-    const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
-    return `${site}_${project}_${dateStr}_${timeStr}`
+  const site = isnProjectInfo.value?.site || 'Unknown'
+  const project = isnProjectInfo.value?.project || 'Unknown'
+  const now = new Date()
+  const dateStr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`
+  const timeStr = `${String(now.getHours()).padStart(2, '0')}${String(now.getMinutes()).padStart(2, '0')}${String(now.getSeconds()).padStart(2, '0')}`
+  return `${site}_${project}_${dateStr}_${timeStr}`
 }
 
 /**
@@ -327,152 +340,159 @@ function generateExportFilename(): string {
  * PSZ (China), PTY (Taiwan) = UTC+8
  */
 function getSiteTimezoneOffset(site: string): number {
-    const siteUpper = (site || '').toUpperCase()
-    if (siteUpper === 'PTB' || siteUpper === 'PVN') {
-        return 8 // UTC+8
-    } else if (siteUpper === 'PSZ' || siteUpper === 'PTY') {
-        return 8 // UTC+8
-    }
-    // Default to UTC+8 for unknown sites
-    return 8
+  const siteUpper = (site || '').toUpperCase()
+  if (siteUpper === 'PTB' || siteUpper === 'PVN') {
+    return 8 // UTC+8
+  } else if (siteUpper === 'PSZ' || siteUpper === 'PTY') {
+    return 8 // UTC+8
+  }
+  // Default to UTC+8 for unknown sites
+  return 8
 }
 
 /**
  * Format time for display in tables
  * Input: "2025-09-16 13:23:57%:z" (UTC+0 time from isn_search API)
  * Output: "2025/09/16, 21:23:57" (local time in display format)
- * 
+ *
  * CRITICAL: isn_search API returns UTC+0 time. We need to convert to local time.
  */
 function formatTimeForDisplay(timeStr: string, site: string): string {
-    if (!timeStr) return ''
+  if (!timeStr) return ''
 
-    // Clean the time string: remove %:z suffix
-    const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
+  // Clean the time string: remove %:z suffix
+  const cleanedTime = timeStr.replace('%:z', '').replace('T', ' ')
 
-    // Parse as UTC
-    const utcDate = new Date(cleanedTime.replace(' ', 'T') + 'Z')
+  // Parse as UTC
+  const utcDate = new Date(`${cleanedTime.replace(' ', 'T')}Z`)
 
-    // Get timezone offset based on site
-    const offsetHours = getSiteTimezoneOffset(site)
+  // Get timezone offset based on site
+  const offsetHours = getSiteTimezoneOffset(site)
 
-    // Add timezone offset
-    const localDate = new Date(utcDate.getTime() + offsetHours * 60 * 60 * 1000)
+  // Add timezone offset
+  const localDate = new Date(utcDate.getTime() + offsetHours * 60 * 60 * 1000)
 
-    // Format as YYYY/MM/DD, HH:mm:ss (consistent with iPLAS display format)
-    const year = localDate.getUTCFullYear()
-    const month = String(localDate.getUTCMonth() + 1).padStart(2, '0')
-    const day = String(localDate.getUTCDate()).padStart(2, '0')
-    const hours = String(localDate.getUTCHours()).padStart(2, '0')
-    const minutes = String(localDate.getUTCMinutes()).padStart(2, '0')
-    const seconds = String(localDate.getUTCSeconds()).padStart(2, '0')
+  // Format as YYYY/MM/DD, HH:mm:ss (consistent with iPLAS display format)
+  const year = localDate.getUTCFullYear()
+  const month = String(localDate.getUTCMonth() + 1).padStart(2, '0')
+  const day = String(localDate.getUTCDate()).padStart(2, '0')
+  const hours = String(localDate.getUTCHours()).padStart(2, '0')
+  const minutes = String(localDate.getUTCMinutes()).padStart(2, '0')
+  const seconds = String(localDate.getUTCSeconds()).padStart(2, '0')
 
-    return `${year}/${month}/${day}, ${hours}:${minutes}:${seconds}`
+  return `${year}/${month}/${day}, ${hours}:${minutes}:${seconds}`
 }
 
 // ============================================================================
 // Helper Functions: Transform ISN Search Data to CsvTestItemData
 // ============================================================================
 function transformIsnRecordToCsvData(record: IplasIsnSearchRecord): CsvTestItemData {
-    // Transform test items from ISN format to standard TestItem format
-    const testItems: TestItem[] = (record.test_item || []).map(item => ({
-        NAME: item.NAME,
-        STATUS: item.STATUS,
-        VALUE: item.VALUE,
-        UCL: item.UCL || '',
-        LCL: item.LCL || '',
-        CYCLE: item.CYCLE || ''
-    }))
+  // Transform test items from ISN format to standard TestItem format
+  const testItems: TestItem[] = (record.test_item || []).map((item) => ({
+    NAME: item.NAME,
+    STATUS: item.STATUS,
+    VALUE: item.VALUE,
+    UCL: item.UCL || '',
+    LCL: item.LCL || '',
+    CYCLE: item.CYCLE || '',
+  }))
 
-    // UPDATED: Convert UTC times from ISN API to local time for display
-    // ISN API returns UTC+0 time with %:z suffix, need to convert to local time
-    const localStartTime = formatTimeForDisplay(record.test_start_time, record.site)
-    const localEndTime = formatTimeForDisplay(record.test_end_time, record.site)
+  // UPDATED: Convert UTC times from ISN API to local time for display
+  // ISN API returns UTC+0 time with %:z suffix, need to convert to local time
+  const localStartTime = formatTimeForDisplay(record.test_start_time, record.site)
+  const localEndTime = formatTimeForDisplay(record.test_end_time, record.site)
 
-    return {
-        Site: record.site,
-        Project: record.project,
-        station: record.display_station_name,
-        TSP: record.station_name,
-        Model: '',
-        MO: record.mo || '',
-        Line: record.line,
-        ISN: record.isn,
-        DeviceId: record.device_id,
-        'Test Status': record.test_status,
-        'Test Start Time': localStartTime,
-        'Test end Time': localEndTime,
-        ErrorCode: record.error_code,
-        ErrorName: record.error_name || 'N/A',
-        TestItem: testItems
-    }
+  return {
+    Site: record.site,
+    Project: record.project,
+    station: record.display_station_name,
+    TSP: record.station_name,
+    Model: '',
+    MO: record.mo || '',
+    Line: record.line,
+    ISN: record.isn,
+    DeviceId: record.device_id,
+    'Test Status': record.test_status,
+    'Test Start Time': localStartTime,
+    'Test end Time': localEndTime,
+    ErrorCode: record.error_code,
+    ErrorName: record.error_name || 'N/A',
+    TestItem: testItems,
+  }
 }
 
 /** Extract unique stations from ISN search records */
 function extractStationsFromIsnRecords(records: IplasIsnSearchRecord[]): Station[] {
-    const stationMap = new Map<string, Station>()
+  const stationMap = new Map<string, Station>()
 
-    for (const record of records) {
-        if (!stationMap.has(record.display_station_name)) {
-            stationMap.set(record.display_station_name, {
-                station_name: record.station_name,
-                display_station_name: record.display_station_name,
-                order: 0,
-                data_source: 'ISN Search'
-            })
-        }
+  for (const record of records) {
+    if (!stationMap.has(record.display_station_name)) {
+      stationMap.set(record.display_station_name, {
+        station_name: record.station_name,
+        display_station_name: record.display_station_name,
+        order: 0,
+        data_source: 'ISN Search',
+      })
     }
+  }
 
-    return Array.from(stationMap.values())
+  return Array.from(stationMap.values())
 }
 
 /** Extract unique device IDs from ISN search records for a specific station */
-function extractDeviceIdsFromRecords(records: IplasIsnSearchRecord[], stationName: string): string[] {
-    const deviceIds = new Set<string>()
+function extractDeviceIdsFromRecords(
+  records: IplasIsnSearchRecord[],
+  stationName: string,
+): string[] {
+  const deviceIds = new Set<string>()
 
-    for (const record of records) {
-        // Match by display_station_name (primary) or station_name (fallback)
-        const stationMatches = record.display_station_name === stationName || record.station_name === stationName
-        if (stationMatches && record.device_id) {
-            deviceIds.add(record.device_id)
-        }
+  for (const record of records) {
+    // Match by display_station_name (primary) or station_name (fallback)
+    const stationMatches =
+      record.display_station_name === stationName || record.station_name === stationName
+    if (stationMatches && record.device_id) {
+      deviceIds.add(record.device_id)
     }
+  }
 
-    return Array.from(deviceIds).sort()
+  return Array.from(deviceIds).sort()
 }
 
 /** Extract unique test item names from ISN search records for a specific station */
-function extractTestItemsFromRecords(records: IplasIsnSearchRecord[], stationName: string): TestItemInfo[] {
-    const testItemMap = new Map<string, TestItemInfo>()
+function extractTestItemsFromRecords(
+  records: IplasIsnSearchRecord[],
+  stationName: string,
+): TestItemInfo[] {
+  const testItemMap = new Map<string, TestItemInfo>()
 
-    for (const record of records) {
-        // Match by display_station_name (primary) or station_name (fallback)
-        if (record.display_station_name !== stationName && record.station_name !== stationName) continue
+  for (const record of records) {
+    // Match by display_station_name (primary) or station_name (fallback)
+    if (record.display_station_name !== stationName && record.station_name !== stationName) continue
 
-        for (const item of record.test_item || []) {
-            if (!testItemMap.has(item.NAME)) {
-                // Determine if value or bin based on UCL/LCL presence and value format
-                const hasUcl = Boolean(item.UCL && item.UCL.trim())
-                const hasLcl = Boolean(item.LCL && item.LCL.trim())
-                const hasLimits = hasUcl || hasLcl
+    for (const item of record.test_item || []) {
+      if (!testItemMap.has(item.NAME)) {
+        // Determine if value or bin based on UCL/LCL presence and value format
+        const hasUcl = Boolean(item.UCL?.trim())
+        const hasLcl = Boolean(item.LCL?.trim())
+        const hasLimits = hasUcl || hasLcl
 
-                // It's a BIN item if no limits and value is a pass/fail type string
-                const binValues = ['PASS', 'FAIL', 'FAILURE', '1', '0', '-1']
-                const isBinValue = binValues.includes(String(item.VALUE).toUpperCase())
-                const isBin = !hasLimits && isBinValue
+        // It's a BIN item if no limits and value is a pass/fail type string
+        const binValues = ['PASS', 'FAIL', 'FAILURE', '1', '0', '-1']
+        const isBinValue = binValues.includes(String(item.VALUE).toUpperCase())
+        const isBin = !hasLimits && isBinValue
 
-                testItemMap.set(item.NAME, {
-                    name: item.NAME,
-                    isValue: !isBin,
-                    isBin: isBin,
-                    hasUcl: hasUcl,
-                    hasLcl: hasLcl
-                })
-            }
-        }
+        testItemMap.set(item.NAME, {
+          name: item.NAME,
+          isValue: !isBin,
+          isBin: isBin,
+          hasUcl: hasUcl,
+          hasLcl: hasLcl,
+        })
+      }
     }
+  }
 
-    return Array.from(testItemMap.values())
+  return Array.from(testItemMap.values())
 }
 
 // ============================================================================
@@ -484,46 +504,48 @@ function extractTestItemsFromRecords(records: IplasIsnSearchRecord[], stationNam
  * Returns a list of all unique identifiers (ISN, SSN, MAC) to search in iPLAS.
  */
 async function lookupSfistspReferences(isnList: string[]): Promise<string[]> {
-    loadingSfistsp.value = true
-    sfistspReferences.value = []
+  loadingSfistsp.value = true
+  sfistspReferences.value = []
 
-    try {
-        // Use batch lookup for efficiency
-        const batchResponse = await lookupIsnsBatch(isnList)
-        sfistspReferences.value = batchResponse.results
+  try {
+    // Use batch lookup for efficiency
+    const batchResponse = await lookupIsnsBatch(isnList)
+    sfistspReferences.value = batchResponse.results
 
-        // Collect only primary identifiers: isn (or isn_searched if isn not present), ssn, mac
-        // Do NOT collect isn_references to avoid searching all related ISNs
-        const identifiers = new Set<string>()
+    // Collect only primary identifiers: isn (or isn_searched if isn not present), ssn, mac
+    // Do NOT collect isn_references to avoid searching all related ISNs
+    const identifiers = new Set<string>()
 
-        for (const ref of batchResponse.results) {
-            // Add the primary ISN: use 'isn' if present, otherwise use 'isn_searched'
-            if (ref.isn && ref.isn.trim()) {
-                identifiers.add(ref.isn.trim())
-            } else if (ref.isn_searched && ref.isn_searched.trim()) {
-                // If 'isn' is not present, user's input is the primary ISN
-                identifiers.add(ref.isn_searched.trim())
-            }
-            // Add SSN if available
-            if (ref.ssn && ref.ssn.trim()) {
-                identifiers.add(ref.ssn.trim())
-            }
-            // Add MAC if available
-            if (ref.mac && ref.mac.trim()) {
-                identifiers.add(ref.mac.trim())
-            }
-            // NOTE: Intentionally not adding isn_references to limit search scope
-        }
-
-        console.info(`SFISTSP lookup found ${identifiers.size} unique identifiers from ${isnList.length} ISNs`)
-        return Array.from(identifiers)
-    } catch (err) {
-        console.warn('SFISTSP lookup failed, using original ISNs only:', err)
-        // If SFISTSP fails, just use the original ISNs
-        return isnList
-    } finally {
-        loadingSfistsp.value = false
+    for (const ref of batchResponse.results) {
+      // Add the primary ISN: use 'isn' if present, otherwise use 'isn_searched'
+      if (ref.isn?.trim()) {
+        identifiers.add(ref.isn.trim())
+      } else if (ref.isn_searched?.trim()) {
+        // If 'isn' is not present, user's input is the primary ISN
+        identifiers.add(ref.isn_searched.trim())
+      }
+      // Add SSN if available
+      if (ref.ssn?.trim()) {
+        identifiers.add(ref.ssn.trim())
+      }
+      // Add MAC if available
+      if (ref.mac?.trim()) {
+        identifiers.add(ref.mac.trim())
+      }
+      // NOTE: Intentionally not adding isn_references to limit search scope
     }
+
+    console.info(
+      `SFISTSP lookup found ${identifiers.size} unique identifiers from ${isnList.length} ISNs`,
+    )
+    return Array.from(identifiers)
+  } catch (err) {
+    console.warn('SFISTSP lookup failed, using original ISNs only:', err)
+    // If SFISTSP fails, just use the original ISNs
+    return isnList
+  } finally {
+    loadingSfistsp.value = false
+  }
 }
 
 /**
@@ -531,759 +553,789 @@ async function lookupSfistspReferences(isnList: string[]): Promise<string[]> {
  * Uses the /isn/stations or /isn-batch/stations endpoint.
  */
 async function fetchStationListFromIsn(identifier: string): Promise<Station[]> {
-    try {
-        const response = await iplasProxyApi.getStationsFromIsn({ isn: identifier })
+  try {
+    const response = await iplasProxyApi.getStationsFromIsn({ isn: identifier })
 
-        if (!response.isn_info.found) {
-            console.warn(`Station list not found for identifier: ${identifier}`)
-            return []
-        }
-
-        // Convert IplasStation to Station format with proper ordering
-        return response.stations.map(s => ({
-            station_name: s.station_name,
-            display_station_name: s.display_station_name,
-            order: s.order,
-            data_source: s.data_source
-        }))
-    } catch (err) {
-        console.warn(`Failed to fetch station list for identifier ${identifier}:`, err)
-        return []
+    if (!response.isn_info.found) {
+      console.warn(`Station list not found for identifier: ${identifier}`)
+      return []
     }
+
+    // Convert IplasStation to Station format with proper ordering
+    return response.stations.map((s) => ({
+      station_name: s.station_name,
+      display_station_name: s.display_station_name,
+      order: s.order,
+      data_source: s.data_source,
+    }))
+  } catch (err) {
+    console.warn(`Failed to fetch station list for identifier ${identifier}:`, err)
+    return []
+  }
 }
 
 async function handleLookupStations(): Promise<void> {
-    // Parse ISN list based on input mode
-    let isnList: string[] = []
+  // Parse ISN list based on input mode
+  let isnList: string[] = []
 
-    if (inputMode.value === 'multiple') {
-        isnList = selectedISNs.value.map(isn => String(isn).trim()).filter(isn => isn.length > 0)
+  if (inputMode.value === 'multiple') {
+    isnList = selectedISNs.value.map((isn) => String(isn).trim()).filter((isn) => isn.length > 0)
+  } else {
+    if (!searchIsn.value?.trim()) return
+    isnList = searchIsn.value
+      .split(/[\n,\s]+/)
+      .map((isn) => isn.trim())
+      .filter((isn) => isn && isn.length > 0)
+  }
+
+  if (isnList.length === 0) {
+    error.value = 'Please enter at least one valid ISN'
+    return
+  }
+
+  // Store parsed ISNs
+  parsedIsns.value = isnList
+
+  // Clear previous state
+  isnProjectInfo.value = null
+  availableStations.value = []
+  stationConfigs.value = {}
+  isnSearchRecords.value = []
+  allIdentifiersToSearch.value = []
+  sfistspReferences.value = []
+  clearTestItemData()
+  recordScores.value = {}
+
+  loadingStationLookup.value = true
+  error.value = null
+
+  try {
+    // STEP 1: Conditionally lookup SFISTSP to get all ISN, SSN, MAC references
+    let allIdentifiers: string[]
+    if (enableUnifiedSearch.value) {
+      allIdentifiers = await lookupSfistspReferences(isnList)
     } else {
-        if (!searchIsn.value?.trim()) return
-        isnList = searchIsn.value
-            .split(/[\n,\s]+/)
-            .map(isn => isn.trim())
-            .filter(isn => isn && isn.length > 0)
+      // Skip SFISTSP lookup - use original ISN list only
+      allIdentifiers = isnList
+    }
+    allIdentifiersToSearch.value = allIdentifiers
+
+    // STEP 2: Search for ALL identifiers in parallel and aggregate results
+    const searchPromises = allIdentifiers.map((identifier) =>
+      iplasProxyApi.searchByIsn({ isn: identifier }).catch((err) => {
+        console.warn(`Failed to search identifier "${identifier}":`, err)
+        return { data: [] as IplasIsnSearchRecord[] }
+      }),
+    )
+
+    const responses = await Promise.all(searchPromises)
+
+    // Aggregate all records from all ISN/SSN/MAC searches
+    const allRecords: IplasIsnSearchRecord[] = []
+    const foundIdentifiers: string[] = []
+    const notFoundIdentifiers: string[] = []
+
+    // Use a Set to deduplicate records by unique key (ISN + station + test_end_time)
+    const recordKeys = new Set<string>()
+
+    for (let i = 0; i < responses.length; i++) {
+      // biome-ignore lint/style/noNonNullAssertion: index i is within bounds of responses
+      const response = responses[i]!
+      // biome-ignore lint/style/noNonNullAssertion: allIdentifiers has same length as responses
+      const identifier = allIdentifiers[i]!
+
+      if (response.data.length === 0) {
+        notFoundIdentifiers.push(identifier)
+      } else {
+        foundIdentifiers.push(identifier)
+        for (const record of response.data) {
+          // Create unique key to avoid duplicates
+          const key = `${record.isn}_${record.display_station_name}_${record.test_end_time}`
+          if (!recordKeys.has(key)) {
+            recordKeys.add(key)
+            allRecords.push(record)
+          }
+        }
+      }
     }
 
-    if (isnList.length === 0) {
-        error.value = 'Please enter at least one valid ISN'
-        return
+    if (allRecords.length === 0) {
+      error.value = `No data found for identifier(s): ${allIdentifiers.slice(0, 5).join(', ')}${allIdentifiers.length > 5 ? '...' : ''}`
+      return
     }
 
-    // Store parsed ISNs
-    parsedIsns.value = isnList
+    // Log summary
+    console.info(
+      `Found ${allRecords.length} unique records from ${foundIdentifiers.length} identifiers (${notFoundIdentifiers.length} not found)`,
+    )
 
-    // Clear previous state
-    isnProjectInfo.value = null
-    availableStations.value = []
-    stationConfigs.value = {}
-    isnSearchRecords.value = []
-    allIdentifiersToSearch.value = []
-    sfistspReferences.value = []
-    clearTestItemData()
-    recordScores.value = {}
+    // Store the raw ISN search records for later use (aggregated and deduplicated)
+    isnSearchRecords.value = allRecords
 
-    loadingStationLookup.value = true
-    error.value = null
-
-    try {
-        // STEP 1: Conditionally lookup SFISTSP to get all ISN, SSN, MAC references
-        let allIdentifiers: string[]
-        if (enableUnifiedSearch.value) {
-            allIdentifiers = await lookupSfistspReferences(isnList)
-        } else {
-            // Skip SFISTSP lookup - use original ISN list only
-            allIdentifiers = isnList
-        }
-        allIdentifiersToSearch.value = allIdentifiers
-
-        // STEP 2: Search for ALL identifiers in parallel and aggregate results
-        const searchPromises = allIdentifiers.map(identifier =>
-            iplasProxyApi.searchByIsn({ isn: identifier }).catch(err => {
-                console.warn(`Failed to search identifier "${identifier}":`, err)
-                return { data: [] as IplasIsnSearchRecord[] }
-            })
-        )
-
-        const responses = await Promise.all(searchPromises)
-
-        // Aggregate all records from all ISN/SSN/MAC searches
-        const allRecords: IplasIsnSearchRecord[] = []
-        const foundIdentifiers: string[] = []
-        const notFoundIdentifiers: string[] = []
-
-        // Use a Set to deduplicate records by unique key (ISN + station + test_end_time)
-        const recordKeys = new Set<string>()
-
-        for (let i = 0; i < responses.length; i++) {
-            const response = responses[i]!
-            const identifier = allIdentifiers[i]!
-
-            if (response.data.length === 0) {
-                notFoundIdentifiers.push(identifier)
-            } else {
-                foundIdentifiers.push(identifier)
-                for (const record of response.data) {
-                    // Create unique key to avoid duplicates
-                    const key = `${record.isn}_${record.display_station_name}_${record.test_end_time}`
-                    if (!recordKeys.has(key)) {
-                        recordKeys.add(key)
-                        allRecords.push(record)
-                    }
-                }
-            }
-        }
-
-        if (allRecords.length === 0) {
-            error.value = `No data found for identifier(s): ${allIdentifiers.slice(0, 5).join(', ')}${allIdentifiers.length > 5 ? '...' : ''}`
-            return
-        }
-
-        // Log summary
-        console.info(`Found ${allRecords.length} unique records from ${foundIdentifiers.length} identifiers (${notFoundIdentifiers.length} not found)`)
-
-        // Store the raw ISN search records for later use (aggregated and deduplicated)
-        isnSearchRecords.value = allRecords
-
-        // Extract project info from first record (assume same project for all)
-        const firstRecord = allRecords[0]!
-        isnProjectInfo.value = {
-            isn: firstRecord.isn,
-            site: firstRecord.site,
-            project: firstRecord.project,
-            found: true
-        }
-
-        // STEP 3: Get station list with proper ordering from iPLAS API
-        // Use the first found identifier to get the station list
-        const stationsFromApi = await fetchStationListFromIsn(firstRecord.isn)
-
-        if (stationsFromApi.length > 0) {
-            // Use API station list with proper ordering
-            // But only keep stations that have records in the search results
-            const stationsWithRecords = new Set(allRecords.map(r => r.display_station_name))
-            availableStations.value = stationsFromApi
-                .filter(s => stationsWithRecords.has(s.display_station_name))
-                .sort((a, b) => a.order - b.order)
-
-            console.info(`Using ${availableStations.value.length} stations from API list (ordered)`)
-        } else {
-            // Fallback: Extract unique stations from search results (no ordering)
-            availableStations.value = extractStationsFromIsnRecords(allRecords)
-            console.info(`Fallback: Using ${availableStations.value.length} stations from search results`)
-        }
-
-        // Pre-cache test items and device IDs for all stations (performance optimization)
-        preCacheStationData(allRecords, isnProjectInfo.value)
-
-    } catch (err) {
-        console.error('ISN lookup failed:', err)
-        error.value = err instanceof Error ? err.message : 'Failed to lookup ISN'
-    } finally {
-        loadingStationLookup.value = false
+    // Extract project info from first record (assume same project for all)
+    // biome-ignore lint/style/noNonNullAssertion: allRecords.length > 0 is checked above
+    const firstRecord = allRecords[0]!
+    isnProjectInfo.value = {
+      isn: firstRecord.isn,
+      site: firstRecord.site,
+      project: firstRecord.project,
+      found: true,
     }
+
+    // STEP 3: Get station list with proper ordering from iPLAS API
+    // Use the first found identifier to get the station list
+    const stationsFromApi = await fetchStationListFromIsn(firstRecord.isn)
+
+    if (stationsFromApi.length > 0) {
+      // Use API station list with proper ordering
+      // But only keep stations that have records in the search results
+      const stationsWithRecords = new Set(allRecords.map((r) => r.display_station_name))
+      availableStations.value = stationsFromApi
+        .filter((s) => stationsWithRecords.has(s.display_station_name))
+        .sort((a, b) => a.order - b.order)
+
+      console.info(`Using ${availableStations.value.length} stations from API list (ordered)`)
+    } else {
+      // Fallback: Extract unique stations from search results (no ordering)
+      availableStations.value = extractStationsFromIsnRecords(allRecords)
+      console.info(`Fallback: Using ${availableStations.value.length} stations from search results`)
+    }
+
+    // Pre-cache test items and device IDs for all stations (performance optimization)
+    preCacheStationData(allRecords, isnProjectInfo.value)
+  } catch (err) {
+    console.error('ISN lookup failed:', err)
+    error.value = err instanceof Error ? getErrorMessage(err) : 'Failed to lookup ISN'
+  } finally {
+    loadingStationLookup.value = false
+  }
 }
 
 /** Pre-cache test items and device IDs for all stations from ISN search data */
-function preCacheStationData(records: IplasIsnSearchRecord[], projectInfo: IplasIsnProjectInfo): void {
-    // Group records by station
-    const stationNames = new Set<string>()
-    for (const record of records) {
-        stationNames.add(record.display_station_name)
+function preCacheStationData(
+  records: IplasIsnSearchRecord[],
+  projectInfo: IplasIsnProjectInfo,
+): void {
+  // Group records by station
+  const stationNames = new Set<string>()
+  for (const record of records) {
+    stationNames.add(record.display_station_name)
+  }
+
+  // Pre-cache for each station
+  for (const stationName of stationNames) {
+    const cacheKey = `${projectInfo.site}_${projectInfo.project}_${stationName}`
+
+    // Cache test items (only if not already cached)
+    if (!testItemNamesCache.value.has(cacheKey)) {
+      const testItems = extractTestItemsFromRecords(records, stationName)
+      if (testItems.length > 0) {
+        testItemNamesCache.value.set(cacheKey, testItems)
+      }
     }
+  }
 
-    // Pre-cache for each station
-    for (const stationName of stationNames) {
-        const cacheKey = `${projectInfo.site}_${projectInfo.project}_${stationName}`
-
-        // Cache test items (only if not already cached)
-        if (!testItemNamesCache.value.has(cacheKey)) {
-            const testItems = extractTestItemsFromRecords(records, stationName)
-            if (testItems.length > 0) {
-                testItemNamesCache.value.set(cacheKey, testItems)
-            }
-        }
-    }
-
-    console.info(`Pre-cached data for ${stationNames.size} stations from ISN search`)
+  console.info(`Pre-cached data for ${stationNames.size} stations from ISN search`)
 }
 
 // ============================================================================
 // Station Selection Dialog Functions
 // ============================================================================
 function openStationSelectionDialog(): void {
-    if (availableStations.value.length === 0) return
-    showStationSelectionDialog.value = true
+  if (availableStations.value.length === 0) return
+  showStationSelectionDialog.value = true
 }
 
 function handleStationClick(station: Station): void {
-    selectedStationForConfig.value = station
-    showStationConfigDialog.value = true
-    // Load device IDs and test items in parallel (performance optimization)
-    Promise.all([
-        loadDeviceIdsForStation(station),
-        loadTestItemsForStation(station)
-    ])
+  selectedStationForConfig.value = station
+  showStationConfigDialog.value = true
+  // Load device IDs and test items in parallel (performance optimization)
+  Promise.all([loadDeviceIdsForStation(station), loadTestItemsForStation(station)])
 }
 
 async function loadDeviceIdsForStation(station: Station): Promise<void> {
-    if (!isnProjectInfo.value || isnSearchRecords.value.length === 0) return
+  if (!isnProjectInfo.value || isnSearchRecords.value.length === 0) return
 
-    loadingCurrentStationDevices.value = true
-    deviceError.value = null
-    currentStationDeviceIds.value = []
+  loadingCurrentStationDevices.value = true
+  deviceError.value = null
+  currentStationDeviceIds.value = []
 
-    try {
-        // Extract device IDs from stored ISN search records (no API call needed)
-        currentStationDeviceIds.value = extractDeviceIdsFromRecords(
-            isnSearchRecords.value,
-            station.display_station_name
-        )
-    } catch (err: any) {
-        deviceError.value = err.message || 'Failed to extract device IDs'
-    } finally {
-        loadingCurrentStationDevices.value = false
-    }
+  try {
+    // Extract device IDs from stored ISN search records (no API call needed)
+    currentStationDeviceIds.value = extractDeviceIdsFromRecords(
+      isnSearchRecords.value,
+      station.display_station_name,
+    )
+  } catch (err: unknown) {
+    deviceError.value = getErrorMessage(err) || 'Failed to extract device IDs'
+  } finally {
+    loadingCurrentStationDevices.value = false
+  }
 }
 
 async function refreshCurrentStationDevices(): Promise<void> {
-    if (selectedStationForConfig.value) {
-        await loadDeviceIdsForStation(selectedStationForConfig.value)
-    }
+  if (selectedStationForConfig.value) {
+    await loadDeviceIdsForStation(selectedStationForConfig.value)
+  }
 }
 
 async function loadTestItemsForStation(station: Station, forceRefresh = false): Promise<void> {
-    if (!isnProjectInfo.value) return
+  if (!isnProjectInfo.value) return
 
-    const cacheKey = `${isnProjectInfo.value.site}_${isnProjectInfo.value.project}_${station.display_station_name}`
+  const cacheKey = `${isnProjectInfo.value.site}_${isnProjectInfo.value.project}_${station.display_station_name}`
 
-    // Check in-memory cache first
-    if (!forceRefresh) {
-        const cachedData = testItemNamesCache.value.get(cacheKey)
-        if (cachedData) {
-            currentStationTestItems.value = cachedData
-            return
-        }
+  // Check in-memory cache first
+  if (!forceRefresh) {
+    const cachedData = testItemNamesCache.value.get(cacheKey)
+    if (cachedData) {
+      currentStationTestItems.value = cachedData
+      return
     }
+  }
 
-    loadingCurrentStationTestItems.value = true
-    testItemsError.value = null
-    currentStationTestItems.value = []
+  loadingCurrentStationTestItems.value = true
+  testItemsError.value = null
+  currentStationTestItems.value = []
 
-    try {
-        // First try to extract from ISN search records (no API call needed)
-        if (isnSearchRecords.value.length > 0) {
-            const testItemInfos = extractTestItemsFromRecords(
-                isnSearchRecords.value,
-                station.display_station_name
-            )
+  try {
+    // First try to extract from ISN search records (no API call needed)
+    if (isnSearchRecords.value.length > 0) {
+      const testItemInfos = extractTestItemsFromRecords(
+        isnSearchRecords.value,
+        station.display_station_name,
+      )
 
-            if (testItemInfos.length > 0) {
-                currentStationTestItems.value = testItemInfos
-                testItemNamesCache.value.set(cacheKey, testItemInfos)
-                loadingCurrentStationTestItems.value = false
-                return
-            }
-        }
-
-        // Fallback: fetch from cached API if ISN records don't have data for this station
-        const response = await fetchTestItemNamesCached(
-            isnProjectInfo.value.site,
-            isnProjectInfo.value.project,
-            station.display_station_name,
-            true,         // Exclude BIN items
-            forceRefresh
-        )
-
-        const testItemInfos: TestItemInfo[] = response.test_items.map(item => ({
-            name: item.name,
-            isValue: item.is_value,
-            isBin: item.is_bin,
-            hasUcl: item.has_ucl,
-            hasLcl: item.has_lcl
-        }))
-
+      if (testItemInfos.length > 0) {
         currentStationTestItems.value = testItemInfos
         testItemNamesCache.value.set(cacheKey, testItemInfos)
-    } catch (err: any) {
-        testItemsError.value = err.message || 'Failed to load test items'
-    } finally {
         loadingCurrentStationTestItems.value = false
+        return
+      }
     }
+
+    // Fallback: fetch from cached API if ISN records don't have data for this station
+    const response = await fetchTestItemNamesCached(
+      isnProjectInfo.value.site,
+      isnProjectInfo.value.project,
+      station.display_station_name,
+      true, // Exclude BIN items
+      forceRefresh,
+    )
+
+    const testItemInfos: TestItemInfo[] = response.test_items.map((item) => ({
+      name: item.name,
+      isValue: item.is_value,
+      isBin: item.is_bin,
+      hasUcl: item.has_ucl,
+      hasLcl: item.has_lcl,
+    }))
+
+    currentStationTestItems.value = testItemInfos
+    testItemNamesCache.value.set(cacheKey, testItemInfos)
+  } catch (err: unknown) {
+    testItemsError.value = getErrorMessage(err) || 'Failed to load test items'
+  } finally {
+    loadingCurrentStationTestItems.value = false
+  }
 }
 
 async function refreshCurrentStationTestItems(): Promise<void> {
-    if (selectedStationForConfig.value && isnProjectInfo.value) {
-        const cacheKey = `${isnProjectInfo.value.site}_${isnProjectInfo.value.project}_${selectedStationForConfig.value.display_station_name}`
-        testItemNamesCache.value.delete(cacheKey)
-        await loadTestItemsForStation(selectedStationForConfig.value, true)
-    }
+  if (selectedStationForConfig.value && isnProjectInfo.value) {
+    const cacheKey = `${isnProjectInfo.value.site}_${isnProjectInfo.value.project}_${selectedStationForConfig.value.display_station_name}`
+    testItemNamesCache.value.delete(cacheKey)
+    await loadTestItemsForStation(selectedStationForConfig.value, true)
+  }
 }
 
 function handleStationSelectionConfirm(configs: Record<string, StationConfig>): void {
-    stationConfigs.value = { ...configs }
-    showStationSelectionDialog.value = false
+  stationConfigs.value = { ...configs }
+  showStationSelectionDialog.value = false
 
-    // UPDATED: Auto-fetch data and calculate scores after station selection confirmation
-    autoFetchAndScore()
+  // UPDATED: Auto-fetch data and calculate scores after station selection confirmation
+  autoFetchAndScore()
 }
 
 async function handleStationConfigSave(config: StationConfig): Promise<void> {
-    // Store total device count if deviceIds is empty (user selected "All")
-    const configWithCount = { ...config }
-    if (configWithCount.deviceIds.length === 0 && currentStationDeviceIds.value.length > 0) {
-        configWithCount.totalDeviceCount = currentStationDeviceIds.value.length
-    }
-    stationConfigs.value[config.displayName] = configWithCount
+  // Store total device count if deviceIds is empty (user selected "All")
+  const configWithCount = { ...config }
+  if (configWithCount.deviceIds.length === 0 && currentStationDeviceIds.value.length > 0) {
+    configWithCount.totalDeviceCount = currentStationDeviceIds.value.length
+  }
+  stationConfigs.value[config.displayName] = configWithCount
 
-    // UPDATED: Auto-fetch data and calculate scores after station config is saved
-    await autoFetchAndScore()
+  // UPDATED: Auto-fetch data and calculate scores after station config is saved
+  await autoFetchAndScore()
 }
 
 /** Automatically fetch data and calculate scores */
 async function autoFetchAndScore(): Promise<void> {
-    // Only auto-fetch if we have configured stations and project info
-    if (configuredStationsCount.value === 0 || !isnProjectInfo.value) {
-        return
-    }
+  // Only auto-fetch if we have configured stations and project info
+  if (configuredStationsCount.value === 0 || !isnProjectInfo.value) {
+    return
+  }
 
-    try {
-        // First, fetch the test item data
-        await fetchTestItems()
+  try {
+    // First, fetch the test item data
+    await fetchTestItems()
 
-        // Then calculate scores if we have data
-        if (testItemData.value.length > 0) {
-            await handleCalculateScores()
-        }
-    } catch (err) {
-        console.error('Auto-fetch and score failed:', err)
-        // Don't show error - user can manually retry
+    // Then calculate scores if we have data
+    if (testItemData.value.length > 0) {
+      await handleCalculateScores()
     }
+  } catch (err) {
+    console.error('Auto-fetch and score failed:', err)
+    // Don't show error - user can manually retry
+  }
 }
 
 function handleStationConfigRemove(displayName: string): void {
-    delete stationConfigs.value[displayName]
+  delete stationConfigs.value[displayName]
 }
 
 function editStationConfig(displayName: string): void {
-    const station = availableStations.value.find(s => s.display_station_name === displayName)
-    if (station) {
-        handleStationClick(station)
-    }
+  const station = availableStations.value.find((s) => s.display_station_name === displayName)
+  if (station) {
+    handleStationClick(station)
+  }
 }
 
 function removeStationConfig(displayName: string): void {
-    delete stationConfigs.value[displayName]
+  delete stationConfigs.value[displayName]
 }
 
 // ============================================================================
 // Data Fetching - Using stored ISN search data (no additional API calls)
 // ============================================================================
 async function fetchTestItems(): Promise<void> {
-    if (!isnProjectInfo.value || configuredStationsCount.value === 0 || isnSearchRecords.value.length === 0) return
+  if (
+    !isnProjectInfo.value ||
+    configuredStationsCount.value === 0 ||
+    isnSearchRecords.value.length === 0
+  )
+    return
 
-    processingIsnData.value = true
-    clearTestItemData()
-    recordScores.value = {}
+  processingIsnData.value = true
+  clearTestItemData()
+  recordScores.value = {}
 
-    try {
-        // Filter ISN search records based on configured stations
-        const configuredStationNames = new Set(Object.keys(stationConfigs.value))
+  try {
+    // Filter ISN search records based on configured stations
+    const configuredStationNames = new Set(Object.keys(stationConfigs.value))
 
-        let filteredRecords = isnSearchRecords.value.filter(record =>
-            configuredStationNames.has(record.display_station_name)
+    let filteredRecords = isnSearchRecords.value.filter((record) =>
+      configuredStationNames.has(record.display_station_name),
+    )
+
+    // Apply additional filters from station configs
+    for (const config of Object.values(stationConfigs.value)) {
+      // Filter by device IDs if specified
+      if (config.deviceIds && config.deviceIds.length > 0) {
+        const deviceIdSet = new Set(config.deviceIds)
+        filteredRecords = filteredRecords.filter(
+          (record) =>
+            record.display_station_name !== config.displayName || deviceIdSet.has(record.device_id),
         )
+      }
 
-        // Apply additional filters from station configs
-        for (const config of Object.values(stationConfigs.value)) {
-            // Filter by device IDs if specified
-            if (config.deviceIds && config.deviceIds.length > 0) {
-                const deviceIdSet = new Set(config.deviceIds)
-                filteredRecords = filteredRecords.filter(record =>
-                    record.display_station_name !== config.displayName ||
-                    deviceIdSet.has(record.device_id)
-                )
-            }
-
-            // Filter by test status if not ALL
-            if (config.testStatus !== 'ALL') {
-                filteredRecords = filteredRecords.filter(record =>
-                    record.display_station_name !== config.displayName ||
-                    record.test_status.toUpperCase() === config.testStatus
-                )
-            }
-        }
-
-        // Transform ISN records to CsvTestItemData format
-        const transformedRecords: CsvTestItemData[] = filteredRecords.map(record => {
-            const csvRecord = transformIsnRecordToCsvData(record)
-
-            // Apply test item filters if configured
-            const config = stationConfigs.value[record.display_station_name]
-            if (config?.selectedTestItems && config.selectedTestItems.length > 0) {
-                const testItemSet = new Set(config.selectedTestItems)
-                csvRecord.TestItem = csvRecord.TestItem.filter(item => testItemSet.has(item.NAME))
-            }
-
-            return csvRecord
-        })
-
-        // Update testItemData using the composable's internal array
-        // Since we can't directly set, push to the reactive array after clearing
-        for (const record of transformedRecords) {
-            testItemData.value.push(record)
-        }
-
-        // Trigger reactivity update
-        testItemData.value = [...testItemData.value]
-
-    } finally {
-        processingIsnData.value = false
+      // Filter by test status if not ALL
+      if (config.testStatus !== 'ALL') {
+        filteredRecords = filteredRecords.filter(
+          (record) =>
+            record.display_station_name !== config.displayName ||
+            record.test_status.toUpperCase() === config.testStatus,
+        )
+      }
     }
+
+    // Transform ISN records to CsvTestItemData format
+    const transformedRecords: CsvTestItemData[] = filteredRecords.map((record) => {
+      const csvRecord = transformIsnRecordToCsvData(record)
+
+      // Apply test item filters if configured
+      const config = stationConfigs.value[record.display_station_name]
+      if (config?.selectedTestItems && config.selectedTestItems.length > 0) {
+        const testItemSet = new Set(config.selectedTestItems)
+        csvRecord.TestItem = csvRecord.TestItem.filter((item) => testItemSet.has(item.NAME))
+      }
+
+      return csvRecord
+    })
+
+    // Update testItemData using the composable's internal array
+    // Since we can't directly set, push to the reactive array after clearing
+    for (const record of transformedRecords) {
+      testItemData.value.push(record)
+    }
+
+    // Trigger reactivity update
+    testItemData.value = [...testItemData.value]
+  } finally {
+    processingIsnData.value = false
+  }
 }
 
 // ============================================================================
 // Scoring Functions
 // ============================================================================
 async function handleCalculateScores(): Promise<void> {
-    if (testItemData.value.length === 0) return
+  if (testItemData.value.length === 0) return
 
-    calculatingScores.value = true
-    try {
-        const records = testItemData.value.map(record => ({
-            ISN: record.ISN || record.DeviceId,
-            DeviceId: record.DeviceId,
-            station: record.station,
-            'Test Start Time': record['Test Start Time'],
-            'Test end Time': record['Test end Time'],
-            TestItem: record.TestItem || []
-        }))
+  calculatingScores.value = true
+  try {
+    const records = testItemData.value.map((record) => ({
+      ISN: record.ISN || record.DeviceId,
+      DeviceId: record.DeviceId,
+      station: record.station,
+      'Test Start Time': record['Test Start Time'],
+      'Test end Time': record['Test end Time'],
+      TestItem: record.TestItem || [],
+    }))
 
-        // Initialize scoring configs from first record's test items
-        const firstRecord = testItemData.value[0]
-        if (firstRecord?.TestItem && firstRecord.TestItem.length > 0) {
-            initializeConfigs(firstRecord.TestItem)
-        }
-
-        // Apply user-selected scoring configs from station configurations
-        applyUserScoringConfigs()
-
-        await calculateScores(records)
-
-        // Map scored records back to score map
-        const newScores: Record<string, number> = {}
-        testItemData.value.forEach((record, index) => {
-            const isn = record.ISN || record.DeviceId || '-'
-            const station = record.station
-            const testEndTime = record['Test end Time'] || ''
-            const key = `${isn}_${station}_${testEndTime}`
-
-            const scoredRecord = scoredRecords.value[index]
-            if (scoredRecord) {
-                newScores[key] = scoredRecord.overallScore
-            }
-        })
-
-        recordScores.value = newScores
-    } catch (err) {
-        console.error('Failed to calculate scores:', err)
-        error.value = scoringError.value || 'Failed to calculate scores'
-    } finally {
-        calculatingScores.value = false
+    // Initialize scoring configs from first record's test items
+    const firstRecord = testItemData.value[0]
+    if (firstRecord?.TestItem && firstRecord.TestItem.length > 0) {
+      initializeConfigs(firstRecord.TestItem)
     }
+
+    // Apply user-selected scoring configs from station configurations
+    applyUserScoringConfigs()
+
+    await calculateScores(records)
+
+    // Map scored records back to score map
+    const newScores: Record<string, number> = {}
+    testItemData.value.forEach((record, index) => {
+      const isn = record.ISN || record.DeviceId || '-'
+      const station = record.station
+      const testEndTime = record['Test end Time'] || ''
+      const key = `${isn}_${station}_${testEndTime}`
+
+      const scoredRecord = scoredRecords.value[index]
+      if (scoredRecord) {
+        newScores[key] = scoredRecord.overallScore
+      }
+    })
+
+    recordScores.value = newScores
+  } catch (err) {
+    console.error('Failed to calculate scores:', err)
+    error.value = scoringError.value || 'Failed to calculate scores'
+  } finally {
+    calculatingScores.value = false
+  }
 }
 
 function applyUserScoringConfigs(): void {
-    for (const config of Object.values(stationConfigs.value)) {
-        if (!config.testItemScoringConfigs) continue
+  for (const config of Object.values(stationConfigs.value)) {
+    if (!config.testItemScoringConfigs) continue
 
-        for (const [testItemName, scoringConfig] of Object.entries(config.testItemScoringConfigs)) {
-            setScoringType(testItemName, scoringConfig.scoringType)
+    for (const [testItemName, scoringConfig] of Object.entries(config.testItemScoringConfigs)) {
+      setScoringType(testItemName, scoringConfig.scoringType)
 
-            const updates: { target?: number; weight?: number } = {}
-            if (scoringConfig.target !== undefined) {
-                updates.target = scoringConfig.target
-            }
-            if (scoringConfig.weight !== undefined) {
-                updates.weight = scoringConfig.weight
-            }
-            if (Object.keys(updates).length > 0) {
-                updateScoringConfig(testItemName, updates)
-            }
-        }
+      const updates: { target?: number; weight?: number } = {}
+      if (scoringConfig.target !== undefined) {
+        updates.target = scoringConfig.target
+      }
+      if (scoringConfig.weight !== undefined) {
+        updates.weight = scoringConfig.weight
+      }
+      if (Object.keys(updates).length > 0) {
+        updateScoringConfig(testItemName, updates)
+      }
     }
+  }
 }
 
 // ============================================================================
 // Record Normalization & Details
 // ============================================================================
 function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
-    const recordIndex = testItemData.value.findIndex(r =>
-        (r.ISN === record.ISN || r.DeviceId === record.DeviceId) &&
-        r.station === record.station &&
-        r['Test end Time'] === record['Test end Time']
-    )
-    const scoredRecord = recordIndex >= 0 ? scoredRecords.value[recordIndex] : null
+  const recordIndex = testItemData.value.findIndex(
+    (r) =>
+      (r.ISN === record.ISN || r.DeviceId === record.DeviceId) &&
+      r.station === record.station &&
+      r['Test end Time'] === record['Test end Time'],
+  )
+  const scoredRecord = recordIndex >= 0 ? scoredRecords.value[recordIndex] : null
 
-    const testItems: NormalizedTestItem[] = (record.TestItem || []).map((item: TestItem): NormalizedTestItem => {
-        const itemScore = scoredRecord?.testItemScores?.find(s => s.testItemName === item.NAME)
-        return {
-            NAME: item.NAME,
-            STATUS: item.STATUS,
-            VALUE: item.VALUE,
-            UCL: item.UCL,
-            LCL: item.LCL,
-            CYCLE: item.CYCLE || '',
-            score: itemScore?.score,
-            scoringType: itemScore?.scoringType,
-            deviation: itemScore?.deviation,
-            policy: itemScore?.policy ?? undefined,
-            target: itemScore?.target ?? undefined,
-            weight: itemScore?.weight ?? 1.0
-        }
-    })
+  const testItems: NormalizedTestItem[] = (record.TestItem || []).map(
+    (item: TestItem): NormalizedTestItem => {
+      const itemScore = scoredRecord?.testItemScores?.find((s) => s.testItemName === item.NAME)
+      return {
+        NAME: item.NAME,
+        STATUS: item.STATUS,
+        VALUE: item.VALUE,
+        UCL: item.UCL,
+        LCL: item.LCL,
+        CYCLE: item.CYCLE || '',
+        score: itemScore?.score,
+        scoringType: itemScore?.scoringType,
+        deviation: itemScore?.deviation,
+        policy: itemScore?.policy ?? undefined,
+        target: itemScore?.target ?? undefined,
+        weight: itemScore?.weight ?? 1.0,
+      }
+    },
+  )
 
-    return {
-        isn: record.ISN || '-',
-        deviceId: record.DeviceId || '-',
-        stationName: record.station,
-        displayStationName: record.TSP || record.station,
-        site: record.Site || '-',
-        project: record.Project || '-',
-        line: record.Line || '-',
-        errorCode: record.ErrorCode || '-',
-        errorName: record.ErrorName || '-',
-        testStatus: record['Test Status'] || '-',
-        testStartTime: record['Test Start Time'] || '-',
-        testEndTime: record['Test end Time'] || '-',
-        testItems,
-        overallScore: scoredRecord?.overallScore,
-        valueItemsScore: scoredRecord?.valueItemsScore,
-        binItemsScore: scoredRecord?.binItemsScore
-    }
+  return {
+    isn: record.ISN || '-',
+    deviceId: record.DeviceId || '-',
+    stationName: record.station,
+    displayStationName: record.TSP || record.station,
+    site: record.Site || '-',
+    project: record.Project || '-',
+    line: record.Line || '-',
+    errorCode: record.ErrorCode || '-',
+    errorName: record.ErrorName || '-',
+    testStatus: record['Test Status'] || '-',
+    testStartTime: record['Test Start Time'] || '-',
+    testEndTime: record['Test end Time'] || '-',
+    testItems,
+    overallScore: scoredRecord?.overallScore,
+    valueItemsScore: scoredRecord?.valueItemsScore,
+    binItemsScore: scoredRecord?.binItemsScore,
+  }
 }
 
 function handleRowClick(payload: { record: CsvTestItemData; stationName: string }): void {
-    const normalized = normalizeRecord(payload.record)
-    detailsRecord.value = normalized
-    showDetailsDialog.value = true
+  const normalized = normalizeRecord(payload.record)
+  detailsRecord.value = normalized
+  showDetailsDialog.value = true
 }
 
 // ============================================================================
 // Download Functions
 // ============================================================================
-async function handleDownloadRecord(payload: { record: CsvTestItemData; stationName: string }): Promise<void> {
-    if (!isnProjectInfo.value) return
+async function handleDownloadRecord(payload: {
+  record: CsvTestItemData
+  stationName: string
+}): Promise<void> {
+  if (!isnProjectInfo.value) return
 
-    const record = payload.record
+  const record = payload.record
+  const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+  // UPDATED: Time is already in local time format (YYYY-MM-DD HH:mm:ss) from transformIsnRecordToCsvData
+  // Just need to convert dashes to slashes for the download attachment API
+  const time =
+    (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+  const deviceid = record.DeviceId
+  // UPDATED: Use display_station_name (record.station) first, as expected by iPLAS API
+  const station = record.station || record.TSP
+
+  await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, [
+    { isn, time, deviceid, station },
+  ])
+
+  // Format time for CSV log download (needs .000 milliseconds)
+  const testEndTime = record['Test end Time'] || ''
+  const formattedEndTime = testEndTime.replace(/-/g, '/').replace('T', ' ')
+  const apiEndTime = formattedEndTime.includes('.') ? formattedEndTime : `${formattedEndTime}.000`
+
+  const csvLogInfo: IplasDownloadCsvLogInfo = {
+    site: isnProjectInfo.value.site,
+    project: isnProjectInfo.value.project,
+    station,
+    line: record.Line || 'NA',
+    model: record.Model || 'ALL',
+    deviceid,
+    isn,
+    test_end_time: apiEndTime,
+    data_source: 0,
+  }
+
+  await downloadCsvLogs([csvLogInfo])
+}
+
+async function handleBulkDownloadRecords(payload: {
+  records: CsvTestItemData[]
+  stationName: string
+}): Promise<void> {
+  if (!isnProjectInfo.value || payload.records.length === 0) return
+
+  const attachments = payload.records.map((record) => {
     const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-    // UPDATED: Time is already in local time format (YYYY-MM-DD HH:mm:ss) from transformIsnRecordToCsvData
-    // Just need to convert dashes to slashes for the download attachment API
-    const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+    // UPDATED: Time is already in local time format from transformIsnRecordToCsvData
+    const time =
+      (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
     const deviceid = record.DeviceId
     // UPDATED: Use display_station_name (record.station) first, as expected by iPLAS API
     const station = record.station || record.TSP
+    return { isn, time, deviceid, station }
+  })
 
-    await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, [{ isn, time, deviceid, station }])
+  await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, attachments)
 
-    // Format time for CSV log download (needs .000 milliseconds)
+  const csvLogInfos: IplasDownloadCsvLogInfo[] = payload.records.map((record) => {
+    const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+    const deviceid = record.DeviceId
+    // UPDATED: Use display_station_name (record.station) first
+    const station = record.station || record.TSP
     const testEndTime = record['Test end Time'] || ''
     const formattedEndTime = testEndTime.replace(/-/g, '/').replace('T', ' ')
     const apiEndTime = formattedEndTime.includes('.') ? formattedEndTime : `${formattedEndTime}.000`
 
-    const csvLogInfo: IplasDownloadCsvLogInfo = {
-        site: isnProjectInfo.value.site,
-        project: isnProjectInfo.value.project,
-        station,
-        line: record.Line || 'NA',
-        model: record.Model || 'ALL',
-        deviceid,
-        isn,
-        test_end_time: apiEndTime,
-        data_source: 0
+    return {
+      site: isnProjectInfo.value?.site ?? '',
+      project: isnProjectInfo.value?.project ?? '',
+      station,
+      line: record.Line || 'NA',
+      model: record.Model || 'ALL',
+      deviceid,
+      isn,
+      test_end_time: apiEndTime,
+      data_source: 0,
     }
+  })
 
-    await downloadCsvLogs([csvLogInfo])
-}
-
-async function handleBulkDownloadRecords(payload: { records: CsvTestItemData[]; stationName: string }): Promise<void> {
-    if (!isnProjectInfo.value || payload.records.length === 0) return
-
-    const attachments = payload.records.map(record => {
-        const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-        // UPDATED: Time is already in local time format from transformIsnRecordToCsvData
-        const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
-        const deviceid = record.DeviceId
-        // UPDATED: Use display_station_name (record.station) first, as expected by iPLAS API
-        const station = record.station || record.TSP
-        return { isn, time, deviceid, station }
-    })
-
-    await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, attachments)
-
-    const csvLogInfos: IplasDownloadCsvLogInfo[] = payload.records.map(record => {
-        const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-        const deviceid = record.DeviceId
-        // UPDATED: Use display_station_name (record.station) first
-        const station = record.station || record.TSP
-        const testEndTime = record['Test end Time'] || ''
-        const formattedEndTime = testEndTime.replace(/-/g, '/').replace('T', ' ')
-        const apiEndTime = formattedEndTime.includes('.') ? formattedEndTime : `${formattedEndTime}.000`
-
-        return {
-            site: isnProjectInfo.value!.site,
-            project: isnProjectInfo.value!.project,
-            station,
-            line: record.Line || 'NA',
-            model: record.Model || 'ALL',
-            deviceid,
-            isn,
-            test_end_time: apiEndTime,
-            data_source: 0
-        }
-    })
-
-    await downloadCsvLogs(csvLogInfos)
+  await downloadCsvLogs(csvLogInfos)
 }
 
 // ============================================================================
 // Export Handlers
 // ============================================================================
-async function handleExportRecords(payload: { records: CsvTestItemData[]; stationName: string }): Promise<void> {
-    if (payload.records.length === 0) return
+async function handleExportRecords(payload: {
+  records: CsvTestItemData[]
+  stationName: string
+}): Promise<void> {
+  if (payload.records.length === 0) return
 
-    // Transform CsvTestItemData to ExportRecord format
-    const exportRecords: ExportRecord[] = payload.records.map(record => {
-        const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-        const station = record.TSP || record.station
+  // Transform CsvTestItemData to ExportRecord format
+  const exportRecords: ExportRecord[] = payload.records.map((record) => {
+    const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+    const station = record.TSP || record.station
 
-        // Map test items from the TestItem array
-        const testItems: ExportTestItem[] = (record.TestItem || []).map(item => ({
-            NAME: item.NAME,
-            STATUS: item.STATUS || '',
-            VALUE: item.VALUE || '',
-            UCL: item.UCL || '',
-            LCL: item.LCL || ''
-        }))
+    // Map test items from the TestItem array
+    const testItems: ExportTestItem[] = (record.TestItem || []).map((item) => ({
+      NAME: item.NAME,
+      STATUS: item.STATUS || '',
+      VALUE: item.VALUE || '',
+      UCL: item.UCL || '',
+      LCL: item.LCL || '',
+    }))
 
-        return {
-            ISN: isn,
-            Project: record.Project || '',
-            Station: station,
-            DeviceId: record.DeviceId,
-            Line: record.Line || 'NA',
-            ErrorCode: record.ErrorCode || '',
-            ErrorName: record.ErrorName || '',
-            Type: 'ONLINE',
-            TestStartTime: record['Test Start Time'] || '',
-            TestEndTime: record['Test end Time'] || '',
-            TestItems: testItems
-        }
+    return {
+      ISN: isn,
+      Project: record.Project || '',
+      Station: station,
+      DeviceId: record.DeviceId,
+      Line: record.Line || 'NA',
+      ErrorCode: record.ErrorCode || '',
+      ErrorName: record.ErrorName || '',
+      Type: 'ONLINE',
+      TestStartTime: record['Test Start Time'] || '',
+      TestEndTime: record['Test end Time'] || '',
+      TestItems: testItems,
+    }
+  })
+
+  try {
+    const response = await iplasProxyApi.exportTestItems({
+      records: exportRecords,
+      format: 'xlsx', // Default to XLSX for multi-sheet support
+      filename_prefix: generateExportFilename(),
     })
 
-    try {
-        const response = await iplasProxyApi.exportTestItems({
-            records: exportRecords,
-            format: 'xlsx', // Default to XLSX for multi-sheet support
-            filename_prefix: generateExportFilename()
-        })
-
-        iplasProxyApi.downloadExportFile(response)
-    } catch (err) {
-        console.error('Export failed:', err)
-    }
+    iplasProxyApi.downloadExportFile(response)
+  } catch (err) {
+    console.error('Export failed:', err)
+  }
 }
 
 // Handle export ALL records to XLSX (all stations)
-async function handleExportAllRecords(payload: { records: CsvTestItemData[]; filenamePrefix: string }): Promise<void> {
-    if (payload.records.length === 0) return
+async function handleExportAllRecords(payload: {
+  records: CsvTestItemData[]
+  filenamePrefix: string
+}): Promise<void> {
+  if (payload.records.length === 0) return
 
-    exportingAll.value = true
-    try {
-        // Transform CsvTestItemData to ExportRecord format
-        const exportRecords: ExportRecord[] = payload.records.map(record => {
-            const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-            const station = record.TSP || record.station
+  exportingAll.value = true
+  try {
+    // Transform CsvTestItemData to ExportRecord format
+    const exportRecords: ExportRecord[] = payload.records.map((record) => {
+      const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+      const station = record.TSP || record.station
 
-            // Map test items from the TestItem array
-            const testItems: ExportTestItem[] = (record.TestItem || []).map(item => ({
-                NAME: item.NAME,
-                STATUS: item.STATUS || '',
-                VALUE: item.VALUE || '',
-                UCL: item.UCL || '',
-                LCL: item.LCL || ''
-            }))
+      // Map test items from the TestItem array
+      const testItems: ExportTestItem[] = (record.TestItem || []).map((item) => ({
+        NAME: item.NAME,
+        STATUS: item.STATUS || '',
+        VALUE: item.VALUE || '',
+        UCL: item.UCL || '',
+        LCL: item.LCL || '',
+      }))
 
-            return {
-                ISN: isn,
-                Project: record.Project || '',
-                Station: station,
-                DeviceId: record.DeviceId,
-                Line: record.Line || 'NA',
-                ErrorCode: record.ErrorCode || '',
-                ErrorName: record.ErrorName || '',
-                Type: 'ONLINE',
-                TestStartTime: record['Test Start Time'] || '',
-                TestEndTime: record['Test end Time'] || '',
-                TestItems: testItems
-            }
-        })
+      return {
+        ISN: isn,
+        Project: record.Project || '',
+        Station: station,
+        DeviceId: record.DeviceId,
+        Line: record.Line || 'NA',
+        ErrorCode: record.ErrorCode || '',
+        ErrorName: record.ErrorName || '',
+        Type: 'ONLINE',
+        TestStartTime: record['Test Start Time'] || '',
+        TestEndTime: record['Test end Time'] || '',
+        TestItems: testItems,
+      }
+    })
 
-        const response = await iplasProxyApi.exportTestItems({
-            records: exportRecords,
-            format: 'xlsx', // XLSX for multi-sheet support (each station is a sheet)
-            filename_prefix: generateExportFilename()
-        })
+    const response = await iplasProxyApi.exportTestItems({
+      records: exportRecords,
+      format: 'xlsx', // XLSX for multi-sheet support (each station is a sheet)
+      filename_prefix: generateExportFilename(),
+    })
 
-        iplasProxyApi.downloadExportFile(response)
-    } catch (err) {
-        console.error('Export all failed:', err)
-    } finally {
-        exportingAll.value = false
-    }
+    iplasProxyApi.downloadExportFile(response)
+  } catch (err) {
+    console.error('Export all failed:', err)
+  } finally {
+    exportingAll.value = false
+  }
 }
 
 async function handleDownloadFromDetails(): Promise<void> {
-    if (!detailsRecord.value || !isnProjectInfo.value) return
-    detailsDownloading.value = true
-    try {
-        const record = testItemData.value.find(r =>
-            (r.ISN === detailsRecord.value?.isn || r.DeviceId === detailsRecord.value?.deviceId) &&
-            (r.station === detailsRecord.value?.stationName || r.TSP === detailsRecord.value?.displayStationName)
-        )
-        if (record) {
-            await handleDownloadRecord({ record, stationName: record.station })
-        }
-    } finally {
-        detailsDownloading.value = false
+  if (!detailsRecord.value || !isnProjectInfo.value) return
+  detailsDownloading.value = true
+  try {
+    const record = testItemData.value.find(
+      (r) =>
+        (r.ISN === detailsRecord.value?.isn || r.DeviceId === detailsRecord.value?.deviceId) &&
+        (r.station === detailsRecord.value?.stationName ||
+          r.TSP === detailsRecord.value?.displayStationName),
+    )
+    if (record) {
+      await handleDownloadRecord({ record, stationName: record.station })
     }
+  } finally {
+    detailsDownloading.value = false
+  }
 }
 
 // ============================================================================
 // Clear & Lifecycle
 // ============================================================================
 function handleClearAll(): void {
-    searchIsn.value = ''
-    selectedISNs.value = []
-    parsedIsns.value = []
-    isnProjectInfo.value = null
-    availableStations.value = []
-    isnSearchRecords.value = []
-    stationConfigs.value = {}
-    clearTestItemData()
-    recordScores.value = {}
-    testItemNamesCache.value.clear()
+  searchIsn.value = ''
+  selectedISNs.value = []
+  parsedIsns.value = []
+  isnProjectInfo.value = null
+  availableStations.value = []
+  isnSearchRecords.value = []
+  stationConfigs.value = {}
+  clearTestItemData()
+  recordScores.value = {}
+  testItemNamesCache.value.clear()
 }
 
 onMounted(() => {
-    // No initialization needed - ISN search data is fetched on demand
+  // No initialization needed - ISN search data is fetched on demand
 })
 
 onUnmounted(() => {
-    clearTestItemData()
-    recordScores.value = {}
-    stationConfigs.value = {}
+  clearTestItemData()
+  recordScores.value = {}
+  stationConfigs.value = {}
 })
 </script>
 

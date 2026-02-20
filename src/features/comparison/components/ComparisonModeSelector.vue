@@ -94,8 +94,7 @@
               <v-icon>mdi-check-circle</v-icon>
             </template>
             <div class="text-caption">
-              Join keys configured: <strong>{{ modelValue.joinKeyA }}</strong> ↔ <strong>{{ modelValue.joinKeyB
-                }}</strong>
+              Join keys configured: <strong>{{ modelValue.joinKeyA }}</strong> ↔ <strong>{{ modelValue.joinKeyB }}</strong>
             </div>
           </v-alert>
 
@@ -146,7 +145,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 // Types
 export type ComparisonMode = 'columns' | 'rows' | 'both'
@@ -184,9 +183,7 @@ const needsJoinKeys = computed(() => {
 })
 
 const joinKeysMatched = computed(() => {
-  return needsJoinKeys.value &&
-    props.modelValue.joinKeyA &&
-    props.modelValue.joinKeyB
+  return needsJoinKeys.value && props.modelValue.joinKeyA && props.modelValue.joinKeyB
 })
 
 const joinKeyAError = computed(() => {
@@ -207,35 +204,35 @@ const joinKeyBError = computed(() => {
 function updateMode(mode: ComparisonMode) {
   emit('update:modelValue', {
     ...props.modelValue,
-    mode
+    mode,
   })
 }
 
 function updateJoinKeyA(value: string) {
   emit('update:modelValue', {
     ...props.modelValue,
-    joinKeyA: value
+    joinKeyA: value,
   })
 }
 
 function updateJoinKeyB(value: string) {
   emit('update:modelValue', {
     ...props.modelValue,
-    joinKeyB: value
+    joinKeyB: value,
   })
 }
 
 function updateCaseSensitive(value: boolean) {
   emit('update:modelValue', {
     ...props.modelValue,
-    caseSensitive: value
+    caseSensitive: value,
   })
 }
 
 function updateNumericTolerance(value: number) {
   emit('update:modelValue', {
     ...props.modelValue,
-    numericTolerance: value
+    numericTolerance: value,
   })
 }
 </script>

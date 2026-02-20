@@ -1,7 +1,11 @@
 // Test Data for Formula Selection System
 // This file provides mock data for testing formula selection functionality
 
-import type { FormulaType, FormulaSelection, CustomFormulaParams } from '../composables/useFormulaSelector'
+import type {
+  CustomFormulaParams,
+  FormulaSelection,
+  FormulaType,
+} from '../composables/useFormulaSelector'
 
 /**
  * Sample formula selections for testing
@@ -14,8 +18,8 @@ export const sampleFormulaSelections = {
     customParams: {
       latex: '\\text{Score} = a \\times x + b',
       parameters: { a: 1.5, b: 0.5 },
-      description: 'Linear scoring with custom parameters'
-    }
+      description: 'Linear scoring with custom parameters',
+    },
   } as FormulaSelection,
 
   // Test 2: Universal EXPONENTIAL formula
@@ -25,8 +29,8 @@ export const sampleFormulaSelections = {
     customParams: {
       latex: '\\text{Score} = a \\times e^{b \\times x}',
       parameters: { a: 10, b: 0.5 },
-      description: 'Exponential scoring'
-    }
+      description: 'Exponential scoring',
+    },
   } as FormulaSelection,
 
   // Test 3: Custom LaTeX formula
@@ -36,8 +40,8 @@ export const sampleFormulaSelections = {
     customParams: {
       latex: '10 \\times e^{-(x - target)^2 / (2 \\times \\sigma^2)}',
       parameters: { sigma: 1.5 },
-      description: 'Gaussian distribution scoring'
-    }
+      description: 'Gaussian distribution scoring',
+    },
   } as FormulaSelection,
 
   // Test 4: SIGMOID formula
@@ -47,21 +51,21 @@ export const sampleFormulaSelections = {
     customParams: {
       latex: '\\text{Score} = \\frac{L}{1 + e^{-k \\times (x - x_0)}}',
       parameters: { L: 10, k: 1.5, x0: 0 },
-      description: 'S-curve scoring'
-    }
+      description: 'S-curve scoring',
+    },
   } as FormulaSelection,
 
   // Test 5: Backend EVM formula
   backendEVM: {
     enabled: true,
-    formulaType: 'EVM' as FormulaType
+    formulaType: 'EVM' as FormulaType,
   } as FormulaSelection,
 
   // Test 6: System auto-detect (disabled)
   systemDefault: {
     enabled: false,
-    formulaType: 'SYSTEM' as FormulaType
-  } as FormulaSelection
+    formulaType: 'SYSTEM' as FormulaType,
+  } as FormulaSelection,
 }
 
 /**
@@ -74,7 +78,7 @@ export const sampleMeasurements = [
     lsl: -40,
     actual: -15.5,
     target: -20,
-    category: 'EVM'
+    category: 'EVM',
   },
   {
     test_item: 'WiFi_FREQ_2G4_CH1',
@@ -82,7 +86,7 @@ export const sampleMeasurements = [
     lsl: 2417.5,
     actual: 2420.0,
     target: 2420.0,
-    category: 'FREQ'
+    category: 'FREQ',
   },
   {
     test_item: 'WiFi_PER_5G_CH36_MCS7',
@@ -90,7 +94,7 @@ export const sampleMeasurements = [
     lsl: 0,
     actual: 2.5,
     target: 0,
-    category: 'PER'
+    category: 'PER',
   },
   {
     test_item: 'WiFi_PA_ADJ_PWR_2G4_CH1',
@@ -98,7 +102,7 @@ export const sampleMeasurements = [
     lsl: -5,
     actual: 0.5,
     target: 0,
-    category: 'PA'
+    category: 'PA',
   },
   {
     test_item: 'WiFi_POW_2G4_CH1_MCS0',
@@ -106,8 +110,8 @@ export const sampleMeasurements = [
     lsl: 15,
     actual: 17.5,
     target: 17.5,
-    category: 'POW'
-  }
+    category: 'POW',
+  },
 ]
 
 /**
@@ -117,27 +121,27 @@ export const sampleMeasurements = [
 export const expectedScores = {
   // LINEAR formula (a=1, b=0): Score = 1*x + 0
   linear: {
-    'WiFi_EVM_2G4_CH1_MCS0': -15.5,
-    'WiFi_FREQ_2G4_CH1': 2420.0,
-    'WiFi_PER_5G_CH36_MCS7': 2.5,
-    'WiFi_PA_ADJ_PWR_2G4_CH1': 0.5,
-    'WiFi_POW_2G4_CH1_MCS0': 17.5
+    WiFi_EVM_2G4_CH1_MCS0: -15.5,
+    WiFi_FREQ_2G4_CH1: 2420.0,
+    WiFi_PER_5G_CH36_MCS7: 2.5,
+    WiFi_PA_ADJ_PWR_2G4_CH1: 0.5,
+    WiFi_POW_2G4_CH1_MCS0: 17.5,
   },
 
   // EXPONENTIAL formula (a=10, b=0.5): Score = 10*e^(0.5*x)
   // Note: These are example approximations
   exponential: {
-    'WiFi_EVM_2G4_CH1_MCS0': 0.001, // Very small for negative values
-    'WiFi_FREQ_2G4_CH1': Infinity, // Very large for large positive values
-    'WiFi_PER_5G_CH36_MCS7': 35.8,
-    'WiFi_PA_ADJ_PWR_2G4_CH1': 12.8,
-    'WiFi_POW_2G4_CH1_MCS0': 19459.5
+    WiFi_EVM_2G4_CH1_MCS0: 0.001, // Very small for negative values
+    WiFi_FREQ_2G4_CH1: Infinity, // Very large for large positive values
+    WiFi_PER_5G_CH36_MCS7: 35.8,
+    WiFi_PA_ADJ_PWR_2G4_CH1: 12.8,
+    WiFi_POW_2G4_CH1_MCS0: 19459.5,
   },
 
   // Backend formulas would use their specific logic
   backendEVM: {
-    'WiFi_EVM_2G4_CH1_MCS0': 8.5 // Example: Good EVM score
-  }
+    WiFi_EVM_2G4_CH1_MCS0: 8.5, // Example: Good EVM score
+  },
 }
 
 /**
@@ -150,17 +154,17 @@ export const testScenarios = [
     universalFormula: sampleFormulaSelections.universalLinear,
     categoryFormulas: {},
     measurements: sampleMeasurements,
-    expectedBehavior: 'All measurements use linear formula'
+    expectedBehavior: 'All measurements use linear formula',
   },
   {
     name: 'Category-Specific EVM Override',
     description: 'Use backend EVM formula for EVM category, linear for others',
     universalFormula: sampleFormulaSelections.universalLinear,
     categoryFormulas: {
-      EVM: sampleFormulaSelections.backendEVM
+      EVM: sampleFormulaSelections.backendEVM,
     },
     measurements: sampleMeasurements,
-    expectedBehavior: 'EVM measurements use EVM formula, others use linear'
+    expectedBehavior: 'EVM measurements use EVM formula, others use linear',
   },
   {
     name: 'Custom Gaussian Formula',
@@ -168,7 +172,7 @@ export const testScenarios = [
     universalFormula: sampleFormulaSelections.customGaussian,
     categoryFormulas: {},
     measurements: sampleMeasurements,
-    expectedBehavior: 'All measurements use custom Gaussian formula'
+    expectedBehavior: 'All measurements use custom Gaussian formula',
   },
   {
     name: 'Mixed Mathematical Formulas',
@@ -176,10 +180,10 @@ export const testScenarios = [
     universalFormula: sampleFormulaSelections.sigmoid,
     categoryFormulas: {
       EVM: sampleFormulaSelections.universalExponential,
-      FREQ: sampleFormulaSelections.universalLinear
+      FREQ: sampleFormulaSelections.universalLinear,
     },
     measurements: sampleMeasurements,
-    expectedBehavior: 'EVM uses exponential, FREQ uses linear, others use sigmoid'
+    expectedBehavior: 'EVM uses exponential, FREQ uses linear, others use sigmoid',
   },
   {
     name: 'No Formula Override',
@@ -187,8 +191,8 @@ export const testScenarios = [
     universalFormula: sampleFormulaSelections.systemDefault,
     categoryFormulas: {},
     measurements: sampleMeasurements,
-    expectedBehavior: 'All measurements use backend auto-detect'
-  }
+    expectedBehavior: 'All measurements use backend auto-detect',
+  },
 ]
 
 /**
@@ -199,20 +203,20 @@ export const parameterTestCases = [
     formulaType: 'LINEAR' as FormulaType,
     validParameters: { a: 1.5, b: 0.5 },
     invalidParameters: { a: 'invalid', b: null },
-    edgeCases: { a: 0, b: 0 }
+    edgeCases: { a: 0, b: 0 },
   },
   {
     formulaType: 'EXPONENTIAL' as FormulaType,
     validParameters: { a: 10, b: 0.5 },
     invalidParameters: { a: -10, b: 'text' },
-    edgeCases: { a: 0, b: 0 }
+    edgeCases: { a: 0, b: 0 },
   },
   {
     formulaType: 'SIGMOID' as FormulaType,
     validParameters: { L: 10, k: 1.5, x0: 0 },
     invalidParameters: { L: -10, k: 0, x0: 'invalid' },
-    edgeCases: { L: 0, k: 0.01, x0: 0 }
-  }
+    edgeCases: { L: 0, k: 0.01, x0: 0 },
+  },
 ]
 
 /**
@@ -222,28 +226,28 @@ export const latexValidationTests = [
   {
     description: 'Valid simple formula',
     latex: '10 \\times x',
-    isValid: true
+    isValid: true,
   },
   {
     description: 'Valid complex formula with fractions',
     latex: '\\frac{10 \\times (x - target)}{usl - lsl}',
-    isValid: true
+    isValid: true,
   },
   {
     description: 'Valid exponential formula',
     latex: '10 \\times e^{-(x - target)^2 / \\sigma^2}',
-    isValid: true
+    isValid: true,
   },
   {
     description: 'Invalid - missing closing brace',
     latex: '10 \\times {x + 1',
-    isValid: false
+    isValid: false,
   },
   {
     description: 'Invalid - undefined variable',
     latex: '10 \\times unknown_var',
-    isValid: false
-  }
+    isValid: false,
+  },
 ]
 
 /**
@@ -253,33 +257,33 @@ export const uiTestCases = [
   {
     name: 'Open Formula Selector Dialog',
     action: 'click formula selector button',
-    expectedResult: 'Dialog opens showing universal and category sections'
+    expectedResult: 'Dialog opens showing universal and category sections',
   },
   {
     name: 'Select Universal Formula',
     action: 'enable universal toggle, select LINEAR from dropdown',
-    expectedResult: 'Formula preview shows, parameter inputs appear'
+    expectedResult: 'Formula preview shows, parameter inputs appear',
   },
   {
     name: 'Adjust Parameters',
     action: 'change parameter values in input fields',
-    expectedResult: 'Parameter values update, ready to apply'
+    expectedResult: 'Parameter values update, ready to apply',
   },
   {
     name: 'Apply Custom LaTeX',
     action: 'enter custom LaTeX in advanced section, click apply',
-    expectedResult: 'Custom formula set as universal, dialog closes'
+    expectedResult: 'Custom formula set as universal, dialog closes',
   },
   {
     name: 'View Score Breakdown',
     action: 'click measurement chip to open breakdown',
-    expectedResult: 'Shows both system and selected formula with LaTeX rendering'
+    expectedResult: 'Shows both system and selected formula with LaTeX rendering',
   },
   {
     name: 'Reset All Formulas',
     action: 'click reset button in formula dialog',
-    expectedResult: 'All formulas reset to system default'
-  }
+    expectedResult: 'All formulas reset to system default',
+  },
 ]
 
 /**
@@ -292,7 +296,7 @@ export const performanceTestData = {
     lsl: 0,
     actual: 5 + Math.random() * 5,
     target: 5,
-    category: ['EVM', 'FREQ', 'PER', 'PA'][i % 4]
+    category: ['EVM', 'FREQ', 'PER', 'PA'][i % 4],
   })),
 
   medium: Array.from({ length: 100 }, (_, i) => ({
@@ -301,7 +305,7 @@ export const performanceTestData = {
     lsl: 0,
     actual: 5 + Math.random() * 5,
     target: 5,
-    category: ['EVM', 'FREQ', 'PER', 'PA'][i % 4]
+    category: ['EVM', 'FREQ', 'PER', 'PA'][i % 4],
   })),
 
   large: Array.from({ length: 1000 }, (_, i) => ({
@@ -310,8 +314,8 @@ export const performanceTestData = {
     lsl: 0,
     actual: 5 + Math.random() * 5,
     target: 5,
-    category: ['EVM', 'FREQ', 'PER', 'PA'][i % 4]
-  }))
+    category: ['EVM', 'FREQ', 'PER', 'PA'][i % 4],
+  })),
 }
 
 /**
@@ -324,7 +328,7 @@ export function generateRandomMeasurement(category: string) {
     lsl: 0,
     actual: Math.random() * 10,
     target: 5,
-    category
+    category,
   }
 }
 
@@ -335,12 +339,12 @@ export function validateFormulaSelection(selection: FormulaSelection): boolean {
   if (!selection) return false
   if (typeof selection.enabled !== 'boolean') return false
   if (!selection.formulaType) return false
-  
+
   // If it's a CUSTOM formula, must have customParams
   if (selection.formulaType === 'CUSTOM' && !selection.customParams?.latex) {
     return false
   }
-  
+
   return true
 }
 
@@ -351,14 +355,14 @@ export function validateCustomParams(params: CustomFormulaParams): boolean {
   if (!params) return false
   if (!params.latex || typeof params.latex !== 'string') return false
   if (!params.parameters || typeof params.parameters !== 'object') return false
-  
+
   // Validate all parameter values are numbers
   for (const value of Object.values(params.parameters)) {
-    if (typeof value !== 'number' || isNaN(value)) {
+    if (typeof value !== 'number' || Number.isNaN(value)) {
       return false
     }
   }
-  
+
   return true
 }
 
@@ -373,5 +377,5 @@ export default {
   performanceTestData,
   generateRandomMeasurement,
   validateFormulaSelection,
-  validateCustomParams
+  validateCustomParams,
 }

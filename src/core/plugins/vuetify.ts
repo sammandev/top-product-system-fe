@@ -1,14 +1,14 @@
 /**
  * Vuetify Plugin Configuration
- * 
+ *
  * Material Design 3 component framework with custom themes
  * Using auto-import via vite-plugin-vuetify for optimal bundle size
  */
 
 import 'vuetify/styles/main.css'
 import '@mdi/font/css/materialdesignicons.css'
-import { createVuetify } from 'vuetify'
 import type { ThemeDefinition } from 'vuetify'
+import { createVuetify } from 'vuetify'
 import { aliases, mdi } from 'vuetify/iconsets/mdi'
 
 // NOTE: Components and directives are auto-imported by vite-plugin-vuetify
@@ -28,8 +28,8 @@ const customLightTheme: ThemeDefinition = {
     success: '#4CAF50',
     warning: '#FFC107',
     background: '#FAFAFA',
-    surface: '#FFFFFF'
-  }
+    surface: '#FFFFFF',
+  },
 }
 
 /**
@@ -46,8 +46,8 @@ const customDarkTheme: ThemeDefinition = {
     success: '#4CAF50',
     warning: '#FFC107',
     background: '#121212',
-    surface: '#1E1E1E'
-  }
+    surface: '#1E1E1E',
+  },
 }
 
 /**
@@ -59,40 +59,40 @@ export default createVuetify({
     defaultSet: 'mdi',
     aliases,
     sets: {
-      mdi
-    }
+      mdi,
+    },
   },
   theme: {
     defaultTheme: 'customLightTheme',
     themes: {
       customLightTheme,
-      customDarkTheme
-    }
+      customDarkTheme,
+    },
   },
   defaults: {
     VBtn: {
       color: 'primary',
       variant: 'elevated',
-      rounded: 'md'
+      rounded: 'md',
     },
     VCard: {
       elevation: 2,
-      rounded: 'lg'
+      rounded: 'lg',
     },
     VTextField: {
       variant: 'outlined',
-      density: 'comfortable'
+      density: 'comfortable',
     },
     VSelect: {
       variant: 'outlined',
-      density: 'comfortable'
+      density: 'comfortable',
     },
     VAutocomplete: {
       variant: 'outlined',
-      density: 'comfortable'
+      density: 'comfortable',
     },
     VDataTable: {
-      hover: true
-    }
-  }
+      hover: true,
+    },
+  },
 })

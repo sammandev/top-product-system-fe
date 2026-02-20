@@ -1,6 +1,6 @@
 /**
  * Parsing Feature Type Definitions
- * 
+ *
  * TypeScript interfaces for file upload, preview, parsing operations
  */
 
@@ -76,7 +76,7 @@ export interface UploadPreviewResponse {
   file_id: string
   filename: string
   columns: string[]
-  preview: Record<string, any>[]
+  preview: Record<string, unknown>[]
   row_count: number
   has_header: boolean
   delimiter?: string
@@ -87,7 +87,7 @@ export interface UploadPreviewResponse {
  */
 export interface ParseDataResponse {
   columns: string[]
-  rows: Record<string, any>[]
+  rows: Record<string, unknown>[]
   row_count: number
   column_count: number
 }
@@ -108,7 +108,7 @@ export interface FileMetadata {
 export interface ParsingError {
   code: string
   message: string
-  details?: Record<string, any>
+  details?: Record<string, unknown>
 }
 
 /**

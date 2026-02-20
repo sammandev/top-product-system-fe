@@ -144,7 +144,6 @@
 
 <script setup lang="ts">
 import { useDashboard } from '../composables'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
 
 const {
   loading,
@@ -157,7 +156,7 @@ const {
   storageTotal,
   storagePercentage,
   userName,
-  refreshStats
+  refreshStats,
 } = useDashboard()
 </script>
 

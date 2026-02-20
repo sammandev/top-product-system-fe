@@ -10,5 +10,5 @@ export const appConfigApi = {
   async update(payload: AppConfigUpdateRequest): Promise<AppConfig> {
     const { data } = await apiClient.put<AppConfig>('/api/app-config', payload)
     return data
-  }
+  },
 }

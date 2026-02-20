@@ -108,22 +108,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { RowSelection, RowSelectionMode } from '../types'
 
 // Props
 interface Props {
-    totalRows: number
-    modelValue?: RowSelection
+  totalRows: number
+  modelValue?: RowSelection
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    modelValue: () => ({ mode: 'all' })
+  modelValue: () => ({ mode: 'all' }),
 })
 
 // Emits
 const emit = defineEmits<{
-    'update:modelValue': [value: RowSelection]
+  'update:modelValue': [value: RowSelection]
 }>()
 
 // State (using 1-based display values)
@@ -135,136 +135,159 @@ const excludeInput = ref<string>('')
 
 // Computed
 const isRangeValid = computed(() => {
-    if (rangeStart.value === null || rangeEnd.value === null) return false
-    if (rangeStart.value < 1 || rangeEnd.value < 1) return false
-    if (rangeStart.value > props.totalRows || rangeEnd.value > props.totalRows) return false
-    return rangeStart.value <= rangeEnd.value
+  if (rangeStart.value === null || rangeEnd.value === null) return false
+  if (rangeStart.value < 1 || rangeEnd.value < 1) return false
+  if (rangeStart.value > props.totalRows || rangeEnd.value > props.totalRows) return false
+  return rangeStart.value <= rangeEnd.value
 })
 
 const selectedRowCount = computed(() => {
-    if (!isRangeValid.value || rangeStart.value === null || rangeEnd.value === null) return 0
-    return rangeEnd.value - rangeStart.value + 1
+  if (!isRangeValid.value || rangeStart.value === null || rangeEnd.value === null) return 0
+  return rangeEnd.value - rangeStart.value + 1
 })
 
 const selectedRowPercentage = computed(() => {
-    if (props.totalRows === 0) return 0
-    return Math.round((selectedRowCount.value / props.totalRows) * 100)
+  if (props.totalRows === 0) return 0
+  return Math.round((selectedRowCount.value / props.totalRows) * 100)
 })
 
 const rangeErrorMessage = computed(() => {
-    if (rangeStart.value === null || rangeEnd.value === null) {
-        return 'Please enter both start and end row numbers'
-    }
-    if (rangeStart.value < 1 || rangeEnd.value < 1) {
-        return 'Row numbers must be 1 or greater'
-    }
-    if (rangeStart.value > props.totalRows || rangeEnd.value > props.totalRows) {
-        return `Row numbers must not exceed ${props.totalRows}`
-    }
-    if (rangeStart.value > rangeEnd.value) {
-        return 'Start row must be less than or equal to end row'
-    }
-    return ''
+  if (rangeStart.value === null || rangeEnd.value === null) {
+    return 'Please enter both start and end row numbers'
+  }
+  if (rangeStart.value < 1 || rangeEnd.value < 1) {
+    return 'Row numbers must be 1 or greater'
+  }
+  if (rangeStart.value > props.totalRows || rangeEnd.value > props.totalRows) {
+    return `Row numbers must not exceed ${props.totalRows}`
+  }
+  if (rangeStart.value > rangeEnd.value) {
+    return 'Start row must be less than or equal to end row'
+  }
+  return ''
 })
 
 // Validation
 function validateRangeStart(value: number | null): boolean | string {
-    if (value === null) return 'Start row is required'
-    if (value < 1) return 'Row number must be 1 or greater'
-    if (value > props.totalRows) return `Row number must not exceed ${props.totalRows}`
-    return true
+  if (value === null) return 'Start row is required'
+  if (value < 1) return 'Row number must be 1 or greater'
+  if (value > props.totalRows) return `Row number must not exceed ${props.totalRows}`
+  return true
 }
 
 function validateRangeEnd(value: number | null): boolean | string {
-    if (value === null) return 'End row is required'
-    if (value < 1) return 'Row number must be 1 or greater'
-    if (value > props.totalRows) return `Row number must not exceed ${props.totalRows}`
-    if (rangeStart.value !== null && value < rangeStart.value) {
-        return 'End row must be greater than or equal to start row'
-    }
-    return true
+  if (value === null) return 'End row is required'
+  if (value < 1) return 'Row number must be 1 or greater'
+  if (value > props.totalRows) return `Row number must not exceed ${props.totalRows}`
+  if (rangeStart.value !== null && value < rangeStart.value) {
+    return 'End row must be greater than or equal to start row'
+  }
+  return true
 }
 
 // Excluded Rows Functions (handles 1-based input, converts to 0-based for backend)
 function parseExcludeInput(input: string): number[] {
-    const indices: number[] = []
-    const parts = input.split(',').map(p => p.trim()).filter(p => p)
+  const indices: number[] = []
+  const parts = input
+    .split(',')
+    .map((p) => p.trim())
+    .filter((p) => p)
 
-    for (const part of parts) {
-        if (part.includes('-')) {
-            // Range like "5-10" (1-based input)
-            const rangeParts = part.split('-')
-            const start = parseInt(rangeParts[0]?.trim() || '')
-            const end = parseInt(rangeParts[1]?.trim() || '')
+  for (const part of parts) {
+    if (part.includes('-')) {
+      // Range like "5-10" (1-based input)
+      const rangeParts = part.split('-')
+      const start = parseInt(rangeParts[0]?.trim() || '', 10)
+      const end = parseInt(rangeParts[1]?.trim() || '', 10)
 
-            if (!isNaN(start) && !isNaN(end) && start <= end) {
-                for (let i = start; i <= end; i++) {
-                    const zeroBasedIndex = i - 1 // Convert to 0-based
-                    if (zeroBasedIndex >= 0 && zeroBasedIndex < props.totalRows && !indices.includes(zeroBasedIndex)) {
-                        indices.push(zeroBasedIndex)
-                    }
-                }
-            }
-        } else {
-            // Single number like "5" (1-based input)
-            const num = parseInt(part)
-            if (!isNaN(num)) {
-                const zeroBasedIndex = num - 1 // Convert to 0-based
-                if (zeroBasedIndex >= 0 && zeroBasedIndex < props.totalRows && !indices.includes(zeroBasedIndex)) {
-                    indices.push(zeroBasedIndex)
-                }
-            }
+      if (!Number.isNaN(start) && !Number.isNaN(end) && start <= end) {
+        for (let i = start; i <= end; i++) {
+          const zeroBasedIndex = i - 1 // Convert to 0-based
+          if (
+            zeroBasedIndex >= 0 &&
+            zeroBasedIndex < props.totalRows &&
+            !indices.includes(zeroBasedIndex)
+          ) {
+            indices.push(zeroBasedIndex)
+          }
         }
+      }
+    } else {
+      // Single number like "5" (1-based input)
+      const num = parseInt(part, 10)
+      if (!Number.isNaN(num)) {
+        const zeroBasedIndex = num - 1 // Convert to 0-based
+        if (
+          zeroBasedIndex >= 0 &&
+          zeroBasedIndex < props.totalRows &&
+          !indices.includes(zeroBasedIndex)
+        ) {
+          indices.push(zeroBasedIndex)
+        }
+      }
     }
+  }
 
-    return indices.sort((a, b) => a - b)
+  return indices.sort((a, b) => a - b)
 }
 
 function applyExcludedRows() {
-    if (!excludeInput.value) return
+  if (!excludeInput.value) return
 
-    const newIndices = parseExcludeInput(excludeInput.value)
-    excludeIndices.value = [...new Set([...excludeIndices.value, ...newIndices])].sort((a, b) => a - b)
-    excludeInput.value = ''
+  const newIndices = parseExcludeInput(excludeInput.value)
+  excludeIndices.value = [...new Set([...excludeIndices.value, ...newIndices])].sort(
+    (a, b) => a - b,
+  )
+  excludeInput.value = ''
 }
 
 function removeExcludedRow(index: number) {
-    excludeIndices.value.splice(index, 1)
+  excludeIndices.value.splice(index, 1)
 }
 
 // Watchers (Convert 1-based UI to 0-based backend)
-watch([selectionMode, rangeStart, rangeEnd, excludeIndices], () => {
+watch(
+  [selectionMode, rangeStart, rangeEnd, excludeIndices],
+  () => {
     const selection: RowSelection = {
-        mode: selectionMode.value
+      mode: selectionMode.value,
     }
 
     if (selectionMode.value === 'range' && isRangeValid.value) {
-        selection.range = {
-            start: rangeStart.value! - 1, // Convert 1-based to 0-based
-            end: rangeEnd.value! - 1       // Convert 1-based to 0-based
-        }
+      selection.range = {
+        // biome-ignore lint/style/noNonNullAssertion: isRangeValid guarantees rangeStart is not null
+        start: rangeStart.value! - 1, // Convert 1-based to 0-based
+        // biome-ignore lint/style/noNonNullAssertion: isRangeValid guarantees rangeEnd is not null
+        end: rangeEnd.value! - 1, // Convert 1-based to 0-based
+      }
     }
 
     if (selectionMode.value === 'exclude') {
-        selection.exclude = excludeIndices.value // Already 0-based internally
+      selection.exclude = excludeIndices.value // Already 0-based internally
     }
 
     emit('update:modelValue', selection)
-}, { deep: true })
+  },
+  { deep: true },
+)
 
 // Initialize from modelValue (Convert 0-based backend to 1-based UI)
-watch(() => props.modelValue, (newValue) => {
+watch(
+  () => props.modelValue,
+  (newValue) => {
     if (newValue) {
-        selectionMode.value = newValue.mode
-        if (newValue.range) {
-            rangeStart.value = newValue.range.start + 1 // Convert 0-based to 1-based
-            rangeEnd.value = newValue.range.end + 1     // Convert 0-based to 1-based
-        }
-        if (newValue.exclude) {
-            excludeIndices.value = newValue.exclude // Already 0-based
-        }
+      selectionMode.value = newValue.mode
+      if (newValue.range) {
+        rangeStart.value = newValue.range.start + 1 // Convert 0-based to 1-based
+        rangeEnd.value = newValue.range.end + 1 // Convert 0-based to 1-based
+      }
+      if (newValue.exclude) {
+        excludeIndices.value = newValue.exclude // Already 0-based
+      }
     }
-}, { immediate: true })
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>

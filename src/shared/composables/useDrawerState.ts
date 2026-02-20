@@ -1,31 +1,31 @@
 /**
  * Drawer State Composable
- * 
+ *
  * Manages navigation drawer state with localStorage persistence.
  * Handles both drawer visibility (open/closed) and rail mode (collapsed/expanded).
  */
 
-import { ref, watch, onMounted } from 'vue'
+import { onMounted, ref, watch } from 'vue'
 
 const STORAGE_KEYS = {
   DRAWER: 'app_drawer_open',
   RAIL: 'app_drawer_rail',
-  THEME: 'app_theme'
+  THEME: 'app_theme',
 } as const
 
 /**
  * Drawer state composable with persistence
- * 
+ *
  * State combinations:
  * - drawer=true, rail=false: Drawer open and expanded (normal mode)
  * - drawer=true, rail=true: Drawer open and collapsed (rail mode, hover to expand)
  * - drawer=false, rail=false: Drawer completely hidden
  * - drawer=false, rail=true: Drawer completely hidden (rail state preserved for when reopened)
- * 
+ *
  * @example
  * ```ts
  * const { drawer, rail, toggleDrawer, toggleRail } = useDrawerState()
- * 
+ *
  * // State automatically persists to localStorage
  * // and restores on page load
  * ```
@@ -111,17 +111,17 @@ export function useDrawerState(initialDrawer = true, initialRail = false) {
     toggleRail,
     reset,
     loadState,
-    saveState
+    saveState,
   }
 }
 
 /**
  * Theme persistence composable
- * 
+ *
  * @example
  * ```ts
  * const { saveTheme, loadTheme } = useThemeState()
- * 
+ *
  * saveTheme('dark')
  * const savedTheme = loadTheme() // Returns 'dark'
  * ```
@@ -146,6 +146,6 @@ export function useThemeState() {
 
   return {
     saveTheme,
-    loadTheme
+    loadTheme,
   }
 }

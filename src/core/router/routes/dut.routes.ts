@@ -1,6 +1,6 @@
 /**
  * DUT Management Routes
- * 
+ *
  * Routes for DUT-related features (Top Products, Analysis, etc.)
  */
 
@@ -18,9 +18,9 @@ export const dutRoutes: RouteRecordRaw[] = [
       breadcrumb: [
         { title: 'Dashboard', to: '/dashboard' },
         { title: 'DUT Management', disabled: true },
-        { title: 'Top Products', disabled: true }
-      ]
-    }
+        { title: 'Top Products', disabled: true },
+      ],
+    },
   },
   {
     path: '/dut/analysis',
@@ -33,9 +33,9 @@ export const dutRoutes: RouteRecordRaw[] = [
       breadcrumb: [
         { title: 'Dashboard', to: '/dashboard' },
         { title: 'DUT Management', disabled: true },
-        { title: 'Analysis', disabled: true }
-      ]
-    }
+        { title: 'Analysis', disabled: true },
+      ],
+    },
   },
   {
     path: '/dut/top-products/pa-trend',
@@ -48,9 +48,9 @@ export const dutRoutes: RouteRecordRaw[] = [
       breadcrumb: [
         { title: 'Dashboard', to: '/dashboard' },
         { title: 'DUT Management', disabled: true },
-        { title: 'PA Trend', disabled: true }
-      ]
-    }
+        { title: 'PA Trend', disabled: true },
+      ],
+    },
   },
   {
     path: '/dut/data-explorer',
@@ -63,15 +63,15 @@ export const dutRoutes: RouteRecordRaw[] = [
       breadcrumb: [
         { title: 'Dashboard', to: '/dashboard' },
         { title: 'DUT Management', disabled: true },
-        { title: 'Data Explorer', disabled: true }
-      ]
-    }
+        { title: 'Data Explorer', disabled: true },
+      ],
+    },
   },
   // iPLAS Integration Routes - Redirect to combined Data Explorer
   {
     path: '/iplas/explorer',
     name: 'IplasExplorer',
-    redirect: '/dut/data-explorer'
+    redirect: '/dut/data-explorer',
   },
   // {
   //   path: '/iplas/download',

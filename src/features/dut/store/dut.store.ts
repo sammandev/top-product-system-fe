@@ -1,21 +1,19 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
-import { dutApi } from '../api'
-import type { 
-  DUTSite, 
-  DUTModel, 
-  DUTStation, 
-  TopProductsResponse
-} from '@/core/types'
 import type {
-  PATrendRequest,
-  PATrendStationDataSchema,
-  PADiffStationDataSchema
-} from '@/types/api'
+  DUTModel,
+  DUTSite,
+  DUTStation,
+  TopProductsRequest,
+  TopProductsResponse,
+} from '@/core/types'
+import { getApiErrorDetail } from '@/shared/utils'
+import type { PADiffStationDataSchema, PATrendRequest, PATrendStationDataSchema } from '@/types/api'
+import { dutApi } from '../api'
 
 /**
  * DUT Management Store
- * 
+ *
  * Manages DUT (Device Under Test) data including sites, models, stations, and analysis results.
  * Provides centralized state management for DUT-related features.
  */
@@ -36,7 +34,7 @@ export const useDUTStore = defineStore('dut', () => {
   const paTrendError = ref<string | null>(null)
 
   // Actions
-  
+
   /**
    * Fetch all available DUT test sites
    */
@@ -46,8 +44,8 @@ export const useDUTStore = defineStore('dut', () => {
 
     try {
       sites.value = await dutApi.getSites()
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Failed to fetch sites'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err, 'Failed to fetch sites')
       throw err
     } finally {
       loading.value = false
@@ -64,8 +62,8 @@ export const useDUTStore = defineStore('dut', () => {
 
     try {
       models.value = await dutApi.getModels(siteId)
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Failed to fetch models'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err, 'Failed to fetch models')
       throw err
     } finally {
       loading.value = false
@@ -82,8 +80,8 @@ export const useDUTStore = defineStore('dut', () => {
 
     try {
       stations.value = await dutApi.getStations(modelId)
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Failed to fetch stations'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err, 'Failed to fetch stations')
       throw err
     } finally {
       loading.value = false
@@ -95,15 +93,15 @@ export const useDUTStore = defineStore('dut', () => {
    * @param stationId - Station ID
    * @param params - Query parameters for analysis
    */
-  async function fetchTopProducts(stationId: string | number, params: any) {
+  async function fetchTopProducts(stationId: string | number, params: TopProductsRequest) {
     loading.value = true
     error.value = null
 
     try {
       topProducts.value = await dutApi.getTopProducts(stationId, params)
       return topProducts.value
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Failed to fetch top products'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err, 'Failed to fetch top products')
       throw err
     } finally {
       loading.value = false
@@ -121,8 +119,8 @@ export const useDUTStore = defineStore('dut', () => {
     try {
       paTrendAutoData.value = await dutApi.getPATrendAuto(params)
       return paTrendAutoData.value
-    } catch (err: any) {
-      paTrendError.value = err.response?.data?.detail || 'Failed to fetch PA Trend Auto data'
+    } catch (err: unknown) {
+      paTrendError.value = getApiErrorDetail(err, 'Failed to fetch PA Trend Auto data')
       throw err
     } finally {
       paTrendLoading.value = false
@@ -140,8 +138,8 @@ export const useDUTStore = defineStore('dut', () => {
     try {
       paTrendDexData.value = await dutApi.getPATrendDex(params)
       return paTrendDexData.value
-    } catch (err: any) {
-      paTrendError.value = err.response?.data?.detail || 'Failed to fetch PA Trend Dex data'
+    } catch (err: unknown) {
+      paTrendError.value = getApiErrorDetail(err, 'Failed to fetch PA Trend Dex data')
       throw err
     } finally {
       paTrendLoading.value = false
@@ -159,8 +157,8 @@ export const useDUTStore = defineStore('dut', () => {
     try {
       paDiffData.value = await dutApi.getPATrendDiff(params)
       return paDiffData.value
-    } catch (err: any) {
-      paTrendError.value = err.response?.data?.detail || 'Failed to fetch PA Trend Diff data'
+    } catch (err: unknown) {
+      paTrendError.value = getApiErrorDetail(err, 'Failed to fetch PA Trend Diff data')
       throw err
     } finally {
       paTrendLoading.value = false
@@ -215,6 +213,6 @@ export const useDUTStore = defineStore('dut', () => {
     fetchPATrendAuto,
     fetchPATrendDex,
     fetchPATrendDiff,
-    clearPATrendData
+    clearPATrendData,
   }
 })

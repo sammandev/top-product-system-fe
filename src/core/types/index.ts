@@ -3,17 +3,15 @@
  * Central export point for all type definitions
  */
 
-// Auth types
-export * from './auth.types'
+// API types
+export * from './api.types'
 
 // App config types
 export * from './app-config.types'
-
-// DUT types
-export * from './dut.types'
+// Auth types
+export * from './auth.types'
 
 // Common types
 export * from './common.types'
-
-// API types
-export * from './api.types'
+// DUT types
+export * from './dut.types'

@@ -1,17 +1,15 @@
 /**
  * File Comparison Composable
- * 
+ *
  * Handles dual file upload, preview, comparison configuration, and result display.
  * Provides reactive state and helper methods for comparing two files.
  */
 
-import { ref, computed } from 'vue'
-import { comparisonApi } from '../api'
+import { computed, ref } from 'vue'
+import type { CompareDataResponse, UploadPreviewResponse } from '@/core/types/api.types'
 import { parsingApi } from '@/features/parsing/api'
-import type {
-  UploadPreviewResponse,
-  CompareDataResponse
-} from '@/core/types/api.types'
+import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
+import { comparisonApi } from '../api'
 
 export interface FileSelection {
   selected: string[]
@@ -31,9 +29,9 @@ export interface ComparisonOptions {
 
 /**
  * File comparison composable for dual file upload and comparison
- * 
+ *
  * @returns Comparison state and operations
- * 
+ *
  * @example
  * ```ts
  * const {
@@ -44,11 +42,11 @@ export interface ComparisonOptions {
  *   compareFiles,
  *   downloadComparison
  * } = useComparison()
- * 
+ *
  * // Upload both files
  * await uploadFileA(selectedFileA)
  * await uploadFileB(selectedFileB)
- * 
+ *
  * // Compare with selections
  * await compareFiles('both', {
  *   aColumns: { selected: ['ISN', 'Result'] },
@@ -75,7 +73,7 @@ export function useComparison(options: ComparisonOptions = {}) {
   const defaultOptions = {
     hasHeader: options.hasHeader ?? true,
     delimiter: options.delimiter ?? ',',
-    persist: options.persist ?? false
+    persist: options.persist ?? false,
   }
 
   // Computed
@@ -86,7 +84,7 @@ export function useComparison(options: ComparisonOptions = {}) {
   const hasPreviewB = computed(() => previewB.value !== null)
   const hasBothPreviews = computed(() => hasPreviewA.value && hasPreviewB.value)
   const hasComparisonResult = computed(() => comparisonResult.value !== null)
-  
+
   const fileIdA = computed(() => previewA.value?.file_id || null)
   const fileIdB = computed(() => previewB.value?.file_id || null)
   const columnsA = computed(() => previewA.value?.columns || [])
@@ -99,7 +97,7 @@ export function useComparison(options: ComparisonOptions = {}) {
    */
   async function uploadFileA(
     selectedFile: File,
-    uploadOptions?: Partial<ComparisonOptions>
+    uploadOptions?: Partial<ComparisonOptions>,
   ): Promise<UploadPreviewResponse | null> {
     try {
       loadingA.value = true
@@ -110,10 +108,7 @@ export function useComparison(options: ComparisonOptions = {}) {
 
       const formData = new FormData()
       formData.append('file', selectedFile)
-      formData.append(
-        'has_header',
-        String(uploadOptions?.hasHeader ?? defaultOptions.hasHeader)
-      )
+      formData.append('has_header', String(uploadOptions?.hasHeader ?? defaultOptions.hasHeader))
       if (uploadOptions?.delimiter || defaultOptions.delimiter) {
         formData.append('delimiter', uploadOptions?.delimiter || defaultOptions.delimiter)
       }
@@ -128,8 +123,8 @@ export function useComparison(options: ComparisonOptions = {}) {
       uploadProgressA.value = 100
 
       return response
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || err.message || 'Upload file A failed'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Upload file A failed'
       return null
     } finally {
       loadingA.value = false
@@ -142,7 +137,7 @@ export function useComparison(options: ComparisonOptions = {}) {
    */
   async function uploadFileB(
     selectedFile: File,
-    uploadOptions?: Partial<ComparisonOptions>
+    uploadOptions?: Partial<ComparisonOptions>,
   ): Promise<UploadPreviewResponse | null> {
     try {
       loadingB.value = true
@@ -153,10 +148,7 @@ export function useComparison(options: ComparisonOptions = {}) {
 
       const formData = new FormData()
       formData.append('file', selectedFile)
-      formData.append(
-        'has_header',
-        String(uploadOptions?.hasHeader ?? defaultOptions.hasHeader)
-      )
+      formData.append('has_header', String(uploadOptions?.hasHeader ?? defaultOptions.hasHeader))
       if (uploadOptions?.delimiter || defaultOptions.delimiter) {
         formData.append('delimiter', uploadOptions?.delimiter || defaultOptions.delimiter)
       }
@@ -171,8 +163,8 @@ export function useComparison(options: ComparisonOptions = {}) {
       uploadProgressB.value = 100
 
       return response
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || err.message || 'Upload file B failed'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Upload file B failed'
       return null
     } finally {
       loadingB.value = false
@@ -191,7 +183,7 @@ export function useComparison(options: ComparisonOptions = {}) {
       bColumns?: Partial<FileSelection>
       bRows?: Partial<RowSelection>
       joinOn?: { a: string[]; b: string[] }
-    }
+    },
   ): Promise<CompareDataResponse | null> {
     if (!fileIdA.value || !fileIdB.value) {
       error.value = 'Both files must be uploaded before comparison'
@@ -247,8 +239,8 @@ export function useComparison(options: ComparisonOptions = {}) {
       comparisonResult.value = response
 
       return response
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || err.message || 'Comparison failed'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Comparison failed'
       return null
     } finally {
       loading.value = false
@@ -267,7 +259,7 @@ export function useComparison(options: ComparisonOptions = {}) {
       bRows?: Partial<RowSelection>
       joinOn?: { a: string[]; b: string[] }
     },
-    filename = 'comparison.csv'
+    filename = 'comparison.csv',
   ): Promise<void> {
     if (!fileIdA.value || !fileIdB.value) {
       error.value = 'Both files must be uploaded before comparison'
@@ -330,8 +322,8 @@ export function useComparison(options: ComparisonOptions = {}) {
       link.click()
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || err.message || 'Download failed'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Download failed'
     } finally {
       loading.value = false
     }
@@ -396,6 +388,6 @@ export function useComparison(options: ComparisonOptions = {}) {
     compareFiles,
     downloadComparison,
     reset,
-    clearError
+    clearError,
   }
 }

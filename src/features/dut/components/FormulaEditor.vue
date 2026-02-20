@@ -161,25 +161,29 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import type { CustomFormulaV2, FormulaType, FormulaParameters } from '../composables/useCustomScoringV2'
-import { getFormulaTypeDescription, getDefaultParameters } from '../composables/useCustomScoringV2'
+import type {
+  CustomFormulaV2,
+  FormulaParameters,
+  FormulaType,
+} from '../composables/useCustomScoringV2'
+import { getDefaultParameters, getFormulaTypeDescription } from '../composables/useCustomScoringV2'
 
 interface Props {
-    formula: CustomFormulaV2
+  formula: CustomFormulaV2
 }
 
 interface Emits {
-    (e: 'update:enabled', value: boolean): void
-    (e: 'update:formulaType', value: FormulaType): void
-    (e: 'update:parameters', value: FormulaParameters): void
-    (e: 'update:customExpression', value: string): void
+  (e: 'update:enabled', value: boolean): void
+  (e: 'update:formulaType', value: FormulaType): void
+  (e: 'update:parameters', value: FormulaParameters): void
+  (e: 'update:customExpression', value: string): void
 }
 
 // Workaround for Vue type inference with boolean emit
 const emitEnabled = (value: boolean | null) => {
-    if (value !== null) {
-        emit('update:enabled', value)
-    }
+  if (value !== null) {
+    emit('update:enabled', value)
+  }
 }
 
 const props = defineProps<Props>()
@@ -188,106 +192,114 @@ const emit = defineEmits<Emits>()
 const testResult = ref<{ success: boolean; message: string } | null>(null)
 
 const formulaTypes = [
-    { value: 'linear', title: 'Linear', description: getFormulaTypeDescription('linear') },
-    { value: 'exponential', title: 'Exponential', description: getFormulaTypeDescription('exponential') },
-    { value: 'logarithmic', title: 'Logarithmic', description: getFormulaTypeDescription('logarithmic') },
-    { value: 'step', title: 'Step', description: getFormulaTypeDescription('step') },
-    { value: 'custom', title: 'Custom', description: getFormulaTypeDescription('custom') },
+  { value: 'linear', title: 'Linear', description: getFormulaTypeDescription('linear') },
+  {
+    value: 'exponential',
+    title: 'Exponential',
+    description: getFormulaTypeDescription('exponential'),
+  },
+  {
+    value: 'logarithmic',
+    title: 'Logarithmic',
+    description: getFormulaTypeDescription('logarithmic'),
+  },
+  { value: 'step', title: 'Step', description: getFormulaTypeDescription('step') },
+  { value: 'custom', title: 'Custom', description: getFormulaTypeDescription('custom') },
 ]
 
 const handleFormulaTypeChange = (newType: FormulaType) => {
-    emit('update:formulaType', newType)
-    // Reset parameters to defaults for new type
-    emit('update:parameters', getDefaultParameters(newType))
+  emit('update:formulaType', newType)
+  // Reset parameters to defaults for new type
+  emit('update:parameters', getDefaultParameters(newType))
 }
 
 const updateParameter = (key: keyof FormulaParameters, value: number | number[] | undefined) => {
-    emit('update:parameters', {
-        ...props.formula.parameters,
-        [key]: value,
-    })
+  emit('update:parameters', {
+    ...props.formula.parameters,
+    [key]: value,
+  })
 }
 
 const updateThreshold = (index: number, value: number) => {
-    const thresholds = [...(props.formula.parameters.thresholds ?? [])]
-    thresholds[index] = value
-    updateParameter('thresholds', thresholds)
+  const thresholds = [...(props.formula.parameters.thresholds ?? [])]
+  thresholds[index] = value
+  updateParameter('thresholds', thresholds)
 }
 
 const updateScore = (index: number, value: number) => {
-    const scores = [...(props.formula.parameters.scores ?? [])]
-    scores[index] = value
-    updateParameter('scores', scores)
+  const scores = [...(props.formula.parameters.scores ?? [])]
+  scores[index] = value
+  updateParameter('scores', scores)
 }
 
 const addStep = () => {
-    const thresholds = [...(props.formula.parameters.thresholds ?? [])]
-    const scores = [...(props.formula.parameters.scores ?? [])]
-    const lastThreshold = thresholds[thresholds.length - 1] ?? 1
-    thresholds.push(lastThreshold + 1)
-    scores.push(0)
-    emit('update:parameters', {
-        ...props.formula.parameters,
-        thresholds,
-        scores,
-    })
+  const thresholds = [...(props.formula.parameters.thresholds ?? [])]
+  const scores = [...(props.formula.parameters.scores ?? [])]
+  const lastThreshold = thresholds[thresholds.length - 1] ?? 1
+  thresholds.push(lastThreshold + 1)
+  scores.push(0)
+  emit('update:parameters', {
+    ...props.formula.parameters,
+    thresholds,
+    scores,
+  })
 }
 
 const removeStep = (index: number) => {
-    const thresholds = [...(props.formula.parameters.thresholds ?? [])]
-    const scores = [...(props.formula.parameters.scores ?? [])]
-    thresholds.splice(index, 1)
-    scores.splice(index, 1)
-    emit('update:parameters', {
-        ...props.formula.parameters,
-        thresholds,
-        scores,
-    })
+  const thresholds = [...(props.formula.parameters.thresholds ?? [])]
+  const scores = [...(props.formula.parameters.scores ?? [])]
+  thresholds.splice(index, 1)
+  scores.splice(index, 1)
+  emit('update:parameters', {
+    ...props.formula.parameters,
+    thresholds,
+    scores,
+  })
 }
 
 const testExpression = () => {
-    try {
-        const expression = props.formula.customExpression ?? ''
-        if (!expression.trim()) {
-            testResult.value = { success: false, message: 'Expression is empty' }
-            return
-        }
-
-        // Test with sample values
-        const context = {
-            actual: 5,
-            usl: 10,
-            lsl: 0,
-            target: 5,
-            Math,
-            min: Math.min,
-            max: Math.max,
-            abs: Math.abs,
-            exp: Math.exp,
-            log: Math.log,
-            pow: Math.pow,
-            sqrt: Math.sqrt,
-            clamp01: (x: number) => Math.max(0, Math.min(1, x)),
-        }
-
-        const func = new Function(...Object.keys(context), `return ${expression}`)
-        const result = func(...Object.values(context))
-
-        if (typeof result !== 'number' || !isFinite(result)) {
-            testResult.value = { success: false, message: `Invalid result: ${result}` }
-            return
-        }
-
-        testResult.value = {
-            success: true,
-            message: `✓ Expression valid. Test result: ${result.toFixed(2)} (actual=5, usl=10, lsl=0, target=5)`,
-        }
-    } catch (error) {
-        testResult.value = {
-            success: false,
-            message: `Error: ${error instanceof Error ? error.message : String(error)}`,
-        }
+  try {
+    const expression = props.formula.customExpression ?? ''
+    if (!expression.trim()) {
+      testResult.value = { success: false, message: 'Expression is empty' }
+      return
     }
+
+    // Test with sample values
+    const context = {
+      actual: 5,
+      usl: 10,
+      lsl: 0,
+      target: 5,
+      Math,
+      min: Math.min,
+      max: Math.max,
+      abs: Math.abs,
+      exp: Math.exp,
+      log: Math.log,
+      pow: Math.pow,
+      sqrt: Math.sqrt,
+      clamp01: (x: number) => Math.max(0, Math.min(1, x)),
+    }
+
+    const func = new Function(...Object.keys(context), `return ${expression}`)
+    const result = func(...Object.values(context))
+
+    if (typeof result !== 'number' || !Number.isFinite(result)) {
+      testResult.value = { success: false, message: `Invalid result: ${result}` }
+      return
+    }
+
+    testResult.value = {
+      success: true,
+      message: `✓ Expression valid. Test result: ${result.toFixed(2)} (actual=5, usl=10, lsl=0, target=5)`,
+    }
+  } catch (error) {
+    testResult.value = {
+      success: false,
+      message: `Error: ${error instanceof Error ? error.message : String(error)}`,
+    }
+  }
 }
 </script>
 

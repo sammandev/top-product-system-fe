@@ -1,6 +1,6 @@
 /**
  * DUT ISN-based Top Product Analysis Types
- * 
+ *
  * These types support the /api/dut/top-product endpoint which evaluates
  * specific DUT ISN(s) across multiple stations.
  */
@@ -9,7 +9,7 @@ import type { ScoreSource } from '../composables/useCustomScoring'
 
 /**
  * Score Breakdown Details (LaTeX Support)
- * 
+ *
  * Detailed breakdown of how a measurement score was calculated, including LaTeX formula.
  * Supports both standard measurements and PA trend comparisons.
  */
@@ -23,13 +23,13 @@ export interface ScoreBreakdown {
   actual?: number
   deviation?: number | null
   // PA Trend specific fields
-  comparison?: string  // e.g., "current vs trend_mean"
-  threshold?: number  // Threshold for deviation scoring
-  current_value?: number  // Current PA measurement
-  trend_mean?: number  // Historical trend average
-  deviation_from_mean?: number  // Deviation from trend mean
-  abs_deviation?: number  // Absolute deviation value
-  interpretation?: string  // Human-readable result interpretation
+  comparison?: string // e.g., "current vs trend_mean"
+  threshold?: number // Threshold for deviation scoring
+  current_value?: number // Current PA measurement
+  trend_mean?: number // Historical trend average
+  deviation_from_mean?: number // Deviation from trend mean
+  abs_deviation?: number // Absolute deviation value
+  interpretation?: string // Human-readable result interpretation
   // Common fields
   raw_score: number
   final_score: number
@@ -38,12 +38,12 @@ export interface ScoreBreakdown {
 
 // Custom scoring result from frontend formulas
 export interface CustomScoringResult {
-  systemScore: number        // From backend
-  customScore: number        // From frontend formula
-  difference: number         // customScore - systemScore
-  formula: string           // Formula name/description used
+  systemScore: number // From backend
+  customScore: number // From frontend formula
+  difference: number // customScore - systemScore
+  formula: string // Formula name/description used
   method: 'system' | 'custom' | 'both'
-  category?: string         // Detected category
+  category?: string // Detected category
 }
 
 export interface TopProductMeasurement {
@@ -86,10 +86,10 @@ export interface TopProductStationResult {
   data: Array<Array<string | number | null | ScoreBreakdown>> // Backend uses 'data' not 'measurement' - Added ScoreBreakdown
   latest_data?: LatestDataItem[] // New API format - array of measurement objects
   overall_data_score: number
-  metadata?: Record<string, any>
-  group_scores?: Record<string, any> | null
+  metadata?: Record<string, unknown>
+  group_scores?: Record<string, unknown> | null
   overall_group_scores?: Record<string, number> | null
-  
+
   // Computed fields for easier access
   measurement?: TopProductMeasurement[] // Parse from 'data' field
   measurement_count?: number // Count of measurements
@@ -116,7 +116,7 @@ export interface TopProductBatchResponse {
 
 /**
  * Per-Station Filter Configuration
- * 
+ *
  * Allows configuring different filters for each selected station
  */
 export interface StationFilterConfig {
@@ -140,7 +140,7 @@ export interface TopProductRequest {
 
 /**
  * Test Item Types
- * 
+ *
  * For fetching available test items per station
  */
 export interface TestItem {
@@ -174,7 +174,7 @@ export interface BatchTestItemsResponse {
 
 /**
  * Device Types
- * 
+ *
  * For fetching available devices per station
  */
 export interface Device {
@@ -207,7 +207,7 @@ export interface BatchDevicesResponse {
 
 /**
  * DUT Summary Types
- * 
+ *
  * Used for fetching station information based on DUT ISN
  */
 export interface DeviceSummary {

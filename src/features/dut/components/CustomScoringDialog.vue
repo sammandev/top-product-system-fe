@@ -156,19 +156,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import type { CustomFormula, CategoryFormulas } from '../composables/useCustomScoring'
+import { computed, ref } from 'vue'
+import type { CategoryFormulas, CustomFormula } from '../composables/useCustomScoring'
 
 interface Props {
-    universalFormula: CustomFormula
-    categoryFormulas: CategoryFormulas
+  universalFormula: CustomFormula
+  categoryFormulas: CategoryFormulas
 }
 
 interface Emits {
-    (e: 'update:universalFormula', value: CustomFormula): void
-    (e: 'update:categoryFormulas', value: CategoryFormulas): void
-    (e: 'reset'): void
-    (e: 'apply'): void
+  (e: 'update:universalFormula', value: CustomFormula): void
+  (e: 'update:categoryFormulas', value: CategoryFormulas): void
+  (e: 'reset'): void
+  (e: 'apply'): void
 }
 
 const props = defineProps<Props>()
@@ -180,56 +180,56 @@ const dialog = ref(false)
 const totalCategories = computed(() => Object.keys(props.categoryFormulas).length)
 
 const enabledCategoryCount = computed(() => {
-    return Object.values(props.categoryFormulas).filter((f) => f.enabled).length
+  return Object.values(props.categoryFormulas).filter((f) => f.enabled).length
 })
 
 const enabledCategories = computed(() => {
-    return Object.entries(props.categoryFormulas)
-        .filter(([_, formula]) => formula.enabled)
-        .map(([category]) => category)
+  return Object.entries(props.categoryFormulas)
+    .filter(([_, formula]) => formula.enabled)
+    .map(([category]) => category)
 })
 
 const activeCount = computed(() => {
-    let count = 0
-    if (props.universalFormula.enabled) count++
-    count += enabledCategoryCount.value
-    return count
+  let count = 0
+  if (props.universalFormula.enabled) count++
+  count += enabledCategoryCount.value
+  return count
 })
 
 // Methods
 const toggleAllCategories = (enabled: boolean) => {
-    const updated = { ...props.categoryFormulas }
-    Object.keys(updated).forEach((category) => {
-        const formula = updated[category]
-        if (formula) {
-            formula.enabled = enabled
-        }
-    })
-    emit('update:categoryFormulas', updated)
+  const updated = { ...props.categoryFormulas }
+  Object.keys(updated).forEach((category) => {
+    const formula = updated[category]
+    if (formula) {
+      formula.enabled = enabled
+    }
+  })
+  emit('update:categoryFormulas', updated)
 }
 
 const getCategoryDescription = (category: string): string => {
-    const descriptions: Record<string, string> = {
-        POW: 'TX Power: Strict ±0.5 dB tolerance',
-        EVM: 'TX EVM: Exponential penalty beyond USL',
-        FREQ: 'TX Frequency: Symmetric tolerance around target',
-        PER: 'RX PER: Linear decay, lower is better',
-        RSSI: 'RX RSSI: Linear scoring within limits',
-        MASK: 'TX Mask: Threshold-based with headroom bonus',
-        LO_LEAKAGE: 'LO Leakage: Threshold-based, more margin = better',
-        POW_DIF_ABS: 'PA Power Delta: Linear decay from zero',
-        ADJUSTED_POW: 'PA Adjusted Power: Linear decay with 5 dB threshold',
-    }
-    return descriptions[category] || 'Custom formula for this category'
+  const descriptions: Record<string, string> = {
+    POW: 'TX Power: Strict ±0.5 dB tolerance',
+    EVM: 'TX EVM: Exponential penalty beyond USL',
+    FREQ: 'TX Frequency: Symmetric tolerance around target',
+    PER: 'RX PER: Linear decay, lower is better',
+    RSSI: 'RX RSSI: Linear scoring within limits',
+    MASK: 'TX Mask: Threshold-based with headroom bonus',
+    LO_LEAKAGE: 'LO Leakage: Threshold-based, more margin = better',
+    POW_DIF_ABS: 'PA Power Delta: Linear decay from zero',
+    ADJUSTED_POW: 'PA Adjusted Power: Linear decay with 5 dB threshold',
+  }
+  return descriptions[category] || 'Custom formula for this category'
 }
 
 const handleReset = () => {
-    emit('reset')
+  emit('reset')
 }
 
 const handleApply = () => {
-    emit('apply')
-    dialog.value = false
+  emit('apply')
+  dialog.value = false
 }
 </script>
 

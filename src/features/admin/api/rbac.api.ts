@@ -2,7 +2,7 @@ import { apiClient } from '@/core/api'
 
 /**
  * RBAC API Client
- * 
+ *
  * Handles all RBAC (Role-Based Access Control) operations
  */
 
@@ -33,7 +33,7 @@ export interface RBACStats {
  */
 export const rbacApi = {
   // ==================== Roles ====================
-  
+
   /**
    * Get all roles (admin endpoint)
    */
@@ -76,7 +76,7 @@ export const rbacApi = {
   },
 
   // ==================== Permissions ====================
-  
+
   /**
    * Get all permissions (admin only)
    */
@@ -111,7 +111,7 @@ export const rbacApi = {
   },
 
   // ==================== Role <-> Permission Links ====================
-  
+
   /**
    * Grant a permission to a role (admin only)
    */
@@ -141,7 +141,7 @@ export const rbacApi = {
   },
 
   // ==================== User <-> Role Links ====================
-  
+
   /**
    * Assign a role to a user (admin only)
    */
@@ -171,12 +171,12 @@ export const rbacApi = {
   },
 
   // ==================== Permission Checks ====================
-  
+
   /**
    * Check if current user has read permission
    */
   async checkReadPermission(): Promise<{ ok: boolean; message: string }> {
     const { data } = await apiClient.get('/api/rbac/check-read-permission')
     return data
-  }
+  },
 }

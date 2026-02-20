@@ -1,10 +1,10 @@
 /**
  * iPLAS IndexedDB Query Helpers
- * 
+ *
  * Advanced query utilities for efficient pagination, filtering, and sorting
  * of test records stored in IndexedDB. Designed for use with v-data-table-server
  * to provide "fake" server-side pagination that actually queries locally.
- * 
+ *
  * Key Features:
  * - Cursor-based pagination for memory efficiency
  * - Index-optimized queries for common filter patterns
@@ -12,8 +12,8 @@
  * - Efficient count queries without loading full records
  */
 
-import { getDb, type IplasDbRecord, type IplasDbSchema } from './iplasDb'
 import type { IDBPDatabase } from 'idb'
+import { getDb, type IplasDbRecord, type IplasDbSchema } from './iplasDb'
 
 // Helper type for IDB object store with index access
 // Using a simplified interface to avoid complex generic type issues
@@ -106,17 +106,17 @@ const STORE_NAME = 'testRecords'
 
 /**
  * Query records with filtering, sorting, and pagination
- * 
+ *
  * This is the main query function designed for v-data-table-server's loadItems handler.
  * It queries IndexedDB locally, providing instant response without network latency.
- * 
+ *
  * @param options - Pagination options from v-data-table-server
  * @param filter - Filter options
  * @returns Items for current page and total count
  */
 export async function queryRecordsForTable(
   options: TablePaginationOptions,
-  filter: RecordFilter = {}
+  filter: RecordFilter = {},
 ): Promise<TableQueryResult> {
   const db = await getDb()
   const { page, itemsPerPage, sortBy } = options
@@ -138,7 +138,7 @@ export async function queryRecordsForTable(
 
 /**
  * Get total count of records matching a filter
- * 
+ *
  * More efficient than loading all records when only count is needed.
  */
 export async function getFilteredCount(filter: RecordFilter = {}): Promise<number> {
@@ -156,12 +156,12 @@ export async function getFilteredCount(filter: RecordFilter = {}): Promise<numbe
 
 /**
  * Get records by filter without pagination
- * 
+ *
  * Use sparingly - prefer paginated queries for large datasets.
  */
 export async function getRecordsByFilter(
   filter: RecordFilter,
-  limit?: number
+  limit?: number,
 ): Promise<IplasDbRecord[]> {
   const db = await getDb()
   const records = await getFilteredRecords(db, filter)
@@ -182,7 +182,7 @@ export async function getRecordsByFilter(
  */
 async function getFilteredRecords(
   db: IDBPDatabase<IplasDbSchema>,
-  filter: RecordFilter
+  filter: RecordFilter,
 ): Promise<IplasDbRecord[]> {
   const tx = db.transaction(STORE_NAME, 'readonly')
   const store = tx.objectStore(STORE_NAME)
@@ -194,15 +194,19 @@ async function getFilteredRecords(
 
   switch (indexStrategy.type) {
     case 'station':
+      // biome-ignore lint/style/noNonNullAssertion: indexStrategy.type === 'station' guarantees filter.station exists
       records = await queryByStation(store as unknown as IDBObjectStoreWithIndexes, filter.station!)
       break
     case 'status':
-      records = await queryByStatus(store as unknown as IDBObjectStoreWithIndexes, filter.status as 'PASS' | 'FAIL')
+      records = await queryByStatus(
+        store as unknown as IDBObjectStoreWithIndexes,
+        filter.status as 'PASS' | 'FAIL',
+      )
       break
     case 'isn':
+      // biome-ignore lint/style/noNonNullAssertion: indexStrategy.type === 'isn' guarantees filter.isn exists
       records = await queryByIsn(store as unknown as IDBObjectStoreWithIndexes, filter.isn!)
       break
-    case 'full-scan':
     default:
       records = await store.getAll()
   }
@@ -244,7 +248,7 @@ function determineIndexStrategy(filter: RecordFilter): {
  */
 async function queryByStation(
   store: IDBObjectStoreWithIndexes,
-  station: string
+  station: string,
 ): Promise<IplasDbRecord[]> {
   const index = store.index('by-station')
   return index.getAll(station)
@@ -255,7 +259,7 @@ async function queryByStation(
  */
 async function queryByStatus(
   store: IDBObjectStoreWithIndexes,
-  status: 'PASS' | 'FAIL'
+  status: 'PASS' | 'FAIL',
 ): Promise<IplasDbRecord[]> {
   const index = store.index('by-status')
   return index.getAll(status)
@@ -264,10 +268,7 @@ async function queryByStatus(
 /**
  * Query using ISN index
  */
-async function queryByIsn(
-  store: IDBObjectStoreWithIndexes,
-  isn: string
-): Promise<IplasDbRecord[]> {
+async function queryByIsn(store: IDBObjectStoreWithIndexes, isn: string): Promise<IplasDbRecord[]> {
   const index = store.index('by-isn')
   return index.getAll(isn)
 }
@@ -278,9 +279,9 @@ async function queryByIsn(
 function applyMemoryFilters(
   records: IplasDbRecord[],
   filter: RecordFilter,
-  usedFields: Set<string>
+  usedFields: Set<string>,
 ): IplasDbRecord[] {
-  return records.filter(record => {
+  return records.filter((record) => {
     // Station filter (if not already applied via index)
     if (filter.station && !usedFields.has('station')) {
       if (record.Station !== filter.station) return false
@@ -350,13 +351,15 @@ function sortRecords(records: IplasDbRecord[], sortConfig: SortOptions): void {
  * Check if filter is empty (no active filters)
  */
 function isEmptyFilter(filter: RecordFilter): boolean {
-  return !filter.station &&
+  return (
+    !filter.station &&
     (!filter.status || filter.status === 'ALL') &&
     !filter.dateRange &&
     !filter.isn &&
     !filter.site &&
     !filter.project &&
     !filter.search
+  )
 }
 
 // ============================================================================
@@ -365,7 +368,7 @@ function isEmptyFilter(filter: RecordFilter): boolean {
 
 /**
  * Get statistics about stored records
- * 
+ *
  * Useful for dashboard displays and filter option generation.
  */
 export async function getRecordStatistics(): Promise<RecordStatistics> {
@@ -377,7 +380,7 @@ export async function getRecordStatistics(): Promise<RecordStatistics> {
     total: 0,
     byStatus: { pass: 0, fail: 0 },
     byStation: new Map(),
-    dateRange: { earliest: null, latest: null }
+    dateRange: { earliest: null, latest: null },
   }
 
   // Iterate through all records once to gather stats
@@ -414,11 +417,11 @@ export async function getRecordStatistics(): Promise<RecordStatistics> {
 
 /**
  * Get list of distinct values for a field
- * 
+ *
  * Useful for populating filter dropdowns.
  */
 export async function getDistinctValues(
-  field: 'Station' | 'Site' | 'Project' | 'DeviceId'
+  field: 'Station' | 'Site' | 'Project' | 'DeviceId',
 ): Promise<string[]> {
   const db = await getDb()
   const tx = db.transaction(STORE_NAME, 'readonly')
@@ -440,13 +443,13 @@ export async function getDistinctValues(
 
 /**
  * Get records grouped by a field
- * 
+ *
  * @param field - Field to group by
  * @param limit - Max records per group (optional)
  */
 export async function getRecordsGroupedBy(
   field: 'Station' | 'DeviceId' | 'TestStatus',
-  limit?: number
+  limit?: number,
 ): Promise<Map<string, IplasDbRecord[]>> {
   const db = await getDb()
   const records = await db.getAll(STORE_NAME)
@@ -461,6 +464,7 @@ export async function getRecordsGroupedBy(
       grouped.set(key, [])
     }
 
+    // biome-ignore lint/style/noNonNullAssertion: checked via grouped.has(key) above
     const group = grouped.get(key)!
     if (!limit || group.length < limit) {
       group.push(record)
@@ -476,9 +480,9 @@ export async function getRecordsGroupedBy(
 
 /**
  * Stream records with a callback for each record
- * 
+ *
  * More memory efficient than loading all records for large datasets.
- * 
+ *
  * @param filter - Filter options
  * @param onRecord - Callback for each matching record
  * @param options - Additional options
@@ -491,7 +495,7 @@ export async function streamRecords(
     limit?: number
     /** Skip this many records */
     offset?: number
-  } = {}
+  } = {},
 ): Promise<number> {
   const db = await getDb()
   const tx = db.transaction(STORE_NAME, 'readonly')
@@ -556,6 +560,4 @@ function matchesFilter(record: IplasDbRecord, filter: RecordFilter): boolean {
 // Export for convenience
 // ============================================================================
 
-export type {
-  IplasDbRecord
-}
+export type { IplasDbRecord }

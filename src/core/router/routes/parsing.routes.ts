@@ -1,6 +1,6 @@
 /**
  * Parsing Routes
- * 
+ *
  * Routes for file parsing features
  */
 
@@ -17,9 +17,9 @@ export const parsingRoutes: RouteRecordRaw[] = [
       icon: 'mdi-file-document-edit',
       breadcrumb: [
         { title: 'Dashboard', to: '/dashboard' },
-        { title: 'File Parsing', disabled: true }
-      ]
-    }
+        { title: 'File Parsing', disabled: true },
+      ],
+    },
   },
   {
     path: '/parsing/download-format',
@@ -31,8 +31,8 @@ export const parsingRoutes: RouteRecordRaw[] = [
       icon: 'mdi-file-export',
       breadcrumb: [
         { title: 'Dashboard', to: '/dashboard' },
-        { title: 'Parse & Download Format', disabled: true }
-      ]
-    }
-  }
+        { title: 'Parse & Download Format', disabled: true },
+      ],
+    },
+  },
 ]

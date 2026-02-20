@@ -48,8 +48,7 @@
                         <template #no-data>
                             <v-list-item>
                                 <v-list-item-title class="text-caption text-medium-emphasis">
-                                    {{ selectedModelId ? 'No stations available for this model' : 'Select a model first'
-                                    }}
+                                    {{ selectedModelId ? 'No stations available for this model' : 'Select a model first' }}
                                 </v-list-item-title>
                             </v-list-item>
                         </template>
@@ -63,8 +62,7 @@
                     <v-icon>mdi-check-circle</v-icon>
                 </template>
                 <div class="text-caption">
-                    <strong>Selected:</strong> {{ selectedSiteName }} → {{ selectedModelName }} → {{ selectedStationName
-                    }}
+                    <strong>Selected:</strong> {{ selectedSiteName }} → {{ selectedModelName }} → {{ selectedStationName }}
                 </div>
             </v-alert>
 
@@ -88,36 +86,43 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted, watch } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
+import type { DUTModel, DUTSite, DUTStation } from '@/core/types'
+import { getErrorMessage } from '@/shared/utils'
 import { useDUTStore } from '../store'
-import type { DUTSite, DUTModel, DUTStation } from '@/core/types'
 
 // Props
 interface Props {
-    modelValue: {
-        siteId: number | null
-        modelId: number | null
-        stationId: number | null
-    }
-    showValidation?: boolean
+  modelValue: {
+    siteId: number | null
+    modelId: number | null
+    stationId: number | null
+  }
+  showValidation?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    showValidation: false
+  showValidation: false,
 })
 
 // Emits
 interface Emits {
-    (e: 'update:modelValue', value: {
-        siteId: number | null
-        modelId: number | null
-        stationId: number | null
-    }): void
-    (e: 'change', value: {
-        site: DUTSite | null
-        model: DUTModel | null
-        station: DUTStation | null
-    }): void
+  (
+    e: 'update:modelValue',
+    value: {
+      siteId: number | null
+      modelId: number | null
+      stationId: number | null
+    },
+  ): void
+  (
+    e: 'change',
+    value: {
+      site: DUTSite | null
+      model: DUTModel | null
+      station: DUTStation | null
+    },
+  ): void
 }
 
 const emit = defineEmits<Emits>()
@@ -143,175 +148,180 @@ const error = ref<string>('')
 // UPDATED: Map items to ensure v-select works with simple value/title structure
 // Backend returns { id, name } so we map to { value, title }
 const siteItems = computed(() =>
-    dutStore.sites.map(site => ({
-        value: site.id,
-        title: site.name,
-        raw: site
-    }))
+  dutStore.sites.map((site) => ({
+    value: site.id,
+    title: site.name,
+    raw: site,
+  })),
 )
 
 const modelItems = computed(() =>
-    dutStore.models.map(model => ({
-        value: model.id,
-        title: model.name,
-        raw: model
-    }))
+  dutStore.models.map((model) => ({
+    value: model.id,
+    title: model.name,
+    raw: model,
+  })),
 )
 
 const stationItems = computed(() =>
-    dutStore.stations.map(station => ({
-        value: station.id,
-        title: station.name,
-        raw: station
-    }))
+  dutStore.stations.map((station) => ({
+    value: station.id,
+    title: station.name,
+    raw: station,
+  })),
 )
 
-const selectedSite = computed(() =>
-    dutStore.sites.find(s => s.id === selectedSiteId.value) || null
+const selectedSite = computed(
+  () => dutStore.sites.find((s) => s.id === selectedSiteId.value) || null,
 )
 
-const selectedModel = computed(() =>
-    dutStore.models.find(m => m.id === selectedModelId.value) || null
+const selectedModel = computed(
+  () => dutStore.models.find((m) => m.id === selectedModelId.value) || null,
 )
 
-const selectedStation = computed(() =>
-    dutStore.stations.find(s => s.id === selectedStationId.value) || null
+const selectedStation = computed(
+  () => dutStore.stations.find((s) => s.id === selectedStationId.value) || null,
 )
 
 const selectedSiteName = computed(() => selectedSite.value?.name || '')
 const selectedModelName = computed(() => selectedModel.value?.name || '')
 const selectedStationName = computed(() => selectedStation.value?.name || '')
 
-const isComplete = computed(() =>
+const isComplete = computed(
+  () =>
     selectedSiteId.value !== null &&
     selectedModelId.value !== null &&
-    selectedStationId.value !== null
+    selectedStationId.value !== null,
 )
 
 // Methods
 async function loadSites() {
-    loadingSites.value = true
-    siteError.value = ''
-    error.value = ''
+  loadingSites.value = true
+  siteError.value = ''
+  error.value = ''
 
-    try {
-        await dutStore.fetchSites()
-    } catch (err: any) {
-        siteError.value = 'Failed to load sites'
-        error.value = err.message || 'Failed to load sites'
-    } finally {
-        loadingSites.value = false
-    }
+  try {
+    await dutStore.fetchSites()
+  } catch (err: unknown) {
+    siteError.value = 'Failed to load sites'
+    error.value = getErrorMessage(err) || 'Failed to load sites'
+  } finally {
+    loadingSites.value = false
+  }
 }
 
 async function loadModels(siteId: number) {
-    loadingModels.value = true
-    modelError.value = ''
-    error.value = ''
+  loadingModels.value = true
+  modelError.value = ''
+  error.value = ''
 
-    try {
-        await dutStore.fetchModels(siteId)
-    } catch (err: any) {
-        modelError.value = 'Failed to load models'
-        error.value = err.message || 'Failed to load models'
-    } finally {
-        loadingModels.value = false
-    }
+  try {
+    await dutStore.fetchModels(siteId)
+  } catch (err: unknown) {
+    modelError.value = 'Failed to load models'
+    error.value = getErrorMessage(err) || 'Failed to load models'
+  } finally {
+    loadingModels.value = false
+  }
 }
 
 async function loadStations(modelId: number) {
-    loadingStations.value = true
-    stationError.value = ''
-    error.value = ''
+  loadingStations.value = true
+  stationError.value = ''
+  error.value = ''
 
-    try {
-        await dutStore.fetchStations(modelId)
-    } catch (err: any) {
-        stationError.value = 'Failed to load stations'
-        error.value = err.message || 'Failed to load stations'
-    } finally {
-        loadingStations.value = false
-    }
+  try {
+    await dutStore.fetchStations(modelId)
+  } catch (err: unknown) {
+    stationError.value = 'Failed to load stations'
+    error.value = getErrorMessage(err) || 'Failed to load stations'
+  } finally {
+    loadingStations.value = false
+  }
 }
 
 function handleSiteChange(siteId: number | null) {
-    selectedSiteId.value = siteId
+  selectedSiteId.value = siteId
 
-    // Clear downstream selections
-    selectedModelId.value = null
-    selectedStationId.value = null
-    dutStore.models = []
-    dutStore.stations = []
+  // Clear downstream selections
+  selectedModelId.value = null
+  selectedStationId.value = null
+  dutStore.models = []
+  dutStore.stations = []
 
-    // Load models if site selected
-    if (siteId !== null) {
-        loadModels(siteId)
-    }
+  // Load models if site selected
+  if (siteId !== null) {
+    loadModels(siteId)
+  }
 
-    emitChange()
+  emitChange()
 }
 
 function handleModelChange(modelId: number | null) {
-    selectedModelId.value = modelId
+  selectedModelId.value = modelId
 
-    // Clear downstream selections
-    selectedStationId.value = null
-    dutStore.stations = []
+  // Clear downstream selections
+  selectedStationId.value = null
+  dutStore.stations = []
 
-    // Load stations if model selected
-    if (modelId !== null) {
-        loadStations(modelId)
-    }
+  // Load stations if model selected
+  if (modelId !== null) {
+    loadStations(modelId)
+  }
 
-    emitChange()
+  emitChange()
 }
 
 function handleStationChange(stationId: number | null) {
-    selectedStationId.value = stationId
-    emitChange()
+  selectedStationId.value = stationId
+  emitChange()
 }
 
 function emitChange() {
-    // Emit v-model update
-    emit('update:modelValue', {
-        siteId: selectedSiteId.value,
-        modelId: selectedModelId.value,
-        stationId: selectedStationId.value
-    })
+  // Emit v-model update
+  emit('update:modelValue', {
+    siteId: selectedSiteId.value,
+    modelId: selectedModelId.value,
+    stationId: selectedStationId.value,
+  })
 
-    // Emit detailed change event
-    emit('change', {
-        site: selectedSite.value,
-        model: selectedModel.value,
-        station: selectedStation.value
-    })
+  // Emit detailed change event
+  emit('change', {
+    site: selectedSite.value,
+    model: selectedModel.value,
+    station: selectedStation.value,
+  })
 }
 
 function clearError() {
-    error.value = ''
-    siteError.value = ''
-    modelError.value = ''
-    stationError.value = ''
+  error.value = ''
+  siteError.value = ''
+  modelError.value = ''
+  stationError.value = ''
 }
 
 // Watch for external changes
-watch(() => props.modelValue, (newValue) => {
+watch(
+  () => props.modelValue,
+  (newValue) => {
     selectedSiteId.value = newValue.siteId
     selectedModelId.value = newValue.modelId
     selectedStationId.value = newValue.stationId
-}, { deep: true })
+  },
+  { deep: true },
+)
 
 // Lifecycle
 onMounted(() => {
-    loadSites()
+  loadSites()
 
-    // If initial values provided, load downstream data
-    if (props.modelValue.siteId) {
-        loadModels(props.modelValue.siteId)
-    }
-    if (props.modelValue.modelId) {
-        loadStations(props.modelValue.modelId)
-    }
+  // If initial values provided, load downstream data
+  if (props.modelValue.siteId) {
+    loadModels(props.modelValue.siteId)
+  }
+  if (props.modelValue.modelId) {
+    loadStations(props.modelValue.modelId)
+  }
 })
 </script>
 

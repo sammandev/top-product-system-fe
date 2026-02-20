@@ -1,6 +1,6 @@
 /**
  * Conversion Tools Routes
- * 
+ *
  * Routes for file format conversion utilities
  */
 
@@ -18,8 +18,8 @@ export const conversionRoutes: RouteRecordRaw[] = [
       breadcrumb: [
         { title: 'Dashboard', to: '/dashboard' },
         { title: 'Tools', disabled: true },
-        { title: 'DVT to MC2 Converter', disabled: true }
-      ]
-    }
-  }
+        { title: 'DVT to MC2 Converter', disabled: true },
+      ],
+    },
+  },
 ]

@@ -133,19 +133,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, type PropType } from 'vue'
+import { type PropType, ref } from 'vue'
 import type { GroupScores, OverallGroupScores } from '@/core/types'
 
 // Props
 const props = defineProps({
-    groupScores: {
-        type: Object as PropType<GroupScores>,
-        required: true
-    },
-    overallGroupScores: {
-        type: Object as PropType<OverallGroupScores | null>,
-        default: null
-    }
+  groupScores: {
+    type: Object as PropType<GroupScores>,
+    required: true,
+  },
+  overallGroupScores: {
+    type: Object as PropType<OverallGroupScores | null>,
+    default: null,
+  },
 })
 
 // State
@@ -155,136 +155,160 @@ const expandedAntennas = ref<Set<string>>(new Set())
 
 // Methods
 function toggleGroup(groupKey: string) {
-    if (expandedGroups.value.has(groupKey)) {
-        expandedGroups.value.delete(groupKey)
-    } else {
-        expandedGroups.value.add(groupKey)
-    }
+  if (expandedGroups.value.has(groupKey)) {
+    expandedGroups.value.delete(groupKey)
+  } else {
+    expandedGroups.value.add(groupKey)
+  }
 }
 
 function toggleSubgroup(groupKey: string, subgroupKey: string) {
-    const key = `${groupKey}.${subgroupKey}`
-    if (expandedSubgroups.value.has(key)) {
-        expandedSubgroups.value.delete(key)
-    } else {
-        expandedSubgroups.value.add(key)
-    }
+  const key = `${groupKey}.${subgroupKey}`
+  if (expandedSubgroups.value.has(key)) {
+    expandedSubgroups.value.delete(key)
+  } else {
+    expandedSubgroups.value.add(key)
+  }
 }
 
 function toggleAntenna(groupKey: string, subgroupKey: string, antennaKey: string) {
-    const key = `${groupKey}.${subgroupKey}.${antennaKey}`
-    if (expandedAntennas.value.has(key)) {
-        expandedAntennas.value.delete(key)
-    } else {
-        expandedAntennas.value.add(key)
-    }
+  const key = `${groupKey}.${subgroupKey}.${antennaKey}`
+  if (expandedAntennas.value.has(key)) {
+    expandedAntennas.value.delete(key)
+  } else {
+    expandedAntennas.value.add(key)
+  }
 }
 
 function expandAll() {
-    if (!props.groupScores) return
+  if (!props.groupScores) return
 
-    expandedGroups.value.clear()
-    expandedSubgroups.value.clear()
-    expandedAntennas.value.clear()
+  expandedGroups.value.clear()
+  expandedSubgroups.value.clear()
+  expandedAntennas.value.clear()
 
-    Object.keys(props.groupScores).forEach(groupKey => {
-        expandedGroups.value.add(groupKey)
+  Object.keys(props.groupScores).forEach((groupKey) => {
+    expandedGroups.value.add(groupKey)
 
-        const subgroups = getSubgroups(props.groupScores[groupKey])
-        Object.keys(subgroups).forEach(subgroupKey => {
-            expandedSubgroups.value.add(`${groupKey}.${subgroupKey}`)
+    const subgroups = getSubgroups(props.groupScores[groupKey])
+    Object.keys(subgroups).forEach((subgroupKey) => {
+      expandedSubgroups.value.add(`${groupKey}.${subgroupKey}`)
 
-            const antennas = getAntennas(subgroups[subgroupKey])
-            Object.keys(antennas).forEach(antennaKey => {
-                expandedAntennas.value.add(`${groupKey}.${subgroupKey}.${antennaKey}`)
-            })
-        })
+      const antennas = getAntennas(subgroups[subgroupKey])
+      Object.keys(antennas).forEach((antennaKey) => {
+        expandedAntennas.value.add(`${groupKey}.${subgroupKey}.${antennaKey}`)
+      })
     })
+  })
 }
 
 function collapseAll() {
-    expandedGroups.value.clear()
-    expandedSubgroups.value.clear()
-    expandedAntennas.value.clear()
+  expandedGroups.value.clear()
+  expandedSubgroups.value.clear()
+  expandedAntennas.value.clear()
 }
 
 function getScoreColor(score: number): string {
-    if (score >= 90) return 'success'
-    if (score >= 70) return 'info'
-    if (score >= 50) return 'warning'
-    return 'error'
+  if (score >= 90) return 'success'
+  if (score >= 70) return 'info'
+  if (score >= 50) return 'warning'
+  return 'error'
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: dynamic hierarchical scoring data from backend
 function getGroupScore(groupData: any): number {
-    return typeof groupData.final_group_score === 'number' ? groupData.final_group_score : 0
+  return typeof groupData.final_group_score === 'number' ? groupData.final_group_score : 0
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: dynamic hierarchical scoring data from backend
 function getGroupAvgScore(groupData: any): number {
-    return typeof groupData.group_avg_score === 'number' ? groupData.group_avg_score : 0
+  return typeof groupData.group_avg_score === 'number' ? groupData.group_avg_score : 0
 }
 
-function getSubgroups(groupData: any): Record<string, any> {
-    const subgroups: Record<string, any> = {}
-    Object.keys(groupData).forEach(key => {
-        if (key !== 'final_group_score' && key !== 'group_avg_score' && typeof groupData[key] === 'object') {
-            subgroups[key] = groupData[key]
-        }
-    })
-    return subgroups
+// biome-ignore lint/suspicious/noExplicitAny: dynamic hierarchical scoring tree with arbitrary nesting
+function getSubgroups(groupData: any): Record<string, unknown> {
+  const subgroups: Record<string, unknown> = {}
+  Object.keys(groupData).forEach((key) => {
+    if (
+      key !== 'final_group_score' &&
+      key !== 'group_avg_score' &&
+      typeof groupData[key] === 'object'
+    ) {
+      subgroups[key] = groupData[key]
+    }
+  })
+  return subgroups
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: dynamic hierarchical scoring data from backend
 function getSubgroupScore(subgroupData: any): number {
-    // Find the Bayesian score key (e.g., "tx_group_score", "rx_group_score")
-    const scoreKey = Object.keys(subgroupData).find(key => key.endsWith('_group_score'))
-    return scoreKey && typeof subgroupData[scoreKey] === 'number' ? subgroupData[scoreKey] : 0
+  // Find the Bayesian score key (e.g., "tx_group_score", "rx_group_score")
+  const scoreKey = Object.keys(subgroupData).find((key) => key.endsWith('_group_score'))
+  return scoreKey && typeof subgroupData[scoreKey] === 'number' ? subgroupData[scoreKey] : 0
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: dynamic hierarchical scoring data from backend
 function getSubgroupAvgScore(subgroupData: any): number {
-    // Find the average score key (e.g., "tx_avg_score", "rx_avg_score")
-    const scoreKey = Object.keys(subgroupData).find(key => key.endsWith('_avg_score'))
-    return scoreKey && typeof subgroupData[scoreKey] === 'number' ? subgroupData[scoreKey] : 0
+  // Find the average score key (e.g., "tx_avg_score", "rx_avg_score")
+  const scoreKey = Object.keys(subgroupData).find((key) => key.endsWith('_avg_score'))
+  return scoreKey && typeof subgroupData[scoreKey] === 'number' ? subgroupData[scoreKey] : 0
 }
 
-function getAntennas(subgroupData: any): Record<string, any> {
-    const antennas: Record<string, any> = {}
-    Object.keys(subgroupData).forEach(key => {
-        if (!key.endsWith('_group_score') && !key.endsWith('_avg_score') && typeof subgroupData[key] === 'object') {
-            antennas[key] = subgroupData[key]
-        }
-    })
-    return antennas
+// biome-ignore lint/suspicious/noExplicitAny: dynamic hierarchical scoring tree with arbitrary nesting
+function getAntennas(subgroupData: any): Record<string, unknown> {
+  const antennas: Record<string, unknown> = {}
+  Object.keys(subgroupData).forEach((key) => {
+    if (
+      !key.endsWith('_group_score') &&
+      !key.endsWith('_avg_score') &&
+      typeof subgroupData[key] === 'object'
+    ) {
+      antennas[key] = subgroupData[key]
+    }
+  })
+  return antennas
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: dynamic hierarchical scoring data from backend
 function getAntennaScore(antennaData: any): number {
-    // Find the antenna Bayesian score key (e.g., "tx1_group_score", "rx2_group_score")
-    const scoreKey = Object.keys(antennaData).find(key => key.endsWith('_group_score'))
-    return scoreKey && typeof antennaData[scoreKey] === 'number' ? antennaData[scoreKey] : 0
+  // Find the antenna Bayesian score key (e.g., "tx1_group_score", "rx2_group_score")
+  const scoreKey = Object.keys(antennaData).find((key) => key.endsWith('_group_score'))
+  return scoreKey && typeof antennaData[scoreKey] === 'number' ? antennaData[scoreKey] : 0
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: dynamic hierarchical scoring data from backend
 function getAntennaAvgScore(antennaData: any): number {
-    // Find the antenna average score key (e.g., "tx1_avg_score", "rx2_avg_score")
-    const scoreKey = Object.keys(antennaData).find(key => key.endsWith('_avg_score'))
-    return scoreKey && typeof antennaData[scoreKey] === 'number' ? antennaData[scoreKey] : 0
+  // Find the antenna average score key (e.g., "tx1_avg_score", "rx2_avg_score")
+  const scoreKey = Object.keys(antennaData).find((key) => key.endsWith('_avg_score'))
+  return scoreKey && typeof antennaData[scoreKey] === 'number' ? antennaData[scoreKey] : 0
 }
 
-function getCategories(antennaData: any): Record<string, any> {
-    const categories: Record<string, any> = {}
-    Object.keys(antennaData).forEach(key => {
-        if (!key.endsWith('_score') && !key.endsWith('_group_score') && !key.endsWith('_avg_score') && typeof antennaData[key] === 'object') {
-            categories[key] = antennaData[key]
-        }
-    })
-    return categories
+// biome-ignore lint/suspicious/noExplicitAny: dynamic hierarchical scoring tree with arbitrary nesting
+function getCategories(antennaData: any): Record<string, unknown> {
+  const categories: Record<string, unknown> = {}
+  Object.keys(antennaData).forEach((key) => {
+    if (
+      !key.endsWith('_score') &&
+      !key.endsWith('_group_score') &&
+      !key.endsWith('_avg_score') &&
+      typeof antennaData[key] === 'object'
+    ) {
+      categories[key] = antennaData[key]
+    }
+  })
+  return categories
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: dynamic hierarchical scoring data from backend
 function getCategoryBayesScore(scoreData: any): number {
-    if (typeof scoreData === 'number') return scoreData
-    return typeof scoreData.category_bayes_score === 'number' ? scoreData.category_bayes_score : 0
+  if (typeof scoreData === 'number') return scoreData
+  return typeof scoreData.category_bayes_score === 'number' ? scoreData.category_bayes_score : 0
 }
 
+// biome-ignore lint/suspicious/noExplicitAny: dynamic hierarchical scoring data from backend
 function getCategoryAvgScore(scoreData: any): number {
-    if (typeof scoreData === 'number') return 0
-    return typeof scoreData.category_avg_score === 'number' ? scoreData.category_avg_score : 0
+  if (typeof scoreData === 'number') return 0
+  return typeof scoreData.category_avg_score === 'number' ? scoreData.category_avg_score : 0
 }
 </script>
 

@@ -64,8 +64,7 @@
                         <v-col cols="12" sm="6" md="3">
                             <div class="text-caption text-medium-emphasis">Selection</div>
                             <div class="font-weight-bold">
-                                {{ resultsMetadata.site_name }} → {{ resultsMetadata.model_name }} → {{
-                                    resultsMetadata.station_name }}
+                                {{ resultsMetadata.site_name }} → {{ resultsMetadata.model_name }} → {{ resultsMetadata.station_name }}
                             </div>
                         </v-col>
                         <v-col cols="12" sm="6" md="3">
@@ -115,20 +114,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
+import type { DUTModel, DUTSite, DUTStation, TopProduct, TopProductsRequest } from '@/core/types'
 import { useDUTStore } from '../store'
-import {
-    SiteModelStationSelector,
-    DateRangePicker,
-    CriteriaConfig,
-    TopProductsTable,
-    ScoreVisualization
-} from '../components'
-import type { TopProduct, DUTSite, DUTModel, DUTStation } from '@/core/types'
 
-defineEmits<{
-    (e: 'export'): void
-}>()
+defineEmits<(e: 'export') => void>()
 
 // Stores
 // Store
@@ -136,20 +126,20 @@ const dutStore = useDUTStore()
 
 // State
 const selection = ref({
-    siteId: null as number | null,
-    modelId: null as number | null,
-    stationId: null as number | null
+  siteId: null as number | null,
+  modelId: null as number | null,
+  stationId: null as number | null,
 })
 
 const dateRange = ref({
-    startDate: '',
-    endDate: ''
+  startDate: '',
+  endDate: '',
 })
 
 const criteriaConfig = ref({
-    criteriaScore: 80,
-    limit: 100,
-    criteriaFile: null as File | null
+  criteriaScore: 80,
+  limit: 100,
+  criteriaFile: null as File | null,
 })
 
 const selectedSite = ref<DUTSite | null>(null)
@@ -158,12 +148,12 @@ const selectedStation = ref<DUTStation | null>(null)
 
 const topProducts = ref<TopProduct[]>([])
 const resultsMetadata = ref({
-    site_name: '',
-    model_name: '',
-    station_name: '',
-    criteria_score: '',
-    total_count: 0,
-    processing_time: 0
+  site_name: '',
+  model_name: '',
+  station_name: '',
+  criteria_score: '',
+  total_count: 0,
+  processing_time: 0,
 })
 
 const loading = ref(false)
@@ -175,109 +165,112 @@ const criteriaValid = ref(false)
 const hasResults = computed(() => topProducts.value.length > 0)
 
 const canAnalyze = computed(() => {
-    return (
-        selection.value.siteId !== null &&
-        selection.value.modelId !== null &&
-        selection.value.stationId !== null &&
-        dateValid.value &&
-        criteriaValid.value
-    )
+  return (
+    selection.value.siteId !== null &&
+    selection.value.modelId !== null &&
+    selection.value.stationId !== null &&
+    dateValid.value &&
+    criteriaValid.value
+  )
 })
 
 // Methods
 function handleSelectionChange(data: {
-    site: DUTSite | null
-    model: DUTModel | null
-    station: DUTStation | null
+  site: DUTSite | null
+  model: DUTModel | null
+  station: DUTStation | null
 }) {
-    selectedSite.value = data.site
-    selectedModel.value = data.model
-    selectedStation.value = data.station
+  selectedSite.value = data.site
+  selectedModel.value = data.model
+  selectedStation.value = data.station
 }
 
 function handleDateChange(data: { valid: boolean }) {
-    dateValid.value = data.valid
+  dateValid.value = data.valid
 }
 
 function handleCriteriaChange(data: { valid: boolean }) {
-    criteriaValid.value = data.valid
+  criteriaValid.value = data.valid
 }
 
 async function handleAnalyze() {
-    attemptedAnalysis.value = true
+  attemptedAnalysis.value = true
 
-    if (!canAnalyze.value) {
-        return
+  if (!canAnalyze.value) {
+    return
+  }
+
+  loading.value = true
+
+  try {
+    const formData = new FormData()
+
+    // Add required parameters
+    formData.append('site_id', String(selection.value.siteId))
+    formData.append('model_id', String(selection.value.modelId))
+    formData.append('station_id', String(selection.value.stationId))
+    formData.append('start_time', dateRange.value.startDate)
+    formData.append('end_time', dateRange.value.endDate)
+    formData.append('criteria_score', String(criteriaConfig.value.criteriaScore))
+    formData.append('limit', String(criteriaConfig.value.limit))
+
+    // Add optional criteria file
+    if (criteriaConfig.value.criteriaFile) {
+      formData.append('criteria_file', criteriaConfig.value.criteriaFile)
     }
 
-    loading.value = true
+    const startTime = performance.now()
 
-    try {
-        const formData = new FormData()
+    // Call API (this should be moved to the API service)
+    const response = await dutStore.fetchTopProducts(
+      String(selection.value.stationId),
+      formData as unknown as TopProductsRequest,
+    )
 
-        // Add required parameters
-        formData.append('site_id', String(selection.value.siteId))
-        formData.append('model_id', String(selection.value.modelId))
-        formData.append('station_id', String(selection.value.stationId))
-        formData.append('start_time', dateRange.value.startDate)
-        formData.append('end_time', dateRange.value.endDate)
-        formData.append('criteria_score', String(criteriaConfig.value.criteriaScore))
-        formData.append('limit', String(criteriaConfig.value.limit))
+    const endTime = performance.now()
 
-        // Add optional criteria file
-        if (criteriaConfig.value.criteriaFile) {
-            formData.append('criteria_file', criteriaConfig.value.criteriaFile)
-        }
-
-        const startTime = performance.now()
-
-        // Call API (this should be moved to the API service)
-        const response = await dutStore.fetchTopProducts(String(selection.value.stationId), formData)
-
-        const endTime = performance.now()
-
-        // Update results
-        topProducts.value = response.requested_data || []
-        resultsMetadata.value = {
-            site_name: response.site_name || '',
-            model_name: response.model_name || '',
-            station_name: response.station_name || '',
-            criteria_score: response.criteria_score || '',
-            total_count: topProducts.value.length,
-            processing_time: (endTime - startTime) / 1000
-        }
-    } catch (err: any) {
-        console.error('Analysis failed:', err)
-        // Error handling should be done in parent component
-    } finally {
-        loading.value = false
+    // Update results
+    topProducts.value = response.requested_data || []
+    resultsMetadata.value = {
+      site_name: response.site_name || '',
+      model_name: response.model_name || '',
+      station_name: response.station_name || '',
+      criteria_score: response.criteria_score || '',
+      total_count: topProducts.value.length,
+      processing_time: (endTime - startTime) / 1000,
     }
+  } catch (err: unknown) {
+    console.error('Analysis failed:', err)
+    // Error handling should be done in parent component
+  } finally {
+    loading.value = false
+  }
 }
 
 function handleReset() {
-    selection.value = {
-        siteId: null,
-        modelId: null,
-        stationId: null
-    }
-    dateRange.value = {
-        startDate: '',
-        endDate: ''
-    }
-    criteriaConfig.value = {
-        criteriaScore: 80,
-        limit: 100,
-        criteriaFile: null
-    }
-    topProducts.value = []
-    resultsMetadata.value = {
-        site_name: '',
-        model_name: '',
-        station_name: '',
-        criteria_score: '',
-        total_count: 0,
-        processing_time: 0
-    }
-    attemptedAnalysis.value = false
+  selection.value = {
+    siteId: null,
+    modelId: null,
+    stationId: null,
+  }
+  dateRange.value = {
+    startDate: '',
+    endDate: '',
+  }
+  criteriaConfig.value = {
+    criteriaScore: 80,
+    limit: 100,
+    criteriaFile: null,
+  }
+  topProducts.value = []
+  resultsMetadata.value = {
+    site_name: '',
+    model_name: '',
+    station_name: '',
+    criteria_score: '',
+    total_count: 0,
+    processing_time: 0,
+  }
+  attemptedAnalysis.value = false
 }
 </script>

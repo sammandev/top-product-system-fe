@@ -62,8 +62,7 @@
                 <div class="text-caption">
                     <strong>Criteria configured:</strong> Score ≥ {{ criteriaScore }}%,
                     Limit: {{ resultLimit }} results
-                    <span v-if="criteriaFileActual"> | Custom criteria file: {{ criteriaFileActual.name }} ({{
-                        formatFileSize(criteriaFileActual.size) }})</span>
+                    <span v-if="criteriaFileActual"> | Custom criteria file: {{ criteriaFileActual.name }} ({{ formatFileSize(criteriaFileActual.size) }})</span>
                 </div>
             </v-alert>
 
@@ -81,35 +80,41 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 // Props
 interface Props {
-    modelValue: {
-        criteriaScore: number
-        limit: number
-        criteriaFile: File | null
-    }
-    showValidation?: boolean
+  modelValue: {
+    criteriaScore: number
+    limit: number
+    criteriaFile: File | null
+  }
+  showValidation?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    showValidation: false
+  showValidation: false,
 })
 
 // Emits
 interface Emits {
-    (e: 'update:modelValue', value: {
-        criteriaScore: number
-        limit: number
-        criteriaFile: File | null
-    }): void
-    (e: 'change', value: {
-        criteriaScore: number
-        limit: number
-        criteriaFile: File | null
-        valid: boolean
-    }): void
+  (
+    e: 'update:modelValue',
+    value: {
+      criteriaScore: number
+      limit: number
+      criteriaFile: File | null
+    },
+  ): void
+  (
+    e: 'change',
+    value: {
+      criteriaScore: number
+      limit: number
+      criteriaFile: File | null
+      valid: boolean
+    },
+  ): void
 }
 
 const emit = defineEmits<Emits>()
@@ -123,94 +128,96 @@ const limitError = ref<string>('')
 
 // Set initial file if provided
 if (props.modelValue.criteriaFile) {
-    criteriaFile.value = props.modelValue.criteriaFile
+  criteriaFile.value = props.modelValue.criteriaFile
 }
 
 // Computed - Extract actual File from criteriaFile (handles both File and File[] formats)
 const criteriaFileActual = computed<File | undefined>(() => {
-    if (!criteriaFile.value) return undefined
-    if (Array.isArray(criteriaFile.value)) {
-        return criteriaFile.value.length > 0 ? criteriaFile.value[0] : undefined
-    }
-    return criteriaFile.value
+  if (!criteriaFile.value) return undefined
+  if (Array.isArray(criteriaFile.value)) {
+    return criteriaFile.value.length > 0 ? criteriaFile.value[0] : undefined
+  }
+  return criteriaFile.value
 })
 
 // Computed
 const isValid = computed(() => {
-    return criteriaScore.value >= 0 &&
-        criteriaScore.value <= 100 &&
-        resultLimit.value >= 1 &&
-        resultLimit.value <= 1000
+  return (
+    criteriaScore.value >= 0 &&
+    criteriaScore.value <= 100 &&
+    resultLimit.value >= 1 &&
+    resultLimit.value <= 1000
+  )
 })
 
 // Methods
 function handleScoreChange() {
-    scoreError.value = ''
+  scoreError.value = ''
 
-    // Validate score
-    if (criteriaScore.value < 0 || criteriaScore.value > 100) {
-        scoreError.value = 'Score must be between 0 and 100'
-    }
+  // Validate score
+  if (criteriaScore.value < 0 || criteriaScore.value > 100) {
+    scoreError.value = 'Score must be between 0 and 100'
+  }
 
-    emitChange()
+  emitChange()
 }
 
 function handleLimitChange() {
-    limitError.value = ''
+  limitError.value = ''
 
-    // Validate limit
-    if (resultLimit.value < 1) {
-        limitError.value = 'Limit must be at least 1'
-    } else if (resultLimit.value > 1000) {
-        limitError.value = 'Limit cannot exceed 1000'
-    }
+  // Validate limit
+  if (resultLimit.value < 1) {
+    limitError.value = 'Limit must be at least 1'
+  } else if (resultLimit.value > 1000) {
+    limitError.value = 'Limit cannot exceed 1000'
+  }
 
-    emitChange()
+  emitChange()
 }
 
 function handleFileChange() {
-    emitChange()
+  emitChange()
 }
 
 function emitChange() {
-    const file = criteriaFileActual.value || null
+  const file = criteriaFileActual.value || null
 
-    // Emit v-model update
-    emit('update:modelValue', {
-        criteriaScore: criteriaScore.value,
-        limit: resultLimit.value,
-        criteriaFile: file
-    })
+  // Emit v-model update
+  emit('update:modelValue', {
+    criteriaScore: criteriaScore.value,
+    limit: resultLimit.value,
+    criteriaFile: file,
+  })
 
-    // Emit detailed change event
-    emit('change', {
-        criteriaScore: criteriaScore.value,
-        limit: resultLimit.value,
-        criteriaFile: file,
-        valid: isValid.value
-    })
+  // Emit detailed change event
+  emit('change', {
+    criteriaScore: criteriaScore.value,
+    limit: resultLimit.value,
+    criteriaFile: file,
+    valid: isValid.value,
+  })
 }
 
 function getScoreColor(score: number): string {
-    if (score >= 90) return 'success'
-    if (score >= 70) return 'primary'
-    if (score >= 50) return 'warning'
-    return 'error'
+  if (score >= 90) return 'success'
+  if (score >= 70) return 'primary'
+  if (score >= 50) return 'warning'
+  return 'error'
 }
 
 function formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 Bytes'
+  if (bytes === 0) return '0 Bytes'
 
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
 
-    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i]
+  return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`
 }
 
 function downloadTemplate() {
-    // Create the template content with enhanced documentation
-    const templateContent = `; TOP PRODUCT CRITERIA CONFIGURATION TEMPLATE
+  // Create the template content with enhanced documentation
+  const templateContent = `; TOP PRODUCT CRITERIA CONFIGURATION TEMPLATE
 ; ================================================================
 ; Format: (can define multiple [Model|Station] sections)
 ; --------
@@ -245,34 +252,38 @@ function downloadTemplate() {
 "TEST_ITEM" <USL,LSL>  ===> "TargetValue"
 `
 
-    // Create a Blob from the content
-    const blob = new Blob([templateContent], { type: 'text/plain;charset=utf-8' })
+  // Create a Blob from the content
+  const blob = new Blob([templateContent], { type: 'text/plain;charset=utf-8' })
 
-    // Create a download link
-    const url = window.URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = 'top_product_criteria_configuration.ini'
+  // Create a download link
+  const url = window.URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = 'top_product_criteria_configuration.ini'
 
-    // Trigger download
-    document.body.appendChild(link)
-    link.click()
+  // Trigger download
+  document.body.appendChild(link)
+  link.click()
 
-    // Cleanup
-    document.body.removeChild(link)
-    window.URL.revokeObjectURL(url)
+  // Cleanup
+  document.body.removeChild(link)
+  window.URL.revokeObjectURL(url)
 }
 
 // Watch for external changes
-watch(() => props.modelValue, (newValue) => {
+watch(
+  () => props.modelValue,
+  (newValue) => {
     criteriaScore.value = newValue.criteriaScore
     resultLimit.value = newValue.limit
     if (newValue.criteriaFile) {
-        criteriaFile.value = newValue.criteriaFile
+      criteriaFile.value = newValue.criteriaFile
     } else {
-        criteriaFile.value = null
+      criteriaFile.value = null
     }
-}, { deep: true })
+  },
+  { deep: true },
+)
 </script>
 
 <style scoped>

@@ -1,6 +1,6 @@
 /**
  * Authentication Routes
- * 
+ *
  * Routes for authentication features (login, logout, etc.)
  */
 
@@ -14,7 +14,7 @@ export const authRoutes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: false,
       title: 'Login',
-      layout: 'auth'
-    }
-  }
+      layout: 'auth',
+    },
+  },
 ]

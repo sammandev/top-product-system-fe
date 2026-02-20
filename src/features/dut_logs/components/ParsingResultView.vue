@@ -469,9 +469,11 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import type { TestLogParseResponseEnhanced, ParsedTestItemEnhanced } from '@/features/dut_logs/composables/useTestLogUpload'
-import ScoreBreakdownDialog from './ScoreBreakdownDialog.vue'
+import { computed, ref, watch } from 'vue'
+import type {
+  ParsedTestItemEnhanced,
+  TestLogParseResponseEnhanced,
+} from '@/features/dut_logs/composables/useTestLogUpload'
 
 const props = defineProps<{
   result: TestLogParseResponseEnhanced
@@ -500,7 +502,7 @@ const itemsPerPageOptions = [
   { title: '50', value: 50 },
   { title: '100', value: 100 },
   { title: 'All', value: -1 },
-  { title: 'Custom', value: 0 }
+  { title: 'Custom', value: 0 },
 ]
 const showCustomInputValue = ref(false)
 const customItemsPerPageValue = ref(10)
@@ -510,14 +512,14 @@ const customItemsPerPageNonValue = ref(10)
 // Separate value and non-value items
 // Note: ADJUSTED_POW items are moved to non-value items
 const valueItems = computed(() => {
-  return props.result.parsed_items_enhanced.filter(item =>
-    item.is_value_type && !item.test_item.includes('ADJUSTED_POW')
+  return props.result.parsed_items_enhanced.filter(
+    (item) => item.is_value_type && !item.test_item.includes('ADJUSTED_POW'),
   )
 })
 
 const nonValueItems = computed(() => {
-  return props.result.parsed_items_enhanced.filter(item =>
-    !item.is_value_type || item.test_item.includes('ADJUSTED_POW')
+  return props.result.parsed_items_enhanced.filter(
+    (item) => !item.is_value_type || item.test_item.includes('ADJUSTED_POW'),
   )
 })
 
@@ -525,30 +527,34 @@ const nonValueItems = computed(() => {
 const filteredValueItems = computed(() => {
   if (!searchValue.value) return valueItems.value
   const searchLower = searchValue.value.toLowerCase()
-  return valueItems.value.filter(item =>
-    item.test_item.toLowerCase().includes(searchLower)
-  )
+  return valueItems.value.filter((item) => item.test_item.toLowerCase().includes(searchLower))
 })
 
 // Filtered non-value items
 const filteredNonValueItems = computed(() => {
   if (!searchNonValue.value) return nonValueItems.value
   const searchLower = searchNonValue.value.toLowerCase()
-  return nonValueItems.value.filter(item =>
-    item.test_item.toLowerCase().includes(searchLower)
-  )
+  return nonValueItems.value.filter((item) => item.test_item.toLowerCase().includes(searchLower))
 })
 
 // Pagination computed for Value Items
 const totalPagesValue = computed(() => {
-  const perPage = itemsPerPageValue.value === -1 ? filteredValueItems.value.length :
-    itemsPerPageValue.value === 0 ? 10 : itemsPerPageValue.value
+  const perPage =
+    itemsPerPageValue.value === -1
+      ? filteredValueItems.value.length
+      : itemsPerPageValue.value === 0
+        ? 10
+        : itemsPerPageValue.value
   return Math.ceil(filteredValueItems.value.length / perPage)
 })
 
 const paginatedValueItems = computed(() => {
-  const perPage = itemsPerPageValue.value === -1 ? filteredValueItems.value.length :
-    itemsPerPageValue.value === 0 ? 10 : itemsPerPageValue.value
+  const perPage =
+    itemsPerPageValue.value === -1
+      ? filteredValueItems.value.length
+      : itemsPerPageValue.value === 0
+        ? 10
+        : itemsPerPageValue.value
   const start = (currentPageValue.value - 1) * perPage
   const end = start + perPage
   return filteredValueItems.value.slice(start, end)
@@ -556,14 +562,22 @@ const paginatedValueItems = computed(() => {
 
 // Pagination computed for Non-Value Items
 const totalPagesNonValue = computed(() => {
-  const perPage = itemsPerPageNonValue.value === -1 ? filteredNonValueItems.value.length :
-    itemsPerPageNonValue.value === 0 ? 10 : itemsPerPageNonValue.value
+  const perPage =
+    itemsPerPageNonValue.value === -1
+      ? filteredNonValueItems.value.length
+      : itemsPerPageNonValue.value === 0
+        ? 10
+        : itemsPerPageNonValue.value
   return Math.ceil(filteredNonValueItems.value.length / perPage)
 })
 
 const paginatedNonValueItems = computed(() => {
-  const perPage = itemsPerPageNonValue.value === -1 ? filteredNonValueItems.value.length :
-    itemsPerPageNonValue.value === 0 ? 10 : itemsPerPageNonValue.value
+  const perPage =
+    itemsPerPageNonValue.value === -1
+      ? filteredNonValueItems.value.length
+      : itemsPerPageNonValue.value === 0
+        ? 10
+        : itemsPerPageNonValue.value
   const start = (currentPageNonValue.value - 1) * perPage
   const end = start + perPage
   return filteredNonValueItems.value.slice(start, end)
@@ -630,7 +644,7 @@ const valueHeaders = [
   { title: 'Value', key: 'value', sortable: true },
   { title: 'Type', key: 'type', sortable: true },
   { title: 'Score', key: 'score', sortable: true, align: 'end' as const },
-  { title: 'Criteria', key: 'matched_criteria', sortable: true, align: 'center' as const }
+  { title: 'Criteria', key: 'matched_criteria', sortable: true, align: 'center' as const },
 ]
 
 // Table headers for Non-Value Items (no scoring)
@@ -639,7 +653,7 @@ const nonValueHeaders = [
   { title: 'Value', key: 'value', sortable: true },
   { title: 'Decimal Value', key: 'decimal_value', sortable: true },
   { title: 'Type', key: 'type', sortable: true },
-  { title: 'Criteria', key: 'matched_criteria', sortable: true, align: 'center' as const }
+  { title: 'Criteria', key: 'matched_criteria', sortable: true, align: 'center' as const },
 ]
 
 // Score breakdown dialog
@@ -663,11 +677,11 @@ const getResultColor = (result: string | null): string => {
 }
 
 const formatScore = (score: number | null | undefined): string => {
-  return (score !== null && score !== undefined) ? score.toFixed(2) : 'N/A'
+  return score !== null && score !== undefined ? score.toFixed(2) : 'N/A'
 }
 
 const formatNumber = (value: number | null | undefined): string => {
-  return (value !== null && value !== undefined) ? value.toString() : 'N/A'
+  return value !== null && value !== undefined ? value.toString() : 'N/A'
 }
 
 const getTypeLabel = (item: ParsedTestItemEnhanced): string => {

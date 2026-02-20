@@ -4,7 +4,7 @@
  */
 
 // API Response wrapper
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   data: T
   message?: string
   status: number
@@ -53,7 +53,7 @@ export interface SortConfig {
 export interface FilterConfig {
   field: string
   operator: 'eq' | 'ne' | 'gt' | 'gte' | 'lt' | 'lte' | 'like' | 'in'
-  value: any
+  value: unknown
 }
 
 // File handling
@@ -73,7 +73,7 @@ export interface FileInfo {
 }
 
 // Form handling
-export interface FormField<T = any> {
+export interface FormField<T = unknown> {
   value: T
   error: string | null
   touched: boolean
@@ -86,7 +86,7 @@ export interface FormState {
 }
 
 // Async operations
-export interface AsyncState<T = any> {
+export interface AsyncState<T = unknown> {
   data: T | null
   loading: boolean
   error: string | null
@@ -114,9 +114,9 @@ export type DeepPartial<T> = {
 export type ValueOf<T> = T[keyof T]
 
 // Component props helper
-export type ComponentProps<T> = T extends new (...args: any) => any
-  ? InstanceType<T>['$props']
-  : never
+// biome-ignore lint/suspicious/noExplicitAny: required for generic type utility
+export type ComponentProps<T extends abstract new (...args: any[]) => any> =
+  InstanceType<T> extends { $props: infer P } ? P : never
 
 // Route meta
 export interface RouteMeta {

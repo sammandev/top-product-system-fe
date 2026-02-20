@@ -260,32 +260,37 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import type { RescoreScoringConfig, ParsedTestItemEnhanced } from '@/features/dut_logs/composables/useTestLogUpload'
+import { computed, ref, watch } from 'vue'
+import type {
+  ParsedTestItemEnhanced,
+  RescoreScoringConfig,
+} from '@/features/dut_logs/composables/useTestLogUpload'
 
 interface Props {
-    modelValue: boolean
-    testItems: ParsedTestItemEnhanced[]
-    existingConfigs?: RescoreScoringConfig[]
-    stations?: string[]
-    testItemStations?: Map<string, Set<string>>  // Maps test item name -> stations it appears in
+  modelValue: boolean
+  testItems: ParsedTestItemEnhanced[]
+  existingConfigs?: RescoreScoringConfig[]
+  stations?: string[]
+  testItemStations?: Map<string, Set<string>> // Maps test item name -> stations it appears in
+  defaultStation?: string | null // Initial station to filter by when dialog opens
 }
 
 interface Emits {
-    (e: 'update:modelValue', value: boolean): void
-    (e: 'apply', configs: RescoreScoringConfig[]): void
+  (e: 'update:modelValue', value: boolean): void
+  (e: 'apply', configs: RescoreScoringConfig[]): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    existingConfigs: () => [],
-    stations: () => []
+  existingConfigs: () => [],
+  stations: () => [],
+  defaultStation: null,
 })
 
 const emit = defineEmits<Emits>()
 
 const dialogOpen = computed({
-    get: () => props.modelValue,
-    set: (value) => emit('update:modelValue', value)
+  get: () => props.modelValue,
+  set: (value) => emit('update:modelValue', value),
 })
 
 // Local state
@@ -311,91 +316,93 @@ const bulkWeight = ref(1.0)
 
 // Scoring type options
 const scoringTypeOptions = [
-    { title: 'Symmetrical (Linear)', value: 'symmetrical' },
-    { title: 'Asymmetrical (Custom Target)', value: 'asymmetrical' },
-    { title: 'Near-Zero', value: 'per_mask' },
-    { title: 'EVM', value: 'evm' },
-    // { title: 'Throughput (Higher-is-Better)', value: 'throughput' },
-    // { title: 'Binary (PASS/FAIL)', value: 'binary' },
+  { title: 'Symmetrical (Linear)', value: 'symmetrical' },
+  { title: 'Asymmetrical (Custom Target)', value: 'asymmetrical' },
+  { title: 'Near-Zero', value: 'per_mask' },
+  { title: 'EVM', value: 'evm' },
+  // { title: 'Throughput (Higher-is-Better)', value: 'throughput' },
+  // { title: 'Binary (PASS/FAIL)', value: 'binary' },
 ]
 
 const policyOptions = [
-    { title: 'Symmetrical (Centered)', value: 'symmetrical' },
-    { title: 'Higher is Better', value: 'higher' },
-    { title: 'Lower is Better', value: 'lower' },
+  { title: 'Symmetrical (Centered)', value: 'symmetrical' },
+  { title: 'Higher is Better', value: 'higher' },
+  { title: 'Lower is Better', value: 'lower' },
 ]
 
 // Initialize scoring configs from test items - preserving original order
 function initializeConfigs() {
-    const existingMap = new Map<string, RescoreScoringConfig>()
-    props.existingConfigs.forEach(cfg => existingMap.set(cfg.test_item_name, cfg))
+  const existingMap = new Map<string, RescoreScoringConfig>()
+  props.existingConfigs.forEach((cfg) => existingMap.set(cfg.test_item_name, cfg))
 
-    // Use array to preserve original order from props.testItems
-    const seen = new Set<string>()
-    const orderedNames: string[] = []
-    props.testItems.forEach(item => {
-        if (!seen.has(item.test_item)) {
-            seen.add(item.test_item)
-            orderedNames.push(item.test_item)
-        }
-    })
+  // Use array to preserve original order from props.testItems
+  const seen = new Set<string>()
+  const orderedNames: string[] = []
+  props.testItems.forEach((item) => {
+    if (!seen.has(item.test_item)) {
+      seen.add(item.test_item)
+      orderedNames.push(item.test_item)
+    }
+  })
 
-    scoringConfigs.value = orderedNames.map(name => {
-        if (existingMap.has(name)) {
-            return { ...existingMap.get(name)! }
-        }
-        return {
-            test_item_name: name,
-            scoring_type: detectScoringType(name) as RescoreScoringConfig['scoring_type'],
-            enabled: true,
-            weight: 1.0,
-            policy: 'symmetrical' as const,
-        }
-    })
+  scoringConfigs.value = orderedNames.map((name) => {
+    if (existingMap.has(name)) {
+      // biome-ignore lint/style/noNonNullAssertion: checked via existingMap.has(name) above
+      return { ...existingMap.get(name)! }
+    }
+    return {
+      test_item_name: name,
+      scoring_type: detectScoringType(name) as RescoreScoringConfig['scoring_type'],
+      enabled: true,
+      weight: 1.0,
+      policy: 'symmetrical' as const,
+    }
+  })
 }
 
 // Auto-detect scoring type by test item name patterns
 function detectScoringType(name: string): string {
-    const upper = name.toUpperCase()
-    if (upper.includes('PER_') || upper.includes('_PER') || upper.includes('MASK')) return 'per_mask'
-    if (upper.includes('EVM')) return 'evm'
-    if (upper.includes('THROUGHPUT') || upper.includes('THRUPUT') || upper.includes('TPUT')) return 'throughput'
-    return 'symmetrical'
+  const upper = name.toUpperCase()
+  if (upper.includes('PER_') || upper.includes('_PER') || upper.includes('MASK')) return 'per_mask'
+  if (upper.includes('EVM')) return 'evm'
+  if (upper.includes('THROUGHPUT') || upper.includes('THRUPUT') || upper.includes('TPUT'))
+    return 'throughput'
+  return 'symmetrical'
 }
 
 // Filtered configs based on search and station
 const filteredConfigs = computed(() => {
-    let configs = scoringConfigs.value
+  let configs = scoringConfigs.value
 
-    // Filter by station if selected and mapping is provided
-    if (selectedStation.value && props.testItemStations) {
-        configs = configs.filter(c => {
-            const itemStations = props.testItemStations?.get(c.test_item_name)
-            return itemStations?.has(selectedStation.value as string)
-        })
-    }
+  // Filter by station if selected and mapping is provided
+  if (selectedStation.value && props.testItemStations) {
+    configs = configs.filter((c) => {
+      const itemStations = props.testItemStations?.get(c.test_item_name)
+      return itemStations?.has(selectedStation.value as string)
+    })
+  }
 
-    // Filter by search query
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase()
-        configs = configs.filter(c => c.test_item_name.toLowerCase().includes(query))
-    }
+  // Filter by search query
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    configs = configs.filter((c) => c.test_item_name.toLowerCase().includes(query))
+  }
 
-    return configs
+  return configs
 })
 
 // Helper: check if item is criteria (has UCL or LCL)
 function isItemCriteria(name: string): boolean {
-    const item = props.testItems.find(t => t.test_item === name)
-    return item ? (item.usl !== null || item.lsl !== null) : false
+  const item = props.testItems.find((t) => t.test_item === name)
+  return item ? item.usl !== null || item.lsl !== null : false
 }
 
 function getItemTypeLabel(name: string): string {
-    return isItemCriteria(name) ? 'Criteria' : 'Non-Criteria'
+  return isItemCriteria(name) ? 'Criteria' : 'Non-Criteria'
 }
 
 function getItemTypeColor(name: string): string {
-    return isItemCriteria(name) ? 'success' : 'warning'
+  return isItemCriteria(name) ? 'success' : 'warning'
 }
 
 // ============================================
@@ -403,58 +410,58 @@ function getItemTypeColor(name: string): string {
 // ============================================
 
 function toggleItemSelection(name: string) {
-    const newSet = new Set(selectedItemNames.value)
-    if (newSet.has(name)) {
-        newSet.delete(name)
-    } else {
-        newSet.add(name)
-    }
-    selectedItemNames.value = newSet
+  const newSet = new Set(selectedItemNames.value)
+  if (newSet.has(name)) {
+    newSet.delete(name)
+  } else {
+    newSet.add(name)
+  }
+  selectedItemNames.value = newSet
 }
 
 function selectDisplayedItems() {
-    const newSet = new Set(selectedItemNames.value)
-    filteredConfigs.value.forEach(c => newSet.add(c.test_item_name))
-    selectedItemNames.value = newSet
+  const newSet = new Set(selectedItemNames.value)
+  filteredConfigs.value.forEach((c) => newSet.add(c.test_item_name))
+  selectedItemNames.value = newSet
 }
 
 function selectCriteriaItems() {
-    const newSet = new Set(selectedItemNames.value)
-    scoringConfigs.value.forEach(c => {
-        if (isItemCriteria(c.test_item_name)) {
-            newSet.add(c.test_item_name)
-        }
-    })
-    selectedItemNames.value = newSet
+  const newSet = new Set(selectedItemNames.value)
+  scoringConfigs.value.forEach((c) => {
+    if (isItemCriteria(c.test_item_name)) {
+      newSet.add(c.test_item_name)
+    }
+  })
+  selectedItemNames.value = newSet
 }
 
 function selectNonCriteriaItems() {
-    const newSet = new Set(selectedItemNames.value)
-    scoringConfigs.value.forEach(c => {
-        if (!isItemCriteria(c.test_item_name)) {
-            newSet.add(c.test_item_name)
-        }
-    })
-    selectedItemNames.value = newSet
+  const newSet = new Set(selectedItemNames.value)
+  scoringConfigs.value.forEach((c) => {
+    if (!isItemCriteria(c.test_item_name)) {
+      newSet.add(c.test_item_name)
+    }
+  })
+  selectedItemNames.value = newSet
 }
 
 function clearSelection() {
-    selectedItemNames.value = new Set()
+  selectedItemNames.value = new Set()
 }
 
 /**
  * Select all displayed items and open bulk config dialog
  */
 function selectDisplayedAndConfigure() {
-    // First, select all displayed items
-    const newSet = new Set<string>()
-    filteredConfigs.value.forEach(c => newSet.add(c.test_item_name))
-    selectedItemNames.value = newSet
+  // First, select all displayed items
+  const newSet = new Set<string>()
+  filteredConfigs.value.forEach((c) => newSet.add(c.test_item_name))
+  selectedItemNames.value = newSet
 
-    // Then open bulk config dialog
-    if (newSet.size > 0) {
-        openBulkScoringConfig()
-    }
+  // Then open bulk config dialog
+  if (newSet.size > 0) {
+    openBulkScoringConfig()
+  }
 }
 
 // ============================================
@@ -462,41 +469,41 @@ function selectDisplayedAndConfigure() {
 // ============================================
 
 function openSingleItemConfig(name: string) {
-    singleConfigItem.value = name
-    singleItemScoringDialog.value = true
+  singleConfigItem.value = name
+  singleItemScoringDialog.value = true
 }
 
 function getSingleDialogConfig(): RescoreScoringConfig | undefined {
-    if (!singleConfigItem.value) return undefined
-    return scoringConfigs.value.find(c => c.test_item_name === singleConfigItem.value)
+  if (!singleConfigItem.value) return undefined
+  return scoringConfigs.value.find((c) => c.test_item_name === singleConfigItem.value)
 }
 
 const singleDialogSpecs = computed(() => {
-    if (!singleConfigItem.value) return null
-    return props.testItems.find(item => item.test_item === singleConfigItem.value) || null
+  if (!singleConfigItem.value) return null
+  return props.testItems.find((item) => item.test_item === singleConfigItem.value) || null
 })
 
 function updateSingleDialogScoringType(type: RescoreScoringConfig['scoring_type']) {
-    const config = getSingleDialogConfig()
-    if (config) {
-        config.scoring_type = type
-        if (type !== 'asymmetrical') config.policy = 'symmetrical'
-    }
+  const config = getSingleDialogConfig()
+  if (config) {
+    config.scoring_type = type
+    if (type !== 'asymmetrical') config.policy = 'symmetrical'
+  }
 }
 
 function updateSingleDialogPolicy(policy: RescoreScoringConfig['policy']) {
-    const config = getSingleDialogConfig()
-    if (config) config.policy = policy
+  const config = getSingleDialogConfig()
+  if (config) config.policy = policy
 }
 
 function updateSingleDialogTarget(target: number | undefined) {
-    const config = getSingleDialogConfig()
-    if (config) config.target = target
+  const config = getSingleDialogConfig()
+  if (config) config.target = target
 }
 
 function updateSingleDialogWeight(weight: number) {
-    const config = getSingleDialogConfig()
-    if (config) config.weight = weight
+  const config = getSingleDialogConfig()
+  if (config) config.weight = weight
 }
 
 // ============================================
@@ -504,29 +511,29 @@ function updateSingleDialogWeight(weight: number) {
 // ============================================
 
 function openBulkScoringConfig() {
-    if (selectedItemNames.value.size === 0) return
-    bulkScoringType.value = 'symmetrical'
-    bulkPolicy.value = 'symmetrical'
-    bulkTarget.value = undefined
-    bulkWeight.value = 1.0
-    bulkScoringDialog.value = true
+  if (selectedItemNames.value.size === 0) return
+  bulkScoringType.value = 'symmetrical'
+  bulkPolicy.value = 'symmetrical'
+  bulkTarget.value = undefined
+  bulkWeight.value = 1.0
+  bulkScoringDialog.value = true
 }
 
 function applyBulkScoringConfig() {
-    scoringConfigs.value.forEach(c => {
-        if (selectedItemNames.value.has(c.test_item_name)) {
-            c.scoring_type = bulkScoringType.value
-            c.weight = bulkWeight.value
-            if (bulkScoringType.value === 'asymmetrical') {
-                c.policy = bulkPolicy.value
-                c.target = bulkTarget.value
-            } else {
-                c.policy = 'symmetrical'
-                c.target = undefined
-            }
-        }
-    })
-    bulkScoringDialog.value = false
+  scoringConfigs.value.forEach((c) => {
+    if (selectedItemNames.value.has(c.test_item_name)) {
+      c.scoring_type = bulkScoringType.value
+      c.weight = bulkWeight.value
+      if (bulkScoringType.value === 'asymmetrical') {
+        c.policy = bulkPolicy.value
+        c.target = bulkTarget.value
+      } else {
+        c.policy = 'symmetrical'
+        c.target = undefined
+      }
+    }
+  })
+  bulkScoringDialog.value = false
 }
 
 // ============================================
@@ -534,85 +541,107 @@ function applyBulkScoringConfig() {
 // ============================================
 
 function resetAll() {
-    scoringConfigs.value.forEach(c => {
-        c.scoring_type = detectScoringType(c.test_item_name) as RescoreScoringConfig['scoring_type']
-        c.weight = 1.0
-        c.policy = 'symmetrical'
-        c.target = undefined
-    })
+  scoringConfigs.value.forEach((c) => {
+    c.scoring_type = detectScoringType(c.test_item_name) as RescoreScoringConfig['scoring_type']
+    c.weight = 1.0
+    c.policy = 'symmetrical'
+    c.target = undefined
+  })
 }
 
 // Handlers
 function handleApply() {
-    emit('apply', [...scoringConfigs.value])
-    dialogOpen.value = false
+  emit('apply', [...scoringConfigs.value])
+  dialogOpen.value = false
 }
 
 function handleCancel() {
-    dialogOpen.value = false
+  dialogOpen.value = false
 }
 
 // Helpers
 function getScoringTypeColor(type: string): string {
-    switch (type) {
-        case 'symmetrical': return 'blue'
-        case 'asymmetrical': return 'purple'
-        case 'per_mask': return 'orange'
-        case 'evm': return 'teal'
-        case 'throughput': return 'green'
-        case 'binary': return 'grey'
-        default: return 'blue'
-    }
+  switch (type) {
+    case 'symmetrical':
+      return 'blue'
+    case 'asymmetrical':
+      return 'purple'
+    case 'per_mask':
+      return 'orange'
+    case 'evm':
+      return 'teal'
+    case 'throughput':
+      return 'green'
+    case 'binary':
+      return 'grey'
+    default:
+      return 'blue'
+  }
 }
 
 function getScoringTypeLabel(type: string): string {
-    switch (type) {
-        case 'symmetrical': return 'Sym'
-        case 'asymmetrical': return 'Asym'
-        case 'per_mask': return 'Near Zero'
-        case 'evm': return 'EVM'
-        case 'throughput': return 'TPUT'
-        case 'binary': return 'Bin'
-        default: return type
-    }
+  switch (type) {
+    case 'symmetrical':
+      return 'Sym'
+    case 'asymmetrical':
+      return 'Asym'
+    case 'per_mask':
+      return 'Near Zero'
+    case 'evm':
+      return 'EVM'
+    case 'throughput':
+      return 'TPUT'
+    case 'binary':
+      return 'Bin'
+    default:
+      return type
+  }
 }
 
 function getScoringAlertType(type: string): 'info' | 'warning' | 'success' {
-    switch (type) {
-        case 'asymmetrical': return 'warning'
-        case 'per_mask':
-        case 'evm': return 'success'
-        default: return 'info'
-    }
+  switch (type) {
+    case 'asymmetrical':
+      return 'warning'
+    case 'per_mask':
+    case 'evm':
+      return 'success'
+    default:
+      return 'info'
+  }
 }
 
 function getScoringTypeDescription(type: string): string {
-    switch (type) {
-        case 'symmetrical':
-            return 'Linear scoring centered on midpoint of UCL/LCL. Score decreases proportionally as value moves toward limits.'
-        case 'asymmetrical':
-            return 'Custom target with directional bias. Use Policy to prefer higher or lower values relative to the target.'
-        case 'per_mask':
-            return 'Near-zero scoring for PER/MASK items. Zero value = perfect score. Score decreases as value increases toward UCL.'
-        case 'evm':
-            return 'EVM scoring where lower values are better. Score based on how far value is from UCL (upper limit).'
-        case 'throughput':
-            return 'Higher-is-better scoring with LCL as minimum. Score increases as value rises above the lower limit.'
-        case 'binary':
-            return 'Simple PASS/FAIL scoring. PASS = 10.0, FAIL = 0.0. No intermediate scores.'
-        default:
-            return 'Select a scoring type.'
-    }
+  switch (type) {
+    case 'symmetrical':
+      return 'Linear scoring centered on midpoint of UCL/LCL. Score decreases proportionally as value moves toward limits.'
+    case 'asymmetrical':
+      return 'Custom target with directional bias. Use Policy to prefer higher or lower values relative to the target.'
+    case 'per_mask':
+      return 'Near-zero scoring for PER/MASK items. Zero value = perfect score. Score decreases as value increases toward UCL.'
+    case 'evm':
+      return 'EVM scoring where lower values are better. Score based on how far value is from UCL (upper limit).'
+    case 'throughput':
+      return 'Higher-is-better scoring with LCL as minimum. Score increases as value rises above the lower limit.'
+    case 'binary':
+      return 'Simple PASS/FAIL scoring. PASS = 10.0, FAIL = 0.0. No intermediate scores.'
+    default:
+      return 'Select a scoring type.'
+  }
 }
 
 // Watch dialog open to initialize
-watch(() => props.modelValue, (isOpen) => {
+watch(
+  () => props.modelValue,
+  (isOpen) => {
     if (isOpen) {
-        initializeConfigs()
-        selectedItemNames.value = new Set()
-        searchQuery.value = ''
+      initializeConfigs()
+      selectedItemNames.value = new Set()
+      searchQuery.value = ''
+      // Set default station filter if provided
+      selectedStation.value = props.defaultStation || null
     }
-})
+  },
+)
 </script>
 
 <style scoped>

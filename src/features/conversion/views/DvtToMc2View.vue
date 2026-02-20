@@ -288,26 +288,25 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import { computed, ref } from 'vue'
 import {
-    convertDvtToMc2Batch,
-    downloadMultipleMc2Results,
-    validateDvtFile,
-    parseDvtFilePreview,
-    type BatchConvertResult
+  type BatchConvertResult,
+  convertDvtToMc2Batch,
+  downloadMultipleMc2Results,
+  parseDvtFilePreview,
+  validateDvtFile,
 } from '../api/convert'
 
 interface FilePreview {
-    filename: string
-    serialNumber?: string
-    detectedBands: string[]
-    rowCount: number
+  filename: string
+  serialNumber?: string
+  detectedBands: string[]
+  rowCount: number
 }
 
 interface ConversionProgress {
-    filename: string
-    progress: number
+  filename: string
+  progress: number
 }
 
 // State
@@ -322,122 +321,120 @@ const errorMessage = ref('')
 
 // Computed
 const canConvert = computed(() => {
-    return dvtFiles.value.length > 0 && !converting.value && !dvtFilesError.value
+  return dvtFiles.value.length > 0 && !converting.value && !dvtFilesError.value
 })
 
 const successCount = computed(() => {
-    return conversionResults.value.filter(r => r.success).length
+  return conversionResults.value.filter((r) => r.success).length
 })
 
 // Methods
 function formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB', 'GB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB', 'GB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`
 }
 
 function formatTotalSize(files: File[]): string {
-    const totalBytes = files.reduce((sum, file) => sum + file.size, 0)
-    return formatFileSize(totalBytes)
+  const totalBytes = files.reduce((sum, file) => sum + file.size, 0)
+  return formatFileSize(totalBytes)
 }
 
 async function handleDvtFilesChange() {
-    dvtFilesError.value = ''
-    filePreviews.value = []
+  dvtFilesError.value = ''
+  filePreviews.value = []
 
-    if (dvtFiles.value.length === 0) return
+  if (dvtFiles.value.length === 0) return
 
-    // Validate each file
-    for (const file of dvtFiles.value) {
-        const validation = validateDvtFile(file)
-        if (!validation.valid) {
-            dvtFilesError.value = `${file.name}: ${validation.error}`
-            return
+  // Validate each file
+  for (const file of dvtFiles.value) {
+    const validation = validateDvtFile(file)
+    if (!validation.valid) {
+      dvtFilesError.value = `${file.name}: ${validation.error}`
+      return
+    }
+  }
+
+  // Generate previews for each file
+  try {
+    const previews = await Promise.all(
+      dvtFiles.value.map(async (file) => {
+        try {
+          const preview = await parseDvtFilePreview(file)
+          return {
+            filename: file.name,
+            ...preview,
+          }
+        } catch (error) {
+          console.error(`Preview failed for ${file.name}:`, error)
+          return {
+            filename: file.name,
+            serialNumber: undefined,
+            detectedBands: [],
+            rowCount: 0,
+          }
         }
-    }
-
-    // Generate previews for each file
-    try {
-        const previews = await Promise.all(
-            dvtFiles.value.map(async (file) => {
-                try {
-                    const preview = await parseDvtFilePreview(file)
-                    return {
-                        filename: file.name,
-                        ...preview
-                    }
-                } catch (error) {
-                    console.error(`Preview failed for ${file.name}:`, error)
-                    return {
-                        filename: file.name,
-                        serialNumber: undefined,
-                        detectedBands: [],
-                        rowCount: 0
-                    }
-                }
-            })
-        )
-        filePreviews.value = previews
-    } catch (error) {
-        console.error('Preview generation failed:', error)
-    }
+      }),
+    )
+    filePreviews.value = previews
+  } catch (error) {
+    console.error('Preview generation failed:', error)
+  }
 }
 
 async function handleConvert() {
-    if (dvtFiles.value.length === 0) return
+  if (dvtFiles.value.length === 0) return
 
-    converting.value = true
-    conversionProgress.value = dvtFiles.value.map(file => ({
-        filename: file.name,
-        progress: 0
-    }))
-    conversionResults.value = []
-    showError.value = false
+  converting.value = true
+  conversionProgress.value = dvtFiles.value.map((file) => ({
+    filename: file.name,
+    progress: 0,
+  }))
+  conversionResults.value = []
+  showError.value = false
 
-    try {
-        const results = await convertDvtToMc2Batch(
-            dvtFiles.value,
-            (fileIndex, _fileName, progress) => {
-                if (conversionProgress.value[fileIndex]) {
-                    conversionProgress.value[fileIndex].progress = progress
-                }
-            }
-        )
+  try {
+    const results = await convertDvtToMc2Batch(dvtFiles.value, (fileIndex, _fileName, progress) => {
+      if (conversionProgress.value[fileIndex]) {
+        conversionProgress.value[fileIndex].progress = progress
+      }
+    })
 
-        conversionResults.value = results
+    conversionResults.value = results
 
-        // Auto-download successful conversions
-        downloadMultipleMc2Results(results.filter(r => r.success))
+    // Auto-download successful conversions
+    downloadMultipleMc2Results(results.filter((r) => r.success))
 
-        // Show error if some conversions failed
-        const failedCount = results.filter(r => !r.success).length
-        if (failedCount > 0) {
-            errorMessage.value = `${failedCount} file(s) failed to convert. See results for details.`
-            showError.value = true
-        }
-    } catch (error) {
-        console.error('Batch conversion failed:', error)
-        errorMessage.value = error instanceof Error ? error.message : 'Conversion failed. Please try again.'
-        showError.value = true
-    } finally {
-        converting.value = false
+    // Show error if some conversions failed
+    const failedCount = results.filter((r) => !r.success).length
+    if (failedCount > 0) {
+      errorMessage.value = `${failedCount} file(s) failed to convert. See results for details.`
+      showError.value = true
     }
+  } catch (error) {
+    console.error('Batch conversion failed:', error)
+    errorMessage.value =
+      error instanceof Error ? error.message : 'Conversion failed. Please try again.'
+    showError.value = true
+  } finally {
+    converting.value = false
+  }
 }
 
 function downloadAllResults() {
-    if (conversionResults.value.length > 0) {
-        downloadMultipleMc2Results(conversionResults.value.filter(r => r.success))
-    }
+  if (conversionResults.value.length > 0) {
+    downloadMultipleMc2Results(conversionResults.value.filter((r) => r.success))
+  }
 }
 
 function resetForm() {
-    dvtFiles.value = []
-    dvtFilesError.value = ''
-    conversionProgress.value = []
-    conversionResults.value = []
-    filePreviews.value = []
+  dvtFiles.value = []
+  dvtFilesError.value = ''
+  conversionProgress.value = []
+  conversionResults.value = []
+  filePreviews.value = []
 }
 </script>
 

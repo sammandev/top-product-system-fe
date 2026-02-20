@@ -1,15 +1,15 @@
 /**
  * Scoring API Client
- * 
+ *
  * API client for the backend scoring endpoints.
  */
 import apiClient from '@/core/api/client'
 import type {
-  ScoringConfig,
+  CalculateScoresResponse,
   RecordScoreResult,
   ScoreSummary,
-  CalculateScoresResponse,
-  ScoringType
+  ScoringConfig,
+  ScoringType,
 } from '../types/scoring.types'
 
 // Transform helpers (camelCase to snake_case for backend)
@@ -24,7 +24,7 @@ function toSnakeCase(config: ScoringConfig): Record<string, unknown> {
     target_score: config.targetScore,
     target_deviation: config.targetDeviation,
     min_score: config.minScore,
-    max_deviation: config.maxDeviation
+    max_deviation: config.maxDeviation,
   }
 }
 
@@ -51,12 +51,12 @@ function fromSnakeCaseRecord(data: Record<string, unknown>): RecordScoreResult {
         score: item.score as number,
         deviation: item.deviation as number | undefined,
         weight: (item.weight as number) ?? 1.0,
-        target: item.target as number | null | undefined
+        target: item.target as number | null | undefined,
       }
     }),
     totalItems: data.total_items as number,
     scoredItems: data.scored_items as number,
-    failedItems: data.failed_items as number
+    failedItems: data.failed_items as number,
   }
 }
 
@@ -69,7 +69,7 @@ function fromSnakeCaseSummary(data: Record<string, unknown>): ScoreSummary {
     stdDeviation: data.std_deviation as number,
     totalRecords: data.total_records as number,
     passRecords: data.pass_records as number,
-    failRecords: data.fail_records as number
+    failRecords: data.fail_records as number,
   }
 }
 
@@ -83,12 +83,12 @@ export const scoringApi = {
   async calculateScores(
     records: unknown[],
     scoringConfigs: ScoringConfig[],
-    includeBinaryInOverall = true
+    includeBinaryInOverall = true,
   ): Promise<CalculateScoresResponse> {
     const payload = {
       records,
       scoring_configs: scoringConfigs.map(toSnakeCase),
-      include_binary_in_overall: includeBinaryInOverall
+      include_binary_in_overall: includeBinaryInOverall,
     }
 
     const response = await apiClient.post<{
@@ -98,67 +98,76 @@ export const scoringApi = {
 
     return {
       scoredRecords: response.data.scored_records.map(fromSnakeCaseRecord),
-      summary: fromSnakeCaseSummary(response.data.summary)
+      summary: fromSnakeCaseSummary(response.data.summary),
     }
   },
 
   /**
    * Auto-detect scoring types for test items in a record
    */
-  async detectScoringTypes(record: unknown): Promise<{
-    testItemName: string
-    detectedType: ScoringType
-    value: string
-    ucl: string
-    lcl: string
-    defaultParams: Record<string, unknown>
-  }[]> {
-    const response = await apiClient.post<{
-      test_item_name: string
-      detected_type: string
+  async detectScoringTypes(record: unknown): Promise<
+    {
+      testItemName: string
+      detectedType: ScoringType
       value: string
       ucl: string
       lcl: string
-      default_params: Record<string, unknown>
-    }[]>('/api/scoring/detect-types', record)
+      defaultParams: Record<string, unknown>
+    }[]
+  > {
+    const response = await apiClient.post<
+      {
+        test_item_name: string
+        detected_type: string
+        value: string
+        ucl: string
+        lcl: string
+        default_params: Record<string, unknown>
+      }[]
+    >('/api/scoring/detect-types', record)
 
-    return response.data.map(item => ({
+    return response.data.map((item) => ({
       testItemName: item.test_item_name,
       detectedType: item.detected_type as ScoringType,
       value: item.value,
       ucl: item.ucl,
       lcl: item.lcl,
-      defaultParams: item.default_params
+      defaultParams: item.default_params,
     }))
   },
 
   /**
    * Get all available scoring types with descriptions
    */
-  async getScoringTypes(): Promise<{
-    type: ScoringType
-    label: string
-    description: string
-    useCase: string
-    params: string[]
-    defaults: Record<string, unknown>
-  }[]> {
-    const response = await apiClient.get<{
-      type: string
+  async getScoringTypes(): Promise<
+    {
+      type: ScoringType
       label: string
       description: string
-      use_case: string
+      useCase: string
       params: string[]
       defaults: Record<string, unknown>
-    }[]>('/api/scoring/types')
+    }[]
+  > {
+    const response =
+      await apiClient.get<
+        {
+          type: string
+          label: string
+          description: string
+          use_case: string
+          params: string[]
+          defaults: Record<string, unknown>
+        }[]
+      >('/api/scoring/types')
 
-    return response.data.map(item => ({
+    return response.data.map((item) => ({
       type: item.type as ScoringType,
       label: item.label,
       description: item.description,
       useCase: item.use_case,
       params: item.params,
-      defaults: item.defaults
+      defaults: item.defaults,
     }))
   },
 
@@ -170,7 +179,7 @@ export const scoringApi = {
     scoringType: ScoringType,
     ucl?: number,
     lcl?: number,
-    config?: Partial<ScoringConfig>
+    config?: Partial<ScoringConfig>,
   ): Promise<{
     value: number
     scoringType: ScoringType
@@ -194,7 +203,10 @@ export const scoringApi = {
       score: number
       deviation: number | null
       score_percent: string
-    }>(`/api/scoring/preview?${params.toString()}`, config ? toSnakeCase(config as ScoringConfig) : null)
+    }>(
+      `/api/scoring/preview?${params.toString()}`,
+      config ? toSnakeCase(config as ScoringConfig) : null,
+    )
 
     return {
       value: response.data.value,
@@ -203,9 +215,9 @@ export const scoringApi = {
       lcl: response.data.lcl,
       score: response.data.score,
       deviation: response.data.deviation,
-      scorePercent: response.data.score_percent
+      scorePercent: response.data.score_percent,
     }
-  }
+  },
 }
 
 export default scoringApi

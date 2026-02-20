@@ -362,8 +362,7 @@
                         <template #append>
                             <v-chip size="small" :color="getScoreColor(selectedTestItem.score ?? 0)" variant="flat"
                                 class="font-weight-bold">
-                                {{ selectedTestItem.score !== undefined ? ((selectedTestItem.score ?? 0) *
-                                    10).toFixed(2) : '-' }} / 10
+                                {{ selectedTestItem.score !== undefined ? ((selectedTestItem.score ?? 0) * 10).toFixed(2) : '-' }} / 10
                             </v-chip>
                         </template>
                     </v-list-item>
@@ -417,22 +416,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
+import { computed, ref, watch } from 'vue'
+import {
+  adjustIplasDisplayTime,
+  getStatusColor,
+  isStatusFail,
+  isStatusPass,
+  normalizeStatus,
+} from '@/shared/utils/helpers'
 import type { ScoringType } from '../types/scoring.types'
 import { getScoreColor, SCORING_TYPE_INFO } from '../types/scoring.types'
-import { adjustIplasDisplayTime, getStatusColor, normalizeStatus, isStatusPass, isStatusFail } from '@/shared/utils/helpers'
+import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
 
 interface Props {
-    modelValue: boolean
-    record: NormalizedRecord | null
-    downloading?: boolean
-    loadingTestItems?: boolean
+  modelValue: boolean
+  record: NormalizedRecord | null
+  downloading?: boolean
+  loadingTestItems?: boolean
 }
 
 interface Emits {
-    (e: 'update:modelValue', value: boolean): void
-    (e: 'download'): void
+  (e: 'update:modelValue', value: boolean): void
+  (e: 'download'): void
 }
 
 const props = defineProps<Props>()
@@ -440,8 +445,8 @@ const emit = defineEmits<Emits>()
 
 // Dialog state
 const isOpen = computed({
-    get: () => props.modelValue,
-    set: (val) => emit('update:modelValue', val)
+  get: () => props.modelValue,
+  set: (val) => emit('update:modelValue', val),
 })
 
 const isFullscreen = ref(false)
@@ -462,371 +467,389 @@ const selectedTestItem = ref<NormalizedTestItem | null>(null)
 
 // Filter options for dropdown
 const testItemFilterOptions = [
-    { title: 'Criteria Data ★', value: 'value' },
-    { title: 'Show All', value: 'all' },
-    { title: 'Non-Criteria', value: 'non-value' },
-    { title: 'Bin Data', value: 'bin' }
+  { title: 'Criteria Data ★', value: 'value' },
+  { title: 'Show All', value: 'all' },
+  { title: 'Non-Criteria', value: 'non-value' },
+  { title: 'Bin Data', value: 'bin' },
 ]
 
 // UPDATED: Score filter options
 const scoreFilterOptions = [
-    { title: '> Greater than', value: 'gt' },
-    { title: '≥ Greater or equal', value: 'gte' },
-    { title: '< Less than', value: 'lt' },
-    { title: '≤ Less or equal', value: 'lte' },
-    { title: '= Equals', value: 'eq' }
+  { title: '> Greater than', value: 'gt' },
+  { title: '≥ Greater or equal', value: 'gte' },
+  { title: '< Less than', value: 'lt' },
+  { title: '≤ Less or equal', value: 'lte' },
+  { title: '= Equals', value: 'eq' },
 ]
 
 // Computed: check if scores are available
 const hasScores = computed(() => {
-    return props.record?.testItems?.some(item => item.score !== undefined) ?? false
+  return props.record?.testItems?.some((item) => item.score !== undefined) ?? false
 })
 
 // Dynamic headers - add Score column if scores are available
 const testItemHeaders = computed(() => {
-    const baseHeaders = [
-        { title: 'Test Item', key: 'NAME', sortable: true },
-        { title: 'Status', key: 'STATUS', sortable: true },
-        { title: 'Value', key: 'VALUE', sortable: true },
-        { title: 'UCL', key: 'UCL', sortable: true },
-        { title: 'LCL', key: 'LCL', sortable: true }
-    ]
+  const baseHeaders = [
+    { title: 'Test Item', key: 'NAME', sortable: true },
+    { title: 'Status', key: 'STATUS', sortable: true },
+    { title: 'Value', key: 'VALUE', sortable: true },
+    { title: 'UCL', key: 'UCL', sortable: true },
+    { title: 'LCL', key: 'LCL', sortable: true },
+  ]
 
-    if (hasScores.value) {
-        baseHeaders.push({ title: 'Score', key: 'SCORE', sortable: true })
-    }
+  if (hasScores.value) {
+    baseHeaders.push({ title: 'Score', key: 'SCORE', sortable: true })
+  }
 
-    return baseHeaders
+  return baseHeaders
 })
 
 // Helper functions
 function isValueData(item: NormalizedTestItem): boolean {
-    const value = item.VALUE?.toUpperCase() || ''
-    // Value data: not PASS, FAIL, 1, 0, or -999
-    if (value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999') {
-        return false
-    }
-    const hasNumericValue = !isNaN(parseFloat(item.VALUE)) && item.VALUE !== ''
-    const hasNumericUcl = !isNaN(parseFloat(item.UCL)) && item.UCL !== ''
-    const hasNumericLcl = !isNaN(parseFloat(item.LCL)) && item.LCL !== ''
-    const numericCount = [hasNumericValue, hasNumericUcl, hasNumericLcl].filter(Boolean).length
-    return numericCount >= 2
+  const value = item.VALUE?.toUpperCase() || ''
+  // Value data: not PASS, FAIL, 1, 0, or -999
+  if (value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999') {
+    return false
+  }
+  const hasNumericValue = !Number.isNaN(parseFloat(item.VALUE)) && item.VALUE !== ''
+  const hasNumericUcl = !Number.isNaN(parseFloat(item.UCL)) && item.UCL !== ''
+  const hasNumericLcl = !Number.isNaN(parseFloat(item.LCL)) && item.LCL !== ''
+  const numericCount = [hasNumericValue, hasNumericUcl, hasNumericLcl].filter(Boolean).length
+  return numericCount >= 2
 }
 
 function isPassFailData(item: NormalizedTestItem): boolean {
-    const value = item.VALUE?.toUpperCase() || ''
-    // STATUS must be PASS, FAIL, 1, 0, or -1 AND VALUE must be PASS, FAIL, 1, 0, or -999
-    const isStatusPF = isStatusPass(item.STATUS) || isStatusFail(item.STATUS) || item.STATUS === '-1'
-    const isValuePF = value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999'
-    return isStatusPF && isValuePF
+  const value = item.VALUE?.toUpperCase() || ''
+  // STATUS must be PASS, FAIL, 1, 0, or -1 AND VALUE must be PASS, FAIL, 1, 0, or -999
+  const isStatusPF = isStatusPass(item.STATUS) || isStatusFail(item.STATUS) || item.STATUS === '-1'
+  const isValuePF =
+    value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999'
+  return isStatusPF && isValuePF
 }
 
 function isBinData(item: NormalizedTestItem): boolean {
-    return isPassFailData(item)
+  return isPassFailData(item)
 }
 
 function isNonValueData(item: NormalizedTestItem): boolean {
-    return !isValueData(item) && !isBinData(item)
+  return !isValueData(item) && !isBinData(item)
 }
 
 function getValueClass(item: NormalizedTestItem): string {
-    const value = item.VALUE?.toUpperCase() || ''
-    if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
-    if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
-    if (value === '-999') return 'text-warning'
-    return ''
+  const value = item.VALUE?.toUpperCase() || ''
+  if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
+  if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
+  if (value === '-999') return 'text-warning'
+  return ''
 }
 
 function formatTime(timeStr: string): string {
-    // Use the centralized helper to adjust time by -1 hour for display
-    // Returns format: YYYY-MM-DD HH:MM:SS (e.g., 2026-02-06 22:34:42)
-    return adjustIplasDisplayTime(timeStr, 1)
+  // Use the centralized helper to adjust time by -1 hour for display
+  // Returns format: YYYY-MM-DD HH:MM:SS (e.g., 2026-02-06 22:34:42)
+  return adjustIplasDisplayTime(timeStr, 1)
 }
 
 function calculateDuration(startStr: string, endStr: string): string {
-    if (!startStr || !endStr) return '-'
-    try {
-        const cleanStart = startStr.replace('%:z', '').replace('T', ' ')
-        const cleanEnd = endStr.replace('%:z', '').replace('T', ' ')
-        const start = new Date(cleanStart.replace(' ', 'T') + 'Z')
-        const end = new Date(cleanEnd.replace(' ', 'T') + 'Z')
-        const diffMs = end.getTime() - start.getTime()
-        const diffSeconds = Math.floor(diffMs / 1000)
-        const minutes = Math.floor(diffSeconds / 60)
-        const seconds = diffSeconds % 60
-        return `${minutes}m ${seconds}s`
-    } catch {
-        return '-'
-    }
+  if (!startStr || !endStr) return '-'
+  try {
+    const cleanStart = startStr.replace('%:z', '').replace('T', ' ')
+    const cleanEnd = endStr.replace('%:z', '').replace('T', ' ')
+    const start = new Date(`${cleanStart.replace(' ', 'T')}Z`)
+    const end = new Date(`${cleanEnd.replace(' ', 'T')}Z`)
+    const diffMs = end.getTime() - start.getTime()
+    const diffSeconds = Math.floor(diffMs / 1000)
+    const minutes = Math.floor(diffSeconds / 60)
+    const seconds = diffSeconds % 60
+    return `${minutes}m ${seconds}s`
+  } catch {
+    return '-'
+  }
 }
 
 async function copyToClipboard(text: string): Promise<void> {
-    if (!text) return
-    try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(text)
-        } else {
-            const textArea = document.createElement('textarea')
-            textArea.value = text
-            textArea.style.position = 'fixed'
-            textArea.style.left = '-9999px'
-            document.body.appendChild(textArea)
-            textArea.select()
-            document.execCommand('copy')
-            document.body.removeChild(textArea)
-        }
-        showCopySuccess.value = true
-    } catch (err) {
-        console.error('Failed to copy:', err)
+  if (!text) return
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-9999px'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
     }
+    showCopySuccess.value = true
+  } catch (err) {
+    console.error('Failed to copy:', err)
+  }
 }
 
 // Computed filtered test items
 const filteredTestItems = computed(() => {
-    if (!props.record?.testItems) return []
+  if (!props.record?.testItems) return []
 
-    let items = [...props.record.testItems]
+  let items = [...props.record.testItems]
 
-    // Apply test item type filter (supports multiple selections)
-    if (testItemFilter.value.length > 0 && !testItemFilter.value.includes('all')) {
-        items = items.filter(item => {
-            return testItemFilter.value.some(filterType => {
-                switch (filterType) {
-                    case 'value':
-                        return isValueData(item)
-                    case 'non-value':
-                        return isNonValueData(item)
-                    case 'bin':
-                        return isBinData(item)
-                    default:
-                        return true
-                }
-            })
-        })
-    }
+  // Apply test item type filter (supports multiple selections)
+  if (testItemFilter.value.length > 0 && !testItemFilter.value.includes('all')) {
+    items = items.filter((item) => {
+      return testItemFilter.value.some((filterType) => {
+        switch (filterType) {
+          case 'value':
+            return isValueData(item)
+          case 'non-value':
+            return isNonValueData(item)
+          case 'bin':
+            return isBinData(item)
+          default:
+            return true
+        }
+      })
+    })
+  }
 
-    // UPDATED: Apply multi-term regex search (AND logic - all terms must match)
-    if (searchTerms.value.length > 0) {
-        items = items.filter(item => {
-            const searchableText = `${item.NAME || ''} ${item.STATUS || ''} ${item.VALUE || ''}`.toLowerCase()
-            // AND logic: every term must match
-            return searchTerms.value.every(term => {
-                const trimmedTerm = term.trim().toLowerCase()
-                if (!trimmedTerm) return true  // Empty terms don't affect filtering
-                try {
-                    const regex = new RegExp(trimmedTerm, 'i')
-                    return regex.test(searchableText)
-                } catch {
-                    return searchableText.includes(trimmedTerm)
-                }
-            })
-        })
-    }
+  // UPDATED: Apply multi-term regex search (AND logic - all terms must match)
+  if (searchTerms.value.length > 0) {
+    items = items.filter((item) => {
+      const searchableText =
+        `${item.NAME || ''} ${item.STATUS || ''} ${item.VALUE || ''}`.toLowerCase()
+      // AND logic: every term must match
+      return searchTerms.value.every((term) => {
+        const trimmedTerm = term.trim().toLowerCase()
+        if (!trimmedTerm) return true // Empty terms don't affect filtering
+        try {
+          const regex = new RegExp(trimmedTerm, 'i')
+          return regex.test(searchableText)
+        } catch {
+          return searchableText.includes(trimmedTerm)
+        }
+      })
+    })
+  }
 
-    // UPDATED: Apply score filter if active
-    if (scoreFilterType.value && scoreFilterValue.value !== null && hasScores.value) {
-        items = items.filter(item => {
-            if (item.score === undefined || item.score === null) return true // Keep items without scores
-            const score = item.score * 10 // Convert to 0-10 scale for comparison
-            const filterValue = scoreFilterValue.value!
-            switch (scoreFilterType.value) {
-                case 'gt': return score > filterValue
-                case 'gte': return score >= filterValue
-                case 'lt': return score < filterValue
-                case 'lte': return score <= filterValue
-                case 'eq': return Math.abs(score - filterValue) < 0.01
-                default: return true
-            }
-        })
-    }
+  // UPDATED: Apply score filter if active
+  if (scoreFilterType.value && scoreFilterValue.value !== null && hasScores.value) {
+    items = items.filter((item) => {
+      if (item.score === undefined || item.score === null) return true // Keep items without scores
+      const score = item.score * 10 // Convert to 0-10 scale for comparison
+      // biome-ignore lint/style/noNonNullAssertion: scoreFilterValue !== null is checked in outer condition
+      const filterValue = scoreFilterValue.value!
+      switch (scoreFilterType.value) {
+        case 'gt':
+          return score > filterValue
+        case 'gte':
+          return score >= filterValue
+        case 'lt':
+          return score < filterValue
+        case 'lte':
+          return score <= filterValue
+        case 'eq':
+          return Math.abs(score - filterValue) < 0.01
+        default:
+          return true
+      }
+    })
+  }
 
-    return items
+  return items
 })
 
 // Methods
 function close(): void {
-    isOpen.value = false
-    searchTerms.value = []
+  isOpen.value = false
+  searchTerms.value = []
 }
 
 function handleDownload(): void {
-    emit('download')
+  emit('download')
 }
 
 // Score-related helpers
 function getScoreColorClass(score: number): string {
-    if (score >= 0.9) return 'text-success font-weight-bold'
-    if (score >= 0.7) return 'text-primary font-weight-bold'
-    if (score >= 0.5) return 'text-warning font-weight-bold'
-    return 'text-error font-weight-bold'
+  if (score >= 0.9) return 'text-success font-weight-bold'
+  if (score >= 0.7) return 'text-primary font-weight-bold'
+  if (score >= 0.5) return 'text-warning font-weight-bold'
+  return 'text-error font-weight-bold'
 }
 
 function getScoringTypeColor(scoringType?: ScoringType): string {
-    if (!scoringType) return 'grey'
-    const info = SCORING_TYPE_INFO[scoringType]
-    return info?.color ?? 'grey'
+  if (!scoringType) return 'grey'
+  const info = SCORING_TYPE_INFO[scoringType]
+  return info?.color ?? 'grey'
 }
 
 function formatScoringType(scoringType?: ScoringType): string {
-    if (!scoringType) return 'Unknown'
-    const info = SCORING_TYPE_INFO[scoringType]
-    return info?.label ?? scoringType
+  if (!scoringType) return 'Unknown'
+  const info = SCORING_TYPE_INFO[scoringType]
+  return info?.label ?? scoringType
 }
 
 function getScoringExplanation(scoringType?: ScoringType): string {
-    const explanations: Record<ScoringType, string> = {
-        'symmetrical': 'Linear scoring where the target is the midpoint between UCL and LCL. Score decreases linearly as the measured value moves away from the target toward either limit. At the target, score is 10.0. At UCL or LCL boundary, score is 1.0.',
-        'symmetrical_nl': 'Non-linear (Gaussian) scoring centered on the midpoint. Score follows a bell curve, with faster degradation near the limits.',
-        'evm': 'EVM-style scoring optimized for Error Vector Magnitude measurements. Lower (more negative) values in dB are better. Uses a gentle decay exponent (0.25) from reference point of -35 dB.',
-        'throughput': 'Throughput scoring where higher values are better. Score is 10.0 at or above UCL, and decreases toward LCL.',
-        'asymmetrical': 'Scoring with a user-defined target that may not be centered between limits. Score degrades based on deviation from the specified target according to the selected policy.',
-        'per_mask': 'Lower-is-better scoring ideal for PER/MASK measurements. Zero is the ideal value with score 10.0, score decreases linearly as the value approaches UCL (failure threshold).',
-        'binary': 'Simple PASS/FAIL scoring. PASS status = 10.0, FAIL status = 0.0. No intermediate values.'
-    }
-    return explanations[scoringType ?? 'binary'] ?? 'Unknown scoring algorithm.'
+  const explanations: Record<ScoringType, string> = {
+    symmetrical:
+      'Linear scoring where the target is the midpoint between UCL and LCL. Score decreases linearly as the measured value moves away from the target toward either limit. At the target, score is 10.0. At UCL or LCL boundary, score is 1.0.',
+    symmetrical_nl:
+      'Non-linear (Gaussian) scoring centered on the midpoint. Score follows a bell curve, with faster degradation near the limits.',
+    evm: 'EVM-style scoring optimized for Error Vector Magnitude measurements. Lower (more negative) values in dB are better. Uses a gentle decay exponent (0.25) from reference point of -35 dB.',
+    throughput:
+      'Throughput scoring where higher values are better. Score is 10.0 at or above UCL, and decreases toward LCL.',
+    asymmetrical:
+      'Scoring with a user-defined target that may not be centered between limits. Score degrades based on deviation from the specified target according to the selected policy.',
+    per_mask:
+      'Lower-is-better scoring ideal for PER/MASK measurements. Zero is the ideal value with score 10.0, score decreases linearly as the value approaches UCL (failure threshold).',
+    binary:
+      'Simple PASS/FAIL scoring. PASS status = 10.0, FAIL status = 0.0. No intermediate values.',
+  }
+  return explanations[scoringType ?? 'binary'] ?? 'Unknown scoring algorithm.'
 }
 
 // UPDATED: Get target label based on scoring type and policy
 function getTargetLabel(item: NormalizedTestItem): string {
-    const scoringType = item.scoringType
+  const scoringType = item.scoringType
 
-    // For asymmetrical scoring, use policy
-    if (scoringType === 'asymmetrical' && item.policy) {
-        switch (item.policy) {
-            case 'higher':
-                return 'Higher is Better'
-            case 'lower':
-                return 'Lower is Better'
-            default:
-                return 'Centered'
-        }
+  // For asymmetrical scoring, use policy
+  if (scoringType === 'asymmetrical' && item.policy) {
+    switch (item.policy) {
+      case 'higher':
+        return 'Higher is Better'
+      case 'lower':
+        return 'Lower is Better'
+      default:
+        return 'Centered'
     }
+  }
 
-    // For other scoring types
-    switch (scoringType) {
-        case 'per_mask':
-            return 'Lower is Better'
-        case 'evm':
-            return 'Lower is Better'
-        case 'throughput':
-            return 'Higher is Better'
-        case 'symmetrical':
-        case 'symmetrical_nl':
-            return 'Centered'
-        case 'binary':
-            return 'Pass/Fail'
-        default:
-            return 'Centered'
-    }
+  // For other scoring types
+  switch (scoringType) {
+    case 'per_mask':
+      return 'Lower is Better'
+    case 'evm':
+      return 'Lower is Better'
+    case 'throughput':
+      return 'Higher is Better'
+    case 'symmetrical':
+    case 'symmetrical_nl':
+      return 'Centered'
+    case 'binary':
+      return 'Pass/Fail'
+    default:
+      return 'Centered'
+  }
 }
 
 // UPDATED: Compute target using backend target value if available, otherwise compute locally
 function computeTarget(item: NormalizedTestItem): string {
-    // If target is provided from backend, use it
-    if (item.target !== undefined && item.target !== null) {
-        return item.target.toFixed(2)
+  // If target is provided from backend, use it
+  if (item.target !== undefined && item.target !== null) {
+    return item.target.toFixed(2)
+  }
+
+  // Fallback: compute target locally based on scoring type
+  const ucl = parseFloat(item.UCL)
+  const lcl = parseFloat(item.LCL)
+
+  // For asymmetrical scoring with policy, compute target based on policy
+  if (item.scoringType === 'asymmetrical' && item.policy) {
+    switch (item.policy) {
+      case 'higher':
+        // Target is UCL for "higher is better"
+        return Number.isNaN(ucl) ? '-' : ucl.toFixed(2)
+      case 'lower':
+        // Target is LCL for "lower is better"
+        return Number.isNaN(lcl) ? '-' : lcl.toFixed(2)
+      default:
+        // For 'symmetrical' policy or unknown, use centered target
+        break
     }
+  }
 
-    // Fallback: compute target locally based on scoring type
-    const ucl = parseFloat(item.UCL)
-    const lcl = parseFloat(item.LCL)
+  // For per_mask, target is 0
+  if (item.scoringType === 'per_mask') {
+    return '0.00'
+  }
 
-    // For asymmetrical scoring with policy, compute target based on policy
-    if (item.scoringType === 'asymmetrical' && item.policy) {
-        switch (item.policy) {
-            case 'higher':
-                // Target is UCL for "higher is better"
-                return isNaN(ucl) ? '-' : ucl.toFixed(2)
-            case 'lower':
-                // Target is LCL for "lower is better"
-                return isNaN(lcl) ? '-' : lcl.toFixed(2)
-            default:
-                // For 'symmetrical' policy or unknown, use centered target
-                break
-        }
-    }
+  // For evm, target is -35 dB
+  if (item.scoringType === 'evm') {
+    return '-35.00'
+  }
 
-    // For per_mask, target is 0
-    if (item.scoringType === 'per_mask') {
-        return '0.00'
-    }
+  // For throughput, target is UCL
+  if (item.scoringType === 'throughput') {
+    return Number.isNaN(ucl) ? '-' : ucl.toFixed(2)
+  }
 
-    // For evm, target is -35 dB
-    if (item.scoringType === 'evm') {
-        return '-35.00'
-    }
+  // For symmetrical scoring, target = (UCL + LCL) / 2
+  if (!Number.isNaN(ucl) && !Number.isNaN(lcl)) {
+    const target = (ucl + lcl) / 2
+    return target.toFixed(2)
+  }
 
-    // For throughput, target is UCL
-    if (item.scoringType === 'throughput') {
-        return isNaN(ucl) ? '-' : ucl.toFixed(2)
-    }
+  // For UCL only, target is 0 (assumed lower is better)
+  if (!Number.isNaN(ucl) && Number.isNaN(lcl)) {
+    return '0.00'
+  }
 
-    // For symmetrical scoring, target = (UCL + LCL) / 2
-    if (!isNaN(ucl) && !isNaN(lcl)) {
-        const target = (ucl + lcl) / 2
-        return target.toFixed(2)
-    }
-
-    // For UCL only, target is 0 (assumed lower is better)
-    if (!isNaN(ucl) && isNaN(lcl)) {
-        return '0.00'
-    }
-
-    return '-'
+  return '-'
 }
 
 // UPDATED: Format weight for display (e.g., "1.0x", "3.0x")
 function formatWeight(weight?: number): string {
-    const w = weight ?? 1.0
-    return `${w.toFixed(1)}x`
+  const w = weight ?? 1.0
+  return `${w.toFixed(1)}x`
 }
 
 // UPDATED: Added helper to format policy for display
-function formatPolicy(policy?: string): string {
-    const policyLabels: Record<string, string> = {
-        'higher': 'Higher is Better',
-        'lower': 'Lower is Better',
-        'symmetrical': 'Centered'
-    }
-    return policyLabels[policy ?? ''] ?? policy ?? 'Unknown'
-}
+// function formatPolicy(policy?: string): string {
+//   const policyLabels: Record<string, string> = {
+//     higher: 'Higher is Better',
+//     lower: 'Lower is Better',
+//     symmetrical: 'Centered',
+//   }
+//   return policyLabels[policy ?? ''] ?? policy ?? 'Unknown'
+// }
 
 // UPDATED: Added helper to get formula for score breakdown display
 function getScoringFormula(scoringType?: ScoringType): string {
-    const formulas: Record<ScoringType, string> = {
-        'symmetrical': 'Score = 1 + 9 × (L - |x - T|) / L, where T = (UCL + LCL) / 2',
-        'symmetrical_nl': 'Score = exp(-((x - T) / σ)²), Gaussian decay',
-        'evm': 'Score = 1 + 9 × (1 - (x - ref) / (UCL - ref))^0.25, ref = -35 dB',
-        'throughput': 'Score = 1 + 9 × (x - LCL) / (UCL - LCL)',
-        'asymmetrical': 'Score = 1 + 9 × (L - d) / L, with policy-based limit selection',
-        'per_mask': 'Score = 1 + 9 × (UCL - x) / UCL, where 0 is ideal',
-        'binary': 'Score = 10.0 if PASS, 0.0 if FAIL'
-    }
-    return formulas[scoringType ?? 'binary'] ?? 'Unknown formula'
+  const formulas: Record<ScoringType, string> = {
+    symmetrical: 'Score = 1 + 9 × (L - |x - T|) / L, where T = (UCL + LCL) / 2',
+    symmetrical_nl: 'Score = exp(-((x - T) / σ)²), Gaussian decay',
+    evm: 'Score = 1 + 9 × (1 - (x - ref) / (UCL - ref))^0.25, ref = -35 dB',
+    throughput: 'Score = 1 + 9 × (x - LCL) / (UCL - LCL)',
+    asymmetrical: 'Score = 1 + 9 × (L - d) / L, with policy-based limit selection',
+    per_mask: 'Score = 1 + 9 × (UCL - x) / UCL, where 0 is ideal',
+    binary: 'Score = 10.0 if PASS, 0.0 if FAIL',
+  }
+  return formulas[scoringType ?? 'binary'] ?? 'Unknown formula'
 }
 
 // Handle row click to show score breakdown
 function handleRowClick(_event: Event, row: { item: NormalizedTestItem }): void {
-    if (hasScores.value && row.item.score !== undefined) {
-        showScoreBreakdown(row.item)
-    }
+  if (hasScores.value && row.item.score !== undefined) {
+    showScoreBreakdown(row.item)
+  }
 }
 
 // Show score breakdown dialog
 function showScoreBreakdown(item: NormalizedTestItem): void {
-    selectedTestItem.value = item
-    showBreakdownDialog.value = true
+  selectedTestItem.value = item
+  showBreakdownDialog.value = true
 }
 
 // Reset filters when record changes - always default to Show All
-watch(() => props.record, () => {
+watch(
+  () => props.record,
+  () => {
     // UPDATED: Always default to Show All
     testItemFilter.value = ['all']
     searchTerms.value = []
     // Clear score filter
     scoreFilterType.value = null
     scoreFilterValue.value = null
-})
+  },
+)
 </script>
 
 <style scoped>

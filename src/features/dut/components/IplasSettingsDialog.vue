@@ -75,25 +75,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, watch, reactive } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
 
 // Props & Emits
 const props = defineProps<{
-    modelValue: boolean
+  modelValue: boolean
 }>()
 
 const emit = defineEmits<{
-    'update:modelValue': [value: boolean]
+  'update:modelValue': [value: boolean]
 }>()
 
 // Settings
-const {
-    servers,
-    selectedServerId,
-    updateServer,
-    resetToDefaults
-} = useIplasSettings()
+const { servers, selectedServerId, updateServer, resetToDefaults } = useIplasSettings()
 
 // Local state
 const localSelectedServerId = ref(selectedServerId.value)
@@ -103,80 +98,88 @@ const editableConfigs = reactive<Record<string, { baseIp: string; token: string 
 
 // Initialize editable configs for all servers
 function initEditableConfigs(): void {
-    for (const server of servers.value) {
-        editableConfigs[server.id] = {
-            baseIp: server.baseIp,
-            token: server.token
-        }
+  for (const server of servers.value) {
+    editableConfigs[server.id] = {
+      baseIp: server.baseIp,
+      token: server.token,
     }
+  }
 }
 
 // Safe getter for server config
 function getServerConfig(serverId: string): { baseIp: string; token: string } {
-    return editableConfigs[serverId] || { baseIp: '', token: '' }
+  return editableConfigs[serverId] || { baseIp: '', token: '' }
 }
 
 // Setter for server base IP
 function setServerBaseIp(serverId: string, value: string): void {
-    if (!editableConfigs[serverId]) {
-        editableConfigs[serverId] = { baseIp: '', token: '' }
-    }
-    editableConfigs[serverId].baseIp = value
+  if (!editableConfigs[serverId]) {
+    editableConfigs[serverId] = { baseIp: '', token: '' }
+  }
+  editableConfigs[serverId].baseIp = value
 }
 
 // Setter for server token
 function setServerToken(serverId: string, value: string): void {
-    if (!editableConfigs[serverId]) {
-        editableConfigs[serverId] = { baseIp: '', token: '' }
-    }
-    editableConfigs[serverId].token = value
+  if (!editableConfigs[serverId]) {
+    editableConfigs[serverId] = { baseIp: '', token: '' }
+  }
+  editableConfigs[serverId].token = value
 }
 
 // Watch for dialog open to reset editable fields
-watch(() => props.modelValue, (isOpen) => {
+watch(
+  () => props.modelValue,
+  (isOpen) => {
     if (isOpen) {
-        localSelectedServerId.value = selectedServerId.value
-        initEditableConfigs()
+      localSelectedServerId.value = selectedServerId.value
+      initEditableConfigs()
     }
-}, { immediate: true })
+  },
+  { immediate: true },
+)
 
 // Also initialize when servers change
-watch(servers, () => {
+watch(
+  servers,
+  () => {
     if (props.modelValue) {
-        initEditableConfigs()
+      initEditableConfigs()
     }
-}, { deep: true })
+  },
+  { deep: true },
+)
 
 function handleSave(): void {
-    // Update the selected server ID
-    selectedServerId.value = localSelectedServerId.value
+  // Update the selected server ID
+  selectedServerId.value = localSelectedServerId.value
 
-    // Save all server settings
-    for (const server of servers.value) {
-        const config = editableConfigs[server.id]
-        if (config) {
-            updateServer(server.id, {
-                baseIp: config.baseIp,
-                token: config.token
-            })
-        }
+  // Save all server settings
+  for (const server of servers.value) {
+    const config = editableConfigs[server.id]
+    if (config) {
+      updateServer(server.id, {
+        baseIp: config.baseIp,
+        token: config.token,
+      })
     }
+  }
 
-    emit('update:modelValue', false)
-    // Reload the page to apply new settings
-    window.location.reload()
+  emit('update:modelValue', false)
+  // Reload the page to apply new settings
+  window.location.reload()
 }
 
 function handleCancel(): void {
-    // Reset editable fields to current values
-    localSelectedServerId.value = selectedServerId.value
-    initEditableConfigs()
-    emit('update:modelValue', false)
+  // Reset editable fields to current values
+  localSelectedServerId.value = selectedServerId.value
+  initEditableConfigs()
+  emit('update:modelValue', false)
 }
 
 function handleReset(): void {
-    resetToDefaults()
-    localSelectedServerId.value = 'PTB'
-    initEditableConfigs()
+  resetToDefaults()
+  localSelectedServerId.value = 'PTB'
+  initEditableConfigs()
 }
 </script>

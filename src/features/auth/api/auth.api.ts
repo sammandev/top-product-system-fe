@@ -1,9 +1,9 @@
 import { apiClient } from '@/core/api'
-import type { LoginRequest, ExternalLoginRequest, LoginResponse, User } from '@/core/types'
+import type { ExternalLoginRequest, LoginRequest, LoginResponse, User } from '@/core/types'
 
 /**
  * Authentication API
- * 
+ *
  * Handles all authentication-related API calls including login, logout, token refresh, and user info.
  */
 export const authApi = {
@@ -45,7 +45,7 @@ export const authApi = {
   async refreshToken(refreshToken: string): Promise<LoginResponse> {
     const formData = new FormData()
     formData.append('refresh_token', refreshToken)
-    
+
     const { data } = await apiClient.post<LoginResponse>('/api/auth/token/refresh', formData)
     return data
   },
@@ -63,5 +63,5 @@ export const authApi = {
    */
   async logout(): Promise<void> {
     await apiClient.post('/api/auth/logout')
-  }
+  },
 }

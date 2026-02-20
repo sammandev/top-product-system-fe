@@ -178,49 +178,49 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import type { IsnSearchData } from '@/features/dut_logs/api/iplasApi'
 import { adjustIplasDisplayTime, getStatusColor, isStatusPass } from '@/shared/utils/helpers'
 import { getScoreColor } from '../types/scoring.types'
 
 interface StationGroup {
-    stationName: string
-    displayName: string
-    hasError: boolean
-    errorCount: number
-    records: IsnSearchData[]
+  stationName: string
+  displayName: string
+  hasError: boolean
+  errorCount: number
+  records: IsnSearchData[]
 }
 
 interface ISNGroup {
-    isn: string
-    site: string
-    project: string
-    hasError: boolean
-    errorCount: number
-    records: IsnSearchData[]
-    stations: StationGroup[]
+  isn: string
+  site: string
+  project: string
+  hasError: boolean
+  errorCount: number
+  records: IsnSearchData[]
+  stations: StationGroup[]
 }
 
 interface Props {
-    isnGroups: ISNGroup[]
-    loading?: boolean
-    scores?: Record<string, number> // Map of record key to score
-    calculatingScores?: boolean
-    exportingAll?: boolean // Whether export all is in progress (controlled by parent)
+  isnGroups: ISNGroup[]
+  loading?: boolean
+  scores?: Record<string, number> // Map of record key to score
+  calculatingScores?: boolean
+  exportingAll?: boolean // Whether export all is in progress (controlled by parent)
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    loading: false,
-    calculatingScores: false,
-    exportingAll: false
+  loading: false,
+  calculatingScores: false,
+  exportingAll: false,
 })
 
 const emit = defineEmits<{
-    (e: 'row-click', record: IsnSearchData): void
-    (e: 'download-selected', records: IsnSearchData[]): void
-    (e: 'calculate-scores'): void
-    (e: 'export', payload: { records: IsnSearchData[]; isnGroups: ISNGroup[] }): void
-    (e: 'export-all', payload: { records: IsnSearchData[]; isnGroups: ISNGroup[] }): void
+  (e: 'row-click', record: IsnSearchData): void
+  (e: 'download-selected', records: IsnSearchData[]): void
+  (e: 'calculate-scores'): void
+  (e: 'export', payload: { records: IsnSearchData[]; isnGroups: ISNGroup[] }): void
+  (e: 'export-all', payload: { records: IsnSearchData[]; isnGroups: ISNGroup[] }): void
 }>()
 
 // State
@@ -235,184 +235,194 @@ const exporting = ref(false)
 
 // Status options
 const statusOptions = [
-    { title: 'Passed', value: 'passed' },
-    { title: 'Failed', value: 'failed' }
+  { title: 'Passed', value: 'passed' },
+  { title: 'Failed', value: 'failed' },
 ]
 
 // Table headers
 const headers = [
-    { title: '', key: 'select', sortable: false, width: '50px' },
-    { title: '#', key: 'rank', sortable: false, align: 'center' as const, width: '60px' },
-    { title: 'Device ID', key: 'device_id', sortable: true },
-    { title: 'Test End Time', key: 'test_end_time', sortable: true },
-    { title: 'Status', key: 'error_code', sortable: true },
-    { title: 'Score', key: 'score', sortable: true, width: '100px' },
-    { title: 'Test Items', key: 'test_item_count', sortable: false, align: 'center' as const },
-    { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const, width: '80px' }
+  { title: '', key: 'select', sortable: false, width: '50px' },
+  { title: '#', key: 'rank', sortable: false, align: 'center' as const, width: '60px' },
+  { title: 'Device ID', key: 'device_id', sortable: true },
+  { title: 'Test End Time', key: 'test_end_time', sortable: true },
+  { title: 'Status', key: 'error_code', sortable: true },
+  { title: 'Score', key: 'score', sortable: true, width: '100px' },
+  { title: 'Test Items', key: 'test_item_count', sortable: false, align: 'center' as const },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const, width: '80px' },
 ]
 
 // Computed
 const totalRecords = computed(() => {
-    return props.isnGroups.reduce((sum, group) => sum + group.records.length, 0)
+  return props.isnGroups.reduce((sum, group) => sum + group.records.length, 0)
 })
 
 // Check if we have scores
 const hasScores = computed(() => {
-    return Object.keys(props.scores || {}).length > 0
+  return Object.keys(props.scores || {}).length > 0
 })
 
 // Get score for a record
 function getRecordScore(record: IsnSearchData): number | null {
-    if (!props.scores) return null
-    const key = getScoreKey(record)
-    return props.scores[key] ?? null
+  if (!props.scores) return null
+  const key = getScoreKey(record)
+  return props.scores[key] ?? null
 }
 
 function getScoreKey(record: IsnSearchData): string {
-    return `${record.isn}_${record.station_name}_${record.test_end_time}`
+  return `${record.isn}_${record.station_name}_${record.test_end_time}`
 }
 
 const selectedRecords = computed(() => {
-    const selected: IsnSearchData[] = []
-    for (const group of props.isnGroups) {
-        for (const record of group.records) {
-            if (selectedRecordsMap.value[getRecordKey(record)]) {
-                selected.push(record)
-            }
-        }
+  const selected: IsnSearchData[] = []
+  for (const group of props.isnGroups) {
+    for (const record of group.records) {
+      if (selectedRecordsMap.value[getRecordKey(record)]) {
+        selected.push(record)
+      }
     }
-    return selected
+  }
+  return selected
 })
 
 // Initialize station tabs
-watch(() => props.isnGroups, (groups) => {
+watch(
+  () => props.isnGroups,
+  (groups) => {
     for (let i = 0; i < groups.length; i++) {
-        if (activeStationTabs.value[i] === undefined) {
-            activeStationTabs.value[i] = 0
-        }
+      if (activeStationTabs.value[i] === undefined) {
+        activeStationTabs.value[i] = 0
+      }
     }
-}, { immediate: true })
+  },
+  { immediate: true },
+)
 
 // Watch select all toggles
-watch(selectAllToggles, (toggles) => {
+watch(
+  selectAllToggles,
+  (toggles) => {
     for (const [key, value] of Object.entries(toggles)) {
-        if (value) {
-            const parts = key.split('-')
-            const isnIndex = parseInt(parts[0] ?? '0')
-            const stationIndex = parseInt(parts[1] ?? '0')
-            const group = props.isnGroups[isnIndex]
-            if (group) {
-                const station = group.stations[stationIndex]
-                if (station) {
-                    const records = getFilteredRecords(isnIndex, stationIndex, station.records)
-                    for (const record of records) {
-                        selectedRecordsMap.value[getRecordKey(record)] = true
-                    }
-                }
+      if (value) {
+        const parts = key.split('-')
+        const isnIndex = parseInt(parts[0] ?? '0', 10)
+        const stationIndex = parseInt(parts[1] ?? '0', 10)
+        const group = props.isnGroups[isnIndex]
+        if (group) {
+          const station = group.stations[stationIndex]
+          if (station) {
+            const records = getFilteredRecords(isnIndex, stationIndex, station.records)
+            for (const record of records) {
+              selectedRecordsMap.value[getRecordKey(record)] = true
             }
+          }
         }
+      }
     }
-}, { deep: true })
+  },
+  { deep: true },
+)
 
 // Methods
 function getRecordKey(record: IsnSearchData): string {
-    return `${record.isn}-${record.station_name}-${record.test_end_time}`
+  return `${record.isn}-${record.station_name}-${record.test_end_time}`
 }
 
-function getFilteredRecords(isnIndex: number, stationIndex: number, records: IsnSearchData[]): IsnSearchData[] {
-    const key = `${isnIndex}-${stationIndex}`
-    const search = searchFilters.value[key]?.toLowerCase() || ''
-    const status = statusFilters.value[key]
+function getFilteredRecords(
+  isnIndex: number,
+  stationIndex: number,
+  records: IsnSearchData[],
+): IsnSearchData[] {
+  const key = `${isnIndex}-${stationIndex}`
+  const search = searchFilters.value[key]?.toLowerCase() || ''
+  const status = statusFilters.value[key]
 
-    return records.filter(record => {
-        // Search filter
-        if (search) {
-            const searchable = [
-                record.device_id,
-                record.error_code,
-                record.error_name
-            ].join(' ').toLowerCase()
-            if (!searchable.includes(search)) return false
-        }
+  return records.filter((record) => {
+    // Search filter
+    if (search) {
+      const searchable = [record.device_id, record.error_code, record.error_name]
+        .join(' ')
+        .toLowerCase()
+      if (!searchable.includes(search)) return false
+    }
 
-        // Status filter
-        if (status) {
-            const isPassed = isStatusPass(record.error_code)
-            if (status === 'passed' && !isPassed) return false
-            if (status === 'failed' && isPassed) return false
-        }
+    // Status filter
+    if (status) {
+      const isPassed = isStatusPass(record.error_code)
+      if (status === 'passed' && !isPassed) return false
+      if (status === 'failed' && isPassed) return false
+    }
 
-        return true
-    })
+    return true
+  })
 }
 
 function formatDateTime(dateStr: string): string {
-    // Use the centralized helper to adjust time by -1 hour for display
-    return adjustIplasDisplayTime(dateStr, 1)
+  // Use the centralized helper to adjust time by -1 hour for display
+  return adjustIplasDisplayTime(dateStr, 1)
 }
 
 function getRowClass(item: IsnSearchData, index: number): string {
-    const classes: string[] = []
-    if (!isStatusPass(item.error_code)) {
-        classes.push('error-row')
-    }
-    if (index < 3) {
-        classes.push(`rank-${index + 1}`)
-    }
-    return classes.join(' ')
+  const classes: string[] = []
+  if (!isStatusPass(item.error_code)) {
+    classes.push('error-row')
+  }
+  if (index < 3) {
+    classes.push(`rank-${index + 1}`)
+  }
+  return classes.join(' ')
 }
 
 function getRankColor(rank: number): string {
-    if (rank === 1) return 'amber-darken-2'
-    if (rank === 2) return 'blue-grey'
-    if (rank === 3) return 'brown'
-    return 'grey'
+  if (rank === 1) return 'amber-darken-2'
+  if (rank === 2) return 'blue-grey'
+  if (rank === 3) return 'brown'
+  return 'grey'
 }
 
 async function copyToClipboard(text: string): Promise<void> {
-    if (!text) return
-    try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(text)
-        } else {
-            const textArea = document.createElement('textarea')
-            textArea.value = text
-            textArea.style.position = 'fixed'
-            textArea.style.left = '-9999px'
-            document.body.appendChild(textArea)
-            textArea.select()
-            document.execCommand('copy')
-            document.body.removeChild(textArea)
-        }
-        showCopySuccess.value = true
-    } catch (err) {
-        console.error('Failed to copy:', err)
+  if (!text) return
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-9999px'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
     }
+    showCopySuccess.value = true
+  } catch (err) {
+    console.error('Failed to copy:', err)
+  }
 }
 
 function handleRowClick(record: IsnSearchData): void {
-    emit('row-click', record)
+  emit('row-click', record)
 }
 
 function handleDownloadSelected(): void {
-    emit('download-selected', selectedRecords.value)
+  emit('download-selected', selectedRecords.value)
 }
 
 function handleExport(): void {
-    if (selectedRecords.value.length === 0) return
-    emit('export', { records: selectedRecords.value, isnGroups: props.isnGroups })
+  if (selectedRecords.value.length === 0) return
+  emit('export', { records: selectedRecords.value, isnGroups: props.isnGroups })
 }
 
 function handleExportAll(): void {
-    // Collect all records from all ISN groups
-    const allRecords: IsnSearchData[] = []
-    for (const group of props.isnGroups) {
-        allRecords.push(...group.records)
-    }
-    if (allRecords.length === 0) return
-    
-    // Loading state is managed by parent via exportingAll prop
-    emit('export-all', { records: allRecords, isnGroups: props.isnGroups })
+  // Collect all records from all ISN groups
+  const allRecords: IsnSearchData[] = []
+  for (const group of props.isnGroups) {
+    allRecords.push(...group.records)
+  }
+  if (allRecords.length === 0) return
+
+  // Loading state is managed by parent via exportingAll prop
+  emit('export-all', { records: allRecords, isnGroups: props.isnGroups })
 }
 </script>
 

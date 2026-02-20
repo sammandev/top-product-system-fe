@@ -187,65 +187,71 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import { adjustIplasDisplayTime, getStatusColor, normalizeStatus, isStatusPass, isStatusFail } from '@/shared/utils/helpers'
+import { computed, ref, watch } from 'vue'
+import {
+  adjustIplasDisplayTime,
+  getStatusColor,
+  isStatusFail,
+  isStatusPass,
+  normalizeStatus,
+} from '@/shared/utils/helpers'
 import type { ScoringType } from '../types/scoring.types'
 
 // Normalized test item interface with optional scoring data
 export interface NormalizedTestItem {
-    NAME: string
-    STATUS: 'PASS' | 'FAIL' | string
-    VALUE: string
-    UCL: string
-    LCL: string
-    CYCLE?: string
-    // Optional scoring data (populated when scores are calculated)
-    score?: number
-    scoringType?: ScoringType
-    deviation?: number
-    // UPDATED: Added policy, target, and weight for scoring display
-    policy?: 'symmetrical' | 'higher' | 'lower'
-    target?: number
-    weight?: number  // Weight used for this test item in scoring (default 1.0)
+  NAME: string
+  STATUS: 'PASS' | 'FAIL' | string
+  VALUE: string
+  UCL: string
+  LCL: string
+  CYCLE?: string
+  // Optional scoring data (populated when scores are calculated)
+  score?: number
+  scoringType?: ScoringType
+  deviation?: number
+  // UPDATED: Added policy, target, and weight for scoring display
+  policy?: 'symmetrical' | 'higher' | 'lower'
+  target?: number
+  weight?: number // Weight used for this test item in scoring (default 1.0)
 }
 
 // Normalized record interface that works for both Station Search and ISN Search
 export interface NormalizedRecord {
-    // Identifiers
-    isn: string
-    deviceId: string
-    // Station info
-    stationName: string
-    displayStationName: string
-    tsp?: string // TSP from Station Search
-    // Location
-    site: string
-    project: string
-    line: string
-    // Test result
-    errorCode: string
-    errorName: string
-    testStatus: string
-    // Time
-    testStartTime: string
-    testEndTime: string
-    // Test items
-    testItems: NormalizedTestItem[]
-    // Optional overall scoring data
-    overallScore?: number
-    valueItemsScore?: number | null
-    binItemsScore?: number | null
+  // Identifiers
+  isn: string
+  deviceId: string
+  // Station info
+  stationName: string
+  displayStationName: string
+  tsp?: string // TSP from Station Search
+  // Location
+  site: string
+  project: string
+  line: string
+  // Test result
+  errorCode: string
+  errorName: string
+  testStatus: string
+  // Time
+  testStartTime: string
+  testEndTime: string
+  // Test items
+  testItems: NormalizedTestItem[]
+  // Optional overall scoring data
+  overallScore?: number
+  valueItemsScore?: number | null
+  binItemsScore?: number | null
 }
 
 interface Props {
-    modelValue: boolean
-    record: NormalizedRecord | null
-    downloading?: boolean
+  modelValue: boolean
+  record: NormalizedRecord | null
+  downloading?: boolean
 }
 
 interface Emits {
-    (e: 'update:modelValue', value: boolean): void
-    (e: 'download'): void
+  (e: 'update:modelValue', value: boolean): void
+  (e: 'download'): void
 }
 
 const props = defineProps<Props>()
@@ -253,8 +259,8 @@ const emit = defineEmits<Emits>()
 
 // Dialog state
 const isOpen = computed({
-    get: () => props.modelValue,
-    set: (val) => emit('update:modelValue', val)
+  get: () => props.modelValue,
+  set: (val) => emit('update:modelValue', val),
 })
 
 // Filter controls
@@ -265,195 +271,200 @@ const showCopySuccess = ref(false)
 
 // Filter options for dropdown (Criteria Data is default)
 const testItemFilterOptions = [
-    { title: 'Criteria Data ★', value: 'value' },
-    { title: 'Show All', value: 'all' },
-    { title: 'Non-Criteria', value: 'non-value' },
-    { title: 'Bin Data', value: 'bin' }
+  { title: 'Criteria Data ★', value: 'value' },
+  { title: 'Show All', value: 'all' },
+  { title: 'Non-Criteria', value: 'non-value' },
+  { title: 'Bin Data', value: 'bin' },
 ]
 
 const testItemHeaders = [
-    { title: 'Test Item', key: 'NAME', sortable: true },
-    { title: 'Status', key: 'STATUS', sortable: true },
-    { title: 'Value', key: 'VALUE', sortable: true },
-    { title: 'UCL', key: 'UCL', sortable: true },
-    { title: 'LCL', key: 'LCL', sortable: true }
+  { title: 'Test Item', key: 'NAME', sortable: true },
+  { title: 'Status', key: 'STATUS', sortable: true },
+  { title: 'Value', key: 'VALUE', sortable: true },
+  { title: 'UCL', key: 'UCL', sortable: true },
+  { title: 'LCL', key: 'LCL', sortable: true },
 ]
 
 // Helper functions
 function isValueData(item: NormalizedTestItem): boolean {
-    const value = item.VALUE?.toUpperCase() || ''
-    // Value data: not PASS, FAIL, 1, 0, or -999
-    if (value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999') {
-        return false
-    }
-    const hasNumericValue = !isNaN(parseFloat(item.VALUE)) && item.VALUE !== ''
-    const hasNumericUcl = !isNaN(parseFloat(item.UCL)) && item.UCL !== ''
-    const hasNumericLcl = !isNaN(parseFloat(item.LCL)) && item.LCL !== ''
-    const numericCount = [hasNumericValue, hasNumericUcl, hasNumericLcl].filter(Boolean).length
-    return numericCount >= 2
+  const value = item.VALUE?.toUpperCase() || ''
+  // Value data: not PASS, FAIL, 1, 0, or -999
+  if (value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999') {
+    return false
+  }
+  const hasNumericValue = !Number.isNaN(parseFloat(item.VALUE)) && item.VALUE !== ''
+  const hasNumericUcl = !Number.isNaN(parseFloat(item.UCL)) && item.UCL !== ''
+  const hasNumericLcl = !Number.isNaN(parseFloat(item.LCL)) && item.LCL !== ''
+  const numericCount = [hasNumericValue, hasNumericUcl, hasNumericLcl].filter(Boolean).length
+  return numericCount >= 2
 }
 
 function isPassFailData(item: NormalizedTestItem): boolean {
-    const value = item.VALUE?.toUpperCase() || ''
-    // STATUS must be PASS, FAIL, 1, 0, or -1 AND VALUE must be PASS, FAIL, 1, 0, or -999
-    const isStatusPF = isStatusPass(item.STATUS) || isStatusFail(item.STATUS) || item.STATUS === '-1'
-    const isValuePF = value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999'
-    return isStatusPF && isValuePF
+  const value = item.VALUE?.toUpperCase() || ''
+  // STATUS must be PASS, FAIL, 1, 0, or -1 AND VALUE must be PASS, FAIL, 1, 0, or -999
+  const isStatusPF = isStatusPass(item.STATUS) || isStatusFail(item.STATUS) || item.STATUS === '-1'
+  const isValuePF =
+    value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999'
+  return isStatusPF && isValuePF
 }
 
 // Alias for better naming consistency
 function isBinData(item: NormalizedTestItem): boolean {
-    return isPassFailData(item)
+  return isPassFailData(item)
 }
 
 function isNonValueData(item: NormalizedTestItem): boolean {
-    return !isValueData(item) && !isBinData(item)
+  return !isValueData(item) && !isBinData(item)
 }
 
 function getValueClass(item: NormalizedTestItem): string {
-    const value = item.VALUE?.toUpperCase() || ''
-    if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
-    if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
-    if (value === '-999') return 'text-warning'
-    return ''
+  const value = item.VALUE?.toUpperCase() || ''
+  if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
+  if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
+  if (value === '-999') return 'text-warning'
+  return ''
 }
 
 function formatTime(timeStr: string): string {
-    // Use the centralized helper to adjust time by -1 hour for display
-    return adjustIplasDisplayTime(timeStr, 1)
+  // Use the centralized helper to adjust time by -1 hour for display
+  return adjustIplasDisplayTime(timeStr, 1)
 }
 
 function calculateDuration(startStr: string, endStr: string): string {
-    if (!startStr || !endStr) return '-'
-    try {
-        // Handle both formats:
-        // 1. API format: "2025-09-16 13:23:57%:z" or "2025-09-16T13:23:57"
-        // 2. Display format: "2025/09/16, 21:23:57"
-        let start: Date
-        let end: Date
-        
-        if (startStr.includes('/') && startStr.includes(',')) {
-            // Display format: "YYYY/MM/DD, HH:mm:ss"
-            const startParts = startStr.replace(',', '').replace(/\//g, '-').replace(/\s+/g, 'T')
-            const endParts = endStr.replace(',', '').replace(/\//g, '-').replace(/\s+/g, 'T')
-            start = new Date(startParts)
-            end = new Date(endParts)
-        } else {
-            // API format: clean and parse
-            const cleanStart = startStr.replace('%:z', '').replace('T', ' ')
-            const cleanEnd = endStr.replace('%:z', '').replace('T', ' ')
-            start = new Date(cleanStart.replace(' ', 'T') + 'Z')
-            end = new Date(cleanEnd.replace(' ', 'T') + 'Z')
-        }
-        
-        if (isNaN(start.getTime()) || isNaN(end.getTime())) return '-'
-        
-        const diffMs = end.getTime() - start.getTime()
-        const diffSeconds = Math.floor(diffMs / 1000)
-        const minutes = Math.floor(diffSeconds / 60)
-        const seconds = diffSeconds % 60
-        return `${minutes}m ${seconds}s`
-    } catch {
-        return '-'
+  if (!startStr || !endStr) return '-'
+  try {
+    // Handle both formats:
+    // 1. API format: "2025-09-16 13:23:57%:z" or "2025-09-16T13:23:57"
+    // 2. Display format: "2025/09/16, 21:23:57"
+    let start: Date
+    let end: Date
+
+    if (startStr.includes('/') && startStr.includes(',')) {
+      // Display format: "YYYY/MM/DD, HH:mm:ss"
+      const startParts = startStr.replace(',', '').replace(/\//g, '-').replace(/\s+/g, 'T')
+      const endParts = endStr.replace(',', '').replace(/\//g, '-').replace(/\s+/g, 'T')
+      start = new Date(startParts)
+      end = new Date(endParts)
+    } else {
+      // API format: clean and parse
+      const cleanStart = startStr.replace('%:z', '').replace('T', ' ')
+      const cleanEnd = endStr.replace('%:z', '').replace('T', ' ')
+      start = new Date(`${cleanStart.replace(' ', 'T')}Z`)
+      end = new Date(`${cleanEnd.replace(' ', 'T')}Z`)
     }
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return '-'
+
+    const diffMs = end.getTime() - start.getTime()
+    const diffSeconds = Math.floor(diffMs / 1000)
+    const minutes = Math.floor(diffSeconds / 60)
+    const seconds = diffSeconds % 60
+    return `${minutes}m ${seconds}s`
+  } catch {
+    return '-'
+  }
 }
 
 async function copyToClipboard(text: string): Promise<void> {
-    if (!text) return
-    try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(text)
-        } else {
-            // Fallback for older browsers or non-HTTPS contexts
-            const textArea = document.createElement('textarea')
-            textArea.value = text
-            textArea.style.position = 'fixed'
-            textArea.style.left = '-9999px'
-            document.body.appendChild(textArea)
-            textArea.select()
-            document.execCommand('copy')
-            document.body.removeChild(textArea)
-        }
-        showCopySuccess.value = true
-    } catch (err) {
-        console.error('Failed to copy:', err)
+  if (!text) return
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      // Fallback for older browsers or non-HTTPS contexts
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-9999px'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
     }
+    showCopySuccess.value = true
+  } catch (err) {
+    console.error('Failed to copy:', err)
+  }
 }
 
 // Computed filtered test items
 const filteredTestItems = computed(() => {
-    if (!props.record?.testItems) return []
+  if (!props.record?.testItems) return []
 
-    let items = [...props.record.testItems]
+  let items = [...props.record.testItems]
 
-    // Apply test item type filter (supports multiple selections)
-    if (testItemFilter.value.length > 0 && !testItemFilter.value.includes('all')) {
-        items = items.filter(item => {
-            return testItemFilter.value.some(filterType => {
-                switch (filterType) {
-                    case 'value':
-                        return isValueData(item)
-                    case 'non-value':
-                        return isNonValueData(item)
-                    case 'bin':
-                        return isBinData(item)
-                    default:
-                        return true
-                }
-            })
-        })
-    }
+  // Apply test item type filter (supports multiple selections)
+  if (testItemFilter.value.length > 0 && !testItemFilter.value.includes('all')) {
+    items = items.filter((item) => {
+      return testItemFilter.value.some((filterType) => {
+        switch (filterType) {
+          case 'value':
+            return isValueData(item)
+          case 'non-value':
+            return isNonValueData(item)
+          case 'bin':
+            return isBinData(item)
+          default:
+            return true
+        }
+      })
+    })
+  }
 
-    // Apply test status filter
-    if (testStatusFilter.value !== 'ALL') {
-        items = items.filter(item => item.STATUS === testStatusFilter.value)
-    }
+  // Apply test status filter
+  if (testStatusFilter.value !== 'ALL') {
+    items = items.filter((item) => item.STATUS === testStatusFilter.value)
+  }
 
-    // Apply multi-term regex search (OR logic - any term must match)
-    if (searchTerms.value.length > 0) {
-        items = items.filter(item => {
-            const searchableText = `${item.NAME || ''} ${item.STATUS || ''} ${item.VALUE || ''}`.toLowerCase()
-            // OR logic: at least one term must match
-            return searchTerms.value.some(term => {
-                const trimmedTerm = term.trim().toLowerCase()
-                if (!trimmedTerm) return false
-                try {
-                    const regex = new RegExp(trimmedTerm, 'i')
-                    return regex.test(searchableText)
-                } catch {
-                    // If invalid regex, fall back to simple includes
-                    return searchableText.includes(trimmedTerm)
-                }
-            })
-        })
-    }
+  // Apply multi-term regex search (OR logic - any term must match)
+  if (searchTerms.value.length > 0) {
+    items = items.filter((item) => {
+      const searchableText =
+        `${item.NAME || ''} ${item.STATUS || ''} ${item.VALUE || ''}`.toLowerCase()
+      // OR logic: at least one term must match
+      return searchTerms.value.some((term) => {
+        const trimmedTerm = term.trim().toLowerCase()
+        if (!trimmedTerm) return false
+        try {
+          const regex = new RegExp(trimmedTerm, 'i')
+          return regex.test(searchableText)
+        } catch {
+          // If invalid regex, fall back to simple includes
+          return searchableText.includes(trimmedTerm)
+        }
+      })
+    })
+  }
 
-    return items
+  return items
 })
 
 // Methods
 function close(): void {
-    isOpen.value = false
-    // Reset filters when closing - will be set again by watcher when reopened
-    testStatusFilter.value = 'ALL'
-    searchTerms.value = []
+  isOpen.value = false
+  // Reset filters when closing - will be set again by watcher when reopened
+  testStatusFilter.value = 'ALL'
+  searchTerms.value = []
 }
 
 function handleDownload(): void {
-    emit('download')
+  emit('download')
 }
 
 // Reset filters when record changes - show all data if record has error
-watch(() => props.record, (newRecord) => {
+watch(
+  () => props.record,
+  (newRecord) => {
     // If record has error (errorCode !== 'PASS'), show all data by default
     if (newRecord && !isStatusPass(newRecord.errorCode)) {
-        testItemFilter.value = ['all']
+      testItemFilter.value = ['all']
     } else {
-        testItemFilter.value = ['value']
+      testItemFilter.value = ['value']
     }
     testStatusFilter.value = 'ALL'
     searchTerms.value = []
-})
+  },
+)
 </script>
 
 <style scoped>

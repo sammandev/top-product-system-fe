@@ -1,13 +1,10 @@
-import { defineConfig } from 'vitest/config'
+import { fileURLToPath } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import vuetify from 'vite-plugin-vuetify'
-import { fileURLToPath } from 'node:url'
+import { defineConfig } from 'vitest/config'
 
 export default defineConfig({
-  plugins: [
-    vue(),
-    vuetify({ autoImport: true })
-  ],
+  plugins: [vue(), vuetify({ autoImport: true })],
   test: {
     globals: true,
     environment: 'happy-dom',
@@ -25,19 +22,19 @@ export default defineConfig({
         '**/*.d.ts',
         'src/main.ts',
         'src/core/plugins/**',
-        '**/__tests__/**'
+        '**/__tests__/**',
       ],
       thresholds: {
         lines: 60,
         functions: 60,
         branches: 60,
-        statements: 60
-      }
-    }
+        statements: 60,
+      },
+    },
   },
   resolve: {
     alias: {
-      '@': fileURLToPath(new URL('./src', import.meta.url))
-    }
-  }
+      '@': fileURLToPath(new URL('./src', import.meta.url)),
+    },
+  },
 })

@@ -1,16 +1,17 @@
-import { ref, computed } from 'vue'
-import { useDUTStore } from '../store'
+import { computed, ref } from 'vue'
 import type { TopProductsRequest } from '@/core/types'
+import { getApiErrorDetail } from '@/shared/utils'
+import { useDUTStore } from '../store'
 
 /**
  * Top Products Composable
- * 
+ *
  * Manages top products analysis workflow including:
  * - Form state management
  * - Cascade selection (site → model → station)
  * - Date range validation
  * - Analysis execution
- * 
+ *
  * @example
  * ```typescript
  * const {
@@ -22,12 +23,12 @@ import type { TopProductsRequest } from '@/core/types'
  *   executeAnalysis,
  *   results
  * } = useTopProducts()
- * 
+ *
  * // Set selections
  * selectedSite.value = sites[0].site_id
  * selectedModel.value = models[0].model_id
  * selectedStation.value = stations[0].station_id
- * 
+ *
  * // Run analysis
  * await executeAnalysis()
  * ```
@@ -41,7 +42,7 @@ export function useTopProducts() {
   const selectedStation = ref<number | null>(null)
   const dateRange = ref<{ start: string; end: string }>({
     start: '',
-    end: ''
+    end: '',
   })
   const criteriaScore = ref<number>(80)
   const criteriaFile = ref<File | null>(null)
@@ -105,22 +106,27 @@ export function useTopProducts() {
     analyzing.value = true
     analysisError.value = null
 
+    if (!selectedSite.value || !selectedModel.value || !selectedStation.value) {
+      analysisError.value = 'Please select site, model, and station'
+      return
+    }
+
     try {
       const params: TopProductsRequest = {
-        site_id: selectedSite.value!,
-        model_id: selectedModel.value!,
-        station_id: selectedStation.value!,
+        site_id: selectedSite.value,
+        model_id: selectedModel.value,
+        station_id: selectedStation.value,
         start_time: dateRange.value.start,
         end_time: dateRange.value.end,
         criteria_score: criteriaScore.value,
         limit: limit.value,
-        criteria_file: criteriaFile.value || undefined
+        criteria_file: criteriaFile.value || undefined,
       }
 
-      await dutStore.fetchTopProducts(selectedStation.value!, params)
+      await dutStore.fetchTopProducts(selectedStation.value, params)
       return results.value
-    } catch (error: any) {
-      analysisError.value = error.response?.data?.detail || 'Analysis failed'
+    } catch (error: unknown) {
+      analysisError.value = getApiErrorDetail(error, 'Analysis failed')
       throw error
     } finally {
       analyzing.value = false
@@ -173,6 +179,6 @@ export function useTopProducts() {
     resetForm,
     onSiteChange,
     onModelChange,
-    validateDateRange
+    validateDateRange,
   }
 }

@@ -56,7 +56,7 @@ class EnvironmentConfig {
       sentryDsn: this.sentryDsn,
       isDevelopment: this.isDevelopment,
       isProduction: this.isProduction,
-      isTest: this.isTest
+      isTest: this.isTest,
     } as const
   }
 

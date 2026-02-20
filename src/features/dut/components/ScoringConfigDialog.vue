@@ -115,38 +115,38 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
-import {
-    type ScoringType,
-    SCORING_TYPE_INFO,
-    createDefaultScoringConfig,
-} from '../types/scoring.types'
+import { computed, ref, watch } from 'vue'
 import { useScoring } from '../composables/useScoring'
+import {
+  createDefaultScoringConfig,
+  SCORING_TYPE_INFO,
+  type ScoringType,
+} from '../types/scoring.types'
 
 interface Props {
-    show: boolean
-    testItems?: { NAME: string; VALUE?: string; UCL?: string; LCL?: string; STATUS?: string }[]
+  show: boolean
+  testItems?: { NAME: string; VALUE?: string; UCL?: string; LCL?: string; STATUS?: string }[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    testItems: () => []
+  testItems: () => [],
 })
 
 const emit = defineEmits<{
-    (e: 'update:show', value: boolean): void
-    (e: 'apply'): void
+  (e: 'update:show', value: boolean): void
+  (e: 'apply'): void
 }>()
 
 // Use scoring composable
 const {
-    scoringConfigs,
-    configList,
-    loading,
-    initializeConfigs,
-    updateConfig,
-    setScoringType,
-    setAllEnabled,
-    detectScoringType
+  scoringConfigs,
+  configList,
+  loading,
+  initializeConfigs,
+  updateConfig,
+  setScoringType,
+  setAllEnabled,
+  detectScoringType,
 } = useScoring()
 
 // Local state
@@ -155,95 +155,97 @@ const typeFilter = ref('all')
 
 // Computed
 const internalShow = computed({
-    get: () => props.show,
-    set: (value) => emit('update:show', value)
+  get: () => props.show,
+  set: (value) => emit('update:show', value),
 })
 
 const filteredTestItems = computed(() => {
-    let items = configList.value
+  let items = configList.value
 
-    // Filter by search
-    if (searchQuery.value) {
-        const query = searchQuery.value.toLowerCase()
-        items = items.filter(c => c.testItemName.toLowerCase().includes(query))
-    }
+  // Filter by search
+  if (searchQuery.value) {
+    const query = searchQuery.value.toLowerCase()
+    items = items.filter((c) => c.testItemName.toLowerCase().includes(query))
+  }
 
-    // Filter by type
-    if (typeFilter.value === 'value') {
-        items = items.filter(c => c.scoringType !== 'binary')
-    } else if (typeFilter.value === 'binary') {
-        items = items.filter(c => c.scoringType === 'binary')
-    }
+  // Filter by type
+  if (typeFilter.value === 'value') {
+    items = items.filter((c) => c.scoringType !== 'binary')
+  } else if (typeFilter.value === 'binary') {
+    items = items.filter((c) => c.scoringType === 'binary')
+  }
 
-    return items
+  return items
 })
 
-const enabledCount = computed(() =>
-    configList.value.filter(c => c.enabled).length
+const enabledCount = computed(() => configList.value.filter((c) => c.enabled).length)
+
+const valueItemsCount = computed(
+  () => configList.value.filter((c) => c.scoringType !== 'binary').length,
 )
 
-const valueItemsCount = computed(() =>
-    configList.value.filter(c => c.scoringType !== 'binary').length
-)
-
-const binaryItemsCount = computed(() =>
-    configList.value.filter(c => c.scoringType === 'binary').length
+const binaryItemsCount = computed(
+  () => configList.value.filter((c) => c.scoringType === 'binary').length,
 )
 
 // Initialize when test items change
-watch(() => props.testItems, (items) => {
+watch(
+  () => props.testItems,
+  (items) => {
     if (items.length > 0 && configList.value.length === 0) {
-        initializeConfigs(items)
+      initializeConfigs(items)
     }
-}, { immediate: true })
+  },
+  { immediate: true },
+)
 
 // Methods
 function getScoringTypeColor(type: ScoringType): string {
-    return SCORING_TYPE_INFO[type]?.color || 'grey'
+  return SCORING_TYPE_INFO[type]?.color || 'grey'
 }
 
 function getScoringTypeLabel(type: ScoringType): string {
-    return SCORING_TYPE_INFO[type]?.label || type
+  return SCORING_TYPE_INFO[type]?.label || type
 }
 
 function toggleEnabled(testItemName: string, enabled: unknown): void {
-    updateConfig(testItemName, { enabled: enabled as boolean })
+  updateConfig(testItemName, { enabled: enabled as boolean })
 }
 
 function enableAll(): void {
-    setAllEnabled(true)
+  setAllEnabled(true)
 }
 
 function disableAll(): void {
-    setAllEnabled(false)
+  setAllEnabled(false)
 }
 
 function autoDetectAll(): void {
-    // Re-detect scoring types for all items
-    for (const item of props.testItems) {
-        const detected = detectScoringType(item)
-        const existing = scoringConfigs.value.get(item.NAME)
-        if (existing && existing.scoringType !== detected) {
-            setScoringType(item.NAME, detected)
-        }
+  // Re-detect scoring types for all items
+  for (const item of props.testItems) {
+    const detected = detectScoringType(item)
+    const existing = scoringConfigs.value.get(item.NAME)
+    if (existing && existing.scoringType !== detected) {
+      setScoringType(item.NAME, detected)
     }
+  }
 }
 
 function resetToDefaults(): void {
-    for (const item of props.testItems) {
-        const detected = detectScoringType(item)
-        const newConfig = createDefaultScoringConfig(item.NAME, detected)
-        scoringConfigs.value.set(item.NAME, newConfig)
-    }
+  for (const item of props.testItems) {
+    const detected = detectScoringType(item)
+    const newConfig = createDefaultScoringConfig(item.NAME, detected)
+    scoringConfigs.value.set(item.NAME, newConfig)
+  }
 }
 
 function handleClose(): void {
-    internalShow.value = false
+  internalShow.value = false
 }
 
 function handleApply(): void {
-    emit('apply')
-    internalShow.value = false
+  emit('apply')
+  internalShow.value = false
 }
 </script>
 

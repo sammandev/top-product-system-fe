@@ -242,12 +242,13 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { adjustIplasDisplayTime, isStatusPass } from '@/shared/utils/helpers'
+import { computed, ref } from 'vue'
 import type { CompactCsvTestItemData, CsvTestItemData } from '@/features/dut_logs/api/iplasProxyApi'
+import { adjustIplasDisplayTime, isStatusPass } from '@/shared/utils/helpers'
 
 // Props
-const props = withDefaults(defineProps<{
+const props = withDefaults(
+  defineProps<{
     items: (CsvTestItemData | CompactCsvTestItemData)[]
     totalItems: number
     loading: boolean
@@ -256,114 +257,129 @@ const props = withDefaults(defineProps<{
     selectable?: boolean
     selectedKeys?: string[]
     serverSide?: boolean
-}>(), {
+  }>(),
+  {
     selectable: false,
     selectedKeys: () => [],
-    serverSide: true
-})
+    serverSide: true,
+  },
+)
 
 // Emits
 const emit = defineEmits<{
-    (e: 'update:options', options: { page: number; itemsPerPage: number; sortBy: { key: string; order: 'asc' | 'desc' }[] }): void
-    (e: 'update:selected-keys', keys: string[]): void
-    (e: 'row-click', record: CsvTestItemData | CompactCsvTestItemData): void
-    (e: 'download', record: CsvTestItemData | CompactCsvTestItemData): void
-    (e: 'download-csv', record: CsvTestItemData | CompactCsvTestItemData): void
+  (
+    e: 'update:options',
+    options: {
+      page: number
+      itemsPerPage: number
+      sortBy: { key: string; order: 'asc' | 'desc' }[]
+    },
+  ): void
+  (e: 'update:selected-keys', keys: string[]): void
+  (e: 'row-click', record: CsvTestItemData | CompactCsvTestItemData): void
+  (e: 'download', record: CsvTestItemData | CompactCsvTestItemData): void
+  (e: 'download-csv', record: CsvTestItemData | CompactCsvTestItemData): void
 }>()
 
 // Table state
 const page = ref(1)
 const itemsPerPage = ref(25)
-const sortBy = ref<{ key: string; order: 'asc' | 'desc' }[]>([{ key: 'TestStartTime', order: 'desc' }])
+const sortBy = ref<{ key: string; order: 'asc' | 'desc' }[]>([
+  { key: 'TestStartTime', order: 'desc' },
+])
 
 // Copy success state
 const showCopySuccess = ref(false)
 
 // Computed items with recordKey added for v-data-table item-value
-const itemsWithKeys = computed(() => 
-    props.items.map(item => ({
-        ...item,
-        recordKey: `${item.ISN}_${item['Test Start Time']}`
-    }))
+const itemsWithKeys = computed(() =>
+  props.items.map((item) => ({
+    ...item,
+    recordKey: `${item.ISN}_${item['Test Start Time']}`,
+  })),
 )
 
 // Computed headers - include selection column when selectable
 const computedHeaders = computed(() => {
-    return [
-        { title: 'ISN', key: 'ISN', sortable: true, width: '180px' },
-        { title: 'Device ID', key: 'DeviceId', sortable: true, width: '120px' },
-        { title: 'Error Code', key: 'ErrorCode', sortable: true, width: '100px' },
-        { title: 'Error Name', key: 'ErrorName', sortable: false, width: '150px' },
-        { title: 'Test Start', key: 'TestStartTime', sortable: true, width: '150px' },
-        { title: 'Test End', key: 'TestEndTime', sortable: true, width: '150px' },
-        { title: 'Duration', key: 'Duration', sortable: false, width: '100px' },
-        { title: 'Test Items', key: 'TestItemCount', sortable: false, width: '100px' },
-        { title: 'Actions', key: 'actions', sortable: false, width: '120px' }
-    ]
+  return [
+    { title: 'ISN', key: 'ISN', sortable: true, width: '180px' },
+    { title: 'Device ID', key: 'DeviceId', sortable: true, width: '120px' },
+    { title: 'Error Code', key: 'ErrorCode', sortable: true, width: '100px' },
+    { title: 'Error Name', key: 'ErrorName', sortable: false, width: '150px' },
+    { title: 'Test Start', key: 'TestStartTime', sortable: true, width: '150px' },
+    { title: 'Test End', key: 'TestEndTime', sortable: true, width: '150px' },
+    { title: 'Duration', key: 'Duration', sortable: false, width: '100px' },
+    { title: 'Test Items', key: 'TestItemCount', sortable: false, width: '100px' },
+    { title: 'Actions', key: 'actions', sortable: false, width: '120px' },
+  ]
 })
 
 // Helper functions
 function formatDateTime(dateStr: string | undefined): string {
-    if (!dateStr) return '-'
-    return adjustIplasDisplayTime(dateStr, 1)
+  if (!dateStr) return '-'
+  return adjustIplasDisplayTime(dateStr, 1)
 }
 
 function calculateDuration(startStr: string | undefined, endStr: string | undefined): string {
-    if (!startStr || !endStr) return '-'
-    try {
-        const start = new Date(startStr)
-        const end = new Date(endStr)
-        const diffMs = end.getTime() - start.getTime()
-        const diffSecs = Math.floor(diffMs / 1000)
-        const mins = Math.floor(diffSecs / 60)
-        const secs = diffSecs % 60
-        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
-    } catch {
-        return '-'
-    }
+  if (!startStr || !endStr) return '-'
+  try {
+    const start = new Date(startStr)
+    const end = new Date(endStr)
+    const diffMs = end.getTime() - start.getTime()
+    const diffSecs = Math.floor(diffMs / 1000)
+    const mins = Math.floor(diffSecs / 60)
+    const secs = diffSecs % 60
+    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
+  } catch {
+    return '-'
+  }
 }
 
 function getTestItemCount(record: CsvTestItemData | CompactCsvTestItemData): number {
-    if ('TestItemCount' in record) {
-        return record.TestItemCount
-    }
-    return record.TestItem?.length || 0
+  if ('TestItemCount' in record) {
+    return record.TestItemCount
+  }
+  return record.TestItem?.length || 0
 }
 
 async function copyToClipboard(text: string | undefined) {
-    if (!text) return
+  if (!text) return
+  try {
+    await navigator.clipboard.writeText(text)
+    showCopySuccess.value = true
+  } catch (_err) {
+    // Fallback for browsers that don't support clipboard API or non-secure contexts
+    const textArea = document.createElement('textarea')
+    textArea.value = text
+    textArea.style.position = 'fixed'
+    textArea.style.opacity = '0'
+    document.body.appendChild(textArea)
+    textArea.focus()
+    textArea.select()
     try {
-        await navigator.clipboard.writeText(text)
-        showCopySuccess.value = true
-    } catch (err) {
-        // Fallback for browsers that don't support clipboard API or non-secure contexts
-        const textArea = document.createElement('textarea')
-        textArea.value = text
-        textArea.style.position = 'fixed'
-        textArea.style.opacity = '0'
-        document.body.appendChild(textArea)
-        textArea.focus()
-        textArea.select()
-        try {
-            document.execCommand('copy')
-            showCopySuccess.value = true
-        } catch (e) {
-            console.error('Failed to copy:', e)
-        }
-        document.body.removeChild(textArea)
+      document.execCommand('copy')
+      showCopySuccess.value = true
+    } catch (e) {
+      console.error('Failed to copy:', e)
     }
+    document.body.removeChild(textArea)
+  }
 }
 
 function handleRowClick(_event: Event, data: { item: CsvTestItemData | CompactCsvTestItemData }) {
-    emit('row-click', data.item)
+  emit('row-click', data.item)
 }
 
-function onOptionsUpdate(options: { page: number; itemsPerPage: number; sortBy: { key: string; order: 'asc' | 'desc' }[] }) {
-    emit('update:options', options)
+function onOptionsUpdate(options: {
+  page: number
+  itemsPerPage: number
+  sortBy: { key: string; order: 'asc' | 'desc' }[]
+}) {
+  emit('update:options', options)
 }
 
 function onSelectionChange(keys: string[]) {
-    emit('update:selected-keys', keys)
+  emit('update:selected-keys', keys)
 }
 </script>
 

@@ -100,28 +100,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 // Props
 interface Props {
-    modelValue: string[]
-    maxISNs?: number
-    siteIdentifiers?: string[]
-    modelIdentifiers?: string[]
+  modelValue: string[]
+  maxISNs?: number
+  siteIdentifiers?: string[]
+  modelIdentifiers?: string[]
 }
 
 const props = withDefaults(defineProps<Props>(), {
-    maxISNs: 10,
-    siteIdentifiers: () => [],
-    modelIdentifiers: () => []
+  maxISNs: 10,
+  siteIdentifiers: () => [],
+  modelIdentifiers: () => [],
 })
 
 // Emits
 const emit = defineEmits<{
-    'update:modelValue': [value: string[]]
-    'update:siteIdentifiers': [value: string[]]
-    'update:modelIdentifiers': [value: string[]]
-    'change': [value: { isns: string[], sites: string[], models: string[], valid: boolean }]
+  'update:modelValue': [value: string[]]
+  'update:siteIdentifiers': [value: string[]]
+  'update:modelIdentifiers': [value: string[]]
+  change: [value: { isns: string[]; sites: string[]; models: string[]; valid: boolean }]
 }>()
 
 // State
@@ -139,144 +139,170 @@ const availableModels = ref<string[]>([])
 
 // Validation Rules
 const rules = {
-    required: (value: string) => !!value || 'ISN is required',
-    isnFormat: (value: string) => {
-        // Accept any non-empty alphanumeric string
-        if (!value) return true
-        const isn = value.trim()
-        return /^[A-Za-z0-9]+$/.test(isn) || 'ISN should contain only letters and numbers'
-    },
-    minOneISN: (value: string[]) => {
-        return value.length > 0 || 'At least one ISN is required'
-    }
+  required: (value: string) => !!value || 'ISN is required',
+  isnFormat: (value: string) => {
+    // Accept any non-empty alphanumeric string
+    if (!value) return true
+    const isn = value.trim()
+    return /^[A-Za-z0-9]+$/.test(isn) || 'ISN should contain only letters and numbers'
+  },
+  minOneISN: (value: string[]) => {
+    return value.length > 0 || 'At least one ISN is required'
+  },
 }
 
 // Computed
 const isValid = computed(() => {
-    return selectedISNs.value.length > 0 &&
-        selectedISNs.value.length <= props.maxISNs
+  return selectedISNs.value.length > 0 && selectedISNs.value.length <= props.maxISNs
 })
 
 // Methods
 function parseBulkISNs() {
-    if (!bulkText.value) return
+  if (!bulkText.value) return
 
-    // Parse ISNs from bulk text (support newlines, commas, spaces)
-    const separators = /[\n,\s]+/
-    const isns = bulkText.value
-        .split(separators)
-        .map(isn => isn.trim())
-        .filter(isn => isn.length > 0 && /^[A-Za-z0-9]+$/.test(isn)) // Accept alphanumeric ISNs
+  // Parse ISNs from bulk text (support newlines, commas, spaces)
+  const separators = /[\n,\s]+/
+  const isns = bulkText.value
+    .split(separators)
+    .map((isn) => isn.trim())
+    .filter((isn) => isn.length > 0 && /^[A-Za-z0-9]+$/.test(isn)) // Accept alphanumeric ISNs
 
-    // Remove duplicates
-    const uniqueISNs = [...new Set([...selectedISNs.value, ...isns])]
+  // Remove duplicates
+  const uniqueISNs = [...new Set([...selectedISNs.value, ...isns])]
 
-    // Check limit
-    if (uniqueISNs.length > props.maxISNs) {
-        validationMessage.value = `Parsed ${isns.length} ISNs, but limit is ${props.maxISNs}. Using first ${props.maxISNs}.`
-        validationType.value = 'warning'
-        selectedISNs.value = uniqueISNs.slice(0, props.maxISNs)
-    } else {
-        validationMessage.value = `Successfully parsed ${isns.length} ISNs`
-        validationType.value = 'success'
-        selectedISNs.value = uniqueISNs
-    }
+  // Check limit
+  if (uniqueISNs.length > props.maxISNs) {
+    validationMessage.value = `Parsed ${isns.length} ISNs, but limit is ${props.maxISNs}. Using first ${props.maxISNs}.`
+    validationType.value = 'warning'
+    selectedISNs.value = uniqueISNs.slice(0, props.maxISNs)
+  } else {
+    validationMessage.value = `Successfully parsed ${isns.length} ISNs`
+    validationType.value = 'success'
+    selectedISNs.value = uniqueISNs
+  }
 
-    bulkText.value = ''
+  bulkText.value = ''
 
-    // Clear message after 3 seconds
-    setTimeout(() => {
-        validationMessage.value = null
-    }, 3000)
+  // Clear message after 3 seconds
+  setTimeout(() => {
+    validationMessage.value = null
+  }, 3000)
 }
 
 function removeISN(index: number) {
-    selectedISNs.value.splice(index, 1)
+  selectedISNs.value.splice(index, 1)
 }
 
 function clearAll() {
-    selectedISNs.value = []
-    bulkText.value = ''
-    validationMessage.value = null
+  selectedISNs.value = []
+  bulkText.value = ''
+  validationMessage.value = null
 }
 
 // Watch for changes and emit (with sanitization)
-watch(selectedISNs, (newValue) => {
+watch(
+  selectedISNs,
+  (newValue) => {
     // Sanitize ISNs by removing non-alphanumeric characters and trimming
-    const sanitized = newValue.map(isn => String(isn).replace(/[^A-Za-z0-9]/g, '').trim()).filter(isn => isn.length > 0)
-    
+    const sanitized = newValue
+      .map((isn) =>
+        String(isn)
+          .replace(/[^A-Za-z0-9]/g, '')
+          .trim(),
+      )
+      .filter((isn) => isn.length > 0)
+
     // If sanitization changed the ISNs, update them
     if (JSON.stringify(sanitized) !== JSON.stringify(newValue)) {
-        selectedISNs.value = sanitized
-        return // Will trigger watch again with sanitized values
+      selectedISNs.value = sanitized
+      return // Will trigger watch again with sanitized values
     }
-    
+
     emit('update:modelValue', sanitized)
     emit('change', {
-        isns: sanitized,
-        sites: selectedSites.value,
-        models: selectedModels.value,
-        valid: isValid.value
+      isns: sanitized,
+      sites: selectedSites.value,
+      models: selectedModels.value,
+      valid: isValid.value,
     })
-}, { deep: true })
+  },
+  { deep: true },
+)
 
 // Watch for site changes and emit
-watch(selectedSites, (newValue) => {
+watch(
+  selectedSites,
+  (newValue) => {
     emit('update:siteIdentifiers', newValue)
     emit('change', {
-        isns: selectedISNs.value,
-        sites: newValue,
-        models: selectedModels.value,
-        valid: isValid.value
+      isns: selectedISNs.value,
+      sites: newValue,
+      models: selectedModels.value,
+      valid: isValid.value,
     })
-}, { deep: true })
+  },
+  { deep: true },
+)
 
 // Watch for model changes and emit
-watch(selectedModels, (newValue) => {
+watch(
+  selectedModels,
+  (newValue) => {
     emit('update:modelIdentifiers', newValue)
     emit('change', {
-        isns: selectedISNs.value,
-        sites: selectedSites.value,
-        models: newValue,
-        valid: isValid.value
+      isns: selectedISNs.value,
+      sites: selectedSites.value,
+      models: newValue,
+      valid: isValid.value,
     })
-}, { deep: true })
+  },
+  { deep: true },
+)
 
 // Initialize from props
-watch(() => props.modelValue, (newValue) => {
+watch(
+  () => props.modelValue,
+  (newValue) => {
     if (JSON.stringify(newValue) !== JSON.stringify(selectedISNs.value)) {
-        selectedISNs.value = [...newValue]
+      selectedISNs.value = [...newValue]
     }
-})
+  },
+)
 
-watch(() => props.siteIdentifiers, (newValue) => {
+watch(
+  () => props.siteIdentifiers,
+  (newValue) => {
     if (JSON.stringify(newValue) !== JSON.stringify(selectedSites.value)) {
-        selectedSites.value = [...newValue]
+      selectedSites.value = [...newValue]
     }
-})
+  },
+)
 
-watch(() => props.modelIdentifiers, (newValue) => {
+watch(
+  () => props.modelIdentifiers,
+  (newValue) => {
     if (JSON.stringify(newValue) !== JSON.stringify(selectedModels.value)) {
-        selectedModels.value = [...newValue]
+      selectedModels.value = [...newValue]
     }
-})
+  },
+)
 
 // Function to update available sites and models from parent
 defineExpose({
-    updateAvailableSites: (sites: string[]) => {
-        availableSites.value = sites
-        // Auto-select if only one unique value
-        if (sites.length === 1 && selectedSites.value.length === 0) {
-            selectedSites.value = [...sites]
-        }
-    },
-    updateAvailableModels: (models: string[]) => {
-        availableModels.value = models
-        // Auto-select if only one unique value
-        if (models.length === 1 && selectedModels.value.length === 0) {
-            selectedModels.value = [...models]
-        }
+  updateAvailableSites: (sites: string[]) => {
+    availableSites.value = sites
+    // Auto-select if only one unique value
+    if (sites.length === 1 && selectedSites.value.length === 0) {
+      selectedSites.value = [...sites]
     }
+  },
+  updateAvailableModels: (models: string[]) => {
+    availableModels.value = models
+    // Auto-select if only one unique value
+    if (models.length === 1 && selectedModels.value.length === 0) {
+      selectedModels.value = [...models]
+    }
+  },
 })
 </script>
 

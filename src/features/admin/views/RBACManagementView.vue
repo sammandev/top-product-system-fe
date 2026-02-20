@@ -398,12 +398,10 @@
                   <v-row dense>
                     <v-col v-if="selectedRoleDetails.created_at" cols="4" class="text-medium-emphasis">Created
                       At:</v-col>
-                    <v-col v-if="selectedRoleDetails.created_at" cols="8">{{ formatDate(selectedRoleDetails.created_at)
-                    }}</v-col>
+                    <v-col v-if="selectedRoleDetails.created_at" cols="8">{{ formatDate(selectedRoleDetails.created_at) }}</v-col>
                     <v-col v-if="selectedRoleDetails.updated_at" cols="4" class="text-medium-emphasis">Updated
                       At:</v-col>
-                    <v-col v-if="selectedRoleDetails.updated_at" cols="8">{{ formatDate(selectedRoleDetails.updated_at)
-                    }}</v-col>
+                    <v-col v-if="selectedRoleDetails.updated_at" cols="8">{{ formatDate(selectedRoleDetails.updated_at) }}</v-col>
                   </v-row>
                 </v-card-text>
               </v-card>
@@ -575,12 +573,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { watchDebounced, useMemoize } from '@vueuse/core'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import { adminApi } from '../api/admin.api'
+import { useMemoize, watchDebounced } from '@vueuse/core'
+import { computed, onMounted, ref } from 'vue'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
-import type { Role, Permission, RBACStats, RoleDetail, PermissionDetail } from '../api/admin.api'
+import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
+import type { Permission, PermissionDetail, RBACStats, Role, RoleDetail } from '../api/admin.api'
+import { adminApi } from '../api/admin.api'
 
 // State - tab persisted in URL
 const tab = useTabPersistence('tab', 'roles')
@@ -593,7 +591,12 @@ const roleSearchDebounced = ref('')
 const permSearchDebounced = ref('')
 const roles = ref<Role[]>([])
 const permissions = ref<Permission[]>([])
-const stats = ref<RBACStats>({ total_roles: 0, total_permissions: 0, users_with_roles: 0, active_sessions: 0 })
+const stats = ref<RBACStats>({
+  total_roles: 0,
+  total_permissions: 0,
+  users_with_roles: 0,
+  active_sessions: 0,
+})
 
 const roleDialog = ref(false)
 const permDialog = ref(false)
@@ -624,13 +627,21 @@ const deletePermConfirmation = ref('')
 const deletingPerm = ref(false)
 
 // Debounced search (150ms) for better performance
-watchDebounced(roleSearch, (val) => {
-  roleSearchDebounced.value = val
-}, { debounce: 150 })
+watchDebounced(
+  roleSearch,
+  (val) => {
+    roleSearchDebounced.value = val
+  },
+  { debounce: 150 },
+)
 
-watchDebounced(permSearch, (val) => {
-  permSearchDebounced.value = val
-}, { debounce: 150 })
+watchDebounced(
+  permSearch,
+  (val) => {
+    permSearchDebounced.value = val
+  },
+  { debounce: 150 },
+)
 
 // Table headers
 const roleHeaders = [
@@ -638,13 +649,13 @@ const roleHeaders = [
   { title: 'Description', key: 'description', sortable: true },
   { title: 'Permissions', key: 'permissions', sortable: false },
   { title: 'Users', key: 'users_count', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false }
+  { title: 'Actions', key: 'actions', sortable: false },
 ]
 
 const permHeaders = [
   { title: 'Permission Name', key: 'name', sortable: true },
   { title: 'Description', key: 'description', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false }
+  { title: 'Actions', key: 'actions', sortable: false },
 ]
 
 // Utility: Escape HTML to prevent XSS
@@ -663,7 +674,10 @@ function highlightText(text: string, query: string): string {
     const escapedQuery = escapeHtml(query)
 
     const regex = new RegExp(`(${escapedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
-    return escapedText.replace(regex, '<mark style="background-color: #FFF59D; padding: 2px 4px; border-radius: 2px;">$1</mark>')
+    return escapedText.replace(
+      regex,
+      '<mark style="background-color: #FFF59D; padding: 2px 4px; border-radius: 2px;">$1</mark>',
+    )
   } catch (e) {
     console.error('Error highlighting text:', e)
     return escapeHtml(text)
@@ -675,10 +689,11 @@ const memoizedFilterRoles = useMemoize((searchQuery: string, rolesList: Role[]) 
   if (!searchQuery || searchQuery.length < 2) return rolesList
 
   const query = searchQuery.toLowerCase()
-  return rolesList.filter(role =>
-    role.name.toLowerCase().includes(query) ||
-    role.description?.toLowerCase().includes(query) ||
-    role.permissions?.some((p: string) => p.toLowerCase().includes(query))
+  return rolesList.filter(
+    (role) =>
+      role.name.toLowerCase().includes(query) ||
+      role.description?.toLowerCase().includes(query) ||
+      role.permissions?.some((p: string) => p.toLowerCase().includes(query)),
   )
 })
 
@@ -700,9 +715,9 @@ const memoizedFilterPermissions = useMemoize((searchQuery: string, permsList: Pe
   if (!searchQuery || searchQuery.length < 2) return permsList
 
   const query = searchQuery.toLowerCase()
-  return permsList.filter(perm =>
-    perm.name.toLowerCase().includes(query) ||
-    perm.description?.toLowerCase().includes(query)
+  return permsList.filter(
+    (perm) =>
+      perm.name.toLowerCase().includes(query) || perm.description?.toLowerCase().includes(query),
   )
 })
 
@@ -720,8 +735,10 @@ const shouldShowPermResultLimit = computed(() => {
 
 // Highlight matching permission chips
 function getPermissionChipColor(permissionName: string): string {
-  if (roleSearchDebounced.value.length >= 2 &&
-    permissionName.toLowerCase().includes(roleSearchDebounced.value.toLowerCase())) {
+  if (
+    roleSearchDebounced.value.length >= 2 &&
+    permissionName.toLowerCase().includes(roleSearchDebounced.value.toLowerCase())
+  ) {
     return 'success'
   }
   return 'default'
@@ -734,7 +751,7 @@ async function loadData() {
   try {
     const [rolesData, permsData] = await Promise.all([
       adminApi.getRoles(),
-      adminApi.getPermissions()
+      adminApi.getPermissions(),
     ])
     roles.value = rolesData.roles || []
     if (rolesData.stats) stats.value = rolesData.stats
@@ -743,8 +760,8 @@ async function loadData() {
     // Clear memoization cache when data updates
     memoizedFilterRoles.clear()
     memoizedFilterPermissions.clear()
-  } catch (err: any) {
-    error.value = err.response?.data?.detail || err.message || 'Failed to load data'
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Failed to load data'
   } finally {
     loading.value = false
   }
@@ -772,8 +789,8 @@ async function handleCreateRole() {
     success.value = `Role "${newRole.value.name}" created successfully`
     roleDialog.value = false
     await loadData()
-  } catch (err: any) {
-    error.value = err.response?.data?.detail || 'Failed to create role'
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to create role')
   } finally {
     loading.value = false
   }
@@ -791,8 +808,8 @@ async function handleCreatePermission() {
     success.value = `Permission "${newPermission.value.name}" created successfully`
     permDialog.value = false
     await loadData()
-  } catch (err: any) {
-    error.value = err.response?.data?.detail || 'Failed to create permission'
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to create permission')
   } finally {
     loading.value = false
   }
@@ -820,21 +837,21 @@ async function handleConfirmDeleteRole() {
   try {
     await adminApi.deleteRole(roleToDelete.value.id)
     success.value = `Role "${roleToDelete.value.name}" deleted successfully`
-    
+
     // Close dialog
     cancelDeleteRole()
-    
+
     // Reload data
     await loadData()
-  } catch (err: any) {
-    error.value = err.response?.data?.detail || 'Failed to delete role'
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to delete role')
   } finally {
     deletingRole.value = false
   }
 }
 
 function handleEditRole(id: number) {
-  const role = roles.value.find(r => r.id === id)
+  const role = roles.value.find((r) => r.id === id)
   if (!role) {
     error.value = 'Role not found'
     return
@@ -843,7 +860,7 @@ function handleEditRole(id: number) {
     id: role.id,
     name: role.name,
     description: role.description || '',
-    permissions: role.permissions ? [...role.permissions] : []
+    permissions: role.permissions ? [...role.permissions] : [],
   }
   editRoleDialog.value = true
 }
@@ -859,13 +876,13 @@ async function saveRoleEdit() {
     await adminApi.updateRole(editRoleForm.value.id, {
       name: editRoleForm.value.name,
       description: editRoleForm.value.description,
-      permissions: editRoleForm.value.permissions
+      permissions: editRoleForm.value.permissions,
     })
     success.value = `Role "${editRoleForm.value.name}" updated successfully`
     editRoleDialog.value = false
     await loadData()
-  } catch (err: any) {
-    error.value = err.response?.data?.detail || 'Failed to update role'
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to update role')
   } finally {
     loading.value = false
   }
@@ -877,8 +894,8 @@ async function showRoleDetails(id: number) {
   try {
     selectedRoleDetails.value = await adminApi.getRoleDetails(id)
     roleDetailsDialog.value = true
-  } catch (err: any) {
-    error.value = err.response?.data?.detail || 'Failed to load role details'
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to load role details')
   } finally {
     loading.value = false
   }
@@ -911,21 +928,21 @@ async function handleConfirmDeletePerm() {
   try {
     await adminApi.deletePermission(permToDelete.value.id)
     success.value = `Permission "${permToDelete.value.name}" deleted successfully`
-    
+
     // Close dialog
     cancelDeletePerm()
-    
+
     // Reload data
     await loadData()
-  } catch (err: any) {
-    error.value = err.response?.data?.detail || 'Failed to delete permission'
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to delete permission')
   } finally {
     deletingPerm.value = false
   }
 }
 
 function handleEditPermission(id: number) {
-  const perm = permissions.value.find(p => p.id === id)
+  const perm = permissions.value.find((p) => p.id === id)
   if (!perm) {
     error.value = 'Permission not found'
     return
@@ -933,7 +950,7 @@ function handleEditPermission(id: number) {
   editPermForm.value = {
     id: perm.id,
     name: perm.name,
-    description: perm.description || ''
+    description: perm.description || '',
   }
   editPermDialog.value = true
 }
@@ -948,13 +965,13 @@ async function savePermissionEdit() {
   try {
     await adminApi.updatePermission(editPermForm.value.id, {
       name: editPermForm.value.name,
-      description: editPermForm.value.description
+      description: editPermForm.value.description,
     })
     success.value = `Permission "${editPermForm.value.name}" updated successfully`
     editPermDialog.value = false
     await loadData()
-  } catch (err: any) {
-    error.value = err.response?.data?.detail || 'Failed to update permission'
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to update permission')
   } finally {
     loading.value = false
   }
@@ -966,8 +983,8 @@ async function showPermissionDetails(id: number) {
   try {
     selectedPermDetails.value = await adminApi.getPermissionDetails(id)
     permDetailsDialog.value = true
-  } catch (err: any) {
-    error.value = err.response?.data?.detail || 'Failed to load permission details'
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to load permission details')
   } finally {
     loading.value = false
   }

@@ -1,10 +1,10 @@
-import { ref, computed, unref, type Ref } from 'vue'
+import { computed, type Ref, ref, unref } from 'vue'
 
 export interface StickyColumnOptions {
   initialLocked?: string[]
 }
 
-export interface HeaderWithPosition extends Record<string, any> {
+export interface HeaderWithPosition extends Record<string, unknown> {
   key?: string
   value?: string
   fixed?: boolean
@@ -13,8 +13,9 @@ export interface HeaderWithPosition extends Record<string, any> {
 }
 
 export function useStickyColumns(
+  // biome-ignore lint/suspicious/noExplicitAny: Vuetify header objects have dynamic shape
   headersInput: Ref<any[]> | (() => any[]),
-  options: StickyColumnOptions = {}
+  options: StickyColumnOptions = {},
 ) {
   const lockedColumns = ref<string[]>(options.initialLocked || [])
   const columnWidths = ref<Record<string, number>>({})
@@ -26,36 +27,38 @@ export function useStickyColumns(
   })
 
   const columnOptions = computed(() => {
+    // biome-ignore lint/suspicious/noExplicitAny: Vuetify header objects have dynamic shape
     return headers.value.map((h: any) => ({
       title: h.title,
-      value: h.key ?? h.value
+      value: h.key ?? h.value,
     }))
   })
 
   const stickyHeaders = computed<HeaderWithPosition[]>(() => {
     let cumulativeLeft = 0
-    
+
+    // biome-ignore lint/suspicious/noExplicitAny: Vuetify header objects have dynamic shape
     return headers.value.map((h: any) => {
       const key = h.key ?? h.value
       const isLocked = lockedColumns.value.includes(key)
-      
+
       if (isLocked) {
         const header: HeaderWithPosition = {
           ...h,
           fixed: true,
           cellClass: 'v-data-table-column--sticky',
-          left: cumulativeLeft
+          left: cumulativeLeft,
         }
-        
+
         // Add width to cumulative position for next locked column
         const width = columnWidths.value[key] || 0
         if (width > 0) {
           cumulativeLeft += width
         }
-        
+
         return header
       }
-      
+
       return h
     })
   })
@@ -81,6 +84,6 @@ export function useStickyColumns(
     stickyHeaders,
     columnWidths,
     setColumnWidth,
-    setColumnWidths
+    setColumnWidths,
   }
 }

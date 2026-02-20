@@ -20,7 +20,6 @@
 </template>
 
 <script setup lang="ts">
-import { computed } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 

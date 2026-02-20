@@ -150,8 +150,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import { onMounted, ref } from 'vue'
 import apiClient from '@/core/api/client'
 
 interface Activity {
@@ -204,19 +203,19 @@ const timeRangeOptions = [
   { title: 'Last 90 days', value: 90 },
   { title: 'Last 6 months', value: 180 },
   { title: 'Last year', value: 365 },
-  { title: 'Custom Range', value: 'custom' }
+  { title: 'Custom Range', value: 'custom' },
 ]
 
 const sortOptions = [
   { title: 'Newest First', value: 'newest' },
-  { title: 'Oldest First', value: 'oldest' }
+  { title: 'Oldest First', value: 'oldest' },
 ]
 
 const pageSizeOptions = [
   { title: '10', value: 10 },
   { title: '20', value: 20 },
   { title: '50', value: 50 },
-  { title: '100', value: 100 }
+  { title: '100', value: 100 },
 ]
 
 // Methods
@@ -257,16 +256,16 @@ async function loadActivities(page?: number) {
   }
 
   try {
-    const params: any = {
+    const params: Record<string, string | number> = {
       page: currentPage.value,
       page_size: pageSize.value,
-      sort_order: sortOrder.value
+      sort_order: sortOrder.value,
     }
 
     // Add time range parameters
     if (timeRangeType.value === 'custom' && customStartDate.value && customEndDate.value) {
       params.start_date = new Date(customStartDate.value).toISOString()
-      params.end_date = new Date(customEndDate.value + 'T23:59:59').toISOString()
+      params.end_date = new Date(`${customEndDate.value}T23:59:59`).toISOString()
     } else if (typeof timeRangeType.value === 'number') {
       params.days = timeRangeType.value
     }
@@ -277,15 +276,28 @@ async function loadActivities(page?: number) {
     }
 
     const response = await apiClient.get<ActivityListResponse>('/api/dashboard/activity/list', {
-      params
+      params,
     })
 
     activities.value = response.data.activities
     total.value = response.data.total
     totalPages.value = response.data.total_pages
-  } catch (err: any) {
+  } catch (err: unknown) {
     console.error('Failed to load activities:', err)
-    error.value = err.response?.data?.detail || 'Failed to load activities'
+    if (err && typeof err === 'object' && 'response' in err) {
+      const response = (err as { response?: unknown }).response
+      if (response && typeof response === 'object' && 'data' in response) {
+        const data = (response as { data?: unknown }).data
+        if (data && typeof data === 'object' && 'detail' in data) {
+          const detail = (data as { detail?: unknown }).detail
+          if (typeof detail === 'string') {
+            error.value = detail
+            return
+          }
+        }
+      }
+    }
+    error.value = 'Failed to load activities'
   } finally {
     loading.value = false
   }
@@ -338,7 +350,7 @@ function formatTime(timestamp: string): string {
   const date = new Date(timestamp)
   return date.toLocaleTimeString('en-US', {
     hour: '2-digit',
-    minute: '2-digit'
+    minute: '2-digit',
   })
 }
 

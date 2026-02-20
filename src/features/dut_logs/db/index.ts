@@ -1,65 +1,57 @@
 /**
  * iPLAS Database Exports
- * 
+ *
  * Barrel export for IndexedDB utilities and types.
  */
 
 export {
-  // Database initialization
-  getDb,
+  clearAllRecords,
+  clearStaleRecords,
   closeDb,
   deleteDatabase,
-  
+  // Utilities
+  generateRecordId,
+  getAllRecords,
+  getCountByStation,
+  getCountByStatus,
+  // Database initialization
+  getDb,
+  getDistinctStations,
+  getPagedRecords,
+  getRecord,
+  getRecordsByIsn,
+  getStorageStats,
+  // Read operations
+  getTotalCount,
+  type IDBPDatabase,
+  type IplasDbPageResult,
+  type IplasDbQueryOptions,
+  // Types
+  type IplasDbRecord,
+  type IplasDbSchema,
   // Write operations
   openWriteTransaction,
   putRecord,
   putRecordsBatch,
-  clearAllRecords,
-  clearStaleRecords,
-  
-  // Read operations
-  getTotalCount,
-  getCountByStation,
-  getCountByStatus,
-  getRecord,
-  getAllRecords,
-  getPagedRecords,
-  getRecordsByIsn,
-  getDistinctStations,
-  
-  // Utilities
-  generateRecordId,
-  getStorageStats,
-  
-  // Types
-  type IplasDbRecord,
-  type IplasDbQueryOptions,
-  type IplasDbPageResult,
-  type IplasDbSchema,
-  type IDBPDatabase
 } from './iplasDb'
 
 // Query helpers
 export {
-  // Main query function for v-data-table-server
-  queryRecordsForTable,
-  
+  getDistinctValues,
   // Filter utilities
   getFilteredCount,
-  getRecordsByFilter,
-  
   // Statistics & aggregation
   getRecordStatistics,
-  getDistinctValues,
+  getRecordsByFilter,
   getRecordsGroupedBy,
-  
-  // Streaming (memory efficient)
-  streamRecords,
-  
+  // Main query function for v-data-table-server
+  queryRecordsForTable,
   // Types
   type RecordFilter,
+  type RecordStatistics,
   type SortOptions,
+  // Streaming (memory efficient)
+  streamRecords,
   type TablePaginationOptions,
   type TableQueryResult,
-  type RecordStatistics
 } from './iplasDbQueries'

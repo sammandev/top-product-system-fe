@@ -44,7 +44,7 @@ export interface TopProduct {
   test_date: string
   overall_data_score: number
   latest_data: MeasurementData[]
-  metadata?: Record<string, any>
+  metadata?: Record<string, unknown>
 }
 
 export interface TopProductsRequest {
@@ -74,19 +74,19 @@ export interface DUTAnalysisRequest {
   station_id: number
   start_date: string
   end_date: string
-  filters?: Record<string, any>
+  filters?: Record<string, unknown>
 }
 
 export interface DUTAnalysisResponse {
   analysis_id: string
-  results: any[]
+  results: unknown[]
   summary: {
     total_devices: number
     pass_rate: number
     fail_rate: number
     average_score: number
   }
-  charts?: any[]
+  charts?: unknown[]
 }
 
 export interface DUTStoreState {
@@ -147,8 +147,8 @@ export interface SubgroupScores {
  */
 export interface GroupScores {
   [groupKey: string]: SubgroupScores & {
-    final_group_score?: number  // Bayesian aggregate score for the entire group
-    group_avg_score?: number    // Arithmetic mean score for the entire group
+    final_group_score?: number // Bayesian aggregate score for the entire group
+    group_avg_score?: number // Arithmetic mean score for the entire group
   }
 }
 
@@ -180,8 +180,8 @@ export interface HierarchicalStationResult {
   error_item: string | null
   data: Array<Array<string | number | null>>
   overall_data_score: number
-  metadata: Record<string, any>
-  
+  metadata: Record<string, unknown>
+
   // Hierarchical additions
   group_scores: GroupScores
   overall_group_scores: OverallGroupScores | null

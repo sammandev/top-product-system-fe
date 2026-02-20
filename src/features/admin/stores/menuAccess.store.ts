@@ -1,11 +1,12 @@
 /**
  * Menu Access Store
- * 
+ *
  * Manages user's accessible menus with caching for fast navigation
  */
 
 import { defineStore } from 'pinia'
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
+import { getApiErrorDetail } from '@/shared/utils'
 import { menuAccessApi } from '../api/menuAccess.api'
 import type { UserMenuData } from '../types/menuAccess.types'
 
@@ -22,35 +23,30 @@ export const useMenuAccessStore = defineStore('menuAccess', () => {
   const initialized = ref(false)
 
   // Computed - organized by section
-  const mainMenus = computed(() => 
-    menus.value.filter(m => m.section === 'main')
-  )
-  
-  const toolsMenus = computed(() => 
-    menus.value.filter(m => m.section === 'tools')
-  )
-  
-  const systemMenus = computed(() => 
-    menus.value.filter(m => m.section === 'system')
-  )
+  const mainMenus = computed(() => menus.value.filter((m) => m.section === 'main'))
+
+  const toolsMenus = computed(() => menus.value.filter((m) => m.section === 'tools'))
+
+  const systemMenus = computed(() => menus.value.filter((m) => m.section === 'system'))
 
   // Computed - check if menu is accessible
-  const canAccess = computed(() => (menuKey: string) => 
-    menus.value.some(m => m.menu_key === menuKey)
+  const canAccess = computed(
+    () => (menuKey: string) => menus.value.some((m) => m.menu_key === menuKey),
   )
 
   // Computed - check if path is accessible
-  const canAccessPath = computed(() => (path: string) => 
-    menus.value.some(m => m.path === path)
-  )
+  const canAccessPath = computed(() => (path: string) => menus.value.some((m) => m.path === path))
 
   /**
    * Fetch user's accessible menus
    */
-  async function fetchMenus(isGuest: boolean = false, forceRefresh: boolean = false): Promise<void> {
+  async function fetchMenus(
+    isGuest: boolean = false,
+    forceRefresh: boolean = false,
+  ): Promise<void> {
     // Check cache first
     const now = Date.now()
-    if (!forceRefresh && cachedMenus && (now - cacheTimestamp) < CACHE_TTL_MS) {
+    if (!forceRefresh && cachedMenus && now - cacheTimestamp < CACHE_TTL_MS) {
       menus.value = cachedMenus
       initialized.value = true
       return
@@ -63,13 +59,13 @@ export const useMenuAccessStore = defineStore('menuAccess', () => {
       const response = isGuest
         ? await menuAccessApi.getGuestMenus()
         : await menuAccessApi.getMyMenus()
-      
+
       menus.value = response.menus
       cachedMenus = response.menus
       cacheTimestamp = now
       initialized.value = true
-    } catch (err: any) {
-      error.value = err.response?.data?.detail || 'Failed to fetch menus'
+    } catch (err: unknown) {
+      error.value = getApiErrorDetail(err, 'Failed to fetch menus')
       // Fail silently - static fallback menus will be used
       // This prevents blocking the UI when menu API is unavailable
       menus.value = []
@@ -100,37 +96,37 @@ export const useMenuAccessStore = defineStore('menuAccess', () => {
     const result = {
       main: [] as MenuItem[],
       tools: [] as MenuItem[],
-      system: [] as MenuItem[]
+      system: [] as MenuItem[],
     }
 
     // Group menus by section
     const bySection = {
-      main: menus.value.filter(m => m.section === 'main'),
-      tools: menus.value.filter(m => m.section === 'tools'),
-      system: menus.value.filter(m => m.section === 'system')
+      main: menus.value.filter((m) => m.section === 'main'),
+      tools: menus.value.filter((m) => m.section === 'tools'),
+      system: menus.value.filter((m) => m.section === 'system'),
     }
 
     // Build tree for each section
     for (const [section, items] of Object.entries(bySection)) {
-      const parents = items.filter(m => !m.parent_key)
-      const children = items.filter(m => m.parent_key)
+      const parents = items.filter((m) => !m.parent_key)
+      const children = items.filter((m) => m.parent_key)
 
       for (const parent of parents) {
         const menuItem: MenuItem = {
           title: parent.title,
           icon: parent.icon,
-          path: parent.path || undefined
+          path: parent.path || undefined,
         }
 
         // Find children for this parent
-        const childItems = children.filter(c => c.parent_key === parent.menu_key)
+        const childItems = children.filter((c) => c.parent_key === parent.menu_key)
         if (childItems.length > 0) {
           menuItem.children = childItems
             .sort((a, b) => a.sort_order - b.sort_order)
-            .map(c => ({
+            .map((c) => ({
               title: c.title,
               icon: c.icon,
-              path: c.path
+              path: c.path,
             }))
         }
 
@@ -139,8 +135,8 @@ export const useMenuAccessStore = defineStore('menuAccess', () => {
 
       // Sort by sort_order
       result[section as keyof typeof result].sort((a, b) => {
-        const aOrder = items.find(i => i.title === a.title)?.sort_order ?? 0
-        const bOrder = items.find(i => i.title === b.title)?.sort_order ?? 0
+        const aOrder = items.find((i) => i.title === a.title)?.sort_order ?? 0
+        const bOrder = items.find((i) => i.title === b.title)?.sort_order ?? 0
         return aOrder - bOrder
       })
     }
@@ -165,7 +161,7 @@ export const useMenuAccessStore = defineStore('menuAccess', () => {
     // Actions
     fetchMenus,
     clearCache,
-    buildMenuTree
+    buildMenuTree,
   }
 })
 

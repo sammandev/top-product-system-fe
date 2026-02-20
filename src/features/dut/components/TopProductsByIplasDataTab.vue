@@ -37,13 +37,9 @@
 </template>
 
 <script setup lang="ts">
-import TopProductIplasStationContent from './TopProductIplasStationContent.vue'
-import TopProductIplasIsnContent from './TopProductIplasIsnContent.vue'
-import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
-import TopProductIplasSettingsDialog from './TopProductIplasSettingsDialog.vue'
+import { ref } from 'vue'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
-import { ref } from 'vue'
 
 // Search mode tab - persisted in URL
 const searchMode = useTabPersistence<'station' | 'isn'>('subTab', 'station')
@@ -58,20 +54,20 @@ const downloadingDetails = ref(false)
 
 // Handle showing details from child components
 function handleShowDetails(record: NormalizedRecord) {
-    selectedRecord.value = record
-    showDetailsDialog.value = true
+  selectedRecord.value = record
+  showDetailsDialog.value = true
 }
 
 // Handle download from dialog
 async function handleDownloadFromDialog() {
-    // This will be handled by the dialog component internally
-    // or we can emit to parent for centralized download handling
-    downloadingDetails.value = true
-    try {
-        // Download logic would go here
-        // The dialog should emit the necessary data for download
-    } finally {
-        downloadingDetails.value = false
-    }
+  // This will be handled by the dialog component internally
+  // or we can emit to parent for centralized download handling
+  downloadingDetails.value = true
+  try {
+    // Download logic would go here
+    // The dialog should emit the necessary data for download
+  } finally {
+    downloadingDetails.value = false
+  }
 }
 </script>

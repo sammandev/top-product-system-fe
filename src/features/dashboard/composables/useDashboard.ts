@@ -1,7 +1,8 @@
-import { ref, computed, onMounted } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useAuthStore } from '@/features/auth/store'
-import { dashboardApi } from '../api/dashboardApi'
+import { getErrorMessage } from '@/shared/utils'
 import type { DashboardResponse } from '../api/dashboardApi'
+import { dashboardApi } from '../api/dashboardApi'
 
 // Cache dashboard data at module level to persist between navigation
 // This prevents re-fetching on every page visit
@@ -55,14 +56,14 @@ interface StatusItem {
 
 /**
  * Dashboard Composable
- * 
+ *
  * Provides dashboard data and business logic including:
  * - Statistics cards
  * - Quick actions
  * - Recent activity
  * - System status
  * - Storage information
- * 
+ *
  * @example
  * ```typescript
  * const {
@@ -93,29 +94,29 @@ export function useDashboard() {
           value: 0,
           trend: 0,
           icon: 'mdi-trophy',
-          color: 'primary'
+          color: 'primary',
         },
         {
           title: 'Unique DUTs',
           value: 0,
           trend: 0,
           icon: 'mdi-chip',
-          color: 'success'
+          color: 'success',
         },
         {
           title: 'Test Stations',
           value: 0,
           trend: 0,
           icon: 'mdi-access-point',
-          color: 'warning'
+          color: 'warning',
         },
         {
           title: 'Recent Analyses',
           value: 0,
           trend: 0,
           icon: 'mdi-chart-line',
-          color: 'info'
-        }
+          color: 'info',
+        },
       ]
     }
 
@@ -127,31 +128,35 @@ export function useDashboard() {
         value: statistics.total_unique_projects,
         trend: statistics.total_unique_projects > 0 ? 8.2 : 0,
         icon: 'mdi-folder-multiple',
-        color: 'warning'
+        color: 'warning',
       },
       {
         title: 'Unique DUTs',
         value: statistics.total_unique_duts,
         trend: statistics.total_unique_duts > 0 ? 12.5 : 0,
         icon: 'mdi-chip',
-        color: 'success'
+        color: 'success',
       },
       {
         title: 'Total Analysis',
         value: statistics.total_top_products,
-        trend: statistics.recent_analyses > 0 ?
-          ((statistics.recent_analyses / statistics.total_top_products) * 100) : 0,
+        trend:
+          statistics.recent_analyses > 0
+            ? (statistics.recent_analyses / statistics.total_top_products) * 100
+            : 0,
         icon: 'mdi-trophy',
-        color: 'primary'
+        color: 'primary',
       },
       {
         title: 'Recent (7 days)',
         value: statistics.recent_analyses,
-        trend: statistics.total_top_products > 0 ?
-          ((statistics.recent_analyses / statistics.total_top_products) * 100) : 0,
+        trend:
+          statistics.total_top_products > 0
+            ? (statistics.recent_analyses / statistics.total_top_products) * 100
+            : 0,
         icon: 'mdi-chart-line',
-        color: 'info'
-      }
+        color: 'info',
+      },
     ]
   })
 
@@ -162,22 +167,22 @@ export function useDashboard() {
       subtitle: 'Search and download test logs',
       icon: 'mdi-download',
       color: 'primary',
-      path: '/dut/data-explorer'
+      path: '/dut/data-explorer',
     },
     {
       title: 'Top Products',
       subtitle: 'Browse database',
       icon: 'mdi-database',
       color: 'warning',
-      path: '/dut/top-products/data'
+      path: '/dut/top-products/data',
     },
     {
       title: 'Top Product Analysis',
       subtitle: 'Multi-DUT insights',
       icon: 'mdi-chart-box',
       color: 'info',
-      path: '/dut/top-products/analysis'
-    }
+      path: '/dut/top-products/analysis',
+    },
   ]
 
   // Helper to format relative time
@@ -204,13 +209,13 @@ export function useDashboard() {
           description: 'Start by uploading a test log or analyzing DUTs',
           time: '-',
           icon: 'mdi-information',
-          color: 'info'
-        }
+          color: 'info',
+        },
       ]
     }
 
     // Only show first 5 activities
-    return dashboardData.value.recent_activities.slice(0, 5).map(activity => {
+    return dashboardData.value.recent_activities.slice(0, 5).map((activity) => {
       // Determine icon and color based on activity type
       let icon = 'mdi-chart-line'
       let color = 'info'
@@ -231,7 +236,7 @@ export function useDashboard() {
         description: activity.description,
         time: formatRelativeTime(activity.timestamp),
         icon,
-        color
+        color,
       }
     })
   })
@@ -244,14 +249,14 @@ export function useDashboard() {
           label: 'Database',
           value: 'Loading...',
           icon: 'mdi-database',
-          color: 'info'
+          color: 'info',
         },
         {
           label: 'Cache',
           value: 'Loading...',
           icon: 'mdi-cached',
-          color: 'info'
-        }
+          color: 'info',
+        },
       ]
     }
 
@@ -262,20 +267,20 @@ export function useDashboard() {
         label: 'Database',
         value: system_status.database_status,
         icon: 'mdi-database',
-        color: system_status.database_status === 'Online' ? 'success' : 'error'
+        color: system_status.database_status === 'Online' ? 'success' : 'error',
       },
       {
         label: 'Total Records',
         value: system_status.database_records.toLocaleString(),
         icon: 'mdi-table',
-        color: 'primary'
+        color: 'primary',
       },
       {
         label: 'Cache',
         value: system_status.cache_enabled ? system_status.cache_status : 'Disabled',
         icon: 'mdi-cached',
-        color: system_status.cache_status === 'Online' ? 'success' : 'warning'
-      }
+        color: system_status.cache_status === 'Online' ? 'success' : 'warning',
+      },
     ]
 
     // Add cache metrics if cache is online
@@ -286,7 +291,12 @@ export function useDashboard() {
           label: 'Cache Hit Rate',
           value: `${system_status.cache_hit_rate.toFixed(1)}%`,
           icon: 'mdi-chart-arc',
-          color: system_status.cache_hit_rate > 70 ? 'success' : system_status.cache_hit_rate > 50 ? 'warning' : 'error'
+          color:
+            system_status.cache_hit_rate > 70
+              ? 'success'
+              : system_status.cache_hit_rate > 50
+                ? 'warning'
+                : 'error',
         })
       }
 
@@ -296,7 +306,7 @@ export function useDashboard() {
           label: 'Cached Keys',
           value: system_status.cache_total_keys.toLocaleString(),
           icon: 'mdi-key',
-          color: 'info'
+          color: 'info',
         })
       }
 
@@ -306,7 +316,7 @@ export function useDashboard() {
           label: 'Cache Memory',
           value: `${system_status.cache_memory_mb.toFixed(2)} MB`,
           icon: 'mdi-memory',
-          color: 'info'
+          color: 'info',
         })
       }
 
@@ -317,7 +327,7 @@ export function useDashboard() {
           label: 'Cache Operations',
           value: `${total.toLocaleString()} (${system_status.cache_hits.toLocaleString()} hits)`,
           icon: 'mdi-counter',
-          color: 'primary'
+          color: 'primary',
         })
       }
     }
@@ -327,7 +337,7 @@ export function useDashboard() {
       label: 'Active Users',
       value: `${system_status.active_users}/${system_status.total_users}`,
       icon: 'mdi-account-group',
-      color: 'primary'
+      color: 'primary',
     })
 
     // Add API version
@@ -335,7 +345,7 @@ export function useDashboard() {
       label: 'API Version',
       value: system_status.api_version,
       icon: 'mdi-api',
-      color: 'info'
+      color: 'info',
     })
 
     return statusItems
@@ -345,21 +355,20 @@ export function useDashboard() {
   const storageUsed = ref(0)
   const storageTotal = ref(100)
   const storagePercentage = computed(() =>
-    Math.round((storageUsed.value / storageTotal.value) * 100)
+    Math.round((storageUsed.value / storageTotal.value) * 100),
   )
 
   // Computed
   const currentUser = computed(() => authStore.user)
   const isGuest = computed(() => authStore.isGuest)
   // Hide username for Guest users
-  const userName = computed(() => isGuest.value ? 'Guest' : (currentUser.value?.username || 'User'))
+  const userName = computed(() => (isGuest.value ? 'Guest' : currentUser.value?.username || 'User'))
 
   /**
    * Check if cache is still valid
    */
   function isCacheValid(): boolean {
-    return cachedDashboardData !== null && 
-           (Date.now() - cacheTimestamp) < CACHE_TTL_MS
+    return cachedDashboardData !== null && Date.now() - cacheTimestamp < CACHE_TTL_MS
   }
 
   /**
@@ -380,13 +389,13 @@ export function useDashboard() {
     try {
       const [stats, uploadStats] = await Promise.all([
         dashboardApi.getStats(),
-        dashboardApi.getUploadStats()
+        dashboardApi.getUploadStats(),
       ])
 
       // Update cache
       cachedDashboardData = stats
       cacheTimestamp = Date.now()
-      
+
       dashboardData.value = stats
 
       // Update storage info
@@ -396,9 +405,9 @@ export function useDashboard() {
         // Assuming 1GB = 1000MB max storage for now
         storageTotal.value = 1000
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch dashboard data:', err)
-      error.value = err.message || 'Failed to load dashboard data'
+      error.value = getErrorMessage(err) || 'Failed to load dashboard data'
     } finally {
       loading.value = false
     }
@@ -437,6 +446,6 @@ export function useDashboard() {
     userName,
 
     // Actions
-    refreshStats
+    refreshStats,
   }
 }

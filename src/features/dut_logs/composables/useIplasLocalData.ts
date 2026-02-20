@@ -1,10 +1,10 @@
 /**
  * useIplasLocalData Composable
- * 
+ *
  * Provides reactive access to iPLAS data stored in IndexedDB.
  * Designed for use with v-data-table-server to enable "fake" server-side
  * pagination that queries locally stored data instead of network.
- * 
+ *
  * Key Features:
  * - Reactive table state management
  * - Integration with v-data-table-server's loadItems handler
@@ -13,20 +13,24 @@
  * - Automatic refresh on store updates
  */
 
-import { ref, reactive, computed, watch, onUnmounted, type Ref } from 'vue'
-import { useIplasDataStore, type StreamStatus, type StreamToDbRequest } from '../stores/iplasData.store'
+import { computed, onUnmounted, type Ref, reactive, ref, watch } from 'vue'
+import { getTotalCount } from '../db/iplasDb'
 import {
-  queryRecordsForTable,
-  getRecordsByFilter,
-  getRecordStatistics,
   getDistinctValues,
+  getRecordStatistics,
+  getRecordsByFilter,
+  type IplasDbRecord,
+  queryRecordsForTable,
   type RecordFilter,
+  type RecordStatistics,
   type SortOptions,
   type TablePaginationOptions,
-  type RecordStatistics,
-  type IplasDbRecord
 } from '../db/iplasDbQueries'
-import { getTotalCount } from '../db/iplasDb'
+import {
+  type StreamStatus,
+  type StreamToDbRequest,
+  useIplasDataStore,
+} from '../stores/iplasData.store'
 
 // Re-export types for convenience
 export type { RecordFilter, SortOptions, IplasDbRecord, RecordStatistics }
@@ -67,24 +71,24 @@ export interface UseIplasLocalDataReturn {
   totalItems: Ref<number>
   loading: Ref<boolean>
   error: Ref<string | null>
-  
+
   // Filter state
   filter: RecordFilter
-  
+
   // Table options (for v-model binding)
   tableOptions: Ref<VuetifyTableOptions>
-  
+
   // Stream status (reactive)
   streamStatus: StreamStatus
-  
+
   // Statistics
   statistics: Ref<RecordStatistics | null>
-  
+
   // Computed
   hasData: Ref<boolean>
   isStreaming: Ref<boolean>
   streamProgress: Ref<number>
-  
+
   // Methods
   loadItems: (options: VuetifyTableOptions) => Promise<void>
   loadAllItems: () => Promise<void>
@@ -104,7 +108,7 @@ export interface UseIplasLocalDataReturn {
 
 /**
  * Composable for accessing iPLAS data from IndexedDB with table integration
- * 
+ *
  * @example
  * ```vue
  * <script setup>
@@ -118,7 +122,7 @@ export interface UseIplasLocalDataReturn {
  *   updateFilter
  * } = useIplasLocalData()
  * </script>
- * 
+ *
  * <template>
  *   <v-data-table-server
  *     v-model:options="tableOptions"
@@ -130,14 +134,12 @@ export interface UseIplasLocalDataReturn {
  * </template>
  * ```
  */
-export function useIplasLocalData(
-  options: UseIplasLocalDataOptions = {}
-): UseIplasLocalDataReturn {
+export function useIplasLocalData(options: UseIplasLocalDataOptions = {}): UseIplasLocalDataReturn {
   const {
     autoRefreshInterval = 0,
     initialFilter = {},
     initialItemsPerPage = 25,
-    filterDebounceMs = 300
+    filterDebounceMs = 300,
   } = options
 
   // Get the Pinia store
@@ -160,7 +162,7 @@ export function useIplasLocalData(
   const tableOptions = ref<VuetifyTableOptions>({
     page: 1,
     itemsPerPage: initialItemsPerPage,
-    sortBy: [{ key: 'TestStartTime', order: 'desc' }]
+    sortBy: [{ key: 'TestStartTime', order: 'desc' }],
   })
 
   // Debounce timer
@@ -174,9 +176,9 @@ export function useIplasLocalData(
   // ============================================================================
 
   const hasData = computed(() => totalItems.value > 0)
-  
+
   const isStreaming = computed(() => store.streamStatus.isStreaming)
-  
+
   const streamProgress = computed(() => {
     const { recordsWritten, totalEstimated } = store.streamStatus
     if (totalEstimated === 0) return 0
@@ -189,7 +191,7 @@ export function useIplasLocalData(
 
   /**
    * Load items from IndexedDB for the current page
-   * 
+   *
    * This is the handler for v-data-table-server's @update:options event.
    */
   async function loadItems(opts: VuetifyTableOptions): Promise<void> {
@@ -201,10 +203,10 @@ export function useIplasLocalData(
       const paginationOptions: TablePaginationOptions = {
         page: opts.page,
         itemsPerPage: opts.itemsPerPage,
-        sortBy: opts.sortBy.map(s => ({
+        sortBy: opts.sortBy.map((s) => ({
           key: s.key as SortOptions['key'],
-          order: s.order
-        }))
+          order: s.order,
+        })),
       }
 
       // Query IndexedDB
@@ -225,10 +227,10 @@ export function useIplasLocalData(
 
   /**
    * Load ALL items from IndexedDB for client-side pagination.
-   * 
+   *
    * Use this for v-data-table (client-side) instead of v-data-table-server.
    * Loads all matching records from IndexedDB into the items array.
-   * 
+   *
    * UPDATED: Added for client-side table pagination support
    */
   async function loadAllItems(): Promise<void> {
@@ -238,7 +240,7 @@ export function useIplasLocalData(
     try {
       // Get all records matching the current filter (no limit)
       const allRecords = await getRecordsByFilter(filter)
-      
+
       items.value = allRecords
       totalItems.value = allRecords.length
     } catch (err) {
@@ -280,7 +282,7 @@ export function useIplasLocalData(
    */
   function clearFilter(): void {
     // Reset filter to empty
-    Object.keys(filter).forEach(key => {
+    Object.keys(filter).forEach((key) => {
       delete (filter as Record<string, unknown>)[key]
     })
 
@@ -291,7 +293,7 @@ export function useIplasLocalData(
 
   /**
    * Stream data from backend to IndexedDB
-   * 
+   *
    * After streaming completes, automatically refreshes the table.
    */
   async function streamData(request: StreamToDbRequest): Promise<number> {
@@ -300,10 +302,10 @@ export function useIplasLocalData(
 
     try {
       const count = await store.streamToIndexedDb(request)
-      
+
       // Refresh table after streaming
       await refreshData()
-      
+
       return count
     } catch (err) {
       error.value = err instanceof Error ? err.message : 'Streaming failed'
@@ -357,7 +359,7 @@ export function useIplasLocalData(
       if (wasStreaming && !isStreaming && store.streamStatus.recordsWritten > 0) {
         refreshData()
       }
-    }
+    },
   )
 
   // ============================================================================
@@ -374,7 +376,7 @@ export function useIplasLocalData(
   }
 
   // Initial load of total count
-  getTotalCount().then(count => {
+  getTotalCount().then((count) => {
     totalItems.value = count
   })
 
@@ -426,7 +428,7 @@ export function useIplasLocalData(
     abortStream,
     getDistinctStations,
     getDistinctSites,
-    loadStatistics
+    loadStatistics,
   }
 }
 

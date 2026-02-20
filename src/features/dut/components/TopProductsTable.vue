@@ -129,8 +129,7 @@
                                                 v-if="measurement.actual !== null && measurement.actual !== '' && measurement.target !== null && measurement.target !== ''"
                                                 size="x-small" variant="tonal"
                                                 :color="getDeltaColor(parseFloat(measurement.actual) - parseFloat(measurement.target))">
-                                                {{ (parseFloat(measurement.actual) -
-                                                    parseFloat(measurement.target)).toFixed(2) }}{{ measurement.unit ? `
+                                                {{ (parseFloat(measurement.actual) - parseFloat(measurement.target)).toFixed(2) }}{{ measurement.unit ? `
                                                 ${measurement.unit}` : '' }}
                                             </v-chip>
                                             <span v-else class="text-medium-emphasis">—</span>
@@ -154,22 +153,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { formatDate } from '@/shared/utils/helpers'
+import { computed, ref } from 'vue'
 import type { TopProduct } from '@/core/types'
+import { formatDate } from '@/shared/utils/helpers'
 
 // Props
 interface Props {
-    items: TopProduct[]
-    loading?: boolean
+  items: TopProduct[]
+  loading?: boolean
 }
 
 defineProps<Props>()
 
 // Emits
-interface Emits {
-    (e: 'export'): void
-}
+type Emits = (e: 'export') => void
 
 const emit = defineEmits<Emits>()
 
@@ -180,53 +177,53 @@ const expanded = ref<Set<string>>(new Set())
 
 // Computed
 const headers = computed(() => [
-    { title: 'ISN', key: 'isn', sortable: true },
-    { title: 'Device', key: 'device', sortable: true },
-    { title: 'Station', key: 'station_name', sortable: true },
-    { title: 'Test Date', key: 'test_date', sortable: true },
-    { title: 'Overall Score', key: 'overall_data_score', sortable: true },
-    { title: 'Details', key: 'actions', sortable: false, align: 'center' as const }
+  { title: 'ISN', key: 'isn', sortable: true },
+  { title: 'Device', key: 'device', sortable: true },
+  { title: 'Station', key: 'station_name', sortable: true },
+  { title: 'Test Date', key: 'test_date', sortable: true },
+  { title: 'Overall Score', key: 'overall_data_score', sortable: true },
+  { title: 'Details', key: 'actions', sortable: false, align: 'center' as const },
 ])
 
 const measurementHeaders = computed(() => [
-    { title: 'Test Item', key: 'test_item', sortable: false },
-    { title: 'USL', key: 'usl', sortable: false },
-    { title: 'LSL', key: 'lsl', sortable: false },
-    { title: 'Target', key: 'target', sortable: false },
-    { title: 'Measurement', key: 'actual', sortable: false },
-    { title: 'Δ Meas. & Target', key: 'delta_actual_target', sortable: false },
-    { title: 'Score', key: 'score', sortable: false }
+  { title: 'Test Item', key: 'test_item', sortable: false },
+  { title: 'USL', key: 'usl', sortable: false },
+  { title: 'LSL', key: 'lsl', sortable: false },
+  { title: 'Target', key: 'target', sortable: false },
+  { title: 'Measurement', key: 'actual', sortable: false },
+  { title: 'Δ Meas. & Target', key: 'delta_actual_target', sortable: false },
+  { title: 'Score', key: 'score', sortable: false },
 ])
 
 // Methods
 function getScoreColor(score: number): string {
-    if (score >= 90) return 'success'
-    if (score >= 70) return 'primary'
-    if (score >= 50) return 'warning'
-    return 'error'
+  if (score >= 90) return 'success'
+  if (score >= 70) return 'primary'
+  if (score >= 50) return 'warning'
+  return 'error'
 }
 
 function getDeltaColor(delta: number): string {
-    if (delta === 0) return 'success'
-    if (Math.abs(delta) < 1) return 'primary'
-    if (Math.abs(delta) < 5) return 'warning'
-    return 'error'
+  if (delta === 0) return 'success'
+  if (Math.abs(delta) < 1) return 'primary'
+  if (Math.abs(delta) < 5) return 'warning'
+  return 'error'
 }
 
 function toggleExpand(isn: string) {
-    if (expanded.value.has(isn)) {
-        expanded.value.delete(isn)
-    } else {
-        expanded.value.add(isn)
-    }
+  if (expanded.value.has(isn)) {
+    expanded.value.delete(isn)
+  } else {
+    expanded.value.add(isn)
+  }
 }
 
 function isExpanded(isn: string): boolean {
-    return expanded.value.has(isn)
+  return expanded.value.has(isn)
 }
 
 function handleExport() {
-    emit('export')
+  emit('export')
 }
 </script>
 

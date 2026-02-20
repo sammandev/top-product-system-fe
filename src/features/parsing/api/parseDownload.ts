@@ -20,7 +20,7 @@ export interface ParseDownloadParams {
  */
 export async function parseDownloadFormat(
   params: ParseDownloadParams,
-  onProgress?: (progress: number) => void
+  onProgress?: (progress: number) => void,
 ): Promise<Blob> {
   const formData = new FormData()
   formData.append('file_id', params.fileId)
@@ -51,7 +51,7 @@ export async function parseDownloadFormat(
         const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total)
         onProgress(progress)
       }
-    }
+    },
   })
 
   return response.data

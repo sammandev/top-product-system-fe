@@ -1,6 +1,6 @@
 /**
  * Common Routes
- * 
+ *
  * Common routes like home redirect, 404, etc.
  */
 
@@ -9,7 +9,7 @@ import type { RouteRecordRaw } from 'vue-router'
 export const commonRoutes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/dashboard'
+    redirect: '/dashboard',
   },
   {
     path: '/:pathMatch(.*)*',
@@ -17,7 +17,7 @@ export const commonRoutes: RouteRecordRaw[] = [
     component: () => import('@/shared/components/error/NotFoundView.vue'),
     meta: {
       requiresAuth: false,
-      title: 'Page Not Found'
-    }
-  }
+      title: 'Page Not Found',
+    },
+  },
 ]

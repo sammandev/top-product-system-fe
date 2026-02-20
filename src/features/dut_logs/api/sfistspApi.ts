@@ -20,32 +20,32 @@ import api from '@/core/api/client'
  * Response for a single ISN lookup
  */
 export interface SfistspIsnReferenceResponse {
-    isn_searched: string
-    isn: string
-    ssn: string | null
-    mac: string | null
-    success: boolean
-    error_message: string | null
-    isn_references: string[]
+  isn_searched: string
+  isn: string
+  ssn: string | null
+  mac: string | null
+  success: boolean
+  error_message: string | null
+  isn_references: string[]
 }
 
 /**
  * Response for batch ISN lookup
  */
 export interface SfistspIsnBatchLookupResponse {
-    results: SfistspIsnReferenceResponse[]
-    total_count: number
-    success_count: number
-    failed_count: number
+  results: SfistspIsnReferenceResponse[]
+  total_count: number
+  success_count: number
+  failed_count: number
 }
 
 /**
  * SFISTSP configuration info
  */
 export interface SfistspConfigResponse {
-    base_url: string
-    endpoint: string
-    available: boolean
+  base_url: string
+  endpoint: string
+  available: boolean
 }
 
 // ============================================================================
@@ -59,8 +59,10 @@ export interface SfistspConfigResponse {
  * @returns Promise with ISN reference data
  */
 export async function lookupIsn(isn: string): Promise<SfistspIsnReferenceResponse> {
-    const response = await api.get<SfistspIsnReferenceResponse>(`/api/sfistsp/isn/${encodeURIComponent(isn)}`)
-    return response.data
+  const response = await api.get<SfistspIsnReferenceResponse>(
+    `/api/sfistsp/isn/${encodeURIComponent(isn)}`,
+  )
+  return response.data
 }
 
 /**
@@ -70,8 +72,8 @@ export async function lookupIsn(isn: string): Promise<SfistspIsnReferenceRespons
  * @returns Promise with batch lookup results
  */
 export async function lookupIsnsBatch(isns: string[]): Promise<SfistspIsnBatchLookupResponse> {
-    const response = await api.post<SfistspIsnBatchLookupResponse>('/api/sfistsp/isn/batch', { isns })
-    return response.data
+  const response = await api.post<SfistspIsnBatchLookupResponse>('/api/sfistsp/isn/batch', { isns })
+  return response.data
 }
 
 /**
@@ -80,8 +82,8 @@ export async function lookupIsnsBatch(isns: string[]): Promise<SfistspIsnBatchLo
  * @returns Promise with configuration details
  */
 export async function getSfistspConfig(): Promise<SfistspConfigResponse> {
-    const response = await api.get<SfistspConfigResponse>('/api/sfistsp/config')
-    return response.data
+  const response = await api.get<SfistspConfigResponse>('/api/sfistsp/config')
+  return response.data
 }
 
 // ============================================================================
@@ -89,9 +91,9 @@ export async function getSfistspConfig(): Promise<SfistspConfigResponse> {
 // ============================================================================
 
 export const sfistspApi = {
-    lookupIsn,
-    lookupIsnsBatch,
-    getSfistspConfig,
+  lookupIsn,
+  lookupIsnsBatch,
+  getSfistspConfig,
 }
 
 export default sfistspApi

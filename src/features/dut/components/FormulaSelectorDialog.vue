@@ -76,13 +76,11 @@
                                                 {{ FORMULA_DEFINITIONS[universalFormula.formulaType].description }}
                                             </div>
                                             <div class="text-caption text-medium-emphasis mb-2">
-                                                Typically used for: {{
-                                                    FORMULA_DEFINITIONS[universalFormula.formulaType].usedFor.join(', ') }}
+                                                Typically used for: {{ FORMULA_DEFINITIONS[universalFormula.formulaType].usedFor.join(', ') }}
                                             </div>
                                             <v-sheet color="white" class="pa-3 rounded text-center">
                                                 <v-icon size="small" class="mr-2">mdi-math-integral</v-icon>
-                                                <code class="text-body-2">{{
-                                                    FORMULA_DEFINITIONS[universalFormula.formulaType].formula_latex }}</code>
+                                                <code class="text-body-2">{{ FORMULA_DEFINITIONS[universalFormula.formulaType].formula_latex }}</code>
                                             </v-sheet>
                                         </v-card-text>
                                     </v-card>
@@ -187,8 +185,7 @@
                                                     <template #item="{ props: itemProps, item }">
                                                         <v-list-item v-bind="itemProps">
                                                             <template #prepend>
-                                                                <v-icon>{{ item.raw.recommended ? 'mdi-star' :
-                                                                    'mdi-function' }}</v-icon>
+                                                                <v-icon>{{ item.raw.recommended ? 'mdi-star' : 'mdi-function' }}</v-icon>
                                                             </template>
                                                             <v-list-item-title>
                                                                 {{ item.raw.name }}
@@ -211,16 +208,12 @@
                                                     <v-card-text>
                                                         <div class="text-subtitle-2 mb-2">Formula Preview:</div>
                                                         <div class="text-body-2 mb-2">
-                                                            {{
-                                                                FORMULA_DEFINITIONS[categoryFormulas[category]!.formulaType].description
-                                                            }}
+                                                            {{ FORMULA_DEFINITIONS[categoryFormulas[category]!.formulaType].description }}
                                                         </div>
                                                         <v-sheet color="white" class="pa-3 rounded text-center">
                                                             <v-icon size="small" class="mr-2">mdi-math-integral</v-icon>
                                                             <code class="text-body-2">
-                                                        {{
-                                                            FORMULA_DEFINITIONS[categoryFormulas[category]!.formulaType].formula_latex
-                                                        }}
+                                                        {{ FORMULA_DEFINITIONS[categoryFormulas[category]!.formulaType].formula_latex }}
                                                     </code>
                                                         </v-sheet>
                                                     </v-card-text>
@@ -347,28 +340,28 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, nextTick, onMounted } from 'vue'
 import katex from 'katex'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import 'katex/dist/katex.min.css'
 import {
-    FORMULA_DEFINITIONS,
-    type FormulaType,
-    type FormulaSelection,
-    type CategoryFormulaSelections
+  type CategoryFormulaSelections,
+  FORMULA_DEFINITIONS,
+  type FormulaSelection,
+  type FormulaType,
 } from '../composables/useFormulaSelector'
 
 interface Props {
-    modelValue: boolean
-    universalFormula: FormulaSelection
-    categoryFormulas: CategoryFormulaSelections
+  modelValue: boolean
+  universalFormula: FormulaSelection
+  categoryFormulas: CategoryFormulaSelections
 }
 
 interface Emits {
-    (e: 'update:modelValue', value: boolean): void
-    (e: 'update:universalFormula', value: FormulaSelection): void
-    (e: 'update:categoryFormulas', value: CategoryFormulaSelections): void
-    (e: 'reset'): void
-    (e: 'apply'): void
+  (e: 'update:modelValue', value: boolean): void
+  (e: 'update:universalFormula', value: FormulaSelection): void
+  (e: 'update:categoryFormulas', value: CategoryFormulaSelections): void
+  (e: 'reset'): void
+  (e: 'apply'): void
 }
 
 const props = defineProps<Props>()
@@ -386,7 +379,7 @@ const formulaTypes = Object.values(FORMULA_DEFINITIONS)
 //   const backend = formulaTypes.filter(f => f.category === 'backend')
 //   const mathematical = formulaTypes.filter(f => f.category === 'mathematical')
 //   const custom = formulaTypes.filter(f => f.category === 'custom')
-//   
+//
 //   return { backend, mathematical, custom }
 // })
 
@@ -397,7 +390,9 @@ const availableCategories = ['EVM', 'FREQ', 'PER', 'PA']
 const universalParameterValues = ref<Record<string, number>>({})
 
 // Define parameters for each mathematical formula type
-const formulaParameterDefinitions: Record<string, Array<{
+const formulaParameterDefinitions: Record<
+  string,
+  Array<{
     name: string
     label: string
     description: string
@@ -406,234 +401,381 @@ const formulaParameterDefinitions: Record<string, Array<{
     min?: number
     max?: number
     step?: number
-}>> = {
-    LINEAR: [
-        { name: 'a', label: 'Slope (a)', description: 'Linear coefficient', hint: 'Default: 1.0', default: 1.0, min: -10, max: 10, step: 0.1 },
-        { name: 'b', label: 'Offset (b)', description: 'Y-intercept', hint: 'Default: 0', default: 0, min: -10, max: 10, step: 0.1 }
-    ],
-    EXPONENTIAL: [
-        { name: 'a', label: 'Amplitude (a)', description: 'Scale factor', hint: 'Default: 10', default: 10, min: 0, max: 20, step: 0.5 },
-        { name: 'b', label: 'Rate (b)', description: 'Growth/decay rate', hint: 'Default: 1', default: 1, min: -5, max: 5, step: 0.1 }
-    ],
-    LOGARITHMIC: [
-        { name: 'a', label: 'Scale (a)', description: 'Logarithm scale factor', hint: 'Default: 1', default: 1, min: 0.1, max: 10, step: 0.1 },
-        { name: 'b', label: 'Inner Scale (b)', description: 'Inner multiplication factor', hint: 'Default: 1', default: 1, min: 0.1, max: 10, step: 0.1 },
-        { name: 'c', label: 'Shift (c)', description: 'Horizontal shift', hint: 'Default: 0', default: 0, min: -100, max: 100, step: 1 }
-    ],
-    POLYNOMIAL: [
-        { name: 'a', label: 'Quadratic (a)', description: 'x² coefficient', hint: 'Default: 0', default: 0, min: -5, max: 5, step: 0.1 },
-        { name: 'b', label: 'Linear (b)', description: 'x coefficient', hint: 'Default: 1', default: 1, min: -10, max: 10, step: 0.1 },
-        { name: 'c', label: 'Constant (c)', description: 'Constant term', hint: 'Default: 0', default: 0, min: -10, max: 10, step: 0.1 }
-    ],
-    INVERSE: [
-        { name: 'a', label: 'Numerator (a)', description: 'Top value', hint: 'Default: 10', default: 10, min: 0, max: 20, step: 0.5 },
-        { name: 'b', label: 'Scale (b)', description: 'Denominator scale', hint: 'Default: 1', default: 1, min: 0.1, max: 10, step: 0.1 },
-        { name: 'c', label: 'Shift (c)', description: 'Denominator shift', hint: 'Default: 0', default: 0, min: -100, max: 100, step: 1 }
-    ],
-    SIGMOID: [
-        { name: 'L', label: 'Maximum (L)', description: 'Upper asymptote', hint: 'Default: 10', default: 10, min: 1, max: 20, step: 0.5 },
-        { name: 'k', label: 'Steepness (k)', description: 'Curve steepness', hint: 'Default: 1', default: 1, min: 0.1, max: 10, step: 0.1 },
-        { name: 'x0', label: 'Midpoint (x₀)', description: 'Inflection point', hint: 'Default: 0', default: 0, min: -100, max: 100, step: 1 }
-    ]
+  }>
+> = {
+  LINEAR: [
+    {
+      name: 'a',
+      label: 'Slope (a)',
+      description: 'Linear coefficient',
+      hint: 'Default: 1.0',
+      default: 1.0,
+      min: -10,
+      max: 10,
+      step: 0.1,
+    },
+    {
+      name: 'b',
+      label: 'Offset (b)',
+      description: 'Y-intercept',
+      hint: 'Default: 0',
+      default: 0,
+      min: -10,
+      max: 10,
+      step: 0.1,
+    },
+  ],
+  EXPONENTIAL: [
+    {
+      name: 'a',
+      label: 'Amplitude (a)',
+      description: 'Scale factor',
+      hint: 'Default: 10',
+      default: 10,
+      min: 0,
+      max: 20,
+      step: 0.5,
+    },
+    {
+      name: 'b',
+      label: 'Rate (b)',
+      description: 'Growth/decay rate',
+      hint: 'Default: 1',
+      default: 1,
+      min: -5,
+      max: 5,
+      step: 0.1,
+    },
+  ],
+  LOGARITHMIC: [
+    {
+      name: 'a',
+      label: 'Scale (a)',
+      description: 'Logarithm scale factor',
+      hint: 'Default: 1',
+      default: 1,
+      min: 0.1,
+      max: 10,
+      step: 0.1,
+    },
+    {
+      name: 'b',
+      label: 'Inner Scale (b)',
+      description: 'Inner multiplication factor',
+      hint: 'Default: 1',
+      default: 1,
+      min: 0.1,
+      max: 10,
+      step: 0.1,
+    },
+    {
+      name: 'c',
+      label: 'Shift (c)',
+      description: 'Horizontal shift',
+      hint: 'Default: 0',
+      default: 0,
+      min: -100,
+      max: 100,
+      step: 1,
+    },
+  ],
+  POLYNOMIAL: [
+    {
+      name: 'a',
+      label: 'Quadratic (a)',
+      description: 'x² coefficient',
+      hint: 'Default: 0',
+      default: 0,
+      min: -5,
+      max: 5,
+      step: 0.1,
+    },
+    {
+      name: 'b',
+      label: 'Linear (b)',
+      description: 'x coefficient',
+      hint: 'Default: 1',
+      default: 1,
+      min: -10,
+      max: 10,
+      step: 0.1,
+    },
+    {
+      name: 'c',
+      label: 'Constant (c)',
+      description: 'Constant term',
+      hint: 'Default: 0',
+      default: 0,
+      min: -10,
+      max: 10,
+      step: 0.1,
+    },
+  ],
+  INVERSE: [
+    {
+      name: 'a',
+      label: 'Numerator (a)',
+      description: 'Top value',
+      hint: 'Default: 10',
+      default: 10,
+      min: 0,
+      max: 20,
+      step: 0.5,
+    },
+    {
+      name: 'b',
+      label: 'Scale (b)',
+      description: 'Denominator scale',
+      hint: 'Default: 1',
+      default: 1,
+      min: 0.1,
+      max: 10,
+      step: 0.1,
+    },
+    {
+      name: 'c',
+      label: 'Shift (c)',
+      description: 'Denominator shift',
+      hint: 'Default: 0',
+      default: 0,
+      min: -100,
+      max: 100,
+      step: 1,
+    },
+  ],
+  SIGMOID: [
+    {
+      name: 'L',
+      label: 'Maximum (L)',
+      description: 'Upper asymptote',
+      hint: 'Default: 10',
+      default: 10,
+      min: 1,
+      max: 20,
+      step: 0.5,
+    },
+    {
+      name: 'k',
+      label: 'Steepness (k)',
+      description: 'Curve steepness',
+      hint: 'Default: 1',
+      default: 1,
+      min: 0.1,
+      max: 10,
+      step: 0.1,
+    },
+    {
+      name: 'x0',
+      label: 'Midpoint (x₀)',
+      description: 'Inflection point',
+      hint: 'Default: 0',
+      default: 0,
+      min: -100,
+      max: 100,
+      step: 1,
+    },
+  ],
 }
 
 // Check if current universal formula has parameters
 const showUniversalParameters = computed(() => {
-    if (!props.universalFormula.enabled) return false
-    const formulaType = props.universalFormula.formulaType
-    return formulaType in formulaParameterDefinitions
+  if (!props.universalFormula.enabled) return false
+  const formulaType = props.universalFormula.formulaType
+  return formulaType in formulaParameterDefinitions
 })
 
 // Get parameters for current universal formula
 const universalFormulaParameters = computed(() => {
-    const formulaType = props.universalFormula.formulaType
-    if (formulaType in formulaParameterDefinitions) {
-        const params = formulaParameterDefinitions[formulaType]
-        // Initialize default values if not set
-        if (params) {
-            params.forEach(param => {
-                if (!(param.name in universalParameterValues.value)) {
-                    universalParameterValues.value[param.name] = param.default
-                }
-            })
+  const formulaType = props.universalFormula.formulaType
+  if (formulaType in formulaParameterDefinitions) {
+    const params = formulaParameterDefinitions[formulaType]
+    // Initialize default values if not set
+    if (params) {
+      params.forEach((param) => {
+        if (!(param.name in universalParameterValues.value)) {
+          universalParameterValues.value[param.name] = param.default
         }
-        return params || []
+      })
     }
-    return []
+    return params || []
+  }
+  return []
 })
 
 // Check if any formula selection is enabled
 const formulaSelectionEnabled = computed(() => {
-    if (props.universalFormula.enabled && props.universalFormula.formulaType !== 'SYSTEM') {
-        return true
-    }
+  if (props.universalFormula.enabled && props.universalFormula.formulaType !== 'SYSTEM') {
+    return true
+  }
 
-    return Object.values(props.categoryFormulas).some(
-        selection => selection?.enabled && selection.formulaType !== 'SYSTEM'
-    )
+  return Object.values(props.categoryFormulas).some(
+    (selection) => selection?.enabled && selection.formulaType !== 'SYSTEM',
+  )
 })
 
 // Count active category formulas
 const activeCategoryCount = computed(() => {
-    return Object.values(props.categoryFormulas).filter(
-        selection => selection?.enabled && selection.formulaType !== 'SYSTEM'
-    ).length
+  return Object.values(props.categoryFormulas).filter(
+    (selection) => selection?.enabled && selection.formulaType !== 'SYSTEM',
+  ).length
 })
 
 // Get active category formulas for summary
 const activeCategoryFormulas = computed(() => {
-    return Object.entries(props.categoryFormulas).filter(
-        ([_, selection]) => selection?.enabled && selection.formulaType !== 'SYSTEM'
-    ) as [string, FormulaSelection][]
+  return Object.entries(props.categoryFormulas).filter(
+    ([_, selection]) => selection?.enabled && selection.formulaType !== 'SYSTEM',
+  ) as [string, FormulaSelection][]
 })
 
 // Update handlers
 function updateUniversalEnabled(enabled: boolean | null) {
-    emit('update:universalFormula', { ...props.universalFormula, enabled: enabled ?? false })
+  emit('update:universalFormula', { ...props.universalFormula, enabled: enabled ?? false })
 }
 
 function updateUniversalType(formulaType: FormulaType) {
-    // Include parameters if it's a mathematical formula
-    const updatedFormula: FormulaSelection = {
-        ...props.universalFormula,
-        formulaType
-    }
+  // Include parameters if it's a mathematical formula
+  const updatedFormula: FormulaSelection = {
+    ...props.universalFormula,
+    formulaType,
+  }
 
-    // If the formula type has parameters, include them
-    if (formulaType in formulaParameterDefinitions) {
-        const params = formulaParameterDefinitions[formulaType]
-        if (params) {
-            const paramValues: Record<string, number> = {}
-            params.forEach(param => {
-                paramValues[param.name] = universalParameterValues.value[param.name] ?? param.default
-            })
-            updatedFormula.customParams = {
-                latex: FORMULA_DEFINITIONS[formulaType].formula_latex,
-                parameters: paramValues
-            }
-        }
+  // If the formula type has parameters, include them
+  if (formulaType in formulaParameterDefinitions) {
+    const params = formulaParameterDefinitions[formulaType]
+    if (params) {
+      const paramValues: Record<string, number> = {}
+      params.forEach((param) => {
+        paramValues[param.name] = universalParameterValues.value[param.name] ?? param.default
+      })
+      updatedFormula.customParams = {
+        latex: FORMULA_DEFINITIONS[formulaType].formula_latex,
+        parameters: paramValues,
+      }
     }
+  }
 
-    emit('update:universalFormula', updatedFormula)
+  emit('update:universalFormula', updatedFormula)
 }
 
 function updateCategoryEnabled(category: string, enabled: boolean | null) {
-    const updated = { ...props.categoryFormulas }
-    const enabledValue = enabled ?? false
-    if (!updated[category]) {
-        updated[category] = { enabled: enabledValue, formulaType: 'SYSTEM' }
-    } else {
-        updated[category] = { ...updated[category]!, enabled: enabledValue }
-    }
-    emit('update:categoryFormulas', updated)
+  const updated = { ...props.categoryFormulas }
+  const enabledValue = enabled ?? false
+  if (!updated[category]) {
+    updated[category] = { enabled: enabledValue, formulaType: 'SYSTEM' }
+  } else {
+    // biome-ignore lint/style/noNonNullAssertion: safe after the falsy check above
+    updated[category] = { ...updated[category]!, enabled: enabledValue }
+  }
+  emit('update:categoryFormulas', updated)
 }
 
 function updateCategoryType(category: string, formulaType: FormulaType) {
-    const updated = { ...props.categoryFormulas }
-    if (!updated[category]) {
-        updated[category] = { enabled: false, formulaType }
-    } else {
-        updated[category] = { ...updated[category]!, formulaType }
-    }
-    emit('update:categoryFormulas', updated)
+  const updated = { ...props.categoryFormulas }
+  if (!updated[category]) {
+    updated[category] = { enabled: false, formulaType }
+  } else {
+    // biome-ignore lint/style/noNonNullAssertion: safe after the falsy check above
+    updated[category] = { ...updated[category]!, formulaType }
+  }
+  emit('update:categoryFormulas', updated)
 }
 
 // Get recommended formulas for a category
 function getRecommendedFormulas(category: string) {
-    return formulaTypes.map(formula => ({
-        ...formula,
-        recommended: formula.usedFor.includes(category)
-    }))
+  return formulaTypes.map((formula) => ({
+    ...formula,
+    recommended: formula.usedFor.includes(category),
+  }))
 }
 
 // Get category color
 function getCategoryColor(category: string): string {
-    const colors: Record<string, string> = {
-        EVM: 'purple',
-        FREQ: 'blue',
-        PER: 'orange',
-        PA: 'green'
-    }
-    return colors[category] || 'grey'
+  const colors: Record<string, string> = {
+    EVM: 'purple',
+    FREQ: 'blue',
+    PER: 'orange',
+    PA: 'green',
+  }
+  return colors[category] || 'grey'
 }
 
 // Get category display name
 function getCategoryName(category: string): string {
-    const names: Record<string, string> = {
-        EVM: 'Error Vector Magnitude',
-        FREQ: 'Frequency Measurements',
-        PER: 'Packet Error Rate',
-        PA: 'Power Amplifier'
-    }
-    return names[category] || category
+  const names: Record<string, string> = {
+    EVM: 'Error Vector Magnitude',
+    FREQ: 'Frequency Measurements',
+    PER: 'Packet Error Rate',
+    PA: 'Power Amplifier',
+  }
+  return names[category] || category
 }
 
 // Apply custom formula
 function applyCustomFormula() {
-    if (!customLatexFormula.value.trim()) return
+  if (!customLatexFormula.value.trim()) return
 
-    // Apply the custom formula as universal formula with CUSTOM type
-    emit('update:universalFormula', {
-        enabled: true,
-        formulaType: 'CUSTOM',
-        customParams: {
-            latex: customLatexFormula.value,
-            parameters: {}, // Can be extended to support parameters
-            description: 'Custom user-defined formula'
-        }
-    })
+  // Apply the custom formula as universal formula with CUSTOM type
+  emit('update:universalFormula', {
+    enabled: true,
+    formulaType: 'CUSTOM',
+    customParams: {
+      latex: customLatexFormula.value,
+      parameters: {}, // Can be extended to support parameters
+      description: 'Custom user-defined formula',
+    },
+  })
 
-    // Show success notification (can be added later)
-    console.log('Custom formula applied:', customLatexFormula.value)
+  // Show success notification (can be added later)
+  console.log('Custom formula applied:', customLatexFormula.value)
 }
 
 // Render KaTeX for custom formula preview
 const renderCustomFormulaPreview = () => {
-    if (!customFormulaPreviewEl.value || !customLatexFormula.value) return
+  if (!customFormulaPreviewEl.value || !customLatexFormula.value) return
 
-    const stripMathDelimiters = (latex: string): string => {
-        let cleaned = latex.trim()
-        cleaned = cleaned.replace(/^(\$\$?|\\\[|\\\()/, '')
-        cleaned = cleaned.replace(/(\$\$?|\\\]|\\\))$/, '')
-        return cleaned.trim()
-    }
+  const stripMathDelimiters = (latex: string): string => {
+    let cleaned = latex.trim()
+    cleaned = cleaned.replace(/^(\$\$?|\\\[|\\\()/, '')
+    cleaned = cleaned.replace(/(\$\$?|\\\]|\\\))$/, '')
+    return cleaned.trim()
+  }
 
-    try {
-        const latexBody = stripMathDelimiters(customLatexFormula.value)
-        katex.render(latexBody, customFormulaPreviewEl.value, {
-            displayMode: true,
-            throwOnError: false,
-            output: 'html'
-        })
-    } catch (error) {
-        console.error('KaTeX rendering error:', error)
-        if (customFormulaPreviewEl.value) {
-            customFormulaPreviewEl.value.textContent = 'Error rendering formula'
-        }
+  try {
+    const latexBody = stripMathDelimiters(customLatexFormula.value)
+    katex.render(latexBody, customFormulaPreviewEl.value, {
+      displayMode: true,
+      throwOnError: false,
+      output: 'html',
+    })
+  } catch (error) {
+    console.error('KaTeX rendering error:', error)
+    if (customFormulaPreviewEl.value) {
+      customFormulaPreviewEl.value.textContent = 'Error rendering formula'
     }
+  }
 }
 
 // Watch for changes to custom formula and re-render
 watch(customLatexFormula, async () => {
-    await nextTick()
-    renderCustomFormulaPreview()
+  await nextTick()
+  renderCustomFormulaPreview()
 })
 
 // Render on mount if formula exists
 onMounted(() => {
-    if (customLatexFormula.value) {
-        renderCustomFormulaPreview()
-    }
+  if (customLatexFormula.value) {
+    renderCustomFormulaPreview()
+  }
 })
 
 // Action handlers
 function handleReset() {
-    emit('reset')
-    customLatexFormula.value = '' // Clear custom formula on reset
+  emit('reset')
+  customLatexFormula.value = '' // Clear custom formula on reset
 }
 
 function handleApply() {
-    emit('apply')
-    emit('update:modelValue', false)
+  emit('apply')
+  emit('update:modelValue', false)
 }
 </script>

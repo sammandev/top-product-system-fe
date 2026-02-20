@@ -1,18 +1,18 @@
 /**
  * DUT ISN-based Top Product API Service
- * 
+ *
  * Provides methods to analyze DUT performance across multiple stations
  * using DUT ISN as the primary identifier.
  */
 
 import apiClient from '@/core/api/client'
 import type {
-  TopProductBatchResponse,
-  TopProductRequest,
+  BatchDevicesRequest,
+  BatchDevicesResponse,
   BatchTestItemsRequest,
   BatchTestItemsResponse,
-  BatchDevicesRequest,
-  BatchDevicesResponse
+  TopProductBatchResponse,
+  TopProductRequest,
 } from '../types/dutTopProduct.types'
 
 const BASE_URL = '/api/dut'
@@ -20,12 +20,12 @@ const BASE_URL = '/api/dut'
 export const dutTopProductApi = {
   /**
    * Analyze DUT performance across multiple stations
-   * 
+   *
    * @param request - Top product request parameters
    * @returns Batch response with results and errors
-   * 
+   *
    * @example
-   * ```typescript   
+   * ```typescript
    * const response = await dutTopProductApi.analyzeByISN({
    *   dut_isns: ['260884980003907', '260884980003908'],
    *   stations: ['144', '145'],
@@ -38,13 +38,13 @@ export const dutTopProductApi = {
     const params = new URLSearchParams()
 
     // Add ISNs (required) - use 'dut_isn' as the query parameter name (backend alias)
-    request.dut_isns.forEach(isn => {
+    request.dut_isns.forEach((isn) => {
       params.append('dut_isn', isn)
     })
 
     // Add optional station filters
     if (request.stations && request.stations.length > 0) {
-      request.stations.forEach(station => {
+      request.stations.forEach((station) => {
         params.append('stations', station)
       })
     }
@@ -61,21 +61,21 @@ export const dutTopProductApi = {
 
     // Add optional device filters
     if (request.device_identifiers && request.device_identifiers.length > 0) {
-      request.device_identifiers.forEach(device => {
+      request.device_identifiers.forEach((device) => {
         params.append('device_identifiers', device)
       })
     }
 
     // Add optional test item filters (include patterns)
     if (request.test_item_filters && request.test_item_filters.length > 0) {
-      request.test_item_filters.forEach(filter => {
+      request.test_item_filters.forEach((filter) => {
         params.append('test_item_filters', filter)
       })
     }
 
     // Add optional test item exclude filters
     if (request.exclude_test_item_filters && request.exclude_test_item_filters.length > 0) {
-      request.exclude_test_item_filters.forEach(filter => {
+      request.exclude_test_item_filters.forEach((filter) => {
         params.append('exclude_test_item_filters', filter)
       })
     }
@@ -103,7 +103,7 @@ export const dutTopProductApi = {
       // The auth interceptor will remove any manual Content-Type header for FormData
       const { data } = await apiClient.post<TopProductBatchResponse>(
         `${BASE_URL}/top-product?${params.toString()}`,
-        formData
+        formData,
       )
 
       // console.log('✅ Criteria file upload response:', {
@@ -120,7 +120,7 @@ export const dutTopProductApi = {
     // When no criteria file, send POST with empty body
     // Backend will use default criteria rules
     const { data } = await apiClient.post<TopProductBatchResponse>(
-      `${BASE_URL}/top-product?${params.toString()}`
+      `${BASE_URL}/top-product?${params.toString()}`,
     )
 
     return data
@@ -128,12 +128,12 @@ export const dutTopProductApi = {
 
   /**
    * Analyze DUT performance with PA trends
-   * 
+   *
    * Uses the with-pa-trends endpoint which includes PA trend measurements
    * that compare historical PA trend data with current PA measurements.
-   * 
+   *
    * ⚠️ WARNING: Including PA trends adds 200-500ms per station with PA test items.
-   * 
+   *
    * @param request - Top product request parameters
    * @returns Batch response with PA trends data
    */
@@ -142,13 +142,13 @@ export const dutTopProductApi = {
     const params = new URLSearchParams()
 
     // Add ISNs (required) - use 'dut_isn' as the query parameter name (backend alias)
-    request.dut_isns.forEach(isn => {
+    request.dut_isns.forEach((isn) => {
       params.append('dut_isn', isn)
     })
 
     // Add optional parameters
     if (request.stations && request.stations.length > 0) {
-      request.stations.forEach(station => {
+      request.stations.forEach((station) => {
         params.append('stations', station)
       })
     }
@@ -162,19 +162,19 @@ export const dutTopProductApi = {
     }
 
     if (request.device_identifiers && request.device_identifiers.length > 0) {
-      request.device_identifiers.forEach(device => {
+      request.device_identifiers.forEach((device) => {
         params.append('device_identifiers', device)
       })
     }
 
     if (request.test_item_filters && request.test_item_filters.length > 0) {
-      request.test_item_filters.forEach(filter => {
+      request.test_item_filters.forEach((filter) => {
         params.append('test_item_filters', filter)
       })
     }
 
     if (request.exclude_test_item_filters && request.exclude_test_item_filters.length > 0) {
-      request.exclude_test_item_filters.forEach(filter => {
+      request.exclude_test_item_filters.forEach((filter) => {
         params.append('exclude_test_item_filters', filter)
       })
     }
@@ -191,14 +191,14 @@ export const dutTopProductApi = {
 
       const { data } = await apiClient.post<TopProductBatchResponse>(
         `${BASE_URL}/top-product/with-pa-trends?${params.toString()}`,
-        formData
+        formData,
       )
       return data
     }
 
     // When no criteria file, send POST with empty body
     const { data } = await apiClient.post<TopProductBatchResponse>(
-      `${BASE_URL}/top-product/with-pa-trends?${params.toString()}`
+      `${BASE_URL}/top-product/with-pa-trends?${params.toString()}`,
     )
 
     return data
@@ -206,10 +206,10 @@ export const dutTopProductApi = {
 
   /**
    * Analyze DUT performance with hierarchical scoring
-   * 
+   *
    * Uses the hierarchical scoring endpoint which provides more detailed
    * breakdown of scores by category/subcategory.
-   * 
+   *
    * @param request - Top product request parameters
    * @returns Batch response with hierarchical scoring results
    */
@@ -218,13 +218,13 @@ export const dutTopProductApi = {
     const params = new URLSearchParams()
 
     // Add ISNs (required) - use 'dut_isn' as the query parameter name (backend alias)
-    request.dut_isns.forEach(isn => {
+    request.dut_isns.forEach((isn) => {
       params.append('dut_isn', isn)
     })
 
     // Add optional parameters
     if (request.stations && request.stations.length > 0) {
-      request.stations.forEach(station => {
+      request.stations.forEach((station) => {
         params.append('stations', station)
       })
     }
@@ -238,19 +238,19 @@ export const dutTopProductApi = {
     }
 
     if (request.device_identifiers && request.device_identifiers.length > 0) {
-      request.device_identifiers.forEach(device => {
+      request.device_identifiers.forEach((device) => {
         params.append('device_identifiers', device)
       })
     }
 
     if (request.test_item_filters && request.test_item_filters.length > 0) {
-      request.test_item_filters.forEach(filter => {
+      request.test_item_filters.forEach((filter) => {
         params.append('test_item_filters', filter)
       })
     }
 
     if (request.exclude_test_item_filters && request.exclude_test_item_filters.length > 0) {
-      request.exclude_test_item_filters.forEach(filter => {
+      request.exclude_test_item_filters.forEach((filter) => {
         params.append('exclude_test_item_filters', filter)
       })
     }
@@ -271,7 +271,7 @@ export const dutTopProductApi = {
       // The auth interceptor will remove any manual Content-Type header for FormData
       const { data } = await apiClient.post<TopProductBatchResponse>(
         `${BASE_URL}/top-product/hierarchical?${params.toString()}`,
-        formData
+        formData,
       )
       return data
     }
@@ -279,7 +279,7 @@ export const dutTopProductApi = {
     // When no criteria file, send POST with empty body
     // Backend will use default criteria rules
     const { data } = await apiClient.post<TopProductBatchResponse>(
-      `${BASE_URL}/top-product/hierarchical?${params.toString()}`
+      `${BASE_URL}/top-product/hierarchical?${params.toString()}`,
     )
 
     return data
@@ -287,13 +287,13 @@ export const dutTopProductApi = {
 
   /**
    * Fetch test items for multiple stations at once
-   * 
+   *
    * Efficiently loads available test items for selected stations.
    * Useful for populating filter dropdowns.
-   * 
+   *
    * @param request - Batch test items request
    * @returns Test items grouped by station
-   * 
+   *
    * @example
    * ```typescript
    * const response = await dutTopProductApi.getTestItemsBatch({
@@ -306,7 +306,7 @@ export const dutTopProductApi = {
   async getTestItemsBatch(request: BatchTestItemsRequest): Promise<BatchTestItemsResponse> {
     const { data } = await apiClient.post<BatchTestItemsResponse>(
       `${BASE_URL}/test-items/batch`,
-      request
+      request,
     )
 
     return data
@@ -314,14 +314,14 @@ export const dutTopProductApi = {
 
   /**
    * Fetch filtered test items for multiple stations (excludes items with both limits as 0)
-   * 
+   *
    * Efficiently loads test items for selected stations, excluding items where both
    * upperlimit=0 AND lowerlimit=0. These items are not useful for top product analysis.
    * Items with only one limit as 0 are still included.
-   * 
+   *
    * @param request - Batch test items request
    * @returns Filtered test items grouped by station
-   * 
+   *
    * @example
    * ```typescript
    * const response = await dutTopProductApi.getTestItemsBatchFiltered({
@@ -334,7 +334,7 @@ export const dutTopProductApi = {
   async getTestItemsBatchFiltered(request: BatchTestItemsRequest): Promise<BatchTestItemsResponse> {
     const { data } = await apiClient.post<BatchTestItemsResponse>(
       `${BASE_URL}/test-items/batch/filtered`,
-      request
+      request,
     )
 
     return data
@@ -342,13 +342,13 @@ export const dutTopProductApi = {
 
   /**
    * Fetch devices for multiple stations at once
-   * 
+   *
    * Efficiently loads available devices for selected stations.
    * Useful for populating device filter dropdowns.
-   * 
+   *
    * @param request - Batch devices request
    * @returns Devices grouped by station
-   * 
+   *
    * @example
    * ```typescript
    * const response = await dutTopProductApi.getDevicesBatch({
@@ -361,9 +361,9 @@ export const dutTopProductApi = {
   async getDevicesBatch(request: BatchDevicesRequest): Promise<BatchDevicesResponse> {
     const { data } = await apiClient.post<BatchDevicesResponse>(
       `${BASE_URL}/devices/batch`,
-      request
+      request,
     )
 
     return data
-  }
+  },
 }

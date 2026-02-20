@@ -1,6 +1,6 @@
 import dayjs from 'dayjs'
-import utc from 'dayjs/plugin/utc'
 import timezone from 'dayjs/plugin/timezone'
+import utc from 'dayjs/plugin/utc'
 
 // Extend dayjs with plugins
 dayjs.extend(utc)
@@ -37,7 +37,7 @@ export function formatDate(
   date: Date | string | null | undefined,
   format = 'YYYY-MM-DD HH:mm:ss',
   showTimezone = false,
-  tz: string = USER_TIMEZONE
+  tz: string = USER_TIMEZONE,
 ): string {
   if (!date) return 'N/A'
 
@@ -54,7 +54,10 @@ export function formatDate(
  * Format date for display (simple, backward compatible)
  * Converts UTC to user's local timezone
  */
-export function formatDateSimple(date: Date | string | null | undefined, format = 'YYYY-MM-DD HH:mm:ss'): string {
+export function formatDateSimple(
+  date: Date | string | null | undefined,
+  format = 'YYYY-MM-DD HH:mm:ss',
+): string {
   if (!date) return 'N/A'
   // Parse as UTC and convert to local timezone
   return dayjs.utc(date).tz(USER_TIMEZONE).format(format)
@@ -70,25 +73,25 @@ export function formatFileSize(bytes: number): string {
   const sizes = ['Bytes', 'KB', 'MB', 'GB']
   const i = Math.floor(Math.log(bytes) / Math.log(k))
 
-  return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+  return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`
 }
 
 /**
  * Debounce function
  */
+// biome-ignore lint/suspicious/noExplicitAny: generic utility must accept any function signature
 export function debounce<T extends (...args: any[]) => any>(
   func: T,
-  wait: number
+  wait: number,
 ): (...args: Parameters<T>) => void {
   let timeout: ReturnType<typeof setTimeout> | null = null
 
+  // biome-ignore lint/suspicious/noExplicitAny: preserving `this` context requires any
   return function (this: any, ...args: Parameters<T>) {
-    const context = this
-
     if (timeout) clearTimeout(timeout)
 
     timeout = setTimeout(() => {
-      func.apply(context, args)
+      func.apply(this, args)
     }, wait)
   }
 }
@@ -139,7 +142,7 @@ export function generateId(): string {
  * Sleep/delay utility
  */
 export function sleep(ms: number): Promise<void> {
-  return new Promise(resolve => setTimeout(resolve, ms))
+  return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
 /**
@@ -147,7 +150,7 @@ export function sleep(ms: number): Promise<void> {
  */
 export function truncate(str: string, length: number): string {
   if (str.length <= length) return str
-  return str.substring(0, length) + '...'
+  return `${str.substring(0, length)}...`
 }
 
 /**
@@ -169,14 +172,17 @@ export function calculatePercentage(value: number, total: number): number {
  * Group array by key
  */
 export function groupBy<T>(array: T[], key: keyof T): Record<string, T[]> {
-  return array.reduce((result, item) => {
-    const groupKey = String(item[key])
-    if (!result[groupKey]) {
-      result[groupKey] = []
-    }
-    result[groupKey].push(item)
-    return result
-  }, {} as Record<string, T[]>)
+  return array.reduce(
+    (result, item) => {
+      const groupKey = String(item[key])
+      if (!result[groupKey]) {
+        result[groupKey] = []
+      }
+      result[groupKey].push(item)
+      return result
+    },
+    {} as Record<string, T[]>,
+  )
 }
 
 /**
@@ -196,7 +202,7 @@ export function sortBy<T>(array: T[], key: keyof T, order: 'asc' | 'desc' = 'asc
 /**
  * Check if object is empty
  */
-export function isEmpty(obj: any): boolean {
+export function isEmpty(obj: unknown): boolean {
   if (obj === null || obj === undefined) return true
   if (Array.isArray(obj)) return obj.length === 0
   if (typeof obj === 'object') return Object.keys(obj).length === 0
@@ -219,13 +225,16 @@ export function deepClone<T>(obj: T): T {
  * @param hoursToDeduct - Number of hours to subtract (default: 1)
  * @returns Adjusted date string in same format, or original if parsing fails
  */
-export function adjustIplasDisplayTime(dateStr: string | null | undefined, hoursToDeduct = 1): string {
+export function adjustIplasDisplayTime(
+  dateStr: string | null | undefined,
+  hoursToDeduct = 1,
+): string {
   if (!dateStr) return '-'
   try {
     // Parse the date string
     const cleanedTime = dateStr.replace('T', ' ').replace('%:z', '').split('.')[0] || ''
     const date = new Date(cleanedTime.replace(' ', 'T'))
-    if (isNaN(date.getTime())) return dateStr
+    if (Number.isNaN(date.getTime())) return dateStr
 
     // Subtract hours
     date.setHours(date.getHours() - hoursToDeduct)

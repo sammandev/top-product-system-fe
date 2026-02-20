@@ -113,27 +113,27 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 
 // Props
 interface Props {
-    modelValue: {
-        stations?: string[]
-        site_identifier?: string
-        model_identifier?: string
-        device_identifiers?: string[]
-        test_item_filters?: string[]
-        exclude_test_item_filters?: string[]
-        criteria_file?: File | null
-    }
+  modelValue: {
+    stations?: string[]
+    site_identifier?: string
+    model_identifier?: string
+    device_identifiers?: string[]
+    test_item_filters?: string[]
+    exclude_test_item_filters?: string[]
+    criteria_file?: File | null
+  }
 }
 
 const props = defineProps<Props>()
 
 // Emits
 const emit = defineEmits<{
-    'update:modelValue': [value: Props['modelValue']]
-    'apply': [value: Props['modelValue']]
+  'update:modelValue': [value: Props['modelValue']]
+  apply: [value: Props['modelValue']]
 }>()
 
 // State
@@ -143,98 +143,109 @@ const criteriaFileArray = ref<File[]>([])
 
 // Computed
 const filterSummary = computed(() => {
-    const parts: string[] = []
+  const parts: string[] = []
 
-    if (filters.value.stations && filters.value.stations.length > 0) {
-        parts.push(`${filters.value.stations.length} station(s)`)
-    }
+  if (filters.value.stations && filters.value.stations.length > 0) {
+    parts.push(`${filters.value.stations.length} station(s)`)
+  }
 
-    if (filters.value.device_identifiers && filters.value.device_identifiers.length > 0) {
-        parts.push(`${filters.value.device_identifiers.length} device(s)`)
-    }
+  if (filters.value.device_identifiers && filters.value.device_identifiers.length > 0) {
+    parts.push(`${filters.value.device_identifiers.length} device(s)`)
+  }
 
-    if (filters.value.site_identifier) {
-        parts.push(`site: ${filters.value.site_identifier}`)
-    }
+  if (filters.value.site_identifier) {
+    parts.push(`site: ${filters.value.site_identifier}`)
+  }
 
-    if (filters.value.model_identifier) {
-        parts.push(`model: ${filters.value.model_identifier}`)
-    }
+  if (filters.value.model_identifier) {
+    parts.push(`model: ${filters.value.model_identifier}`)
+  }
 
-    if (filters.value.test_item_filters && filters.value.test_item_filters.length > 0) {
-        parts.push(`${filters.value.test_item_filters.length} include pattern(s)`)
-    }
+  if (filters.value.test_item_filters && filters.value.test_item_filters.length > 0) {
+    parts.push(`${filters.value.test_item_filters.length} include pattern(s)`)
+  }
 
-    if (filters.value.exclude_test_item_filters && filters.value.exclude_test_item_filters.length > 0) {
-        parts.push(`${filters.value.exclude_test_item_filters.length} exclude pattern(s)`)
-    }
+  if (
+    filters.value.exclude_test_item_filters &&
+    filters.value.exclude_test_item_filters.length > 0
+  ) {
+    parts.push(`${filters.value.exclude_test_item_filters.length} exclude pattern(s)`)
+  }
 
-    if (filters.value.criteria_file) {
-        parts.push(`criteria file: ${filters.value.criteria_file.name}`)
-    }
+  if (filters.value.criteria_file) {
+    parts.push(`criteria file: ${filters.value.criteria_file.name}`)
+  }
 
-    return parts.length > 0 ? parts.join(', ') : 'No filters applied'
+  return parts.length > 0 ? parts.join(', ') : 'No filters applied'
 })
 
 // Methods
 function handleFileChange(files: File | File[] | null) {
-    if (files) {
-        const fileArray = Array.isArray(files) ? files : [files]
-        if (fileArray.length > 0) {
-            filters.value.criteria_file = fileArray[0]
-        } else {
-            filters.value.criteria_file = null
-        }
+  if (files) {
+    const fileArray = Array.isArray(files) ? files : [files]
+    if (fileArray.length > 0) {
+      filters.value.criteria_file = fileArray[0]
     } else {
-        filters.value.criteria_file = null
+      filters.value.criteria_file = null
     }
-    emitChange()
+  } else {
+    filters.value.criteria_file = null
+  }
+  emitChange()
 }
 
 function formatFileSize(bytes: number): string {
-    if (bytes === 0) return '0 Bytes'
-    const k = 1024
-    const sizes = ['Bytes', 'KB', 'MB']
-    const i = Math.floor(Math.log(bytes) / Math.log(k))
-    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i]
+  if (bytes === 0) return '0 Bytes'
+  const k = 1024
+  const sizes = ['Bytes', 'KB', 'MB']
+  const i = Math.floor(Math.log(bytes) / Math.log(k))
+  return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`
 }
 
 function clearFilters() {
-    filters.value = {
-        stations: [],
-        site_identifier: '',
-        model_identifier: '',
-        device_identifiers: [],
-        test_item_filters: [],
-        exclude_test_item_filters: [],
-        criteria_file: null
-    }
-    criteriaFileArray.value = []
-    emitChange()
+  filters.value = {
+    stations: [],
+    site_identifier: '',
+    model_identifier: '',
+    device_identifiers: [],
+    test_item_filters: [],
+    exclude_test_item_filters: [],
+    criteria_file: null,
+  }
+  criteriaFileArray.value = []
+  emitChange()
 }
 
 function applyFilters() {
-    emit('apply', { ...filters.value })
+  emit('apply', { ...filters.value })
 }
 
 function emitChange() {
-    emit('update:modelValue', { ...filters.value })
+  emit('update:modelValue', { ...filters.value })
 }
 
 // Watch for changes
-watch(filters, () => {
+watch(
+  filters,
+  () => {
     emitChange()
-}, { deep: true })
+  },
+  { deep: true },
+)
 
 // Initialize from props
-watch(() => props.modelValue, (newValue) => {
+watch(
+  () => props.modelValue,
+  (newValue) => {
     filters.value = { ...newValue }
     if (newValue.criteria_file) {
-        criteriaFileArray.value = [newValue.criteria_file]
+      criteriaFileArray.value = [newValue.criteria_file]
     } else {
-        criteriaFileArray.value = []
+      criteriaFileArray.value = []
     }
-}, { immediate: true })
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>

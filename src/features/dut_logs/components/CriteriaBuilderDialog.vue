@@ -73,8 +73,7 @@
                       {{ rule.testItem }}
                     </v-list-item-title>
                     <v-list-item-subtitle class="text-caption">
-                      UCL: {{ formatValue(rule.ucl) }} | LCL: {{ formatValue(rule.lcl) }} | Target: {{
-                        formatValue(rule.target) }}
+                      UCL: {{ formatValue(rule.ucl) }} | LCL: {{ formatValue(rule.lcl) }} | Target: {{ formatValue(rule.target) }}
                     </v-list-item-subtitle>
 
                     <template #append>
@@ -129,7 +128,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   modelValue: boolean
@@ -155,12 +154,12 @@ const currentRule = ref<CriteriaRule>({
   testItem: '',
   ucl: null,
   lcl: null,
-  target: null
+  target: null,
 })
 const editingIndex = ref<number | null>(null)
 
 // Available test items for autocomplete
-const availableTestItems = computed(() => props.availableTestItems || [])
+// const availableTestItems = computed(() => props.availableTestItems || [])
 
 // Computed
 const canAddRule = computed(() => {
@@ -169,11 +168,11 @@ const canAddRule = computed(() => {
 
 // JSON preview
 const jsonPreview = computed(() => {
-  const criteria = rules.value.map(rule => ({
+  const criteria = rules.value.map((rule) => ({
     test_item: rule.testItem,
     ucl: rule.ucl,
     lcl: rule.lcl,
-    target: rule.target
+    target: rule.target,
   }))
   return JSON.stringify({ criteria }, null, 2)
 })
@@ -190,7 +189,7 @@ const addRule = () => {
     testItem: currentRule.value.testItem.trim(),
     ucl: currentRule.value.ucl,
     lcl: currentRule.value.lcl,
-    target: currentRule.value.target
+    target: currentRule.value.target,
   }
 
   if (editingIndex.value !== null) {
@@ -213,7 +212,7 @@ const editRule = (index: number) => {
     testItem: rule.testItem,
     ucl: rule.ucl,
     lcl: rule.lcl,
-    target: rule.target
+    target: rule.target,
   }
   editingIndex.value = index
 }
@@ -230,7 +229,7 @@ const resetCurrentRule = () => {
     testItem: '',
     ucl: null,
     lcl: null,
-    target: null
+    target: null,
   }
   editingIndex.value = null
 }

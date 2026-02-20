@@ -104,7 +104,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed } from 'vue'
+import { computed, ref } from 'vue'
 
 // Types
 export interface ColumnMapping {
@@ -120,7 +120,7 @@ interface Props {
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  modelValue: () => []
+  modelValue: () => [],
 })
 
 // Emits
@@ -150,12 +150,12 @@ const mappedPairs = computed((): ColumnMapping[] => {
 })
 
 const unmappedColumnsA = computed(() => {
-  return props.columnsA.filter(col => !mappings.value.has(col))
+  return props.columnsA.filter((col) => !mappings.value.has(col))
 })
 
 const unmappedColumnsB = computed(() => {
   const mappedBColumns = new Set(mappings.value.values())
-  return props.columnsB.filter(col => !mappedBColumns.has(col))
+  return props.columnsB.filter((col) => !mappedBColumns.has(col))
 })
 
 // Methods
@@ -174,7 +174,7 @@ function availableColumnsBForA(colA: string): string[] {
     }
   })
 
-  return props.columnsB.filter(colB => {
+  return props.columnsB.filter((colB) => {
     return colB === currentMapping || !mappedBColumns.has(colB)
   })
 }
@@ -193,10 +193,8 @@ function autoMapByName() {
   mappings.value.clear()
 
   // Map columns with exact name matches (case-insensitive)
-  props.columnsA.forEach(colA => {
-    const matchingColB = props.columnsB.find(
-      colB => colB.toLowerCase() === colA.toLowerCase()
-    )
+  props.columnsA.forEach((colA) => {
+    const matchingColB = props.columnsB.find((colB) => colB.toLowerCase() === colA.toLowerCase())
     if (matchingColB) {
       mappings.value.set(colA, matchingColB)
     }
