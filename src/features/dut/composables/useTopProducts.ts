@@ -1,7 +1,7 @@
 import { computed, ref } from 'vue'
 import type { TopProductsRequest } from '@/core/types'
 import { getApiErrorDetail } from '@/shared/utils'
-import { useDUTStore } from '../store'
+import { useDUTStore } from '../stores'
 
 /**
  * Top Products Composable

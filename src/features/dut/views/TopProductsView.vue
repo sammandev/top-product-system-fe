@@ -84,7 +84,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 // import { useRouter } from 'vue-router'
-// import { useAuthStore } from '@/features/auth/store'
+// import { useAuthStore } from '@/features/auth/stores'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 
 // Stores

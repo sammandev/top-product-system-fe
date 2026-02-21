@@ -1,23 +1,23 @@
 <template>
-    <v-card>
-        <v-card-title>
-            <v-icon class="mr-2">mdi-chart-bar</v-icon>
-            Subgroup Comparison
-        </v-card-title>
+  <v-card>
+    <v-card-title>
+      <v-icon class="mr-2">mdi-chart-bar</v-icon>
+      Subgroup Comparison
+    </v-card-title>
 
-        <v-card-text>
-            <!-- Empty State -->
-            <div v-if="!overallGroupScores || Object.keys(overallGroupScores).length === 0" class="text-center py-8">
-                <v-icon size="64" color="grey">mdi-chart-bar-stacked</v-icon>
-                <p class="text-body-1 text-medium-emphasis mt-4">
-                    No subgroup scores available
-                </p>
-            </div>
+    <v-card-text>
+      <!-- Empty State -->
+      <div v-if="!overallGroupScores || Object.keys(overallGroupScores).length === 0" class="text-center py-8">
+        <v-icon size="64" color="grey">mdi-chart-bar-stacked</v-icon>
+        <p class="text-body-1 text-medium-emphasis mt-4">
+          No subgroup scores available
+        </p>
+      </div>
 
-            <!-- Chart -->
-            <v-chart v-else :option="chartOption" :style="{ height: '400px', width: '100%' }" autoresize />
-        </v-card-text>
-    </v-card>
+      <!-- Chart -->
+      <v-chart v-else :option="chartOption" :style="{ height: '400px', width: '100%' }" autoresize />
+    </v-card-text>
+  </v-card>
 </template>
 
 <script setup lang="ts">
@@ -126,5 +126,4 @@ const chartOption = computed<EChartsOption>(() => {
 })
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>

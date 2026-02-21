@@ -1,117 +1,114 @@
 <template>
-    <v-dialog v-model="internalShow" max-width="650" scrollable persistent>
-        <v-card>
-            <!-- UPDATED: Added bg-info for distinct dialog header color -->
-            <v-card-title class="d-flex align-center bg-info">
-                <v-icon start color="white">mdi-tune-variant</v-icon>
-                <span class="text-white">Configure Scoring Parameters</span>
-                <v-spacer />
-                <v-btn icon variant="text" color="white" @click="handleClose">
-                    <v-icon>mdi-close</v-icon>
-                </v-btn>
-            </v-card-title>
+  <v-dialog v-model="internalShow" max-width="650" scrollable persistent>
+    <v-card>
+      <!-- UPDATED: Added bg-info for distinct dialog header color -->
+      <v-card-title class="d-flex align-center bg-info">
+        <v-icon start color="white">mdi-tune-variant</v-icon>
+        <span class="text-white">Configure Scoring Parameters</span>
+        <v-spacer />
+        <v-btn icon variant="text" color="white" @click="handleClose">
+          <v-icon>mdi-close</v-icon>
+        </v-btn>
+      </v-card-title>
 
-            <v-divider />
+      <v-divider />
 
-            <v-card-text class="pa-0">
-                <div class="pa-3">
-                            <!-- Search and Filter -->
-                            <v-text-field v-model="searchQuery" label="Search Test Items"
-                                prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details
-                                clearable class="mb-3" />
+      <v-card-text class="pa-0">
+        <div class="pa-3">
+          <!-- Search and Filter -->
+          <v-text-field v-model="searchQuery" label="Search Test Items" prepend-inner-icon="mdi-magnify"
+            variant="outlined" density="compact" hide-details clearable class="mb-3" />
 
-                            <!-- Quick Actions -->
-                            <div class="d-flex flex-wrap gap-1 mb-3">
-                                <v-btn size="x-small" variant="tonal" color="primary" @click="enableAll">
-                                    Enable All
-                                </v-btn>
-                                <v-btn size="x-small" variant="tonal" color="grey" @click="disableAll">
-                                    Disable All
-                                </v-btn>
-                                <v-btn size="x-small" variant="tonal" color="secondary" @click="autoDetectAll">
-                                    <v-icon start size="small">mdi-auto-fix</v-icon>
-                                    Auto-Detect
-                                </v-btn>
-                            </div>
+          <!-- Quick Actions -->
+          <div class="d-flex flex-wrap gap-1 mb-3">
+            <v-btn size="x-small" variant="tonal" color="primary" @click="enableAll">
+              Enable All
+            </v-btn>
+            <v-btn size="x-small" variant="tonal" color="grey" @click="disableAll">
+              Disable All
+            </v-btn>
+            <v-btn size="x-small" variant="tonal" color="secondary" @click="autoDetectAll">
+              <v-icon start size="small">mdi-auto-fix</v-icon>
+              Auto-Detect
+            </v-btn>
+          </div>
 
-                            <!-- Filter by Type -->
-                            <v-chip-group v-model="typeFilter" column class="mb-2">
-                                <v-chip size="small" filter value="all">All</v-chip>
-                                <v-chip size="small" filter value="value" color="success">Value</v-chip>
-                                <v-chip size="small" filter value="binary" color="grey">Binary</v-chip>
-                            </v-chip-group>
+          <!-- Filter by Type -->
+          <v-chip-group v-model="typeFilter" column class="mb-2">
+            <v-chip size="small" filter value="all">All</v-chip>
+            <v-chip size="small" filter value="value" color="success">Value</v-chip>
+            <v-chip size="small" filter value="binary" color="grey">Binary</v-chip>
+          </v-chip-group>
 
-                            <!-- Test Items List -->
-                            <v-virtual-scroll :items="filteredTestItems" :height="400" item-height="48">
-                                <template #default="{ item }">
-                                    <v-list-item :key="item.testItemName" density="compact">
-                                        <template #prepend>
-                                            <v-checkbox-btn :model-value="item.enabled" density="compact"
-                                                @update:model-value="toggleEnabled(item.testItemName, $event)"
-                                                @click.stop />
-                                        </template>
+          <!-- Test Items List -->
+          <v-virtual-scroll :items="filteredTestItems" :height="400" item-height="48">
+            <template #default="{ item }">
+              <v-list-item :key="item.testItemName" density="compact">
+                <template #prepend>
+                  <v-checkbox-btn :model-value="item.enabled" density="compact"
+                    @update:model-value="toggleEnabled(item.testItemName, $event)" @click.stop />
+                </template>
 
-                                        <v-list-item-title class="text-body-2 text-truncate">
-                                            {{ item.testItemName }}
-                                        </v-list-item-title>
+                <v-list-item-title class="text-body-2 text-truncate">
+                  {{ item.testItemName }}
+                </v-list-item-title>
 
-                                        <template #append>
-                                            <v-chip :color="getScoringTypeColor(item.scoringType)" size="x-small"
-                                                variant="tonal">
-                                                {{ getScoringTypeLabel(item.scoringType) }}
-                                            </v-chip>
-                                        </template>
-                                    </v-list-item>
-                                </template>
-                            </v-virtual-scroll>
+                <template #append>
+                  <v-chip :color="getScoringTypeColor(item.scoringType)" size="x-small" variant="tonal">
+                    {{ getScoringTypeLabel(item.scoringType) }}
+                  </v-chip>
+                </template>
+              </v-list-item>
+            </template>
+          </v-virtual-scroll>
 
-                            <div class="text-caption text-medium-emphasis pa-2">
-                                {{ filteredTestItems.length }} of {{ configList.length }} items shown
-                            </div>
-                        </div>
+          <div class="text-caption text-medium-emphasis pa-2">
+            {{ filteredTestItems.length }} of {{ configList.length }} items shown
+          </div>
+        </div>
 
 
-            <!-- Summary Stats -->
-            <v-card-text class="py-2 bg-grey-lighten-4">
-                <v-row dense class="text-center">
-                    <v-col cols="3">
-                        <div class="text-caption text-medium-emphasis">Total Items</div>
-                        <div class="text-body-1 font-weight-medium">{{ configList.length }}</div>
-                    </v-col>
-                    <v-col cols="3">
-                        <div class="text-caption text-medium-emphasis">Enabled</div>
-                        <div class="text-body-1 font-weight-medium text-success">{{ enabledCount }}</div>
-                    </v-col>
-                    <v-col cols="3">
-                        <div class="text-caption text-medium-emphasis">Value Items</div>
-                        <div class="text-body-1 font-weight-medium text-primary">{{ valueItemsCount }}</div>
-                    </v-col>
-                    <v-col cols="3">
-                        <div class="text-caption text-medium-emphasis">Binary Items</div>
-                        <div class="text-body-1 font-weight-medium text-grey">{{ binaryItemsCount }}</div>
-                    </v-col>
-                </v-row>
-            </v-card-text>
+        <!-- Summary Stats -->
+        <v-card-text class="py-2 bg-grey-lighten-4">
+          <v-row dense class="text-center">
+            <v-col cols="3">
+              <div class="text-caption text-medium-emphasis">Total Items</div>
+              <div class="text-body-1 font-weight-medium">{{ configList.length }}</div>
+            </v-col>
+            <v-col cols="3">
+              <div class="text-caption text-medium-emphasis">Enabled</div>
+              <div class="text-body-1 font-weight-medium text-success">{{ enabledCount }}</div>
+            </v-col>
+            <v-col cols="3">
+              <div class="text-caption text-medium-emphasis">Value Items</div>
+              <div class="text-body-1 font-weight-medium text-primary">{{ valueItemsCount }}</div>
+            </v-col>
+            <v-col cols="3">
+              <div class="text-caption text-medium-emphasis">Binary Items</div>
+              <div class="text-body-1 font-weight-medium text-grey">{{ binaryItemsCount }}</div>
+            </v-col>
+          </v-row>
+        </v-card-text>
 
-            <v-divider />
+        <v-divider />
 
-            <!-- Actions -->
-            <v-card-actions class="pa-4">
-                <v-btn variant="outlined" color="grey" @click="resetToDefaults">
-                    <v-icon start>mdi-refresh</v-icon>
-                    Reset Defaults
-                </v-btn>
-                <v-spacer />
-                <v-btn variant="outlined" @click="handleClose">
-                    Cancel
-                </v-btn>
-                <v-btn variant="flat" color="primary" :loading="loading" @click="handleApply">
-                    <v-icon start>mdi-check</v-icon>
-                    Apply Configuration
-                </v-btn>
-            </v-card-actions>
-        </v-card>
-    </v-dialog>
+        <!-- Actions -->
+        <v-card-actions class="pa-4">
+          <v-btn variant="outlined" color="grey" @click="resetToDefaults">
+            <v-icon start>mdi-refresh</v-icon>
+            Reset Defaults
+          </v-btn>
+          <v-spacer />
+          <v-btn variant="outlined" @click="handleClose">
+            Cancel
+          </v-btn>
+          <v-btn variant="flat" color="primary" :loading="loading" @click="handleApply">
+            <v-icon start>mdi-check</v-icon>
+            Apply Configuration
+          </v-btn>
+        </v-card-actions>
+    </v-card>
+  </v-dialog>
 </template>
 
 <script setup lang="ts">
@@ -251,15 +248,15 @@ function handleApply(): void {
 
 <style scoped>
 .test-item-row:hover {
-    background-color: rgba(var(--v-theme-primary), 0.05);
+  background-color: rgba(var(--v-theme-primary), 0.05);
 }
 
 /* UPDATED: Fix icon cropping inside chips */
 :deep(.v-chip .v-icon) {
-    margin-right: 4px;
+  margin-right: 4px;
 }
 
 :deep(.v-chip__content) {
-    overflow: visible;
+  overflow: visible;
 }
 </style>

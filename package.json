@@ -4,6 +4,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
+    "preinstall": "node -e \"if (!process.env.npm_config_user_agent?.startsWith('pnpm/')) { console.error('Use pnpm: corepack enable && pnpm install'); process.exit(1); }\"",
     "dev": "vite",
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",

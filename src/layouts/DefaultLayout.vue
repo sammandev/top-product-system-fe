@@ -229,7 +229,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useTheme } from 'vuetify'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useMenuAccessStore } from '@/features/admin/stores/menuAccess.store'
-import { useAuthStore } from '@/features/auth/store'
+import { useAuthStore } from '@/features/auth/stores'
 import { useDrawerState, useThemeState } from '@/shared/composables'
 
 const router = useRouter()

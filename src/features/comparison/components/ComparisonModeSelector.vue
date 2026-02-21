@@ -94,7 +94,8 @@
               <v-icon>mdi-check-circle</v-icon>
             </template>
             <div class="text-caption">
-              Join keys configured: <strong>{{ modelValue.joinKeyA }}</strong> ↔ <strong>{{ modelValue.joinKeyB }}</strong>
+              Join keys configured: <strong>{{ modelValue.joinKeyA }}</strong> ↔ <strong>{{ modelValue.joinKeyB
+                }}</strong>
             </div>
           </v-alert>
 

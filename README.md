@@ -281,14 +281,9 @@ cd frontend_vuetify
 ### 2. Install Dependencies
 
 ```bash
-# Using npm (default)
-npm install
-
-# Using pnpm (recommended - faster, more efficient)
+# Using pnpm (recommended)
+corepack enable
 pnpm install
-
-# Using yarn
-yarn install
 ```
 
 ### 3. Configure Environment
@@ -314,7 +309,7 @@ make dev  # Starts backend at http://127.0.0.1:8001
 ### 5. Start Development Server
 
 ```bash
-npm run dev
+pnpm run dev
 ```
 
 Application will be available at `http://localhost:3000`
@@ -327,17 +322,17 @@ Application will be available at `http://localhost:3000`
 
 | Command | Description | Usage |
 |---------|-------------|-------|
-| `npm run dev` | Start dev server with HMR | Development |
-| `npm run build` | Build for production | Deployment |
-| `npm run preview` | Preview production build | Testing |
-| `npm run lint` | Run ESLint | Code quality |
-| `npm run lint:fix` | Fix ESLint errors | Auto-fix |
-| `npm run format` | Format with Prettier | Code style |
-| `npm run type-check` | TypeScript validation | Type safety |
-| `npm run test:unit` | Run unit tests | Testing |
-| `npm run test:unit:ui` | Unit tests with UI | Interactive |
-| `npm run test:e2e` | Run E2E tests | Integration |
-| `npm run test:e2e:ui` | E2E tests with UI | Interactive |
+| `pnpm run dev` | Start dev server with HMR | Development |
+| `pnpm run build` | Build for production | Deployment |
+| `pnpm run preview` | Preview production build | Testing |
+| `pnpm run lint` | Run Biome lint checks | Code quality |
+| `pnpm run lint:fix` | Apply Biome auto-fixes | Auto-fix |
+| `pnpm run format` | Check formatting with Biome | Code style |
+| `pnpm run type-check` | TypeScript validation | Type safety |
+| `pnpm run test:run` | Run unit tests (single run) | Testing |
+| `pnpm run test:ui` | Unit tests with UI | Interactive |
+| `pnpm run test:e2e` | Run E2E tests | Integration |
+| `pnpm run test:e2e:ui` | E2E tests with UI | Interactive |
 
 ### Development Workflow
 
@@ -347,16 +342,16 @@ Application will be available at `http://localhost:3000`
    cd backend_fastapi && make dev
    
    # Terminal 2: Frontend
-   cd frontend_vuetify && npm run dev
+  cd frontend_vuetify && pnpm run dev
    ```
 
 2. **Make Changes**: Edit files in `src/` directory
 
 3. **Hot Module Replacement**: Changes auto-reload in browser
 
-4. **Type Checking**: Run `npm run type-check` to validate TypeScript
+4. **Type Checking**: Run `pnpm run type-check` to validate TypeScript
 
-5. **Linting**: Run `npm run lint` to check code quality
+5. **Linting**: Run `pnpm run lint` to check code quality
 
 6. **Testing**: Run tests before committing (see [Testing](#-testing))
 
@@ -364,12 +359,12 @@ Application will be available at `http://localhost:3000`
 
 ```bash
 # Type check + build
-npm run type-check && npm run build
+pnpm run type-check && pnpm run build
 
 # Output: dist/ directory
 
 # Preview production build locally
-npm run preview
+pnpm run preview
 ```
 
 ---
@@ -395,19 +390,19 @@ npm run preview
 
 ```bash
 # Run all unit tests
-npm run test:unit
+pnpm run test:run
 
 # Run with coverage
-npm run test:unit -- --coverage
+pnpm run test:coverage
 
 # Run specific test file
-npm run test:unit src/features/auth/store/__tests__/auth.store.spec.ts
+pnpm run test:run src/features/auth/store/__tests__/auth.store.spec.ts
 
 # Watch mode for TDD
-npm run test:unit -- --watch
+pnpm run test
 
 # Interactive UI
-npm run test:unit:ui
+pnpm run test:ui
 ```
 
 **Unit Test Structure**:

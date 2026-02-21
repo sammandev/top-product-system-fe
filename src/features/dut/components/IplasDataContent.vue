@@ -473,12 +473,12 @@ import type {
   DownloadAttachmentInfo,
   Station,
   TestItem,
-} from '@/features/dut_logs/api/iplasApi'
-import type { CompactCsvTestItemData } from '@/features/dut_logs/api/iplasProxyApi'
-import type { DownloadCsvLogInfo } from '@/features/dut_logs/composables/useIplasApi'
-import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
-import { useIplasLocalData } from '@/features/dut_logs/composables/useIplasLocalData'
-import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
+} from '@/features/dut-logs/api/iplasApi'
+import type { CompactCsvTestItemData } from '@/features/dut-logs/api/iplasProxyApi'
+import type { DownloadCsvLogInfo } from '@/features/dut-logs/composables/useIplasApi'
+import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
+import { useIplasLocalData } from '@/features/dut-logs/composables/useIplasLocalData'
+import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 

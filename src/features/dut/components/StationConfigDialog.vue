@@ -183,8 +183,12 @@
                                                     :color="getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).color"
                                                     @click.stop="openScoringConfig(item.name)"
                                                     class="scoring-config-btn">
-                                                    <v-icon start size="small">{{ getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).icon }}</v-icon>
-                                                    {{ getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).label }}
+                                                    <v-icon start size="small">{{
+                                                        getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).icon
+                                                    }}</v-icon>
+                                                    {{
+                                                        getScoringTypeInfo(getTestItemScoringConfig(item.name).scoringType).label
+                                                    }}
                                                     <v-icon end size="x-small">mdi-chevron-down</v-icon>
                                                 </v-btn>
                                                 <v-chip :color="getTestItemTypeColor(item)" size="x-small"
@@ -269,8 +273,8 @@
                             <v-select v-if="currentScoringTypeRequiresPolicy"
                                 :model-value="getTestItemScoringConfig(scoringConfigItem).policy || 'symmetrical'"
                                 @update:model-value="updateTestItemPolicy(scoringConfigItem!, $event)"
-                                :items="policyOptions" item-title="title" item-value="value"
-                                label="Scoring Policy" variant="outlined" density="comfortable" class="mt-4">
+                                :items="policyOptions" item-title="title" item-value="value" label="Scoring Policy"
+                                variant="outlined" density="comfortable" class="mt-4">
                                 <template #item="{ props: itemProps, item }">
                                     <v-list-item v-bind="itemProps">
                                         <template #prepend>
@@ -304,7 +308,9 @@
                             <v-alert type="info" variant="tonal" class="mt-4" density="compact">
                                 <div class="text-caption font-weight-bold mb-1">Formula:</div>
                                 <div class="text-body-2 font-italic">
-                                    {{ getScoringTypeInfo(getTestItemScoringConfig(scoringConfigItem).scoringType).description }}
+                                    {{
+                                        getScoringTypeInfo(getTestItemScoringConfig(scoringConfigItem).scoringType).description
+                                    }}
                                 </div>
                             </v-alert>
                         </v-card-text>
@@ -333,7 +339,8 @@
 
                         <v-card-text class="pa-4">
                             <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-                                This will apply the selected scoring algorithm and weight to all {{ selectedCriteriaCount }} selected
+                                This will apply the selected scoring algorithm and weight to all {{
+                                    selectedCriteriaCount }} selected
                                 criteria test items.
                             </v-alert>
 
@@ -375,9 +382,9 @@
                             </v-text-field>
 
                             <!-- Policy Selection (for asymmetrical only) -->
-                            <v-select v-if="bulkScoringTypeRequiresPolicy" v-model="bulkPolicy"
-                                :items="policyOptions" item-title="title" item-value="value"
-                                label="Scoring Policy" variant="outlined" density="comfortable" class="mt-4">
+                            <v-select v-if="bulkScoringTypeRequiresPolicy" v-model="bulkPolicy" :items="policyOptions"
+                                item-title="title" item-value="value" label="Scoring Policy" variant="outlined"
+                                density="comfortable" class="mt-4">
                                 <template #item="{ props: itemProps, item }">
                                     <v-list-item v-bind="itemProps">
                                         <template #prepend>
@@ -454,95 +461,95 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
 import {
-  SCORING_POLICIES,
-  SCORING_TYPE_INFO,
-  type ScoringPolicy,
-  type ScoringType,
-  shouldUseEvmScoring,
-  shouldUsePerMaskScoring,
-  UI_SCORING_TYPES,
+    SCORING_POLICIES,
+    SCORING_TYPE_INFO,
+    type ScoringPolicy,
+    type ScoringType,
+    shouldUseEvmScoring,
+    shouldUsePerMaskScoring,
+    UI_SCORING_TYPES,
 } from '@/features/dut/types/scoring.types'
-import type { Station } from '@/features/dut_logs/composables/useIplasApi'
+import type { Station } from '@/features/dut-logs/composables/useIplasApi'
 import type { StationConfig, TestItemScoringConfig } from './StationSelectionDialog.vue'
 
 export interface TestItemInfo {
-  name: string
-  isValue: boolean // true if it has UCL/LCL limits OR has numeric VALUE (not pure PASS/FAIL)
-  isBin: boolean // true if it's a binary test item (PASS/FAIL/1/0/-999 without limits)
-  hasUcl: boolean // true if it has UCL (upper criteria limit)
-  hasLcl: boolean // true if it has LCL (lower criteria limit)
+    name: string
+    isValue: boolean // true if it has UCL/LCL limits OR has numeric VALUE (not pure PASS/FAIL)
+    isBin: boolean // true if it's a binary test item (PASS/FAIL/1/0/-999 without limits)
+    hasUcl: boolean // true if it has UCL (upper criteria limit)
+    hasLcl: boolean // true if it has LCL (lower criteria limit)
 }
 
 // Available scoring types for selection (from UI_SCORING_TYPES)
 const scoringTypeOptions = UI_SCORING_TYPES.map((key) => ({
-  value: key as ScoringType,
-  title: SCORING_TYPE_INFO[key].label,
-  subtitle: SCORING_TYPE_INFO[key].description,
-  icon: SCORING_TYPE_INFO[key].icon,
-  color: SCORING_TYPE_INFO[key].color,
-  requiresTarget: SCORING_TYPE_INFO[key].requiredInputs?.includes('target') ?? false,
-  requiresPolicy: SCORING_TYPE_INFO[key].requiredInputs?.includes('policy') ?? false,
+    value: key as ScoringType,
+    title: SCORING_TYPE_INFO[key].label,
+    subtitle: SCORING_TYPE_INFO[key].description,
+    icon: SCORING_TYPE_INFO[key].icon,
+    color: SCORING_TYPE_INFO[key].color,
+    requiresTarget: SCORING_TYPE_INFO[key].requiredInputs?.includes('target') ?? false,
+    requiresPolicy: SCORING_TYPE_INFO[key].requiredInputs?.includes('policy') ?? false,
 }))
 
 // Policy options for asymmetrical scoring
 const policyOptions = SCORING_POLICIES.map((p) => ({
-  value: p.value,
-  title: p.label,
-  subtitle: p.description,
-  icon: p.icon,
+    value: p.value,
+    title: p.label,
+    subtitle: p.description,
+    icon: p.icon,
 }))
 
 interface Props {
-  show: boolean
-  station: Station | null
-  site: string
-  project: string
-  startTime?: string // Optional - not needed for ISN search
-  endTime?: string // Optional - not needed for ISN search
-  existingConfig?: StationConfig
-  availableDeviceIds: string[]
-  loadingDevices: boolean
-  deviceError: string | null
-  availableTestItems: TestItemInfo[]
-  loadingTestItems: boolean
-  testItemsError: string | null
+    show: boolean
+    station: Station | null
+    site: string
+    project: string
+    startTime?: string // Optional - not needed for ISN search
+    endTime?: string // Optional - not needed for ISN search
+    existingConfig?: StationConfig
+    availableDeviceIds: string[]
+    loadingDevices: boolean
+    deviceError: string | null
+    availableTestItems: TestItemInfo[]
+    loadingTestItems: boolean
+    testItemsError: string | null
 }
 
 const props = withDefaults(defineProps<Props>(), {
-  startTime: '',
-  endTime: '',
-  availableTestItems: () => [],
-  loadingTestItems: false,
-  testItemsError: null,
+    startTime: '',
+    endTime: '',
+    availableTestItems: () => [],
+    loadingTestItems: false,
+    testItemsError: null,
 })
 
 const emit = defineEmits<{
-  (e: 'update:show', value: boolean): void
-  (e: 'save', config: StationConfig): void
-  (e: 'remove', displayName: string): void
-  (e: 'refresh-devices'): void
-  (e: 'refresh-test-items'): void
+    (e: 'update:show', value: boolean): void
+    (e: 'save', config: StationConfig): void
+    (e: 'remove', displayName: string): void
+    (e: 'refresh-devices'): void
+    (e: 'refresh-test-items'): void
 }>()
 
 const internalShow = computed({
-  get: () => props.show,
-  set: (value) => emit('update:show', value),
+    get: () => props.show,
+    set: (value) => emit('update:show', value),
 })
 
 // Test Status Options
 const testStatusOptions = [
-  { title: 'All (PASS & FAIL)', value: 'ALL' },
-  { title: 'PASS Only', value: 'PASS' },
-  { title: 'FAIL Only', value: 'FAIL' },
+    { title: 'All (PASS & FAIL)', value: 'ALL' },
+    { title: 'PASS Only', value: 'PASS' },
+    { title: 'FAIL Only', value: 'FAIL' },
 ]
 
 const localConfig = ref<StationConfig>({
-  displayName: '',
-  stationName: '',
-  deviceIds: [],
-  testStatus: 'PASS', // UPDATED: Default to PASS only
-  selectedTestItems: [],
-  testItemScoringConfigs: {},
+    displayName: '',
+    stationName: '',
+    deviceIds: [],
+    testStatus: 'PASS', // UPDATED: Default to PASS only
+    selectedTestItems: [],
+    testItemScoringConfigs: {},
 })
 
 const testItemSearchQuery = ref('')
@@ -562,369 +569,369 @@ const isExistingConfig = computed(() => !!props.existingConfig)
 
 // Device selection helpers
 const allDevicesSelected = computed(() => {
-  return (
-    props.availableDeviceIds.length > 0 &&
-    localConfig.value.deviceIds.length === props.availableDeviceIds.length
-  )
+    return (
+        props.availableDeviceIds.length > 0 &&
+        localConfig.value.deviceIds.length === props.availableDeviceIds.length
+    )
 })
 
 const someDevicesSelected = computed(() => {
-  return localConfig.value.deviceIds.length > 0
+    return localConfig.value.deviceIds.length > 0
 })
 
 // Test Items filtering - only show Criteria and Non-Criteria items (exclude Bin)
 const filteredTestItems = computed(() => {
-  // Filter out Bin items, only keep Criteria (isValue) and Non-Criteria (!isValue && !isBin)
-  let items = props.availableTestItems.filter((item) => !item.isBin)
+    // Filter out Bin items, only keep Criteria (isValue) and Non-Criteria (!isValue && !isBin)
+    let items = props.availableTestItems.filter((item) => !item.isBin)
 
-  // Apply search query
-  if (testItemSearchQuery.value) {
-    const query = testItemSearchQuery.value.toLowerCase()
-    items = items.filter((item) => item.name.toLowerCase().includes(query))
-  }
+    // Apply search query
+    if (testItemSearchQuery.value) {
+        const query = testItemSearchQuery.value.toLowerCase()
+        items = items.filter((item) => item.name.toLowerCase().includes(query))
+    }
 
-  return items
+    return items
 })
 
 // Initialize config when dialog opens
 watch(
-  () => props.show,
-  (newShow) => {
-    if (newShow && props.station) {
-      if (props.existingConfig) {
-        // Load existing config
-        localConfig.value = {
-          ...props.existingConfig,
-          testItemScoringConfigs: props.existingConfig.testItemScoringConfigs || {},
+    () => props.show,
+    (newShow) => {
+        if (newShow && props.station) {
+            if (props.existingConfig) {
+                // Load existing config
+                localConfig.value = {
+                    ...props.existingConfig,
+                    testItemScoringConfigs: props.existingConfig.testItemScoringConfigs || {},
+                }
+            } else {
+                // Initialize new config
+                localConfig.value = {
+                    displayName: props.station.display_station_name,
+                    stationName: props.station.station_name,
+                    deviceIds: [],
+                    testStatus: 'PASS', // UPDATED: Default to PASS only
+                    selectedTestItems: [],
+                    testItemScoringConfigs: {},
+                }
+            }
+            testItemSearchQuery.value = ''
+            scoringConfigItem.value = null
+            scoringConfigDialog.value = false
         }
-      } else {
-        // Initialize new config
-        localConfig.value = {
-          displayName: props.station.display_station_name,
-          stationName: props.station.station_name,
-          deviceIds: [],
-          testStatus: 'PASS', // UPDATED: Default to PASS only
-          selectedTestItems: [],
-          testItemScoringConfigs: {},
-        }
-      }
-      testItemSearchQuery.value = ''
-      scoringConfigItem.value = null
-      scoringConfigDialog.value = false
-    }
-  },
+    },
 )
 
 // Helper functions
 function getStatusColor(value: string): string {
-  switch (value) {
-    case 'PASS':
-      return 'success'
-    case 'FAIL':
-      return 'error'
-    default:
-      return 'primary'
-  }
+    switch (value) {
+        case 'PASS':
+            return 'success'
+        case 'FAIL':
+            return 'error'
+        default:
+            return 'primary'
+    }
 }
 
 function getStatusIcon(value: string): string {
-  switch (value) {
-    case 'PASS':
-      return 'mdi-check-circle'
-    case 'FAIL':
-      return 'mdi-close-circle'
-    default:
-      return 'mdi-format-list-bulleted'
-  }
+    switch (value) {
+        case 'PASS':
+            return 'mdi-check-circle'
+        case 'FAIL':
+            return 'mdi-close-circle'
+        default:
+            return 'mdi-format-list-bulleted'
+    }
 }
 
 function toggleSelectAllDevices(): void {
-  if (allDevicesSelected.value) {
-    localConfig.value.deviceIds = []
-  } else {
-    localConfig.value.deviceIds = [...props.availableDeviceIds]
-  }
+    if (allDevicesSelected.value) {
+        localConfig.value.deviceIds = []
+    } else {
+        localConfig.value.deviceIds = [...props.availableDeviceIds]
+    }
 }
 
 function toggleTestItem(name: string): void {
-  const index = localConfig.value.selectedTestItems.indexOf(name)
-  if (index > -1) {
-    localConfig.value.selectedTestItems.splice(index, 1)
-  } else {
-    localConfig.value.selectedTestItems.push(name)
-  }
+    const index = localConfig.value.selectedTestItems.indexOf(name)
+    if (index > -1) {
+        localConfig.value.selectedTestItems.splice(index, 1)
+    } else {
+        localConfig.value.selectedTestItems.push(name)
+    }
 }
 
 function selectDisplayedTestItems(): void {
-  // Select only currently displayed/filtered test items
-  localConfig.value.selectedTestItems = filteredTestItems.value.map((item) => item.name)
+    // Select only currently displayed/filtered test items
+    localConfig.value.selectedTestItems = filteredTestItems.value.map((item) => item.name)
 }
 
 function selectDisplayedAndConfigureScore(): void {
-  // First select all displayed test items
-  selectDisplayedTestItems()
-  // Then open bulk scoring config dialog
-  openBulkScoringConfig()
+    // First select all displayed test items
+    selectDisplayedTestItems()
+    // Then open bulk scoring config dialog
+    openBulkScoringConfig()
 }
 
 function selectValueTestItems(): void {
-  // CRITERIA: test items with UCL OR LCL (criteria limits define criteria, regardless of value type)
-  localConfig.value.selectedTestItems = props.availableTestItems
-    .filter((item) => item.isValue && (item.hasUcl || item.hasLcl))
-    .map((item) => item.name)
+    // CRITERIA: test items with UCL OR LCL (criteria limits define criteria, regardless of value type)
+    localConfig.value.selectedTestItems = props.availableTestItems
+        .filter((item) => item.isValue && (item.hasUcl || item.hasLcl))
+        .map((item) => item.name)
 }
 
 function selectNonValueTestItems(): void {
-  // NON-CRITERIA: test items with numeric VALUE but NO UCL AND NO LCL
-  localConfig.value.selectedTestItems = props.availableTestItems
-    .filter((item) => item.isValue && !item.hasUcl && !item.hasLcl)
-    .map((item) => item.name)
+    // NON-CRITERIA: test items with numeric VALUE but NO UCL AND NO LCL
+    localConfig.value.selectedTestItems = props.availableTestItems
+        .filter((item) => item.isValue && !item.hasUcl && !item.hasLcl)
+        .map((item) => item.name)
 }
 
 function clearTestItemSelection(): void {
-  localConfig.value.selectedTestItems = []
+    localConfig.value.selectedTestItems = []
 }
 
 function getTestItemTypeLabel(item: TestItemInfo): string {
-  // CRITERIA: has UCL or LCL (criteria limits define criteria)
-  if (item.isValue && (item.hasUcl || item.hasLcl)) return 'CRITERIA'
-  // NON-CRITERIA: has numeric VALUE but no limits
-  if (item.isValue && !item.hasUcl && !item.hasLcl) return 'NON-CRITERIA'
-  return 'OTHER'
+    // CRITERIA: has UCL or LCL (criteria limits define criteria)
+    if (item.isValue && (item.hasUcl || item.hasLcl)) return 'CRITERIA'
+    // NON-CRITERIA: has numeric VALUE but no limits
+    if (item.isValue && !item.hasUcl && !item.hasLcl) return 'NON-CRITERIA'
+    return 'OTHER'
 }
 
 function getTestItemTypeColor(item: TestItemInfo): string {
-  if (item.isValue && (item.hasUcl || item.hasLcl)) return 'success'
-  if (item.isValue && !item.hasUcl && !item.hasLcl) return 'warning'
-  return 'grey'
+    if (item.isValue && (item.hasUcl || item.hasLcl)) return 'success'
+    if (item.isValue && !item.hasUcl && !item.hasLcl) return 'warning'
+    return 'grey'
 }
 
 function handleSave(): void {
-  if (!props.station) return
+    if (!props.station) return
 
-  // Update display and station names to ensure they're current
-  localConfig.value.displayName = props.station.display_station_name
-  localConfig.value.stationName = props.station.station_name
+    // Update display and station names to ensure they're current
+    localConfig.value.displayName = props.station.display_station_name
+    localConfig.value.stationName = props.station.station_name
 
-  // If no test items selected, default to all CRITERIA and NON-CRITERIA items (exclude Bin)
-  const configToSave = { ...localConfig.value }
-  if (configToSave.selectedTestItems.length === 0) {
-    configToSave.selectedTestItems = props.availableTestItems
-      .filter((item) => !item.isBin)
-      .map((item) => item.name)
-  }
+    // If no test items selected, default to all CRITERIA and NON-CRITERIA items (exclude Bin)
+    const configToSave = { ...localConfig.value }
+    if (configToSave.selectedTestItems.length === 0) {
+        configToSave.selectedTestItems = props.availableTestItems
+            .filter((item) => !item.isBin)
+            .map((item) => item.name)
+    }
 
-  emit('save', configToSave)
-  internalShow.value = false
+    emit('save', configToSave)
+    internalShow.value = false
 }
 
 function handleRemove(): void {
-  if (props.station) {
-    emit('remove', props.station.display_station_name)
-    internalShow.value = false
-  }
+    if (props.station) {
+        emit('remove', props.station.display_station_name)
+        internalShow.value = false
+    }
 }
 
 function handleClose(): void {
-  internalShow.value = false
+    internalShow.value = false
 }
 
 function handleRefreshDevices(): void {
-  emit('refresh-devices')
+    emit('refresh-devices')
 }
 
 function handleRefreshTestItems(): void {
-  emit('refresh-test-items')
+    emit('refresh-test-items')
 }
 
 // Scoring configuration helper functions
 function getTestItemScoringConfig(testItemName: string): TestItemScoringConfig {
-  // Return existing config if already set
-  if (localConfig.value.testItemScoringConfigs?.[testItemName]) {
-    return localConfig.value.testItemScoringConfigs[testItemName]
-  }
+    // Return existing config if already set
+    if (localConfig.value.testItemScoringConfigs?.[testItemName]) {
+        return localConfig.value.testItemScoringConfigs[testItemName]
+    }
 
-  // Auto-detect scoring type for new items
-  const testItem = props.availableTestItems.find((item) => item.name === testItemName)
+    // Auto-detect scoring type for new items
+    const testItem = props.availableTestItems.find((item) => item.name === testItemName)
 
-  // UPDATED: Auto-detect PER/MASK items (UCL-only, lower is better)
-  if (testItem && shouldUsePerMaskScoring(testItemName) && testItem.hasUcl && !testItem.hasLcl) {
-    return { scoringType: 'per_mask' }
-  }
+    // UPDATED: Auto-detect PER/MASK items (UCL-only, lower is better)
+    if (testItem && shouldUsePerMaskScoring(testItemName) && testItem.hasUcl && !testItem.hasLcl) {
+        return { scoringType: 'per_mask' }
+    }
 
-  // UPDATED: Auto-detect EVM items (UCL-only, lower is better with gentle decay)
-  // Only use EVM scoring when there's no LCL - if LCL exists, use symmetrical
-  if (testItem && shouldUseEvmScoring(testItemName) && testItem.hasUcl && !testItem.hasLcl) {
-    return { scoringType: 'evm' }
-  }
+    // UPDATED: Auto-detect EVM items (UCL-only, lower is better with gentle decay)
+    // Only use EVM scoring when there's no LCL - if LCL exists, use symmetrical
+    if (testItem && shouldUseEvmScoring(testItemName) && testItem.hasUcl && !testItem.hasLcl) {
+        return { scoringType: 'evm' }
+    }
 
-  // Default to symmetrical for all other items
-  return { scoringType: 'symmetrical' }
+    // Default to symmetrical for all other items
+    return { scoringType: 'symmetrical' }
 }
 
 function openScoringConfig(testItemName: string): void {
-  scoringConfigItem.value = testItemName
-  scoringConfigDialog.value = true
+    scoringConfigItem.value = testItemName
+    scoringConfigDialog.value = true
 }
 
 function closeScoringConfig(): void {
-  scoringConfigDialog.value = false
-  scoringConfigItem.value = null
+    scoringConfigDialog.value = false
+    scoringConfigItem.value = null
 }
 
 function getScoringTypeInfo(scoringType: ScoringType) {
-  return SCORING_TYPE_INFO[scoringType]
+    return SCORING_TYPE_INFO[scoringType]
 }
 
 function updateTestItemScoringType(testItemName: string, scoringType: ScoringType): void {
-  if (!localConfig.value.testItemScoringConfigs) {
-    localConfig.value.testItemScoringConfigs = {}
-  }
+    if (!localConfig.value.testItemScoringConfigs) {
+        localConfig.value.testItemScoringConfigs = {}
+    }
 
-  const existing = localConfig.value.testItemScoringConfigs[testItemName] || {}
-  localConfig.value.testItemScoringConfigs[testItemName] = {
-    ...existing,
-    scoringType,
-  }
+    const existing = localConfig.value.testItemScoringConfigs[testItemName] || {}
+    localConfig.value.testItemScoringConfigs[testItemName] = {
+        ...existing,
+        scoringType,
+    }
 
-  // Clear target if not required
-  const typeInfo = SCORING_TYPE_INFO[scoringType]
-  if (!typeInfo.requiredInputs?.includes('target')) {
-    delete localConfig.value.testItemScoringConfigs[testItemName].target
-  }
+    // Clear target if not required
+    const typeInfo = SCORING_TYPE_INFO[scoringType]
+    if (!typeInfo.requiredInputs?.includes('target')) {
+        delete localConfig.value.testItemScoringConfigs[testItemName].target
+    }
 }
 
 function updateTestItemTarget(testItemName: string, target: number | undefined): void {
-  if (!localConfig.value.testItemScoringConfigs) {
-    localConfig.value.testItemScoringConfigs = {}
-  }
+    if (!localConfig.value.testItemScoringConfigs) {
+        localConfig.value.testItemScoringConfigs = {}
+    }
 
-  if (!localConfig.value.testItemScoringConfigs[testItemName]) {
-    localConfig.value.testItemScoringConfigs[testItemName] = { scoringType: 'symmetrical' }
-  }
+    if (!localConfig.value.testItemScoringConfigs[testItemName]) {
+        localConfig.value.testItemScoringConfigs[testItemName] = { scoringType: 'symmetrical' }
+    }
 
-  localConfig.value.testItemScoringConfigs[testItemName].target = target
+    localConfig.value.testItemScoringConfigs[testItemName].target = target
 }
 
 // UPDATED: Add function to update test item policy
 function updateTestItemPolicy(testItemName: string, policy: ScoringPolicy): void {
-  if (!localConfig.value.testItemScoringConfigs) {
-    localConfig.value.testItemScoringConfigs = {}
-  }
+    if (!localConfig.value.testItemScoringConfigs) {
+        localConfig.value.testItemScoringConfigs = {}
+    }
 
-  if (!localConfig.value.testItemScoringConfigs[testItemName]) {
-    localConfig.value.testItemScoringConfigs[testItemName] = { scoringType: 'asymmetrical' }
-  }
+    if (!localConfig.value.testItemScoringConfigs[testItemName]) {
+        localConfig.value.testItemScoringConfigs[testItemName] = { scoringType: 'asymmetrical' }
+    }
 
-  localConfig.value.testItemScoringConfigs[testItemName].policy = policy
+    localConfig.value.testItemScoringConfigs[testItemName].policy = policy
 }
 
 function scoringRequiresTarget(scoringType: ScoringType): boolean {
-  return SCORING_TYPE_INFO[scoringType].requiredInputs?.includes('target') ?? false
+    return SCORING_TYPE_INFO[scoringType].requiredInputs?.includes('target') ?? false
 }
 
 // Bulk configuration functions
 function openBulkScoringConfig(): void {
-  bulkScoringType.value = 'symmetrical'
-  bulkTarget.value = undefined
-  bulkPolicy.value = 'symmetrical' // UPDATED: Reset policy
-  bulkWeight.value = 1.0
-  bulkScoringDialog.value = true
+    bulkScoringType.value = 'symmetrical'
+    bulkTarget.value = undefined
+    bulkPolicy.value = 'symmetrical' // UPDATED: Reset policy
+    bulkWeight.value = 1.0
+    bulkScoringDialog.value = true
 }
 
 function closeBulkScoringConfig(): void {
-  bulkScoringDialog.value = false
+    bulkScoringDialog.value = false
 }
 
 function applyBulkScoringConfig(): void {
-  if (!localConfig.value.testItemScoringConfigs) {
-    localConfig.value.testItemScoringConfigs = {}
-  }
-
-  // Apply to all selected criteria test items (has VALUE + UCL or LCL)
-  const criteriaItems = props.availableTestItems.filter(
-    (item) =>
-      item.isValue &&
-      (item.hasUcl || item.hasLcl) &&
-      localConfig.value.selectedTestItems.includes(item.name),
-  )
-
-  for (const item of criteriaItems) {
-    const config: TestItemScoringConfig = {
-      scoringType: bulkScoringType.value,
-      weight: bulkWeight.value,
+    if (!localConfig.value.testItemScoringConfigs) {
+        localConfig.value.testItemScoringConfigs = {}
     }
 
-    // Only add target if required and provided
-    if (scoringRequiresTarget(bulkScoringType.value) && bulkTarget.value !== undefined) {
-      config.target = bulkTarget.value
+    // Apply to all selected criteria test items (has VALUE + UCL or LCL)
+    const criteriaItems = props.availableTestItems.filter(
+        (item) =>
+            item.isValue &&
+            (item.hasUcl || item.hasLcl) &&
+            localConfig.value.selectedTestItems.includes(item.name),
+    )
+
+    for (const item of criteriaItems) {
+        const config: TestItemScoringConfig = {
+            scoringType: bulkScoringType.value,
+            weight: bulkWeight.value,
+        }
+
+        // Only add target if required and provided
+        if (scoringRequiresTarget(bulkScoringType.value) && bulkTarget.value !== undefined) {
+            config.target = bulkTarget.value
+        }
+
+        // UPDATED: Add policy for asymmetrical scoring
+        if (bulkScoringType.value === 'asymmetrical') {
+            config.policy = bulkPolicy.value
+        }
+
+        localConfig.value.testItemScoringConfigs[item.name] = config
     }
 
-    // UPDATED: Add policy for asymmetrical scoring
-    if (bulkScoringType.value === 'asymmetrical') {
-      config.policy = bulkPolicy.value
-    }
-
-    localConfig.value.testItemScoringConfigs[item.name] = config
-  }
-
-  closeBulkScoringConfig()
+    closeBulkScoringConfig()
 }
 
 // Get count of selected criteria items for bulk config
 const selectedCriteriaCount = computed(() => {
-  // CRITERIA: has VALUE + (UCL or LCL)
-  return props.availableTestItems.filter(
-    (item) =>
-      item.isValue &&
-      (item.hasUcl || item.hasLcl) &&
-      localConfig.value.selectedTestItems.includes(item.name),
-  ).length
+    // CRITERIA: has VALUE + (UCL or LCL)
+    return props.availableTestItems.filter(
+        (item) =>
+            item.isValue &&
+            (item.hasUcl || item.hasLcl) &&
+            localConfig.value.selectedTestItems.includes(item.name),
+    ).length
 })
 
 // Get count of criteria items in currently displayed/filtered list
 const displayedCriteriaCount = computed(() => {
-  return filteredTestItems.value.filter((item) => item.isValue && (item.hasUcl || item.hasLcl))
-    .length
+    return filteredTestItems.value.filter((item) => item.isValue && (item.hasUcl || item.hasLcl))
+        .length
 })
 
 const bulkScoringTypeRequiresTarget = computed(() => {
-  return scoringRequiresTarget(bulkScoringType.value)
+    return scoringRequiresTarget(bulkScoringType.value)
 })
 
 // Update test item weight
 function updateTestItemWeight(testItemName: string, weight: number | undefined): void {
-  if (!localConfig.value.testItemScoringConfigs) {
-    localConfig.value.testItemScoringConfigs = {}
-  }
+    if (!localConfig.value.testItemScoringConfigs) {
+        localConfig.value.testItemScoringConfigs = {}
+    }
 
-  if (!localConfig.value.testItemScoringConfigs[testItemName]) {
-    localConfig.value.testItemScoringConfigs[testItemName] = { scoringType: 'symmetrical' }
-  }
+    if (!localConfig.value.testItemScoringConfigs[testItemName]) {
+        localConfig.value.testItemScoringConfigs[testItemName] = { scoringType: 'symmetrical' }
+    }
 
-  localConfig.value.testItemScoringConfigs[testItemName].weight = weight ?? 1.0
+    localConfig.value.testItemScoringConfigs[testItemName].weight = weight ?? 1.0
 }
 
 // Computed for current scoring config being edited
 const currentScoringConfig = computed(() => {
-  if (!scoringConfigItem.value) return null
-  return getTestItemScoringConfig(scoringConfigItem.value)
+    if (!scoringConfigItem.value) return null
+    return getTestItemScoringConfig(scoringConfigItem.value)
 })
 
 const currentScoringTypeRequiresTarget = computed(() => {
-  if (!currentScoringConfig.value) return false
-  return scoringRequiresTarget(currentScoringConfig.value.scoringType)
+    if (!currentScoringConfig.value) return false
+    return scoringRequiresTarget(currentScoringConfig.value.scoringType)
 })
 
 // UPDATED: Check if current scoring type requires policy (asymmetrical only)
 const currentScoringTypeRequiresPolicy = computed(() => {
-  if (!currentScoringConfig.value) return false
-  return currentScoringConfig.value.scoringType === 'asymmetrical'
+    if (!currentScoringConfig.value) return false
+    return currentScoringConfig.value.scoringType === 'asymmetrical'
 })
 
 // UPDATED: Check if bulk scoring type requires policy
 const bulkScoringTypeRequiresPolicy = computed(() => {
-  return bulkScoringType.value === 'asymmetrical'
+    return bulkScoringType.value === 'asymmetrical'
 })
 </script>
 

@@ -2,7 +2,7 @@ import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConf
 import { createPinia, setActivePinia } from 'pinia'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import type { LoginResponse } from '@/core/types'
-import { useAuthStore } from '@/features/auth/store/index' // Fixed: explicit index import
+import { useAuthStore } from '@/features/auth/stores/index' // Fixed: explicit index import
 import {
   createErrorResponseInterceptor,
   errorResponseSuccessInterceptor,

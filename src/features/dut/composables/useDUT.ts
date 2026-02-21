@@ -1,6 +1,6 @@
 import { computed } from 'vue'
 import type { TopProductsRequest } from '@/core/types'
-import { useDUTStore } from '../store'
+import { useDUTStore } from '../stores'
 
 /**
  * DUT Composable

@@ -1,208 +1,200 @@
 <template>
-    <v-card class="mb-4">
-        <v-card-title class="d-flex justify-space-between align-center flex-wrap">
-            <div>
-                <v-icon class="mr-2" color="warning">mdi-podium-gold</v-icon>
-                <!-- UPDATED: Change title based on whether scores are calculated -->
-                {{ hasScores ? 'iPLAS Data Ranking by Test Station' : 'iPLAS Data Result' }}
-            </div>
-            <div class="d-flex align-center gap-2 flex-wrap">
-                <!-- Export All Button -->
-                <v-btn v-if="totalRecords > 0" color="primary" variant="outlined" size="small"
-                    prepend-icon="mdi-file-export" :loading="props.exportingAll"
-                    @click="handleExportAll">
-                    Export All ({{ totalRecords }})
+  <v-card class="mb-4">
+    <v-card-title class="d-flex justify-space-between align-center flex-wrap">
+      <div>
+        <v-icon class="mr-2" color="warning">mdi-podium-gold</v-icon>
+        <!-- UPDATED: Change title based on whether scores are calculated -->
+        {{ hasScores ? 'iPLAS Data Ranking by Test Station' : 'iPLAS Data Result' }}
+      </div>
+      <div class="d-flex align-center gap-2 flex-wrap">
+        <!-- Export All Button -->
+        <v-btn v-if="totalRecords > 0" color="primary" variant="outlined" size="small" prepend-icon="mdi-file-export"
+          :loading="props.exportingAll" @click="handleExportAll">
+          Export All ({{ totalRecords }})
+        </v-btn>
+        <!-- Export Selected Button -->
+        <v-btn v-if="selectedItems.length > 0" color="info" variant="outlined" size="small"
+          prepend-icon="mdi-file-export-outline" :loading="exporting" @click="handleExport">
+          Export Selected ({{ selectedItems.length }})
+        </v-btn>
+        <!-- Bulk Download Button -->
+        <v-btn v-if="selectedItems.length > 0" color="success" variant="outlined" size="small"
+          prepend-icon="mdi-download-multiple" :loading="bulkDownloading" @click="handleBulkDownload">
+          Download Selected ({{ selectedItems.length }})
+        </v-btn>
+        <!-- UPDATED: Show Calculate/Re-calculate button -->
+        <v-btn v-if="!hasScores" color="primary" variant="outlined" size="small" prepend-icon="mdi-calculator"
+          :loading="calculatingScores" :disabled="loading" @click="emit('calculate-scores')">
+          Calculate Scores
+        </v-btn>
+        <v-btn v-else color="secondary" variant="outlined" size="small" prepend-icon="mdi-refresh"
+          :loading="calculatingScores" :disabled="loading" @click="emit('calculate-scores')">
+          Re-calculate
+        </v-btn>
+        <v-chip size="small" color="success" variant="tonal" prepend-icon="mdi-barcode">
+          {{ totalRecords }} Records
+        </v-chip>
+      </div>
+    </v-card-title>
+
+    <v-card-subtitle class="text-caption text-medium-emphasis pb-0">
+      <span v-if="hasScores">Rankings are based on scoring. Higher scores indicate better performance.</span>
+      <span v-else>Click "Calculate Scores" to rank records by performance score. Records with errors are shown at
+        the bottom.</span>
+    </v-card-subtitle>
+
+    <v-card-text>
+      <!-- Station Tabs -->
+      <v-tabs v-model="selectedTab" color="primary" density="compact" show-arrows>
+        <v-tab v-for="(ranking, station) in rankingByStation" :key="station" :value="station">
+          <v-icon start size="small">mdi-router-wireless</v-icon>
+          {{ getStationDisplayName(station) }}
+          <v-chip size="x-small" class="ml-2" :color="hasStationErrors(station) ? 'error' : 'success'">
+            {{ ranking.length }}
+          </v-chip>
+        </v-tab>
+      </v-tabs>
+
+      <!-- Station Rankings -->
+      <v-window v-model="selectedTab" class="pt-4">
+        <v-window-item v-for="(_, station) in rankingByStation" :key="station" :value="station">
+          <!-- Filters Row: Search, Device, Score Filter -->
+          <v-row class="mb-2" dense>
+            <v-col cols="12" md="4">
+              <v-text-field v-model="searchQuery" label="Search Records" prepend-inner-icon="mdi-magnify"
+                variant="outlined" density="compact" hide-details clearable placeholder="Search ISN, Device ID..." />
+            </v-col>
+            <v-col cols="12" md="3">
+              <v-autocomplete v-model="deviceFilter" :items="getUniqueDevices(station)" label="Device ID"
+                variant="outlined" density="compact" prepend-inner-icon="mdi-chip" hide-details clearable multiple chips
+                closable-chips>
+                <template #chip="{ props, item }">
+                  <v-chip v-bind="props" :text="item.raw" size="small" />
+                </template>
+              </v-autocomplete>
+            </v-col>
+            <!-- Score Filter (only shown when scores are calculated) -->
+            <template v-if="hasScores">
+              <v-col cols="12" md="2">
+                <v-select v-model="scoreFilterType" :items="scoreFilterTypeOptions" item-title="title"
+                  item-value="value" label="Score Filter" variant="outlined" density="compact"
+                  prepend-inner-icon="mdi-filter-variant" hide-details clearable
+                  @update:model-value="() => { if (!scoreFilterType) { scoreFilterValue = null; scoreFilterValue2 = null; scoreRangeInput = '' } }" />
+              </v-col>
+              <v-col v-if="scoreFilterType === 'between'" cols="12" md="2">
+                <v-text-field v-model="scoreRangeInput" label="Range (e.g. 8-10)" variant="outlined" density="compact"
+                  hide-details placeholder="8-10" @update:model-value="parseScoreRange" />
+              </v-col>
+              <v-col v-else-if="scoreFilterType" cols="12" md="2">
+                <v-text-field v-model.number="scoreFilterValue" label="Score Value" type="number" variant="outlined"
+                  density="compact" hide-details min="0" max="10" step="0.1" placeholder="0-10" />
+              </v-col>
+            </template>
+            <v-col cols="12" :md="hasScores ? 1 : 5" class="d-flex align-center justify-end">
+              <v-btn v-if="hasActiveFilters" variant="text" size="small" color="primary" @click="clearAllFilters">
+                <v-icon start size="small">mdi-filter-off</v-icon>
+                Clear
+                <v-chip size="x-small" color="primary" class="ml-1">{{ activeFilterCount }}</v-chip>
+              </v-btn>
+            </v-col>
+          </v-row>
+
+          <!-- Data Table with Selection -->
+          <v-data-table v-model="selectedItems" :headers="rankingHeaders" :items="filteredRanking" :items-per-page="25"
+            density="comfortable" class="elevation-1 ranking-table cursor-pointer" :row-props="getRowProps" show-select
+            item-value="key" return-object
+            @click:row="(_event: unknown, data: any) => handleRowClick(data.item, station as string)">
+            <!-- Rank Column -->
+            <template #item.rank="{ item }">
+              <div class="d-flex align-center">
+                <template v-if="item.hasError">
+                  <v-icon color="error" size="small">mdi-alert-circle</v-icon>
+                </template>
+                <template v-else-if="item.rank === 1">
+                  <v-icon color="warning">mdi-trophy</v-icon>
+                  <span class="ml-1 font-weight-bold">1</span>
+                </template>
+                <template v-else-if="item.rank === 2">
+                  <v-icon color="grey-lighten-1">mdi-medal</v-icon>
+                  <span class="ml-1">2</span>
+                </template>
+                <template v-else-if="item.rank === 3">
+                  <v-icon color="orange-darken-3">mdi-medal-outline</v-icon>
+                  <span class="ml-1">3</span>
+                </template>
+                <template v-else>
+                  <span class="text-medium-emphasis">{{ item.rank }}</span>
+                </template>
+              </div>
+            </template>
+
+            <!-- ISN Column with Copy Icon on Left -->
+            <template #item.isn="{ item }">
+              <div class="d-flex align-center gap-1">
+                <v-btn icon size="x-small" variant="text" color="primary" @click.stop="copyToClipboard(item.isn)">
+                  <v-icon size="small">mdi-content-copy</v-icon>
+                  <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
                 </v-btn>
-                <!-- Export Selected Button -->
-                <v-btn v-if="selectedItems.length > 0" color="info" variant="outlined" size="small"
-                    prepend-icon="mdi-file-export-outline" :loading="exporting"
-                    @click="handleExport">
-                    Export Selected ({{ selectedItems.length }})
-                </v-btn>
-                <!-- Bulk Download Button -->
-                <v-btn v-if="selectedItems.length > 0" color="success" variant="outlined" size="small"
-                    prepend-icon="mdi-download-multiple" :loading="bulkDownloading"
-                    @click="handleBulkDownload">
-                    Download Selected ({{ selectedItems.length }})
-                </v-btn>
-                <!-- UPDATED: Show Calculate/Re-calculate button -->
-                <v-btn v-if="!hasScores" color="primary" variant="outlined" size="small" prepend-icon="mdi-calculator"
-                    :loading="calculatingScores" :disabled="loading" @click="emit('calculate-scores')">
-                    Calculate Scores
-                </v-btn>
-                <v-btn v-else color="secondary" variant="outlined" size="small" prepend-icon="mdi-refresh"
-                    :loading="calculatingScores" :disabled="loading" @click="emit('calculate-scores')">
-                    Re-calculate
-                </v-btn>
-                <v-chip size="small" color="success" variant="tonal" prepend-icon="mdi-barcode">
-                    {{ totalRecords }} Records
+                <span class="font-weight-medium font-mono">{{ item.isn }}</span>
+              </div>
+            </template>
+
+            <!-- Device Column -->
+            <template #item.device="{ item }">
+              <v-chip size="small" variant="outlined">{{ item.device || '-' }}</v-chip>
+            </template>
+
+            <!-- Test End Time Column -->
+            <template #item.testDate="{ item }">
+              <span class="text-caption">{{ item.testDate }}</span>
+            </template>
+
+            <!-- Duration Column -->
+            <template #item.duration="{ item }">
+              <span class="text-caption text-medium-emphasis">{{ item.duration }}</span>
+            </template>
+
+            <!-- Status Column -->
+            <template #item.status="{ item }">
+              <v-chip :color="item.hasError ? 'error' : 'success'" size="small">
+                {{ item.hasError ? item.errorCode : 'PASS' }}
+              </v-chip>
+            </template>
+
+            <!-- Score Column -->
+            <template #item.score="{ item }">
+              <template v-if="item.hasError">
+                <v-chip size="small" color="error" variant="tonal">FAIL</v-chip>
+              </template>
+              <template v-else-if="item.score !== null">
+                <v-chip size="small" :color="getScoreColor(item.score)" variant="flat" class="font-weight-bold">
+                  {{ (item.score * 10).toFixed(2) }}
                 </v-chip>
-            </div>
-        </v-card-title>
+              </template>
+              <template v-else>
+                <span class="text-medium-emphasis">-</span>
+              </template>
+            </template>
 
-        <v-card-subtitle class="text-caption text-medium-emphasis pb-0">
-            <span v-if="hasScores">Rankings are based on scoring. Higher scores indicate better performance.</span>
-            <span v-else>Click "Calculate Scores" to rank records by performance score. Records with errors are shown at
-                the bottom.</span>
-        </v-card-subtitle>
-
-        <v-card-text>
-            <!-- Station Tabs -->
-            <v-tabs v-model="selectedTab" color="primary" density="compact" show-arrows>
-                <v-tab v-for="(ranking, station) in rankingByStation" :key="station" :value="station">
-                    <v-icon start size="small">mdi-router-wireless</v-icon>
-                    {{ getStationDisplayName(station) }}
-                    <v-chip size="x-small" class="ml-2" :color="hasStationErrors(station) ? 'error' : 'success'">
-                        {{ ranking.length }}
-                    </v-chip>
-                </v-tab>
-            </v-tabs>
-
-            <!-- Station Rankings -->
-            <v-window v-model="selectedTab" class="pt-4">
-                <v-window-item v-for="(_, station) in rankingByStation" :key="station" :value="station">
-                    <!-- Filters Row: Search, Device, Score Filter -->
-                    <v-row class="mb-2" dense>
-                        <v-col cols="12" md="4">
-                            <v-text-field v-model="searchQuery" label="Search Records" prepend-inner-icon="mdi-magnify"
-                                variant="outlined" density="compact" hide-details clearable
-                                placeholder="Search ISN, Device ID..." />
-                        </v-col>
-                        <v-col cols="12" md="3">
-                            <v-autocomplete v-model="deviceFilter" :items="getUniqueDevices(station)" label="Device ID"
-                                variant="outlined" density="compact" prepend-inner-icon="mdi-chip" hide-details
-                                clearable multiple chips closable-chips>
-                                <template #chip="{ props, item }">
-                                    <v-chip v-bind="props" :text="item.raw" size="small" />
-                                </template>
-                            </v-autocomplete>
-                        </v-col>
-                        <!-- Score Filter (only shown when scores are calculated) -->
-                        <template v-if="hasScores">
-                            <v-col cols="12" md="2">
-                                <v-select v-model="scoreFilterType" :items="scoreFilterTypeOptions" item-title="title"
-                                    item-value="value" label="Score Filter" variant="outlined" density="compact" 
-                                    prepend-inner-icon="mdi-filter-variant" hide-details clearable
-                                    @update:model-value="() => { if (!scoreFilterType) { scoreFilterValue = null; scoreFilterValue2 = null; scoreRangeInput = '' } }" />
-                            </v-col>
-                            <v-col v-if="scoreFilterType === 'between'" cols="12" md="2">
-                                <v-text-field v-model="scoreRangeInput" label="Range (e.g. 8-10)" 
-                                    variant="outlined" density="compact" hide-details
-                                    placeholder="8-10" @update:model-value="parseScoreRange" />
-                            </v-col>
-                            <v-col v-else-if="scoreFilterType" cols="12" md="2">
-                                <v-text-field v-model.number="scoreFilterValue" label="Score Value" type="number"
-                                    variant="outlined" density="compact" hide-details
-                                    min="0" max="10" step="0.1" placeholder="0-10" />
-                            </v-col>
-                        </template>
-                        <v-col cols="12" :md="hasScores ? 1 : 5" class="d-flex align-center justify-end">
-                            <v-btn v-if="hasActiveFilters" variant="text" size="small" color="primary"
-                                @click="clearAllFilters">
-                                <v-icon start size="small">mdi-filter-off</v-icon>
-                                Clear
-                                <v-chip size="x-small" color="primary" class="ml-1">{{ activeFilterCount }}</v-chip>
-                            </v-btn>
-                        </v-col>
-                    </v-row>
-
-                    <!-- Data Table with Selection -->
-                    <v-data-table v-model="selectedItems" :headers="rankingHeaders" :items="filteredRanking" 
-                        :items-per-page="25" density="comfortable" class="elevation-1 ranking-table cursor-pointer" 
-                        :row-props="getRowProps" show-select item-value="key" return-object
-                        @click:row="(_event: unknown, data: any) => handleRowClick(data.item, station as string)">
-                        <!-- Rank Column -->
-                        <template #item.rank="{ item }">
-                            <div class="d-flex align-center">
-                                <template v-if="item.hasError">
-                                    <v-icon color="error" size="small">mdi-alert-circle</v-icon>
-                                </template>
-                                <template v-else-if="item.rank === 1">
-                                    <v-icon color="warning">mdi-trophy</v-icon>
-                                    <span class="ml-1 font-weight-bold">1</span>
-                                </template>
-                                <template v-else-if="item.rank === 2">
-                                    <v-icon color="grey-lighten-1">mdi-medal</v-icon>
-                                    <span class="ml-1">2</span>
-                                </template>
-                                <template v-else-if="item.rank === 3">
-                                    <v-icon color="orange-darken-3">mdi-medal-outline</v-icon>
-                                    <span class="ml-1">3</span>
-                                </template>
-                                <template v-else>
-                                    <span class="text-medium-emphasis">{{ item.rank }}</span>
-                                </template>
-                            </div>
-                        </template>
-
-                        <!-- ISN Column with Copy Icon on Left -->
-                        <template #item.isn="{ item }">
-                            <div class="d-flex align-center gap-1">
-                                <v-btn icon size="x-small" variant="text" color="primary" @click.stop="copyToClipboard(item.isn)">
-                                    <v-icon size="small">mdi-content-copy</v-icon>
-                                    <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
-                                </v-btn>
-                                <span class="font-weight-medium font-mono">{{ item.isn }}</span>
-                            </div>
-                        </template>
-
-                        <!-- Device Column -->
-                        <template #item.device="{ item }">
-                            <v-chip size="small" variant="outlined">{{ item.device || '-' }}</v-chip>
-                        </template>
-
-                        <!-- Test End Time Column -->
-                        <template #item.testDate="{ item }">
-                            <span class="text-caption">{{ item.testDate }}</span>
-                        </template>
-
-                        <!-- Duration Column -->
-                        <template #item.duration="{ item }">
-                            <span class="text-caption text-medium-emphasis">{{ item.duration }}</span>
-                        </template>
-
-                        <!-- Status Column -->
-                        <template #item.status="{ item }">
-                            <v-chip :color="item.hasError ? 'error' : 'success'" size="small">
-                                {{ item.hasError ? item.errorCode : 'PASS' }}
-                            </v-chip>
-                        </template>
-
-                        <!-- Score Column -->
-                        <template #item.score="{ item }">
-                            <template v-if="item.hasError">
-                                <v-chip size="small" color="error" variant="tonal">FAIL</v-chip>
-                            </template>
-                            <template v-else-if="item.score !== null">
-                                <v-chip size="small" :color="getScoreColor(item.score)" variant="flat"
-                                    class="font-weight-bold">
-                                    {{ (item.score * 10).toFixed(2) }}
-                                </v-chip>
-                            </template>
-                            <template v-else>
-                                <span class="text-medium-emphasis">-</span>
-                            </template>
-                        </template>
-
-                        <!-- Actions Column -->
-                        <template #item.actions="{ item }">
-                            <v-btn icon size="small" variant="text" color="success"
-                                @click.stop="handleDownloadDetails(item, station as string)">
-                                <v-icon>mdi-download</v-icon>
-                                <v-tooltip activator="parent" location="top">Download Attachment</v-tooltip>
-                            </v-btn>
-                        </template>
-                    </v-data-table>
-                </v-window-item>
-            </v-window>
-        </v-card-text>
-    </v-card>
+            <!-- Actions Column -->
+            <template #item.actions="{ item }">
+              <v-btn icon size="small" variant="text" color="success"
+                @click.stop="handleDownloadDetails(item, station as string)">
+                <v-icon>mdi-download</v-icon>
+                <v-tooltip activator="parent" location="top">Download Attachment</v-tooltip>
+              </v-btn>
+            </template>
+          </v-data-table>
+        </v-window-item>
+      </v-window>
+    </v-card-text>
+  </v-card>
 </template>
 
 <script setup lang="ts">
 import { useDebounceFn } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
-import type { CsvTestItemData } from '@/features/dut_logs/composables/useIplasApi'
+import type { CsvTestItemData } from '@/features/dut-logs/composables/useIplasApi'
 import { adjustIplasDisplayTime, isStatusPass } from '@/shared/utils/helpers'
 import { getScoreColor } from '../types/scoring.types'
 
@@ -670,31 +662,31 @@ function handleExportAll(): void {
 
 <style scoped>
 :deep(.rank-1-row) {
-    background-color: rgba(255, 215, 0, 0.1) !important;
+  background-color: rgba(255, 215, 0, 0.1) !important;
 }
 
 :deep(.rank-2-row) {
-    background-color: rgba(192, 192, 192, 0.1) !important;
+  background-color: rgba(192, 192, 192, 0.1) !important;
 }
 
 :deep(.rank-3-row) {
-    background-color: rgba(205, 127, 50, 0.1) !important;
+  background-color: rgba(205, 127, 50, 0.1) !important;
 }
 
 :deep(.error-row) {
-    background-color: rgba(244, 67, 54, 0.05) !important;
+  background-color: rgba(244, 67, 54, 0.05) !important;
 }
 
 .ranking-table {
-    border-radius: 8px;
-    overflow: hidden;
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 .cursor-pointer {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 .gap-2 {
-    gap: 0.5rem;
+  gap: 0.5rem;
 }
 </style>

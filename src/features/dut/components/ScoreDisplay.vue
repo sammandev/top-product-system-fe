@@ -1,30 +1,30 @@
 <template>
-    <!-- Circular Progress Variant -->
-    <v-progress-circular v-if="variant === 'circular'" :model-value="scorePercent" :color="scoreColor" :size="size"
-        :width="width">
-        <template #default>
-            <span :class="['font-weight-bold', textSizeClass]">{{ formattedScore }}</span>
-        </template>
-    </v-progress-circular>
+  <!-- Circular Progress Variant -->
+  <v-progress-circular v-if="variant === 'circular'" :model-value="scorePercent" :color="scoreColor" :size="size"
+    :width="width">
+    <template #default>
+      <span :class="['font-weight-bold', textSizeClass]">{{ formattedScore }}</span>
+    </template>
+  </v-progress-circular>
 
-    <!-- Chip Variant -->
-    <v-chip v-else-if="variant === 'chip'" :color="scoreColor" :size="chipSize" variant="tonal">
-        <v-icon v-if="showIcon" start :size="iconSize">{{ scoreIcon }}</v-icon>
-        {{ formattedScore }}
-    </v-chip>
+  <!-- Chip Variant -->
+  <v-chip v-else-if="variant === 'chip'" :color="scoreColor" :size="chipSize" variant="tonal">
+    <v-icon v-if="showIcon" start :size="iconSize">{{ scoreIcon }}</v-icon>
+    {{ formattedScore }}
+  </v-chip>
 
-    <!-- Bar Variant -->
-    <div v-else-if="variant === 'bar'" class="score-bar d-flex align-center">
-        <v-progress-linear :model-value="scorePercent" :color="scoreColor" :height="barHeight" rounded
-            class="flex-grow-1" />
-        <span :class="['ml-2', 'font-weight-medium', textSizeClass]">{{ formattedScore }}</span>
-    </div>
+  <!-- Bar Variant -->
+  <div v-else-if="variant === 'bar'" class="score-bar d-flex align-center">
+    <v-progress-linear :model-value="scorePercent" :color="scoreColor" :height="barHeight" rounded
+      class="flex-grow-1" />
+    <span :class="['ml-2', 'font-weight-medium', textSizeClass]">{{ formattedScore }}</span>
+  </div>
 
-    <!-- Text Variant -->
-    <span v-else :class="['font-weight-bold', `text-${scoreColor}`, textSizeClass]">
-        <v-icon v-if="showIcon" :size="iconSize" class="mr-1">{{ scoreIcon }}</v-icon>
-        {{ formattedScore }}
-    </span>
+  <!-- Text Variant -->
+  <span v-else :class="['font-weight-bold', `text-${scoreColor}`, textSizeClass]">
+    <v-icon v-if="showIcon" :size="iconSize" class="mr-1">{{ scoreIcon }}</v-icon>
+    {{ formattedScore }}
+  </span>
 </template>
 
 <script setup lang="ts">
@@ -162,6 +162,6 @@ const barHeight = computed(() => {
 
 <style scoped>
 .score-bar {
-    min-width: 100px;
+  min-width: 100px;
 }
 </style>

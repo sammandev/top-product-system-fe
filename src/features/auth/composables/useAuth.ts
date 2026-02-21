@@ -1,7 +1,7 @@
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
 import type { ExternalLoginRequest, LoginRequest } from '@/core/types'
-import { useAuthStore } from '../store'
+import { useAuthStore } from '../stores'
 
 /**
  * Auth Composable

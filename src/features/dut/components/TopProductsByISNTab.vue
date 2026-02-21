@@ -1,214 +1,209 @@
 <template>
-    <v-row>
-        <!-- DUT ISN Input with Site/Model Selection -->
-        <v-col cols="12">
-            <DUTISNInput ref="dutISNInputRef" v-model="dutISNs" v-model:site-identifiers="siteIdentifier"
-                v-model:model-identifiers="modelIdentifier" :max-i-s-ns="20" class="mb-4" />
-        </v-col>
+  <v-row>
+    <!-- DUT ISN Input with Site/Model Selection -->
+    <v-col cols="12">
+      <DUTISNInput ref="dutISNInputRef" v-model="dutISNs" v-model:site-identifiers="siteIdentifier"
+        v-model:model-identifiers="modelIdentifier" :max-i-s-ns="20" class="mb-4" />
+    </v-col>
 
-        <!-- Station Selection (Optional) -->
-        <v-col cols="12" md="6">
-            <v-card>
-                <v-card-title>
-                    <v-icon class="mr-2">mdi-access-point</v-icon>
-                    Station Selection (Optional)
-                </v-card-title>
+    <!-- Station Selection (Optional) -->
+    <v-col cols="12" md="6">
+      <v-card>
+        <v-card-title>
+          <v-icon class="mr-2">mdi-access-point</v-icon>
+          Station Selection (Optional)
+        </v-card-title>
 
-                <v-card-text>
-                    <v-combobox v-model="selectedStations" :items="availableStations" :loading="loadingStations"
-                        label="Select Stations" placeholder="Leave empty to evaluate all stations" multiple chips
-                        closable-chips clearable
-                        hint="Stations are automatically loaded based on DUT ISN. Leave empty for all stations."
-                        persistent-hint>
-                        <template #chip="{ props: chipProps, item }">
-                            <v-chip v-bind="chipProps" :text="String(item.value || item)" closable />
-                        </template>
-                    </v-combobox>
-                </v-card-text>
-            </v-card>
-        </v-col>
+        <v-card-text>
+          <v-combobox v-model="selectedStations" :items="availableStations" :loading="loadingStations"
+            label="Select Stations" placeholder="Leave empty to evaluate all stations" multiple chips closable-chips
+            clearable hint="Stations are automatically loaded based on DUT ISN. Leave empty for all stations."
+            persistent-hint>
+            <template #chip="{ props: chipProps, item }">
+              <v-chip v-bind="chipProps" :text="String(item.value || item)" closable />
+            </template>
+          </v-combobox>
+        </v-card-text>
+      </v-card>
+    </v-col>
 
-        <!-- Criteria Configuration -->
-        <v-col cols="12" md="6">
-            <v-card>
-                <v-card-title class="d-flex align-center">
-                    <v-icon class="mr-2">mdi-file-cog</v-icon>
-                    Criteria Configuration
-                    <v-spacer />
-                    <v-btn size="small" variant="outlined" color="primary" prepend-icon="mdi-download"
-                        @click="downloadCriteriaTemplate" title="Download criteria configuration template">
-                        Download Template
-                    </v-btn>
-                </v-card-title>
+    <!-- Criteria Configuration -->
+    <v-col cols="12" md="6">
+      <v-card>
+        <v-card-title class="d-flex align-center">
+          <v-icon class="mr-2">mdi-file-cog</v-icon>
+          Criteria Configuration
+          <v-spacer />
+          <v-btn size="small" variant="outlined" color="primary" prepend-icon="mdi-download"
+            @click="downloadCriteriaTemplate" title="Download criteria configuration template">
+            Download Template
+          </v-btn>
+        </v-card-title>
 
-                <v-card-text>
-                    <v-file-input v-model="criteriaFile" label="Criteria File (Optional)"
-                        placeholder="Upload criteria file" accept=".ini,.txt,.conf" prepend-icon="mdi-paperclip"
-                        clearable hint="Upload custom criteria file or use default rules" persistent-hint>
-                        <template #selection="{ fileNames }">
-                            <v-chip v-for="fileName in fileNames" :key="fileName" color="primary" size="small">
-                                {{ fileName }}
-                            </v-chip>
-                        </template>
-                    </v-file-input>
+        <v-card-text>
+          <v-file-input v-model="criteriaFile" label="Criteria File (Optional)" placeholder="Upload criteria file"
+            accept=".ini,.txt,.conf" prepend-icon="mdi-paperclip" clearable
+            hint="Upload custom criteria file or use default rules" persistent-hint>
+            <template #selection="{ fileNames }">
+              <v-chip v-for="fileName in fileNames" :key="fileName" color="primary" size="small">
+                {{ fileName }}
+              </v-chip>
+            </template>
+          </v-file-input>
 
-                    <!-- Debug info -->
-                    <v-alert v-if="criteriaFile" type="info" density="compact" class="mt-2">
-                        File selected: {{ criteriaFileActual?.name }} ({{ formatFileSize(criteriaFileActual?.size || 0) }})
-                    </v-alert>
-                </v-card-text>
-            </v-card>
-        </v-col>
+          <!-- Debug info -->
+          <v-alert v-if="criteriaFile" type="info" density="compact" class="mt-2">
+            File selected: {{ criteriaFileActual?.name }} ({{ formatFileSize(criteriaFileActual?.size || 0) }})
+          </v-alert>
+        </v-card-text>
+      </v-card>
+    </v-col>
 
-        <!-- Advanced Filters (Collapsible) -->
-        <v-col cols="12">
-            <v-expansion-panels>
-                <v-expansion-panel>
-                    <v-expansion-panel-title>
-                        <v-icon class="mr-2">mdi-filter-variant</v-icon>
-                        Universal Filters (Apply to All Stations)
-                    </v-expansion-panel-title>
+    <!-- Advanced Filters (Collapsible) -->
+    <v-col cols="12">
+      <v-expansion-panels>
+        <v-expansion-panel>
+          <v-expansion-panel-title>
+            <v-icon class="mr-2">mdi-filter-variant</v-icon>
+            Universal Filters (Apply to All Stations)
+          </v-expansion-panel-title>
 
-                    <v-expansion-panel-text>
-                        <v-row>
-                            <!-- Device Identifiers -->
-                            <v-col cols="12">
-                                <v-combobox v-model="deviceIdentifiers" label="Device Identifiers (Optional)"
-                                    placeholder="e.g., 1351, 614670" multiple chips closable-chips clearable
-                                    hint="Filter by specific device IDs or names (applies to all stations unless overridden)"
-                                    persistent-hint />
-                            </v-col>
+          <v-expansion-panel-text>
+            <v-row>
+              <!-- Device Identifiers -->
+              <v-col cols="12">
+                <v-combobox v-model="deviceIdentifiers" label="Device Identifiers (Optional)"
+                  placeholder="e.g., 1351, 614670" multiple chips closable-chips clearable
+                  hint="Filter by specific device IDs or names (applies to all stations unless overridden)"
+                  persistent-hint />
+              </v-col>
 
-                            <!-- Test Item Include Filters -->
-                            <v-col cols="12" md="6">
-                                <v-combobox v-model="testItemFilters" label="Include Test Items (Regex)"
-                                    placeholder="e.g., WiFi_TX_POW.*" multiple chips closable-chips clearable
-                                    hint="Regex patterns to include specific test items (applies to all stations unless overridden)"
-                                    persistent-hint />
-                            </v-col>
+              <!-- Test Item Include Filters -->
+              <v-col cols="12" md="6">
+                <v-combobox v-model="testItemFilters" label="Include Test Items (Regex)"
+                  placeholder="e.g., WiFi_TX_POW.*" multiple chips closable-chips clearable
+                  hint="Regex patterns to include specific test items (applies to all stations unless overridden)"
+                  persistent-hint />
+              </v-col>
 
-                            <!-- Test Item Exclude Filters -->
-                            <v-col cols="12" md="6">
-                                <v-combobox v-model="excludeTestItemFilters" label="Exclude Test Items (Regex)"
-                                    placeholder="e.g., WiFi_PA_POW_OLD.*" multiple chips closable-chips clearable
-                                    hint="Regex patterns to exclude test items (applies to all stations unless overridden)"
-                                    persistent-hint />
-                            </v-col>
-                        </v-row>
-                    </v-expansion-panel-text>
-                </v-expansion-panel>
-            </v-expansion-panels>
-        </v-col>
+              <!-- Test Item Exclude Filters -->
+              <v-col cols="12" md="6">
+                <v-combobox v-model="excludeTestItemFilters" label="Exclude Test Items (Regex)"
+                  placeholder="e.g., WiFi_PA_POW_OLD.*" multiple chips closable-chips clearable
+                  hint="Regex patterns to exclude test items (applies to all stations unless overridden)"
+                  persistent-hint />
+              </v-col>
+            </v-row>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+      </v-expansion-panels>
+    </v-col>
 
-        <!-- Per-Station Filter Configuration -->
-        <v-col v-if="selectedStations.length > 0" cols="12">
-            <v-expansion-panels>
-                <v-expansion-panel>
-                    <v-expansion-panel-title>
-                        <v-icon class="mr-2">mdi-tune-variant</v-icon>
-                        Per-Station Filter Configuration (Optional)
-                    </v-expansion-panel-title>
+    <!-- Per-Station Filter Configuration -->
+    <v-col v-if="selectedStations.length > 0" cols="12">
+      <v-expansion-panels>
+        <v-expansion-panel>
+          <v-expansion-panel-title>
+            <v-icon class="mr-2">mdi-tune-variant</v-icon>
+            Per-Station Filter Configuration (Optional)
+          </v-expansion-panel-title>
 
-                    <v-expansion-panel-text>
-                        <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-                            Configure specific filters for each selected station. Per-station filters
-                            <strong>override</strong>
-                            universal filters.
-                            Leave empty to use universal filters for all stations.
-                        </v-alert>
-
-                        <!-- Loading Test Items & Devices -->
-                        <v-progress-linear v-if="loadingTestItems || loadingDevices" indeterminate color="primary"
-                            class="mb-4" />
-
-                        <v-row>
-                            <v-col v-for="station in selectedStations" :key="station" cols="12" md="6">
-                                <StationFilterConfig :station-identifier="station" :station-name="station"
-                                    :available-test-items="stationTestItems[station] || []"
-                                    :available-devices="stationDevices[station] || []"
-                                    :loading="loadingTestItems || loadingDevices"
-                                    v-model="stationFilterConfigs[station]" />
-                            </v-col>
-                        </v-row>
-                    </v-expansion-panel-text>
-                </v-expansion-panel>
-            </v-expansion-panels>
-        </v-col>
-
-        <!-- Action Buttons -->
-        <v-col cols="12">
-            <v-card>
-                <v-card-text>
-                    <v-row class="align-stretch">
-                        <v-col cols="12" sm="6" lg="3">
-                            <v-btn color="primary" size="large" block :loading="loading" :disabled="!canAnalyze"
-                                @click="handleAnalyze">
-                                <v-icon class="mr-2">mdi-chart-line</v-icon>
-                                Analyze DUTs
-                            </v-btn>
-                        </v-col>
-
-                        <v-col cols="12" sm="6" lg="3">
-                            <v-btn color="secondary" size="large" block variant="tonal" :loading="loading"
-                                :disabled="!canAnalyze" @click="handleAnalyzeWithPATrends">
-                                <v-icon class="mr-2">mdi-chart-timeline-variant</v-icon>
-                                Analyze with PA Trends
-                            </v-btn>
-                        </v-col>
-
-                        <v-col cols="12" sm="6" lg="3">
-                            <v-btn color="info" size="large" block variant="tonal" :loading="loading"
-                                :disabled="!canAnalyze" @click="handleAnalyzeHierarchical">
-                                <v-icon class="mr-2">mdi-sitemap</v-icon>
-                                Hierarchical Scoring
-                            </v-btn>
-                        </v-col>
-
-                        <v-col cols="12" sm="6" lg="3">
-                            <FormulaSelectorDialog v-model="showFormulaSelectorDialog"
-                                :universal-formula="universalFormula"
-                                @update:universal-formula="universalFormula = $event"
-                                v-model:category-formulas="categoryFormulas" @reset="handleResetFormulas"
-                                @apply="handleApplyFormulas">
-                                <template #activator="{ props: dialogProps }">
-                                    <v-btn v-bind="dialogProps" color="primary" variant="outlined"
-                                        prepend-icon="mdi-function-variant" block>
-                                        Formula Selection
-                                        <v-badge v-if="formulaSelectionEnabled"
-                                            :content="activeFormulaStats.enabledCount" color="success" inline />
-                                    </v-btn>
-                                </template>
-                            </FormulaSelectorDialog>
-                        </v-col>
-                    </v-row>
-
-                    <!-- Validation Alert -->
-                    <v-alert v-if="attemptedAnalysis && !canAnalyze" type="warning" variant="tonal" density="compact"
-                        class="mt-4">
-                        <template #prepend>
-                            <v-icon>mdi-alert</v-icon>
-                        </template>
-                        Please add at least one DUT ISN to continue
-                    </v-alert>
-                </v-card-text>
-            </v-card>
-        </v-col>
-
-        <!-- Error Display -->
-        <v-col v-if="error" cols="12">
-            <v-alert type="error" variant="tonal" closable @click:close="clearError">
-                <div class="font-weight-medium">Analysis Failed</div>
-                <div class="text-caption">{{ error }}</div>
+          <v-expansion-panel-text>
+            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
+              Configure specific filters for each selected station. Per-station filters
+              <strong>override</strong>
+              universal filters.
+              Leave empty to use universal filters for all stations.
             </v-alert>
-        </v-col>
 
-        <!-- Results Display -->
-        <v-col v-if="hasResults" ref="resultsSection" cols="12">
-            <TopProductISNResults :results="processedResults!.results" :errors="processedResults!.errors"
-                :custom-scoring-enabled="formulaSelectionEnabled" :universal-formula="universalFormula"
-                :category-formulas="categoryFormulas" @export="handleExport" />
-        </v-col>
-    </v-row>
+            <!-- Loading Test Items & Devices -->
+            <v-progress-linear v-if="loadingTestItems || loadingDevices" indeterminate color="primary" class="mb-4" />
+
+            <v-row>
+              <v-col v-for="station in selectedStations" :key="station" cols="12" md="6">
+                <StationFilterConfig :station-identifier="station" :station-name="station"
+                  :available-test-items="stationTestItems[station] || []"
+                  :available-devices="stationDevices[station] || []" :loading="loadingTestItems || loadingDevices"
+                  v-model="stationFilterConfigs[station]" />
+              </v-col>
+            </v-row>
+          </v-expansion-panel-text>
+        </v-expansion-panel>
+      </v-expansion-panels>
+    </v-col>
+
+    <!-- Action Buttons -->
+    <v-col cols="12">
+      <v-card>
+        <v-card-text>
+          <v-row class="align-stretch">
+            <v-col cols="12" sm="6" lg="3">
+              <v-btn color="primary" size="large" block :loading="loading" :disabled="!canAnalyze"
+                @click="handleAnalyze">
+                <v-icon class="mr-2">mdi-chart-line</v-icon>
+                Analyze DUTs
+              </v-btn>
+            </v-col>
+
+            <v-col cols="12" sm="6" lg="3">
+              <v-btn color="secondary" size="large" block variant="tonal" :loading="loading" :disabled="!canAnalyze"
+                @click="handleAnalyzeWithPATrends">
+                <v-icon class="mr-2">mdi-chart-timeline-variant</v-icon>
+                Analyze with PA Trends
+              </v-btn>
+            </v-col>
+
+            <v-col cols="12" sm="6" lg="3">
+              <v-btn color="info" size="large" block variant="tonal" :loading="loading" :disabled="!canAnalyze"
+                @click="handleAnalyzeHierarchical">
+                <v-icon class="mr-2">mdi-sitemap</v-icon>
+                Hierarchical Scoring
+              </v-btn>
+            </v-col>
+
+            <v-col cols="12" sm="6" lg="3">
+              <FormulaSelectorDialog v-model="showFormulaSelectorDialog" :universal-formula="universalFormula"
+                @update:universal-formula="universalFormula = $event" v-model:category-formulas="categoryFormulas"
+                @reset="handleResetFormulas" @apply="handleApplyFormulas">
+                <template #activator="{ props: dialogProps }">
+                  <v-btn v-bind="dialogProps" color="primary" variant="outlined" prepend-icon="mdi-function-variant"
+                    block>
+                    Formula Selection
+                    <v-badge v-if="formulaSelectionEnabled" :content="activeFormulaStats.enabledCount" color="success"
+                      inline />
+                  </v-btn>
+                </template>
+              </FormulaSelectorDialog>
+            </v-col>
+          </v-row>
+
+          <!-- Validation Alert -->
+          <v-alert v-if="attemptedAnalysis && !canAnalyze" type="warning" variant="tonal" density="compact"
+            class="mt-4">
+            <template #prepend>
+              <v-icon>mdi-alert</v-icon>
+            </template>
+            Please add at least one DUT ISN to continue
+          </v-alert>
+        </v-card-text>
+      </v-card>
+    </v-col>
+
+    <!-- Error Display -->
+    <v-col v-if="error" cols="12">
+      <v-alert type="error" variant="tonal" closable @click:close="clearError">
+        <div class="font-weight-medium">Analysis Failed</div>
+        <div class="text-caption">{{ error }}</div>
+      </v-alert>
+    </v-col>
+
+    <!-- Results Display -->
+    <v-col v-if="hasResults" ref="resultsSection" cols="12">
+      <TopProductISNResults :results="processedResults!.results" :errors="processedResults!.errors"
+        :custom-scoring-enabled="formulaSelectionEnabled" :universal-formula="universalFormula"
+        :category-formulas="categoryFormulas" @export="handleExport" />
+    </v-col>
+  </v-row>
 </template>
 
 <script setup lang="ts">

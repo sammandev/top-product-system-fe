@@ -5,7 +5,7 @@ import { envConfig } from '@/core/config/env.config'
 import { pinia, vuetify } from '@/core/plugins'
 import router from '@/core/router'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
-import { useAuthStore } from '@/features/auth/store'
+import { useAuthStore } from '@/features/auth/stores'
 import App from './App.vue'
 
 // Import global styles

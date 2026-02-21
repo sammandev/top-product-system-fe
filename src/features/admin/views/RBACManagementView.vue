@@ -398,10 +398,12 @@
                   <v-row dense>
                     <v-col v-if="selectedRoleDetails.created_at" cols="4" class="text-medium-emphasis">Created
                       At:</v-col>
-                    <v-col v-if="selectedRoleDetails.created_at" cols="8">{{ formatDate(selectedRoleDetails.created_at) }}</v-col>
+                    <v-col v-if="selectedRoleDetails.created_at" cols="8">{{ formatDate(selectedRoleDetails.created_at)
+                      }}</v-col>
                     <v-col v-if="selectedRoleDetails.updated_at" cols="4" class="text-medium-emphasis">Updated
                       At:</v-col>
-                    <v-col v-if="selectedRoleDetails.updated_at" cols="8">{{ formatDate(selectedRoleDetails.updated_at) }}</v-col>
+                    <v-col v-if="selectedRoleDetails.updated_at" cols="8">{{ formatDate(selectedRoleDetails.updated_at)
+                      }}</v-col>
                   </v-row>
                 </v-card-text>
               </v-card>
@@ -510,8 +512,8 @@
             <p class="text-body-2 mb-2">
               Type <strong>DELETE</strong> to confirm:
             </p>
-            <v-text-field v-model="deleteRoleConfirmation" placeholder="DELETE" variant="outlined"
-              density="comfortable" hide-details autofocus @keyup.enter="handleConfirmDeleteRole" />
+            <v-text-field v-model="deleteRoleConfirmation" placeholder="DELETE" variant="outlined" density="comfortable"
+              hide-details autofocus @keyup.enter="handleConfirmDeleteRole" />
           </div>
         </v-card-text>
         <v-card-actions>
@@ -553,8 +555,8 @@
             <p class="text-body-2 mb-2">
               Type <strong>DELETE</strong> to confirm:
             </p>
-            <v-text-field v-model="deletePermConfirmation" placeholder="DELETE" variant="outlined"
-              density="comfortable" hide-details autofocus @keyup.enter="handleConfirmDeletePerm" />
+            <v-text-field v-model="deletePermConfirmation" placeholder="DELETE" variant="outlined" density="comfortable"
+              hide-details autofocus @keyup.enter="handleConfirmDeletePerm" />
           </div>
         </v-card-text>
         <v-card-actions>

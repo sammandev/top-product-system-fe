@@ -6,7 +6,7 @@ services:
   frontend:
     build:
       context: .
-      dockerfile: Dockerfile.dev
+      dockerfile: Dockerfile.staging
     image: ast-tools-frontend:dev
     container_name: ast-tools-frontend
     restart: unless-stopped

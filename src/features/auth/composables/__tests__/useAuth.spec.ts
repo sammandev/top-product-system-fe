@@ -1,7 +1,7 @@
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { createMemoryHistory, createRouter } from 'vue-router'
-import { useAuthStore } from '../../store/index'
+import { useAuthStore } from '../../stores/index'
 import { useAuth } from '../useAuth'
 
 // Create global router instance for tests

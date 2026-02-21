@@ -1,222 +1,217 @@
 <template>
-    <div>
-        <!-- UPDATED: Step 1: ISN Input & Station Lookup Card (like Station Search) -->
-        <v-card elevation="2" class="mb-4">
-            <v-card-title class="d-flex align-center justify-space-between bg-primary">
-                <div class="d-flex align-center">
-                    <v-icon class="mr-2">mdi-barcode-scan</v-icon>
-                    ISN Search - Custom Configuration
-                </div>
-                <v-btn v-if="isnProjectInfo" color="white" variant="text" prepend-icon="mdi-refresh" size="small"
-                    :disabled="loadingTestItems" @click="handleClearAll">
-                    Clear All
+  <div>
+    <!-- UPDATED: Step 1: ISN Input & Station Lookup Card (like Station Search) -->
+    <v-card elevation="2" class="mb-4">
+      <v-card-title class="d-flex align-center justify-space-between bg-primary">
+        <div class="d-flex align-center">
+          <v-icon class="mr-2">mdi-barcode-scan</v-icon>
+          ISN Search - Custom Configuration
+        </div>
+        <v-btn v-if="isnProjectInfo" color="white" variant="text" prepend-icon="mdi-refresh" size="small"
+          :disabled="loadingTestItems" @click="handleClearAll">
+          Clear All
+        </v-btn>
+      </v-card-title>
+      <v-card-text class="pt-4">
+        <!-- Input Mode Toggle -->
+        <div class="d-flex align-center mb-4">
+          <v-btn-toggle v-model="inputMode" mandatory color="primary">
+            <v-btn value="single" size="small">
+              <v-icon start>mdi-numeric-1-box</v-icon>
+              Single ISN
+            </v-btn>
+            <v-btn value="multiple" size="small">
+              <v-icon start>mdi-format-list-bulleted</v-icon>
+              Multiple ISNs
+            </v-btn>
+            <v-btn value="bulk" size="small">
+              <v-icon start>mdi-text-box-multiple</v-icon>
+              Bulk Paste
+            </v-btn>
+          </v-btn-toggle>
+
+          <v-switch v-model="enableUnifiedSearch" label="Unified Search" color="primary" hide-details density="compact"
+            class="ml-4">
+            <template #label>
+              <span class="text-body-2">Unified Search</span>
+              <v-tooltip activator="parent" location="top" max-width="400">
+                <span>When enabled, searches for all related identifiers (ISN, SSN, MAC) using SFISTSP
+                  lookup (Slower).
+                  This finds all test data from all stations that tested the same DUT, even if
+                  different identifiers were used.</span>
+              </v-tooltip>
+            </template>
+          </v-switch>
+        </div>
+
+        <!-- Single ISN Input -->
+        <v-row v-if="inputMode === 'single'">
+          <v-col cols="12" md="10">
+            <v-text-field v-model="searchIsn" label="DUT ISN" placeholder="e.g., DM2520270073965"
+              prepend-inner-icon="mdi-barcode-scan" variant="outlined" density="comfortable" clearable
+              hint="Enter ISN to lookup available stations" persistent-hint @keyup.enter="handleLookupStations" />
+          </v-col>
+          <v-col cols="12" md="2" class="d-flex align-center">
+            <v-btn color="secondary" size="large" :loading="loadingStationLookup" :disabled="!searchIsn?.trim()"
+              prepend-icon="mdi-magnify" block class="mb-5" @click="handleLookupStations">
+              Search
+            </v-btn>
+          </v-col>
+        </v-row>
+
+        <!-- Multiple ISNs Combobox -->
+        <v-row v-if="inputMode === 'multiple'">
+          <v-col cols="12">
+            <v-combobox v-model="selectedISNs" label="DUT ISNs" placeholder="Type ISN and press Enter"
+              prepend-inner-icon="mdi-barcode-scan" variant="outlined" chips multiple closable-chips clearable
+              hint="Type ISN and press Enter to add multiple" persistent-hint>
+              <template #chip="{ props, item }">
+                <v-chip v-bind="props" :text="String(item.value || item)" closable />
+              </template>
+              <template #append>
+                <v-btn color="secondary" variant="flat" size="small" :loading="loadingStationLookup"
+                  :disabled="!selectedISNs || selectedISNs.length === 0" prepend-icon="mdi-magnify"
+                  @click="handleLookupStations">
+                  Search
                 </v-btn>
-            </v-card-title>
-            <v-card-text class="pt-4">
-                <!-- Input Mode Toggle -->
-                <div class="d-flex align-center mb-4">
-                    <v-btn-toggle v-model="inputMode" mandatory color="primary">
-                        <v-btn value="single" size="small">
-                            <v-icon start>mdi-numeric-1-box</v-icon>
-                            Single ISN
-                        </v-btn>
-                        <v-btn value="multiple" size="small">
-                            <v-icon start>mdi-format-list-bulleted</v-icon>
-                            Multiple ISNs
-                        </v-btn>
-                        <v-btn value="bulk" size="small">
-                            <v-icon start>mdi-text-box-multiple</v-icon>
-                            Bulk Paste
-                        </v-btn>
-                    </v-btn-toggle>
+              </template>
+            </v-combobox>
+          </v-col>
+        </v-row>
 
-                    <v-switch v-model="enableUnifiedSearch" label="Unified Search" color="primary" hide-details
-                        density="compact" class="ml-4">
-                        <template #label>
-                            <span class="text-body-2">Unified Search</span>
-                            <v-tooltip activator="parent" location="top" max-width="400">
-                                <span>When enabled, searches for all related identifiers (ISN, SSN, MAC) using SFISTSP
-                                    lookup (Slower).
-                                    This finds all test data from all stations that tested the same DUT, even if
-                                    different identifiers were used.</span>
-                            </v-tooltip>
-                        </template>
-                    </v-switch>
+        <!-- Bulk Paste Textarea -->
+        <v-row v-if="inputMode === 'bulk'">
+          <v-col cols="12">
+            <v-textarea v-model="searchIsn" label="Bulk ISN Input"
+              placeholder="Paste multiple ISNs (one per line, comma-separated, or space-separated)&#10;Example:&#10;DM2520270073965&#10;DM2527470036123"
+              prepend-inner-icon="mdi-text-box-multiple" variant="outlined" rows="4" clearable
+              hint="Paste ISNs separated by newlines, commas, or spaces" persistent-hint>
+              <template #append>
+                <v-btn color="secondary" variant="flat" size="small" :loading="loadingStationLookup"
+                  :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify" @click="handleLookupStations">
+                  Search
+                </v-btn>
+              </template>
+            </v-textarea>
+          </v-col>
+        </v-row>
+
+        <!-- UPDATED: ISN Lookup Results - Site/Project Info -->
+        <v-card v-if="isnProjectInfo" variant="outlined" class="mt-4">
+          <v-card-text class="py-3">
+            <v-row align="center">
+              <v-col cols="auto">
+                <v-icon color="success" size="large">mdi-check-circle</v-icon>
+              </v-col>
+              <v-col>
+                <div class="d-flex flex-wrap align-center gap-3">
+                  <v-chip color="primary" label>
+                    <v-icon start>mdi-barcode-scan</v-icon>
+                    {{ parsedIsns.length }} ISN(s)
+                  </v-chip>
+                  <v-chip color="info" label>
+                    <v-icon start>mdi-map-marker</v-icon>
+                    Site: {{ isnProjectInfo.site }}
+                  </v-chip>
+                  <v-chip color="info" label>
+                    <v-icon start>mdi-folder</v-icon>
+                    Project: {{ isnProjectInfo.project }}
+                  </v-chip>
+                  <v-chip color="success" label>
+                    <v-icon start>mdi-router-wireless</v-icon>
+                    {{ availableStations.length }} Stations
+                  </v-chip>
                 </div>
-
-                <!-- Single ISN Input -->
-                <v-row v-if="inputMode === 'single'">
-                    <v-col cols="12" md="10">
-                        <v-text-field v-model="searchIsn" label="DUT ISN" placeholder="e.g., DM2520270073965"
-                            prepend-inner-icon="mdi-barcode-scan" variant="outlined" density="comfortable" clearable
-                            hint="Enter ISN to lookup available stations" persistent-hint
-                            @keyup.enter="handleLookupStations" />
-                    </v-col>
-                    <v-col cols="12" md="2" class="d-flex align-center">
-                        <v-btn color="secondary" size="large" :loading="loadingStationLookup"
-                            :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify" block class="mb-5"
-                            @click="handleLookupStations">
-                            Search
-                        </v-btn>
-                    </v-col>
-                </v-row>
-
-                <!-- Multiple ISNs Combobox -->
-                <v-row v-if="inputMode === 'multiple'">
-                    <v-col cols="12">
-                        <v-combobox v-model="selectedISNs" label="DUT ISNs" placeholder="Type ISN and press Enter"
-                            prepend-inner-icon="mdi-barcode-scan" variant="outlined" chips multiple closable-chips
-                            clearable hint="Type ISN and press Enter to add multiple" persistent-hint>
-                            <template #chip="{ props, item }">
-                                <v-chip v-bind="props" :text="String(item.value || item)" closable />
-                            </template>
-                            <template #append>
-                                <v-btn color="secondary" variant="flat" size="small" :loading="loadingStationLookup"
-                                    :disabled="!selectedISNs || selectedISNs.length === 0" prepend-icon="mdi-magnify"
-                                    @click="handleLookupStations">
-                                    Search
-                                </v-btn>
-                            </template>
-                        </v-combobox>
-                    </v-col>
-                </v-row>
-
-                <!-- Bulk Paste Textarea -->
-                <v-row v-if="inputMode === 'bulk'">
-                    <v-col cols="12">
-                        <v-textarea v-model="searchIsn" label="Bulk ISN Input"
-                            placeholder="Paste multiple ISNs (one per line, comma-separated, or space-separated)&#10;Example:&#10;DM2520270073965&#10;DM2527470036123"
-                            prepend-inner-icon="mdi-text-box-multiple" variant="outlined" rows="4" clearable
-                            hint="Paste ISNs separated by newlines, commas, or spaces" persistent-hint>
-                            <template #append>
-                                <v-btn color="secondary" variant="flat" size="small" :loading="loadingStationLookup"
-                                    :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify"
-                                    @click="handleLookupStations">
-                                    Search
-                                </v-btn>
-                            </template>
-                        </v-textarea>
-                    </v-col>
-                </v-row>
-
-                <!-- UPDATED: ISN Lookup Results - Site/Project Info -->
-                <v-card v-if="isnProjectInfo" variant="outlined" class="mt-4">
-                    <v-card-text class="py-3">
-                        <v-row align="center">
-                            <v-col cols="auto">
-                                <v-icon color="success" size="large">mdi-check-circle</v-icon>
-                            </v-col>
-                            <v-col>
-                                <div class="d-flex flex-wrap align-center gap-3">
-                                    <v-chip color="primary" label>
-                                        <v-icon start>mdi-barcode-scan</v-icon>
-                                        {{ parsedIsns.length }} ISN(s)
-                                    </v-chip>
-                                    <v-chip color="info" label>
-                                        <v-icon start>mdi-map-marker</v-icon>
-                                        Site: {{ isnProjectInfo.site }}
-                                    </v-chip>
-                                    <v-chip color="info" label>
-                                        <v-icon start>mdi-folder</v-icon>
-                                        Project: {{ isnProjectInfo.project }}
-                                    </v-chip>
-                                    <v-chip color="success" label>
-                                        <v-icon start>mdi-router-wireless</v-icon>
-                                        {{ availableStations.length }} Stations
-                                    </v-chip>
-                                </div>
-                            </v-col>
-                        </v-row>
-                    </v-card-text>
-                </v-card>
-
-                <!-- UPDATED: Configure Stations Button (like Station Search) -->
-                <v-row v-if="isnProjectInfo" dense class="mt-2">
-                    <v-col cols="12">
-                        <v-btn color="secondary" block size="large" prepend-icon="mdi-format-list-checkbox"
-                            :disabled="availableStations.length === 0" :loading="loadingStations"
-                            @click="openStationSelectionDialog">
-                            Configure Stations
-                            <v-chip v-if="configuredStationsCount > 0" size="small" color="success" variant="flat"
-                                class="ml-2">
-                                {{ configuredStationsCount }} Selected
-                            </v-chip>
-                        </v-btn>
-                    </v-col>
-                </v-row>
-
-                <!-- UPDATED: Configured Stations Summary (like Station Search) -->
-                <v-card v-if="configuredStationsCount > 0" variant="outlined" class="mt-4">
-                    <v-card-title class="text-subtitle-1">
-                        Configured Stations Summary
-                    </v-card-title>
-                    <v-card-text class="pa-2">
-                        <v-chip v-for="(config, displayName) in stationConfigs" :key="displayName" class="ma-1"
-                            color="primary" variant="tonal" closable @click="editStationConfig(displayName)"
-                            @click:close="removeStationConfig(displayName)">
-                            {{ displayName }}
-                            <v-badge :content="config.deviceIds.length || config.totalDeviceCount || 'All'" color="success" inline class="ml-1" />
-                            <v-chip size="x-small" class="ml-1" variant="outlined">{{ config.testStatus }}</v-chip>
-                        </v-chip>
-                    </v-card-text>
-                </v-card>
-            </v-card-text>
+              </v-col>
+            </v-row>
+          </v-card-text>
         </v-card>
 
-        <!-- Error Alert -->
-        <v-alert v-if="error" type="error" class="mb-4" closable @click:close="error = null">
-            {{ error }}
-        </v-alert>
+        <!-- UPDATED: Configure Stations Button (like Station Search) -->
+        <v-row v-if="isnProjectInfo" dense class="mt-2">
+          <v-col cols="12">
+            <v-btn color="secondary" block size="large" prepend-icon="mdi-format-list-checkbox"
+              :disabled="availableStations.length === 0" :loading="loadingStations" @click="openStationSelectionDialog">
+              Configure Stations
+              <v-chip v-if="configuredStationsCount > 0" size="small" color="success" variant="flat" class="ml-2">
+                {{ configuredStationsCount }} Selected
+              </v-chip>
+            </v-btn>
+          </v-col>
+        </v-row>
 
-        <!-- UPDATED: Results Section with TopProductIplasRanking (like Station Search) -->
-        <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
-            :calculating-scores="calculatingScores" :exporting-all="exportingAll" @row-click="handleRowClick"
-            @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords"
-            @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores" />
+        <!-- UPDATED: Configured Stations Summary (like Station Search) -->
+        <v-card v-if="configuredStationsCount > 0" variant="outlined" class="mt-4">
+          <v-card-title class="text-subtitle-1">
+            Configured Stations Summary
+          </v-card-title>
+          <v-card-text class="pa-2">
+            <v-chip v-for="(config, displayName) in stationConfigs" :key="displayName" class="ma-1" color="primary"
+              variant="tonal" closable @click="editStationConfig(displayName)"
+              @click:close="removeStationConfig(displayName)">
+              {{ displayName }}
+              <v-badge :content="config.deviceIds.length || config.totalDeviceCount || 'All'" color="success" inline
+                class="ml-1" />
+              <v-chip size="x-small" class="ml-1" variant="outlined">{{ config.testStatus }}</v-chip>
+            </v-chip>
+          </v-card-text>
+        </v-card>
+      </v-card-text>
+    </v-card>
 
-        <!-- Station Selection Dialog -->
-        <StationSelectionDialog v-model:show="showStationSelectionDialog" :stations="(availableStations as any)"
-            :site="isnProjectInfo?.site || ''" :project="isnProjectInfo?.project || ''"
-            :selected-configs="stationConfigs" :loading="loadingStations" @station-click="handleStationClick"
-            @confirm="handleStationSelectionConfirm" />
+    <!-- Error Alert -->
+    <v-alert v-if="error" type="error" class="mb-4" closable @click:close="error = null">
+      {{ error }}
+    </v-alert>
 
-        <!-- Station Config Dialog -->
-        <StationConfigDialog v-model:show="showStationConfigDialog" :station="selectedStationForConfig"
-            :site="isnProjectInfo?.site || ''" :project="isnProjectInfo?.project || ''"
-            :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
-            :loading-devices="loadingCurrentStationDevices" :device-error="deviceError"
-            :available-test-items="currentStationTestItems" :loading-test-items="loadingCurrentStationTestItems"
-            :test-items-error="testItemsError" @save="handleStationConfigSave" @remove="handleStationConfigRemove"
-            @refresh-devices="refreshCurrentStationDevices" @refresh-test-items="refreshCurrentStationTestItems" />
+    <!-- UPDATED: Results Section with TopProductIplasRanking (like Station Search) -->
+    <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
+      :calculating-scores="calculatingScores" :exporting-all="exportingAll" @row-click="handleRowClick"
+      @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords"
+      @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores" />
 
-        <!-- Details Dialog -->
-        <TopProductIplasDetailsDialog v-model="showDetailsDialog" :record="detailsRecord"
-            :downloading="detailsDownloading" @download="handleDownloadFromDetails" />
-    </div>
+    <!-- Station Selection Dialog -->
+    <StationSelectionDialog v-model:show="showStationSelectionDialog" :stations="(availableStations as any)"
+      :site="isnProjectInfo?.site || ''" :project="isnProjectInfo?.project || ''" :selected-configs="stationConfigs"
+      :loading="loadingStations" @station-click="handleStationClick" @confirm="handleStationSelectionConfirm" />
+
+    <!-- Station Config Dialog -->
+    <StationConfigDialog v-model:show="showStationConfigDialog" :station="selectedStationForConfig"
+      :site="isnProjectInfo?.site || ''" :project="isnProjectInfo?.project || ''"
+      :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
+      :loading-devices="loadingCurrentStationDevices" :device-error="deviceError"
+      :available-test-items="currentStationTestItems" :loading-test-items="loadingCurrentStationTestItems"
+      :test-items-error="testItemsError" @save="handleStationConfigSave" @remove="handleStationConfigRemove"
+      @refresh-devices="refreshCurrentStationDevices" @refresh-test-items="refreshCurrentStationTestItems" />
+
+    <!-- Details Dialog -->
+    <TopProductIplasDetailsDialog v-model="showDetailsDialog" :record="detailsRecord" :downloading="detailsDownloading"
+      @download="handleDownloadFromDetails" />
+  </div>
 </template>
 
 <script setup lang="ts">
 // UPDATED: Complete rewrite of script section for new UX flow
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useScoring } from '@/features/dut/composables/useScoring'
-import type { IplasDownloadCsvLogInfo } from '@/features/dut_logs/api/iplasProxyApi'
+import type { IplasDownloadCsvLogInfo } from '@/features/dut-logs/api/iplasProxyApi'
 import {
   type ExportRecord,
   type ExportTestItem,
   type IplasIsnProjectInfo,
   type IplasIsnSearchRecord,
   iplasProxyApi,
-} from '@/features/dut_logs/api/iplasProxyApi'
+} from '@/features/dut-logs/api/iplasProxyApi'
 import {
   lookupIsnsBatch,
   type SfistspIsnReferenceResponse,
-} from '@/features/dut_logs/api/sfistspApi'
+} from '@/features/dut-logs/api/sfistspApi'
 import {
   type CsvTestItemData,
   type Station,
   type TestItem,
   useIplasApi,
-} from '@/features/dut_logs/composables/useIplasApi'
+} from '@/features/dut-logs/composables/useIplasApi'
 import { getErrorMessage } from '@/shared/utils'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
 import type { TestItemInfo } from './StationConfigDialog.vue'
@@ -1341,10 +1336,10 @@ onUnmounted(() => {
 
 <style scoped>
 .gap-2 {
-    gap: 0.5rem;
+  gap: 0.5rem;
 }
 
 .gap-3 {
-    gap: 0.75rem;
+  gap: 0.75rem;
 }
 </style>

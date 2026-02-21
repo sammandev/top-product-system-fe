@@ -1,206 +1,200 @@
 <template>
-    <!-- Test Item Selection Dialog -->
-    <v-dialog v-model="testItemDialog" max-width="1000px">
-        <v-card>
-            <v-card-title class="d-flex justify-space-between align-center bg-primary-lighten-5">
-                <div>
-                    <v-icon class="mr-2" :color="dialogFilterType === 'include' ? 'success' : 'error'">
-                        {{ dialogFilterType === 'include' ? 'mdi-filter-plus' : 'mdi-filter-minus' }}
-                    </v-icon>
-                    {{ dialogFilterType === 'include' ? 'Include' : 'Exclude' }} Test Items
-                </div>
-                <v-btn icon="mdi-close" variant="text" @click="testItemDialog = false" />
-            </v-card-title>
+  <!-- Test Item Selection Dialog -->
+  <v-dialog v-model="testItemDialog" max-width="1000px">
+    <v-card>
+      <v-card-title class="d-flex justify-space-between align-center bg-primary-lighten-5">
+        <div>
+          <v-icon class="mr-2" :color="dialogFilterType === 'include' ? 'success' : 'error'">
+            {{ dialogFilterType === 'include' ? 'mdi-filter-plus' : 'mdi-filter-minus' }}
+          </v-icon>
+          {{ dialogFilterType === 'include' ? 'Include' : 'Exclude' }} Test Items
+        </div>
+        <v-btn icon="mdi-close" variant="text" @click="testItemDialog = false" />
+      </v-card-title>
 
-            <v-card-text class="pa-4">
-                <!-- Search Bar -->
-                <v-text-field v-model="dialogSearch" prepend-inner-icon="mdi-magnify" label="Search Test Items"
-                    placeholder="Type to search..." clearable density="comfortable" variant="outlined" class="mb-4" />
+      <v-card-text class="pa-4">
+        <!-- Search Bar -->
+        <v-text-field v-model="dialogSearch" prepend-inner-icon="mdi-magnify" label="Search Test Items"
+          placeholder="Type to search..." clearable density="comfortable" variant="outlined" class="mb-4" />
 
-                <!-- Action Buttons -->
-                <div class="d-flex mb-4" style="gap: 8px;">
-                    <v-btn size="small" variant="tonal" color="primary" prepend-icon="mdi-select-all"
-                        @click="selectAllDialogItems">
-                        Select All
-                    </v-btn>
-                    <v-btn size="small" variant="tonal" color="info" prepend-icon="mdi-select-inverse"
-                        @click="invertDialogSelection">
-                        Select Inverse
-                    </v-btn>
-                    <v-btn size="small" variant="tonal" color="warning" prepend-icon="mdi-select-off"
-                        @click="deselectAllDialogItems">
-                        Deselect All
-                    </v-btn>
-                    <v-spacer />
-                    <v-chip size="small" color="primary" variant="tonal">
-                        {{ dialogSelectedCount }} selected
-                    </v-chip>
-                </div>
+        <!-- Action Buttons -->
+        <div class="d-flex mb-4" style="gap: 8px;">
+          <v-btn size="small" variant="tonal" color="primary" prepend-icon="mdi-select-all"
+            @click="selectAllDialogItems">
+            Select All
+          </v-btn>
+          <v-btn size="small" variant="tonal" color="info" prepend-icon="mdi-select-inverse"
+            @click="invertDialogSelection">
+            Select Inverse
+          </v-btn>
+          <v-btn size="small" variant="tonal" color="warning" prepend-icon="mdi-select-off"
+            @click="deselectAllDialogItems">
+            Deselect All
+          </v-btn>
+          <v-spacer />
+          <v-chip size="small" color="primary" variant="tonal">
+            {{ dialogSelectedCount }} selected
+          </v-chip>
+        </div>
 
-                <!-- Test Item List with Virtual Scrolling for Performance -->
-                <v-card variant="outlined">
-                    <v-virtual-scroll :items="dialogFilteredItems" height="500" item-height="48">
-                        <template v-slot:default="{ item }">
-                            <v-list-item :key="item" @click="toggleDialogItem(item)" class="test-item-row">
-                                <template #prepend>
-                                    <v-checkbox-btn :model-value="isDialogItemSelected(item)"
-                                        @click.stop="toggleDialogItem(item)" />
-                                </template>
-                                <v-list-item-title class="text-wrap"
-                                    style="white-space: normal; word-break: break-word;">
-                                    {{ item.replace(/\.\*/, '').replace(/\s+\(Grouped - \d+ items\)$/i, '') }}
-                                </v-list-item-title>
-                                <template #append v-if="/\(Grouped - \d+ items\)$/i.test(item)">
-                                    <v-chip size="x-small" color="info" variant="outlined">
-                                        {{ item.match(/\(Grouped - (\d+) items\)$/i)?.[1] }} items
-                                    </v-chip>
-                                </template>
-                            </v-list-item>
-                        </template>
-                    </v-virtual-scroll>
-                </v-card>
-            </v-card-text>
-
-            <v-card-actions class="pa-4">
-                <v-spacer />
-                <v-btn variant="text" @click="testItemDialog = false">Cancel</v-btn>
-                <v-btn variant="elevated" color="primary" @click="applyDialogSelection">Apply</v-btn>
-            </v-card-actions>
+        <!-- Test Item List with Virtual Scrolling for Performance -->
+        <v-card variant="outlined">
+          <v-virtual-scroll :items="dialogFilteredItems" height="500" item-height="48">
+            <template v-slot:default="{ item }">
+              <v-list-item :key="item" @click="toggleDialogItem(item)" class="test-item-row">
+                <template #prepend>
+                  <v-checkbox-btn :model-value="isDialogItemSelected(item)" @click.stop="toggleDialogItem(item)" />
+                </template>
+                <v-list-item-title class="text-wrap" style="white-space: normal; word-break: break-word;">
+                  {{ item.replace(/\.\*/, '').replace(/\s+\(Grouped - \d+ items\)$/i, '') }}
+                </v-list-item-title>
+                <template #append v-if="/\(Grouped - \d+ items\)$/i.test(item)">
+                  <v-chip size="x-small" color="info" variant="outlined">
+                    {{ item.match(/\(Grouped - (\d+) items\)$/i)?.[1] }} items
+                  </v-chip>
+                </template>
+              </v-list-item>
+            </template>
+          </v-virtual-scroll>
         </v-card>
-    </v-dialog>
+      </v-card-text>
 
-    <v-card variant="outlined" class="station-filter-card">
-        <v-card-title class="d-flex align-center bg-primary-lighten-5">
-            <v-icon class="mr-2" color="primary">mdi-access-point</v-icon>
-            <span class="text-h6">{{ stationName }}</span>
-            <v-chip v-if="stationIdentifier !== stationName" size="small" class="ml-2" variant="tonal">
-                ID: {{ stationIdentifier }}
-            </v-chip>
-            <v-spacer />
-            <v-btn v-if="hasFilters" icon="mdi-close" size="small" variant="text" @click="clearFilters"
-                title="Clear all filters for this station">
-            </v-btn>
-        </v-card-title>
-
-        <v-card-text>
-            <v-row>
-                <!-- Device Selection -->
-                <v-col cols="12">
-                    <v-combobox v-model="localDeviceIdentifiers" :items="availableDevices" :loading="loading"
-                        label="Device Identifiers (Optional)" placeholder="Select specific devices for this station"
-                        multiple chips closable-chips clearable
-                        hint="Override universal device filters for this station" persistent-hint>
-                        <template #prepend-inner>
-                            <v-icon size="small">mdi-chip</v-icon>
-                        </template>
-                        <template #chip="{ props: chipProps, item }">
-                            <v-chip v-bind="chipProps" :text="String(item.value || item)" closable size="small" />
-                        </template>
-                    </v-combobox>
-                </v-col>
-
-                <!-- Test Item Include Filters -->
-                <v-col cols="12">
-                    <div class="d-flex align-center" style="gap: 8px;">
-                        <v-combobox v-model="localTestItemFilters" :items="testItemSuggestions" :loading="loading"
-                            label="Include Test Items (Regex)" placeholder="e.g., WiFi_TX_POW.*, Bluetooth_.*" multiple
-                            chips closable-chips clearable style="flex: 1;"
-                            hint="Regex patterns to include specific test items for this station" persistent-hint
-                            @click:clear="localTestItemFilters = []" :custom-filter="customFilterFunction"
-                            @update:search-input="handleSearchInput">
-                            <template #prepend-inner>
-                                <v-icon size="small" color="success">mdi-filter-plus</v-icon>
-                            </template>
-                            <template #item="{ item }">
-                                <v-list-item :title="String(item.value || item).replace(/\.\*/, '')"
-                                    @click="handleItemClick(String(item.value || item), 'include', $event)">
-                                    <template #prepend>
-                                        <v-checkbox-btn
-                                            :model-value="isItemSelected(String(item.value || item), 'include')"
-                                            @click.stop="handleCheckboxClick(String(item.value || item), 'include', $event)" />
-                                    </template>
-                                </v-list-item>
-                            </template>
-                            <template #chip="{ props: chipProps, item }">
-                                <v-chip v-bind="chipProps" :text="String(item.value || item).replace(/\.\*/, '')"
-                                    closable size="small" color="success" variant="tonal" />
-                            </template>
-                        </v-combobox>
-                        <v-btn density="default" variant="tonal" color="success" :rounded="1"
-                            @click="openTestItemDialog('include')" title="Advanced Test Item Selection"
-                            style="height: 56px; min-width: 56px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center;">
-                            <v-icon size="large">mdi-filter-settings</v-icon>
-                        </v-btn>
-                    </div>
-                </v-col>
-
-                <!-- Test Item Exclude Filters -->
-                <v-col cols="12">
-                    <div class="d-flex align-center" style="gap: 8px;">
-                        <v-combobox v-model="localExcludeTestItemFilters" :items="testItemSuggestions"
-                            :loading="loading" label="Exclude Test Items (Regex)"
-                            placeholder="e.g., .*_OLD.*, .*_BACKUP.*" multiple chips closable-chips clearable
-                            hint="Regex patterns to exclude test items for this station" persistent-hint
-                            @click:clear="localExcludeTestItemFilters = []" style="flex: 1;"
-                            :custom-filter="customFilterFunction" @update:search-input="handleSearchInput">
-                            <template #prepend-inner>
-                                <v-icon size="small" color="error">mdi-filter-minus</v-icon>
-                            </template>
-                            <template #item="{ item }">
-                                <v-list-item :title="String(item.value || item).replace(/\.\*/, '')"
-                                    @click="handleItemClick(String(item.value || item), 'exclude', $event)">
-                                    <template #prepend>
-                                        <v-checkbox-btn
-                                            :model-value="isItemSelected(String(item.value || item), 'exclude')"
-                                            @click.stop="handleCheckboxClick(String(item.value || item), 'exclude', $event)" />
-                                    </template>
-                                </v-list-item>
-                            </template>
-                            <template #chip="{ props: chipProps, item }">
-                                <v-chip v-bind="chipProps" :text="String(item.value || item).replace(/\.\*/, '')"
-                                    closable size="small" color="error" variant="tonal" />
-                            </template>
-                        </v-combobox>
-                        <v-btn variant="tonal" color="error" :rounded="1" @click="openTestItemDialog('exclude')"
-                            title="Advanced Test Item Selection"
-                            style="height: 56px; min-width: 56px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center;">
-                            <v-icon size="large">mdi-filter-settings</v-icon>
-                        </v-btn>
-                    </div>
-                </v-col>
-
-                <!-- Info Alert -->
-                <v-col v-if="!hasFilters" cols="12">
-                    <v-alert type="info" variant="tonal" density="compact">
-                        No station-specific filters configured. Universal filters will apply.
-                    </v-alert>
-                </v-col>
-
-                <!-- Active Filters Summary -->
-                <v-col v-else cols="12">
-                    <v-alert type="success" variant="tonal" density="compact">
-                        <template #prepend>
-                            <v-icon size="small">mdi-check-circle</v-icon>
-                        </template>
-                        <div class="text-caption">
-                            <span v-if="localDeviceIdentifiers.length > 0">
-                                <strong>{{ localDeviceIdentifiers.length }}</strong> device(s)
-                            </span>
-                            <span v-if="localTestItemFilters.length > 0">
-                                <span v-if="localDeviceIdentifiers.length > 0"> • </span>
-                                <strong>{{ localTestItemFilters.length }}</strong> include pattern(s)
-                            </span>
-                            <span v-if="localExcludeTestItemFilters.length > 0">
-                                <span v-if="localDeviceIdentifiers.length > 0 || localTestItemFilters.length > 0"> •
-                                </span>
-                                <strong>{{ localExcludeTestItemFilters.length }}</strong> exclude pattern(s)
-                            </span>
-                        </div>
-                    </v-alert>
-                </v-col>
-            </v-row>
-        </v-card-text>
+      <v-card-actions class="pa-4">
+        <v-spacer />
+        <v-btn variant="text" @click="testItemDialog = false">Cancel</v-btn>
+        <v-btn variant="elevated" color="primary" @click="applyDialogSelection">Apply</v-btn>
+      </v-card-actions>
     </v-card>
+  </v-dialog>
+
+  <v-card variant="outlined" class="station-filter-card">
+    <v-card-title class="d-flex align-center bg-primary-lighten-5">
+      <v-icon class="mr-2" color="primary">mdi-access-point</v-icon>
+      <span class="text-h6">{{ stationName }}</span>
+      <v-chip v-if="stationIdentifier !== stationName" size="small" class="ml-2" variant="tonal">
+        ID: {{ stationIdentifier }}
+      </v-chip>
+      <v-spacer />
+      <v-btn v-if="hasFilters" icon="mdi-close" size="small" variant="text" @click="clearFilters"
+        title="Clear all filters for this station">
+      </v-btn>
+    </v-card-title>
+
+    <v-card-text>
+      <v-row>
+        <!-- Device Selection -->
+        <v-col cols="12">
+          <v-combobox v-model="localDeviceIdentifiers" :items="availableDevices" :loading="loading"
+            label="Device Identifiers (Optional)" placeholder="Select specific devices for this station" multiple chips
+            closable-chips clearable hint="Override universal device filters for this station" persistent-hint>
+            <template #prepend-inner>
+              <v-icon size="small">mdi-chip</v-icon>
+            </template>
+            <template #chip="{ props: chipProps, item }">
+              <v-chip v-bind="chipProps" :text="String(item.value || item)" closable size="small" />
+            </template>
+          </v-combobox>
+        </v-col>
+
+        <!-- Test Item Include Filters -->
+        <v-col cols="12">
+          <div class="d-flex align-center" style="gap: 8px;">
+            <v-combobox v-model="localTestItemFilters" :items="testItemSuggestions" :loading="loading"
+              label="Include Test Items (Regex)" placeholder="e.g., WiFi_TX_POW.*, Bluetooth_.*" multiple chips
+              closable-chips clearable style="flex: 1;"
+              hint="Regex patterns to include specific test items for this station" persistent-hint
+              @click:clear="localTestItemFilters = []" :custom-filter="customFilterFunction"
+              @update:search-input="handleSearchInput">
+              <template #prepend-inner>
+                <v-icon size="small" color="success">mdi-filter-plus</v-icon>
+              </template>
+              <template #item="{ item }">
+                <v-list-item :title="String(item.value || item).replace(/\.\*/, '')"
+                  @click="handleItemClick(String(item.value || item), 'include', $event)">
+                  <template #prepend>
+                    <v-checkbox-btn :model-value="isItemSelected(String(item.value || item), 'include')"
+                      @click.stop="handleCheckboxClick(String(item.value || item), 'include', $event)" />
+                  </template>
+                </v-list-item>
+              </template>
+              <template #chip="{ props: chipProps, item }">
+                <v-chip v-bind="chipProps" :text="String(item.value || item).replace(/\.\*/, '')" closable size="small"
+                  color="success" variant="tonal" />
+              </template>
+            </v-combobox>
+            <v-btn density="default" variant="tonal" color="success" :rounded="1" @click="openTestItemDialog('include')"
+              title="Advanced Test Item Selection"
+              style="height: 56px; min-width: 56px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center;">
+              <v-icon size="large">mdi-filter-settings</v-icon>
+            </v-btn>
+          </div>
+        </v-col>
+
+        <!-- Test Item Exclude Filters -->
+        <v-col cols="12">
+          <div class="d-flex align-center" style="gap: 8px;">
+            <v-combobox v-model="localExcludeTestItemFilters" :items="testItemSuggestions" :loading="loading"
+              label="Exclude Test Items (Regex)" placeholder="e.g., .*_OLD.*, .*_BACKUP.*" multiple chips closable-chips
+              clearable hint="Regex patterns to exclude test items for this station" persistent-hint
+              @click:clear="localExcludeTestItemFilters = []" style="flex: 1;" :custom-filter="customFilterFunction"
+              @update:search-input="handleSearchInput">
+              <template #prepend-inner>
+                <v-icon size="small" color="error">mdi-filter-minus</v-icon>
+              </template>
+              <template #item="{ item }">
+                <v-list-item :title="String(item.value || item).replace(/\.\*/, '')"
+                  @click="handleItemClick(String(item.value || item), 'exclude', $event)">
+                  <template #prepend>
+                    <v-checkbox-btn :model-value="isItemSelected(String(item.value || item), 'exclude')"
+                      @click.stop="handleCheckboxClick(String(item.value || item), 'exclude', $event)" />
+                  </template>
+                </v-list-item>
+              </template>
+              <template #chip="{ props: chipProps, item }">
+                <v-chip v-bind="chipProps" :text="String(item.value || item).replace(/\.\*/, '')" closable size="small"
+                  color="error" variant="tonal" />
+              </template>
+            </v-combobox>
+            <v-btn variant="tonal" color="error" :rounded="1" @click="openTestItemDialog('exclude')"
+              title="Advanced Test Item Selection"
+              style="height: 56px; min-width: 56px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center;">
+              <v-icon size="large">mdi-filter-settings</v-icon>
+            </v-btn>
+          </div>
+        </v-col>
+
+        <!-- Info Alert -->
+        <v-col v-if="!hasFilters" cols="12">
+          <v-alert type="info" variant="tonal" density="compact">
+            No station-specific filters configured. Universal filters will apply.
+          </v-alert>
+        </v-col>
+
+        <!-- Active Filters Summary -->
+        <v-col v-else cols="12">
+          <v-alert type="success" variant="tonal" density="compact">
+            <template #prepend>
+              <v-icon size="small">mdi-check-circle</v-icon>
+            </template>
+            <div class="text-caption">
+              <span v-if="localDeviceIdentifiers.length > 0">
+                <strong>{{ localDeviceIdentifiers.length }}</strong> device(s)
+              </span>
+              <span v-if="localTestItemFilters.length > 0">
+                <span v-if="localDeviceIdentifiers.length > 0"> • </span>
+                <strong>{{ localTestItemFilters.length }}</strong> include pattern(s)
+              </span>
+              <span v-if="localExcludeTestItemFilters.length > 0">
+                <span v-if="localDeviceIdentifiers.length > 0 || localTestItemFilters.length > 0"> •
+                </span>
+                <strong>{{ localExcludeTestItemFilters.length }}</strong> exclude pattern(s)
+              </span>
+            </div>
+          </v-alert>
+        </v-col>
+      </v-row>
+    </v-card-text>
+  </v-card>
 </template>
 
 <script setup lang="ts">
@@ -717,6 +711,6 @@ function clearFilters() {
 
 <style scoped>
 .station-filter-card {
-    border-left: 4px solid rgb(var(--v-theme-primary));
+  border-left: 4px solid rgb(var(--v-theme-primary));
 }
 </style>

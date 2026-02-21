@@ -288,10 +288,9 @@ export const adminApi = {
     role: string
     granted: string
   }> {
-    const formData = new FormData()
-    formData.append('perm_id', permissionId.toString())
-
-    const { data } = await apiClient.post(`/api/rbac/roles/${roleId}/grant`, formData)
+    const { data } = await apiClient.post(`/api/admin/rbac/roles/${roleId}/grant`, {
+      perm_id: permissionId,
+    })
     return data
   },
 
@@ -305,10 +304,9 @@ export const adminApi = {
     role: string
     revoked: string
   }> {
-    const formData = new FormData()
-    formData.append('perm_id', permissionId.toString())
-
-    const { data } = await apiClient.post(`/api/rbac/roles/${roleId}/revoke`, formData)
+    const { data } = await apiClient.post(`/api/admin/rbac/roles/${roleId}/revoke`, {
+      perm_id: permissionId,
+    })
     return data
   },
 
@@ -323,10 +321,9 @@ export const adminApi = {
     role: string
     assigned: boolean
   }> {
-    const formData = new FormData()
-    formData.append('role_id', roleId.toString())
-
-    const { data } = await apiClient.post(`/api/rbac/users/${userId}/assign-role`, formData)
+    const { data } = await apiClient.post(`/api/admin/rbac/users/${userId}/assign-role`, {
+      role_id: roleId,
+    })
     return data
   },
 
@@ -341,10 +338,9 @@ export const adminApi = {
     role: string
     removed: boolean
   }> {
-    const formData = new FormData()
-    formData.append('role_id', roleId.toString())
-
-    const { data } = await apiClient.post(`/api/rbac/users/${userId}/remove-role`, formData)
+    const { data } = await apiClient.post(`/api/admin/rbac/users/${userId}/remove-role`, {
+      role_id: roleId,
+    })
     return data
   },
 }

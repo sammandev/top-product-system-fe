@@ -1,53 +1,53 @@
 <template>
-    <v-card>
-        <v-card-title class="d-flex align-center">
-            <v-icon start>mdi-chart-bar</v-icon>
-            Score Visualization
-        </v-card-title>
+  <v-card>
+    <v-card-title class="d-flex align-center">
+      <v-icon start>mdi-chart-bar</v-icon>
+      Score Visualization
+    </v-card-title>
 
-        <v-card-text>
-            <!-- Chart Type Selector -->
-            <v-tabs v-model="selectedChart" class="mb-4">
-                <v-tab value="distribution">
-                    <v-icon start>mdi-chart-bar</v-icon>
-                    Distribution
-                </v-tab>
-                <v-tab value="trend">
-                    <v-icon start>mdi-chart-line</v-icon>
-                    Trend
-                </v-tab>
-                <v-tab value="comparison">
-                    <v-icon start>mdi-chart-scatter-plot</v-icon>
-                    Comparison
-                </v-tab>
-            </v-tabs>
+    <v-card-text>
+      <!-- Chart Type Selector -->
+      <v-tabs v-model="selectedChart" class="mb-4">
+        <v-tab value="distribution">
+          <v-icon start>mdi-chart-bar</v-icon>
+          Distribution
+        </v-tab>
+        <v-tab value="trend">
+          <v-icon start>mdi-chart-line</v-icon>
+          Trend
+        </v-tab>
+        <v-tab value="comparison">
+          <v-icon start>mdi-chart-scatter-plot</v-icon>
+          Comparison
+        </v-tab>
+      </v-tabs>
 
-            <!-- Chart Container -->
-            <v-window v-model="selectedChart">
-                <!-- Score Distribution Chart -->
-                <v-window-item value="distribution">
-                    <div ref="distributionChartRef" class="chart-container" />
-                </v-window-item>
+      <!-- Chart Container -->
+      <v-window v-model="selectedChart">
+        <!-- Score Distribution Chart -->
+        <v-window-item value="distribution">
+          <div ref="distributionChartRef" class="chart-container" />
+        </v-window-item>
 
-                <!-- Score Trend Chart -->
-                <v-window-item value="trend">
-                    <div ref="trendChartRef" class="chart-container" />
-                </v-window-item>
+        <!-- Score Trend Chart -->
+        <v-window-item value="trend">
+          <div ref="trendChartRef" class="chart-container" />
+        </v-window-item>
 
-                <!-- Score Comparison Chart -->
-                <v-window-item value="comparison">
-                    <div ref="comparisonChartRef" class="chart-container" />
-                </v-window-item>
-            </v-window>
+        <!-- Score Comparison Chart -->
+        <v-window-item value="comparison">
+          <div ref="comparisonChartRef" class="chart-container" />
+        </v-window-item>
+      </v-window>
 
-            <!-- No Data Alert -->
-            <v-alert v-if="!hasData" type="info" variant="tonal" density="compact" class="mt-4">
-                <div class="text-caption">
-                    No data available for visualization. Run an analysis to see charts.
-                </div>
-            </v-alert>
-        </v-card-text>
-    </v-card>
+      <!-- No Data Alert -->
+      <v-alert v-if="!hasData" type="info" variant="tonal" density="compact" class="mt-4">
+        <div class="text-caption">
+          No data available for visualization. Run an analysis to see charts.
+        </div>
+      </v-alert>
+    </v-card-text>
+  </v-card>
 </template>
 
 <script setup lang="ts">
@@ -402,12 +402,12 @@ onUnmounted(() => {
 
 <style scoped>
 .chart-container {
-    width: 100%;
-    height: 400px;
-    min-height: 400px;
+  width: 100%;
+  height: 400px;
+  min-height: 400px;
 }
 
 :deep(.v-window__container) {
-    min-height: 400px;
+  min-height: 400px;
 }
 </style>

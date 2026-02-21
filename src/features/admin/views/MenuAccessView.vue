@@ -12,22 +12,12 @@
               </p>
             </div>
             <div class="d-flex gap-2">
-              <v-btn
-                color="secondary"
-                variant="tonal"
-                prepend-icon="mdi-database-refresh"
-                :loading="initializing"
-                @click="handleInitialize"
-              >
+              <v-btn color="secondary" variant="tonal" prepend-icon="mdi-database-refresh" :loading="initializing"
+                @click="handleInitialize">
                 Initialize Defaults
               </v-btn>
-              <v-btn
-                color="primary"
-                prepend-icon="mdi-content-save"
-                :loading="saving"
-                :disabled="!hasChanges"
-                @click="handleSave"
-              >
+              <v-btn color="primary" prepend-icon="mdi-content-save" :loading="saving" :disabled="!hasChanges"
+                @click="handleSave">
                 Save Changes
               </v-btn>
             </div>
@@ -69,32 +59,16 @@
                     <v-icon class="mr-2" color="primary">mdi-home</v-icon>
                     <span class="text-h6">Main Section</span>
                     <v-spacer />
-                    <v-btn
-                      variant="text"
-                      size="small"
-                      @click="toggleSection('main', role)"
-                    >
+                    <v-btn variant="text" size="small" @click="toggleSection('main', role)">
                       {{ isSectionAllSelected('main', role) ? 'Deselect All' : 'Select All' }}
                     </v-btn>
                   </div>
                   <v-row>
-                    <v-col
-                      v-for="menu in getMenusBySection('main')"
-                      :key="menu.menu_key"
-                      cols="12"
-                      sm="6"
-                      md="4"
-                      lg="3"
-                    >
-                      <v-checkbox
-                        v-model="roleMenuAccess[role]"
-                        :value="menu.menu_key"
-                        :label="getMenuDisplayName(menu)"
-                        density="compact"
-                        hide-details
-                        :disabled="isProtectedMenu(menu.menu_key, role)"
-                        color="primary"
-                      />
+                    <v-col v-for="menu in getMenusBySection('main')" :key="menu.menu_key" cols="12" sm="6" md="4"
+                      lg="3">
+                      <v-checkbox v-model="roleMenuAccess[role]" :value="menu.menu_key"
+                        :label="getMenuDisplayName(menu)" density="compact" hide-details
+                        :disabled="isProtectedMenu(menu.menu_key, role)" color="primary" />
                     </v-col>
                   </v-row>
                 </div>
@@ -107,32 +81,16 @@
                     <v-icon class="mr-2" color="warning">mdi-tools</v-icon>
                     <span class="text-h6">Tools Section</span>
                     <v-spacer />
-                    <v-btn
-                      variant="text"
-                      size="small"
-                      @click="toggleSection('tools', role)"
-                    >
+                    <v-btn variant="text" size="small" @click="toggleSection('tools', role)">
                       {{ isSectionAllSelected('tools', role) ? 'Deselect All' : 'Select All' }}
                     </v-btn>
                   </div>
                   <v-row>
-                    <v-col
-                      v-for="menu in getMenusBySection('tools')"
-                      :key="menu.menu_key"
-                      cols="12"
-                      sm="6"
-                      md="4"
-                      lg="3"
-                    >
-                      <v-checkbox
-                        v-model="roleMenuAccess[role]"
-                        :value="menu.menu_key"
-                        :label="getMenuDisplayName(menu)"
-                        density="compact"
-                        hide-details
-                        :disabled="isProtectedMenu(menu.menu_key, role)"
-                        color="warning"
-                      />
+                    <v-col v-for="menu in getMenusBySection('tools')" :key="menu.menu_key" cols="12" sm="6" md="4"
+                      lg="3">
+                      <v-checkbox v-model="roleMenuAccess[role]" :value="menu.menu_key"
+                        :label="getMenuDisplayName(menu)" density="compact" hide-details
+                        :disabled="isProtectedMenu(menu.menu_key, role)" color="warning" />
                     </v-col>
                   </v-row>
                 </div>
@@ -148,33 +106,16 @@
                       Admin Only
                     </v-chip>
                     <v-spacer />
-                    <v-btn
-                      v-if="role === 'admin'"
-                      variant="text"
-                      size="small"
-                      @click="toggleSection('system', role)"
-                    >
+                    <v-btn v-if="role === 'admin'" variant="text" size="small" @click="toggleSection('system', role)">
                       {{ isSectionAllSelected('system', role) ? 'Deselect All' : 'Select All' }}
                     </v-btn>
                   </div>
                   <v-row>
-                    <v-col
-                      v-for="menu in getMenusBySection('system')"
-                      :key="menu.menu_key"
-                      cols="12"
-                      sm="6"
-                      md="4"
-                      lg="3"
-                    >
-                      <v-checkbox
-                        v-model="roleMenuAccess[role]"
-                        :value="menu.menu_key"
-                        :label="getMenuDisplayName(menu)"
-                        density="compact"
-                        hide-details
-                        :disabled="role !== 'admin' || isProtectedMenu(menu.menu_key, role)"
-                        color="error"
-                      />
+                    <v-col v-for="menu in getMenusBySection('system')" :key="menu.menu_key" cols="12" sm="6" md="4"
+                      lg="3">
+                      <v-checkbox v-model="roleMenuAccess[role]" :value="menu.menu_key"
+                        :label="getMenuDisplayName(menu)" density="compact" hide-details
+                        :disabled="role !== 'admin' || isProtectedMenu(menu.menu_key, role)" color="error" />
                     </v-col>
                   </v-row>
                 </div>

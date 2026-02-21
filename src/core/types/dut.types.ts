@@ -262,3 +262,41 @@ export interface DUTIdentifierList {
   model_name: string | null
   identifiers: DUTIdentifier[]
 }
+
+// ============================================================================
+// PA Trend Types
+// ============================================================================
+
+export interface PATrendStationItemSchema {
+  test_item_name: string
+  mid: number | null
+  mean: number | null
+}
+
+export interface PATrendStationDataSchema {
+  isn: string | null
+  station_id: number
+  station_name: string
+  device: string | null
+  test_date: string | null
+  trend_items: PATrendStationItemSchema[]
+}
+
+export interface PADiffStationDataSchema {
+  isn: string | null
+  station_id: number
+  station_name: string
+  device: string | null
+  test_date: string | null
+  trend_diff_items: PATrendStationItemSchema[]
+}
+
+export interface PATrendRequest {
+  dut_isn: string[]
+  station_id: string[]
+  site_identifier?: string
+  model_identifier?: string
+  start_time?: string
+  end_time?: string
+  srom_filter?: 'all' | 'old' | 'new'
+}

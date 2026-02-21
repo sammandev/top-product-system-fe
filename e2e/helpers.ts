@@ -1,8 +1,8 @@
-import { Page, expect } from '@playwright/test'
+import { expect, type Page } from '@playwright/test'
 
 /**
  * E2E Test Helpers
- * 
+ *
  * Reusable utilities for Playwright E2E tests
  */
 
@@ -30,22 +30,22 @@ export class AuthHelper {
     username: string = 'testuser',
     password: string = 'testpassword',
     dutUsername?: string,
-    dutPassword?: string
+    dutPassword?: string,
   ) {
     await this.page.goto('/login')
     await this.page.getByRole('tab', { name: /external login/i }).click()
-    
+
     // Use .first() to get the first Username/Password fields (local credentials)
     await this.page.getByLabel('Username').first().fill(username)
     await this.page.locator('input[type="password"]').first().fill(password)
-    
+
     if (dutUsername) {
       await this.page.getByLabel('DUT Username').fill(dutUsername)
     }
     if (dutPassword) {
       await this.page.getByLabel('DUT Password').fill(dutPassword)
     }
-    
+
     await this.page.getByRole('button', { name: /external/i }).click()
     await expect(this.page).toHaveURL('/dashboard')
   }
@@ -93,7 +93,7 @@ export class NavigationHelper {
   async navigateTo(route: string, expectedText?: string | RegExp) {
     await this.page.goto(route)
     await expect(this.page).toHaveURL(route)
-    
+
     if (expectedText) {
       await expect(this.page.getByText(expectedText)).toBeVisible()
     }
@@ -180,7 +180,7 @@ export class FormHelper {
   async getValidationError(fieldLabel: string): Promise<string | null> {
     const field = this.page.getByLabel(fieldLabel)
     const errorMessage = field.locator('+ .v-messages__message')
-    
+
     if (await errorMessage.isVisible()) {
       return await errorMessage.textContent()
     }
@@ -346,12 +346,12 @@ export class NetworkHelper {
   /**
    * Mock API response
    */
-  async mockApiResponse(urlPattern: string | RegExp, response: any, status: number = 200) {
-    await this.page.route(urlPattern, route => {
+  async mockApiResponse(urlPattern: string | RegExp, response: unknown, status: number = 200) {
+    await this.page.route(urlPattern, (route) => {
       route.fulfill({
         status,
         contentType: 'application/json',
-        body: JSON.stringify(response)
+        body: JSON.stringify(response),
       })
     })
   }
@@ -360,7 +360,7 @@ export class NetworkHelper {
    * Simulate network error
    */
   async simulateNetworkError(urlPattern: string | RegExp) {
-    await this.page.route(urlPattern, route => route.abort('failed'))
+    await this.page.route(urlPattern, (route) => route.abort('failed'))
   }
 
   /**
@@ -419,7 +419,7 @@ export class ScreenshotHelper {
   async takeFullPage(name: string) {
     await this.page.screenshot({
       path: `test-results/screenshots/${name}.png`,
-      fullPage: true
+      fullPage: true,
     })
   }
 
@@ -429,7 +429,7 @@ export class ScreenshotHelper {
   async takeElement(selector: string, name: string) {
     const element = this.page.locator(selector)
     await element.screenshot({
-      path: `test-results/screenshots/${name}.png`
+      path: `test-results/screenshots/${name}.png`,
     })
   }
 }

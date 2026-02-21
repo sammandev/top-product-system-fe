@@ -15,33 +15,14 @@
               </v-alert>
 
               <v-form ref="formRef" v-model="formValid" @submit.prevent="handleSave">
-                <v-text-field
-                  v-model="form.name"
-                  label="Application Name"
-                  :rules="[rules.required]"
-                  prepend-inner-icon="mdi-application"
-                  variant="outlined"
-                  class="mb-3"
-                />
+                <v-text-field v-model="form.name" label="Application Name" :rules="[rules.required]"
+                  prepend-inner-icon="mdi-application" variant="outlined" class="mb-3" />
 
-                <v-text-field
-                  v-model="form.version"
-                  label="Application Version"
-                  :rules="[rules.required]"
-                  prepend-inner-icon="mdi-tag"
-                  variant="outlined"
-                  class="mb-3"
-                />
+                <v-text-field v-model="form.version" label="Application Version" :rules="[rules.required]"
+                  prepend-inner-icon="mdi-tag" variant="outlined" class="mb-3" />
 
-                <v-textarea
-                  v-model="form.description"
-                  label="Description"
-                  prepend-inner-icon="mdi-text-long"
-                  variant="outlined"
-                  rows="3"
-                  auto-grow
-                  class="mb-3"
-                />
+                <v-textarea v-model="form.description" label="Description" prepend-inner-icon="mdi-text-long"
+                  variant="outlined" rows="3" auto-grow class="mb-3" />
 
                 <v-alert v-if="error" type="error" density="compact" class="mb-3">
                   {{ error }}

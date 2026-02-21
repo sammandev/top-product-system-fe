@@ -12,7 +12,7 @@
 
 import type { AxiosError, AxiosInstance, AxiosResponse, InternalAxiosRequestConfig } from 'axios'
 import type { Router } from 'vue-router'
-import { useAuthStore } from '@/features/auth/store'
+import { useAuthStore } from '@/features/auth/stores'
 
 // Router instance will be injected after router is created
 let routerInstance: Router | null = null

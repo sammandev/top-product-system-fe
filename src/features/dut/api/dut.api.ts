@@ -4,10 +4,12 @@ import type {
   DUTModel,
   DUTSite,
   DUTStation,
+  PADiffStationDataSchema,
+  PATrendRequest,
+  PATrendStationDataSchema,
   TopProductsRequest,
   TopProductsResponse,
 } from '@/core/types'
-import type { PADiffStationDataSchema, PATrendRequest, PATrendStationDataSchema } from '@/types/api'
 
 /**
  * DUT Management API

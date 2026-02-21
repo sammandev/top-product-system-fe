@@ -65,7 +65,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
+import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 
 // Active tab state - persisted in URL

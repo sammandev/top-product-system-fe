@@ -45,11 +45,12 @@
                     <v-col cols="12" md="6">
                         <v-text-field v-model="adminKey" label="Admin Key" type="password" variant="outlined"
                             density="comfortable" prepend-inner-icon="mdi-key" :error-messages="adminKeyError"
-                            hint="Required: Admin authorization key" persistent-hint @update:model-value="adminKeyError = ''" />
+                            hint="Required: Admin authorization key" persistent-hint
+                            @update:model-value="adminKeyError = ''" />
                     </v-col>
                     <v-col cols="12" md="6">
-                        <v-text-field v-model.number="ttl" label="Time to Live (seconds)" type="number" variant="outlined"
-                            density="comfortable" prepend-inner-icon="mdi-clock-outline"
+                        <v-text-field v-model.number="ttl" label="Time to Live (seconds)" type="number"
+                            variant="outlined" density="comfortable" prepend-inner-icon="mdi-clock-outline"
                             hint="Files older than this will be removed (default: 3600 = 1 hour)" persistent-hint />
                     </v-col>
                 </v-row>
@@ -212,65 +213,65 @@ const cleanupResult = ref<{ removed: string[] } | null>(null)
 
 // Computed
 const canProcess = computed(() => {
-  return adminKey.value.trim().length > 0 && !processing.value
+    return adminKey.value.trim().length > 0 && !processing.value
 })
 
 // Methods
 function formatTTL(seconds: number): string {
-  if (seconds < 60) {
-    return `${seconds} seconds`
-  } else if (seconds < 3600) {
-    const minutes = Math.floor(seconds / 60)
-    return `${minutes} minute${minutes > 1 ? 's' : ''}`
-  } else if (seconds < 86400) {
-    const hours = Math.floor(seconds / 3600)
-    return `${hours} hour${hours > 1 ? 's' : ''}`
-  } else {
-    const days = Math.floor(seconds / 86400)
-    return `${days} day${days > 1 ? 's' : ''}`
-  }
+    if (seconds < 60) {
+        return `${seconds} seconds`
+    } else if (seconds < 3600) {
+        const minutes = Math.floor(seconds / 60)
+        return `${minutes} minute${minutes > 1 ? 's' : ''}`
+    } else if (seconds < 86400) {
+        const hours = Math.floor(seconds / 3600)
+        return `${hours} hour${hours > 1 ? 's' : ''}`
+    } else {
+        const days = Math.floor(seconds / 86400)
+        return `${days} day${days > 1 ? 's' : ''}`
+    }
 }
 
 async function handleCleanup() {
-  if (!canProcess.value) return
+    if (!canProcess.value) return
 
-  // Validate admin key
-  if (!adminKey.value.trim()) {
-    adminKeyError.value = 'Admin key is required'
-    return
-  }
-
-  processing.value = true
-  error.value = ''
-  successMessage.value = ''
-  cleanupResult.value = null
-
-  try {
-    const formData = new FormData()
-    formData.append('admin_key', adminKey.value.trim())
-    if (ttl.value && ttl.value > 0) {
-      formData.append('ttl', ttl.value.toString())
+    // Validate admin key
+    if (!adminKey.value.trim()) {
+        adminKeyError.value = 'Admin key is required'
+        return
     }
 
-    const result = await parsingApi.cleanupUploads(formData)
-    cleanupResult.value = result
+    processing.value = true
+    error.value = ''
+    successMessage.value = ''
+    cleanupResult.value = null
 
-    if (result.removed.length > 0) {
-      successMessage.value = `Successfully removed ${result.removed.length} file${result.removed.length > 1 ? 's' : ''}`
-    } else {
-      successMessage.value = 'Cleanup completed. No files needed to be removed.'
+    try {
+        const formData = new FormData()
+        formData.append('admin_key', adminKey.value.trim())
+        if (ttl.value && ttl.value > 0) {
+            formData.append('ttl', ttl.value.toString())
+        }
+
+        const result = await parsingApi.cleanupUploads(formData)
+        cleanupResult.value = result
+
+        if (result.removed.length > 0) {
+            successMessage.value = `Successfully removed ${result.removed.length} file${result.removed.length > 1 ? 's' : ''}`
+        } else {
+            successMessage.value = 'Cleanup completed. No files needed to be removed.'
+        }
+    } catch (err: unknown) {
+        console.error('Cleanup failed:', err)
+        if (getErrorStatus(err) === 403) {
+            error.value = 'Invalid admin key. Please check your credentials.'
+            adminKeyError.value = 'Invalid admin key'
+        } else {
+            error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Cleanup operation failed'
+        }
+    } finally {
+        processing.value = false
     }
-  } catch (err: unknown) {
-    console.error('Cleanup failed:', err)
-    if (getErrorStatus(err) === 403) {
-      error.value = 'Invalid admin key. Please check your credentials.'
-      adminKeyError.value = 'Invalid admin key'
-    } else {
-      error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Cleanup operation failed'
-    }
-  } finally {
-    processing.value = false
-  }
 }
 </script>
 

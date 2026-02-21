@@ -1,8 +1,8 @@
 import { computed, onMounted, ref } from 'vue'
-import { useAuthStore } from '@/features/auth/store'
+import { useAuthStore } from '@/features/auth/stores'
 import { getErrorMessage } from '@/shared/utils'
-import type { DashboardResponse } from '../api/dashboardApi'
-import { dashboardApi } from '../api/dashboardApi'
+import type { DashboardResponse } from '../api/dashboard.api'
+import { dashboardApi } from '../api/dashboard.api'
 
 // Cache dashboard data at module level to persist between navigation
 // This prevents re-fetching on every page visit

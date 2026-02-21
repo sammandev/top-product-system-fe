@@ -6,7 +6,7 @@
  */
 
 import type { NavigationGuardNext, RouteLocationNormalized } from 'vue-router'
-import { useAuthStore } from '@/features/auth/store'
+import { useAuthStore } from '@/features/auth/stores'
 
 /**
  * Check if route requires authentication and handle accordingly

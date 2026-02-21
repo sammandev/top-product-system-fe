@@ -1,95 +1,94 @@
 <template>
-    <v-card>
-        <v-card-title class="d-flex align-center">
-            <v-icon start>mdi-map-marker-path</v-icon>
-            Site / Model / Station Selection
-        </v-card-title>
+  <v-card>
+    <v-card-title class="d-flex align-center">
+      <v-icon start>mdi-map-marker-path</v-icon>
+      Site / Model / Station Selection
+    </v-card-title>
 
-        <v-card-text>
-            <v-row>
-                <!-- Site Selector -->
-                <v-col cols="12" md="4">
-                    <v-select v-model="selectedSiteId" :items="siteItems" label="Test Site" variant="outlined"
-                        density="comfortable" prepend-inner-icon="mdi-office-building" :loading="loadingSites"
-                        :disabled="loadingSites" :error-messages="siteError" clearable
-                        @update:model-value="handleSiteChange">
-                        <template #no-data>
-                            <v-list-item>
-                                <v-list-item-title class="text-caption text-medium-emphasis">
-                                    No sites available
-                                </v-list-item-title>
-                            </v-list-item>
-                        </template>
-                    </v-select>
-                </v-col>
+    <v-card-text>
+      <v-row>
+        <!-- Site Selector -->
+        <v-col cols="12" md="4">
+          <v-select v-model="selectedSiteId" :items="siteItems" label="Test Site" variant="outlined"
+            density="comfortable" prepend-inner-icon="mdi-office-building" :loading="loadingSites"
+            :disabled="loadingSites" :error-messages="siteError" clearable @update:model-value="handleSiteChange">
+            <template #no-data>
+              <v-list-item>
+                <v-list-item-title class="text-caption text-medium-emphasis">
+                  No sites available
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+          </v-select>
+        </v-col>
 
-                <!-- Model Selector -->
-                <v-col cols="12" md="4">
-                    <v-select v-model="selectedModelId" :items="modelItems" label="Device Model" variant="outlined"
-                        density="comfortable" prepend-inner-icon="mdi-cellphone" :loading="loadingModels"
-                        :disabled="!selectedSiteId || loadingModels" :error-messages="modelError" clearable
-                        @update:model-value="handleModelChange">
-                        <template #no-data>
-                            <v-list-item>
-                                <v-list-item-title class="text-caption text-medium-emphasis">
-                                    {{ selectedSiteId ? 'No models available for this site' : 'Select a site first' }}
-                                </v-list-item-title>
-                            </v-list-item>
-                        </template>
-                    </v-select>
-                </v-col>
+        <!-- Model Selector -->
+        <v-col cols="12" md="4">
+          <v-select v-model="selectedModelId" :items="modelItems" label="Device Model" variant="outlined"
+            density="comfortable" prepend-inner-icon="mdi-cellphone" :loading="loadingModels"
+            :disabled="!selectedSiteId || loadingModels" :error-messages="modelError" clearable
+            @update:model-value="handleModelChange">
+            <template #no-data>
+              <v-list-item>
+                <v-list-item-title class="text-caption text-medium-emphasis">
+                  {{ selectedSiteId ? 'No models available for this site' : 'Select a site first' }}
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+          </v-select>
+        </v-col>
 
-                <!-- Station Selector -->
-                <v-col cols="12" md="4">
-                    <v-select v-model="selectedStationId" :items="stationItems" label="Test Station" variant="outlined"
-                        density="comfortable" prepend-inner-icon="mdi-atom-variant" :loading="loadingStations"
-                        :disabled="!selectedModelId || loadingStations" :error-messages="stationError" clearable
-                        @update:model-value="handleStationChange">
-                        <template #no-data>
-                            <v-list-item>
-                                <v-list-item-title class="text-caption text-medium-emphasis">
-                                    {{ selectedModelId ? 'No stations available for this model' : 'Select a model first' }}
-                                </v-list-item-title>
-                            </v-list-item>
-                        </template>
-                    </v-select>
-                </v-col>
-            </v-row>
+        <!-- Station Selector -->
+        <v-col cols="12" md="4">
+          <v-select v-model="selectedStationId" :items="stationItems" label="Test Station" variant="outlined"
+            density="comfortable" prepend-inner-icon="mdi-atom-variant" :loading="loadingStations"
+            :disabled="!selectedModelId || loadingStations" :error-messages="stationError" clearable
+            @update:model-value="handleStationChange">
+            <template #no-data>
+              <v-list-item>
+                <v-list-item-title class="text-caption text-medium-emphasis">
+                  {{ selectedModelId ? 'No stations available for this model' : 'Select a model first' }}
+                </v-list-item-title>
+              </v-list-item>
+            </template>
+          </v-select>
+        </v-col>
+      </v-row>
 
-            <!-- Selection Summary -->
-            <v-alert v-if="isComplete" type="success" variant="tonal" density="compact" class="mt-2">
-                <template #prepend>
-                    <v-icon>mdi-check-circle</v-icon>
-                </template>
-                <div class="text-caption">
-                    <strong>Selected:</strong> {{ selectedSiteName }} → {{ selectedModelName }} → {{ selectedStationName }}
-                </div>
-            </v-alert>
+      <!-- Selection Summary -->
+      <v-alert v-if="isComplete" type="success" variant="tonal" density="compact" class="mt-2">
+        <template #prepend>
+          <v-icon>mdi-check-circle</v-icon>
+        </template>
+        <div class="text-caption">
+          <strong>Selected:</strong> {{ selectedSiteName }} → {{ selectedModelName }} → {{ selectedStationName }}
+        </div>
+      </v-alert>
 
-            <!-- Validation Alert -->
-            <v-alert v-else-if="showValidation" type="warning" variant="tonal" density="compact" class="mt-2">
-                <template #prepend>
-                    <v-icon>mdi-alert</v-icon>
-                </template>
-                <div class="text-caption">
-                    Please select Site, Model, and Station to continue
-                </div>
-            </v-alert>
+      <!-- Validation Alert -->
+      <v-alert v-else-if="showValidation" type="warning" variant="tonal" density="compact" class="mt-2">
+        <template #prepend>
+          <v-icon>mdi-alert</v-icon>
+        </template>
+        <div class="text-caption">
+          Please select Site, Model, and Station to continue
+        </div>
+      </v-alert>
 
-            <!-- Error Alert -->
-            <v-alert v-if="error" type="error" variant="tonal" density="compact" class="mt-2" closable
-                @click:close="clearError">
-                {{ error }}
-            </v-alert>
-        </v-card-text>
-    </v-card>
+      <!-- Error Alert -->
+      <v-alert v-if="error" type="error" variant="tonal" density="compact" class="mt-2" closable
+        @click:close="clearError">
+        {{ error }}
+      </v-alert>
+    </v-card-text>
+  </v-card>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import type { DUTModel, DUTSite, DUTStation } from '@/core/types'
 import { getErrorMessage } from '@/shared/utils'
-import { useDUTStore } from '../store'
+import { useDUTStore } from '../stores'
 
 // Props
 interface Props {

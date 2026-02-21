@@ -1,7 +1,5 @@
 import type { AxiosProgressEvent } from 'axios'
-import axios from 'axios'
-
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:7070'
+import apiClient from '@/core/api/client'
 
 export interface ConvertDvtParams {
   dvtFile: File
@@ -23,7 +21,7 @@ export async function convertDvtToMc2(params: ConvertDvtParams): Promise<Blob> {
   const formData = new FormData()
   formData.append('dvt_file', params.dvtFile)
 
-  const response = await axios.post(`${API_BASE_URL}/api/convert-dvt-to-mc2`, formData, {
+  const response = await apiClient.post('/api/convert-dvt-to-mc2', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },

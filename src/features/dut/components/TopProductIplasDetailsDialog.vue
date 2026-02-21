@@ -1,418 +1,406 @@
 <template>
-    <v-dialog v-model="isOpen" :max-width="isFullscreen ? undefined : '1200px'" :fullscreen="isFullscreen"
-        :transition="isFullscreen ? 'dialog-bottom-transition' : 'dialog-transition'">
-        <v-card v-if="record" class="d-flex flex-column"
-            :style="{ height: isFullscreen ? '100vh' : '90vh', overflow: 'hidden' }">
-            <!-- Sticky Header Container -->
-            <div class="dialog-sticky-header flex-shrink-0"
-                style="z-index: 10; background-color: rgb(var(--v-theme-surface));">
-                <v-card-title class="d-flex justify-space-between align-center flex-shrink-0 bg-primary pa-2 py-1">
-                    <div class="d-flex align-center">
-                        <v-icon class="mr-2" color="white" size="small">mdi-table-eye</v-icon>
-                        <span class="text-white text-body-1">Test Items Details</span>
+  <v-dialog v-model="isOpen" :max-width="isFullscreen ? undefined : '1200px'" :fullscreen="isFullscreen"
+    :transition="isFullscreen ? 'dialog-bottom-transition' : 'dialog-transition'">
+    <v-card v-if="record" class="d-flex flex-column"
+      :style="{ height: isFullscreen ? '100vh' : '90vh', overflow: 'hidden' }">
+      <!-- Sticky Header Container -->
+      <div class="dialog-sticky-header flex-shrink-0"
+        style="z-index: 10; background-color: rgb(var(--v-theme-surface));">
+        <v-card-title class="d-flex justify-space-between align-center flex-shrink-0 bg-primary pa-2 py-1">
+          <div class="d-flex align-center">
+            <v-icon class="mr-2" color="white" size="small">mdi-table-eye</v-icon>
+            <span class="text-white text-body-1">Test Items Details</span>
+          </div>
+          <div class="d-flex align-center gap-2">
+            <v-btn variant="outlined" color="white" size="x-small" :loading="downloading" @click="handleDownload">
+              <v-icon start size="x-small">mdi-download</v-icon>
+              Download
+            </v-btn>
+            <v-btn :icon="isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text" color="white"
+              size="small" @click="isFullscreen = !isFullscreen"
+              :title="isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'" />
+            <v-btn icon="mdi-close" variant="text" color="white" size="small" @click="close" />
+          </div>
+        </v-card-title>
+
+        <!-- DUT Information Section -->
+        <div class="flex-shrink-0 px-3 py-2">
+          <!-- Primary Information -->
+          <v-card variant="tonal" color="primary" class="mb-3">
+            <v-card-text class="py-3">
+              <v-row dense>
+                <v-col cols="12" md="6">
+                  <div class="d-flex align-center cursor-pointer" @click="copyToClipboard(record.isn)">
+                    <v-icon size="large" class="mr-3" color="primary">mdi-barcode</v-icon>
+                    <div>
+                      <div class="text-caption text-medium-emphasis">DUT ISN</div>
+                      <div class="text-h6 font-weight-bold">{{ record.isn || '-' }}</div>
                     </div>
-                    <div class="d-flex align-center gap-2">
-                        <v-btn variant="outlined" color="white" size="x-small" :loading="downloading"
-                            @click="handleDownload">
-                            <v-icon start size="x-small">mdi-download</v-icon>
-                            Download
-                        </v-btn>
-                        <v-btn :icon="isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
-                            color="white" size="small" @click="isFullscreen = !isFullscreen"
-                            :title="isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'" />
-                        <v-btn icon="mdi-close" variant="text" color="white" size="small" @click="close" />
+                    <v-tooltip activator="parent" location="top">Click to copy ISN</v-tooltip>
+                  </div>
+                </v-col>
+                <v-col cols="12" md="6">
+                  <div class="d-flex align-center">
+                    <v-icon size="large" class="mr-3" color="primary">mdi-factory</v-icon>
+                    <div>
+                      <div class="text-caption text-medium-emphasis">Station</div>
+                      <div class="text-h6 font-weight-bold">
+                        {{ record.displayStationName || record.stationName }}
+                      </div>
                     </div>
-                </v-card-title>
-
-                <!-- DUT Information Section -->
-                <div class="flex-shrink-0 px-3 py-2">
-                    <!-- Primary Information -->
-                    <v-card variant="tonal" color="primary" class="mb-3">
-                        <v-card-text class="py-3">
-                            <v-row dense>
-                                <v-col cols="12" md="6">
-                                    <div class="d-flex align-center cursor-pointer"
-                                        @click="copyToClipboard(record.isn)">
-                                        <v-icon size="large" class="mr-3" color="primary">mdi-barcode</v-icon>
-                                        <div>
-                                            <div class="text-caption text-medium-emphasis">DUT ISN</div>
-                                            <div class="text-h6 font-weight-bold">{{ record.isn || '-' }}</div>
-                                        </div>
-                                        <v-tooltip activator="parent" location="top">Click to copy ISN</v-tooltip>
-                                    </div>
-                                </v-col>
-                                <v-col cols="12" md="6">
-                                    <div class="d-flex align-center">
-                                        <v-icon size="large" class="mr-3" color="primary">mdi-factory</v-icon>
-                                        <div>
-                                            <div class="text-caption text-medium-emphasis">Station</div>
-                                            <div class="text-h6 font-weight-bold">
-                                                {{ record.displayStationName || record.stationName }}
-                                            </div>
-                                        </div>
-                                    </div>
-                                </v-col>
-                            </v-row>
-                        </v-card-text>
-                    </v-card>
-
-                    <!-- Device & Identifiers -->
-                    <v-card variant="outlined" class="mb-3">
-                        <v-card-text class="py-2">
-                            <v-row dense>
-                                <v-col cols="12" md="4">
-                                    <div class="d-flex align-center cursor-pointer"
-                                        @click="copyToClipboard(record.deviceId)">
-                                        <v-icon size="small" class="mr-2">mdi-chip</v-icon>
-                                        <span class="text-body-2">
-                                            <strong>Device ID:</strong>
-                                            <span class="ml-2 font-mono">{{ record.deviceId }}</span>
-                                        </span>
-                                        <v-tooltip activator="parent" location="top">Click to copy Device
-                                            ID</v-tooltip>
-                                    </div>
-                                </v-col>
-                                <v-col cols="12" md="4">
-                                    <div class="d-flex align-center">
-                                        <v-icon size="small" class="mr-2">mdi-map-marker</v-icon>
-                                        <span class="text-body-2">
-                                            <strong>Site:</strong>
-                                            <span class="ml-2">{{ record.site }}</span>
-                                        </span>
-                                    </div>
-                                </v-col>
-                                <v-col cols="12" md="4">
-                                    <div class="d-flex align-center">
-                                        <v-icon size="small" class="mr-2">mdi-folder</v-icon>
-                                        <span class="text-body-2">
-                                            <strong>Project:</strong>
-                                            <span class="ml-2">{{ record.project }}</span>
-                                        </span>
-                                    </div>
-                                </v-col>
-                            </v-row>
-                        </v-card-text>
-                    </v-card>
-
-                    <!-- Timing & Status -->
-                    <div class="d-flex align-center flex-wrap gap-2 text-caption">
-                        <v-chip size="small" variant="tonal" color="primary" prepend-icon="mdi-calendar-clock" label>
-                            <span class="text-medium-emphasis mr-1">Start:</span>
-                            {{ formatTime(record.testStartTime) }}
-                        </v-chip>
-                        <v-chip size="small" variant="tonal" color="primary" prepend-icon="mdi-calendar-check" label>
-                            <span class="text-medium-emphasis mr-1">End:</span>
-                            {{ formatTime(record.testEndTime) }}
-                        </v-chip>
-                        <v-chip size="small" variant="tonal" color="secondary" prepend-icon="mdi-timer" label>
-                            <span class="text-medium-emphasis mr-1">Duration:</span>
-                            {{ calculateDuration(record.testStartTime, record.testEndTime) }}
-                        </v-chip>
-                        <v-chip size="small" variant="tonal" color="info" prepend-icon="mdi-list-box" label>
-                            <span class="text-medium-emphasis mr-1">Test Items:</span>
-                            {{ record.testItems?.length || 0 }}
-                        </v-chip>
-                        <v-chip size="small" :color="getStatusColor(record.errorCode)"
-                            :prepend-icon="isStatusPass(record.errorCode) ? 'mdi-check-circle' : 'mdi-alert-circle'"
-                            class="cursor-pointer" label @click="copyToClipboard(record.errorCode)">
-                            <span class="text-medium-emphasis mr-1">Status:</span>
-                            {{ record.errorCode }}
-                            <v-tooltip activator="parent" location="top">Click to copy Error Code</v-tooltip>
-                        </v-chip>
-                        <template
-                            v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)">
-                            <v-chip size="small" color="error" variant="outlined" class="cursor-pointer" label
-                                prepend-icon="mdi-alert-octagon" @click="copyToClipboard(record.errorName)">
-                                <span class="text-medium-emphasis mr-1">Error:</span>
-                                {{ record.errorName }}
-                                <v-tooltip activator="parent" location="top">Click to copy Error Name</v-tooltip>
-                            </v-chip>
-                        </template>
-                    </div>
-                </div>
-
-                <v-divider class="flex-shrink-0" />
-            </div>
-            <!-- End Sticky Header Container -->
-
-            <!-- Search and Filter Controls -->
-            <v-card-text class="pb-2 pt-2 flex-shrink-0">
-                <v-row dense>
-                    <v-col cols="12" md="4">
-                        <!-- UPDATED: Changed hint to AND logic -->
-                        <v-combobox v-model="searchTerms" label="Search Test Items (Regex)"
-                            prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details clearable
-                            multiple chips closable-chips placeholder="Type and press Enter (AND logic)..."
-                            hint="Multiple terms use AND logic">
-                            <template #chip="{ props, item }">
-                                <v-chip v-bind="props" :text="String(item.value || item)" size="small"
-                                    color="primary" />
-                            </template>
-                        </v-combobox>
-                    </v-col>
-                    <v-col cols="12" md="4">
-                        <v-select v-model="testItemFilter" :items="testItemFilterOptions" item-title="title"
-                            item-value="value" label="Data Type" variant="outlined" density="compact" hide-details
-                            multiple chips closable-chips>
-                            <template #chip="{ props, item }">
-                                <v-chip v-bind="props" :text="item.title" size="small" />
-                            </template>
-                        </v-select>
-                    </v-col>
-                    <!-- UPDATED: Score Filter -->
-                    <v-col cols="12" md="4" v-if="hasScores">
-                        <v-row dense class="align-center">
-                            <v-col cols="6">
-                                <v-select v-model="scoreFilterType" :items="scoreFilterOptions" item-title="title"
-                                    item-value="value" label="Score Filter" variant="outlined" density="compact"
-                                    hide-details clearable placeholder="Filter...">
-                                </v-select>
-                            </v-col>
-                            <v-col cols="6">
-                                <v-text-field v-model.number="scoreFilterValue" type="number" label="Value (0-10)"
-                                    variant="outlined" density="compact" hide-details :disabled="!scoreFilterType"
-                                    :min="0" :max="10" step="0.1" placeholder="0.00" />
-                            </v-col>
-                        </v-row>
-                    </v-col>
-                </v-row>
+                  </div>
+                </v-col>
+              </v-row>
             </v-card-text>
+          </v-card>
 
-            <!-- Data Table Container - UPDATED: Added overflow-y: auto for scrolling in non-fullscreen mode -->
-            <div class="flex-grow-1 position-relative"
-                :style="{ minHeight: 0, overflow: isFullscreen ? 'hidden' : 'auto' }">
-                <!-- Loading Overlay when fetching test items -->
-                <v-overlay v-model="props.loadingTestItems" contained class="align-center justify-center" persistent>
-                    <div class="text-center">
-                        <v-progress-circular indeterminate color="primary" size="64" />
-                        <div class="text-body-1 mt-4">Loading test items...</div>
-                    </div>
-                </v-overlay>
+          <!-- Device & Identifiers -->
+          <v-card variant="outlined" class="mb-3">
+            <v-card-text class="py-2">
+              <v-row dense>
+                <v-col cols="12" md="4">
+                  <div class="d-flex align-center cursor-pointer" @click="copyToClipboard(record.deviceId)">
+                    <v-icon size="small" class="mr-2">mdi-chip</v-icon>
+                    <span class="text-body-2">
+                      <strong>Device ID:</strong>
+                      <span class="ml-2 font-mono">{{ record.deviceId }}</span>
+                    </span>
+                    <v-tooltip activator="parent" location="top">Click to copy Device
+                      ID</v-tooltip>
+                  </div>
+                </v-col>
+                <v-col cols="12" md="4">
+                  <div class="d-flex align-center">
+                    <v-icon size="small" class="mr-2">mdi-map-marker</v-icon>
+                    <span class="text-body-2">
+                      <strong>Site:</strong>
+                      <span class="ml-2">{{ record.site }}</span>
+                    </span>
+                  </div>
+                </v-col>
+                <v-col cols="12" md="4">
+                  <div class="d-flex align-center">
+                    <v-icon size="small" class="mr-2">mdi-folder</v-icon>
+                    <span class="text-body-2">
+                      <strong>Project:</strong>
+                      <span class="ml-2">{{ record.project }}</span>
+                    </span>
+                  </div>
+                </v-col>
+              </v-row>
+            </v-card-text>
+          </v-card>
 
-                <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="50"
-                    density="comfortable" fixed-header fixed-footer style="height: 100%;"
-                    class="elevation-1 v-table--striped" :class="{ 'clickable-rows': hasScores }"
-                    @click:row="handleRowClick">
-                    <template #item.STATUS="{ item }">
-                        <v-chip :color="getStatusColor(item.STATUS)" size="small">
-                            {{ normalizeStatus(item.STATUS) }}
-                        </v-chip>
-                    </template>
-                    <template #item.VALUE="{ item }">
-                        <span :class="getValueClass(item)">{{ item.VALUE }}</span>
-                    </template>
-                    <template #item.UCL="{ item }">
-                        <span class="text-medium-emphasis">{{ item.UCL || '-' }}</span>
-                    </template>
-                    <template #item.LCL="{ item }">
-                        <span class="text-medium-emphasis">{{ item.LCL || '-' }}</span>
-                    </template>
-                    <template #item.SCORE="{ item }">
-                        <template v-if="item.score !== undefined && item.score !== null">
-                            <v-chip :color="getScoreColor(item.score)" size="small" variant="flat"
-                                class="font-weight-bold cursor-pointer" @click.stop="showScoreBreakdown(item)">
-                                {{ (item.score * 10).toFixed(2) }}
-                                <v-icon size="x-small" end>mdi-information-outline</v-icon>
-                            </v-chip>
-                        </template>
-                        <span v-else class="text-medium-emphasis">-</span>
-                    </template>
-                </v-data-table>
-            </div>
+          <!-- Timing & Status -->
+          <div class="d-flex align-center flex-wrap gap-2 text-caption">
+            <v-chip size="small" variant="tonal" color="primary" prepend-icon="mdi-calendar-clock" label>
+              <span class="text-medium-emphasis mr-1">Start:</span>
+              {{ formatTime(record.testStartTime) }}
+            </v-chip>
+            <v-chip size="small" variant="tonal" color="primary" prepend-icon="mdi-calendar-check" label>
+              <span class="text-medium-emphasis mr-1">End:</span>
+              {{ formatTime(record.testEndTime) }}
+            </v-chip>
+            <v-chip size="small" variant="tonal" color="secondary" prepend-icon="mdi-timer" label>
+              <span class="text-medium-emphasis mr-1">Duration:</span>
+              {{ calculateDuration(record.testStartTime, record.testEndTime) }}
+            </v-chip>
+            <v-chip size="small" variant="tonal" color="info" prepend-icon="mdi-list-box" label>
+              <span class="text-medium-emphasis mr-1">Test Items:</span>
+              {{ record.testItems?.length || 0 }}
+            </v-chip>
+            <v-chip size="small" :color="getStatusColor(record.errorCode)"
+              :prepend-icon="isStatusPass(record.errorCode) ? 'mdi-check-circle' : 'mdi-alert-circle'"
+              class="cursor-pointer" label @click="copyToClipboard(record.errorCode)">
+              <span class="text-medium-emphasis mr-1">Status:</span>
+              {{ record.errorCode }}
+              <v-tooltip activator="parent" location="top">Click to copy Error Code</v-tooltip>
+            </v-chip>
+            <template v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)">
+              <v-chip size="small" color="error" variant="outlined" class="cursor-pointer" label
+                prepend-icon="mdi-alert-octagon" @click="copyToClipboard(record.errorName)">
+                <span class="text-medium-emphasis mr-1">Error:</span>
+                {{ record.errorName }}
+                <v-tooltip activator="parent" location="top">Click to copy Error Name</v-tooltip>
+              </v-chip>
+            </template>
+          </div>
+        </div>
 
-            <!-- Overall Score Badge (if available) -->
-            <div v-if="record.overallScore !== undefined" class="flex-shrink-0 px-3 py-2 bg-surface">
-                <div class="d-flex align-center justify-end gap-4">
-                    <v-chip color="primary" variant="tonal" prepend-icon="mdi-chart-line">
-                        <strong>Overall Score:</strong>&nbsp;
-                        <span :class="getScoreColorClass(record.overallScore)">
-                            {{ (record.overallScore * 10).toFixed(2) }} / 10
-                        </span>
-                    </v-chip>
-                    <v-chip v-if="record.valueItemsScore !== null && record.valueItemsScore !== undefined"
-                        color="success" variant="outlined" size="small">
-                        Value Items: {{ (record.valueItemsScore * 10).toFixed(2) }}
-                    </v-chip>
-                    <v-chip v-if="record.binItemsScore !== null && record.binItemsScore !== undefined" color="info"
-                        variant="outlined" size="small">
-                        Binary Items: {{ (record.binItemsScore * 10).toFixed(2) }}
-                    </v-chip>
-                </div>
-            </div>
-        </v-card>
-    </v-dialog>
+        <v-divider class="flex-shrink-0" />
+      </div>
+      <!-- End Sticky Header Container -->
 
-    <!-- Score Breakdown Dialog -->
-    <v-dialog v-model="showBreakdownDialog" max-width="500px" persistent>
-        <v-card v-if="selectedTestItem">
-            <v-card-title class="d-flex align-center bg-primary">
-                <v-icon class="mr-2" color="white">mdi-calculator-variant</v-icon>
-                <span class="text-white">Score Breakdown</span>
-                <v-spacer />
-                <v-btn icon="mdi-close" variant="text" color="white" size="small"
-                    @click="showBreakdownDialog = false" />
-            </v-card-title>
-            <v-card-text class="pt-4">
-                <!-- Test Item Name -->
-                <v-alert color="info" variant="tonal" density="compact" class="mb-4">
-                    <div class="text-subtitle-2 font-weight-bold">{{ selectedTestItem.NAME }}</div>
+      <!-- Search and Filter Controls -->
+      <v-card-text class="pb-2 pt-2 flex-shrink-0">
+        <v-row dense>
+          <v-col cols="12" md="4">
+            <!-- UPDATED: Changed hint to AND logic -->
+            <v-combobox v-model="searchTerms" label="Search Test Items (Regex)" prepend-inner-icon="mdi-magnify"
+              variant="outlined" density="compact" hide-details clearable multiple chips closable-chips
+              placeholder="Type and press Enter (AND logic)..." hint="Multiple terms use AND logic">
+              <template #chip="{ props, item }">
+                <v-chip v-bind="props" :text="String(item.value || item)" size="small" color="primary" />
+              </template>
+            </v-combobox>
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-select v-model="testItemFilter" :items="testItemFilterOptions" item-title="title" item-value="value"
+              label="Data Type" variant="outlined" density="compact" hide-details multiple chips closable-chips>
+              <template #chip="{ props, item }">
+                <v-chip v-bind="props" :text="item.title" size="small" />
+              </template>
+            </v-select>
+          </v-col>
+          <!-- UPDATED: Score Filter -->
+          <v-col cols="12" md="4" v-if="hasScores">
+            <v-row dense class="align-center">
+              <v-col cols="6">
+                <v-select v-model="scoreFilterType" :items="scoreFilterOptions" item-title="title" item-value="value"
+                  label="Score Filter" variant="outlined" density="compact" hide-details clearable
+                  placeholder="Filter...">
+                </v-select>
+              </v-col>
+              <v-col cols="6">
+                <v-text-field v-model.number="scoreFilterValue" type="number" label="Value (0-10)" variant="outlined"
+                  density="compact" hide-details :disabled="!scoreFilterType" :min="0" :max="10" step="0.1"
+                  placeholder="0.00" />
+              </v-col>
+            </v-row>
+          </v-col>
+        </v-row>
+      </v-card-text>
+
+      <!-- Data Table Container - UPDATED: Added overflow-y: auto for scrolling in non-fullscreen mode -->
+      <div class="flex-grow-1 position-relative" :style="{ minHeight: 0, overflow: isFullscreen ? 'hidden' : 'auto' }">
+        <!-- Loading Overlay when fetching test items -->
+        <v-overlay v-model="props.loadingTestItems" contained class="align-center justify-center" persistent>
+          <div class="text-center">
+            <v-progress-circular indeterminate color="primary" size="64" />
+            <div class="text-body-1 mt-4">Loading test items...</div>
+          </div>
+        </v-overlay>
+
+        <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="50" density="comfortable"
+          fixed-header fixed-footer style="height: 100%;" class="elevation-1 v-table--striped"
+          :class="{ 'clickable-rows': hasScores }" @click:row="handleRowClick">
+          <template #item.STATUS="{ item }">
+            <v-chip :color="getStatusColor(item.STATUS)" size="small">
+              {{ normalizeStatus(item.STATUS) }}
+            </v-chip>
+          </template>
+          <template #item.VALUE="{ item }">
+            <span :class="getValueClass(item)">{{ item.VALUE }}</span>
+          </template>
+          <template #item.UCL="{ item }">
+            <span class="text-medium-emphasis">{{ item.UCL || '-' }}</span>
+          </template>
+          <template #item.LCL="{ item }">
+            <span class="text-medium-emphasis">{{ item.LCL || '-' }}</span>
+          </template>
+          <template #item.SCORE="{ item }">
+            <template v-if="item.score !== undefined && item.score !== null">
+              <v-chip :color="getScoreColor(item.score)" size="small" variant="flat"
+                class="font-weight-bold cursor-pointer" @click.stop="showScoreBreakdown(item)">
+                {{ (item.score * 10).toFixed(2) }}
+                <v-icon size="x-small" end>mdi-information-outline</v-icon>
+              </v-chip>
+            </template>
+            <span v-else class="text-medium-emphasis">-</span>
+          </template>
+        </v-data-table>
+      </div>
+
+      <!-- Overall Score Badge (if available) -->
+      <div v-if="record.overallScore !== undefined" class="flex-shrink-0 px-3 py-2 bg-surface">
+        <div class="d-flex align-center justify-end gap-4">
+          <v-chip color="primary" variant="tonal" prepend-icon="mdi-chart-line">
+            <strong>Overall Score:</strong>&nbsp;
+            <span :class="getScoreColorClass(record.overallScore)">
+              {{ (record.overallScore * 10).toFixed(2) }} / 10
+            </span>
+          </v-chip>
+          <v-chip v-if="record.valueItemsScore !== null && record.valueItemsScore !== undefined" color="success"
+            variant="outlined" size="small">
+            Value Items: {{ (record.valueItemsScore * 10).toFixed(2) }}
+          </v-chip>
+          <v-chip v-if="record.binItemsScore !== null && record.binItemsScore !== undefined" color="info"
+            variant="outlined" size="small">
+            Binary Items: {{ (record.binItemsScore * 10).toFixed(2) }}
+          </v-chip>
+        </div>
+      </div>
+    </v-card>
+  </v-dialog>
+
+  <!-- Score Breakdown Dialog -->
+  <v-dialog v-model="showBreakdownDialog" max-width="500px" persistent>
+    <v-card v-if="selectedTestItem">
+      <v-card-title class="d-flex align-center bg-primary">
+        <v-icon class="mr-2" color="white">mdi-calculator-variant</v-icon>
+        <span class="text-white">Score Breakdown</span>
+        <v-spacer />
+        <v-btn icon="mdi-close" variant="text" color="white" size="small" @click="showBreakdownDialog = false" />
+      </v-card-title>
+      <v-card-text class="pt-4">
+        <!-- Test Item Name -->
+        <v-alert color="info" variant="tonal" density="compact" class="mb-4">
+          <div class="text-subtitle-2 font-weight-bold">{{ selectedTestItem.NAME }}</div>
+        </v-alert>
+
+        <!-- Score Details -->
+        <v-list density="compact" class="rounded border">
+          <v-list-item>
+            <template #prepend>
+              <v-icon color="error">mdi-arrow-up-bold</v-icon>
+            </template>
+            <v-list-item-title>Upper Criteria Limit (UCL)</v-list-item-title>
+            <template #append>
+              <span class="font-weight-medium">{{ selectedTestItem.UCL || '-' }}</span>
+            </template>
+          </v-list-item>
+
+          <v-divider />
+
+          <v-list-item>
+            <template #prepend>
+              <v-icon color="warning">mdi-arrow-down-bold</v-icon>
+            </template>
+            <v-list-item-title>Lower Criteria Limit (LCL)</v-list-item-title>
+            <template #append>
+              <span class="font-weight-medium">{{ selectedTestItem.LCL || '-' }}</span>
+            </template>
+          </v-list-item>
+
+          <v-divider />
+
+          <v-list-item>
+            <template #prepend>
+              <v-icon color="primary">mdi-speedometer</v-icon>
+            </template>
+            <v-list-item-title>Measured Value</v-list-item-title>
+            <template #append>
+              <span class="font-weight-bold">{{ selectedTestItem.VALUE }}</span>
+            </template>
+          </v-list-item>
+
+          <v-divider />
+
+          <v-list-item>
+            <template #prepend>
+              <v-icon color="success">mdi-target</v-icon>
+            </template>
+            <v-list-item-title>
+              Target
+              <span class="text-caption text-medium-emphasis">
+                ({{ getTargetLabel(selectedTestItem) }})
+              </span>
+            </v-list-item-title>
+            <template #append>
+              <span class="font-weight-bold text-success">{{ computeTarget(selectedTestItem) }}</span>
+            </template>
+          </v-list-item>
+
+          <v-divider />
+
+          <v-list-item>
+            <template #prepend>
+              <v-icon color="secondary">mdi-function-variant</v-icon>
+            </template>
+            <v-list-item-title>Scoring Algorithm</v-list-item-title>
+            <template #append>
+              <v-chip size="small" :color="getScoringTypeColor(selectedTestItem.scoringType)" variant="tonal">
+                {{ formatScoringType(selectedTestItem.scoringType) }}
+              </v-chip>
+            </template>
+          </v-list-item>
+
+          <v-divider />
+
+          <v-list-item>
+            <template #prepend>
+              <v-icon color="blue-grey">mdi-weight</v-icon>
+            </template>
+            <v-list-item-title>Score Weight</v-list-item-title>
+            <template #append>
+              <v-chip size="small" color="blue-grey" variant="tonal">
+                {{ formatWeight(selectedTestItem.weight) }}
+              </v-chip>
+            </template>
+          </v-list-item>
+
+          <v-divider />
+
+          <v-list-item v-if="selectedTestItem.deviation !== undefined">
+            <template #prepend>
+              <v-icon color="purple">mdi-delta</v-icon>
+            </template>
+            <v-list-item-title>Deviation from Target</v-list-item-title>
+            <template #append>
+              <span class="font-weight-medium">{{ selectedTestItem.deviation?.toFixed(2) }}</span>
+            </template>
+          </v-list-item>
+
+          <v-divider v-if="selectedTestItem.deviation !== undefined" />
+
+          <v-list-item>
+            <template #prepend>
+              <v-icon :color="getScoreColor(selectedTestItem.score ?? 0)">mdi-star</v-icon>
+            </template>
+            <v-list-item-title class="font-weight-bold">Final Score</v-list-item-title>
+            <template #append>
+              <v-chip size="small" :color="getScoreColor(selectedTestItem.score ?? 0)" variant="flat"
+                class="font-weight-bold">
+                {{ selectedTestItem.score !== undefined ? ((selectedTestItem.score ?? 0) * 10).toFixed(2) : '-' }} / 10
+              </v-chip>
+            </template>
+          </v-list-item>
+        </v-list>
+
+        <!-- Scoring Formula Explanation -->
+        <v-expansion-panels variant="accordion" class="mt-4">
+          <v-expansion-panel>
+            <v-expansion-panel-title>
+              <v-icon start size="small">mdi-help-circle-outline</v-icon>
+              How is this score calculated?
+            </v-expansion-panel-title>
+            <v-expansion-panel-text>
+              <div class="text-body-2">
+                <p class="mb-3">{{ getScoringExplanation(selectedTestItem.scoringType) }}</p>
+
+                <!-- Formula Display -->
+                <v-alert density="compact" variant="tonal" color="info" class="mb-3">
+                  <div class="text-subtitle-2 font-weight-bold mb-1">Formula:</div>
+                  <code class="text-body-2">{{ getScoringFormula(selectedTestItem.scoringType) }}</code>
                 </v-alert>
 
-                <!-- Score Details -->
-                <v-list density="compact" class="rounded border">
-                    <v-list-item>
-                        <template #prepend>
-                            <v-icon color="error">mdi-arrow-up-bold</v-icon>
-                        </template>
-                        <v-list-item-title>Upper Criteria Limit (UCL)</v-list-item-title>
-                        <template #append>
-                            <span class="font-weight-medium">{{ selectedTestItem.UCL || '-' }}</span>
-                        </template>
-                    </v-list-item>
+                <!-- Score Range Explanation -->
+                <div class="text-caption text-medium-emphasis">
+                  <v-icon size="x-small" class="mr-1">mdi-information-outline</v-icon>
+                  <strong>Score Range:</strong> 0.00 - 10.00
+                  <ul class="mt-1 ml-4">
+                    <li><strong>10.00</strong> = At target (best possible)</li>
+                    <li><strong>1.00</strong> = At UCL/LCL boundary (limit score)</li>
+                    <li><strong>0.00</strong> = Outside limits (failed)</li>
+                  </ul>
+                </div>
+              </div>
+            </v-expansion-panel-text>
+          </v-expansion-panel>
+        </v-expansion-panels>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn color="primary" variant="tonal" @click="showBreakdownDialog = false">Close</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
 
-                    <v-divider />
-
-                    <v-list-item>
-                        <template #prepend>
-                            <v-icon color="warning">mdi-arrow-down-bold</v-icon>
-                        </template>
-                        <v-list-item-title>Lower Criteria Limit (LCL)</v-list-item-title>
-                        <template #append>
-                            <span class="font-weight-medium">{{ selectedTestItem.LCL || '-' }}</span>
-                        </template>
-                    </v-list-item>
-
-                    <v-divider />
-
-                    <v-list-item>
-                        <template #prepend>
-                            <v-icon color="primary">mdi-speedometer</v-icon>
-                        </template>
-                        <v-list-item-title>Measured Value</v-list-item-title>
-                        <template #append>
-                            <span class="font-weight-bold">{{ selectedTestItem.VALUE }}</span>
-                        </template>
-                    </v-list-item>
-
-                    <v-divider />
-
-                    <v-list-item>
-                        <template #prepend>
-                            <v-icon color="success">mdi-target</v-icon>
-                        </template>
-                        <v-list-item-title>
-                            Target
-                            <span class="text-caption text-medium-emphasis">
-                                ({{ getTargetLabel(selectedTestItem) }})
-                            </span>
-                        </v-list-item-title>
-                        <template #append>
-                            <span class="font-weight-bold text-success">{{ computeTarget(selectedTestItem) }}</span>
-                        </template>
-                    </v-list-item>
-
-                    <v-divider />
-
-                    <v-list-item>
-                        <template #prepend>
-                            <v-icon color="secondary">mdi-function-variant</v-icon>
-                        </template>
-                        <v-list-item-title>Scoring Algorithm</v-list-item-title>
-                        <template #append>
-                            <v-chip size="small" :color="getScoringTypeColor(selectedTestItem.scoringType)"
-                                variant="tonal">
-                                {{ formatScoringType(selectedTestItem.scoringType) }}
-                            </v-chip>
-                        </template>
-                    </v-list-item>
-
-                    <v-divider />
-
-                    <v-list-item>
-                        <template #prepend>
-                            <v-icon color="blue-grey">mdi-weight</v-icon>
-                        </template>
-                        <v-list-item-title>Score Weight</v-list-item-title>
-                        <template #append>
-                            <v-chip size="small" color="blue-grey" variant="tonal">
-                                {{ formatWeight(selectedTestItem.weight) }}
-                            </v-chip>
-                        </template>
-                    </v-list-item>
-
-                    <v-divider />
-
-                    <v-list-item v-if="selectedTestItem.deviation !== undefined">
-                        <template #prepend>
-                            <v-icon color="purple">mdi-delta</v-icon>
-                        </template>
-                        <v-list-item-title>Deviation from Target</v-list-item-title>
-                        <template #append>
-                            <span class="font-weight-medium">{{ selectedTestItem.deviation?.toFixed(2) }}</span>
-                        </template>
-                    </v-list-item>
-
-                    <v-divider v-if="selectedTestItem.deviation !== undefined" />
-
-                    <v-list-item>
-                        <template #prepend>
-                            <v-icon :color="getScoreColor(selectedTestItem.score ?? 0)">mdi-star</v-icon>
-                        </template>
-                        <v-list-item-title class="font-weight-bold">Final Score</v-list-item-title>
-                        <template #append>
-                            <v-chip size="small" :color="getScoreColor(selectedTestItem.score ?? 0)" variant="flat"
-                                class="font-weight-bold">
-                                {{ selectedTestItem.score !== undefined ? ((selectedTestItem.score ?? 0) * 10).toFixed(2) : '-' }} / 10
-                            </v-chip>
-                        </template>
-                    </v-list-item>
-                </v-list>
-
-                <!-- Scoring Formula Explanation -->
-                <v-expansion-panels variant="accordion" class="mt-4">
-                    <v-expansion-panel>
-                        <v-expansion-panel-title>
-                            <v-icon start size="small">mdi-help-circle-outline</v-icon>
-                            How is this score calculated?
-                        </v-expansion-panel-title>
-                        <v-expansion-panel-text>
-                            <div class="text-body-2">
-                                <p class="mb-3">{{ getScoringExplanation(selectedTestItem.scoringType) }}</p>
-
-                                <!-- Formula Display -->
-                                <v-alert density="compact" variant="tonal" color="info" class="mb-3">
-                                    <div class="text-subtitle-2 font-weight-bold mb-1">Formula:</div>
-                                    <code
-                                        class="text-body-2">{{ getScoringFormula(selectedTestItem.scoringType) }}</code>
-                                </v-alert>
-
-                                <!-- Score Range Explanation -->
-                                <div class="text-caption text-medium-emphasis">
-                                    <v-icon size="x-small" class="mr-1">mdi-information-outline</v-icon>
-                                    <strong>Score Range:</strong> 0.00 - 10.00
-                                    <ul class="mt-1 ml-4">
-                                        <li><strong>10.00</strong> = At target (best possible)</li>
-                                        <li><strong>1.00</strong> = At UCL/LCL boundary (limit score)</li>
-                                        <li><strong>0.00</strong> = Outside limits (failed)</li>
-                                    </ul>
-                                </div>
-                            </div>
-                        </v-expansion-panel-text>
-                    </v-expansion-panel>
-                </v-expansion-panels>
-            </v-card-text>
-            <v-card-actions>
-                <v-spacer />
-                <v-btn color="primary" variant="tonal" @click="showBreakdownDialog = false">Close</v-btn>
-            </v-card-actions>
-        </v-card>
-    </v-dialog>
-
-    <!-- Copy Success Snackbar -->
-    <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
-        <v-icon start>mdi-check</v-icon>
-        Copied to clipboard!
-    </v-snackbar>
+  <!-- Copy Success Snackbar -->
+  <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
+    <v-icon start>mdi-check</v-icon>
+    Copied to clipboard!
+  </v-snackbar>
 </template>
 
 <script setup lang="ts">
@@ -854,28 +842,28 @@ watch(
 
 <style scoped>
 .gap-2 {
-    gap: 0.5rem;
+  gap: 0.5rem;
 }
 
 .cursor-pointer {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 :deep(.v-table--striped tbody tr:nth-of-type(even)) {
-    background-color: rgba(0, 0, 0, 0.02);
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 :deep(.v-theme--dark .v-table--striped tbody tr:nth-of-type(even)) {
-    background-color: rgba(255, 255, 255, 0.02);
+  background-color: rgba(255, 255, 255, 0.02);
 }
 
 /* Clickable rows styling when scores are available */
 .clickable-rows :deep(tbody tr) {
-    cursor: pointer;
-    transition: background-color 0.15s ease;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
 }
 
 .clickable-rows :deep(tbody tr:hover) {
-    background-color: rgba(var(--v-theme-primary), 0.08) !important;
+  background-color: rgba(var(--v-theme-primary), 0.08) !important;
 }
 </style>

@@ -750,18 +750,18 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { iplasProxyApi } from '@/features/dut_logs/api/iplasProxyApi'
+import { iplasProxyApi } from '@/features/dut-logs/api/iplasProxyApi'
 import {
   lookupIsn,
   lookupIsnsBatch,
   type SfistspIsnReferenceResponse,
-} from '@/features/dut_logs/api/sfistspApi'
+} from '@/features/dut-logs/api/sfistspApi'
 import {
   type DownloadAttachmentInfo,
   type DownloadCsvLogInfo,
   type IsnSearchData,
   useIplasApi,
-} from '@/features/dut_logs/composables/useIplasApi'
+} from '@/features/dut-logs/composables/useIplasApi'
 import { isStatusPass } from '@/shared/utils/helpers'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 

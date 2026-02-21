@@ -76,7 +76,7 @@ export const dutRoutes: RouteRecordRaw[] = [
   // {
   //   path: '/iplas/download',
   //   name: 'IplasDownload',
-  //   component: () => import('@/features/dut_logs/views/IplasDownloadView.vue'),
+  //   component: () => import('@/features/dut-logs/views/IplasDownloadView.vue'),
   //   meta: {
   //     requiresAuth: true,
   //     title: 'iPLAS Downloader',

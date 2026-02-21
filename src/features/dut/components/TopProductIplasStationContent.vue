@@ -1,129 +1,128 @@
 <template>
-    <div>
-        <!-- Data Selection Card -->
-        <v-card elevation="2" class="mb-4">
-            <v-card-title class="d-flex align-center justify-space-between bg-primary">
-                <div class="d-flex align-center">
-                    <v-icon class="mr-2">mdi-database-search</v-icon>
-                    Station Search - Custom Configuration
-                </div>
-                <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-cog"
-                    @click="emit('show-settings')">
-                    iPLAS Settings
-                </v-btn>
-            </v-card-title>
-            <v-card-text class="pt-4">
-                <!-- Site Selection -->
-                <v-row dense>
-                    <v-col cols="12" md="6">
-                        <v-autocomplete v-model="selectedSite" :items="uniqueSites" label="Site" variant="outlined"
-                            density="comfortable" prepend-inner-icon="mdi-map-marker" clearable hide-details
-                            :disabled="loading || loadingStations" @update:model-value="handleSiteChange" />
-                    </v-col>
-                    <v-col cols="12" md="6">
-                        <v-autocomplete v-model="selectedProject" :items="projectsForSelectedSite" label="Project"
-                            variant="outlined" density="comfortable" prepend-inner-icon="mdi-folder" hide-details
-                            :disabled="!selectedSite || loading || loadingStations" clearable
-                            @update:model-value="handleProjectChange" />
-                    </v-col>
-                </v-row>
+  <div>
+    <!-- Data Selection Card -->
+    <v-card elevation="2" class="mb-4">
+      <v-card-title class="d-flex align-center justify-space-between bg-primary">
+        <div class="d-flex align-center">
+          <v-icon class="mr-2">mdi-database-search</v-icon>
+          Station Search - Custom Configuration
+        </div>
+        <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-cog" @click="emit('show-settings')">
+          iPLAS Settings
+        </v-btn>
+      </v-card-title>
+      <v-card-text class="pt-4">
+        <!-- Site Selection -->
+        <v-row dense>
+          <v-col cols="12" md="6">
+            <v-autocomplete v-model="selectedSite" :items="uniqueSites" label="Site" variant="outlined"
+              density="comfortable" prepend-inner-icon="mdi-map-marker" clearable hide-details
+              :disabled="loading || loadingStations" @update:model-value="handleSiteChange" />
+          </v-col>
+          <v-col cols="12" md="6">
+            <v-autocomplete v-model="selectedProject" :items="projectsForSelectedSite" label="Project"
+              variant="outlined" density="comfortable" prepend-inner-icon="mdi-folder" hide-details
+              :disabled="!selectedSite || loading || loadingStations" clearable
+              @update:model-value="handleProjectChange" />
+          </v-col>
+        </v-row>
 
-                <!-- UPDATED: Date Range Preset and Date Range fields in same row -->
-                <v-row dense class="mt-4">
-                    <v-col cols="12" md="4">
-                        <v-select v-model="dateRangePreset" :items="dateRangePresets" item-value="value"
-                            label="Date Range Preset" variant="outlined" density="comfortable"
-                            prepend-inner-icon="mdi-calendar-clock" @update:model-value="applyDateRangePreset" />
-                    </v-col>
-                    <v-col cols="12" md="4">
-                        <v-text-field v-model="startTime" label="Start Time" type="datetime-local" variant="outlined"
-                            density="comfortable" prepend-inner-icon="mdi-calendar-start" />
-                    </v-col>
-                    <v-col cols="12" md="4">
-                        <v-text-field v-model="endTime" label="End Time" type="datetime-local" variant="outlined"
-                            density="comfortable" prepend-inner-icon="mdi-calendar-end" />
-                    </v-col>
-                </v-row>
+        <!-- UPDATED: Date Range Preset and Date Range fields in same row -->
+        <v-row dense class="mt-4">
+          <v-col cols="12" md="4">
+            <v-select v-model="dateRangePreset" :items="dateRangePresets" item-value="value" label="Date Range Preset"
+              variant="outlined" density="comfortable" prepend-inner-icon="mdi-calendar-clock"
+              @update:model-value="applyDateRangePreset" />
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-text-field v-model="startTime" label="Start Time" type="datetime-local" variant="outlined"
+              density="comfortable" prepend-inner-icon="mdi-calendar-start" />
+          </v-col>
+          <v-col cols="12" md="4">
+            <v-text-field v-model="endTime" label="End Time" type="datetime-local" variant="outlined"
+              density="comfortable" prepend-inner-icon="mdi-calendar-end" />
+          </v-col>
+        </v-row>
 
-                <!-- Station Configuration Button -->
-                <v-row dense>
-                    <v-col cols="12">
-                        <v-btn color="secondary" block size="large" prepend-icon="mdi-format-list-checkbox"
-                            :disabled="!selectedSite || !selectedProject || loadingStations" :loading="loadingStations"
-                            @click="openStationSelectionDialog">
-                            Configure Stations
-                            <v-chip v-if="configuredStationsCount > 0" size="small" color="success" variant="flat"
-                                class="ml-2">
-                                {{ configuredStationsCount }} Selected
-                            </v-chip>
-                        </v-btn>
-                    </v-col>
-                </v-row>
+        <!-- Station Configuration Button -->
+        <v-row dense>
+          <v-col cols="12">
+            <v-btn color="secondary" block size="large" prepend-icon="mdi-format-list-checkbox"
+              :disabled="!selectedSite || !selectedProject || loadingStations" :loading="loadingStations"
+              @click="openStationSelectionDialog">
+              Configure Stations
+              <v-chip v-if="configuredStationsCount > 0" size="small" color="success" variant="flat" class="ml-2">
+                {{ configuredStationsCount }} Selected
+              </v-chip>
+            </v-btn>
+          </v-col>
+        </v-row>
 
-                <!-- Configured Stations Summary -->
-                <v-card v-if="configuredStationsCount > 0" variant="outlined" class="mt-4">
-                    <v-card-title class="text-subtitle-1 bg-grey-lighten-5">
-                        Configured Stations Summary
-                    </v-card-title>
-                    <v-card-text class="pa-2">
-                        <v-chip v-for="(config, displayName) in stationConfigs" :key="displayName" class="ma-1"
-                            color="primary" variant="tonal" closable @click="editStationConfig(displayName)"
-                            @click:close="removeStationConfig(displayName)">
-                            {{ displayName }}
-                            <v-badge :content="config.deviceIds.length || config.totalDeviceCount || 'All'" color="success" inline class="ml-1" />
-                            <v-chip size="x-small" class="ml-1" variant="outlined">{{ config.testStatus }}</v-chip>
-                        </v-chip>
-                    </v-card-text>
-                </v-card>
-
-                <!-- Action Buttons -->
-                <v-divider class="my-4" />
-                <div class="d-flex justify-end gap-2">
-                    <v-btn color="error" variant="outlined" prepend-icon="mdi-refresh" :disabled="loading"
-                        @click="handleClearAll">
-                        Clear All
-                    </v-btn>
-                    <v-btn color="primary" variant="flat" prepend-icon="mdi-magnify" :loading="loadingTestItems"
-                        :disabled="!canFetchData" @click="fetchTestItems">
-                        Search
-                    </v-btn>
-                </div>
-            </v-card-text>
+        <!-- Configured Stations Summary -->
+        <v-card v-if="configuredStationsCount > 0" variant="outlined" class="mt-4">
+          <v-card-title class="text-subtitle-1 bg-grey-lighten-5">
+            Configured Stations Summary
+          </v-card-title>
+          <v-card-text class="pa-2">
+            <v-chip v-for="(config, displayName) in stationConfigs" :key="displayName" class="ma-1" color="primary"
+              variant="tonal" closable @click="editStationConfig(displayName)"
+              @click:close="removeStationConfig(displayName)">
+              {{ displayName }}
+              <v-badge :content="config.deviceIds.length || config.totalDeviceCount || 'All'" color="success" inline
+                class="ml-1" />
+              <v-chip size="x-small" class="ml-1" variant="outlined">{{ config.testStatus }}</v-chip>
+            </v-chip>
+          </v-card-text>
         </v-card>
 
-        <!-- Error Alert -->
-        <v-alert v-if="error" type="error" class="mb-4" closable @click:close="error = null">
-            {{ error }}
-        </v-alert>
+        <!-- Action Buttons -->
+        <v-divider class="my-4" />
+        <div class="d-flex justify-end gap-2">
+          <v-btn color="error" variant="outlined" prepend-icon="mdi-refresh" :disabled="loading"
+            @click="handleClearAll">
+            Clear All
+          </v-btn>
+          <v-btn color="primary" variant="flat" prepend-icon="mdi-magnify" :loading="loadingTestItems"
+            :disabled="!canFetchData" @click="fetchTestItems">
+            Search
+          </v-btn>
+        </div>
+      </v-card-text>
+    </v-card>
 
-        <!-- Loading Indicator -->
-        <v-card v-if="loadingTestItems" class="mb-4">
-            <v-card-text class="text-center py-8">
-                <v-progress-circular indeterminate color="primary" size="48" />
-                <p class="text-medium-emphasis mt-4">Fetching test data from iPLAS...</p>
-            </v-card-text>
-        </v-card>
+    <!-- Error Alert -->
+    <v-alert v-if="error" type="error" class="mb-4" closable @click:close="error = null">
+      {{ error }}
+    </v-alert>
 
-        <!-- Results Section with Ranking Table -->
-        <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
-            :calculating-scores="calculatingScores" :loading="loadingTestItems" :exporting-all="exportingAll" @row-click="handleRowClick" @download="handleDownloadRecord"
-            @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores" />
+    <!-- Loading Indicator -->
+    <v-card v-if="loadingTestItems" class="mb-4">
+      <v-card-text class="text-center py-8">
+        <v-progress-circular indeterminate color="primary" size="48" />
+        <p class="text-medium-emphasis mt-4">Fetching test data from iPLAS...</p>
+      </v-card-text>
+    </v-card>
 
-        <!-- Station Selection Dialog -->
-        <StationSelectionDialog v-model:show="showStationSelectionDialog" :site="selectedSite || ''"
-            :project="selectedProject || ''" :stations="stations" :selected-configs="stationConfigs"
-            @station-click="handleStationClick" @confirm="handleStationSelectionConfirm"
-            @clear-all="clearAllStations" />
+    <!-- Results Section with Ranking Table -->
+    <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
+      :calculating-scores="calculatingScores" :loading="loadingTestItems" :exporting-all="exportingAll"
+      @row-click="handleRowClick" @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords"
+      @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores" />
 
-        <!-- Station Config Dialog -->
-        <StationConfigDialog v-model:show="showStationConfigDialog" :station="selectedStationForConfig"
-            :site="selectedSite || ''" :project="selectedProject || ''" :start-time="startTime" :end-time="endTime"
-            :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
-            :loading-devices="loadingCurrentStationDevices" :device-error="deviceError"
-            :available-test-items="currentStationTestItems" :loading-test-items="loadingCurrentStationTestItems"
-            :test-items-error="testItemsError" @save="handleStationConfigSave" @remove="handleStationConfigRemove"
-            @refresh-devices="refreshCurrentStationDevices" @refresh-test-items="refreshCurrentStationTestItems" />
-    </div>
+    <!-- Station Selection Dialog -->
+    <StationSelectionDialog v-model:show="showStationSelectionDialog" :site="selectedSite || ''"
+      :project="selectedProject || ''" :stations="stations" :selected-configs="stationConfigs"
+      @station-click="handleStationClick" @confirm="handleStationSelectionConfirm" @clear-all="clearAllStations" />
+
+    <!-- Station Config Dialog -->
+    <StationConfigDialog v-model:show="showStationConfigDialog" :station="selectedStationForConfig"
+      :site="selectedSite || ''" :project="selectedProject || ''" :start-time="startTime" :end-time="endTime"
+      :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
+      :loading-devices="loadingCurrentStationDevices" :device-error="deviceError"
+      :available-test-items="currentStationTestItems" :loading-test-items="loadingCurrentStationTestItems"
+      :test-items-error="testItemsError" @save="handleStationConfigSave" @remove="handleStationConfigRemove"
+      @refresh-devices="refreshCurrentStationDevices" @refresh-test-items="refreshCurrentStationTestItems" />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -132,15 +131,15 @@ import {
   type ExportRecord,
   type ExportTestItem,
   iplasProxyApi,
-} from '@/features/dut_logs/api/iplasProxyApi'
+} from '@/features/dut-logs/api/iplasProxyApi'
 import type {
   CsvTestItemData,
   DownloadCsvLogInfo,
   Station,
   TestItem,
-} from '@/features/dut_logs/composables/useIplasApi'
-import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
-import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
+} from '@/features/dut-logs/composables/useIplasApi'
+import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
+import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { getErrorMessage } from '@/shared/utils'
 import { useScoring } from '../composables/useScoring'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
@@ -972,10 +971,10 @@ onUnmounted(() => {
 
 <style scoped>
 .gap-2 {
-    gap: 0.5rem;
+  gap: 0.5rem;
 }
 
 .gap-3 {
-    gap: 0.75rem;
+  gap: 0.75rem;
 }
 </style>

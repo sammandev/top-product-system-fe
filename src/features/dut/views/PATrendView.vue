@@ -161,10 +161,10 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { useAuthStore } from '@/features/auth/store'
+import type { PATrendRequest } from '@/core/types'
+import { useAuthStore } from '@/features/auth/stores'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
-import type { PATrendRequest } from '@/types/api'
-import { useDUTStore } from '../store/dut.store'
+import { useDUTStore } from '../stores/dut.store'
 
 // Stores
 const dutStore = useDUTStore()
@@ -187,76 +187,76 @@ const filterForm = ref()
 
 // SROM Filter Options
 const sromFilterOptions = [
-  { title: 'All', value: 'all' },
-  { title: 'Old', value: 'old' },
-  { title: 'New', value: 'new' },
+    { title: 'All', value: 'all' },
+    { title: 'Old', value: 'old' },
+    { title: 'New', value: 'new' },
 ]
 
 // Computed
 const hasDUTAccess = computed(() => authStore.hasDUTAccess)
 
 const canAnalyze = computed(() => {
-  return selectedDutIsns.value.length > 0 && selectedStationIds.value.length > 0
+    return selectedDutIsns.value.length > 0 && selectedStationIds.value.length > 0
 })
 
 const hasResults = computed(() => {
-  if (activeTab.value === 'auto') return dutStore.paTrendAutoData.length > 0
-  if (activeTab.value === 'dex') return dutStore.paTrendDexData.length > 0
-  if (activeTab.value === 'diff') return dutStore.paDiffData.length > 0
-  return false
+    if (activeTab.value === 'auto') return dutStore.paTrendAutoData.length > 0
+    if (activeTab.value === 'dex') return dutStore.paTrendDexData.length > 0
+    if (activeTab.value === 'diff') return dutStore.paDiffData.length > 0
+    return false
 })
 
 // Actions
 async function handleAnalyze() {
-  // Build request params
-  const params: PATrendRequest = {
-    dut_isn: selectedDutIsns.value,
-    station_id: selectedStationIds.value.map(String),
-    srom_filter: sromFilter.value,
-  }
-
-  // Add optional parameters
-  if (siteIdentifier.value) {
-    params.site_identifier = siteIdentifier.value
-  }
-  if (modelIdentifier.value) {
-    params.model_identifier = modelIdentifier.value
-  }
-  if (startTime.value) {
-    params.start_time = startTime.value
-  }
-  if (endTime.value) {
-    params.end_time = endTime.value
-  }
-
-  try {
-    // Fetch data based on active tab
-    if (activeTab.value === 'auto') {
-      await dutStore.fetchPATrendAuto(params)
-    } else if (activeTab.value === 'dex') {
-      await dutStore.fetchPATrendDex(params)
-    } else if (activeTab.value === 'diff') {
-      await dutStore.fetchPATrendDiff(params)
+    // Build request params
+    const params: PATrendRequest = {
+        dut_isn: selectedDutIsns.value,
+        station_id: selectedStationIds.value.map(String),
+        srom_filter: sromFilter.value,
     }
-  } catch (error) {
-    console.error('Failed to fetch PA trend data:', error)
-  }
+
+    // Add optional parameters
+    if (siteIdentifier.value) {
+        params.site_identifier = siteIdentifier.value
+    }
+    if (modelIdentifier.value) {
+        params.model_identifier = modelIdentifier.value
+    }
+    if (startTime.value) {
+        params.start_time = startTime.value
+    }
+    if (endTime.value) {
+        params.end_time = endTime.value
+    }
+
+    try {
+        // Fetch data based on active tab
+        if (activeTab.value === 'auto') {
+            await dutStore.fetchPATrendAuto(params)
+        } else if (activeTab.value === 'dex') {
+            await dutStore.fetchPATrendDex(params)
+        } else if (activeTab.value === 'diff') {
+            await dutStore.fetchPATrendDiff(params)
+        }
+    } catch (error) {
+        console.error('Failed to fetch PA trend data:', error)
+    }
 }
 
 function handleReset() {
-  selectedDutIsns.value = []
-  selectedStationIds.value = []
-  siteIdentifier.value = ''
-  modelIdentifier.value = ''
-  sromFilter.value = 'all'
-  startTime.value = ''
-  endTime.value = ''
-  dutStore.clearPATrendData()
+    selectedDutIsns.value = []
+    selectedStationIds.value = []
+    siteIdentifier.value = ''
+    modelIdentifier.value = ''
+    sromFilter.value = 'all'
+    startTime.value = ''
+    endTime.value = ''
+    dutStore.clearPATrendData()
 }
 
 function handleExport() {
-  // TODO: Implement export functionality
-  console.log('Export functionality to be implemented')
+    // TODO: Implement export functionality
+    console.log('Export functionality to be implemented')
 }
 </script>
 

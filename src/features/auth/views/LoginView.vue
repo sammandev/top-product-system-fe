@@ -100,7 +100,7 @@ import { storeToRefs } from 'pinia'
 import { ref } from 'vue'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useAuth } from '../composables'
-import { useAuthStore } from '../store'
+import { useAuthStore } from '../stores'
 
 // Use auth composable with router integration
 // COMMENTED OUT: login not used since we only use external login now
@@ -131,7 +131,7 @@ const showPassword = ref(false)
 const rememberMe = ref(localStorage.getItem('remember_me') === 'true')
 
 const rules = {
-  required: (value: string) => !!value || 'Required field',
+    required: (value: string) => !!value || 'Required field',
 }
 
 // Clear error when switching tabs - COMMENTED OUT: No mode switching now
@@ -141,52 +141,52 @@ const rules = {
 // })
 
 if (rememberMe.value) {
-  const rememberedUsername = localStorage.getItem('remember_username')
-  if (rememberedUsername) {
-    username.value = rememberedUsername
-  }
+    const rememberedUsername = localStorage.getItem('remember_username')
+    if (rememberedUsername) {
+        username.value = rememberedUsername
+    }
 }
 
 async function handleLogin() {
-  if (!loginValid.value) return
+    if (!loginValid.value) return
 
-  try {
-    // COMMENTED OUT: Local login option - now always using external login
-    // if (loginMode.value === 'local') {
-    //     await login({
-    //         username: username.value,
-    //         password: password.value
-    //     })
-    // } else {
-    await externalLogin({
-      username: username.value,
-      password: password.value,
-    })
-    // }
+    try {
+        // COMMENTED OUT: Local login option - now always using external login
+        // if (loginMode.value === 'local') {
+        //     await login({
+        //         username: username.value,
+        //         password: password.value
+        //     })
+        // } else {
+        await externalLogin({
+            username: username.value,
+            password: password.value,
+        })
+        // }
 
-    if (rememberMe.value) {
-      localStorage.setItem('remember_me', 'true')
-      localStorage.setItem('remember_username', username.value)
-    } else {
-      localStorage.removeItem('remember_me')
-      localStorage.removeItem('remember_username')
+        if (rememberMe.value) {
+            localStorage.setItem('remember_me', 'true')
+            localStorage.setItem('remember_username', username.value)
+        } else {
+            localStorage.removeItem('remember_me')
+            localStorage.removeItem('remember_username')
+        }
+        // COMMENTED OUT: No need to save login mode anymore
+        // localStorage.setItem('login_mode', loginMode.value)
+    } catch (err) {
+        console.error('Login failed:', err)
     }
-    // COMMENTED OUT: No need to save login mode anymore
-    // localStorage.setItem('login_mode', loginMode.value)
-  } catch (err) {
-    console.error('Login failed:', err)
-  }
 }
 
 async function handleGuestLogin() {
-  guestLoading.value = true
-  try {
-    await guestLogin()
-  } catch (err) {
-    console.error('Guest login failed:', err)
-  } finally {
-    guestLoading.value = false
-  }
+    guestLoading.value = true
+    try {
+        await guestLogin()
+    } catch (err) {
+        console.error('Guest login failed:', err)
+    } finally {
+        guestLoading.value = false
+    }
 }
 </script>
 
