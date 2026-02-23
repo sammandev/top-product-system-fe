@@ -6,12 +6,16 @@ import { pinia, vuetify } from '@/core/plugins'
 import router from '@/core/router'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useAuthStore } from '@/features/auth/stores'
+import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import App from './App.vue'
 
 // Import global styles
 import './assets/main.css'
 
 const app = createApp(App)
+
+// Register global layout component used by 23+ views
+app.component('DefaultLayout', DefaultLayout)
 
 // Inject router instance into API interceptors for proper navigation
 // This allows error interceptor to use router.push() instead of window.location.href

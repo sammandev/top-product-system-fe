@@ -399,11 +399,11 @@
                     <v-col v-if="selectedRoleDetails.created_at" cols="4" class="text-medium-emphasis">Created
                       At:</v-col>
                     <v-col v-if="selectedRoleDetails.created_at" cols="8">{{ formatDate(selectedRoleDetails.created_at)
-                      }}</v-col>
+                    }}</v-col>
                     <v-col v-if="selectedRoleDetails.updated_at" cols="4" class="text-medium-emphasis">Updated
                       At:</v-col>
                     <v-col v-if="selectedRoleDetails.updated_at" cols="8">{{ formatDate(selectedRoleDetails.updated_at)
-                      }}</v-col>
+                    }}</v-col>
                   </v-row>
                 </v-card-text>
               </v-card>
