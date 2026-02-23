@@ -128,7 +128,7 @@ export interface AccessControlUser {
   is_superuser: boolean
   is_staff: boolean
   is_active: boolean
-  role: 'developer' | 'superadmin' | 'user'
+  role: 'developer' | 'superadmin' | 'admin' | 'user' | 'guest'
   menu_permissions: Record<string, string[]> | null
   permission_updated_at: string | null
   last_login: string | null

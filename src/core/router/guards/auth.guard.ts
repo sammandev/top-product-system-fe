@@ -1,23 +1,35 @@
 /**
  * Authentication Guard
  *
- * Navigation guard that protects routes requiring authentication
- * Optimized to prevent redundant API calls during navigation
+ * Navigation guard that protects routes requiring authentication.
+ * Enforces the 5-role access hierarchy:
+ *   guest → user → admin → superadmin → developer
+ *
+ * guest: only /dut/top-products/analysis and /dut/data-explorer (default)
+ * user:  standard pages + tools (no admin/system)
+ * admin: all pages except System Cleanup, App Config, Roles & Permissions, Menu Access
+ * superadmin/developer: all pages
  */
 
 import type { NavigationGuardNext, RouteLocationNormalized } from 'vue-router'
 import { useAuthStore } from '@/features/auth/stores'
 
+/** Paths a guest can always access (before menu_permissions grants). */
+const GUEST_ALLOWED_PATHS = new Set(['/dut/top-products/analysis', '/dut/data-explorer'])
+
+/** Default redirect for guest users when they try to access restricted pages. */
+const GUEST_DEFAULT_PATH = '/dut/top-products/analysis'
+
 /**
- * Check if route requires authentication and handle accordingly
+ * Check if route requires authentication and handle accordingly.
  *
- * Behavior:
- * - If route requires auth and user is not authenticated → redirect to login
- * - If route requires admin and user is not admin → redirect to dashboard
- * - If route is login and user is authenticated → redirect to dashboard
- * - Otherwise → allow navigation
- *
- * Performance: Deferred to auth store's fetchUser() which handles deduplication
+ * Priority:
+ * 1. Not authenticated → login
+ * 2. requiresSuperAdmin → only superadmin/developer
+ * 3. requiresAdmin → only admin/superadmin/developer
+ * 4. Guest restrictions → only allowed paths
+ * 5. User restrictions → no admin pages
+ * 6. Login page while authenticated → dashboard
  */
 export async function authGuard(
   to: RouteLocationNormalized,
@@ -38,7 +50,6 @@ export async function authGuard(
 
   // Check if route requires authentication
   if (requiresAuth && !authStore.isAuthenticated) {
-    // User not authenticated, redirect to login with return path
     next({
       name: 'Login',
       query: { redirect: to.fullPath },
@@ -48,30 +59,68 @@ export async function authGuard(
 
   // Check if route requires superadmin role (developer or superadmin)
   if (requiresSuperAdmin && !authStore.isSuperAdmin) {
-    // User not superadmin, redirect to dashboard
     next({
-      name: 'Dashboard',
+      path: authStore.isGuest ? GUEST_DEFAULT_PATH : '/dashboard',
       query: { error: 'unauthorized' },
     })
     return
   }
 
-  // Check if route requires admin role
+  // Check if route requires admin role (admin, superadmin, developer)
   if (requiresAdmin && !authStore.isAdmin) {
-    // User not admin, redirect to dashboard
     next({
-      name: 'Dashboard',
+      path: authStore.isGuest ? GUEST_DEFAULT_PATH : '/dashboard',
       query: { error: 'unauthorized' },
     })
     return
+  }
+
+  // Guest restrictions: only allowed paths (unless granted via menu_permissions)
+  if (authStore.isGuest && requiresAuth && !GUEST_ALLOWED_PATHS.has(to.path)) {
+    // Check if guest has been granted access via menu_permissions
+    const resource = routePathToResource(to.path)
+    if (!resource || !authStore.hasMenuPermission(resource, 'read')) {
+      next({ path: GUEST_DEFAULT_PATH })
+      return
+    }
   }
 
   // Prevent authenticated users from accessing login page
   if (to.name === 'Login' && authStore.isAuthenticated) {
-    next({ name: 'Dashboard' })
+    // Guests default to top products analysis instead of dashboard
+    next({ path: authStore.isGuest ? GUEST_DEFAULT_PATH : '/dashboard' })
     return
   }
 
   // Allow navigation
   next()
+}
+
+/**
+ * Map a route path to a menu_permissions resource name.
+ * Returns undefined if no mapping exists (the route has no resource check).
+ */
+function routePathToResource(path: string): string | undefined {
+  const mapping: Record<string, string> = {
+    '/dashboard': 'dashboard',
+    '/dut/top-products/analysis': 'top_products',
+    '/dut/top-products/data': 'top_products',
+    '/dut/top-products/pa-trend': 'top_products',
+    '/dut/analysis': 'dut_analysis',
+    '/dut/data-explorer': 'dut_management',
+    '/parsing': 'parsing',
+    '/parsing/download-format': 'parsing',
+    '/compare': 'comparison',
+    '/compare/dvt-mc2': 'comparison',
+    '/mastercontrol/analyze': 'mastercontrol',
+    '/conversion/dvt-to-mc2': 'conversion',
+    '/activity': 'activity',
+    '/admin/users': 'admin_users',
+    '/admin/rbac': 'admin_rbac',
+    '/admin/cleanup': 'admin_cleanup',
+    '/admin/app-config': 'admin_config',
+    '/admin/menu-access': 'admin_menu_access',
+    '/admin/access-control': 'admin_access_control',
+  }
+  return mapping[path]
 }

@@ -117,7 +117,7 @@
             <v-list density="compact" nav class="flex-grow-1 overflow-y-auto">
                 <!-- Main Section -->
                 <v-list-subheader v-if="!rail" class="mt-2">MAIN</v-list-subheader>
-                <template v-for="item in filteredMainItems" :key="item.path">
+                <template v-for="item in visibleMainItems" :key="item.path">
                     <!-- Items with children (collapsible groups) -->
                     <v-list-group v-if="item.children" :value="item.title" fluid>
                         <template #activator="{ props }">
@@ -133,28 +133,30 @@
                         rounded="xl" color="primary" class="my-1" />
                 </template>
 
-                <!-- Tools Section -->
-                <v-list-subheader v-if="!rail" class="mt-3">TOOLS</v-list-subheader>
-                <template v-for="item in filteredToolsItems" :key="item.path">
-                    <!-- Items with children (collapsible groups) -->
-                    <v-list-group v-if="item.children" :value="item.title" fluid>
-                        <template #activator="{ props }">
-                            <v-list-item v-bind="props" :prepend-icon="item.icon" :title="item.title" rounded="xl"
-                                color="primary" class="my-1" />
-                        </template>
-                        <v-list-item v-for="child in item.children" :key="child.path" :prepend-icon="child.icon"
-                            :title="child.title" :to="child.path" :value="child.path" rounded="xl" color="primary"
-                            class="my-1" />
-                    </v-list-group>
-                    <!-- Regular items -->
-                    <v-list-item v-else :prepend-icon="item.icon" :title="item.title" :to="item.path" :value="item.path"
-                        rounded="xl" color="primary" class="my-1" />
+                <!-- Tools Section (hidden for guests) -->
+                <template v-if="authStore.isUser">
+                    <v-list-subheader v-if="!rail" class="mt-3">TOOLS</v-list-subheader>
+                    <template v-for="item in filteredToolsItems" :key="item.path">
+                        <!-- Items with children (collapsible groups) -->
+                        <v-list-group v-if="item.children" :value="item.title" fluid>
+                            <template #activator="{ props }">
+                                <v-list-item v-bind="props" :prepend-icon="item.icon" :title="item.title" rounded="xl"
+                                    color="primary" class="my-1" />
+                            </template>
+                            <v-list-item v-for="child in item.children" :key="child.path" :prepend-icon="child.icon"
+                                :title="child.title" :to="child.path" :value="child.path" rounded="xl" color="primary"
+                                class="my-1" />
+                        </v-list-group>
+                        <!-- Regular items -->
+                        <v-list-item v-else :prepend-icon="item.icon" :title="item.title" :to="item.path"
+                            :value="item.path" rounded="xl" color="primary" class="my-1" />
+                    </template>
                 </template>
 
-                <!-- System Section (Admin Only) -->
+                <!-- System Section (Admin+ Only) -->
                 <template v-if="authStore.isAdmin">
                     <v-list-subheader v-if="!rail" class="mt-3">SYSTEM</v-list-subheader>
-                    <template v-for="item in filteredSystemItems" :key="item.path">
+                    <template v-for="item in visibleSystemItems" :key="item.path">
                         <!-- Items with children (collapsible groups like Access Control) -->
                         <v-list-group v-if="item.children" :value="item.title" fluid>
                             <template #activator="{ props }">
@@ -317,6 +319,7 @@ const staticSystemItems: MenuItem[] = [
     icon: 'mdi-shield-lock',
     children: [
       { title: 'User Management', icon: 'mdi-circle-small', path: '/admin/users' },
+      { title: 'Access Control', icon: 'mdi-circle-small', path: '/admin/access-control' },
       { title: 'Roles & Permissions', icon: 'mdi-circle-small', path: '/admin/rbac' },
       { title: 'Menu Access', icon: 'mdi-circle-small', path: '/admin/menu-access' },
     ],
@@ -324,6 +327,17 @@ const staticSystemItems: MenuItem[] = [
   { title: 'System Cleanup', icon: 'mdi-delete-sweep', path: '/admin/cleanup' },
   { title: 'App Configuration', icon: 'mdi-cog', path: '/admin/app-config' },
 ]
+
+/** Paths only accessible to superadmin/developer in the System section. */
+const SUPERADMIN_ONLY_PATHS = new Set([
+  '/admin/rbac',
+  '/admin/menu-access',
+  '/admin/cleanup',
+  '/admin/app-config',
+])
+
+/** Paths a guest can see in the Main section. */
+const GUEST_MAIN_PATHS = new Set(['/dut/top-products/analysis', '/dut/data-explorer'])
 
 // Dynamic menus from database (use static as fallback)
 const mainItems = computed(() => {
@@ -379,6 +393,63 @@ const filteredSystemItems = computed(() => {
       item.title.toLowerCase().includes(query) ||
       item.children?.some((child) => child.title.toLowerCase().includes(query)),
   )
+})
+
+/**
+ * Helper: filter a menu item's children by allowed paths (set-based).
+ * Returns a new item with only matching children, or null if none match.
+ */
+function filterItemByPaths(item: MenuItem, allowed: Set<string>): MenuItem | null {
+  if (item.children) {
+    const filteredChildren = item.children.filter((c) => c.path && allowed.has(c.path))
+    if (filteredChildren.length === 0) return null
+    return { ...item, children: filteredChildren }
+  }
+  if (item.path && allowed.has(item.path)) return item
+  return null
+}
+
+/**
+ * Helper: remove superadmin-only items from a menu tree.
+ * Used by admin role to hide System Cleanup, App Config, Roles & Permissions, Menu Access.
+ */
+function filterOutSuperAdminItems(items: MenuItem[]): MenuItem[] {
+  return items.reduce<MenuItem[]>((acc, item) => {
+    if (item.children) {
+      const filteredChildren = item.children.filter(
+        (c) => !c.path || !SUPERADMIN_ONLY_PATHS.has(c.path),
+      )
+      if (filteredChildren.length > 0) {
+        acc.push({ ...item, children: filteredChildren })
+      }
+    } else if (!item.path || !SUPERADMIN_ONLY_PATHS.has(item.path)) {
+      acc.push(item)
+    }
+    return acc
+  }, [])
+}
+
+/** Main items filtered by role and search query. */
+const visibleMainItems = computed(() => {
+  let items = filteredMainItems.value
+  if (authStore.isGuest) {
+    // Guest: only Top Products Analysis + Data Explorer
+    items = items.reduce<MenuItem[]>((acc, item) => {
+      const filtered = filterItemByPaths(item, GUEST_MAIN_PATHS)
+      if (filtered) acc.push(filtered)
+      return acc
+    }, [])
+  }
+  return items
+})
+
+/** System items filtered by role: admin sees only User Management + Access Control; superadmin+ sees all. */
+const visibleSystemItems = computed(() => {
+  let items = filteredSystemItems.value
+  if (authStore.isAdmin && !authStore.isSuperAdmin) {
+    items = filterOutSuperAdminItems(items)
+  }
+  return items
 })
 
 function handleLogout() {

@@ -94,26 +94,32 @@ Role-based access control with per-resource CRUD menu permissions, matching the 
 
 **Role Hierarchy (enforced in auth store):**
 
-1. **Developer** — hardcoded identity check (`Samuel_Halomoan` / `MW2400549`), auto-assigned on login.
-2. **Super Admin** — `role === 'superadmin'` or developer; full admin access.
-3. **Admin** — superadmin or legacy `is_admin`/`is_ptb_admin` flags.
-4. **User** — default; access governed by `menu_permissions`.
+1. **Developer** — hardcoded identity check (`Samuel_Halomoan` / `MW2400549`), auto-assigned on login. Full access.
+2. **Super Admin** — `role === 'superadmin'` or developer; full admin access. Cannot modify developer users.
+3. **Admin** — `role === 'admin'`; all pages except System Cleanup, App Configuration, Roles & Permissions, Menu Access. Auto-assigned for `is_ptb_admin` users on first login.
+4. **User** — default; standard pages + tools. Access governed by `menu_permissions`.
+5. **Guest** — `role === 'guest'` or `isGuestMode`; only Top Products Analysis + Data Explorer. Can be granted more via `menu_permissions`.
 
 **Auth Store Getters/Methods (`auth.store.ts`):**
 
 - `isDeveloper` — computed; checks `role === 'developer'` or hardcoded identity.
 - `isSuperAdmin` — computed; developer or `role === 'superadmin'`.
-- `isAdmin` — computed; superadmin or legacy admin flags.
+- `isAdmin` — computed; superadmin or `role === 'admin'` or legacy admin flags.
+- `isUser` — computed; admin or `role === 'user'` (not guest).
+- `isGuest` — computed; `isGuestMode` or `role === 'guest'`.
+- `roleLevel` — computed; numeric level (guest=0, user=1, admin=2, superadmin=3, developer=4).
 - `hasMenuPermission(resource, action)` — checks developer/superadmin bypass → explicit `menu_permissions` → `is_ptb_admin`/`is_admin` fallback.
 
 **Route Guard (`auth.guard.ts`):**
 
-- Supports `meta.requiresSuperAdmin` — restricts route to superadmin+ roles, redirects others to dashboard.
-- Guard priority: `requiresSuperAdmin` → `requiresAdmin` → `requiresAuth`.
+- Supports `meta.requiresSuperAdmin` — restricts route to superadmin+ roles.
+- Supports `meta.requiresAdmin` — restricts route to admin+ roles.
+- Guest restrictions — only allowed to `/dut/top-products/analysis` and `/dut/data-explorer` unless granted via `menu_permissions`.
+- Guard priority: `requiresSuperAdmin` → `requiresAdmin` → guest check → `requiresAuth`.
 
 **Frontend Types (`auth.types.ts`):**
 
-- `UserRole` = `'developer' | 'superadmin' | 'user'`
+- `UserRole` = `'developer' | 'superadmin' | 'admin' | 'user' | 'guest'`
 - `MenuPermissions` = `Record<string, string[]>`
 - `User` interface extended with `role`, `menu_permissions`, `is_superuser`, `is_staff`.
 

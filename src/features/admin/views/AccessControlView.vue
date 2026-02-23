@@ -116,6 +116,12 @@
                                 <span v-else-if="item.role === 'superadmin'" class="text-caption text-info">
                                     Full Access (Super Admin)
                                 </span>
+                                <span v-else-if="item.role === 'admin'" class="text-caption text-warning">
+                                    Admin Access
+                                </span>
+                                <span v-else-if="item.role === 'guest'" class="text-caption text-medium-emphasis">
+                                    Guest (Limited)
+                                </span>
                                 <span v-else-if="!item.menu_permissions" class="text-caption text-medium-emphasis">
                                     Not configured
                                 </span>
@@ -267,9 +273,9 @@ const defaultPermissions = ref<Record<string, string[]>>({})
 const editDialog = ref(false)
 const editingUser = ref<AccessControlUser | null>(null)
 const editForm = ref({
-    role: 'user' as string,
-    is_active: true,
-    is_ptb_admin: false,
+  role: 'user' as string,
+  is_active: true,
+  is_ptb_admin: false,
 })
 
 // Permissions dialog state
@@ -279,19 +285,21 @@ const permissionsForm = ref<Record<string, string[]>>({})
 
 // Table headers
 const headers = [
-    { title: 'User', key: 'username', sortable: true },
-    { title: 'Role', key: 'role', sortable: true },
-    { title: 'Status', key: 'is_active', sortable: true },
-    { title: 'Flags', key: 'flags', sortable: false },
-    { title: 'Permissions', key: 'menu_permissions', sortable: false },
-    { title: 'Last Login', key: 'last_login', sortable: true },
-    { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const },
+  { title: 'User', key: 'username', sortable: true },
+  { title: 'Role', key: 'role', sortable: true },
+  { title: 'Status', key: 'is_active', sortable: true },
+  { title: 'Flags', key: 'flags', sortable: false },
+  { title: 'Permissions', key: 'menu_permissions', sortable: false },
+  { title: 'Last Login', key: 'last_login', sortable: true },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const },
 ]
 
 // Available roles for the dropdown (developer cannot be assigned via UI)
 const availableRoles = [
-    { title: 'User', value: 'user' },
-    { title: 'Super Admin', value: 'superadmin' },
+  { title: 'Guest', value: 'guest' },
+  { title: 'User', value: 'user' },
+  { title: 'Admin', value: 'admin' },
+  { title: 'Super Admin', value: 'superadmin' },
 ]
 
 // ============================================================================
@@ -299,24 +307,24 @@ const availableRoles = [
 // ============================================================================
 
 async function loadData() {
-    loading.value = true
-    error.value = ''
+  loading.value = true
+  error.value = ''
 
-    try {
-        const [usersResponse, resourcesResponse] = await Promise.all([
-            adminApi.getAccessControlUsers(),
-            adminApi.getMenuResources(),
-        ])
+  try {
+    const [usersResponse, resourcesResponse] = await Promise.all([
+      adminApi.getAccessControlUsers(),
+      adminApi.getMenuResources(),
+    ])
 
-        users.value = usersResponse.users
-        availableResources.value = resourcesResponse.resources
-        availableActions.value = resourcesResponse.actions
-        defaultPermissions.value = resourcesResponse.default_permissions
-    } catch (err: unknown) {
-        error.value = getApiErrorDetail(err, 'Failed to load access control data')
-    } finally {
-        loading.value = false
-    }
+    users.value = usersResponse.users
+    availableResources.value = resourcesResponse.resources
+    availableActions.value = resourcesResponse.actions
+    defaultPermissions.value = resourcesResponse.default_permissions
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to load access control data')
+  } finally {
+    loading.value = false
+  }
 }
 
 // ============================================================================
@@ -324,36 +332,36 @@ async function loadData() {
 // ============================================================================
 
 function openEditDialog(user: AccessControlUser) {
-    editingUser.value = user
-    editForm.value = {
-        role: user.role,
-        is_active: user.is_active,
-        is_ptb_admin: user.is_ptb_admin,
-    }
-    editDialog.value = true
+  editingUser.value = user
+  editForm.value = {
+    role: user.role,
+    is_active: user.is_active,
+    is_ptb_admin: user.is_ptb_admin,
+  }
+  editDialog.value = true
 }
 
 async function saveUserAccess() {
-    if (!editingUser.value) return
+  if (!editingUser.value) return
 
-    saving.value = true
-    error.value = ''
+  saving.value = true
+  error.value = ''
 
-    try {
-        await adminApi.updateUserAccess(editingUser.value.id, {
-            role: editForm.value.role,
-            is_active: editForm.value.is_active,
-            is_ptb_admin: editForm.value.is_ptb_admin,
-        })
+  try {
+    await adminApi.updateUserAccess(editingUser.value.id, {
+      role: editForm.value.role,
+      is_active: editForm.value.is_active,
+      is_ptb_admin: editForm.value.is_ptb_admin,
+    })
 
-        success.value = `Access settings updated for ${editingUser.value.username}`
-        editDialog.value = false
-        await loadData()
-    } catch (err: unknown) {
-        error.value = getApiErrorDetail(err, 'Failed to update access settings')
-    } finally {
-        saving.value = false
-    }
+    success.value = `Access settings updated for ${editingUser.value.username}`
+    editDialog.value = false
+    await loadData()
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to update access settings')
+  } finally {
+    saving.value = false
+  }
 }
 
 // ============================================================================
@@ -361,71 +369,71 @@ async function saveUserAccess() {
 // ============================================================================
 
 function openPermissionsDialog(user: AccessControlUser) {
-    permissionsUser.value = user
-    // Deep clone existing permissions or start empty
-    permissionsForm.value = user.menu_permissions
-        ? JSON.parse(JSON.stringify(user.menu_permissions))
-        : {}
-    permissionsDialog.value = true
+  permissionsUser.value = user
+  // Deep clone existing permissions or start empty
+  permissionsForm.value = user.menu_permissions
+    ? JSON.parse(JSON.stringify(user.menu_permissions))
+    : {}
+  permissionsDialog.value = true
 }
 
 function hasPermission(resource: string, action: string): boolean {
-    return permissionsForm.value[resource]?.includes(action) ?? false
+  return permissionsForm.value[resource]?.includes(action) ?? false
 }
 
 function togglePermission(resource: string, action: string, checked: unknown) {
-    if (!permissionsForm.value[resource]) {
-        permissionsForm.value[resource] = []
-    }
+  if (!permissionsForm.value[resource]) {
+    permissionsForm.value[resource] = []
+  }
 
-    if (checked) {
-        if (!permissionsForm.value[resource].includes(action)) {
-            permissionsForm.value[resource].push(action)
-        }
-    } else {
-        permissionsForm.value[resource] = permissionsForm.value[resource].filter((a) => a !== action)
-        // Remove empty arrays
-        if (permissionsForm.value[resource].length === 0) {
-            delete permissionsForm.value[resource]
-        }
+  if (checked) {
+    if (!permissionsForm.value[resource].includes(action)) {
+      permissionsForm.value[resource].push(action)
     }
+  } else {
+    permissionsForm.value[resource] = permissionsForm.value[resource].filter((a) => a !== action)
+    // Remove empty arrays
+    if (permissionsForm.value[resource].length === 0) {
+      delete permissionsForm.value[resource]
+    }
+  }
 }
 
 function selectAllPermissions() {
-    const allPerms: Record<string, string[]> = {}
-    for (const resource of availableResources.value) {
-        allPerms[resource] = [...availableActions.value]
-    }
-    permissionsForm.value = allPerms
+  const allPerms: Record<string, string[]> = {}
+  for (const resource of availableResources.value) {
+    allPerms[resource] = [...availableActions.value]
+  }
+  permissionsForm.value = allPerms
 }
 
 function clearAllPermissions() {
-    permissionsForm.value = {}
+  permissionsForm.value = {}
 }
 
 function applyDefaultPermissions() {
-    permissionsForm.value = JSON.parse(JSON.stringify(defaultPermissions.value))
+  permissionsForm.value = JSON.parse(JSON.stringify(defaultPermissions.value))
 }
 
 async function savePermissions() {
-    if (!permissionsUser.value) return
+  if (!permissionsUser.value) return
 
-    saving.value = true
-    error.value = ''
+  saving.value = true
+  error.value = ''
 
-    try {
-        await adminApi.updateUserAccess(permissionsUser.value.id, {
-            menu_permissions: permissionsForm.value,
-        })
+  try {
+    await adminApi.updateUserAccess(permissionsUser.value.id, {
+      menu_permissions: permissionsForm.value,
+    })
 
-        success.value = `Menu permissions updated for ${permissionsUser.value.username}`
-        permissionsDialog.value = false
-        await loadData()
-    } catch (err: unknown) {
-        error.value = getApiErrorDetail(err, 'Failed to update menu permissions')
-    } finally {
-        saving.value = false
-    }
+    success.value = `Menu permissions updated for ${permissionsUser.value.username}`
+    permissionsDialog.value = false
+    await loadData()
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to update menu permissions')
+  } finally {
+    saving.value = false
+  }
 }
 
 // ============================================================================
@@ -433,72 +441,80 @@ async function savePermissions() {
 // ============================================================================
 
 function getRoleColor(role: string): string {
-    switch (role) {
-        case 'developer':
-            return 'deep-purple'
-        case 'superadmin':
-            return 'orange'
-        case 'user':
-            return 'blue-grey'
-        default:
-            return 'grey'
-    }
+  switch (role) {
+    case 'developer':
+      return 'deep-purple'
+    case 'superadmin':
+      return 'orange'
+    case 'admin':
+      return 'teal'
+    case 'user':
+      return 'blue-grey'
+    case 'guest':
+      return 'grey'
+    default:
+      return 'grey'
+  }
 }
 
 function getRoleIcon(role: string): string {
-    switch (role) {
-        case 'developer':
-            return 'mdi-code-tags'
-        case 'superadmin':
-            return 'mdi-shield-crown'
-        case 'user':
-            return 'mdi-account'
-        default:
-            return 'mdi-account-question'
-    }
+  switch (role) {
+    case 'developer':
+      return 'mdi-code-tags'
+    case 'superadmin':
+      return 'mdi-shield-crown'
+    case 'admin':
+      return 'mdi-shield-account'
+    case 'user':
+      return 'mdi-account'
+    case 'guest':
+      return 'mdi-account-question'
+    default:
+      return 'mdi-account-question'
+  }
 }
 
 function getResourceIcon(resource: string): string {
-    const icons: Record<string, string> = {
-        dashboard: 'mdi-view-dashboard',
-        parsing: 'mdi-file-document-edit',
-        comparison: 'mdi-compare-horizontal',
-        top_products: 'mdi-trophy',
-        dut_analysis: 'mdi-chart-line',
-        dut_management: 'mdi-devices',
-        activity: 'mdi-history',
-        mastercontrol: 'mdi-factory',
-        conversion: 'mdi-swap-horizontal',
-        admin_users: 'mdi-account-group',
-        admin_rbac: 'mdi-shield-lock',
-        admin_cleanup: 'mdi-broom',
-        admin_config: 'mdi-cog',
-        admin_menu_access: 'mdi-menu',
-        admin_access_control: 'mdi-shield-account',
-    }
-    return icons[resource] || 'mdi-circle-small'
+  const icons: Record<string, string> = {
+    dashboard: 'mdi-view-dashboard',
+    parsing: 'mdi-file-document-edit',
+    comparison: 'mdi-compare-horizontal',
+    top_products: 'mdi-trophy',
+    dut_analysis: 'mdi-chart-line',
+    dut_management: 'mdi-devices',
+    activity: 'mdi-history',
+    mastercontrol: 'mdi-factory',
+    conversion: 'mdi-swap-horizontal',
+    admin_users: 'mdi-account-group',
+    admin_rbac: 'mdi-shield-lock',
+    admin_cleanup: 'mdi-broom',
+    admin_config: 'mdi-cog',
+    admin_menu_access: 'mdi-menu',
+    admin_access_control: 'mdi-shield-account',
+  }
+  return icons[resource] || 'mdi-circle-small'
 }
 
 function formatResourceName(resource: string): string {
-    return resource
-        .split('_')
-        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-        .join(' ')
+  return resource
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
 }
 
 function formatDate(dateStr: string): string {
-    try {
-        const date = new Date(dateStr)
-        return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-        })
-    } catch {
-        return dateStr
-    }
+  try {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return dateStr
+  }
 }
 
 // ============================================================================
@@ -506,6 +522,6 @@ function formatDate(dateStr: string): string {
 // ============================================================================
 
 onMounted(() => {
-    loadData()
+  loadData()
 })
 </script>

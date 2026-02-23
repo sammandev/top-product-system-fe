@@ -27,13 +27,20 @@ export const useAuthStore = defineStore('auth', () => {
   // Getters
   const isAuthenticated = computed(() => !!accessToken.value)
   const hasDUTAccess = computed(() => !!dutAccessToken.value)
-  const isGuest = computed(() => isGuestMode.value)
+  const isGuest = computed(() => isGuestMode.value || user.value?.role === 'guest')
 
   // Display name - shows 'Guest' for guest mode, otherwise actual username
-  const displayName = computed(() => (isGuestMode.value ? 'Guest' : user.value?.username || 'User'))
+  const displayName = computed(() => (isGuest.value ? 'Guest' : user.value?.username || 'User'))
 
-  // Display role - shows 'Guest' for guest mode, otherwise actual roles
-  const displayRole = computed(() => (isGuestMode.value ? 'Guest' : formatRoles(user.value?.roles)))
+  // Display role - shows role label based on user role
+  const displayRole = computed(() => {
+    if (isGuest.value) return 'Guest'
+    const role = user.value?.role
+    if (role === 'developer') return 'Developer'
+    if (role === 'superadmin') return 'Super Admin'
+    if (role === 'admin') return 'Admin'
+    return formatRoles(user.value?.roles)
+  })
 
   /**
    * Developer check — hardcoded identity or role='developer'.
@@ -60,17 +67,36 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin = computed(() => {
     // Superadmin/developer implies admin
     if (isSuperAdmin.value) return true
-    // Check is_admin field first (from backend)
+    // Check role field from backend
+    if (user.value?.role === 'admin') return true
+    // Check is_admin field (from backend)
     if (user.value?.is_admin === true) return true
-    // Allowlist for external admin access
-    const normalizedUsername = (user.value?.username || '').toLowerCase()
-    if (['samuel_halomoan'].includes(normalizedUsername)) return true
-    const normalizedWorkerId = (user.value?.worker_id || '').toUpperCase()
-    if (['MW2400549'].includes(normalizedWorkerId)) return true
-    // Fallback to checking roles
+    // Fallback to checking roles array
     if (!user.value?.roles) return false
     const roles = Array.isArray(user.value.roles) ? user.value.roles : [user.value.roles]
     return roles.some((role) => role.toLowerCase() === 'admin')
+  })
+
+  /**
+   * User check — any authenticated user that is NOT a guest.
+   * Users have access to standard pages + tools.
+   */
+  const isUser = computed(() => {
+    if (isAdmin.value) return true
+    if (isGuest.value) return false
+    return user.value?.role === 'user' || !user.value?.role
+  })
+
+  /**
+   * Numeric role level for comparison (higher = more privileged).
+   * guest=0, user=1, admin=2, superadmin=3, developer=4
+   */
+  const roleLevel = computed(() => {
+    if (isDeveloper.value) return 4
+    if (isSuperAdmin.value) return 3
+    if (isAdmin.value) return 2
+    if (isGuest.value) return 0
+    return 1 // default: user
   })
 
   /**
@@ -335,6 +361,8 @@ export const useAuthStore = defineStore('auth', () => {
     isDeveloper,
     isSuperAdmin,
     isAdmin,
+    isUser,
+    roleLevel,
     hasMenuPermission,
     hasRole,
 

@@ -7,7 +7,7 @@ export const adminRoutes: RouteRecordRaw[] = [
     component: () => import('../views/RBACManagementView.vue'),
     meta: {
       requiresAuth: true,
-      requiresAdmin: true,
+      requiresSuperAdmin: true,
       title: 'RBAC Management',
     },
   },
@@ -27,7 +27,7 @@ export const adminRoutes: RouteRecordRaw[] = [
     component: () => import('../views/SystemCleanupView.vue'),
     meta: {
       requiresAuth: true,
-      requiresAdmin: true,
+      requiresSuperAdmin: true,
       title: 'System Cleanup',
     },
   },
@@ -37,7 +37,7 @@ export const adminRoutes: RouteRecordRaw[] = [
     component: () => import('../views/AppConfigView.vue'),
     meta: {
       requiresAuth: true,
-      requiresAdmin: true,
+      requiresSuperAdmin: true,
       title: 'App Configuration',
     },
   },
@@ -47,7 +47,7 @@ export const adminRoutes: RouteRecordRaw[] = [
     component: () => import('../views/MenuAccessView.vue'),
     meta: {
       requiresAuth: true,
-      requiresAdmin: true,
+      requiresSuperAdmin: true,
       title: 'Menu Access Control',
     },
   },
@@ -57,7 +57,7 @@ export const adminRoutes: RouteRecordRaw[] = [
     component: () => import('../views/AccessControlView.vue'),
     meta: {
       requiresAuth: true,
-      requiresSuperAdmin: true,
+      requiresAdmin: true,
       title: 'Access Control',
     },
   },

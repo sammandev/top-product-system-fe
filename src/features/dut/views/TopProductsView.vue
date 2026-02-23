@@ -86,6 +86,10 @@ import { computed, ref } from 'vue'
 // import { useRouter } from 'vue-router'
 // import { useAuthStore } from '@/features/auth/stores'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
+import TopProductsByISNTab from '../components/TopProductsByISNTab.vue'
+import TopProductsByIplasDataTab from '../components/TopProductsByIplasDataTab.vue'
+import TopProductsByStationTab from '../components/TopProductsByStationTab.vue'
+import TopProductsByUploadLogTab from '@/features/dut-logs/components/TopProductsByUploadLogTab.vue'
 
 // Stores
 // const router = useRouter()
