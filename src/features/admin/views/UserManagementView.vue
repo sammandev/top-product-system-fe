@@ -344,11 +344,11 @@ import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/features/auth/stores'
 import { getApiErrorDetail, getErrorStatus } from '@/shared/utils'
 import {
-    adminApi,
-    type CreateUserRequest,
-    type UpdateUserRequest,
-    type User,
-    type UserStats,
+  adminApi,
+  type CreateUserRequest,
+  type UpdateUserRequest,
+  type User,
+  type UserStats,
 } from '../api/admin.api'
 
 // Router for logout redirect
@@ -369,19 +369,19 @@ const detailsDialog = ref(false)
 const selectedUser = ref<User | null>(null)
 
 const stats = ref<UserStats>({
-    total_users: 0,
-    active_users: 0,
-    online_users: 0,
-    new_users: 0,
+  total_users: 0,
+  active_users: 0,
+  online_users: 0,
+  new_users: 0,
 })
 
 const users = ref<User[]>([])
 
 const currentUser = ref<Partial<User & { password?: string }>>({
-    username: '',
-    email: '',
-    roles: [],
-    is_active: true,
+  username: '',
+  email: '',
+  roles: [],
+  is_active: true,
 })
 
 // Delete dialog state
@@ -400,300 +400,300 @@ const loggedInUser = computed(() => authStore.user)
 const availableRoles = ref<string[]>([])
 
 const headers = [
-    { title: 'User', key: 'username' },
-    { title: 'Roles', key: 'roles', sortable: false },
-    { title: 'Account Status', key: 'is_active', align: 'center' as const },
-    { title: 'Last Login', key: 'last_login' },
-    { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const },
+  { title: 'User', key: 'username' },
+  { title: 'Roles', key: 'roles', sortable: false },
+  { title: 'Account Status', key: 'is_active', align: 'center' as const },
+  { title: 'Last Login', key: 'last_login' },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const },
 ]
 
 // Computed
 const filteredUsers = computed(() => {
-    if (!search.value) return users.value
-    return users.value.filter(
-        (user) =>
-            user.username.toLowerCase().includes(search.value.toLowerCase()) ||
-            user.email?.toLowerCase().includes(search.value.toLowerCase()),
-    )
+  if (!search.value) return users.value
+  return users.value.filter(
+    (user) =>
+      user.username.toLowerCase().includes(search.value.toLowerCase()) ||
+      user.email?.toLowerCase().includes(search.value.toLowerCase()),
+  )
 })
 
 // Methods
 async function loadRoles() {
-    try {
-        const response = await adminApi.getRoles()
-        availableRoles.value = response.roles.map((role) => role.name)
-    } catch (error) {
-        console.error('Failed to load roles:', error)
-        // Fallback to default roles if API fails
-        availableRoles.value = ['admin', 'user', 'analyst', 'viewer']
-    }
+  try {
+    const response = await adminApi.getRoles()
+    availableRoles.value = response.roles.map((role) => role.name)
+  } catch (error) {
+    console.error('Failed to load roles:', error)
+    // Fallback to default roles if API fails
+    availableRoles.value = ['admin', 'user', 'analyst', 'viewer']
+  }
 }
 
 async function loadUsers() {
-    console.log('[UserManagement] Loading users...')
-    loading.value = true
-    try {
-        const response = await adminApi.getUsers()
-        users.value = response.users
-        stats.value = response.stats
-        console.log('[UserManagement] Users loaded successfully', {
-            totalUsers: response.users.length,
-            stats: response.stats,
-        })
-        // Load available roles
-        await loadRoles()
-    } catch (error) {
-        console.error('[UserManagement] Failed to load users:', error)
-    } finally {
-        loading.value = false
-    }
+  console.log('[UserManagement] Loading users...')
+  loading.value = true
+  try {
+    const response = await adminApi.getUsers()
+    users.value = response.users
+    stats.value = response.stats
+    console.log('[UserManagement] Users loaded successfully', {
+      totalUsers: response.users.length,
+      stats: response.stats,
+    })
+    // Load available roles
+    await loadRoles()
+  } catch (error) {
+    console.error('[UserManagement] Failed to load users:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 function getRoleColor(role: string): string {
-    const colors: Record<string, string> = {
-        admin: 'error',
-        user: 'primary',
-        analyst: 'info',
-        viewer: 'success',
-    }
-    return colors[role] || 'default'
+  const colors: Record<string, string> = {
+    admin: 'error',
+    user: 'primary',
+    analyst: 'info',
+    viewer: 'success',
+  }
+  return colors[role] || 'default'
 }
 
 function formatDate(dateString: string | null): string {
-    if (!dateString) return 'Never'
-    const date = new Date(dateString)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+  if (!dateString) return 'Never'
+  const date = new Date(dateString)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
 
-    if (days === 0) return 'Today'
-    if (days === 1) return 'Yesterday'
-    if (days < 7) return `${days} days ago`
-    return date.toLocaleDateString()
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days} days ago`
+  return date.toLocaleDateString()
 }
 
 function openCreateDialog() {
-    editMode.value = false
-    currentUser.value = {
-        username: '',
-        email: '',
-        roles: [],
-        is_active: true,
-        password: '',
-    }
-    dialog.value = true
+  editMode.value = false
+  currentUser.value = {
+    username: '',
+    email: '',
+    roles: [],
+    is_active: true,
+    password: '',
+  }
+  dialog.value = true
 }
 
 function editUser(user: User) {
-    editMode.value = true
-    currentUser.value = { ...user }
-    dialog.value = true
+  editMode.value = true
+  currentUser.value = { ...user }
+  dialog.value = true
 }
 
 function resetPassword(user: User) {
-    if (confirm(`Reset password for user "${user.username}"?`)) {
-        // API call to reset password
-        alert('Password reset email sent!')
-    }
+  if (confirm(`Reset password for user "${user.username}"?`)) {
+    // API call to reset password
+    alert('Password reset email sent!')
+  }
 }
 
 function confirmDelete(user: User) {
-    userToDelete.value = user
-    deleteConfirmation.value = ''
-    deleteDialog.value = true
+  userToDelete.value = user
+  deleteConfirmation.value = ''
+  deleteDialog.value = true
 }
 
 function cancelDelete() {
-    deleteDialog.value = false
-    userToDelete.value = null
-    deleteConfirmation.value = ''
+  deleteDialog.value = false
+  userToDelete.value = null
+  deleteConfirmation.value = ''
 }
 
 async function handleDeleteUser() {
-    if (deleteConfirmation.value !== 'DELETE' || !userToDelete.value || deleting.value) {
-        return
-    }
+  if (deleteConfirmation.value !== 'DELETE' || !userToDelete.value || deleting.value) {
+    return
+  }
 
-    deleting.value = true
-    try {
-        error.value = ''
-        await adminApi.deleteUser(userToDelete.value.id)
-        success.value = `User "${userToDelete.value.username}" deleted successfully`
+  deleting.value = true
+  try {
+    error.value = ''
+    await adminApi.deleteUser(userToDelete.value.id)
+    success.value = `User "${userToDelete.value.username}" deleted successfully`
 
-        // Close dialog
-        cancelDelete()
+    // Close dialog
+    cancelDelete()
 
-        // Reload users list
-        await loadUsers()
-    } catch (err: unknown) {
-        console.error('Failed to delete user:', err)
-        error.value = getApiErrorDetail(err, 'Failed to delete user')
-    } finally {
-        deleting.value = false
-    }
+    // Reload users list
+    await loadUsers()
+  } catch (err: unknown) {
+    console.error('Failed to delete user:', err)
+    error.value = getApiErrorDetail(err, 'Failed to delete user')
+  } finally {
+    deleting.value = false
+  }
 }
 
 async function toggleUserStatus(user: User) {
-    console.log('[UserManagement] toggleUserStatus called', {
-        userId: user.id,
-        username: user.username,
-        currentStatus: user.is_active,
-        targetStatus: !user.is_active,
-        togglingUserId: togglingUserId.value,
-    })
+  console.log('[UserManagement] toggleUserStatus called', {
+    userId: user.id,
+    username: user.username,
+    currentStatus: user.is_active,
+    targetStatus: !user.is_active,
+    togglingUserId: togglingUserId.value,
+  })
 
-    // Prevent multiple simultaneous toggles
-    if (togglingUserId.value !== null) {
-        console.warn('[UserManagement] Toggle already in progress for user:', togglingUserId.value)
-        return
+  // Prevent multiple simultaneous toggles
+  if (togglingUserId.value !== null) {
+    console.warn('[UserManagement] Toggle already in progress for user:', togglingUserId.value)
+    return
+  }
+
+  const newStatus = !user.is_active
+  const action = newStatus ? 'activate' : 'deactivate'
+
+  // Prevent self-deactivation
+  if (!newStatus && loggedInUser.value && user.id === loggedInUser.value.id) {
+    console.warn('[UserManagement] Prevented self-deactivation attempt', {
+      userId: user.id,
+      username: user.username,
+    })
+    error.value = 'Cannot deactivate your own account'
+    return
+  }
+
+  togglingUserId.value = user.id
+  error.value = ''
+
+  console.log('[UserManagement] Starting user status toggle', {
+    userId: user.id,
+    username: user.username,
+    action,
+    newStatus,
+  })
+
+  try {
+    // Update user status - only send is_active field to avoid issues
+    const updateData: UpdateUserRequest = {
+      is_active: newStatus,
     }
 
-    const newStatus = !user.is_active
-    const action = newStatus ? 'activate' : 'deactivate'
+    console.log('[UserManagement] Sending API request to update user', {
+      userId: user.id,
+      updateData,
+    })
 
-    // Prevent self-deactivation
+    const response = await adminApi.updateUser(user.id, updateData)
+
+    console.log('[UserManagement] API response received', {
+      userId: response.id,
+      username: response.username,
+      is_active: response.is_active,
+    })
+
+    // Update local user object immediately for responsive UI
+    user.is_active = newStatus
+
+    success.value = `User "${user.username}" ${action}d successfully`
+    console.log('[UserManagement] User status updated successfully', {
+      userId: user.id,
+      username: user.username,
+      newStatus: user.is_active,
+    })
+
+    // If we deactivated ourselves (shouldn't happen with check above), logout
     if (!newStatus && loggedInUser.value && user.id === loggedInUser.value.id) {
-        console.warn('[UserManagement] Prevented self-deactivation attempt', {
-            userId: user.id,
-            username: user.username,
-        })
-        error.value = 'Cannot deactivate your own account'
-        return
+      console.warn('[UserManagement] Current user was deactivated, logging out...')
+      setTimeout(async () => {
+        await authStore.logout()
+        router.push('/login')
+      }, 1500)
     }
-
-    togglingUserId.value = user.id
-    error.value = ''
-
-    console.log('[UserManagement] Starting user status toggle', {
-        userId: user.id,
-        username: user.username,
-        action,
-        newStatus,
+  } catch (err: unknown) {
+    console.error('[UserManagement] Failed to toggle user status', {
+      userId: user.id,
+      username: user.username,
+      action,
+      error: err,
+      errorDetail: getApiErrorDetail(err),
+      errorStatus: getErrorStatus(err),
     })
 
-    try {
-        // Update user status - only send is_active field to avoid issues
-        const updateData: UpdateUserRequest = {
-            is_active: newStatus,
-        }
+    error.value = getApiErrorDetail(err, `Failed to ${action} user`)
 
-        console.log('[UserManagement] Sending API request to update user', {
-            userId: user.id,
-            updateData,
-        })
-
-        const response = await adminApi.updateUser(user.id, updateData)
-
-        console.log('[UserManagement] API response received', {
-            userId: response.id,
-            username: response.username,
-            is_active: response.is_active,
-        })
-
-        // Update local user object immediately for responsive UI
-        user.is_active = newStatus
-
-        success.value = `User "${user.username}" ${action}d successfully`
-        console.log('[UserManagement] User status updated successfully', {
-            userId: user.id,
-            username: user.username,
-            newStatus: user.is_active,
-        })
-
-        // If we deactivated ourselves (shouldn't happen with check above), logout
-        if (!newStatus && loggedInUser.value && user.id === loggedInUser.value.id) {
-            console.warn('[UserManagement] Current user was deactivated, logging out...')
-            setTimeout(async () => {
-                await authStore.logout()
-                router.push('/login')
-            }, 1500)
-        }
-    } catch (err: unknown) {
-        console.error('[UserManagement] Failed to toggle user status', {
-            userId: user.id,
-            username: user.username,
-            action,
-            error: err,
-            errorDetail: getApiErrorDetail(err),
-            errorStatus: getErrorStatus(err),
-        })
-
-        error.value = getApiErrorDetail(err, `Failed to ${action} user`)
-
-        // Reload on error to restore correct state
-        console.log('[UserManagement] Reloading user list due to error')
-        await loadUsers()
-    } finally {
-        togglingUserId.value = null
-        console.log('[UserManagement] Toggle operation completed for user:', user.id)
-    }
+    // Reload on error to restore correct state
+    console.log('[UserManagement] Reloading user list due to error')
+    await loadUsers()
+  } finally {
+    togglingUserId.value = null
+    console.log('[UserManagement] Toggle operation completed for user:', user.id)
+  }
 }
 
 function showUserDetails(user: User) {
-    selectedUser.value = user
-    detailsDialog.value = true
+  selectedUser.value = user
+  detailsDialog.value = true
 }
 
 function editUserFromDetails() {
-    if (selectedUser.value) {
-        editUser(selectedUser.value)
-        detailsDialog.value = false
-    }
+  if (selectedUser.value) {
+    editUser(selectedUser.value)
+    detailsDialog.value = false
+  }
 }
 
 async function saveUser() {
-    try {
-        loading.value = true
-        error.value = ''
+  try {
+    loading.value = true
+    error.value = ''
 
-        if (editMode.value) {
-            // Update existing user
-            const updateData: UpdateUserRequest = {
-                email: currentUser.value.email,
-                roles: currentUser.value.roles,
-                is_active: currentUser.value.is_active,
-            }
+    if (editMode.value) {
+      // Update existing user
+      const updateData: UpdateUserRequest = {
+        email: currentUser.value.email,
+        roles: currentUser.value.roles,
+        is_active: currentUser.value.is_active,
+      }
 
-            // Include password if provided
-            if (currentUser.value.password && currentUser.value.password.trim() !== '') {
-                updateData.password = currentUser.value.password
-            }
+      // Include password if provided
+      if (currentUser.value.password && currentUser.value.password.trim() !== '') {
+        updateData.password = currentUser.value.password
+      }
 
-            await adminApi.updateUser(
-                // biome-ignore lint/style/noNonNullAssertion: id exists for existing users being updated
-                currentUser.value.id!,
-                updateData,
-            )
-            success.value = 'User updated successfully'
-        } else {
-            // Create new user
-            const createData: CreateUserRequest = {
-                // biome-ignore lint/style/noNonNullAssertion: validated as required before submission
-                username: currentUser.value.username!,
-                email: currentUser.value.email,
-                // biome-ignore lint/style/noNonNullAssertion: validated as required before submission
-                password: currentUser.value.password!,
-                roles: currentUser.value.roles,
-                is_active: currentUser.value.is_active,
-            }
+      await adminApi.updateUser(
+        // biome-ignore lint/style/noNonNullAssertion: id exists for existing users being updated
+        currentUser.value.id!,
+        updateData,
+      )
+      success.value = 'User updated successfully'
+    } else {
+      // Create new user
+      const createData: CreateUserRequest = {
+        // biome-ignore lint/style/noNonNullAssertion: validated as required before submission
+        username: currentUser.value.username!,
+        email: currentUser.value.email,
+        // biome-ignore lint/style/noNonNullAssertion: validated as required before submission
+        password: currentUser.value.password!,
+        roles: currentUser.value.roles,
+        is_active: currentUser.value.is_active,
+      }
 
-            await adminApi.createUser(createData)
-            success.value = 'User created successfully'
-        }
-
-        // Close dialog and reload users
-        dialog.value = false
-        await loadUsers()
-    } catch (err: unknown) {
-        console.error('Failed to save user:', err)
-        error.value = getApiErrorDetail(err, 'Failed to save user')
-    } finally {
-        loading.value = false
+      await adminApi.createUser(createData)
+      success.value = 'User created successfully'
     }
+
+    // Close dialog and reload users
+    dialog.value = false
+    await loadUsers()
+  } catch (err: unknown) {
+    console.error('Failed to save user:', err)
+    error.value = getApiErrorDetail(err, 'Failed to save user')
+  } finally {
+    loading.value = false
+  }
 }
 
 onMounted(() => {
-    loadUsers()
+  loadUsers()
 })
 </script>
 

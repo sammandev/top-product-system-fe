@@ -194,34 +194,34 @@ dayjs.extend(utc)
 dayjs.extend(timezone)
 
 interface TestRecord {
-    id: number
-    test_date: string
-    test_duration: number
-    test_result: number
-    error_item: string
-    device_id: number
-    device_id__name: string
-    dut_id: number
-    dut_id__isn: string
-    site_name: string
+  id: number
+  test_date: string
+  test_duration: number
+  test_result: number
+  error_item: string
+  device_id: number
+  device_id__name: string
+  dut_id: number
+  dut_id__isn: string
+  site_name: string
 }
 
 interface Station {
-    id: number
-    name: string
-    status: number
-    order: number
-    model_id: number
-    site_name: string
-    model_name: string
-    data: TestRecord[]
-    dut_isn: string
-    dut_id: number
+  id: number
+  name: string
+  status: number
+  order: number
+  model_id: number
+  site_name: string
+  model_name: string
+  data: TestRecord[]
+  dut_isn: string
+  dut_id: number
 }
 
 interface Props {
-    station: Station
-    downloadingRecordId?: number | null
+  station: Station
+  downloadingRecordId?: number | null
 }
 
 type Emits = (e: 'download', value: { station: Station; record: TestRecord }) => void
@@ -230,7 +230,7 @@ defineProps<Props>()
 defineEmits<Emits>()
 
 const formatDate = (isoDate: string): string => {
-    // Parse as UTC and convert to user's local timezone
-    return dayjs.utc(isoDate).tz(dayjs.tz.guess()).format('YYYY-MM-DD HH:mm:ss')
+  // Parse as UTC and convert to user's local timezone
+  return dayjs.utc(isoDate).tz(dayjs.tz.guess()).format('YYYY-MM-DD HH:mm:ss')
 }
 </script>

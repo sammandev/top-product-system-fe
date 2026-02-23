@@ -34,6 +34,7 @@ export async function authGuard(
 
   const requiresAuth = to.meta.requiresAuth !== false
   const requiresAdmin = to.meta.requiresAdmin === true
+  const requiresSuperAdmin = to.meta.requiresSuperAdmin === true
 
   // Check if route requires authentication
   if (requiresAuth && !authStore.isAuthenticated) {
@@ -41,6 +42,16 @@ export async function authGuard(
     next({
       name: 'Login',
       query: { redirect: to.fullPath },
+    })
+    return
+  }
+
+  // Check if route requires superadmin role (developer or superadmin)
+  if (requiresSuperAdmin && !authStore.isSuperAdmin) {
+    // User not superadmin, redirect to dashboard
+    next({
+      name: 'Dashboard',
+      query: { error: 'unauthorized' },
     })
     return
   }

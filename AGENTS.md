@@ -88,6 +88,48 @@ Vue 3 frontend lives in `src/`, with `views/` containing page components, `compo
 - Token versioning on backend allows instant revocation; frontend handles 401 by attempting refresh, then logout on failure.
 - Route guards in `router/index.ts` check `authStore.isAuthenticated` before protected routes; login page is public via `meta: { requiresAuth: false }`.
 
+### Access Control System
+
+Role-based access control with per-resource CRUD menu permissions, matching the backend access control system.
+
+**Role Hierarchy (enforced in auth store):**
+
+1. **Developer** — hardcoded identity check (`Samuel_Halomoan` / `MW2400549`), auto-assigned on login.
+2. **Super Admin** — `role === 'superadmin'` or developer; full admin access.
+3. **Admin** — superadmin or legacy `is_admin`/`is_ptb_admin` flags.
+4. **User** — default; access governed by `menu_permissions`.
+
+**Auth Store Getters/Methods (`auth.store.ts`):**
+
+- `isDeveloper` — computed; checks `role === 'developer'` or hardcoded identity.
+- `isSuperAdmin` — computed; developer or `role === 'superadmin'`.
+- `isAdmin` — computed; superadmin or legacy admin flags.
+- `hasMenuPermission(resource, action)` — checks developer/superadmin bypass → explicit `menu_permissions` → `is_ptb_admin`/`is_admin` fallback.
+
+**Route Guard (`auth.guard.ts`):**
+
+- Supports `meta.requiresSuperAdmin` — restricts route to superadmin+ roles, redirects others to dashboard.
+- Guard priority: `requiresSuperAdmin` → `requiresAdmin` → `requiresAuth`.
+
+**Frontend Types (`auth.types.ts`):**
+
+- `UserRole` = `'developer' | 'superadmin' | 'user'`
+- `MenuPermissions` = `Record<string, string[]>`
+- `User` interface extended with `role`, `menu_permissions`, `is_superuser`, `is_staff`.
+
+**Admin API (`admin.api.ts`):**
+
+- `getAccessControlUsers()` — list users with access settings.
+- `getMenuResources()` — list available resources/actions/defaults.
+- `updateUserAccess(userId, request)` — update role/permissions/flags.
+
+**Access Control View (`AccessControlView.vue`):**
+
+- Route: `/admin/access-control` with `requiresSuperAdmin: true`.
+- User table with role chips, status badges, flags, and permission summaries.
+- Edit Role/Status dialog (role dropdown, toggle switches).
+- Menu Permissions dialog (per-resource CRUD checkbox grid, Select All/Clear All/Apply Defaults).
+
 ## API Integration Layer
 
 - `api/client.ts` exports configured Axios instance with request/response interceptors.
@@ -721,6 +763,7 @@ try {
 - Created detailed testing documentation
 - Fixed legacy file duplication (removed unused NotFoundView.vue from src/views/)
 - Achieved 58% E2E pass rate with CRITICAL tests passing
+- Implemented Access Control / Super Admin Dashboard: `AccessControlView.vue` at `/admin/access-control` with `requiresSuperAdmin` route guard. Auth store extended with `isDeveloper`, `isSuperAdmin` getters and `hasMenuPermission()` method. Admin API extended with access control endpoints.
 
 ## How to Resume Work
 

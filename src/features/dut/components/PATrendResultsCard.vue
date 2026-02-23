@@ -129,52 +129,52 @@ dayjs.extend(timezone)
 
 // Props
 const props = defineProps<{
-    data: PATrendStationDataSchema[] | PADiffStationDataSchema[]
-    loading: boolean
-    title: string
-    type: 'auto' | 'dex' | 'diff'
+  data: PATrendStationDataSchema[] | PADiffStationDataSchema[]
+  loading: boolean
+  title: string
+  type: 'auto' | 'dex' | 'diff'
 }>()
 
 // Headers for data table
 const headers = [
-    { title: 'ISN', key: 'isn', sortable: true },
-    { title: 'Station ID', key: 'station_id', sortable: true },
-    { title: 'Station Name', key: 'station_name', sortable: true },
-    { title: 'Device', key: 'device', sortable: true },
-    { title: 'Test Date', key: 'test_date', sortable: true },
-    { title: 'Trend Items', key: 'trend_items_count', sortable: false },
+  { title: 'ISN', key: 'isn', sortable: true },
+  { title: 'Station ID', key: 'station_id', sortable: true },
+  { title: 'Station Name', key: 'station_name', sortable: true },
+  { title: 'Device', key: 'device', sortable: true },
+  { title: 'Test Date', key: 'test_date', sortable: true },
+  { title: 'Trend Items', key: 'trend_items_count', sortable: false },
 ]
 
 // Computed
 const totalTrendItems = computed(() => {
-    return props.data.reduce((sum, item) => {
-        return sum + getTrendItemsCount(item)
-    }, 0)
+  return props.data.reduce((sum, item) => {
+    return sum + getTrendItemsCount(item)
+  }, 0)
 })
 
 // Helper Functions
 function getTrendItems(item: PATrendStationDataSchema | PADiffStationDataSchema) {
-    if ('trend_items' in item) {
-        return item.trend_items
-    } else if ('trend_diff_items' in item) {
-        return item.trend_diff_items
-    }
-    return []
+  if ('trend_items' in item) {
+    return item.trend_items
+  } else if ('trend_diff_items' in item) {
+    return item.trend_diff_items
+  }
+  return []
 }
 
 function getTrendItemsCount(item: PATrendStationDataSchema | PADiffStationDataSchema): number {
-    return getTrendItems(item).length
+  return getTrendItems(item).length
 }
 
 function formatDate(dateString: string | null): string {
-    if (!dateString) return 'N/A'
+  if (!dateString) return 'N/A'
 
-    try {
-        // Parse as UTC and convert to user's local timezone
-        return dayjs.utc(dateString).tz(dayjs.tz.guess()).format('YYYY-MM-DD HH:mm:ss')
-    } catch {
-        return dateString
-    }
+  try {
+    // Parse as UTC and convert to user's local timezone
+    return dayjs.utc(dateString).tz(dayjs.tz.guess()).format('YYYY-MM-DD HH:mm:ss')
+  } catch {
+    return dateString
+  }
 }
 </script>
 

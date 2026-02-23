@@ -656,10 +656,10 @@ const comparisonTableItems = computed(() => {
       if (iplasRecords && iplasRecords.length > 0) {
         const stationRecord = selectedIplasStation.value
           ? iplasRecords.find(
-            (r) =>
-              r.display_station_name === selectedIplasStation.value ||
-              r.station_name === selectedIplasStation.value,
-          )
+              (r) =>
+                r.display_station_name === selectedIplasStation.value ||
+                r.station_name === selectedIplasStation.value,
+            )
           : iplasRecords[0]
         if (stationRecord) {
           const iplasItem = stationRecord.test_item.find(
@@ -870,10 +870,10 @@ const rescoreIplasData = async () => {
     const records = iplasDataByIsn.value.get(isn) || []
     const stationRecord = selectedIplasStation.value
       ? records.find(
-        (r) =>
-          r.display_station_name === selectedIplasStation.value ||
-          r.station_name === selectedIplasStation.value,
-      )
+          (r) =>
+            r.display_station_name === selectedIplasStation.value ||
+            r.station_name === selectedIplasStation.value,
+        )
       : records[0]
 
     if (!stationRecord || !stationRecord.test_item.length) continue

@@ -35,7 +35,31 @@ export const useAuthStore = defineStore('auth', () => {
   // Display role - shows 'Guest' for guest mode, otherwise actual roles
   const displayRole = computed(() => (isGuestMode.value ? 'Guest' : formatRoles(user.value?.roles)))
 
+  /**
+   * Developer check — hardcoded identity or role='developer'.
+   * Developers have the highest privilege level and cannot be modified via UI.
+   */
+  const isDeveloper = computed(() => {
+    if (user.value?.role === 'developer') return true
+    const normalizedUsername = (user.value?.username || '').toLowerCase()
+    if (['samuel_halomoan'].includes(normalizedUsername)) return true
+    const normalizedWorkerId = (user.value?.worker_id || '').toUpperCase()
+    if (['MW2400549'].includes(normalizedWorkerId)) return true
+    return false
+  })
+
+  /**
+   * Super Admin check — developer or role='superadmin'.
+   * Super admins can manage user roles and permissions.
+   */
+  const isSuperAdmin = computed(() => {
+    if (isDeveloper.value) return true
+    return user.value?.role === 'superadmin'
+  })
+
   const isAdmin = computed(() => {
+    // Superadmin/developer implies admin
+    if (isSuperAdmin.value) return true
     // Check is_admin field first (from backend)
     if (user.value?.is_admin === true) return true
     // Allowlist for external admin access
@@ -48,6 +72,24 @@ export const useAuthStore = defineStore('auth', () => {
     const roles = Array.isArray(user.value.roles) ? user.value.roles : [user.value.roles]
     return roles.some((role) => role.toLowerCase() === 'admin')
   })
+
+  /**
+   * Check if user has a specific menu permission for a resource.
+   * Developers/superadmins bypass all checks.
+   */
+  const hasMenuPermission = (resource: string, action: string = 'read'): boolean => {
+    if (isDeveloper.value || isSuperAdmin.value) return true
+    if (user.value?.is_admin || user.value?.is_ptb_admin) return true
+    const perms = user.value?.menu_permissions
+    if (perms && typeof perms === 'object') {
+      const resourcePerms = perms[resource]
+      if (resourcePerms !== undefined) {
+        return resourcePerms.includes(action)
+      }
+      return false
+    }
+    return false
+  }
 
   // Helper to check if user has specific role
   const hasRole = (roleName: string): boolean => {
@@ -290,7 +332,10 @@ export const useAuthStore = defineStore('auth', () => {
     isGuest,
     displayName,
     displayRole,
+    isDeveloper,
+    isSuperAdmin,
     isAdmin,
+    hasMenuPermission,
     hasRole,
 
     // Actions

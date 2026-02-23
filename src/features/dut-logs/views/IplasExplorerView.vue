@@ -361,40 +361,40 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import type {
-    CsvTestItemData,
-    DownloadAttachmentInfo,
-    Station,
-    TestItem,
+  CsvTestItemData,
+  DownloadAttachmentInfo,
+  Station,
+  TestItem,
 } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import {
-    adjustIplasDisplayTime,
-    getStatusColor,
-    isStatusFail,
-    isStatusPass,
-    normalizeStatus,
+  adjustIplasDisplayTime,
+  getStatusColor,
+  isStatusFail,
+  isStatusPass,
+  normalizeStatus,
 } from '@/shared/utils/helpers'
 
 const {
-    loading,
-    loadingStations,
-    loadingDevices,
-    loadingTestItems,
-    downloading,
-    error,
-    siteProjects,
-    stations,
-    deviceIds,
-    testItemData,
-    uniqueSites,
-    projectsBySite,
-    fetchSiteProjects,
-    fetchStations,
-    fetchDeviceIds,
-    fetchTestItems: fetchTestItemsApi,
-    downloadAttachments,
-    clearTestItemData,
+  loading,
+  loadingStations,
+  loadingDevices,
+  loadingTestItems,
+  downloading,
+  error,
+  siteProjects,
+  stations,
+  deviceIds,
+  testItemData,
+  uniqueSites,
+  projectsBySite,
+  fetchSiteProjects,
+  fetchStations,
+  fetchDeviceIds,
+  fetchTestItems: fetchTestItemsApi,
+  downloadAttachments,
+  clearTestItemData,
 } = useIplasApi()
 
 // Selection state - UPDATED: Support multiple stations and device IDs
@@ -421,118 +421,118 @@ const downloadingIndex = ref<number | null>(null)
 
 // Computed
 const availableProjects = computed(() => {
-    if (!selectedSite.value) return []
-    return projectsBySite.value[selectedSite.value] || []
+  if (!selectedSite.value) return []
+  return projectsBySite.value[selectedSite.value] || []
 })
 
 // UPDATED: Station options now show display_station_name on first line, station_name on second line
 const stationOptions = computed(() => {
-    return stations.value
-        .sort((a: Station, b: Station) => a.order - b.order)
-        .map((s: Station) => ({
-            displayName: s.display_station_name,
-            stationName: s.station_name,
-            displayText: `${s.display_station_name} - ${s.station_name}`,
-            chipText: s.display_station_name,
-            value: s.display_station_name,
-            order: s.order,
-            dataSource: s.data_source,
-        }))
+  return stations.value
+    .sort((a: Station, b: Station) => a.order - b.order)
+    .map((s: Station) => ({
+      displayName: s.display_station_name,
+      stationName: s.station_name,
+      displayText: `${s.display_station_name} - ${s.station_name}`,
+      chipText: s.display_station_name,
+      value: s.display_station_name,
+      order: s.order,
+      dataSource: s.data_source,
+    }))
 })
 
 const displayedDevices = computed(() => {
-    if (showAllDevices.value) return deviceIds.value
-    return deviceIds.value.slice(0, 20)
+  if (showAllDevices.value) return deviceIds.value
+  return deviceIds.value.slice(0, 20)
 })
 
 const testItemHeaders = [
-    { title: 'Test Item', key: 'NAME', sortable: true },
-    { title: 'Status', key: 'STATUS', sortable: true },
-    { title: 'Value', key: 'VALUE', sortable: true },
-    { title: 'UCL', key: 'UCL', sortable: true },
-    { title: 'LCL', key: 'LCL', sortable: true },
+  { title: 'Test Item', key: 'NAME', sortable: true },
+  { title: 'Status', key: 'STATUS', sortable: true },
+  { title: 'Value', key: 'VALUE', sortable: true },
+  { title: 'UCL', key: 'UCL', sortable: true },
+  { title: 'LCL', key: 'LCL', sortable: true },
 ]
 
 // Helper functions for filtering test items
 function isValueData(item: TestItem): boolean {
-    const value = item.VALUE?.toUpperCase() || ''
-    // Value data: not PASS, FAIL, 1, 0, or -999 and has at least 2 numeric fields
-    if (value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999') {
-        return false
-    }
-    // Check if VALUE, UCL, or LCL contain numeric data
-    const hasNumericValue = !Number.isNaN(parseFloat(item.VALUE)) && item.VALUE !== ''
-    const hasNumericUcl = !Number.isNaN(parseFloat(item.UCL)) && item.UCL !== ''
-    const hasNumericLcl = !Number.isNaN(parseFloat(item.LCL)) && item.LCL !== ''
-    const numericCount = [hasNumericValue, hasNumericUcl, hasNumericLcl].filter(Boolean).length
-    return numericCount >= 2
+  const value = item.VALUE?.toUpperCase() || ''
+  // Value data: not PASS, FAIL, 1, 0, or -999 and has at least 2 numeric fields
+  if (value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999') {
+    return false
+  }
+  // Check if VALUE, UCL, or LCL contain numeric data
+  const hasNumericValue = !Number.isNaN(parseFloat(item.VALUE)) && item.VALUE !== ''
+  const hasNumericUcl = !Number.isNaN(parseFloat(item.UCL)) && item.UCL !== ''
+  const hasNumericLcl = !Number.isNaN(parseFloat(item.LCL)) && item.LCL !== ''
+  const numericCount = [hasNumericValue, hasNumericUcl, hasNumericLcl].filter(Boolean).length
+  return numericCount >= 2
 }
 
 function isPassFailData(item: TestItem): boolean {
-    const value = item.VALUE?.toUpperCase() || ''
-    // STATUS must be PASS, FAIL, 1, 0, or -1 AND VALUE must be PASS, FAIL, 1, 0, or -999
-    const isStatusPF = isStatusPass(item.STATUS) || isStatusFail(item.STATUS) || item.STATUS === '-1'
-    const isValuePF =
-        value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999'
-    return isStatusPF && isValuePF
+  const value = item.VALUE?.toUpperCase() || ''
+  // STATUS must be PASS, FAIL, 1, 0, or -1 AND VALUE must be PASS, FAIL, 1, 0, or -999
+  const isStatusPF = isStatusPass(item.STATUS) || isStatusFail(item.STATUS) || item.STATUS === '-1'
+  const isValuePF =
+    value === 'PASS' || value === 'FAIL' || value === '1' || value === '0' || value === '-999'
+  return isStatusPF && isValuePF
 }
 
 function isNonValueData(item: TestItem): boolean {
-    return !isValueData(item) && !isPassFailData(item)
+  return !isValueData(item) && !isPassFailData(item)
 }
 
 function filterTestItems(items: TestItem[] | undefined): TestItem[] {
-    if (!items) return []
+  if (!items) return []
 
-    // If no filters or 'all' is selected, return all items
-    if (testItemFilter.value.length === 0 || testItemFilter.value.includes('all')) {
-        return items
-    }
+  // If no filters or 'all' is selected, return all items
+  if (testItemFilter.value.length === 0 || testItemFilter.value.includes('all')) {
+    return items
+  }
 
-    // Filter items based on selected types (OR logic)
-    return items.filter((item) => {
-        return testItemFilter.value.some((filterType) => {
-            switch (filterType) {
-                case 'value':
-                    return isValueData(item)
-                case 'non-value':
-                    return isNonValueData(item)
-                case 'pass-fail':
-                    return isPassFailData(item)
-                default:
-                    return true
-            }
-        })
+  // Filter items based on selected types (OR logic)
+  return items.filter((item) => {
+    return testItemFilter.value.some((filterType) => {
+      switch (filterType) {
+        case 'value':
+          return isValueData(item)
+        case 'non-value':
+          return isNonValueData(item)
+        case 'pass-fail':
+          return isPassFailData(item)
+        default:
+          return true
+      }
     })
+  })
 }
 
 function getValueClass(item: TestItem): string {
-    const value = item.VALUE?.toUpperCase() || ''
-    if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
-    if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
-    if (value === '-999') return 'text-warning'
-    return ''
+  const value = item.VALUE?.toUpperCase() || ''
+  if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
+  if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
+  if (value === '-999') return 'text-warning'
+  return ''
 }
 
 // UPDATED: Format UTC time to local timezone with 1 hour deduction for iPLAS display
 function formatLocalTime(utcTimeStr: string): string {
-    // Use the centralized helper to adjust time by -1 hour for display
-    return adjustIplasDisplayTime(utcTimeStr, 1)
+  // Use the centralized helper to adjust time by -1 hour for display
+  return adjustIplasDisplayTime(utcTimeStr, 1)
 }
 
 function calculateDuration(startStr: string, endStr: string): string {
-    if (!startStr || !endStr) return '-'
-    try {
-        const start = new Date(`${startStr.replace(' ', 'T')}Z`)
-        const end = new Date(`${endStr.replace(' ', 'T')}Z`)
-        const diffMs = end.getTime() - start.getTime()
-        const diffSeconds = Math.floor(diffMs / 1000)
-        const minutes = Math.floor(diffSeconds / 60)
-        const seconds = diffSeconds % 60
-        return `${minutes}m ${seconds}s`
-    } catch {
-        return '-'
-    }
+  if (!startStr || !endStr) return '-'
+  try {
+    const start = new Date(`${startStr.replace(' ', 'T')}Z`)
+    const end = new Date(`${endStr.replace(' ', 'T')}Z`)
+    const diffMs = end.getTime() - start.getTime()
+    const diffSeconds = Math.floor(diffMs / 1000)
+    const minutes = Math.floor(diffSeconds / 60)
+    const seconds = diffSeconds % 60
+    return `${minutes}m ${seconds}s`
+  } catch {
+    return '-'
+  }
 }
 
 /**
@@ -540,49 +540,49 @@ function calculateDuration(startStr: string, endStr: string): string {
  * Sums up all CYCLE values (which are float strings)
  */
 function calculateTotalCycleTime(testItems: TestItem[] | undefined): string {
-    if (!testItems || testItems.length === 0) return '-'
+  if (!testItems || testItems.length === 0) return '-'
 
-    let totalSeconds = 0
-    for (const item of testItems) {
-        if (item.CYCLE && item.CYCLE !== '') {
-            const cycleTime = parseFloat(item.CYCLE)
-            if (!Number.isNaN(cycleTime)) {
-                totalSeconds += cycleTime
-            }
-        }
+  let totalSeconds = 0
+  for (const item of testItems) {
+    if (item.CYCLE && item.CYCLE !== '') {
+      const cycleTime = parseFloat(item.CYCLE)
+      if (!Number.isNaN(cycleTime)) {
+        totalSeconds += cycleTime
+      }
     }
+  }
 
-    if (totalSeconds === 0) return '-'
+  if (totalSeconds === 0) return '-'
 
-    const minutes = Math.floor(totalSeconds / 60)
-    const seconds = (totalSeconds % 60).toFixed(2)
-    if (minutes > 0) {
-        return `${minutes}m ${seconds}s`
-    }
-    return `${seconds}s`
+  const minutes = Math.floor(totalSeconds / 60)
+  const seconds = (totalSeconds % 60).toFixed(2)
+  if (minutes > 0) {
+    return `${minutes}m ${seconds}s`
+  }
+  return `${seconds}s`
 }
 
 /**
  * Toggle selection of a record for download
  */
 function toggleRecordSelection(index: number): void {
-    const idx = selectedRecordIndices.value.indexOf(index)
-    if (idx === -1) {
-        selectedRecordIndices.value.push(index)
-    } else {
-        selectedRecordIndices.value.splice(idx, 1)
-    }
+  const idx = selectedRecordIndices.value.indexOf(index)
+  if (idx === -1) {
+    selectedRecordIndices.value.push(index)
+  } else {
+    selectedRecordIndices.value.splice(idx, 1)
+  }
 }
 
 /**
  * Toggle select/deselect all records
  */
 function toggleSelectAllRecords(): void {
-    if (selectedRecordIndices.value.length === testItemData.value.length) {
-        selectedRecordIndices.value = []
-    } else {
-        selectedRecordIndices.value = testItemData.value.map((_, i) => i)
-    }
+  if (selectedRecordIndices.value.length === testItemData.value.length) {
+    selectedRecordIndices.value = []
+  } else {
+    selectedRecordIndices.value = testItemData.value.map((_, i) => i)
+  }
 }
 
 /**
@@ -590,161 +590,161 @@ function toggleSelectAllRecords(): void {
  * API format: "2026-01-05 14:46:14" -> Download format: "2026/01/05 14:46:14"
  */
 function formatTimeForDownload(timeStr: string): string {
-    if (!timeStr) return ''
-    // Replace dashes with slashes, handle ISO format with T
-    return timeStr.replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+  if (!timeStr) return ''
+  // Replace dashes with slashes, handle ISO format with T
+  return timeStr.replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
 }
 
 /**
  * Create download attachment info from a test record
  */
 function createAttachmentInfo(record: CsvTestItemData): DownloadAttachmentInfo {
-    // Use ISN if available, otherwise use DeviceId
-    const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-    return {
-        isn,
-        time: formatTimeForDownload(record['Test Start Time']),
-        deviceid: record.DeviceId,
-        station: record.station,
-    }
+  // Use ISN if available, otherwise use DeviceId
+  const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+  return {
+    isn,
+    time: formatTimeForDownload(record['Test Start Time']),
+    deviceid: record.DeviceId,
+    station: record.station,
+  }
 }
 
 /**
  * Download a single test record
  */
 async function downloadSingleRecord(record: CsvTestItemData, index: number): Promise<void> {
-    if (!selectedSite.value || !selectedProject.value) return
+  if (!selectedSite.value || !selectedProject.value) return
 
-    downloadingIndex.value = index
-    try {
-        const attachmentInfo = createAttachmentInfo(record)
-        console.log('Download attachment info:', attachmentInfo)
-        await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
-    } catch (err) {
-        console.error('Failed to download test log:', err)
-    } finally {
-        downloadingIndex.value = null
-    }
+  downloadingIndex.value = index
+  try {
+    const attachmentInfo = createAttachmentInfo(record)
+    console.log('Download attachment info:', attachmentInfo)
+    await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
+  } catch (err) {
+    console.error('Failed to download test log:', err)
+  } finally {
+    downloadingIndex.value = null
+  }
 }
 
 /**
  * Download all selected records
  */
 async function downloadSelectedRecords(): Promise<void> {
-    if (!selectedSite.value || !selectedProject.value || selectedRecordIndices.value.length === 0)
-        return
+  if (!selectedSite.value || !selectedProject.value || selectedRecordIndices.value.length === 0)
+    return
 
-    try {
-        const attachments = selectedRecordIndices.value
-            .map((idx) => testItemData.value[idx])
-            .filter((record): record is CsvTestItemData => record !== undefined)
-            .map(createAttachmentInfo)
+  try {
+    const attachments = selectedRecordIndices.value
+      .map((idx) => testItemData.value[idx])
+      .filter((record): record is CsvTestItemData => record !== undefined)
+      .map(createAttachmentInfo)
 
-        await downloadAttachments(selectedSite.value, selectedProject.value, attachments)
-    } catch (err) {
-        console.error('Failed to download test logs:', err)
-    }
+    await downloadAttachments(selectedSite.value, selectedProject.value, attachments)
+  } catch (err) {
+    console.error('Failed to download test logs:', err)
+  }
 }
 
 // Handlers
 function handleSiteChange() {
-    selectedProject.value = null
-    selectedStations.value = []
-    selectedDeviceIds.value = []
-    stations.value = []
-    deviceIds.value = []
-    clearTestItemData()
-    selectedRecordIndices.value = []
+  selectedProject.value = null
+  selectedStations.value = []
+  selectedDeviceIds.value = []
+  stations.value = []
+  deviceIds.value = []
+  clearTestItemData()
+  selectedRecordIndices.value = []
 }
 
 async function handleProjectChange() {
-    selectedStations.value = []
-    selectedDeviceIds.value = []
-    deviceIds.value = []
-    clearTestItemData()
-    selectedRecordIndices.value = []
+  selectedStations.value = []
+  selectedDeviceIds.value = []
+  deviceIds.value = []
+  clearTestItemData()
+  selectedRecordIndices.value = []
 
-    if (selectedSite.value && selectedProject.value) {
-        await fetchStations(selectedSite.value, selectedProject.value)
-    }
+  if (selectedSite.value && selectedProject.value) {
+    await fetchStations(selectedSite.value, selectedProject.value)
+  }
 }
 
 function handleStationChange() {
-    selectedDeviceIds.value = []
-    deviceIds.value = []
-    clearTestItemData()
-    selectedRecordIndices.value = []
+  selectedDeviceIds.value = []
+  deviceIds.value = []
+  clearTestItemData()
+  selectedRecordIndices.value = []
 }
 
 async function fetchDevices() {
-    if (!selectedSite.value || !selectedProject.value || selectedStations.value.length === 0) return
+  if (!selectedSite.value || !selectedProject.value || selectedStations.value.length === 0) return
 
-    const firstStation = selectedStations.value[0]
-    if (!firstStation) return
+  const firstStation = selectedStations.value[0]
+  if (!firstStation) return
 
-    const start = new Date(startTime.value).toISOString()
-    const end = new Date(endTime.value).toISOString()
+  const start = new Date(startTime.value).toISOString()
+  const end = new Date(endTime.value).toISOString()
 
-    // Fetch devices for the first selected station
-    // TODO: In the future, could aggregate devices from multiple stations
-    await fetchDeviceIds(selectedSite.value, selectedProject.value, firstStation, start, end)
+  // Fetch devices for the first selected station
+  // TODO: In the future, could aggregate devices from multiple stations
+  await fetchDeviceIds(selectedSite.value, selectedProject.value, firstStation, start, end)
 }
 
 async function fetchTestItems() {
-    if (
-        !selectedSite.value ||
-        !selectedProject.value ||
-        selectedStations.value.length === 0 ||
-        selectedDeviceIds.value.length === 0
+  if (
+    !selectedSite.value ||
+    !selectedProject.value ||
+    selectedStations.value.length === 0 ||
+    selectedDeviceIds.value.length === 0
+  )
+    return
+
+  const stationInfo = stations.value.find(
+    (s: Station) => s.display_station_name === selectedStations.value[0],
+  )
+  if (!stationInfo) return
+
+  // Pass Date objects - the composable handles ISO format conversion
+  const begintime = new Date(startTime.value)
+  const endtime = new Date(endTime.value)
+
+  // Clear existing data before fetching
+  clearTestItemData()
+  selectedRecordIndices.value = []
+
+  // UPDATED: Fetch test items for each selected device
+  for (const deviceId of selectedDeviceIds.value) {
+    await fetchTestItemsApi(
+      selectedSite.value,
+      selectedProject.value,
+      stationInfo.station_name,
+      deviceId,
+      begintime,
+      endtime,
+      testStatusFilter.value,
     )
-        return
+  }
 
-    const stationInfo = stations.value.find(
-        (s: Station) => s.display_station_name === selectedStations.value[0],
-    )
-    if (!stationInfo) return
-
-    // Pass Date objects - the composable handles ISO format conversion
-    const begintime = new Date(startTime.value)
-    const endtime = new Date(endTime.value)
-
-    // Clear existing data before fetching
-    clearTestItemData()
-    selectedRecordIndices.value = []
-
-    // UPDATED: Fetch test items for each selected device
-    for (const deviceId of selectedDeviceIds.value) {
-        await fetchTestItemsApi(
-            selectedSite.value,
-            selectedProject.value,
-            stationInfo.station_name,
-            deviceId,
-            begintime,
-            endtime,
-            testStatusFilter.value,
-        )
-    }
-
-    // Expand first panel after fetching
-    if (testItemData.value.length > 0) {
-        expandedPanels.value = [0]
-    }
+  // Expand first panel after fetching
+  if (testItemData.value.length > 0) {
+    expandedPanels.value = [0]
+  }
 }
 
 async function handleRefresh() {
-    await fetchSiteProjects(true)
+  await fetchSiteProjects(true)
 }
 
 // Initialize
 onMounted(async () => {
-    await fetchSiteProjects()
+  await fetchSiteProjects()
 
-    // UPDATED: Set default site based on connected iPLAS server
-    const { selectedServer } = useIplasSettings()
-    const serverId = selectedServer.value?.id?.toUpperCase()
-    if (serverId && uniqueSites.value.includes(serverId) && !selectedSite.value) {
-        selectedSite.value = serverId
-    }
+  // UPDATED: Set default site based on connected iPLAS server
+  const { selectedServer } = useIplasSettings()
+  const serverId = selectedServer.value?.id?.toUpperCase()
+  if (serverId && uniqueSites.value.includes(serverId) && !selectedSite.value) {
+    selectedSite.value = serverId
+  }
 })
 </script>
 

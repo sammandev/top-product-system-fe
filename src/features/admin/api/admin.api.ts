@@ -115,6 +115,49 @@ export interface UpdatePermissionRequest {
 }
 
 // ============================================================================
+// Access Control Interfaces
+// ============================================================================
+
+export interface AccessControlUser {
+  id: number
+  username: string
+  email: string | null
+  worker_id: string | null
+  is_admin: boolean
+  is_ptb_admin: boolean
+  is_superuser: boolean
+  is_staff: boolean
+  is_active: boolean
+  role: 'developer' | 'superadmin' | 'user'
+  menu_permissions: Record<string, string[]> | null
+  permission_updated_at: string | null
+  last_login: string | null
+  created_at: string
+}
+
+export interface AccessControlUserListResponse {
+  users: AccessControlUser[]
+  available_resources: string[]
+  available_actions: string[]
+  total: number
+}
+
+export interface MenuResourcesResponse {
+  resources: string[]
+  actions: string[]
+  default_permissions: Record<string, string[]>
+}
+
+export interface UpdateAccessRequest {
+  role?: string
+  menu_permissions?: Record<string, string[]>
+  is_active?: boolean
+  is_ptb_admin?: boolean
+  is_superuser?: boolean
+  is_staff?: boolean
+}
+
+// ============================================================================
 // Admin API
 // ============================================================================
 
@@ -341,6 +384,39 @@ export const adminApi = {
     const { data } = await apiClient.post(`/api/admin/rbac/users/${userId}/remove-role`, {
       role_id: roleId,
     })
+    return data
+  },
+
+  // ==================== Access Control ====================
+
+  /**
+   * Get all users with access control settings (superadmin/developer only)
+   */
+  async getAccessControlUsers(): Promise<AccessControlUserListResponse> {
+    const { data } = await apiClient.get<AccessControlUserListResponse>(
+      '/api/admin/access-control/users',
+    )
+    return data
+  },
+
+  /**
+   * Get available menu resources and actions
+   */
+  async getMenuResources(): Promise<MenuResourcesResponse> {
+    const { data } = await apiClient.get<MenuResourcesResponse>(
+      '/api/admin/access-control/resources',
+    )
+    return data
+  },
+
+  /**
+   * Update a user's access control settings (superadmin/developer only)
+   */
+  async updateUserAccess(userId: number, request: UpdateAccessRequest): Promise<AccessControlUser> {
+    const { data } = await apiClient.patch<AccessControlUser>(
+      `/api/admin/access-control/users/${userId}`,
+      request,
+    )
     return data
   },
 }

@@ -1054,21 +1054,21 @@ import { useStickyColumns } from '@/shared/composables'
 import { formatDate } from '@/shared/utils/helpers'
 import { dutApi } from '../api/dut.api'
 import type {
-    ScoreBreakdown,
-    TopProductError,
-    TopProductMeasurement,
-    TopProductResult,
-    TopProductStationResult,
+  ScoreBreakdown,
+  TopProductError,
+  TopProductMeasurement,
+  TopProductResult,
+  TopProductStationResult,
 } from '../types/dutTopProduct.types'
 
 interface Props {
-    results: TopProductResult[]
-    errors: TopProductError[]
-    customScoringEnabled?: boolean
-    // biome-ignore lint/suspicious/noExplicitAny: FormulaSelection type from useFormulaSelector composable
-    universalFormula?: any // FormulaSelection from useFormulaSelector
-    // biome-ignore lint/suspicious/noExplicitAny: CategoryFormulaSelections type from useFormulaSelector composable
-    categoryFormulas?: any // CategoryFormulaSelections from useFormulaSelector
+  results: TopProductResult[]
+  errors: TopProductError[]
+  customScoringEnabled?: boolean
+  // biome-ignore lint/suspicious/noExplicitAny: FormulaSelection type from useFormulaSelector composable
+  universalFormula?: any // FormulaSelection from useFormulaSelector
+  // biome-ignore lint/suspicious/noExplicitAny: CategoryFormulaSelections type from useFormulaSelector composable
+  categoryFormulas?: any // CategoryFormulaSelections from useFormulaSelector
 }
 
 const props = defineProps<Props>()
@@ -1088,12 +1088,12 @@ const selectedScoreBreakdown = ref<any | null>(null) // Type as 'any' to match P
 // Reset selectedScoreBreakdown when dialog closes
 // Delay cleanup to ensure v-dialog transition fully completes (300ms is Vuetify's default transition duration)
 watch(scoreBreakdownDialog, (isOpen) => {
-    if (!isOpen) {
-        // Wait for dialog transition to complete before clearing data
-        setTimeout(() => {
-            selectedScoreBreakdown.value = null
-        }, 350) // 50ms buffer beyond typical 300ms transition
-    }
+  if (!isOpen) {
+    // Wait for dialog transition to complete before clearing data
+    setTimeout(() => {
+      selectedScoreBreakdown.value = null
+    }, 350) // 50ms buffer beyond typical 300ms transition
+  }
 })
 
 // State for search and filters
@@ -1115,368 +1115,368 @@ const comparisonLimitFilter = ref<string | null>(null)
 
 // Computed: All linked ISNs (for total count, excluding the first index which is usually the search ISN)
 const allLinkedISNs = computed(() => {
-    if (linkedIdentifiers.value.length === 0) {
-        return []
-    }
-    // Exclude first index (typically the same as dut_isn used for search)
-    return linkedIdentifiers.value.slice(1)
+  if (linkedIdentifiers.value.length === 0) {
+    return []
+  }
+  // Exclude first index (typically the same as dut_isn used for search)
+  return linkedIdentifiers.value.slice(1)
 })
 
 // Computed: Other linked ISNs (exclude search ISN for dropdown display)
 const otherLinkedISNs = computed(() => {
-    if (linkedIdentifiers.value.length === 0) {
-        return []
-    }
-    // Filter out the search ISN from the list
-    return linkedIdentifiers.value.filter((isn) => isn !== selectedMeasurement.value?.dutISN)
+  if (linkedIdentifiers.value.length === 0) {
+    return []
+  }
+  // Filter out the search ISN from the list
+  return linkedIdentifiers.value.filter((isn) => isn !== selectedMeasurement.value?.dutISN)
 })
 
 // Filter options
 const scoreFilterOptions = [
-    { title: 'All Scores', value: null },
-    { title: 'Score >= 9', value: 'high' },
-    { title: 'Score 7-9', value: 'medium' },
-    { title: 'Score < 7', value: 'low' },
+  { title: 'All Scores', value: null },
+  { title: 'Score >= 9', value: 'high' },
+  { title: 'Score 7-9', value: 'medium' },
+  { title: 'Score < 7', value: 'low' },
 ]
 
 const limitFilterOptions = [
-    { title: 'All', value: null },
-    { title: 'Within Limits', value: 'within' },
-    { title: 'Out of Limits', value: 'out' },
+  { title: 'All', value: null },
+  { title: 'Within Limits', value: 'within' },
+  { title: 'Out of Limits', value: 'out' },
 ]
 
 // Watch for measurement dialog changes to fetch linked identifiers
 watch(measurementDialog, async (isOpen) => {
-    if (isOpen && selectedMeasurement.value?.dutISN) {
-        await fetchLinkedIdentifiers(selectedMeasurement.value.dutISN)
-    } else if (!isOpen) {
-        // Clear linked identifiers when dialog closes
-        linkedIdentifiers.value = []
-        // Reset search and filters
-        measurementSearch.value = ''
-        scoreFilter.value = null
-        limitFilter.value = null
-        // Reset fullscreen mode
-        isFullscreen.value = false
-    }
+  if (isOpen && selectedMeasurement.value?.dutISN) {
+    await fetchLinkedIdentifiers(selectedMeasurement.value.dutISN)
+  } else if (!isOpen) {
+    // Clear linked identifiers when dialog closes
+    linkedIdentifiers.value = []
+    // Reset search and filters
+    measurementSearch.value = ''
+    scoreFilter.value = null
+    limitFilter.value = null
+    // Reset fullscreen mode
+    isFullscreen.value = false
+  }
 })
 
 // Parse measurement data from the 'data' field
 // biome-ignore lint/suspicious/noExplicitAny: dynamic measurement data from backend API (object or array format)
 function parseMeasurements(data: Array<any>): TopProductMeasurement[] {
-    if (!data || data.length === 0) return []
+  if (!data || data.length === 0) return []
 
-    const measurements: TopProductMeasurement[] = []
+  const measurements: TopProductMeasurement[] = []
 
-    for (let i = 0; i < data.length; i++) {
-        const item = data[i]
-        if (!item) continue
+  for (let i = 0; i < data.length; i++) {
+    const item = data[i]
+    if (!item) continue
 
-        // Detect format: object has 'test_item' property, array doesn't
-        const isObjectFormat = typeof item === 'object' && !Array.isArray(item) && 'test_item' in item
+    // Detect format: object has 'test_item' property, array doesn't
+    const isObjectFormat = typeof item === 'object' && !Array.isArray(item) && 'test_item' in item
 
-        let testItem: string
-        let usl: number | null
-        let lsl: number | null
-        let actual: number
-        let target: number | null
-        let systemScore: number
-        let breakdown: ScoreBreakdown | null
+    let testItem: string
+    let usl: number | null
+    let lsl: number | null
+    let actual: number
+    let target: number | null
+    let systemScore: number
+    let breakdown: ScoreBreakdown | null
 
-        if (isObjectFormat) {
-            // NEW OBJECT FORMAT: {test_item, usl, lsl, actual, score_breakdown}
-            testItem = String(item.test_item || '')
-            usl = item.usl !== null && item.usl !== undefined ? Number(item.usl) : null
-            lsl = item.lsl !== null && item.lsl !== undefined ? Number(item.lsl) : null
-            actual = item.actual !== null && item.actual !== undefined ? Number(item.actual) : 0
+    if (isObjectFormat) {
+      // NEW OBJECT FORMAT: {test_item, usl, lsl, actual, score_breakdown}
+      testItem = String(item.test_item || '')
+      usl = item.usl !== null && item.usl !== undefined ? Number(item.usl) : null
+      lsl = item.lsl !== null && item.lsl !== undefined ? Number(item.lsl) : null
+      actual = item.actual !== null && item.actual !== undefined ? Number(item.actual) : 0
 
-            // Extract score from breakdown
-            breakdown =
-                item.score_breakdown && typeof item.score_breakdown === 'object'
-                    ? (item.score_breakdown as ScoreBreakdown)
-                    : null
+      // Extract score from breakdown
+      breakdown =
+        item.score_breakdown && typeof item.score_breakdown === 'object'
+          ? (item.score_breakdown as ScoreBreakdown)
+          : null
 
-            // Extract score: prefer final_score, fallback to score for backward compatibility
-            // biome-ignore lint/suspicious/noExplicitAny: backward-compat fallback for legacy 'score' field
-            systemScore = breakdown?.final_score ?? (breakdown as any)?.score ?? 0
-            target = breakdown?.target_used ?? null
+      // Extract score: prefer final_score, fallback to score for backward compatibility
+      // biome-ignore lint/suspicious/noExplicitAny: backward-compat fallback for legacy 'score' field
+      systemScore = breakdown?.final_score ?? (breakdown as any)?.score ?? 0
+      target = breakdown?.target_used ?? null
 
-            // Debug: Log breakdown data for first item
-            if (breakdown && i === 0) {
-                console.log('Score Breakdown Sample (Object Format):', {
-                    test_item: testItem,
-                    breakdown,
-                    has_formula: !!breakdown.formula_latex,
-                    has_final_score: !!breakdown.final_score,
-                    // biome-ignore lint/suspicious/noExplicitAny: backward-compat check for legacy 'score' field
-                    has_score: !!(breakdown as any).score,
-                })
-            }
-        } else {
-            // OLD ARRAY FORMAT: [test_item, usl, lsl, actual, target, score, breakdown]
-            const row = item as Array<string | number | null | ScoreBreakdown>
-            if (row.length < 6) continue
-
-            testItem = String(row[0] || '')
-            usl = row[1] !== null ? Number(row[1]) : null
-            lsl = row[2] !== null ? Number(row[2]) : null
-            actual = row[3] !== null && row[3] !== undefined ? Number(row[3]) : 0
-            target = row[4] !== null ? Number(row[4]) : null
-            systemScore = Number(row[5] || 0)
-            breakdown = row[6] && typeof row[6] === 'object' ? (row[6] as ScoreBreakdown) : null
-
-            // Debug: Log breakdown data for first item
-            if (breakdown && i === 0) {
-                console.log('Score Breakdown Sample (Array Format):', {
-                    test_item: testItem,
-                    breakdown,
-                    has_formula: !!breakdown.formula_latex,
-                })
-            }
-        }
-
-        // Use system score (custom scoring now handled via formula selection in parent)
-        const finalScore = systemScore
-        const scoreSource = 'system'
-
-        measurements.push({
-            test_item: testItem,
-            usl,
-            lsl,
-            actual: String(actual),
-            target: target !== null ? String(target) : null,
-            expected: target !== null ? String(target) : null,
-            score: finalScore,
-            breakdown, // Include score breakdown with LaTeX formula
-            systemScore, // Keep original system score for reference
-            scoreSource, // Track which formula was used
+      // Debug: Log breakdown data for first item
+      if (breakdown && i === 0) {
+        console.log('Score Breakdown Sample (Object Format):', {
+          test_item: testItem,
+          breakdown,
+          has_formula: !!breakdown.formula_latex,
+          has_final_score: !!breakdown.final_score,
+          // biome-ignore lint/suspicious/noExplicitAny: backward-compat check for legacy 'score' field
+          has_score: !!(breakdown as any).score,
         })
+      }
+    } else {
+      // OLD ARRAY FORMAT: [test_item, usl, lsl, actual, target, score, breakdown]
+      const row = item as Array<string | number | null | ScoreBreakdown>
+      if (row.length < 6) continue
+
+      testItem = String(row[0] || '')
+      usl = row[1] !== null ? Number(row[1]) : null
+      lsl = row[2] !== null ? Number(row[2]) : null
+      actual = row[3] !== null && row[3] !== undefined ? Number(row[3]) : 0
+      target = row[4] !== null ? Number(row[4]) : null
+      systemScore = Number(row[5] || 0)
+      breakdown = row[6] && typeof row[6] === 'object' ? (row[6] as ScoreBreakdown) : null
+
+      // Debug: Log breakdown data for first item
+      if (breakdown && i === 0) {
+        console.log('Score Breakdown Sample (Array Format):', {
+          test_item: testItem,
+          breakdown,
+          has_formula: !!breakdown.formula_latex,
+        })
+      }
     }
 
-    return measurements
+    // Use system score (custom scoring now handled via formula selection in parent)
+    const finalScore = systemScore
+    const scoreSource = 'system'
+
+    measurements.push({
+      test_item: testItem,
+      usl,
+      lsl,
+      actual: String(actual),
+      target: target !== null ? String(target) : null,
+      expected: target !== null ? String(target) : null,
+      score: finalScore,
+      breakdown, // Include score breakdown with LaTeX formula
+      systemScore, // Keep original system score for reference
+      scoreSource, // Track which formula was used
+    })
+  }
+
+  return measurements
 }
 
 // Enhance results with parsed measurements
 const enhancedResults = computed(() => {
-    return props.results.map((result) => ({
-        ...result,
-        test_result: result.test_result.map((station) => ({
-            ...station,
-            measurement: parseMeasurements(station.data),
-            // Get measurement_count from metadata first, fallback to data length
-            measurement_count: Number(station.metadata?.measurement_count || station.data?.length || 0),
-            device_name: station.device, // Add alias for backward compatibility
-        })),
-    }))
+  return props.results.map((result) => ({
+    ...result,
+    test_result: result.test_result.map((station) => ({
+      ...station,
+      measurement: parseMeasurements(station.data),
+      // Get measurement_count from metadata first, fallback to data length
+      measurement_count: Number(station.metadata?.measurement_count || station.data?.length || 0),
+      device_name: station.device, // Add alias for backward compatibility
+    })),
+  }))
 })
 
 // Table Headers
 const stationHeaders = [
-    { title: 'Station', key: 'station_name', sortable: true },
-    { title: 'Device', key: 'device', sortable: true },
-    { title: 'Test Date', key: 'test_date', sortable: true },
-    { title: 'Test Item Count', key: 'measurement_count', sortable: true, align: 'start' as const },
-    { title: 'Overall Score', key: 'overall_data_score', sortable: true, align: 'start' as const },
-    { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const },
+  { title: 'Station', key: 'station_name', sortable: true },
+  { title: 'Device', key: 'device', sortable: true },
+  { title: 'Test Date', key: 'test_date', sortable: true },
+  { title: 'Test Item Count', key: 'measurement_count', sortable: true, align: 'start' as const },
+  { title: 'Overall Score', key: 'overall_data_score', sortable: true, align: 'start' as const },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const },
 ]
 
 // Make measurementHeaders reactive to work with useStickyColumns
 const measurementHeaders = computed(() => [
-    { title: 'Test Item', key: 'test_item', sortable: true },
-    { title: 'USL', key: 'usl', sortable: true, align: 'start' as const },
-    { title: 'LSL', key: 'lsl', sortable: true, align: 'start' as const },
-    { title: 'Target', key: 'target', sortable: false, align: 'center' as const },
-    { title: 'Meas.', key: 'actual', sortable: false, align: 'center' as const },
-    {
-        title: 'Δ Meas. & Target',
-        key: 'delta_actual_target',
-        sortable: false,
-        align: 'center' as const,
-    },
-    { title: 'Score', key: 'score', sortable: true, align: 'center' as const },
+  { title: 'Test Item', key: 'test_item', sortable: true },
+  { title: 'USL', key: 'usl', sortable: true, align: 'start' as const },
+  { title: 'LSL', key: 'lsl', sortable: true, align: 'start' as const },
+  { title: 'Target', key: 'target', sortable: false, align: 'center' as const },
+  { title: 'Meas.', key: 'actual', sortable: false, align: 'center' as const },
+  {
+    title: 'Δ Meas. & Target',
+    key: 'delta_actual_target',
+    sortable: false,
+    align: 'center' as const,
+  },
+  { title: 'Score', key: 'score', sortable: true, align: 'center' as const },
 ])
 
 const {
-    lockedColumns: measurementLockedColumns,
-    columnOptions: measurementColumnOptions,
-    stickyHeaders: measurementStickyHeaders,
-    setColumnWidths: setMeasurementColumnWidths,
+  lockedColumns: measurementLockedColumns,
+  columnOptions: measurementColumnOptions,
+  stickyHeaders: measurementStickyHeaders,
+  setColumnWidths: setMeasurementColumnWidths,
 } = useStickyColumns(measurementHeaders, { initialLocked: ['test_item', 'usl', 'lsl'] })
 
 // Computed properties
 const totalStations = computed(() => {
-    return enhancedResults.value.reduce((sum, result) => sum + result.test_result.length, 0)
+  return enhancedResults.value.reduce((sum, result) => sum + result.test_result.length, 0)
 })
 
 // Count DUTs that have at least one station with error_item
 const failedDUTsCount = computed(() => {
-    return enhancedResults.value.filter((result) => {
-        // Check if any station has an error_item
-        return result.test_result.some(
-            (station) => station.error_item && station.error_item.trim() !== '',
-        )
-    }).length
+  return enhancedResults.value.filter((result) => {
+    // Check if any station has an error_item
+    return result.test_result.some(
+      (station) => station.error_item && station.error_item.trim() !== '',
+    )
+  }).length
 })
 
 // Filtered measurements based on search and filters
 const filteredMeasurements = computed(() => {
-    if (!selectedMeasurement.value?.station.measurement) return []
+  if (!selectedMeasurement.value?.station.measurement) return []
 
-    let filtered = selectedMeasurement.value.station.measurement
+  let filtered = selectedMeasurement.value.station.measurement
 
-    // Apply score filter
-    if (scoreFilter.value) {
-        filtered = filtered.filter((m) => {
-            if (scoreFilter.value === 'high') return m.score >= 9
-            if (scoreFilter.value === 'medium') return m.score >= 7 && m.score < 9
-            if (scoreFilter.value === 'low') return m.score < 7
-            return true
-        })
-    }
+  // Apply score filter
+  if (scoreFilter.value) {
+    filtered = filtered.filter((m) => {
+      if (scoreFilter.value === 'high') return m.score >= 9
+      if (scoreFilter.value === 'medium') return m.score >= 7 && m.score < 9
+      if (scoreFilter.value === 'low') return m.score < 7
+      return true
+    })
+  }
 
-    // Apply limit filter
-    if (limitFilter.value) {
-        filtered = filtered.filter((m) => {
-            const actual = parseFloat(m.actual)
-            if (Number.isNaN(actual)) return false
+  // Apply limit filter
+  if (limitFilter.value) {
+    filtered = filtered.filter((m) => {
+      const actual = parseFloat(m.actual)
+      if (Number.isNaN(actual)) return false
 
-            const withinLimits =
-                (m.lsl === null || actual >= m.lsl) && (m.usl === null || actual <= m.usl)
+      const withinLimits =
+        (m.lsl === null || actual >= m.lsl) && (m.usl === null || actual <= m.usl)
 
-            if (limitFilter.value === 'within') return withinLimits
-            if (limitFilter.value === 'out') return !withinLimits
-            return true
-        })
-    }
+      if (limitFilter.value === 'within') return withinLimits
+      if (limitFilter.value === 'out') return !withinLimits
+      return true
+    })
+  }
 
-    return filtered
+  return filtered
 })
 
 // Comparison feature computed properties
 // Get all unique station names across all DUTs with site and model information
 // Only show stations that exist in ALL DUTs with matching Site/Model
 const comparisonStations = computed(() => {
-    if (enhancedResults.value.length === 0) return []
+  if (enhancedResults.value.length === 0) return []
 
-    // Group DUTs by Site/Model combination
-    const siteModelGroups = new Map<string, typeof enhancedResults.value>()
+  // Group DUTs by Site/Model combination
+  const siteModelGroups = new Map<string, typeof enhancedResults.value>()
 
-    enhancedResults.value.forEach((result) => {
-        const key = `${result.site_name || 'Unknown'}|${result.model_name || 'Unknown'}`
-        if (!siteModelGroups.has(key)) {
-            siteModelGroups.set(key, [])
-        }
-        siteModelGroups.get(key)?.push(result)
+  enhancedResults.value.forEach((result) => {
+    const key = `${result.site_name || 'Unknown'}|${result.model_name || 'Unknown'}`
+    if (!siteModelGroups.has(key)) {
+      siteModelGroups.set(key, [])
+    }
+    siteModelGroups.get(key)?.push(result)
+  })
+
+  // For each Site/Model group, find stations that exist in ALL DUTs
+  const stationOptions: Array<{
+    value: string
+    title: string
+    raw: { station: string; site: string; model: string }
+  }> = []
+
+  siteModelGroups.forEach((dutGroup) => {
+    if (dutGroup.length === 0) return
+
+    // Get stations from first DUT in this group
+    const firstDUT = dutGroup[0]
+    if (!firstDUT) return
+
+    const potentialStations = new Map<string, { station: string; site: string; model: string }>()
+
+    firstDUT.test_result.forEach((station) => {
+      potentialStations.set(station.station_name, {
+        station: station.station_name,
+        site: firstDUT.site_name || 'Unknown',
+        model: firstDUT.model_name || 'Unknown',
+      })
     })
 
-    // For each Site/Model group, find stations that exist in ALL DUTs
-    const stationOptions: Array<{
-        value: string
-        title: string
-        raw: { station: string; site: string; model: string }
-    }> = []
+    // Filter to only stations present in ALL DUTs of this Site/Model group
+    potentialStations.forEach((stationInfo, stationName) => {
+      const existsInAllDUTs = dutGroup.every((dut) =>
+        dut.test_result.some((s) => s.station_name === stationName),
+      )
 
-    siteModelGroups.forEach((dutGroup) => {
-        if (dutGroup.length === 0) return
-
-        // Get stations from first DUT in this group
-        const firstDUT = dutGroup[0]
-        if (!firstDUT) return
-
-        const potentialStations = new Map<string, { station: string; site: string; model: string }>()
-
-        firstDUT.test_result.forEach((station) => {
-            potentialStations.set(station.station_name, {
-                station: station.station_name,
-                site: firstDUT.site_name || 'Unknown',
-                model: firstDUT.model_name || 'Unknown',
-            })
+      if (existsInAllDUTs) {
+        stationOptions.push({
+          value: stationName,
+          title: stationName, // Display only station name in selector
+          raw: stationInfo,
         })
-
-        // Filter to only stations present in ALL DUTs of this Site/Model group
-        potentialStations.forEach((stationInfo, stationName) => {
-            const existsInAllDUTs = dutGroup.every((dut) =>
-                dut.test_result.some((s) => s.station_name === stationName),
-            )
-
-            if (existsInAllDUTs) {
-                stationOptions.push({
-                    value: stationName,
-                    title: stationName, // Display only station name in selector
-                    raw: stationInfo,
-                })
-            }
-        })
+      }
     })
+  })
 
-    return stationOptions.sort((a, b) => a.title.localeCompare(b.title))
+  return stationOptions.sort((a, b) => a.title.localeCompare(b.title))
 })
 
 // Build comparison headers dynamically based on DUTs
 const comparisonHeaders = computed(() => {
-    const baseHeaders = [
-        { title: 'Test Item', key: 'test_item', sortable: true },
-        { title: 'USL', key: 'usl', sortable: true, align: 'start' as const },
-        { title: 'LSL', key: 'lsl', sortable: true, align: 'start' as const },
-    ]
+  const baseHeaders = [
+    { title: 'Test Item', key: 'test_item', sortable: true },
+    { title: 'USL', key: 'usl', sortable: true, align: 'start' as const },
+    { title: 'LSL', key: 'lsl', sortable: true, align: 'start' as const },
+  ]
 
-    // Add Target column (before Actual columns)
-    const targetHeader = {
-        title: 'Target',
-        key: 'target',
-        sortable: false,
-        align: 'center' as const,
-        width: '120px',
-    }
+  // Add Target column (before Actual columns)
+  const targetHeader = {
+    title: 'Target',
+    key: 'target',
+    sortable: false,
+    align: 'center' as const,
+    width: '120px',
+  }
 
-    // Add Actual columns for each DUT
-    const measuredHeaders = enhancedResults.value.map((result) => ({
-        title: `Meas.\n${result.dut_isn}`,
-        key: `measured_${result.dut_isn}`,
-        sortable: false,
-        align: 'center' as const,
-    }))
+  // Add Actual columns for each DUT
+  const measuredHeaders = enhancedResults.value.map((result) => ({
+    title: `Meas.\n${result.dut_isn}`,
+    key: `measured_${result.dut_isn}`,
+    sortable: false,
+    align: 'center' as const,
+  }))
 
-    // Add Meas.Max Diff column (Maximum difference between actual values)
-    const actMaxDiffHeader = {
-        title: 'Meas.Max Diff',
-        key: 'measured_max_diff',
-        sortable: true,
-        align: 'center' as const,
-    }
+  // Add Meas.Max Diff column (Maximum difference between actual values)
+  const actMaxDiffHeader = {
+    title: 'Meas.Max Diff',
+    key: 'measured_max_diff',
+    sortable: true,
+    align: 'center' as const,
+  }
 
-    // Add Delta Act.Tar columns for each DUT
-    const deltaHeaders = enhancedResults.value.map((result) => ({
-        title: `Δ Meas. & Target\n${result.dut_isn}`,
-        key: `delta_mt_${result.dut_isn}`,
-        sortable: false,
-        align: 'center' as const,
-    }))
+  // Add Delta Act.Tar columns for each DUT
+  const deltaHeaders = enhancedResults.value.map((result) => ({
+    title: `Δ Meas. & Target\n${result.dut_isn}`,
+    key: `delta_mt_${result.dut_isn}`,
+    sortable: false,
+    align: 'center' as const,
+  }))
 
-    // Add Score columns for each DUT
-    const scoreHeaders = enhancedResults.value.map((result) => ({
-        title: `Score\n${result.dut_isn}`,
-        key: `score_${result.dut_isn}`,
-        sortable: true,
-        align: 'center' as const,
-    }))
+  // Add Score columns for each DUT
+  const scoreHeaders = enhancedResults.value.map((result) => ({
+    title: `Score\n${result.dut_isn}`,
+    key: `score_${result.dut_isn}`,
+    sortable: true,
+    align: 'center' as const,
+  }))
 
-    // Order: Test Item | USL | LSL | Target | Meas.(\n)ISN1 | Meas.(\n) ISN2 | Meas.Max Diff | Δ Meas. & Target(\n)ISN1 | Δ Meas. & Target(\n)ISN2 | Score(\n)ISN1 | Score(\n)ISN2
-    return [
-        ...baseHeaders,
-        targetHeader,
-        ...measuredHeaders,
-        actMaxDiffHeader,
-        ...deltaHeaders,
-        ...scoreHeaders,
-    ]
+  // Order: Test Item | USL | LSL | Target | Meas.(\n)ISN1 | Meas.(\n) ISN2 | Meas.Max Diff | Δ Meas. & Target(\n)ISN1 | Δ Meas. & Target(\n)ISN2 | Score(\n)ISN1 | Score(\n)ISN2
+  return [
+    ...baseHeaders,
+    targetHeader,
+    ...measuredHeaders,
+    actMaxDiffHeader,
+    ...deltaHeaders,
+    ...scoreHeaders,
+  ]
 })
 
 const {
-    lockedColumns: comparisonLockedColumns,
-    columnOptions: comparisonColumnOptions,
-    stickyHeaders: comparisonStickyHeaders,
-    setColumnWidths: setComparisonColumnWidths,
+  lockedColumns: comparisonLockedColumns,
+  columnOptions: comparisonColumnOptions,
+  stickyHeaders: comparisonStickyHeaders,
+  setColumnWidths: setComparisonColumnWidths,
 } = useStickyColumns(comparisonHeaders, { initialLocked: ['test_item', 'usl', 'lsl', 'target'] })
 
 // Column width measurement (keeps natural widths for sticky columns)
@@ -1484,65 +1484,65 @@ const measurementColumnWidths = ref<Record<string, number>>({})
 const comparisonColumnWidths = ref<Record<string, number>>({})
 
 const measurementHeadersWithWidths = computed(() => {
-    let cumulativeLeft = 0
-    return measurementStickyHeaders.value.map((header) => {
-        const key = String(header.key ?? '')
-        const isLocked = measurementLockedColumns.value.includes(key)
+  let cumulativeLeft = 0
+  return measurementStickyHeaders.value.map((header) => {
+    const key = String(header.key ?? '')
+    const isLocked = measurementLockedColumns.value.includes(key)
 
-        if (isLocked) {
-            const width = measurementColumnWidths.value[key] || 0
-            const leftPosition = cumulativeLeft
-            const result = {
-                ...header,
-                width: width || undefined,
-                cellProps: () => ({
-                    class: 'locked-column',
-                    style: `position: sticky !important; left: ${leftPosition}px !important; z-index: 2 !important; background-color: rgb(var(--v-theme-surface)) !important;`,
-                }),
-                // Add headerProps to style the header cells with both horizontal and vertical sticky
-                headerProps: {
-                    class: 'locked-column locked-header',
-                    style: `position: sticky !important; left: ${leftPosition}px !important; top: 0px !important; z-index: 10 !important; background-color: rgb(var(--v-theme-surface)) !important;`,
-                },
-            }
-            if (width > 0) {
-                cumulativeLeft += width
-            }
-            return result
-        }
-        return header
-    })
+    if (isLocked) {
+      const width = measurementColumnWidths.value[key] || 0
+      const leftPosition = cumulativeLeft
+      const result = {
+        ...header,
+        width: width || undefined,
+        cellProps: () => ({
+          class: 'locked-column',
+          style: `position: sticky !important; left: ${leftPosition}px !important; z-index: 2 !important; background-color: rgb(var(--v-theme-surface)) !important;`,
+        }),
+        // Add headerProps to style the header cells with both horizontal and vertical sticky
+        headerProps: {
+          class: 'locked-column locked-header',
+          style: `position: sticky !important; left: ${leftPosition}px !important; top: 0px !important; z-index: 10 !important; background-color: rgb(var(--v-theme-surface)) !important;`,
+        },
+      }
+      if (width > 0) {
+        cumulativeLeft += width
+      }
+      return result
+    }
+    return header
+  })
 })
 
 const comparisonHeadersWithWidths = computed(() => {
-    let cumulativeLeft = 0
-    return comparisonStickyHeaders.value.map((header) => {
-        const key = String(header.key ?? '')
-        const isLocked = comparisonLockedColumns.value.includes(key)
+  let cumulativeLeft = 0
+  return comparisonStickyHeaders.value.map((header) => {
+    const key = String(header.key ?? '')
+    const isLocked = comparisonLockedColumns.value.includes(key)
 
-        if (isLocked) {
-            const width = comparisonColumnWidths.value[key] || 0
-            const leftPosition = cumulativeLeft
-            const result = {
-                ...header,
-                width: width || undefined,
-                cellProps: () => ({
-                    class: 'locked-column',
-                    style: `position: sticky !important; left: ${leftPosition}px !important; z-index: 2 !important; background-color: rgb(var(--v-theme-surface)) !important;`,
-                }),
-                // Add headerProps to style the header cells with both horizontal and vertical sticky
-                headerProps: {
-                    class: 'locked-column locked-header',
-                    style: `position: sticky !important; left: ${leftPosition}px !important; top: 0px !important; z-index: 10 !important; background-color: rgb(var(--v-theme-surface)) !important;`,
-                },
-            }
-            if (width > 0) {
-                cumulativeLeft += width
-            }
-            return result
-        }
-        return header
-    })
+    if (isLocked) {
+      const width = comparisonColumnWidths.value[key] || 0
+      const leftPosition = cumulativeLeft
+      const result = {
+        ...header,
+        width: width || undefined,
+        cellProps: () => ({
+          class: 'locked-column',
+          style: `position: sticky !important; left: ${leftPosition}px !important; z-index: 2 !important; background-color: rgb(var(--v-theme-surface)) !important;`,
+        }),
+        // Add headerProps to style the header cells with both horizontal and vertical sticky
+        headerProps: {
+          class: 'locked-column locked-header',
+          style: `position: sticky !important; left: ${leftPosition}px !important; top: 0px !important; z-index: 10 !important; background-color: rgb(var(--v-theme-surface)) !important;`,
+        },
+      }
+      if (width > 0) {
+        cumulativeLeft += width
+      }
+      return result
+    }
+    return header
+  })
 })
 
 const measurementTableRef = ref<HTMLElement | null>(null)
@@ -1550,488 +1550,488 @@ const comparisonTableRef = ref<HTMLElement | null>(null)
 const comparisonFullscreenTableRef = ref<HTMLElement | null>(null)
 
 function measureLockedColumns(
-    tableEl: HTMLElement | null,
-    lockedKeys: string[],
-    setter: (map: Record<string, number>) => void,
+  tableEl: HTMLElement | null,
+  lockedKeys: string[],
+  setter: (map: Record<string, number>) => void,
 ) {
-    if (!tableEl) return
+  if (!tableEl) return
 
-    // Access the actual DOM element from Vue component instance
-    // Vue component refs have $el property that contains the root DOM element
-    let actualTableEl: HTMLElement | null = null
+  // Access the actual DOM element from Vue component instance
+  // Vue component refs have $el property that contains the root DOM element
+  let actualTableEl: HTMLElement | null = null
 
-    // biome-ignore lint/suspicious/noExplicitAny: Vue component ref may be a component instance with $el
-    if ((tableEl as any)?.$el) {
-        // It's a Vue component instance
-        // biome-ignore lint/suspicious/noExplicitAny: Vue component ref $el accessor
-        actualTableEl = (tableEl as any).$el.querySelector('table')
-    } else if (tableEl instanceof HTMLElement) {
-        // It's already a DOM element
-        actualTableEl = tableEl.querySelector('table')
-    }
+  // biome-ignore lint/suspicious/noExplicitAny: Vue component ref may be a component instance with $el
+  if ((tableEl as any)?.$el) {
+    // It's a Vue component instance
+    // biome-ignore lint/suspicious/noExplicitAny: Vue component ref $el accessor
+    actualTableEl = (tableEl as any).$el.querySelector('table')
+  } else if (tableEl instanceof HTMLElement) {
+    // It's already a DOM element
+    actualTableEl = tableEl.querySelector('table')
+  }
 
-    if (!actualTableEl) {
-        console.warn('Could not find table element for width measurement')
-        return
-    }
+  if (!actualTableEl) {
+    console.warn('Could not find table element for width measurement')
+    return
+  }
 
-    const newMap: Record<string, number> = {}
-    const headers = actualTableEl.querySelectorAll('thead th')
+  const newMap: Record<string, number> = {}
+  const headers = actualTableEl.querySelectorAll('thead th')
 
-    if (headers.length === 0) {
-        console.warn('No table headers found for width measurement')
-        return
-    }
+  if (headers.length === 0) {
+    console.warn('No table headers found for width measurement')
+    return
+  }
 
-    // biome-ignore lint/suspicious/noExplicitAny: DOM element iterated from querySelectorAll
-    headers.forEach((th: any) => {
-        // Try to get the key from data attribute or text content
-        const key = th.getAttribute('data-key') || th.textContent?.trim()?.replace(/\n/g, '')
+  // biome-ignore lint/suspicious/noExplicitAny: DOM element iterated from querySelectorAll
+  headers.forEach((th: any) => {
+    // Try to get the key from data attribute or text content
+    const key = th.getAttribute('data-key') || th.textContent?.trim()?.replace(/\n/g, '')
 
-        // Find matching header to get the actual key
-        const allHeaders = [...measurementHeaders.value, ...comparisonHeaders.value]
-        const matchingHeader = allHeaders.find((h) => {
-            const headerTitle = h.title?.replace(/\n/g, '')
-            return h.key === key || headerTitle === key
-        })
-
-        const actualKey = matchingHeader ? matchingHeader.key : key
-
-        if (actualKey && lockedKeys.includes(actualKey)) {
-            const rectWidth = Math.ceil(th.getBoundingClientRect().width)
-            const computedWidth = rectWidth > 0 ? rectWidth : Math.ceil(th.offsetWidth || 0)
-            newMap[actualKey] = computedWidth || 160
-        }
+    // Find matching header to get the actual key
+    const allHeaders = [...measurementHeaders.value, ...comparisonHeaders.value]
+    const matchingHeader = allHeaders.find((h) => {
+      const headerTitle = h.title?.replace(/\n/g, '')
+      return h.key === key || headerTitle === key
     })
 
-    setter(newMap)
+    const actualKey = matchingHeader ? matchingHeader.key : key
+
+    if (actualKey && lockedKeys.includes(actualKey)) {
+      const rectWidth = Math.ceil(th.getBoundingClientRect().width)
+      const computedWidth = rectWidth > 0 ? rectWidth : Math.ceil(th.offsetWidth || 0)
+      newMap[actualKey] = computedWidth || 160
+    }
+  })
+
+  setter(newMap)
 }
 
 function measureMeasurementWidths() {
-    nextTick(() => {
-        // Add a small delay to ensure the table is fully rendered
-        setTimeout(() => {
-            measureLockedColumns(measurementTableRef.value, measurementLockedColumns.value, (map) => {
-                measurementColumnWidths.value = map
-                setMeasurementColumnWidths(map)
-            })
-        }, 100)
-    })
+  nextTick(() => {
+    // Add a small delay to ensure the table is fully rendered
+    setTimeout(() => {
+      measureLockedColumns(measurementTableRef.value, measurementLockedColumns.value, (map) => {
+        measurementColumnWidths.value = map
+        setMeasurementColumnWidths(map)
+      })
+    }, 100)
+  })
 }
 
 function measureComparisonWidths() {
-    nextTick(() => {
-        // Add a small delay to ensure the table is fully rendered
-        setTimeout(() => {
-            const tableEl = comparisonFullscreenTableRef.value || comparisonTableRef.value
-            measureLockedColumns(tableEl, comparisonLockedColumns.value, (map) => {
-                comparisonColumnWidths.value = map
-                setComparisonColumnWidths(map)
-            })
-        }, 100)
-    })
+  nextTick(() => {
+    // Add a small delay to ensure the table is fully rendered
+    setTimeout(() => {
+      const tableEl = comparisonFullscreenTableRef.value || comparisonTableRef.value
+      measureLockedColumns(tableEl, comparisonLockedColumns.value, (map) => {
+        comparisonColumnWidths.value = map
+        setComparisonColumnWidths(map)
+      })
+    }, 100)
+  })
 }
 
 // Build comparison data for selected station
 const comparisonData = computed(() => {
-    if (!selectedCompareStation.value) return []
+  if (!selectedCompareStation.value) return []
 
-    // First, collect all test item names and create a global ordering
-    // Use the first DUT's order as the canonical order
-    let canonicalOrder: string[] = []
-    const firstResult = enhancedResults.value[0]
-    if (firstResult) {
-        const firstStation = firstResult.test_result.find(
-            (s) => s.station_name === selectedCompareStation.value,
-        )
-        if (firstStation) {
-            const measurements = parseMeasurements(firstStation.data)
-            canonicalOrder = measurements.map((m) => m.test_item)
-        }
+  // First, collect all test item names and create a global ordering
+  // Use the first DUT's order as the canonical order
+  let canonicalOrder: string[] = []
+  const firstResult = enhancedResults.value[0]
+  if (firstResult) {
+    const firstStation = firstResult.test_result.find(
+      (s) => s.station_name === selectedCompareStation.value,
+    )
+    if (firstStation) {
+      const measurements = parseMeasurements(firstStation.data)
+      canonicalOrder = measurements.map((m) => m.test_item)
     }
+  }
 
-    // Collect all test items from all DUTs for the selected station
-    // biome-ignore lint/suspicious/noExplicitAny: dynamic comparison data with computed DUT-specific keys
-    const testItemMap = new Map<string, any>()
+  // Collect all test items from all DUTs for the selected station
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic comparison data with computed DUT-specific keys
+  const testItemMap = new Map<string, any>()
+
+  enhancedResults.value.forEach((result) => {
+    const station = result.test_result.find((s) => s.station_name === selectedCompareStation.value)
+    if (!station) return
+
+    const measurements = parseMeasurements(station.data)
+    measurements.forEach((m) => {
+      if (!testItemMap.has(m.test_item)) {
+        // Get global index from canonical order
+        const globalIndex = canonicalOrder.indexOf(m.test_item)
+
+        testItemMap.set(m.test_item, {
+          test_item: m.test_item,
+          usl: m.usl,
+          lsl: m.lsl,
+          target: m.target,
+          _global_index: globalIndex >= 0 ? globalIndex : 9999, // Items not in canonical order go to end
+        })
+      }
+
+      // Add this DUT's score and measured value
+      const entry = testItemMap.get(m.test_item)
+      if (entry) {
+        entry[`score_${result.dut_isn}`] = m.score
+        entry[`measured_${result.dut_isn}`] = m.actual
+
+        // Store breakdown data for score dialog
+        entry[`breakdown_${result.dut_isn}`] = m.breakdown
+
+        // Calculate Delta M.T (Measured - Target)
+        if (m.actual !== null && m.actual !== '' && m.target !== null) {
+          const measuredNum = parseFloat(m.actual)
+          const targetNum = parseFloat(m.target)
+          if (!Number.isNaN(measuredNum) && !Number.isNaN(targetNum)) {
+            entry[`delta_mt_${result.dut_isn}`] = measuredNum - targetNum
+          }
+        }
+      }
+    })
+  })
+
+  // Calculate max differences for each test item
+  const comparisonItems = Array.from(testItemMap.values()).map((item) => {
+    const scores: number[] = []
+    const measuredValues: number[] = []
 
     enhancedResults.value.forEach((result) => {
-        const station = result.test_result.find((s) => s.station_name === selectedCompareStation.value)
-        if (!station) return
+      const score = item[`score_${result.dut_isn}`]
+      const measured = item[`measured_${result.dut_isn}`]
 
-        const measurements = parseMeasurements(station.data)
-        measurements.forEach((m) => {
-            if (!testItemMap.has(m.test_item)) {
-                // Get global index from canonical order
-                const globalIndex = canonicalOrder.indexOf(m.test_item)
+      if (score !== undefined) {
+        scores.push(score)
+      }
 
-                testItemMap.set(m.test_item, {
-                    test_item: m.test_item,
-                    usl: m.usl,
-                    lsl: m.lsl,
-                    target: m.target,
-                    _global_index: globalIndex >= 0 ? globalIndex : 9999, // Items not in canonical order go to end
-                })
-            }
-
-            // Add this DUT's score and measured value
-            const entry = testItemMap.get(m.test_item)
-            if (entry) {
-                entry[`score_${result.dut_isn}`] = m.score
-                entry[`measured_${result.dut_isn}`] = m.actual
-
-                // Store breakdown data for score dialog
-                entry[`breakdown_${result.dut_isn}`] = m.breakdown
-
-                // Calculate Delta M.T (Measured - Target)
-                if (m.actual !== null && m.actual !== '' && m.target !== null) {
-                    const measuredNum = parseFloat(m.actual)
-                    const targetNum = parseFloat(m.target)
-                    if (!Number.isNaN(measuredNum) && !Number.isNaN(targetNum)) {
-                        entry[`delta_mt_${result.dut_isn}`] = measuredNum - targetNum
-                    }
-                }
-            }
-        })
-    })
-
-    // Calculate max differences for each test item
-    const comparisonItems = Array.from(testItemMap.values()).map((item) => {
-        const scores: number[] = []
-        const measuredValues: number[] = []
-
-        enhancedResults.value.forEach((result) => {
-            const score = item[`score_${result.dut_isn}`]
-            const measured = item[`measured_${result.dut_isn}`]
-
-            if (score !== undefined) {
-                scores.push(score)
-            }
-
-            if (measured !== undefined && measured !== '') {
-                const measuredNum = parseFloat(measured)
-                if (!Number.isNaN(measuredNum)) {
-                    measuredValues.push(measuredNum)
-                }
-            }
-        })
-
-        const scoreDiff = scores.length > 1 ? Math.max(...scores) - Math.min(...scores) : null
-
-        // Calculate Meas.Max Diff (maximum difference between measured values)
-        const measuredMaxDiff =
-            measuredValues.length > 1 ? Math.max(...measuredValues) - Math.min(...measuredValues) : null
-
-        return {
-            ...item,
-            score_diff: scoreDiff,
-            measured_max_diff: measuredMaxDiff,
+      if (measured !== undefined && measured !== '') {
+        const measuredNum = parseFloat(measured)
+        if (!Number.isNaN(measuredNum)) {
+          measuredValues.push(measuredNum)
         }
+      }
     })
 
-    // Sort by global index to maintain consistent canonical order across all DUTs
-    return comparisonItems.sort((a, b) => {
-        return (a._global_index ?? 9999) - (b._global_index ?? 9999)
-    })
+    const scoreDiff = scores.length > 1 ? Math.max(...scores) - Math.min(...scores) : null
+
+    // Calculate Meas.Max Diff (maximum difference between measured values)
+    const measuredMaxDiff =
+      measuredValues.length > 1 ? Math.max(...measuredValues) - Math.min(...measuredValues) : null
+
+    return {
+      ...item,
+      score_diff: scoreDiff,
+      measured_max_diff: measuredMaxDiff,
+    }
+  })
+
+  // Sort by global index to maintain consistent canonical order across all DUTs
+  return comparisonItems.sort((a, b) => {
+    return (a._global_index ?? 9999) - (b._global_index ?? 9999)
+  })
 })
 
 // Filtered comparison data based on search
 const filteredComparisonData = computed(() => {
-    let filtered = comparisonData.value
+  let filtered = comparisonData.value
 
-    // Apply search filter
-    if (comparisonSearch.value) {
-        const searchLower = comparisonSearch.value.toLowerCase()
-        filtered = filtered.filter((item) => item.test_item.toLowerCase().includes(searchLower))
-    }
+  // Apply search filter
+  if (comparisonSearch.value) {
+    const searchLower = comparisonSearch.value.toLowerCase()
+    filtered = filtered.filter((item) => item.test_item.toLowerCase().includes(searchLower))
+  }
 
-    // Apply score filter (check all DUT scores)
-    if (comparisonScoreFilter.value) {
-        filtered = filtered.filter((item) => {
-            // Check if any DUT score matches the filter criteria
-            return enhancedResults.value.some((result) => {
-                const score = item[`score_${result.dut_isn}`]
-                if (score === undefined) return false
+  // Apply score filter (check all DUT scores)
+  if (comparisonScoreFilter.value) {
+    filtered = filtered.filter((item) => {
+      // Check if any DUT score matches the filter criteria
+      return enhancedResults.value.some((result) => {
+        const score = item[`score_${result.dut_isn}`]
+        if (score === undefined) return false
 
-                if (comparisonScoreFilter.value === 'high') return score >= 9
-                if (comparisonScoreFilter.value === 'medium') return score >= 7 && score < 9
-                if (comparisonScoreFilter.value === 'low') return score < 7
-                return true
-            })
-        })
-    }
+        if (comparisonScoreFilter.value === 'high') return score >= 9
+        if (comparisonScoreFilter.value === 'medium') return score >= 7 && score < 9
+        if (comparisonScoreFilter.value === 'low') return score < 7
+        return true
+      })
+    })
+  }
 
-    // Apply limit status filter (check all DUT measured values)
-    if (comparisonLimitFilter.value) {
-        filtered = filtered.filter((item) => {
-            // Check if any DUT measured value matches the filter criteria
-            return enhancedResults.value.some((result) => {
-                const measured = item[`measured_${result.dut_isn}`]
-                if (!measured || measured === 'N/A') return false
+  // Apply limit status filter (check all DUT measured values)
+  if (comparisonLimitFilter.value) {
+    filtered = filtered.filter((item) => {
+      // Check if any DUT measured value matches the filter criteria
+      return enhancedResults.value.some((result) => {
+        const measured = item[`measured_${result.dut_isn}`]
+        if (!measured || measured === 'N/A') return false
 
-                const measuredNum = parseFloat(measured)
-                if (Number.isNaN(measuredNum)) return false
+        const measuredNum = parseFloat(measured)
+        if (Number.isNaN(measuredNum)) return false
 
-                const withinLimits =
-                    (item.lsl === null || measuredNum >= item.lsl) &&
-                    (item.usl === null || measuredNum <= item.usl)
+        const withinLimits =
+          (item.lsl === null || measuredNum >= item.lsl) &&
+          (item.usl === null || measuredNum <= item.usl)
 
-                if (comparisonLimitFilter.value === 'within') return withinLimits
-                if (comparisonLimitFilter.value === 'out') return !withinLimits
-                return true
-            })
-        })
-    }
+        if (comparisonLimitFilter.value === 'within') return withinLimits
+        if (comparisonLimitFilter.value === 'out') return !withinLimits
+        return true
+      })
+    })
+  }
 
-    return filtered
+  return filtered
 })
 
 watch([measurementLockedColumns, filteredMeasurements], measureMeasurementWidths, {
-    immediate: true,
+  immediate: true,
 })
 watch([comparisonLockedColumns, filteredComparisonData], measureComparisonWidths, {
-    immediate: true,
+  immediate: true,
 })
 
 // Watch for locked columns changes specifically to ensure proper width measurement
 watch(
-    measurementLockedColumns,
-    () => {
-        // Clear existing widths first
-        measurementColumnWidths.value = {}
-        // Then measure new widths
-        measureMeasurementWidths()
-    },
-    { deep: true },
+  measurementLockedColumns,
+  () => {
+    // Clear existing widths first
+    measurementColumnWidths.value = {}
+    // Then measure new widths
+    measureMeasurementWidths()
+  },
+  { deep: true },
 )
 
 watch(
-    comparisonLockedColumns,
-    () => {
-        // Clear existing widths first
-        comparisonColumnWidths.value = {}
-        // Then measure new widths
-        measureComparisonWidths()
-    },
-    { deep: true },
+  comparisonLockedColumns,
+  () => {
+    // Clear existing widths first
+    comparisonColumnWidths.value = {}
+    // Then measure new widths
+    measureComparisonWidths()
+  },
+  { deep: true },
 )
 
 onMounted(() => {
-    measureMeasurementWidths()
-    measureComparisonWidths()
+  measureMeasurementWidths()
+  measureComparisonWidths()
 })
 
 // Methods
 async function fetchLinkedIdentifiers(isn: string) {
-    // Validate ISN format before making API call
-    if (!isn || isn.length < 10) {
-        linkedIdentifiers.value = []
-        return
-    }
+  // Validate ISN format before making API call
+  if (!isn || isn.length < 10) {
+    linkedIdentifiers.value = []
+    return
+  }
 
-    loadingIdentifiers.value = true
-    try {
-        // Use getDUTISNVariants to get all ISN variants linked to this DUT
-        // The endpoint returns all ISNs including the search ISN in the response
-        const response = await dutApi.getDUTISNVariants(isn)
-        // Store all linked ISNs including the search ISN
-        linkedIdentifiers.value = response
-    } catch (_error) {
-        // Silently handle error - linked identifiers are optional
-        linkedIdentifiers.value = []
-    } finally {
-        loadingIdentifiers.value = false
-    }
+  loadingIdentifiers.value = true
+  try {
+    // Use getDUTISNVariants to get all ISN variants linked to this DUT
+    // The endpoint returns all ISNs including the search ISN in the response
+    const response = await dutApi.getDUTISNVariants(isn)
+    // Store all linked ISNs including the search ISN
+    linkedIdentifiers.value = response
+  } catch (_error) {
+    // Silently handle error - linked identifiers are optional
+    linkedIdentifiers.value = []
+  } finally {
+    loadingIdentifiers.value = false
+  }
 }
 
 async function copyToClipboard(text: string) {
-    try {
-        await navigator.clipboard.writeText(text)
-    } catch (_error) {
-        // Silently handle clipboard errors
-    }
+  try {
+    await navigator.clipboard.writeText(text)
+  } catch (_error) {
+    // Silently handle clipboard errors
+  }
 }
 
 function getScoreColor(score: number): string {
-    // Score color mapping based on 0-10 scale:
-    // Score ≥9: Excellent (green)
-    // Score ≥7: Good (blue/primary)
-    // Score <7: Warning/Error (yellow/red)
-    if (score >= 9) return 'success' // Excellent (green)
-    if (score >= 7) return 'primary' // Good (blue)
-    if (score >= 4) return 'warning' // Acceptable (yellow/orange)
-    return 'error' // Poor (red)
+  // Score color mapping based on 0-10 scale:
+  // Score ≥9: Excellent (green)
+  // Score ≥7: Good (blue/primary)
+  // Score <7: Warning/Error (yellow/red)
+  if (score >= 9) return 'success' // Excellent (green)
+  if (score >= 7) return 'primary' // Good (blue)
+  if (score >= 4) return 'warning' // Acceptable (yellow/orange)
+  return 'error' // Poor (red)
 }
 
 // Score source type for backward compatibility
 type ScoreSource = 'category' | 'universal' | 'system'
 
 function getScoreSourceIcon(source: ScoreSource): string {
-    switch (source) {
-        case 'category':
-            return 'mdi-target'
-        case 'universal':
-            return 'mdi-earth'
-        default:
-            return 'mdi-cog'
-    }
+  switch (source) {
+    case 'category':
+      return 'mdi-target'
+    case 'universal':
+      return 'mdi-earth'
+    default:
+      return 'mdi-cog'
+  }
 }
 
 function getScoreSourceLabel(source: ScoreSource): string {
-    switch (source) {
-        case 'category':
-            return 'Category Custom Formula'
-        case 'universal':
-            return 'Universal Custom Formula'
-        default:
-            return 'System Default'
-    }
+  switch (source) {
+    case 'category':
+      return 'Category Custom Formula'
+    case 'universal':
+      return 'Universal Custom Formula'
+    default:
+      return 'System Default'
+  }
 }
 
 function getDeltaColor(delta: number): string {
-    const absDelta = Math.abs(delta)
+  const absDelta = Math.abs(delta)
 
-    // Green (success): delta = 0 - 0.5 (very close match)
-    if (absDelta <= 0.5) return 'success'
+  // Green (success): delta = 0 - 0.5 (very close match)
+  if (absDelta <= 0.5) return 'success'
 
-    // Blue (primary): |delta| <= 1 (close, above 0.5 until 1)
-    if (absDelta <= 1) return 'primary'
+  // Blue (primary): |delta| <= 1 (close, above 0.5 until 1)
+  if (absDelta <= 1) return 'primary'
 
-    // Orange (warning): |delta| < 3 (acceptable)
-    if (absDelta < 3) return 'warning'
+  // Orange (warning): |delta| < 3 (acceptable)
+  if (absDelta < 3) return 'warning'
 
-    // Red (error): |delta| >= 3 (significant deviation)
-    return 'error'
+  // Red (error): |delta| >= 3 (significant deviation)
+  return 'error'
 }
 
 function isErrorItem(testItemName: string): boolean {
-    if (!selectedMeasurement.value?.station.error_item) {
-        return false
-    }
-    return selectedMeasurement.value.station.error_item === testItemName
+  if (!selectedMeasurement.value?.station.error_item) {
+    return false
+  }
+  return selectedMeasurement.value.station.error_item === testItemName
 }
 
 function hasErrorInResult(result: TopProductResult): boolean {
-    return result.test_result.some(
-        (station) => station.error_item && station.error_item.trim() !== '',
-    )
+  return result.test_result.some(
+    (station) => station.error_item && station.error_item.trim() !== '',
+  )
 }
 
 // Handle score breakdown click
 function handleScoreClick(item: TopProductMeasurement) {
-    console.log('Score clicked:', { item, has_breakdown: !!item.breakdown })
-    if (item.breakdown) {
-        console.log('Opening breakdown dialog with:', item.breakdown)
-        // Create a wrapper object that matches ParsedTestItemEnhanced interface
-        selectedScoreBreakdown.value = {
-            test_item: item.test_item,
-            value: item.actual,
-            score: item.score,
-            score_breakdown: item.breakdown,
-            // biome-ignore lint/suspicious/noExplicitAny: type assertion needed for ParsedTestItemEnhanced interface mismatch
-        } as any
+  console.log('Score clicked:', { item, has_breakdown: !!item.breakdown })
+  if (item.breakdown) {
+    console.log('Opening breakdown dialog with:', item.breakdown)
+    // Create a wrapper object that matches ParsedTestItemEnhanced interface
+    selectedScoreBreakdown.value = {
+      test_item: item.test_item,
+      value: item.actual,
+      score: item.score,
+      score_breakdown: item.breakdown,
+      // biome-ignore lint/suspicious/noExplicitAny: type assertion needed for ParsedTestItemEnhanced interface mismatch
+    } as any
 
-        // Open dialog immediately - component is always mounted
-        scoreBreakdownDialog.value = true
-    } else {
-        console.warn('No breakdown data available for:', item.test_item)
-    }
+    // Open dialog immediately - component is always mounted
+    scoreBreakdownDialog.value = true
+  } else {
+    console.warn('No breakdown data available for:', item.test_item)
+  }
 }
 
 // Handle score breakdown click from comparison table
 // biome-ignore lint/suspicious/noExplicitAny: dynamic comparison item with DUT-specific computed keys
 function handleComparisonScoreClick(comparisonItem: any, dutIsn: string) {
-    const breakdown = comparisonItem[`breakdown_${dutIsn}`]
-    const score = comparisonItem[`score_${dutIsn}`]
-    const measuredValue = comparisonItem[`measured_${dutIsn}`]
+  const breakdown = comparisonItem[`breakdown_${dutIsn}`]
+  const score = comparisonItem[`score_${dutIsn}`]
+  const measuredValue = comparisonItem[`measured_${dutIsn}`]
 
-    console.log('Comparison score clicked:', {
-        test_item: comparisonItem.test_item,
-        dut_isn: dutIsn,
-        has_breakdown: !!breakdown,
-    })
+  console.log('Comparison score clicked:', {
+    test_item: comparisonItem.test_item,
+    dut_isn: dutIsn,
+    has_breakdown: !!breakdown,
+  })
 
-    if (breakdown) {
-        console.log('Opening breakdown dialog with:', breakdown)
-        selectedScoreBreakdown.value = {
-            test_item: comparisonItem.test_item,
-            value: measuredValue,
-            score: score,
-            score_breakdown: breakdown,
-            // biome-ignore lint/suspicious/noExplicitAny: type assertion needed for ParsedTestItemEnhanced interface mismatch
-        } as any
+  if (breakdown) {
+    console.log('Opening breakdown dialog with:', breakdown)
+    selectedScoreBreakdown.value = {
+      test_item: comparisonItem.test_item,
+      value: measuredValue,
+      score: score,
+      score_breakdown: breakdown,
+      // biome-ignore lint/suspicious/noExplicitAny: type assertion needed for ParsedTestItemEnhanced interface mismatch
+    } as any
 
-        // Open dialog immediately - component is always mounted
-        scoreBreakdownDialog.value = true
-    } else {
-        console.warn('No breakdown data available for:', comparisonItem.test_item, 'DUT:', dutIsn)
-    }
+    // Open dialog immediately - component is always mounted
+    scoreBreakdownDialog.value = true
+  } else {
+    console.warn('No breakdown data available for:', comparisonItem.test_item, 'DUT:', dutIsn)
+  }
 }
 
 function getActualValueColor(measurement: TopProductMeasurement): string {
-    const actual = parseFloat(measurement.actual)
-    if (Number.isNaN(actual)) return 'default'
+  const actual = parseFloat(measurement.actual)
+  if (Number.isNaN(actual)) return 'default'
 
-    const withinLimits =
-        (measurement.lsl === null || actual >= measurement.lsl) &&
-        (measurement.usl === null || actual <= measurement.usl)
+  const withinLimits =
+    (measurement.lsl === null || actual >= measurement.lsl) &&
+    (measurement.usl === null || actual <= measurement.usl)
 
-    if (!withinLimits) return 'error'
+  if (!withinLimits) return 'error'
 
-    // Check if value is close to limits (within 10%)
-    if (measurement.lsl !== null && measurement.usl !== null) {
-        const range = measurement.usl - measurement.lsl
-        const lowerWarning = measurement.lsl + range * 0.1
-        const upperWarning = measurement.usl - range * 0.1
+  // Check if value is close to limits (within 10%)
+  if (measurement.lsl !== null && measurement.usl !== null) {
+    const range = measurement.usl - measurement.lsl
+    const lowerWarning = measurement.lsl + range * 0.1
+    const upperWarning = measurement.usl - range * 0.1
 
-        if (actual <= lowerWarning || actual >= upperWarning) {
-            return 'warning'
-        }
+    if (actual <= lowerWarning || actual >= upperWarning) {
+      return 'warning'
     }
+  }
 
-    return 'success'
+  return 'success'
 }
 
 // Get color for measured values in comparison view
 // biome-ignore lint/suspicious/noExplicitAny: accepts string or number from dynamic comparison data
 function getMeasuredValueColor(measuredValue: any, usl: number | null, lsl: number | null): string {
-    const actual = parseFloat(measuredValue)
-    if (Number.isNaN(actual)) return 'default'
+  const actual = parseFloat(measuredValue)
+  if (Number.isNaN(actual)) return 'default'
 
-    const withinLimits = (lsl === null || actual >= lsl) && (usl === null || actual <= usl)
+  const withinLimits = (lsl === null || actual >= lsl) && (usl === null || actual <= usl)
 
-    if (!withinLimits) return 'error'
+  if (!withinLimits) return 'error'
 
-    // Check if value is close to limits (within 10%)
-    if (lsl !== null && usl !== null) {
-        const range = usl - lsl
-        const lowerWarning = lsl + range * 0.1
-        const upperWarning = usl - range * 0.1
+  // Check if value is close to limits (within 10%)
+  if (lsl !== null && usl !== null) {
+    const range = usl - lsl
+    const lowerWarning = lsl + range * 0.1
+    const upperWarning = usl - range * 0.1
 
-        if (actual <= lowerWarning || actual >= upperWarning) {
-            return 'warning'
-        }
+    if (actual <= lowerWarning || actual >= upperWarning) {
+      return 'warning'
     }
+  }
 
-    return 'success'
+  return 'success'
 }
 
 function handleRankingRowClick(payload: { isn: string; stationName: string }) {
-    // Find the DUT result for this ISN
-    const dutResult = enhancedResults.value.find((r) => r.dut_isn === payload.isn)
-    if (!dutResult) return
+  // Find the DUT result for this ISN
+  const dutResult = enhancedResults.value.find((r) => r.dut_isn === payload.isn)
+  if (!dutResult) return
 
-    // Find the station result matching the station name
-    const stationResult = dutResult.test_result.find(
-        (r: TopProductStationResult) => r.station_name === payload.stationName,
-    )
-    if (!stationResult) return
+  // Find the station result matching the station name
+  const stationResult = dutResult.test_result.find(
+    (r: TopProductStationResult) => r.station_name === payload.stationName,
+  )
+  if (!stationResult) return
 
-    showMeasurements(payload.isn, stationResult)
+  showMeasurements(payload.isn, stationResult)
 }
 
 function showMeasurements(dutISN: string, station: TopProductStationResult) {
-    selectedMeasurement.value = { dutISN, station }
-    measurementDialog.value = true
+  selectedMeasurement.value = { dutISN, station }
+  measurementDialog.value = true
 }
 </script>
 

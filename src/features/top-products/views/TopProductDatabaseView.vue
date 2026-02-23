@@ -611,16 +611,16 @@ import { formatDateTimeCompact } from '@/core/utils/dateTime'
 import { useAuthStore } from '@/features/auth/stores'
 import { getApiErrorDetail } from '@/shared/utils'
 import {
-    getTopProductDetail,
-    getTopProductsList,
-    getTopProductsStats,
-    getUniqueProjects,
-    getUniqueStations,
-    type TopProductDetail,
-    type TopProductItem,
-    type TopProductListParams,
-    type TopProductMeasurement,
-    type TopProductStats,
+  getTopProductDetail,
+  getTopProductsList,
+  getTopProductsStats,
+  getUniqueProjects,
+  getUniqueStations,
+  type TopProductDetail,
+  type TopProductItem,
+  type TopProductListParams,
+  type TopProductMeasurement,
+  type TopProductStats,
 } from '../api/topProducts.api'
 import { useTopProductExport } from '../composables/useTopProductExport'
 
@@ -631,16 +631,16 @@ const loading = ref(false)
 const statsLoading = ref(false)
 const products = ref<TopProductItem[]>([])
 const stats = ref<TopProductStats>({
-    total_products: 0,
-    total_unique_isns: 0,
-    total_projects: 0,
-    avg_score: null,
-    max_score: null,
-    min_score: null,
-    total_pass: 0,
-    total_fail: 0,
-    recent_products_24h: 0,
-    recent_products_7d: 0,
+  total_products: 0,
+  total_unique_isns: 0,
+  total_projects: 0,
+  avg_score: null,
+  max_score: null,
+  min_score: null,
+  total_pass: 0,
+  total_fail: 0,
+  recent_products_24h: 0,
+  recent_products_7d: 0,
 })
 const selectedProduct = ref<TopProductDetail | null>(null)
 const detailDialog = ref(false)
@@ -661,23 +661,23 @@ const deleting = ref(false)
 // Filter options
 const projectOptions = ref<{ title: string; value: string }[]>([])
 const stationOptions = ref<
-    { title: string; value: string; stationName: string; project: string | null }[]
+  { title: string; value: string; stationName: string; project: string | null }[]
 >([])
 
 const pagination = ref({
-    page: 1,
-    page_size: 20,
-    total: 0,
-    total_pages: 0,
+  page: 1,
+  page_size: 20,
+  total: 0,
+  total_pages: 0,
 })
 
 const filters = ref<TopProductListParams>({
-    dut_isn: undefined,
-    projects: [],
-    stations: [],
-    min_score: undefined,
-    sort_by: 'created_at',
-    sort_desc: true,
+  dut_isn: undefined,
+  projects: [],
+  stations: [],
+  min_score: undefined,
+  sort_by: 'created_at',
+  sort_desc: true,
 })
 
 const pageSizeOptions = [10, 20, 50, 100]
@@ -686,327 +686,327 @@ const pageSizeOptions = [10, 20, 50, 100]
 const isAdmin = computed(() => authStore.user?.is_admin || false)
 
 const hasActiveFilters = computed(() => {
-    return !!(
-        filters.value.dut_isn ||
-        (filters.value.projects && filters.value.projects.length > 0) ||
-        (filters.value.stations && filters.value.stations.length > 0) ||
-        filters.value.min_score
-    )
+  return !!(
+    filters.value.dut_isn ||
+    (filters.value.projects && filters.value.projects.length > 0) ||
+    (filters.value.stations && filters.value.stations.length > 0) ||
+    filters.value.min_score
+  )
 })
 
 const filteredAvgScore = computed(() => {
-    if (products.value.length === 0) {
-        return '0.00'
-    }
-    const avg = products.value.reduce((sum, p) => sum + p.score, 0) / products.value.length
-    return avg.toFixed(2)
+  if (products.value.length === 0) {
+    return '0.00'
+  }
+  const avg = products.value.reduce((sum, p) => sum + p.score, 0) / products.value.length
+  return avg.toFixed(2)
 })
 
 const filteredMeasurements = computed(() => {
-    if (!selectedProduct.value?.measurements) return []
-    if (!measurementSearch.value) return selectedProduct.value.measurements
+  if (!selectedProduct.value?.measurements) return []
+  if (!measurementSearch.value) return selectedProduct.value.measurements
 
-    const search = measurementSearch.value.toLowerCase()
-    return selectedProduct.value.measurements.filter((m) =>
-        m.test_item.toLowerCase().includes(search),
-    )
+  const search = measurementSearch.value.toLowerCase()
+  return selectedProduct.value.measurements.filter((m) =>
+    m.test_item.toLowerCase().includes(search),
+  )
 })
 
 // ===== Table Headers =====
 const headers = [
-    { title: 'DUT ISN', key: 'dut_isn', sortable: true, width: '140px' },
-    { title: 'Project', key: 'project_name', sortable: true },
-    { title: 'Station', key: 'station_name', sortable: true },
-    { title: 'Score', key: 'score', sortable: true, align: 'center' as const },
-    { title: 'Passed', key: 'pass_count', sortable: true, align: 'center' as const },
-    { title: 'Failed', key: 'fail_count', sortable: true, align: 'center' as const },
-    { title: 'Pass Rate', key: 'pass_rate', sortable: false, align: 'center' as const },
-    { title: 'Test Date', key: 'test_date', sortable: true },
-    { title: 'Measurements', key: 'measurements_count', sortable: false, align: 'center' as const },
-    { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const, width: '120px' },
+  { title: 'DUT ISN', key: 'dut_isn', sortable: true, width: '140px' },
+  { title: 'Project', key: 'project_name', sortable: true },
+  { title: 'Station', key: 'station_name', sortable: true },
+  { title: 'Score', key: 'score', sortable: true, align: 'center' as const },
+  { title: 'Passed', key: 'pass_count', sortable: true, align: 'center' as const },
+  { title: 'Failed', key: 'fail_count', sortable: true, align: 'center' as const },
+  { title: 'Pass Rate', key: 'pass_rate', sortable: false, align: 'center' as const },
+  { title: 'Test Date', key: 'test_date', sortable: true },
+  { title: 'Measurements', key: 'measurements_count', sortable: false, align: 'center' as const },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const, width: '120px' },
 ]
 
 const measurementHeaders = [
-    { title: 'Test Item', key: 'test_item' },
-    { title: 'Status', key: 'pass_status', align: 'center' as const },
-    { title: 'USL', key: 'usl', align: 'end' as const },
-    { title: 'LSL', key: 'lsl', align: 'end' as const },
-    { title: 'Target', key: 'target_value', align: 'end' as const },
-    { title: 'Actual', key: 'actual_value', align: 'end' as const },
-    { title: 'Deviation', key: 'deviation', align: 'end' as const },
+  { title: 'Test Item', key: 'test_item' },
+  { title: 'Status', key: 'pass_status', align: 'center' as const },
+  { title: 'USL', key: 'usl', align: 'end' as const },
+  { title: 'LSL', key: 'lsl', align: 'end' as const },
+  { title: 'Target', key: 'target_value', align: 'end' as const },
+  { title: 'Actual', key: 'actual_value', align: 'end' as const },
+  { title: 'Deviation', key: 'deviation', align: 'end' as const },
 ]
 
 // ===== Methods =====
 async function fetchProducts() {
-    loading.value = true
-    try {
-        const params: TopProductListParams = {
-            page: pagination.value.page,
-            page_size: pagination.value.page_size,
-            ...filters.value,
-        }
-
-        console.log('🔍 Fetching products with params:', params)
-        console.log('  - Projects filter:', filters.value.projects)
-        console.log('  - Stations filter:', filters.value.stations)
-
-        const response = await getTopProductsList(params)
-
-        console.log('✅ Received products:', response.top_products.length, 'total:', response.total)
-
-        products.value = response.top_products
-        pagination.value.total = response.total
-        pagination.value.total_pages = response.total_pages
-    } catch (error) {
-        console.error('❌ Failed to fetch products:', error)
-    } finally {
-        loading.value = false
+  loading.value = true
+  try {
+    const params: TopProductListParams = {
+      page: pagination.value.page,
+      page_size: pagination.value.page_size,
+      ...filters.value,
     }
+
+    console.log('🔍 Fetching products with params:', params)
+    console.log('  - Projects filter:', filters.value.projects)
+    console.log('  - Stations filter:', filters.value.stations)
+
+    const response = await getTopProductsList(params)
+
+    console.log('✅ Received products:', response.top_products.length, 'total:', response.total)
+
+    products.value = response.top_products
+    pagination.value.total = response.total
+    pagination.value.total_pages = response.total_pages
+  } catch (error) {
+    console.error('❌ Failed to fetch products:', error)
+  } finally {
+    loading.value = false
+  }
 }
 
 async function fetchStats() {
-    statsLoading.value = true
-    try {
-        const result = await getTopProductsStats()
-        stats.value = result
-    } catch (error) {
-        console.error('Failed to fetch stats:', error)
-        // Stats already has default values from initialization
-    } finally {
-        statsLoading.value = false
-    }
+  statsLoading.value = true
+  try {
+    const result = await getTopProductsStats()
+    stats.value = result
+  } catch (error) {
+    console.error('Failed to fetch stats:', error)
+    // Stats already has default values from initialization
+  } finally {
+    statsLoading.value = false
+  }
 }
 
 async function viewDetail(productId: number) {
-    try {
-        selectedProduct.value = await getTopProductDetail(productId)
-        measurementSearch.value = '' // Reset search when opening dialog
-        detailDialog.value = true
-    } catch (error) {
-        console.error('Failed to fetch product detail:', error)
-    }
+  try {
+    selectedProduct.value = await getTopProductDetail(productId)
+    measurementSearch.value = '' // Reset search when opening dialog
+    detailDialog.value = true
+  } catch (error) {
+    console.error('Failed to fetch product detail:', error)
+  }
 }
 
 async function loadFilterOptions() {
-    try {
-        // Load projects
-        const projects = await getUniqueProjects()
-        projectOptions.value = projects.map((p) => ({
-            title: p.label,
-            value: p.value,
-        }))
+  try {
+    // Load projects
+    const projects = await getUniqueProjects()
+    projectOptions.value = projects.map((p) => ({
+      title: p.label,
+      value: p.value,
+    }))
 
-        // Load stations
-        const stations = await getUniqueStations()
-        stationOptions.value = stations.map((s) => ({
-            title: s.label,
-            value: s.value,
-            stationName: s.value,
-            project: s.project,
-        }))
-    } catch (error) {
-        console.error('Failed to load filter options:', error)
-    }
+    // Load stations
+    const stations = await getUniqueStations()
+    stationOptions.value = stations.map((s) => ({
+      title: s.label,
+      value: s.value,
+      stationName: s.value,
+      project: s.project,
+    }))
+  } catch (error) {
+    console.error('Failed to load filter options:', error)
+  }
 }
 
 function clearFilters() {
-    filters.value = {
-        dut_isn: undefined,
-        projects: [],
-        stations: [],
-        min_score: undefined,
-        sort_by: 'created_at',
-        sort_desc: true,
-    }
-    pagination.value.page = 1
-    fetchProducts()
+  filters.value = {
+    dut_isn: undefined,
+    projects: [],
+    stations: [],
+    min_score: undefined,
+    sort_by: 'created_at',
+    sort_desc: true,
+  }
+  pagination.value.page = 1
+  fetchProducts()
 }
 
 function refreshData() {
-    fetchStats()
-    fetchProducts()
-    loadFilterOptions()
+  fetchStats()
+  fetchProducts()
+  loadFilterOptions()
 }
 
 function handlePageSizeChange() {
-    pagination.value.page = 1
-    fetchProducts()
+  pagination.value.page = 1
+  fetchProducts()
 }
 
 // Debounce helper
 let debounceTimer: number | undefined
 function debouncedFetch() {
-    clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => {
-        pagination.value.page = 1
-        fetchProducts()
-    }, 500) as unknown as number
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    pagination.value.page = 1
+    fetchProducts()
+  }, 500) as unknown as number
 }
 
 // ===== Computed & Helpers =====
 function formatDate(dateString: string | null): string {
-    // Convert UTC to user's local timezone
-    return formatDateTimeCompact(dateString)
+  // Convert UTC to user's local timezone
+  return formatDateTimeCompact(dateString)
 }
 
 function getPassRate(item: TopProductItem): string {
-    const total = item.pass_count + item.fail_count
-    if (total === 0) return '0.00'
-    return ((item.pass_count / total) * 100).toFixed(2)
+  const total = item.pass_count + item.fail_count
+  if (total === 0) return '0.00'
+  return ((item.pass_count / total) * 100).toFixed(2)
 }
 
 function getPassRateValue(item: TopProductItem): number {
-    const total = item.pass_count + item.fail_count
-    if (total === 0) return 0
-    return (item.pass_count / total) * 100
+  const total = item.pass_count + item.fail_count
+  if (total === 0) return 0
+  return (item.pass_count / total) * 100
 }
 
 function getPassRateColor(passRate: number): string {
-    if (passRate >= 95) return 'success'
-    if (passRate >= 80) return 'warning'
-    return 'error'
+  if (passRate >= 95) return 'success'
+  if (passRate >= 80) return 'warning'
+  return 'error'
 }
 
 function getScoreColor(score: number | null | undefined): string {
-    if (!score) return 'error'
-    if (score >= 8) return 'success'
-    if (score >= 6) return 'warning'
-    return 'error'
+  if (!score) return 'error'
+  if (score >= 8) return 'success'
+  if (score >= 6) return 'warning'
+  return 'error'
 }
 
 function getScoreIcon(score: number | null | undefined): string {
-    if (!score) return 'mdi-alert-circle'
-    if (score >= 8) return 'mdi-check-circle'
-    if (score >= 6) return 'mdi-alert'
-    return 'mdi-close-circle'
+  if (!score) return 'mdi-alert-circle'
+  if (score >= 8) return 'mdi-check-circle'
+  if (score >= 6) return 'mdi-alert'
+  return 'mdi-close-circle'
 }
 
 function isWithinLimits(measurement: TopProductMeasurement): boolean {
-    if (measurement.actual_value === null) return false
-    const withinLSL = measurement.lsl === null || measurement.actual_value >= measurement.lsl
-    const withinUSL = measurement.usl === null || measurement.actual_value <= measurement.usl
-    return withinLSL && withinUSL
+  if (measurement.actual_value === null) return false
+  const withinLSL = measurement.lsl === null || measurement.actual_value >= measurement.lsl
+  const withinUSL = measurement.usl === null || measurement.actual_value <= measurement.usl
+  return withinLSL && withinUSL
 }
 
 function handleSort(column: { key: string; order?: 'asc' | 'desc' }) {
-    if (!column.key || column.key === 'pass_rate' || column.key === 'actions') return
+  if (!column.key || column.key === 'pass_rate' || column.key === 'actions') return
 
-    // Toggle sort order if clicking same column
-    if (filters.value.sort_by === column.key) {
-        filters.value.sort_desc = !filters.value.sort_desc
-    } else {
-        filters.value.sort_by = column.key
-        filters.value.sort_desc = true
-    }
+  // Toggle sort order if clicking same column
+  if (filters.value.sort_by === column.key) {
+    filters.value.sort_desc = !filters.value.sort_desc
+  } else {
+    filters.value.sort_by = column.key
+    filters.value.sort_desc = true
+  }
 
-    pagination.value.page = 1
-    fetchProducts()
+  pagination.value.page = 1
+  fetchProducts()
 }
 
 // ===== Delete Handlers =====
 function confirmDelete(product: TopProductItem) {
-    productToDelete.value = product
-    deleteConfirmation.value = ''
-    deleteDialog.value = true
+  productToDelete.value = product
+  deleteConfirmation.value = ''
+  deleteDialog.value = true
 }
 
 function cancelDelete() {
-    deleteDialog.value = false
-    productToDelete.value = null
-    deleteConfirmation.value = ''
+  deleteDialog.value = false
+  productToDelete.value = null
+  deleteConfirmation.value = ''
 }
 
 async function handleDelete() {
-    if (deleteConfirmation.value !== 'DELETE' || !productToDelete.value || deleting.value) {
-        return
-    }
+  if (deleteConfirmation.value !== 'DELETE' || !productToDelete.value || deleting.value) {
+    return
+  }
 
-    deleting.value = true
-    try {
-        await apiClient.delete(`/api/top-products/${productToDelete.value.id}`)
+  deleting.value = true
+  try {
+    await apiClient.delete(`/api/top-products/${productToDelete.value.id}`)
 
-        // Show success message
-        console.log('Product deleted successfully')
+    // Show success message
+    console.log('Product deleted successfully')
 
-        // Close dialog
-        cancelDelete()
+    // Close dialog
+    cancelDelete()
 
-        // Refresh the data
-        await fetchProducts()
-        await fetchStats()
-    } catch (error: unknown) {
-        console.error('Failed to delete product:', error)
-        const errorMessage = getApiErrorDetail(error, 'Failed to delete product. Please try again.')
-        alert(errorMessage)
-    } finally {
-        deleting.value = false
-    }
+    // Refresh the data
+    await fetchProducts()
+    await fetchStats()
+  } catch (error: unknown) {
+    console.error('Failed to delete product:', error)
+    const errorMessage = getApiErrorDetail(error, 'Failed to delete product. Please try again.')
+    alert(errorMessage)
+  } finally {
+    deleting.value = false
+  }
 }
 
 // ===== Export Handlers =====
 function handleExport(product: TopProductItem) {
-    productToExport.value = product
-    exportDialog.value = true
+  productToExport.value = product
+  exportDialog.value = true
 }
 
 async function exportProduct(format: 'excel' | 'pdf' | 'clipboard') {
-    if (!productToExport.value || exporting.value) return
+  if (!productToExport.value || exporting.value) return
 
-    exporting.value = true
-    try {
-        // Fetch full product details including measurements
-        const details = await getTopProductDetail(productToExport.value.id)
+  exporting.value = true
+  try {
+    // Fetch full product details including measurements
+    const details = await getTopProductDetail(productToExport.value.id)
 
-        const exportData = {
-            dut_isn: details.dut_isn,
-            project_name: details.project_name,
-            station_name: details.station_name,
-            device_name: details.device_name,
-            score: details.score,
-            test_date: details.test_date,
-            pass_count: details.pass_count,
-            fail_count: details.fail_count,
-            retest_count: details.retest_count,
-            test_duration: details.test_duration,
-            measurements: details.measurements?.map((m) => ({
-                test_item: m.test_item,
-                usl: m.usl,
-                lsl: m.lsl,
-                actual_value: m.actual_value,
-                deviation: m.deviation,
-            })),
-        }
-
-        if (format === 'excel') {
-            await exportToExcel(exportData)
-        } else if (format === 'pdf') {
-            await exportToPDF(exportData)
-        } else if (format === 'clipboard') {
-            await copyToClipboard(exportData)
-        }
-
-        exportDialog.value = false
-        productToExport.value = null
-    } catch (error: unknown) {
-        console.error('Export failed:', error)
-        alert('Export failed. Please try again.')
-    } finally {
-        exporting.value = false
+    const exportData = {
+      dut_isn: details.dut_isn,
+      project_name: details.project_name,
+      station_name: details.station_name,
+      device_name: details.device_name,
+      score: details.score,
+      test_date: details.test_date,
+      pass_count: details.pass_count,
+      fail_count: details.fail_count,
+      retest_count: details.retest_count,
+      test_duration: details.test_duration,
+      measurements: details.measurements?.map((m) => ({
+        test_item: m.test_item,
+        usl: m.usl,
+        lsl: m.lsl,
+        actual_value: m.actual_value,
+        deviation: m.deviation,
+      })),
     }
+
+    if (format === 'excel') {
+      await exportToExcel(exportData)
+    } else if (format === 'pdf') {
+      await exportToPDF(exportData)
+    } else if (format === 'clipboard') {
+      await copyToClipboard(exportData)
+    }
+
+    exportDialog.value = false
+    productToExport.value = null
+  } catch (error: unknown) {
+    console.error('Export failed:', error)
+    alert('Export failed. Please try again.')
+  } finally {
+    exporting.value = false
+  }
 }
 
 // ===== Lifecycle =====
 onMounted(() => {
-    fetchStats()
-    fetchProducts()
-    loadFilterOptions()
+  fetchStats()
+  fetchProducts()
+  loadFilterOptions()
 })
 
 onBeforeUnmount(() => {
-    // Clear debounce timer
-    if (debounceTimer) {
-        clearTimeout(debounceTimer)
-    }
+  // Clear debounce timer
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
+  }
 })
 </script>
 

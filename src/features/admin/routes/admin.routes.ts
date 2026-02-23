@@ -51,4 +51,14 @@ export const adminRoutes: RouteRecordRaw[] = [
       title: 'Menu Access Control',
     },
   },
+  {
+    path: '/admin/access-control',
+    name: 'AccessControl',
+    component: () => import('../views/AccessControlView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresSuperAdmin: true,
+      title: 'Access Control',
+    },
+  },
 ]
