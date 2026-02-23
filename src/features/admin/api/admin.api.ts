@@ -16,6 +16,7 @@ export interface User {
   username: string
   email: string | null
   roles: string[]
+  role: string
   is_active: boolean
   last_login: string | null
   created_at: string
@@ -39,12 +40,14 @@ export interface CreateUserRequest {
   email?: string | null
   password: string
   roles?: string[]
+  role?: string
   is_active?: boolean
 }
 
 export interface UpdateUserRequest {
   email?: string | null
   roles?: string[]
+  role?: string
   is_active?: boolean
   password?: string
 }

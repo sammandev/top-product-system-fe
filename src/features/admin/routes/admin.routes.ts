@@ -2,16 +2,6 @@ import type { RouteRecordRaw } from 'vue-router'
 
 export const adminRoutes: RouteRecordRaw[] = [
   {
-    path: '/admin/rbac',
-    name: 'RBACManagement',
-    component: () => import('../views/RBACManagementView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresSuperAdmin: true,
-      title: 'RBAC Management',
-    },
-  },
-  {
     path: '/admin/users',
     name: 'UserManagement',
     component: () => import('../views/UserManagementView.vue'),
@@ -51,14 +41,14 @@ export const adminRoutes: RouteRecordRaw[] = [
       title: 'Menu Access Control',
     },
   },
+  // Access Control route redirects to User Management (Roles tab)
   {
     path: '/admin/access-control',
-    name: 'AccessControl',
-    component: () => import('../views/AccessControlView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
-      title: 'Access Control',
-    },
+    redirect: '/admin/users',
+  },
+  // Legacy RBAC route redirects to User Management (Roles tab)
+  {
+    path: '/admin/rbac',
+    redirect: '/admin/users',
   },
 ]

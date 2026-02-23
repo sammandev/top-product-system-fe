@@ -17,6 +17,9 @@ import { useAuthStore } from '@/features/auth/stores'
 /** Paths a guest can always access (before menu_permissions grants). */
 const GUEST_ALLOWED_PATHS = new Set(['/dut/top-products/analysis', '/dut/data-explorer'])
 
+/** Default page for regular users (non-admin). */
+const USER_DEFAULT_PATH = '/dut/top-products/analysis'
+
 /** Default redirect for guest users when they try to access restricted pages. */
 const GUEST_DEFAULT_PATH = '/dut/top-products/analysis'
 
@@ -60,7 +63,7 @@ export async function authGuard(
   // Check if route requires superadmin role (developer or superadmin)
   if (requiresSuperAdmin && !authStore.isSuperAdmin) {
     next({
-      path: authStore.isGuest ? GUEST_DEFAULT_PATH : '/dashboard',
+      path: authStore.isAdmin ? '/dashboard' : USER_DEFAULT_PATH,
       query: { error: 'unauthorized' },
     })
     return
@@ -69,7 +72,7 @@ export async function authGuard(
   // Check if route requires admin role (admin, superadmin, developer)
   if (requiresAdmin && !authStore.isAdmin) {
     next({
-      path: authStore.isGuest ? GUEST_DEFAULT_PATH : '/dashboard',
+      path: USER_DEFAULT_PATH,
       query: { error: 'unauthorized' },
     })
     return
@@ -87,8 +90,7 @@ export async function authGuard(
 
   // Prevent authenticated users from accessing login page
   if (to.name === 'Login' && authStore.isAuthenticated) {
-    // Guests default to top products analysis instead of dashboard
-    next({ path: authStore.isGuest ? GUEST_DEFAULT_PATH : '/dashboard' })
+    next({ path: authStore.isAdmin ? '/dashboard' : USER_DEFAULT_PATH })
     return
   }
 

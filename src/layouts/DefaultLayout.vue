@@ -319,8 +319,6 @@ const staticSystemItems: MenuItem[] = [
     icon: 'mdi-shield-lock',
     children: [
       { title: 'User Management', icon: 'mdi-circle-small', path: '/admin/users' },
-      { title: 'Access Control', icon: 'mdi-circle-small', path: '/admin/access-control' },
-      { title: 'Roles & Permissions', icon: 'mdi-circle-small', path: '/admin/rbac' },
       { title: 'Menu Access', icon: 'mdi-circle-small', path: '/admin/menu-access' },
     ],
   },
@@ -329,15 +327,13 @@ const staticSystemItems: MenuItem[] = [
 ]
 
 /** Paths only accessible to superadmin/developer in the System section. */
-const SUPERADMIN_ONLY_PATHS = new Set([
-  '/admin/rbac',
-  '/admin/menu-access',
-  '/admin/cleanup',
-  '/admin/app-config',
-])
+const SUPERADMIN_ONLY_PATHS = new Set(['/admin/menu-access', '/admin/cleanup', '/admin/app-config'])
 
 /** Paths a guest can see in the Main section. */
 const GUEST_MAIN_PATHS = new Set(['/dut/top-products/analysis', '/dut/data-explorer'])
+
+/** Paths that require admin+ role in the Main section. */
+const ADMIN_MAIN_PATHS = new Set(['/dashboard'])
 
 // Dynamic menus from database (use static as fallback)
 const mainItems = computed(() => {
@@ -411,7 +407,7 @@ function filterItemByPaths(item: MenuItem, allowed: Set<string>): MenuItem | nul
 
 /**
  * Helper: remove superadmin-only items from a menu tree.
- * Used by admin role to hide System Cleanup, App Config, Roles & Permissions, Menu Access.
+ * Used by admin role to hide System Cleanup, App Config, Menu Access.
  */
 function filterOutSuperAdminItems(items: MenuItem[]): MenuItem[] {
   return items.reduce<MenuItem[]>((acc, item) => {
@@ -439,6 +435,9 @@ const visibleMainItems = computed(() => {
       if (filtered) acc.push(filtered)
       return acc
     }, [])
+  } else if (!authStore.isAdmin) {
+    // Regular user: hide admin-only main items (Dashboard)
+    items = items.filter((item) => !item.path || !ADMIN_MAIN_PATHS.has(item.path))
   }
   return items
 })

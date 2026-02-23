@@ -9,7 +9,7 @@ import type { RouteRecordRaw } from 'vue-router'
 export const commonRoutes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/dashboard',
+    redirect: '/dut/top-products/analysis',
   },
   {
     path: '/:pathMatch(.*)*',

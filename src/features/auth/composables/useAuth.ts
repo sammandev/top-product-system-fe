@@ -34,13 +34,13 @@ export function useAuth() {
 
   /**
    * Perform local login
-   * Redirects to dashboard on success
+   * Redirects to top products analysis on success (dashboard for admin+)
    */
   async function login(credentials: LoginRequest) {
     try {
       await authStore.login(credentials)
       const redirect = router.currentRoute.value.query.redirect as string
-      await router.push(redirect || '/dashboard')
+      await router.push(redirect || '/dut/top-products/analysis')
     } catch (error) {
       console.error('Login failed:', error)
       throw error
@@ -49,13 +49,13 @@ export function useAuth() {
 
   /**
    * Perform external login with DUT credentials
-   * Redirects to dashboard on success
+   * Redirects to top products analysis on success (dashboard for admin+)
    */
   async function externalLogin(credentials: ExternalLoginRequest) {
     try {
       await authStore.externalLogin(credentials)
       const redirect = router.currentRoute.value.query.redirect as string
-      await router.push(redirect || '/dashboard')
+      await router.push(redirect || '/dut/top-products/analysis')
     } catch (error) {
       console.error('External login failed:', error)
       throw error
@@ -64,13 +64,13 @@ export function useAuth() {
 
   /**
    * Perform guest login using predefined credentials
-   * Redirects to dashboard on success
+   * Redirects to top products analysis on success
    */
   async function guestLogin() {
     try {
       await authStore.guestLogin()
       const redirect = router.currentRoute.value.query.redirect as string
-      await router.push(redirect || '/dashboard')
+      await router.push(redirect || '/dut/top-products/analysis')
     } catch (error) {
       console.error('Guest login failed:', error)
       throw error

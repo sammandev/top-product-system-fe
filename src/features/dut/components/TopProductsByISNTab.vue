@@ -220,7 +220,8 @@ import type {
   TestItem,
   TopProductBatchResponse,
 } from '../types/dutTopProduct.types'
-import type DUTISNInput from './DUTISNInput.vue'
+// biome-ignore lint/style/useImportType: value import required for template component resolution
+import DUTISNInput from './DUTISNInput.vue'
 
 // Formula Selector (New approach)
 const {

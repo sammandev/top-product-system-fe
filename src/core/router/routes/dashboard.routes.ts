@@ -13,6 +13,7 @@ export const dashboardRoutes: RouteRecordRaw[] = [
     component: () => import('@/features/dashboard/views/DashboardView.vue'),
     meta: {
       requiresAuth: true,
+      requiresAdmin: true,
       title: 'Dashboard',
       icon: 'mdi-view-dashboard',
     },

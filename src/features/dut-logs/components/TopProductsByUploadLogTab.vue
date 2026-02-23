@@ -426,6 +426,7 @@ import {
   useTestLogUpload,
 } from '@/features/dut-logs/composables/useTestLogUpload'
 import { getErrorMessage } from '@/shared/utils'
+import UploadScoringConfigDialog from './UploadScoringConfigDialog.vue'
 
 // File inputs
 const logFiles = ref<File[] | null>(null)

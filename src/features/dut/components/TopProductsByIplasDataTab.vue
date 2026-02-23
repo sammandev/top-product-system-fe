@@ -40,6 +40,10 @@
 import { ref } from 'vue'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
+import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
+import TopProductIplasIsnContent from './TopProductIplasIsnContent.vue'
+import TopProductIplasSettingsDialog from './TopProductIplasSettingsDialog.vue'
+import TopProductIplasStationContent from './TopProductIplasStationContent.vue'
 
 // Search mode tab - persisted in URL
 const searchMode = useTabPersistence<'station' | 'isn'>('subTab', 'station')

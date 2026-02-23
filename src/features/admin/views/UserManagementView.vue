@@ -10,15 +10,22 @@
                                 Manage user accounts, roles, and access permissions
                             </p>
                         </div>
-                        <v-btn color="primary" prepend-icon="mdi-account-plus" @click="openCreateDialog">
-                            Add User
-                        </v-btn>
+                        <div class="d-flex ga-2">
+                            <v-btn v-if="activeTab === 'users'" color="primary" prepend-icon="mdi-account-plus"
+                                @click="openCreateDialog">
+                                Add User
+                            </v-btn>
+                            <v-btn v-if="activeTab === 'roles'" color="primary" prepend-icon="mdi-refresh"
+                                :loading="acLoading" @click="loadAccessControlData">
+                                Refresh
+                            </v-btn>
+                        </div>
                     </div>
                 </v-col>
             </v-row>
 
-            <!-- Statistics Cards -->
-            <v-row class="mb-4">
+            <!-- Statistics Cards (Users tab only) -->
+            <v-row v-if="activeTab === 'users'" class="mb-4">
                 <v-col cols="12" sm="6" md="3">
                     <v-card>
                         <v-card-text>
@@ -89,10 +96,20 @@
                 {{ success }}
             </v-alert>
 
-            <!-- Users Table -->
-            <v-row>
-                <v-col cols="12">
-                    <v-card>
+            <!-- Tabs -->
+            <v-card>
+                <v-tabs v-model="activeTab" color="primary">
+                    <v-tab value="users" prepend-icon="mdi-account-group">Users</v-tab>
+                    <v-tab v-if="authStore.isSuperAdmin" value="roles" prepend-icon="mdi-shield-account">
+                        Roles & Access
+                    </v-tab>
+                </v-tabs>
+
+                <v-divider />
+
+                <v-tabs-window v-model="activeTab">
+                    <!-- ==================== USERS TAB ==================== -->
+                    <v-tabs-window-item value="users">
                         <v-card-title>
                             <v-row align="center">
                                 <v-col cols="12" md="6">
@@ -119,13 +136,11 @@
                                         </div>
                                     </div>
                                 </template>
-                                <template v-slot:item.roles="{ item }">
-                                    <v-chip-group>
-                                        <v-chip v-for="role in item.roles" :key="role" size="small"
-                                            :color="getRoleColor(role)">
-                                            {{ role }}
-                                        </v-chip>
-                                    </v-chip-group>
+                                <template v-slot:item.role="{ item }">
+                                    <v-chip :color="getAccessRoleColor(item.role)" size="small" label>
+                                        <v-icon start size="14">{{ getAccessRoleIcon(item.role) }}</v-icon>
+                                        {{ (item.role || 'user').toUpperCase() }}
+                                    </v-chip>
                                 </template>
                                 <template v-slot:item.is_active="{ item }">
                                     <div class="d-flex justify-center align-center">
@@ -156,9 +171,134 @@
                                 </template>
                             </v-data-table>
                         </v-card-text>
-                    </v-card>
-                </v-col>
-            </v-row>
+                    </v-tabs-window-item>
+
+                    <!-- ==================== ROLES & ACCESS TAB ==================== -->
+                    <v-tabs-window-item v-if="authStore.isSuperAdmin" value="roles">
+                        <!-- Loading -->
+                        <v-card-text v-if="acLoading && acUsers.length === 0" class="text-center py-8">
+                            <v-progress-circular indeterminate color="primary" size="48" />
+                            <p class="mt-4 text-medium-emphasis">Loading access control data...</p>
+                        </v-card-text>
+
+                        <!-- Content -->
+                        <template v-else>
+                            <v-card-title class="d-flex align-center">
+                                <v-icon class="mr-2">mdi-shield-account</v-icon>
+                                User Access Management
+                                <v-spacer />
+                                <v-text-field v-model="acSearch" density="compact" label="Search users"
+                                    prepend-inner-icon="mdi-magnify" variant="outlined" hide-details
+                                    style="max-width: 300px" />
+                            </v-card-title>
+
+                            <v-card-text>
+                                <v-data-table :headers="acHeaders" :items="acUsers" :search="acSearch"
+                                    :loading="acLoading" :items-per-page="15" hover>
+                                    <!-- Username column -->
+                                    <template #item.username="{ item }">
+                                        <div class="d-flex align-center">
+                                            <v-avatar size="32" class="mr-2"
+                                                :color="getAccessRoleColor(item.role)">
+                                                <v-icon size="18" color="white">{{ getAccessRoleIcon(item.role)
+                                                    }}</v-icon>
+                                            </v-avatar>
+                                            <div>
+                                                <span class="font-weight-medium">{{ item.username }}</span>
+                                                <div v-if="item.email" class="text-caption text-medium-emphasis">
+                                                    {{ item.email }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </template>
+
+                                    <!-- Role column -->
+                                    <template #item.role="{ item }">
+                                        <v-chip :color="getAccessRoleColor(item.role)" size="small" label>
+                                            <v-icon start size="14">{{ getAccessRoleIcon(item.role) }}</v-icon>
+                                            {{ item.role.toUpperCase() }}
+                                        </v-chip>
+                                    </template>
+
+                                    <!-- Status column -->
+                                    <template #item.is_active="{ item }">
+                                        <v-chip :color="item.is_active ? 'success' : 'error'" size="small" label>
+                                            {{ item.is_active ? 'Active' : 'Inactive' }}
+                                        </v-chip>
+                                    </template>
+
+                                    <!-- Flags column -->
+                                    <template #item.flags="{ item }">
+                                        <div class="d-flex ga-1 flex-wrap">
+                                            <v-chip v-if="item.is_ptb_admin" size="x-small" color="info" label>
+                                                PTB Admin
+                                            </v-chip>
+                                            <v-chip v-if="item.is_superuser" size="x-small" color="purple" label>
+                                                Superuser
+                                            </v-chip>
+                                            <v-chip v-if="item.is_staff" size="x-small" color="teal" label>
+                                                Staff
+                                            </v-chip>
+                                            <v-chip v-if="item.is_admin" size="x-small" color="warning" label>
+                                                Admin
+                                            </v-chip>
+                                        </div>
+                                    </template>
+
+                                    <!-- Permissions column -->
+                                    <template #item.menu_permissions="{ item }">
+                                        <span v-if="item.role === 'developer'" class="text-caption text-success">
+                                            Full Access (Developer)
+                                        </span>
+                                        <span v-else-if="item.role === 'superadmin'" class="text-caption text-info">
+                                            Full Access (Super Admin)
+                                        </span>
+                                        <span v-else-if="item.role === 'admin'" class="text-caption text-warning">
+                                            Admin Access
+                                        </span>
+                                        <span v-else-if="item.role === 'guest'"
+                                            class="text-caption text-medium-emphasis">
+                                            Guest (Limited)
+                                        </span>
+                                        <span v-else-if="!item.menu_permissions"
+                                            class="text-caption text-medium-emphasis">
+                                            Not configured
+                                        </span>
+                                        <span v-else class="text-caption">
+                                            {{ Object.keys(item.menu_permissions).length }} resources
+                                        </span>
+                                    </template>
+
+                                    <!-- Last Login column -->
+                                    <template #item.last_login="{ item }">
+                                        <span v-if="item.last_login" class="text-caption">
+                                            {{ formatDateFull(item.last_login) }}
+                                        </span>
+                                        <span v-else class="text-caption text-medium-emphasis">Never</span>
+                                    </template>
+
+                                    <!-- Actions column -->
+                                    <template #item.actions="{ item }">
+                                        <v-btn v-if="item.role !== 'developer'" icon size="small" variant="text"
+                                            @click="openAccessEditDialog(item)">
+                                            <v-icon size="18">mdi-pencil</v-icon>
+                                            <v-tooltip activator="parent" location="top">Edit Role</v-tooltip>
+                                        </v-btn>
+                                        <v-btn v-if="item.role !== 'developer'" icon size="small" variant="text"
+                                            @click="openPermissionsDialog(item)">
+                                            <v-icon size="18">mdi-shield-key</v-icon>
+                                            <v-tooltip activator="parent" location="top">Menu Permissions</v-tooltip>
+                                        </v-btn>
+                                        <v-chip v-if="item.role === 'developer'" size="x-small" color="grey" label>
+                                            Protected
+                                        </v-chip>
+                                    </template>
+                                </v-data-table>
+                            </v-card-text>
+                        </template>
+                    </v-tabs-window-item>
+                </v-tabs-window>
+            </v-card>
 
             <!-- User Details Dialog -->
             <v-dialog v-model="detailsDialog" max-width="800px">
@@ -192,35 +332,16 @@
                                                     {{ selectedUser.is_active ? 'Active' : 'Inactive' }}
                                                 </v-chip>
                                             </v-col>
-                                            <v-col cols="4" class="text-medium-emphasis">Admin Access:</v-col>
+                                            <v-col cols="4" class="text-medium-emphasis">Role:</v-col>
                                             <v-col cols="8">
-                                                <v-chip
-                                                    :color="selectedUser.roles.includes('admin') ? 'primary' : 'default'"
-                                                    size="small">
-                                                    {{ selectedUser.roles.includes('admin') ? 'Administrator' : 'Regular User' }}
+                                                <v-chip :color="getAccessRoleColor(selectedUser.role)" size="small"
+                                                    label>
+                                                    <v-icon start size="14">{{ getAccessRoleIcon(selectedUser.role)
+                                                        }}</v-icon>
+                                                    {{ (selectedUser.role || 'user').toUpperCase() }}
                                                 </v-chip>
                                             </v-col>
                                         </v-row>
-                                    </v-card-text>
-                                </v-card>
-                            </v-col>
-
-                            <!-- Assigned Roles -->
-                            <v-col cols="12">
-                                <v-card variant="outlined">
-                                    <v-card-title class="text-subtitle-1 d-flex align-center">
-                                        <v-icon class="mr-2">mdi-shield-account</v-icon>
-                                        Assigned Roles ({{ selectedUser.roles?.length || 0 }})
-                                    </v-card-title>
-                                    <v-divider />
-                                    <v-card-text>
-                                        <v-chip-group v-if="selectedUser.roles && selectedUser.roles.length > 0" column>
-                                            <v-chip v-for="role in selectedUser.roles" :key="role"
-                                                :color="getRoleColor(role)" variant="outlined">
-                                                {{ role }}
-                                            </v-chip>
-                                        </v-chip-group>
-                                        <p v-else class="text-medium-emphasis">No roles assigned</p>
                                     </v-card-text>
                                 </v-card>
                             </v-col>
@@ -274,7 +395,7 @@
                                 <v-card-text>
                                     <div><strong>Username:</strong> {{ userToDelete?.username || 'N/A' }}</div>
                                     <div><strong>Email:</strong> {{ userToDelete?.email || 'N/A' }}</div>
-                                    <div><strong>Roles:</strong> {{ userToDelete?.roles?.join(', ') || 'None' }}</div>
+                                    <div><strong>Role:</strong> {{ userToDelete?.role || 'user' }}</div>
                                 </v-card-text>
                             </v-card>
                             <v-alert type="warning" variant="tonal" color="orange-darken-1" class="mb-4">
@@ -320,8 +441,8 @@
                                 :rules="editMode ? [] : [v => !!v || 'Password is required']" variant="outlined"
                                 :hint="editMode ? 'Leave blank to keep current password' : ''" persistent-hint
                                 class="mt-2 mb-5" />
-                            <v-select v-model="currentUser.roles" :items="availableRoles" label="Roles" multiple chips
-                                variant="outlined" closable-chips class="mb-3" />
+                            <v-select v-model="currentUser.role" :items="userRoleOptions" label="Role" variant="outlined"
+                                class="mb-3" />
                             <v-switch v-model="currentUser.is_active" label="Active Account" color="success" />
                         </v-form>
                     </v-card-text>
@@ -334,54 +455,151 @@
                     </v-card-actions>
                 </v-card>
             </v-dialog>
+
+            <!-- Edit Role/Status Dialog (Access Control) -->
+            <v-dialog v-model="acEditDialog" max-width="500" persistent>
+                <v-card>
+                    <v-card-title class="d-flex align-center">
+                        <v-icon class="mr-2">mdi-account-cog</v-icon>
+                        Edit Access: {{ acEditingUser?.username }}
+                    </v-card-title>
+
+                    <v-card-text>
+                        <v-select v-model="acEditForm.role" :items="acAvailableRoles" label="Role" variant="outlined"
+                            :disabled="!authStore.isDeveloper && acEditForm.role === 'superadmin'"
+                            hint="Only developers can grant superadmin role" persistent-hint />
+
+                        <v-switch v-model="acEditForm.is_active" label="Active" color="success" class="mt-2" />
+
+                        <v-switch v-model="acEditForm.is_ptb_admin" label="PTB Admin" color="info"
+                            hint="Synced from external API on login" persistent-hint />
+                    </v-card-text>
+
+                    <v-card-actions>
+                        <v-spacer />
+                        <v-btn variant="text" @click="acEditDialog = false">Cancel</v-btn>
+                        <v-btn color="primary" :loading="acSaving" @click="saveUserAccess">Save</v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+
+            <!-- Menu Permissions Dialog (Access Control) -->
+            <v-dialog v-model="permissionsDialog" max-width="900" persistent>
+                <v-card>
+                    <v-card-title class="d-flex align-center">
+                        <v-icon class="mr-2">mdi-shield-key</v-icon>
+                        Menu Permissions: {{ permissionsUser?.username }}
+                    </v-card-title>
+
+                    <v-card-subtitle>
+                        Configure which resources and actions this user can access. Check the boxes to grant specific
+                        CRUD permissions for each resource.
+                    </v-card-subtitle>
+
+                    <v-card-text>
+                        <v-btn size="small" variant="outlined" class="mr-2 mb-3"
+                            prepend-icon="mdi-checkbox-marked-outline" @click="selectAllPermissions">
+                            Select All
+                        </v-btn>
+                        <v-btn size="small" variant="outlined" class="mr-2 mb-3"
+                            prepend-icon="mdi-checkbox-blank-outline" @click="clearAllPermissions">
+                            Clear All
+                        </v-btn>
+                        <v-btn size="small" variant="outlined" class="mb-3" prepend-icon="mdi-restore"
+                            @click="applyDefaultPermissions">
+                            Apply Defaults
+                        </v-btn>
+
+                        <v-table density="compact">
+                            <thead>
+                                <tr>
+                                    <th class="text-left" style="min-width: 180px">Resource</th>
+                                    <th v-for="action in acAvailableActions" :key="action" class="text-center">
+                                        {{ action.charAt(0).toUpperCase() + action.slice(1) }}
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="resource in acAvailableResources" :key="resource">
+                                    <td>
+                                        <v-icon size="16" class="mr-1">{{ getResourceIcon(resource) }}</v-icon>
+                                        {{ formatResourceName(resource) }}
+                                    </td>
+                                    <td v-for="action in acAvailableActions" :key="action" class="text-center">
+                                        <v-checkbox :model-value="hasPermission(resource, action)" density="compact"
+                                            hide-details class="d-inline-flex"
+                                            @update:model-value="togglePermission(resource, action, $event)" />
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </v-table>
+                    </v-card-text>
+
+                    <v-card-actions>
+                        <v-spacer />
+                        <v-btn variant="text" @click="permissionsDialog = false">Cancel</v-btn>
+                        <v-btn color="primary" :loading="acSaving" @click="savePermissions">Save Permissions</v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
         </v-container>
     </DefaultLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/features/auth/stores'
+import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import { getApiErrorDetail, getErrorStatus } from '@/shared/utils'
 import {
-    adminApi,
-    type CreateUserRequest,
-    type UpdateUserRequest,
-    type User,
-    type UserStats,
+  type AccessControlUser,
+  adminApi,
+  type CreateUserRequest,
+  type UpdateUserRequest,
+  type User,
+  type UserStats,
 } from '../api/admin.api'
 
 // Router for logout redirect
 const router = useRouter()
 const authStore = useAuthStore()
 
-// State
+// ============================================================================
+// Shared State
+// ============================================================================
+
+const activeTab = useTabPersistence<'users' | 'roles'>('tab', 'users')
+const error = ref('')
+const success = ref('')
+
+// ============================================================================
+// Users Tab State
+// ============================================================================
+
 const loading = ref(false)
 const search = ref('')
 const dialog = ref(false)
 const editMode = ref(false)
 const form = ref()
 
-const error = ref('')
-const success = ref('')
-
 const detailsDialog = ref(false)
 const selectedUser = ref<User | null>(null)
 
 const stats = ref<UserStats>({
-    total_users: 0,
-    active_users: 0,
-    online_users: 0,
-    new_users: 0,
+  total_users: 0,
+  active_users: 0,
+  online_users: 0,
+  new_users: 0,
 })
 
 const users = ref<User[]>([])
 
 const currentUser = ref<Partial<User & { password?: string }>>({
-    username: '',
-    email: '',
-    roles: [],
-    is_active: true,
+  username: '',
+  email: '',
+  role: 'user',
+  is_active: true,
 })
 
 // Delete dialog state
@@ -396,304 +614,479 @@ const togglingUserId = ref<number | null>(null)
 // Get current logged-in user
 const loggedInUser = computed(() => authStore.user)
 
-// Load roles dynamically from RBAC
-const availableRoles = ref<string[]>([])
+// Role options for user create/edit dialog
+const userRoleOptions = [
+  { title: 'Guest', value: 'guest' },
+  { title: 'User', value: 'user' },
+  { title: 'Admin', value: 'admin' },
+  { title: 'Super Admin', value: 'superadmin' },
+]
 
 const headers = [
-    { title: 'User', key: 'username' },
-    { title: 'Roles', key: 'roles', sortable: false },
-    { title: 'Account Status', key: 'is_active', align: 'center' as const },
-    { title: 'Last Login', key: 'last_login' },
-    { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const },
+  { title: 'User', key: 'username' },
+  { title: 'Role', key: 'role', sortable: true },
+  { title: 'Account Status', key: 'is_active', align: 'center' as const },
+  { title: 'Last Login', key: 'last_login' },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const },
 ]
 
 // Computed
 const filteredUsers = computed(() => {
-    if (!search.value) return users.value
-    return users.value.filter(
-        (user) =>
-            user.username.toLowerCase().includes(search.value.toLowerCase()) ||
-            user.email?.toLowerCase().includes(search.value.toLowerCase()),
-    )
+  if (!search.value) return users.value
+  return users.value.filter(
+    (user) =>
+      user.username.toLowerCase().includes(search.value.toLowerCase()) ||
+      user.email?.toLowerCase().includes(search.value.toLowerCase()),
+  )
 })
 
-// Methods
-async function loadRoles() {
-    try {
-        const response = await adminApi.getRoles()
-        availableRoles.value = response.roles.map((role) => role.name)
-    } catch (error) {
-        console.error('Failed to load roles:', error)
-        // Fallback to default roles if API fails
-        availableRoles.value = ['admin', 'user', 'analyst', 'viewer']
-    }
-}
+// ============================================================================
+// Access Control (Roles) Tab State
+// ============================================================================
+
+const acLoading = ref(false)
+const acSaving = ref(false)
+const acSearch = ref('')
+
+const acUsers = ref<AccessControlUser[]>([])
+const acAvailableResources = ref<string[]>([])
+const acAvailableActions = ref<string[]>([])
+const acDefaultPermissions = ref<Record<string, string[]>>({})
+
+// Edit dialog state
+const acEditDialog = ref(false)
+const acEditingUser = ref<AccessControlUser | null>(null)
+const acEditForm = ref({
+  role: 'user' as string,
+  is_active: true,
+  is_ptb_admin: false,
+})
+
+// Permissions dialog state
+const permissionsDialog = ref(false)
+const permissionsUser = ref<AccessControlUser | null>(null)
+const permissionsForm = ref<Record<string, string[]>>({})
+
+// Table headers for access control tab
+const acHeaders = [
+  { title: 'User', key: 'username', sortable: true },
+  { title: 'Role', key: 'role', sortable: true },
+  { title: 'Status', key: 'is_active', sortable: true },
+  { title: 'Flags', key: 'flags', sortable: false },
+  { title: 'Permissions', key: 'menu_permissions', sortable: false },
+  { title: 'Last Login', key: 'last_login', sortable: true },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const },
+]
+
+// Available roles for the dropdown (developer cannot be assigned via UI)
+const acAvailableRoles = [
+  { title: 'Guest', value: 'guest' },
+  { title: 'User', value: 'user' },
+  { title: 'Admin', value: 'admin' },
+  { title: 'Super Admin', value: 'superadmin' },
+]
+
+// ============================================================================
+// Users Tab Methods
+// ============================================================================
 
 async function loadUsers() {
-    console.log('[UserManagement] Loading users...')
-    loading.value = true
-    try {
-        const response = await adminApi.getUsers()
-        users.value = response.users
-        stats.value = response.stats
-        console.log('[UserManagement] Users loaded successfully', {
-            totalUsers: response.users.length,
-            stats: response.stats,
-        })
-        // Load available roles
-        await loadRoles()
-    } catch (error) {
-        console.error('[UserManagement] Failed to load users:', error)
-    } finally {
-        loading.value = false
-    }
-}
-
-function getRoleColor(role: string): string {
-    const colors: Record<string, string> = {
-        admin: 'error',
-        user: 'primary',
-        analyst: 'info',
-        viewer: 'success',
-    }
-    return colors[role] || 'default'
-}
-
-function formatDate(dateString: string | null): string {
-    if (!dateString) return 'Never'
-    const date = new Date(dateString)
-    const now = new Date()
-    const diff = now.getTime() - date.getTime()
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24))
-
-    if (days === 0) return 'Today'
-    if (days === 1) return 'Yesterday'
-    if (days < 7) return `${days} days ago`
-    return date.toLocaleDateString()
+  loading.value = true
+  try {
+    const response = await adminApi.getUsers()
+    users.value = response.users
+    stats.value = response.stats
+  } catch (err: unknown) {
+    console.error('[UserManagement] Failed to load users:', err)
+    error.value = getApiErrorDetail(err, 'Failed to load users')
+  } finally {
+    loading.value = false
+  }
 }
 
 function openCreateDialog() {
-    editMode.value = false
-    currentUser.value = {
-        username: '',
-        email: '',
-        roles: [],
-        is_active: true,
-        password: '',
-    }
-    dialog.value = true
+  editMode.value = false
+  currentUser.value = {
+    username: '',
+    email: '',
+    role: 'user',
+    is_active: true,
+    password: '',
+  }
+  dialog.value = true
 }
 
 function editUser(user: User) {
-    editMode.value = true
-    currentUser.value = { ...user }
-    dialog.value = true
+  editMode.value = true
+  currentUser.value = { ...user }
+  dialog.value = true
 }
 
 function resetPassword(user: User) {
-    if (confirm(`Reset password for user "${user.username}"?`)) {
-        // API call to reset password
-        alert('Password reset email sent!')
-    }
+  if (confirm(`Reset password for user "${user.username}"?`)) {
+    alert('Password reset email sent!')
+  }
 }
 
 function confirmDelete(user: User) {
-    userToDelete.value = user
-    deleteConfirmation.value = ''
-    deleteDialog.value = true
+  userToDelete.value = user
+  deleteConfirmation.value = ''
+  deleteDialog.value = true
 }
 
 function cancelDelete() {
-    deleteDialog.value = false
-    userToDelete.value = null
-    deleteConfirmation.value = ''
+  deleteDialog.value = false
+  userToDelete.value = null
+  deleteConfirmation.value = ''
 }
 
 async function handleDeleteUser() {
-    if (deleteConfirmation.value !== 'DELETE' || !userToDelete.value || deleting.value) {
-        return
-    }
+  if (deleteConfirmation.value !== 'DELETE' || !userToDelete.value || deleting.value) {
+    return
+  }
 
-    deleting.value = true
-    try {
-        error.value = ''
-        await adminApi.deleteUser(userToDelete.value.id)
-        success.value = `User "${userToDelete.value.username}" deleted successfully`
-
-        // Close dialog
-        cancelDelete()
-
-        // Reload users list
-        await loadUsers()
-    } catch (err: unknown) {
-        console.error('Failed to delete user:', err)
-        error.value = getApiErrorDetail(err, 'Failed to delete user')
-    } finally {
-        deleting.value = false
-    }
+  deleting.value = true
+  try {
+    error.value = ''
+    await adminApi.deleteUser(userToDelete.value.id)
+    success.value = `User "${userToDelete.value.username}" deleted successfully`
+    cancelDelete()
+    await loadUsers()
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to delete user')
+  } finally {
+    deleting.value = false
+  }
 }
 
 async function toggleUserStatus(user: User) {
-    console.log('[UserManagement] toggleUserStatus called', {
-        userId: user.id,
-        username: user.username,
-        currentStatus: user.is_active,
-        targetStatus: !user.is_active,
-        togglingUserId: togglingUserId.value,
-    })
+  if (togglingUserId.value !== null) return
 
-    // Prevent multiple simultaneous toggles
-    if (togglingUserId.value !== null) {
-        console.warn('[UserManagement] Toggle already in progress for user:', togglingUserId.value)
-        return
-    }
+  const newStatus = !user.is_active
+  const action = newStatus ? 'activate' : 'deactivate'
 
-    const newStatus = !user.is_active
-    const action = newStatus ? 'activate' : 'deactivate'
+  // Prevent self-deactivation
+  if (!newStatus && loggedInUser.value && user.id === loggedInUser.value.id) {
+    error.value = 'Cannot deactivate your own account'
+    return
+  }
 
-    // Prevent self-deactivation
+  togglingUserId.value = user.id
+  error.value = ''
+
+  try {
+    const updateData: UpdateUserRequest = { is_active: newStatus }
+    await adminApi.updateUser(user.id, updateData)
+    user.is_active = newStatus
+    success.value = `User "${user.username}" ${action}d successfully`
+
     if (!newStatus && loggedInUser.value && user.id === loggedInUser.value.id) {
-        console.warn('[UserManagement] Prevented self-deactivation attempt', {
-            userId: user.id,
-            username: user.username,
-        })
-        error.value = 'Cannot deactivate your own account'
-        return
+      setTimeout(async () => {
+        await authStore.logout()
+        router.push('/login')
+      }, 1500)
     }
-
-    togglingUserId.value = user.id
-    error.value = ''
-
-    console.log('[UserManagement] Starting user status toggle', {
-        userId: user.id,
-        username: user.username,
-        action,
-        newStatus,
-    })
-
-    try {
-        // Update user status - only send is_active field to avoid issues
-        const updateData: UpdateUserRequest = {
-            is_active: newStatus,
-        }
-
-        console.log('[UserManagement] Sending API request to update user', {
-            userId: user.id,
-            updateData,
-        })
-
-        const response = await adminApi.updateUser(user.id, updateData)
-
-        console.log('[UserManagement] API response received', {
-            userId: response.id,
-            username: response.username,
-            is_active: response.is_active,
-        })
-
-        // Update local user object immediately for responsive UI
-        user.is_active = newStatus
-
-        success.value = `User "${user.username}" ${action}d successfully`
-        console.log('[UserManagement] User status updated successfully', {
-            userId: user.id,
-            username: user.username,
-            newStatus: user.is_active,
-        })
-
-        // If we deactivated ourselves (shouldn't happen with check above), logout
-        if (!newStatus && loggedInUser.value && user.id === loggedInUser.value.id) {
-            console.warn('[UserManagement] Current user was deactivated, logging out...')
-            setTimeout(async () => {
-                await authStore.logout()
-                router.push('/login')
-            }, 1500)
-        }
-    } catch (err: unknown) {
-        console.error('[UserManagement] Failed to toggle user status', {
-            userId: user.id,
-            username: user.username,
-            action,
-            error: err,
-            errorDetail: getApiErrorDetail(err),
-            errorStatus: getErrorStatus(err),
-        })
-
-        error.value = getApiErrorDetail(err, `Failed to ${action} user`)
-
-        // Reload on error to restore correct state
-        console.log('[UserManagement] Reloading user list due to error')
-        await loadUsers()
-    } finally {
-        togglingUserId.value = null
-        console.log('[UserManagement] Toggle operation completed for user:', user.id)
-    }
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, `Failed to ${action} user`)
+    await loadUsers()
+  } finally {
+    togglingUserId.value = null
+  }
 }
 
 function showUserDetails(user: User) {
-    selectedUser.value = user
-    detailsDialog.value = true
+  selectedUser.value = user
+  detailsDialog.value = true
 }
 
 function editUserFromDetails() {
-    if (selectedUser.value) {
-        editUser(selectedUser.value)
-        detailsDialog.value = false
-    }
+  if (selectedUser.value) {
+    editUser(selectedUser.value)
+    detailsDialog.value = false
+  }
 }
 
 async function saveUser() {
-    try {
-        loading.value = true
-        error.value = ''
+  try {
+    loading.value = true
+    error.value = ''
 
-        if (editMode.value) {
-            // Update existing user
-            const updateData: UpdateUserRequest = {
-                email: currentUser.value.email,
-                roles: currentUser.value.roles,
-                is_active: currentUser.value.is_active,
-            }
+    if (editMode.value) {
+      const updateData: UpdateUserRequest = {
+        email: currentUser.value.email,
+        role: currentUser.value.role,
+        is_active: currentUser.value.is_active,
+      }
 
-            // Include password if provided
-            if (currentUser.value.password && currentUser.value.password.trim() !== '') {
-                updateData.password = currentUser.value.password
-            }
+      if (currentUser.value.password && currentUser.value.password.trim() !== '') {
+        updateData.password = currentUser.value.password
+      }
 
-            await adminApi.updateUser(
-                // biome-ignore lint/style/noNonNullAssertion: id exists for existing users being updated
-                currentUser.value.id!,
-                updateData,
-            )
-            success.value = 'User updated successfully'
-        } else {
-            // Create new user
-            const createData: CreateUserRequest = {
-                // biome-ignore lint/style/noNonNullAssertion: validated as required before submission
-                username: currentUser.value.username!,
-                email: currentUser.value.email,
-                // biome-ignore lint/style/noNonNullAssertion: validated as required before submission
-                password: currentUser.value.password!,
-                roles: currentUser.value.roles,
-                is_active: currentUser.value.is_active,
-            }
+      await adminApi.updateUser(
+        // biome-ignore lint/style/noNonNullAssertion: id exists for existing users being updated
+        currentUser.value.id!,
+        updateData,
+      )
+      success.value = 'User updated successfully'
+    } else {
+      const createData: CreateUserRequest = {
+        // biome-ignore lint/style/noNonNullAssertion: validated as required before submission
+        username: currentUser.value.username!,
+        email: currentUser.value.email,
+        // biome-ignore lint/style/noNonNullAssertion: validated as required before submission
+        password: currentUser.value.password!,
+        role: currentUser.value.role,
+        is_active: currentUser.value.is_active,
+      }
 
-            await adminApi.createUser(createData)
-            success.value = 'User created successfully'
-        }
-
-        // Close dialog and reload users
-        dialog.value = false
-        await loadUsers()
-    } catch (err: unknown) {
-        console.error('Failed to save user:', err)
-        error.value = getApiErrorDetail(err, 'Failed to save user')
-    } finally {
-        loading.value = false
+      await adminApi.createUser(createData)
+      success.value = 'User created successfully'
     }
+
+    dialog.value = false
+    await loadUsers()
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to save user')
+  } finally {
+    loading.value = false
+  }
 }
 
+// ============================================================================
+// Access Control (Roles) Tab Methods
+// ============================================================================
+
+async function loadAccessControlData() {
+  acLoading.value = true
+  error.value = ''
+
+  try {
+    const [usersResponse, resourcesResponse] = await Promise.all([
+      adminApi.getAccessControlUsers(),
+      adminApi.getMenuResources(),
+    ])
+
+    acUsers.value = usersResponse.users
+    acAvailableResources.value = resourcesResponse.resources
+    acAvailableActions.value = resourcesResponse.actions
+    acDefaultPermissions.value = resourcesResponse.default_permissions
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to load access control data')
+  } finally {
+    acLoading.value = false
+  }
+}
+
+function openAccessEditDialog(user: AccessControlUser) {
+  acEditingUser.value = user
+  acEditForm.value = {
+    role: user.role,
+    is_active: user.is_active,
+    is_ptb_admin: user.is_ptb_admin,
+  }
+  acEditDialog.value = true
+}
+
+async function saveUserAccess() {
+  if (!acEditingUser.value) return
+
+  acSaving.value = true
+  error.value = ''
+
+  try {
+    await adminApi.updateUserAccess(acEditingUser.value.id, {
+      role: acEditForm.value.role,
+      is_active: acEditForm.value.is_active,
+      is_ptb_admin: acEditForm.value.is_ptb_admin,
+    })
+
+    success.value = `Access settings updated for ${acEditingUser.value.username}`
+    acEditDialog.value = false
+    await loadAccessControlData()
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to update access settings')
+  } finally {
+    acSaving.value = false
+  }
+}
+
+function openPermissionsDialog(user: AccessControlUser) {
+  permissionsUser.value = user
+  permissionsForm.value = user.menu_permissions
+    ? JSON.parse(JSON.stringify(user.menu_permissions))
+    : {}
+  permissionsDialog.value = true
+}
+
+function hasPermission(resource: string, action: string): boolean {
+  return permissionsForm.value[resource]?.includes(action) ?? false
+}
+
+function togglePermission(resource: string, action: string, checked: unknown) {
+  if (!permissionsForm.value[resource]) {
+    permissionsForm.value[resource] = []
+  }
+
+  if (checked) {
+    if (!permissionsForm.value[resource].includes(action)) {
+      permissionsForm.value[resource].push(action)
+    }
+  } else {
+    permissionsForm.value[resource] = permissionsForm.value[resource].filter((a) => a !== action)
+    if (permissionsForm.value[resource].length === 0) {
+      delete permissionsForm.value[resource]
+    }
+  }
+}
+
+function selectAllPermissions() {
+  const allPerms: Record<string, string[]> = {}
+  for (const resource of acAvailableResources.value) {
+    allPerms[resource] = [...acAvailableActions.value]
+  }
+  permissionsForm.value = allPerms
+}
+
+function clearAllPermissions() {
+  permissionsForm.value = {}
+}
+
+function applyDefaultPermissions() {
+  permissionsForm.value = JSON.parse(JSON.stringify(acDefaultPermissions.value))
+}
+
+async function savePermissions() {
+  if (!permissionsUser.value) return
+
+  acSaving.value = true
+  error.value = ''
+
+  try {
+    await adminApi.updateUserAccess(permissionsUser.value.id, {
+      menu_permissions: permissionsForm.value,
+    })
+
+    success.value = `Menu permissions updated for ${permissionsUser.value.username}`
+    permissionsDialog.value = false
+    await loadAccessControlData()
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to update menu permissions')
+  } finally {
+    acSaving.value = false
+  }
+}
+
+// ============================================================================
+// Shared Helpers
+// ============================================================================
+
+function getAccessRoleColor(role: string): string {
+  switch (role) {
+    case 'developer':
+      return 'deep-purple'
+    case 'superadmin':
+      return 'orange'
+    case 'admin':
+      return 'teal'
+    case 'user':
+      return 'blue-grey'
+    case 'guest':
+      return 'grey'
+    default:
+      return 'grey'
+  }
+}
+
+function getAccessRoleIcon(role: string): string {
+  switch (role) {
+    case 'developer':
+      return 'mdi-code-tags'
+    case 'superadmin':
+      return 'mdi-shield-crown'
+    case 'admin':
+      return 'mdi-shield-account'
+    case 'user':
+      return 'mdi-account'
+    case 'guest':
+      return 'mdi-account-question'
+    default:
+      return 'mdi-account-question'
+  }
+}
+
+function getResourceIcon(resource: string): string {
+  const icons: Record<string, string> = {
+    dashboard: 'mdi-view-dashboard',
+    parsing: 'mdi-file-document-edit',
+    comparison: 'mdi-compare-horizontal',
+    top_products: 'mdi-trophy',
+    dut_analysis: 'mdi-chart-line',
+    dut_management: 'mdi-devices',
+    activity: 'mdi-history',
+    mastercontrol: 'mdi-factory',
+    conversion: 'mdi-swap-horizontal',
+    admin_users: 'mdi-account-group',
+    admin_rbac: 'mdi-shield-lock',
+    admin_cleanup: 'mdi-broom',
+    admin_config: 'mdi-cog',
+    admin_menu_access: 'mdi-menu',
+    admin_access_control: 'mdi-shield-account',
+  }
+  return icons[resource] || 'mdi-circle-small'
+}
+
+function formatResourceName(resource: string): string {
+  return resource
+    .split('_')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ')
+}
+
+function formatDate(dateString: string | null): string {
+  if (!dateString) return 'Never'
+  const date = new Date(dateString)
+  const now = new Date()
+  const diff = now.getTime() - date.getTime()
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24))
+
+  if (days === 0) return 'Today'
+  if (days === 1) return 'Yesterday'
+  if (days < 7) return `${days} days ago`
+  return date.toLocaleDateString()
+}
+
+function formatDateFull(dateStr: string): string {
+  try {
+    const date = new Date(dateStr)
+    return date.toLocaleDateString('en-US', {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    })
+  } catch {
+    return dateStr
+  }
+}
+
+// ============================================================================
+// Lifecycle
+// ============================================================================
+
+// Load access control data when switching to the Roles tab
+watch(activeTab, (tab) => {
+  if (tab === 'roles' && acUsers.value.length === 0) {
+    loadAccessControlData()
+  }
+})
+
 onMounted(() => {
-    loadUsers()
+  loadUsers()
+  // If starting on roles tab, load access control data too
+  if (activeTab.value === 'roles' && authStore.isSuperAdmin) {
+    loadAccessControlData()
+  }
 })
 </script>
 

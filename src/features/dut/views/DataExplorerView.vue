@@ -67,6 +67,9 @@
 import { ref } from 'vue'
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
+import InternalDataContent from '../components/InternalDataContent.vue'
+import IplasDataContent from '../components/IplasDataContent.vue'
+import IplasSettingsDialog from '../components/IplasSettingsDialog.vue'
 
 // Active tab state - persisted in URL
 const activeTab = useTabPersistence('tab', 'iplas')
