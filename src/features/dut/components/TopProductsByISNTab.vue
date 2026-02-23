@@ -222,6 +222,9 @@ import type {
 } from '../types/dutTopProduct.types'
 // biome-ignore lint/style/useImportType: value import required for template component resolution
 import DUTISNInput from './DUTISNInput.vue'
+import FormulaSelectorDialog from './FormulaSelectorDialog.vue'
+import StationFilterConfig from './StationFilterConfig.vue'
+import TopProductISNResults from './TopProductISNResults.vue'
 
 // Formula Selector (New approach)
 const {

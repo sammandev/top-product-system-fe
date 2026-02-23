@@ -426,6 +426,8 @@ import {
   useTestLogUpload,
 } from '@/features/dut-logs/composables/useTestLogUpload'
 import { getErrorMessage } from '@/shared/utils'
+import CriteriaBuilderDialog from './CriteriaBuilderDialog.vue'
+import TopProductRankingUploadLog from './TopProductRankingUploadLog.vue'
 import UploadScoringConfigDialog from './UploadScoringConfigDialog.vue'
 
 // File inputs

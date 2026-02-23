@@ -214,8 +214,10 @@ import {
 } from '@/features/dut-logs/composables/useIplasApi'
 import { getErrorMessage } from '@/shared/utils'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
-import type { TestItemInfo } from './StationConfigDialog.vue'
-import type { StationConfig } from './StationSelectionDialog.vue'
+import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
+import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
+import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
+import TopProductIplasRanking from './TopProductIplasRanking.vue'
 
 // ============================================================================
 // State: ISN Input

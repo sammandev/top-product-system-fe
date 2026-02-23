@@ -21,7 +21,7 @@
 
             <!-- Statistics Cards -->
             <v-row class="mb-4">
-                <v-col cols="12" sm="6" md="3">
+                <v-col cols="12" sm="6" md="4">
                     <v-card color="info" variant="tonal">
                         <v-card-text>
                             <div class="d-flex align-center">
@@ -38,7 +38,7 @@
                         </v-card-text>
                     </v-card>
                 </v-col>
-                <v-col cols="12" sm="6" md="3">
+                <v-col cols="12" sm="6" md="4">
                     <v-card color="indigo" variant="tonal">
                         <v-card-text>
                             <div class="d-flex align-center">
@@ -55,7 +55,7 @@
                         </v-card-text>
                     </v-card>
                 </v-col>
-                <v-col cols="12" sm="6" md="3">
+                <v-col cols="12" sm="6" md="4">
                     <v-card color="teal" variant="tonal">
                         <v-card-text>
                             <div class="d-flex align-center">
@@ -66,25 +66,6 @@
                                     <div class="text-overline">Total Analysis</div>
                                     <div class="text-h5 font-weight-bold">
                                         {{ statsLoading ? '...' : stats.total_products.toLocaleString() }}
-                                    </div>
-                                </div>
-                            </div>
-                        </v-card-text>
-                    </v-card>
-                </v-col>
-                <v-col cols="12" sm="6" md="3">
-                    <v-card color="success" variant="tonal">
-                        <v-card-text>
-                            <div class="d-flex align-center">
-                                <v-avatar color="success" size="48" class="mr-3">
-                                    <v-icon color="white">mdi-chart-line</v-icon>
-                                </v-avatar>
-                                <div>
-                                    <div class="text-overline">Avg. Score (per page)</div>
-                                    <div class="text-h5 font-weight-bold">
-                                        {{ filteredAvgScore }}
-                                        <span v-if="hasActiveFilters"
-                                            class="text-subtitle-1 text-medium-emphasis">(filtered)</span>
                                     </div>
                                 </div>
                             </div>
@@ -163,8 +144,15 @@
                     <v-chip class="ml-2" size="small" color="primary" variant="tonal">
                         {{ pagination.total.toLocaleString() }} total
                     </v-chip>
+                    <v-chip v-if="selectedProducts.length > 0" class="ml-2" size="small" color="warning" variant="flat">
+                        {{ selectedProducts.length }} selected
+                    </v-chip>
                     <v-spacer />
                     <div class="d-flex align-center gap-2">
+                        <v-btn v-if="canBulkDelete && selectedProducts.length > 0" color="error" variant="tonal"
+                            prepend-icon="mdi-delete-sweep" size="small" @click="confirmBulkDelete">
+                            Delete Selected ({{ selectedProducts.length }})
+                        </v-btn>
                         <v-select v-model="pagination.page_size" :items="pageSizeOptions" label="Items"
                             variant="outlined" density="compact" hide-details style="max-width: 180px"
                             @update:model-value="handlePageSizeChange">
@@ -176,10 +164,11 @@
                 </v-card-title>
                 <v-divider />
                 <v-card-text class="pa-0">
-                    <v-data-table :headers="headers" :items="products" :loading="loading"
-                        :items-per-page="pagination.page_size" hide-default-footer hover
-                        @click:row="(_event: unknown, row: any) => viewDetail(row.item.id)" @update:sort-by="handleSort"
-                        class="cursor-pointer">
+                    <v-data-table v-model="selectedProducts" :headers="computedHeaders" :items="products"
+                        :loading="loading" :items-per-page="pagination.page_size" hide-default-footer hover
+                        :show-select="canBulkDelete" item-value="id" return-object
+                        @click:row="(_event: unknown, row: any) => viewDetail(row.item.id)"
+                        @update:sort-by="handleSort" class="cursor-pointer">
                         <template #item.dut_isn="{ item }">
                             <div class="d-flex align-center">
                                 <v-icon size="small" class="mr-2" color="primary">mdi-barcode</v-icon>
@@ -557,6 +546,61 @@
                 </v-card>
             </v-dialog>
 
+            <!-- Bulk Delete Confirmation Dialog -->
+            <v-dialog v-model="bulkDeleteDialog" max-width="600px" persistent>
+                <v-card>
+                    <v-card-title class="text-h5 bg-error text-white">
+                        <v-icon start>mdi-delete-sweep</v-icon>
+                        Confirm Bulk Delete
+                    </v-card-title>
+                    <v-card-text class="pt-4">
+                        <div class="mb-4">
+                            <p class="text-body-1 mb-2">
+                                You are about to delete <strong>{{ selectedProducts.length }}</strong> top product
+                                record(s):
+                            </p>
+                            <v-card variant="outlined" class="mb-4" style="max-height: 200px; overflow-y: auto">
+                                <v-list density="compact">
+                                    <v-list-item v-for="product in selectedProducts" :key="product.id">
+                                        <template #prepend>
+                                            <v-icon size="small" color="error">mdi-circle-small</v-icon>
+                                        </template>
+                                        <v-list-item-title class="text-body-2">
+                                            {{ product.dut_isn }} — {{ product.station_name }}
+                                            <v-chip v-if="product.project_name" size="x-small" color="info"
+                                                variant="tonal" class="ml-1">
+                                                {{ product.project_name }}
+                                            </v-chip>
+                                        </v-list-item-title>
+                                    </v-list-item>
+                                </v-list>
+                            </v-card>
+                            <v-alert type="warning" variant="tonal" color="orange-darken-1" class="mb-4">
+                                This action cannot be undone. All selected records and their measurements will be
+                                permanently deleted.
+                            </v-alert>
+                        </div>
+                        <div>
+                            <p class="text-body-2 mb-2">
+                                Type <strong>DELETE</strong> to confirm:
+                            </p>
+                            <v-text-field v-model="bulkDeleteConfirmation" placeholder="DELETE" variant="outlined"
+                                density="comfortable" hide-details autofocus @keyup.enter="handleBulkDelete" />
+                        </div>
+                    </v-card-text>
+                    <v-card-actions>
+                        <v-spacer />
+                        <v-btn color="default" variant="tonal" @click="cancelBulkDelete" :disabled="bulkDeleting">
+                            Cancel
+                        </v-btn>
+                        <v-btn color="error" variant="flat" @click="handleBulkDelete"
+                            :disabled="bulkDeleteConfirmation !== 'DELETE' || bulkDeleting" :loading="bulkDeleting">
+                            Delete {{ selectedProducts.length }} Record(s)
+                        </v-btn>
+                    </v-card-actions>
+                </v-card>
+            </v-dialog>
+
             <!-- Export Dialog -->
             <v-dialog v-model="exportDialog" max-width="500px">
                 <v-card>
@@ -611,6 +655,7 @@ import { formatDateTimeCompact } from '@/core/utils/dateTime'
 import { useAuthStore } from '@/features/auth/stores'
 import { getApiErrorDetail } from '@/shared/utils'
 import {
+  bulkDeleteTopProducts,
   getTopProductDetail,
   getTopProductsList,
   getTopProductsStats,
@@ -658,6 +703,12 @@ const productToDelete = ref<TopProductItem | null>(null)
 const deleteConfirmation = ref('')
 const deleting = ref(false)
 
+// Bulk delete state
+const selectedProducts = ref<TopProductItem[]>([])
+const bulkDeleteDialog = ref(false)
+const bulkDeleteConfirmation = ref('')
+const bulkDeleting = ref(false)
+
 // Filter options
 const projectOptions = ref<{ title: string; value: string }[]>([])
 const stationOptions = ref<
@@ -685,6 +736,19 @@ const pageSizeOptions = [10, 20, 50, 100]
 // ===== Computed =====
 const isAdmin = computed(() => authStore.user?.is_admin || false)
 
+/**
+ * Whether the current user can perform bulk delete.
+ * Only available to superadmin and developer roles, or users with explicit delete permission.
+ */
+const canBulkDelete = computed(() => {
+  return authStore.isSuperAdmin || authStore.hasMenuPermission('top_product_database', 'delete')
+})
+
+/**
+ * Dynamic headers — same base headers for all users.
+ */
+const computedHeaders = computed(() => headers)
+
 const hasActiveFilters = computed(() => {
   return !!(
     filters.value.dut_isn ||
@@ -692,14 +756,6 @@ const hasActiveFilters = computed(() => {
     (filters.value.stations && filters.value.stations.length > 0) ||
     filters.value.min_score
   )
-})
-
-const filteredAvgScore = computed(() => {
-  if (products.value.length === 0) {
-    return '0.00'
-  }
-  const avg = products.value.reduce((sum, p) => sum + p.score, 0) / products.value.length
-  return avg.toFixed(2)
 })
 
 const filteredMeasurements = computed(() => {
@@ -757,6 +813,8 @@ async function fetchProducts() {
     products.value = response.top_products
     pagination.value.total = response.total
     pagination.value.total_pages = response.total_pages
+    // Clear selection when data changes
+    selectedProducts.value = []
   } catch (error) {
     console.error('❌ Failed to fetch products:', error)
   } finally {
@@ -940,6 +998,53 @@ async function handleDelete() {
     alert(errorMessage)
   } finally {
     deleting.value = false
+  }
+}
+
+// ===== Bulk Delete Handlers =====
+function confirmBulkDelete() {
+  if (selectedProducts.value.length === 0) return
+  bulkDeleteConfirmation.value = ''
+  bulkDeleteDialog.value = true
+}
+
+function cancelBulkDelete() {
+  bulkDeleteDialog.value = false
+  bulkDeleteConfirmation.value = ''
+}
+
+async function handleBulkDelete() {
+  if (
+    bulkDeleteConfirmation.value !== 'DELETE' ||
+    selectedProducts.value.length === 0 ||
+    bulkDeleting.value
+  ) {
+    return
+  }
+
+  bulkDeleting.value = true
+  try {
+    const ids = selectedProducts.value.map((p) => p.id)
+    const result = await bulkDeleteTopProducts(ids)
+
+    console.log(`Bulk deleted ${result.deleted_count} products`)
+
+    // Clear selection and close dialog
+    selectedProducts.value = []
+    cancelBulkDelete()
+
+    // Refresh the data
+    await fetchProducts()
+    await fetchStats()
+  } catch (error: unknown) {
+    console.error('Failed to bulk delete products:', error)
+    const errorMessage = getApiErrorDetail(
+      error,
+      'Failed to delete selected products. Please try again.',
+    )
+    alert(errorMessage)
+  } finally {
+    bulkDeleting.value = false
   }
 }
 

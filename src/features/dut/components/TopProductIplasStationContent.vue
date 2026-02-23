@@ -143,8 +143,9 @@ import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettin
 import { getErrorMessage } from '@/shared/utils'
 import { useScoring } from '../composables/useScoring'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
-import type { TestItemInfo } from './StationConfigDialog.vue'
-import type { StationConfig } from './StationSelectionDialog.vue'
+import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
+import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
+import TopProductIplasRanking from './TopProductIplasRanking.vue'
 
 // Emits
 const emit = defineEmits<{

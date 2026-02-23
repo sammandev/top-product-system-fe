@@ -480,7 +480,10 @@ import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasLocalData } from '@/features/dut-logs/composables/useIplasLocalData'
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
+import IplasIsnSearchContent from './IplasIsnSearchContent.vue'
+import IplasRecordTable from './IplasRecordTable.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
+import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 
 // UPDATED: Define emits for iPLAS Settings button
 const emit = defineEmits<(e: 'show-settings') => void>()

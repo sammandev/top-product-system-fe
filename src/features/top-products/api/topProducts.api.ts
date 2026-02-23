@@ -186,3 +186,13 @@ export async function deleteTopProduct(
   const response = await apiClient.delete(`/api/top-products/${productId}`)
   return response.data
 }
+
+/**
+ * Bulk delete multiple top products by IDs
+ */
+export async function bulkDeleteTopProducts(
+  ids: number[],
+): Promise<{ message: string; deleted_count: number; deleted_ids: number[] }> {
+  const response = await apiClient.delete('/api/top-products/bulk-delete', { data: { ids } })
+  return response.data
+}

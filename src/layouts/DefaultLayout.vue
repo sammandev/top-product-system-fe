@@ -315,15 +315,15 @@ const staticToolsItems: MenuItem[] = [
 
 const staticSystemItems: MenuItem[] = [
   {
-    title: 'Access Control',
+    title: 'System Configuration',
     icon: 'mdi-shield-lock',
     children: [
       { title: 'User Management', icon: 'mdi-circle-small', path: '/admin/users' },
       { title: 'Menu Access', icon: 'mdi-circle-small', path: '/admin/menu-access' },
+      { title: 'App Configuration', icon: 'mdi-circle-small', path: '/admin/app-config' },
     ],
   },
   { title: 'System Cleanup', icon: 'mdi-delete-sweep', path: '/admin/cleanup' },
-  { title: 'App Configuration', icon: 'mdi-cog', path: '/admin/app-config' },
 ]
 
 /** Paths only accessible to superadmin/developer in the System section. */
