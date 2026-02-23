@@ -763,7 +763,9 @@ import {
   useIplasApi,
 } from '@/features/dut-logs/composables/useIplasApi'
 import { isStatusPass } from '@/shared/utils/helpers'
-import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
+import IplasTestItemsFullscreenDialog, {
+  type NormalizedRecord,
+} from './IplasTestItemsFullscreenDialog.vue'
 
 // ============================================================================
 // Timezone Utilities for ISN Search API

@@ -193,6 +193,6 @@ export async function deleteTopProduct(
 export async function bulkDeleteTopProducts(
   ids: number[],
 ): Promise<{ message: string; deleted_count: number; deleted_ids: number[] }> {
-  const response = await apiClient.delete('/api/top-products/bulk-delete', { data: { ids } })
+  const response = await apiClient.post('/api/top-products/bulk-delete', { ids })
   return response.data
 }
