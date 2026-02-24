@@ -174,3 +174,39 @@ body {
 .slide-leave-to {
   transform: translateX(100%);
 }
+
+/* ============================================================================
+   Dialog Sticky Header / Footer
+   Use .app-dialog on v-card, .app-dialog-header on the header wrapper,
+   and .app-dialog-footer on the footer wrapper.
+   ============================================================================ */
+
+.app-dialog {
+  display: flex;
+  flex-direction: column;
+  max-height: 90vh;
+  overflow: hidden;
+}
+
+.app-dialog-header {
+  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background-color: rgb(var(--v-theme-surface));
+  border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.app-dialog-body {
+  flex: 1 1 auto;
+  overflow-y: auto;
+}
+
+.app-dialog-footer {
+  flex-shrink: 0;
+  position: sticky;
+  bottom: 0;
+  z-index: 10;
+  background-color: rgb(var(--v-theme-surface));
+  border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}

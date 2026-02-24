@@ -400,17 +400,17 @@
     <v-dialog v-model="showBreakdownDialog" :fullscreen="breakdownFullscreen"
       :max-width="breakdownFullscreen ? undefined : 650" scrollable
       :transition="breakdownFullscreen ? 'dialog-bottom-transition' : undefined">
-      <v-card v-if="selectedTestItem">
-        <v-card-title class="d-flex align-center bg-info">
-          <v-icon start color="white">mdi-calculator-variant</v-icon>
-          <span class="text-white">Score Breakdown</span>
+      <v-card v-if="selectedTestItem" class="app-dialog">
+        <div class="app-dialog-header"><v-card-title class="d-flex align-center">
+          <v-icon start>mdi-calculator-variant</v-icon>
+          Score Breakdown
           <v-spacer />
-          <v-btn :icon="breakdownFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text" color="white"
+          <v-btn :icon="breakdownFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
             @click="breakdownFullscreen = !breakdownFullscreen" />
-          <v-btn icon="mdi-close" variant="text" color="white" @click="showBreakdownDialog = false" />
-        </v-card-title>
+          <v-btn icon="mdi-close" variant="text" @click="showBreakdownDialog = false" />
+        </v-card-title></div>
 
-        <v-card-text class="pa-4">
+        <div class="app-dialog-body"><v-card-text class="pa-4">
           <!-- Test Item Info -->
           <v-card variant="tonal" class="mb-4">
             <v-card-text>
@@ -499,28 +499,28 @@
               </tr>
             </tbody>
           </v-table>
-        </v-card-text>
+        </v-card-text></div>
 
-        <v-card-actions>
+        <div class="app-dialog-footer"><v-card-actions>
           <v-spacer />
           <v-btn color="primary" variant="text" @click="showBreakdownDialog = false">Close</v-btn>
-        </v-card-actions>
+        </v-card-actions></div>
       </v-card>
     </v-dialog>
 
     <!-- Custom Items Per Page Dialog -->
     <v-dialog v-model="showCustomInput" max-width="400">
-      <v-card>
-        <v-card-title>Custom Items Per Page</v-card-title>
-        <v-card-text>
+      <v-card class="app-dialog">
+        <div class="app-dialog-header"><v-card-title>Custom Items Per Page</v-card-title></div>
+        <div class="app-dialog-body"><v-card-text>
           <v-text-field v-model.number="customItemsPerPage" type="number" label="Enter number of items"
             variant="outlined" density="comfortable" min="1" autofocus @keyup.enter="applyCustomItemsPerPage" />
-        </v-card-text>
-        <v-card-actions>
+        </v-card-text></div>
+        <div class="app-dialog-footer"><v-card-actions>
           <v-spacer />
           <v-btn text @click="cancelCustomInput">Cancel</v-btn>
           <v-btn color="primary" variant="elevated" @click="applyCustomItemsPerPage">Apply</v-btn>
-        </v-card-actions>
+        </v-card-actions></div>
       </v-card>
     </v-dialog>
   </v-card>

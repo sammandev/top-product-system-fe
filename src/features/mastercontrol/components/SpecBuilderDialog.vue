@@ -1,12 +1,12 @@
 <template>
     <v-dialog :model-value="modelValue" max-width="1400" persistent scrollable
         @update:model-value="emit('update:modelValue', $event)">
-        <v-card>
-            <v-card-title class="d-flex align-center bg-primary">
-                <v-icon start color="white">mdi-file-cog-outline</v-icon>
-                <span class="text-white">Spec Builder - Create Custom Specification</span>
+        <v-card class="app-dialog">
+            <div class="app-dialog-header"><v-card-title class="d-flex align-center">
+                <v-icon start>mdi-file-cog-outline</v-icon>
+                Spec Builder - Create Custom Specification
                 <v-spacer />
-                <v-btn-toggle v-model="specFormat" mandatory class="mx-4" density="compact" color="white">
+                <v-btn-toggle v-model="specFormat" mandatory class="mx-4" density="compact">
                     <v-btn value="json" size="small">
                         <v-icon start>mdi-code-json</v-icon>
                         JSON
@@ -16,10 +16,10 @@
                         INI
                     </v-btn>
                 </v-btn-toggle>
-                <v-btn icon="mdi-close" variant="text" color="white" @click="handleClose" />
-            </v-card-title>
+                <v-btn icon="mdi-close" variant="text" @click="handleClose" />
+            </v-card-title></div>
 
-            <v-card-text class="pa-4">
+            <div class="app-dialog-body"><v-card-text class="pa-4">
                 <v-row>
                     <!-- Left Panel: Rule Editor -->
                     <v-col cols="12" md="6">
@@ -133,11 +133,9 @@
                         </v-card>
                     </v-col>
                 </v-row>
-            </v-card-text>
+            </v-card-text></div>
 
-            <v-divider />
-
-            <v-card-actions class="pa-4">
+            <div class="app-dialog-footer"><v-card-actions class="pa-4">
                 <v-btn color="info" prepend-icon="mdi-download" @click="downloadTemplate">
                     Download Empty Template
                 </v-btn>
@@ -156,7 +154,7 @@
                 <v-btn variant="outlined" @click="handleClose">
                     Cancel
                 </v-btn>
-            </v-card-actions>
+            </v-card-actions></div>
         </v-card>
     </v-dialog>
 </template>

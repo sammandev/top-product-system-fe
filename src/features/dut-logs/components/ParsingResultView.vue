@@ -434,33 +434,33 @@
 
   <!-- Custom Items Per Page Dialog for Value Items -->
   <v-dialog v-model="showCustomInputValue" max-width="400">
-    <v-card>
-      <v-card-title>Custom Items Per Page (Value Items)</v-card-title>
-      <v-card-text>
+    <v-card class="app-dialog">
+      <div class="app-dialog-header"><v-card-title>Custom Items Per Page (Value Items)</v-card-title></div>
+      <div class="app-dialog-body"><v-card-text>
         <v-text-field v-model.number="customItemsPerPageValue" type="number" label="Enter number of items"
           variant="outlined" density="comfortable" min="1" autofocus @keyup.enter="applyCustomItemsPerPageValue" />
-      </v-card-text>
-      <v-card-actions>
+      </v-card-text></div>
+      <div class="app-dialog-footer"><v-card-actions>
         <v-spacer />
         <v-btn text @click="cancelCustomInputValue">Cancel</v-btn>
         <v-btn color="primary" variant="elevated" @click="applyCustomItemsPerPageValue">Apply</v-btn>
-      </v-card-actions>
+      </v-card-actions></div>
     </v-card>
   </v-dialog>
 
   <!-- Custom Items Per Page Dialog for Non-Value Items -->
   <v-dialog v-model="showCustomInputNonValue" max-width="400">
-    <v-card>
-      <v-card-title>Custom Items Per Page (Non-Value Items)</v-card-title>
-      <v-card-text>
+    <v-card class="app-dialog">
+      <div class="app-dialog-header"><v-card-title>Custom Items Per Page (Non-Value Items)</v-card-title></div>
+      <div class="app-dialog-body"><v-card-text>
         <v-text-field v-model.number="customItemsPerPageNonValue" type="number" label="Enter number of items"
           variant="outlined" density="comfortable" min="1" autofocus @keyup.enter="applyCustomItemsPerPageNonValue" />
-      </v-card-text>
-      <v-card-actions>
+      </v-card-text></div>
+      <div class="app-dialog-footer"><v-card-actions>
         <v-spacer />
         <v-btn text @click="cancelCustomInputNonValue">Cancel</v-btn>
         <v-btn color="primary" variant="elevated" @click="applyCustomItemsPerPageNonValue">Apply</v-btn>
-      </v-card-actions>
+      </v-card-actions></div>
     </v-card>
   </v-dialog>
 

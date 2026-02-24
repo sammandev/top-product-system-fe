@@ -1,16 +1,14 @@
 <template>
   <v-dialog v-model="dialogOpen" max-width="900px" scrollable>
-    <v-card v-if="item && item.score_breakdown">
-      <v-card-title class="d-flex align-center">
+    <v-card v-if="item && item.score_breakdown" class="app-dialog">
+      <div class="app-dialog-header"><v-card-title class="d-flex align-center">
         <v-icon start>mdi-calculator</v-icon>
         Score Breakdown
         <v-spacer />
         <v-btn icon="mdi-close" variant="text" @click="dialogOpen = false" />
-      </v-card-title>
+      </v-card-title></div>
 
-      <v-divider />
-
-      <v-card-text class="pa-4">
+      <div class="app-dialog-body"><v-card-text class="pa-4">
         <!-- Test Item Info -->
         <v-card variant="tonal" class="mb-4">
           <v-card-text>
@@ -173,16 +171,14 @@
             </tbody>
           </v-table>
         </v-card>
-      </v-card-text>
+      </v-card-text></div>
 
-      <v-divider />
-
-      <v-card-actions>
+      <div class="app-dialog-footer"><v-card-actions>
         <v-spacer />
         <v-btn color="primary" variant="text" @click="dialogOpen = false">
           Close
         </v-btn>
-      </v-card-actions>
+      </v-card-actions></div>
     </v-card>
   </v-dialog>
 </template>

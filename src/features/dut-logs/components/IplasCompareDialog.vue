@@ -119,16 +119,16 @@
   <v-dialog v-model="showBreakdownDialog" :fullscreen="breakdownFullscreen"
     :max-width="breakdownFullscreen ? undefined : 600"
     :transition="breakdownFullscreen ? 'dialog-bottom-transition' : undefined">
-    <v-card v-if="breakdownItem">
-      <v-card-title class="d-flex align-center bg-info">
-        <v-icon start color="white">mdi-calculator-variant</v-icon>
-        <span class="text-white">Score Breakdown - {{ breakdownSource === 'upload' ? 'Uploaded' : 'iPLAS' }}</span>
+    <v-card v-if="breakdownItem" class="app-dialog">
+      <div class="app-dialog-header"><v-card-title class="d-flex align-center">
+        <v-icon start>mdi-calculator-variant</v-icon>
+        Score Breakdown - {{ breakdownSource === 'upload' ? 'Uploaded' : 'iPLAS' }}
         <v-spacer />
-        <v-btn :icon="breakdownFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text" color="white"
+        <v-btn :icon="breakdownFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
           @click="breakdownFullscreen = !breakdownFullscreen" />
-        <v-btn icon="mdi-close" variant="text" color="white" @click="showBreakdownDialog = false" />
-      </v-card-title>
-      <v-card-text class="pa-4">
+        <v-btn icon="mdi-close" variant="text" @click="showBreakdownDialog = false" />
+      </v-card-title></div>
+      <div class="app-dialog-body"><v-card-text class="pa-4">
         <v-table density="compact">
           <tbody>
             <tr>
@@ -176,11 +176,11 @@
             </tr>
           </tbody>
         </v-table>
-      </v-card-text>
-      <v-card-actions>
+      </v-card-text></div>
+      <div class="app-dialog-footer"><v-card-actions>
         <v-spacer />
         <v-btn color="primary" variant="text" @click="showBreakdownDialog = false">Close</v-btn>
-      </v-card-actions>
+      </v-card-actions></div>
     </v-card>
   </v-dialog>
 

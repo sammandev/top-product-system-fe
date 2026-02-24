@@ -1,23 +1,21 @@
 <template>
   <v-dialog v-model="dialogOpen" :fullscreen="isFullscreen" :max-width="isFullscreen ? undefined : 650" scrollable
     persistent :transition="isFullscreen ? 'dialog-bottom-transition' : undefined">
-    <v-card :class="isFullscreen ? 'd-flex flex-column' : ''"
+    <v-card :class="[isFullscreen ? 'd-flex flex-column' : '', 'app-dialog']"
       :style="isFullscreen ? 'height: 100vh; overflow: hidden;' : ''">
-      <v-card-title class="d-flex align-center bg-primary">
-        <v-icon start color="white">mdi-cog-outline</v-icon>
-        <span class="text-white">Configure Scoring</span>
+      <div class="app-dialog-header"><v-card-title class="d-flex align-center">
+        <v-icon start>mdi-cog-outline</v-icon>
+        Configure Scoring
         <v-spacer />
-        <v-chip size="small" color="white" variant="outlined" class="ml-2">
+        <v-chip size="small" variant="outlined" class="ml-2">
           {{ scoringConfigs.length }} items
         </v-chip>
-        <v-btn :icon="isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text" color="white"
+        <v-btn :icon="isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
           @click="isFullscreen = !isFullscreen" class="ml-1" />
-        <v-btn icon="mdi-close" variant="text" color="white" @click="handleCancel" />
-      </v-card-title>
+        <v-btn icon="mdi-close" variant="text" @click="handleCancel" />
+      </v-card-title></div>
 
-      <v-divider />
-
-      <v-card-text class="pa-0" :class="isFullscreen ? 'flex-grow-1' : ''"
+      <div class="app-dialog-body"><v-card-text class="pa-0" :class="isFullscreen ? 'flex-grow-1' : ''"
         :style="isFullscreen ? 'overflow: hidden;' : 'height: 600px;'">
         <div style="height: 100%; overflow: hidden; display: flex; flex-direction: column;">
           <div class="pa-3 pb-2 d-flex gap-2">
@@ -107,11 +105,9 @@
             </div>
           </div>
         </div>
-      </v-card-text>
+      </v-card-text></div>
 
-      <v-divider />
-
-      <v-card-actions class="flex-shrink-0">
+      <div class="app-dialog-footer"><v-card-actions class="flex-shrink-0">
         <v-btn variant="text" color="warning" prepend-icon="mdi-restore" @click="resetAll">
           Reset All
         </v-btn>
@@ -120,22 +116,22 @@
         <v-btn color="primary" variant="elevated" prepend-icon="mdi-check" @click="handleApply">
           Apply
         </v-btn>
-      </v-card-actions>
+      </v-card-actions></div>
     </v-card>
   </v-dialog>
 
   <!-- Bulk Scoring Configuration Dialog -->
   <v-dialog v-model="bulkScoringDialog" max-width="550" persistent>
-    <v-card>
-      <v-card-title class="d-flex align-center bg-secondary">
+    <v-card class="app-dialog">
+      <div class="app-dialog-header"><v-card-title class="d-flex align-center">
         <v-icon class="mr-2">mdi-tune-variant</v-icon>
         Bulk Configure Scoring
       </v-card-title>
-      <v-card-subtitle class="bg-secondary py-3">
+      <v-card-subtitle class="py-3">
         Apply to {{ selectedItemNames.size }} selected test item(s)
-      </v-card-subtitle>
+      </v-card-subtitle></div>
 
-      <v-card-text class="pa-4">
+      <div class="app-dialog-body"><v-card-text class="pa-4">
         <v-alert type="info" variant="tonal" density="compact" class="mb-4">
           This will apply the selected scoring algorithm, policy, and weight to all
           {{ selectedItemNames.size }} selected test items.
@@ -163,11 +159,9 @@
         <v-text-field v-model.number="bulkWeight" label="Weight" type="number" variant="outlined" density="comfortable"
           min="0" max="10" step="0.1" hint="Weight for these test items in overall score calculation (default: 1.0)"
           persistent-hint />
-      </v-card-text>
+      </v-card-text></div>
 
-      <v-divider />
-
-      <v-card-actions class="pa-3">
+      <div class="app-dialog-footer"><v-card-actions class="pa-3">
         <v-btn color="grey" variant="outlined" @click="bulkScoringDialog = false">
           Cancel
         </v-btn>
@@ -175,22 +169,22 @@
         <v-btn color="primary" variant="flat" @click="applyBulkScoringConfig">
           Apply to {{ selectedItemNames.size }} Items
         </v-btn>
-      </v-card-actions>
+      </v-card-actions></div>
     </v-card>
   </v-dialog>
 
   <!-- Single Item Scoring Configuration Dialog -->
   <v-dialog v-model="singleItemScoringDialog" max-width="500" persistent>
-    <v-card v-if="singleConfigItem">
-      <v-card-title class="d-flex align-center bg-info">
+    <v-card v-if="singleConfigItem" class="app-dialog">
+      <div class="app-dialog-header"><v-card-title class="d-flex align-center">
         <v-icon class="mr-2">mdi-tune</v-icon>
         Configure Scoring
       </v-card-title>
-      <v-card-subtitle class="bg-info py-3 text-truncate">
+      <v-card-subtitle class="py-3 text-truncate">
         {{ singleConfigItem }}
-      </v-card-subtitle>
+      </v-card-subtitle></div>
 
-      <v-card-text class="pa-4">
+      <div class="app-dialog-body"><v-card-text class="pa-4">
         <!-- Scoring Type Selection -->
         <v-select :model-value="getSingleDialogConfig()?.scoring_type"
           @update:model-value="updateSingleDialogScoringType($event)" :items="scoringTypeOptions" label="Scoring Type"
@@ -240,16 +234,14 @@
             </v-row>
           </v-card-text>
         </v-card>
-      </v-card-text>
+      </v-card-text></div>
 
-      <v-divider />
-
-      <v-card-actions class="pa-3">
+      <div class="app-dialog-footer"><v-card-actions class="pa-3">
         <v-spacer />
         <v-btn color="primary" variant="flat" @click="singleItemScoringDialog = false">
           Done
         </v-btn>
-      </v-card-actions>
+      </v-card-actions></div>
     </v-card>
   </v-dialog>
 </template>

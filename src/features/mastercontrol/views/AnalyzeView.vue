@@ -254,12 +254,12 @@
 
         <!-- Template Download Dialog -->
         <v-dialog v-model="showTemplateDialog" max-width="400">
-            <v-card>
-                <v-card-title class="bg-primary">
-                    <v-icon start color="white">mdi-download</v-icon>
-                    <span class="text-white">Download Spec Template</span>
-                </v-card-title>
-                <v-card-text class="pa-6">
+            <v-card class="app-dialog">
+                <div class="app-dialog-header"><v-card-title>
+                    <v-icon start>mdi-download</v-icon>
+                    Download Spec Template
+                </v-card-title></div>
+                <div class="app-dialog-body"><v-card-text class="pa-6">
                     <p class="text-body-2 mb-4">Choose the template format to download:</p>
                     <v-row dense>
                         <v-col cols="6">
@@ -275,11 +275,11 @@
                             </v-btn>
                         </v-col>
                     </v-row>
-                </v-card-text>
-                <v-card-actions>
+                </v-card-text></div>
+                <div class="app-dialog-footer"><v-card-actions>
                     <v-spacer />
                     <v-btn variant="text" @click="showTemplateDialog = false">Cancel</v-btn>
-                </v-card-actions>
+                </v-card-actions></div>
             </v-card>
         </v-dialog>
     </DefaultLayout>

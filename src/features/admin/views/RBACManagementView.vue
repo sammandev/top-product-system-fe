@@ -222,45 +222,45 @@
 
     <!-- Create Role Dialog -->
     <v-dialog v-model="roleDialog" max-width="600px">
-      <v-card>
-        <v-card-title class="text-h5">Create New Role</v-card-title>
-        <v-card-text>
+      <v-card class="app-dialog">
+        <div class="app-dialog-header"><v-card-title class="text-h5">Create New Role</v-card-title></div>
+        <div class="app-dialog-body"><v-card-text>
           <v-text-field v-model="newRole.name" label="Role Name" variant="outlined" class="mb-3"
             hint="e.g., data_analyst, viewer, editor" persistent-hint />
           <v-textarea v-model="newRole.description" label="Description" variant="outlined" rows="3"
             hint="Describe what this role can do" persistent-hint />
-        </v-card-text>
-        <v-card-actions>
+        </v-card-text></div>
+        <div class="app-dialog-footer"><v-card-actions>
           <v-spacer />
           <v-btn @click="roleDialog = false">Cancel</v-btn>
           <v-btn color="primary" :loading="loading" @click="handleCreateRole">Create Role</v-btn>
-        </v-card-actions>
+        </v-card-actions></div>
       </v-card>
     </v-dialog>
 
     <!-- Create Permission Dialog -->
     <v-dialog v-model="permDialog" max-width="600px">
-      <v-card>
-        <v-card-title class="text-h5">Create New Permission</v-card-title>
-        <v-card-text>
+      <v-card class="app-dialog">
+        <div class="app-dialog-header"><v-card-title class="text-h5">Create New Permission</v-card-title></div>
+        <div class="app-dialog-body"><v-card-text>
           <v-text-field v-model="newPermission.name" label="Permission Name" variant="outlined" class="mb-3"
             hint="e.g., read_reports, write_data, manage_users" persistent-hint />
           <v-textarea v-model="newPermission.description" label="Description" variant="outlined" rows="3"
             hint="Describe what this permission allows" persistent-hint />
-        </v-card-text>
-        <v-card-actions>
+        </v-card-text></div>
+        <div class="app-dialog-footer"><v-card-actions>
           <v-spacer />
           <v-btn @click="permDialog = false">Cancel</v-btn>
           <v-btn color="secondary" :loading="loading" @click="handleCreatePermission">Create Permission</v-btn>
-        </v-card-actions>
+        </v-card-actions></div>
       </v-card>
     </v-dialog>
 
     <!-- Edit Role Dialog -->
     <v-dialog v-model="editRoleDialog" max-width="700px">
-      <v-card>
-        <v-card-title class="text-h5">Edit Role</v-card-title>
-        <v-card-text>
+      <v-card class="app-dialog">
+        <div class="app-dialog-header"><v-card-title class="text-h5">Edit Role</v-card-title></div>
+        <div class="app-dialog-body"><v-card-text>
           <v-text-field v-model="editRoleForm.name" label="Role Name" variant="outlined" class="mb-3"
             hint="e.g., data_analyst, viewer, editor" persistent-hint />
           <v-textarea v-model="editRoleForm.description" label="Description" variant="outlined" rows="3"
@@ -275,42 +275,41 @@
               </v-chip-group>
             </v-card-text>
           </v-card>
-        </v-card-text>
-        <v-card-actions>
+        </v-card-text></div>
+        <div class="app-dialog-footer"><v-card-actions>
           <v-spacer />
           <v-btn @click="editRoleDialog = false">Cancel</v-btn>
           <v-btn color="primary" :loading="loading" @click="saveRoleEdit">Save Changes</v-btn>
-        </v-card-actions>
+        </v-card-actions></div>
       </v-card>
     </v-dialog>
 
     <!-- Edit Permission Dialog -->
     <v-dialog v-model="editPermDialog" max-width="600px">
-      <v-card>
-        <v-card-title class="text-h5">Edit Permission</v-card-title>
-        <v-card-text>
+      <v-card class="app-dialog">
+        <div class="app-dialog-header"><v-card-title class="text-h5">Edit Permission</v-card-title></div>
+        <div class="app-dialog-body"><v-card-text>
           <v-text-field v-model="editPermForm.name" label="Permission Name" variant="outlined" class="mb-3"
             hint="e.g., read_reports, write_data, manage_users" persistent-hint />
           <v-textarea v-model="editPermForm.description" label="Description" variant="outlined" rows="3"
             hint="Describe what this permission allows" persistent-hint />
-        </v-card-text>
-        <v-card-actions>
+        </v-card-text></div>
+        <div class="app-dialog-footer"><v-card-actions>
           <v-spacer />
           <v-btn @click="editPermDialog = false">Cancel</v-btn>
           <v-btn color="secondary" :loading="loading" @click="savePermissionEdit">Save Changes</v-btn>
-        </v-card-actions>
+        </v-card-actions></div>
       </v-card>
     </v-dialog>
 
     <!-- Role Details Dialog -->
     <v-dialog v-model="roleDetailsDialog" max-width="800px">
-      <v-card v-if="selectedRoleDetails">
-        <v-card-title class="d-flex justify-space-between align-center">
+      <v-card v-if="selectedRoleDetails" class="app-dialog">
+        <div class="app-dialog-header"><v-card-title class="d-flex justify-space-between align-center">
           <span class="text-h5">Role Details: {{ selectedRoleDetails.name }}</span>
           <v-btn icon="mdi-close" variant="text" @click="roleDetailsDialog = false" />
-        </v-card-title>
-        <v-divider />
-        <v-card-text class="pa-6">
+        </v-card-title></div>
+        <div class="app-dialog-body"><v-card-text class="pa-6">
           <v-row>
             <!-- Basic Information -->
             <v-col cols="12">
@@ -409,26 +408,24 @@
               </v-card>
             </v-col>
           </v-row>
-        </v-card-text>
-        <v-divider />
-        <v-card-actions>
+        </v-card-text></div>
+        <div class="app-dialog-footer"><v-card-actions>
           <v-spacer />
           <v-btn @click="roleDetailsDialog = false">Close</v-btn>
           <v-btn color="primary" prepend-icon="mdi-pencil"
             @click="editRoleFromDetails(selectedRoleDetails.id)">Edit</v-btn>
-        </v-card-actions>
+        </v-card-actions></div>
       </v-card>
     </v-dialog>
 
     <!-- Permission Details Dialog -->
     <v-dialog v-model="permDetailsDialog" max-width="800px">
-      <v-card v-if="selectedPermDetails">
-        <v-card-title class="d-flex justify-space-between align-center">
+      <v-card v-if="selectedPermDetails" class="app-dialog">
+        <div class="app-dialog-header"><v-card-title class="d-flex justify-space-between align-center">
           <span class="text-h5">Permission Details: {{ selectedPermDetails.name }}</span>
           <v-btn icon="mdi-close" variant="text" @click="permDetailsDialog = false" />
-        </v-card-title>
-        <v-divider />
-        <v-card-text class="pa-6">
+        </v-card-title></div>
+        <div class="app-dialog-body"><v-card-text class="pa-6">
           <v-row>
             <!-- Basic Information -->
             <v-col cols="12">
@@ -474,25 +471,24 @@
               </v-card>
             </v-col>
           </v-row>
-        </v-card-text>
-        <v-divider />
-        <v-card-actions>
+        </v-card-text></div>
+        <div class="app-dialog-footer"><v-card-actions>
           <v-spacer />
           <v-btn @click="permDetailsDialog = false">Close</v-btn>
           <v-btn color="secondary" prepend-icon="mdi-pencil"
             @click="editPermissionFromDetails(selectedPermDetails.id)">Edit</v-btn>
-        </v-card-actions>
+        </v-card-actions></div>
       </v-card>
     </v-dialog>
 
     <!-- Delete Role Confirmation Dialog -->
     <v-dialog v-model="deleteRoleDialog" max-width="500px" persistent>
-      <v-card>
-        <v-card-title class="text-h5 bg-error text-white">
+      <v-card class="app-dialog">
+        <div class="app-dialog-header"><v-card-title class="text-h5">
           <v-icon start>mdi-alert</v-icon>
           Confirm Delete Role
-        </v-card-title>
-        <v-card-text class="pt-4">
+        </v-card-title></div>
+        <div class="app-dialog-body"><v-card-text class="pt-4">
           <div class="mb-4">
             <p class="text-body-1 mb-2">
               You are about to delete this role:
@@ -515,8 +511,8 @@
             <v-text-field v-model="deleteRoleConfirmation" placeholder="DELETE" variant="outlined" density="comfortable"
               hide-details autofocus @keyup.enter="handleConfirmDeleteRole" />
           </div>
-        </v-card-text>
-        <v-card-actions>
+        </v-card-text></div>
+        <div class="app-dialog-footer"><v-card-actions>
           <v-spacer />
           <v-btn color="default" variant="tonal" @click="cancelDeleteRole" :disabled="deletingRole">
             Cancel
@@ -525,18 +521,18 @@
             :disabled="deleteRoleConfirmation !== 'DELETE' || deletingRole" :loading="deletingRole">
             Delete Role
           </v-btn>
-        </v-card-actions>
+        </v-card-actions></div>
       </v-card>
     </v-dialog>
 
     <!-- Delete Permission Confirmation Dialog -->
     <v-dialog v-model="deletePermDialog" max-width="500px" persistent>
-      <v-card>
-        <v-card-title class="text-h5 bg-error text-white">
+      <v-card class="app-dialog">
+        <div class="app-dialog-header"><v-card-title class="text-h5">
           <v-icon start>mdi-alert</v-icon>
           Confirm Delete Permission
-        </v-card-title>
-        <v-card-text class="pt-4">
+        </v-card-title></div>
+        <div class="app-dialog-body"><v-card-text class="pt-4">
           <div class="mb-4">
             <p class="text-body-1 mb-2">
               You are about to delete this permission:
@@ -558,8 +554,8 @@
             <v-text-field v-model="deletePermConfirmation" placeholder="DELETE" variant="outlined" density="comfortable"
               hide-details autofocus @keyup.enter="handleConfirmDeletePerm" />
           </div>
-        </v-card-text>
-        <v-card-actions>
+        </v-card-text></div>
+        <div class="app-dialog-footer"><v-card-actions>
           <v-spacer />
           <v-btn color="default" variant="tonal" @click="cancelDeletePerm" :disabled="deletingPerm">
             Cancel
@@ -568,7 +564,7 @@
             :disabled="deletePermConfirmation !== 'DELETE' || deletingPerm" :loading="deletingPerm">
             Delete Permission
           </v-btn>
-        </v-card-actions>
+        </v-card-actions></div>
       </v-card>
     </v-dialog>
   </DefaultLayout>

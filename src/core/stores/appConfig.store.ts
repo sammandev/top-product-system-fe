@@ -1,7 +1,8 @@
 import { defineStore } from 'pinia'
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { appConfigApi } from '@/core/api/appConfigApi'
 import { APP_CONFIG } from '@/core/config'
+import { envConfig } from '@/core/config/env.config'
 import type { AppConfig, AppConfigUpdateRequest } from '@/core/types'
 
 const fallbackConfig: AppConfig = {
@@ -36,6 +37,24 @@ function getErrorDetail(err: unknown): string | null {
   return null
 }
 
+const DEFAULT_FAVICON_HREF = '/icon.svg'
+
+/**
+ * Update the <link rel="icon"> element in <head> to point at the given URL,
+ * or revert to the default favicon when url is null.
+ */
+function _applyFavicon(url: string | null | undefined): void {
+  const href = url || DEFAULT_FAVICON_HREF
+  let link = document.querySelector<HTMLLinkElement>("link[rel~='icon']")
+  if (!link) {
+    link = document.createElement('link')
+    link.rel = 'icon'
+    document.head.appendChild(link)
+  }
+  // Append a cache-busting param so the browser re-fetches immediately
+  link.href = url ? `${href}?t=${Date.now()}` : href
+}
+
 export const useAppConfigStore = defineStore('appConfig', () => {
   const config = ref<AppConfig>({ ...fallbackConfig })
   const loading = ref(false)
@@ -47,6 +66,18 @@ export const useAppConfigStore = defineStore('appConfig', () => {
   const appName = computed(() => config.value.name || APP_CONFIG.name)
   const appVersion = computed(() => config.value.version || APP_CONFIG.version)
   const appDescription = computed(() => config.value.description || APP_CONFIG.description)
+  const tabTitle = computed(() => config.value.tab_title || envConfig.appTitle || APP_CONFIG.name)
+  const faviconUrl = computed(() => config.value.favicon_url || null)
+
+  // Live-update browser tab title whenever config changes
+  watch(tabTitle, (title) => {
+    document.title = title
+  }, { immediate: true })
+
+  // Live-update favicon whenever config changes
+  watch(faviconUrl, (url) => {
+    _applyFavicon(url)
+  }, { immediate: true })
 
   async function fetchConfig(): Promise<void> {
     loading.value = true
@@ -93,6 +124,8 @@ export const useAppConfigStore = defineStore('appConfig', () => {
     appName,
     appVersion,
     appDescription,
+    tabTitle,
+    faviconUrl,
     fetchConfig,
     updateConfig,
     initialize,

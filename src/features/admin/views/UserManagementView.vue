@@ -302,13 +302,12 @@
 
             <!-- User Details Dialog -->
             <v-dialog v-model="detailsDialog" max-width="800px">
-                <v-card v-if="selectedUser">
-                    <v-card-title class="d-flex justify-space-between align-center">
+                <v-card v-if="selectedUser" class="app-dialog">
+                    <div class="app-dialog-header"><v-card-title class="d-flex justify-space-between align-center">
                         <span class="text-h5">User Details: {{ selectedUser.username }}</span>
                         <v-btn icon="mdi-close" variant="text" color="primary" @click="detailsDialog = false" />
-                    </v-card-title>
-                    <v-divider />
-                    <v-card-text class="pa-6">
+                    </v-card-title></div>
+                    <div class="app-dialog-body"><v-card-text class="pa-6">
                         <v-row>
                             <!-- Basic Information -->
                             <v-col cols="12">
@@ -367,26 +366,25 @@
                                 </v-card>
                             </v-col>
                         </v-row>
-                    </v-card-text>
-                    <v-divider />
-                    <v-card-actions>
+                    </v-card-text></div>
+                    <div class="app-dialog-footer"><v-card-actions>
                         <v-spacer />
                         <v-btn @click="detailsDialog = false">Close</v-btn>
                         <v-btn color="primary" prepend-icon="mdi-pencil" @click="editUserFromDetails">
                             Edit
                         </v-btn>
-                    </v-card-actions>
+                    </v-card-actions></div>
                 </v-card>
             </v-dialog>
 
             <!-- Delete Confirmation Dialog -->
             <v-dialog v-model="deleteDialog" max-width="500px" persistent>
-                <v-card>
-                    <v-card-title class="text-h5 bg-error text-white">
+                <v-card class="app-dialog">
+                    <div class="app-dialog-header"><v-card-title class="text-h5">
                         <v-icon start>mdi-alert</v-icon>
                         Confirm Delete
-                    </v-card-title>
-                    <v-card-text class="pt-4">
+                    </v-card-title></div>
+                    <div class="app-dialog-body"><v-card-text class="pt-4">
                         <div class="mb-4">
                             <p class="text-body-1 mb-2">
                                 You are about to delete this user:
@@ -409,8 +407,8 @@
                             <v-text-field v-model="deleteConfirmation" placeholder="DELETE" variant="outlined"
                                 density="comfortable" hide-details autofocus @keyup.enter="handleDeleteUser" />
                         </div>
-                    </v-card-text>
-                    <v-card-actions>
+                    </v-card-text></div>
+                    <div class="app-dialog-footer"><v-card-actions>
                         <v-spacer />
                         <v-btn color="default" variant="tonal" @click="cancelDelete" :disabled="deleting">
                             Cancel
@@ -419,17 +417,17 @@
                             :disabled="deleteConfirmation !== 'DELETE' || deleting" :loading="deleting">
                             Delete User
                         </v-btn>
-                    </v-card-actions>
+                    </v-card-actions></div>
                 </v-card>
             </v-dialog>
 
             <!-- Create/Edit User Dialog -->
             <v-dialog v-model="dialog" max-width="600px">
-                <v-card>
-                    <v-card-title>
+                <v-card class="app-dialog">
+                    <div class="app-dialog-header"><v-card-title>
                         <span class="text-h5">{{ editMode ? 'Edit User' : 'Create User' }}</span>
-                    </v-card-title>
-                    <v-card-text>
+                    </v-card-title></div>
+                    <div class="app-dialog-body"><v-card-text>
                         <v-form ref="form">
                             <v-text-field v-model="currentUser.username" label="Username"
                                 :rules="[v => !!v || 'Username is required']" :disabled="editMode" variant="outlined"
@@ -445,26 +443,26 @@
                                 class="mb-3" />
                             <v-switch v-model="currentUser.is_active" label="Active Account" color="success" />
                         </v-form>
-                    </v-card-text>
-                    <v-card-actions>
+                    </v-card-text></div>
+                    <div class="app-dialog-footer"><v-card-actions>
                         <v-spacer />
                         <v-btn variant="text" @click="dialog = false">Cancel</v-btn>
                         <v-btn color="primary" variant="flat" @click="saveUser" :loading="loading">
                             Save
                         </v-btn>
-                    </v-card-actions>
+                    </v-card-actions></div>
                 </v-card>
             </v-dialog>
 
             <!-- Edit Role/Status Dialog (Access Control) -->
             <v-dialog v-model="acEditDialog" max-width="500" persistent>
-                <v-card>
-                    <v-card-title class="d-flex align-center">
+                <v-card class="app-dialog">
+                    <div class="app-dialog-header"><v-card-title class="d-flex align-center">
                         <v-icon class="mr-2">mdi-account-cog</v-icon>
                         Edit Access: {{ acEditingUser?.username }}
-                    </v-card-title>
+                    </v-card-title></div>
 
-                    <v-card-text>
+                    <div class="app-dialog-body"><v-card-text>
                         <v-select v-model="acEditForm.role" :items="acAvailableRoles" label="Role" variant="outlined"
                             :disabled="!authStore.isDeveloper && acEditForm.role === 'superadmin'"
                             hint="Only developers can grant superadmin role" persistent-hint />
@@ -473,20 +471,20 @@
 
                         <v-switch v-model="acEditForm.is_ptb_admin" label="PTB Admin" color="info"
                             hint="Synced from external API on login" persistent-hint />
-                    </v-card-text>
+                    </v-card-text></div>
 
-                    <v-card-actions>
+                    <div class="app-dialog-footer"><v-card-actions>
                         <v-spacer />
                         <v-btn variant="text" @click="acEditDialog = false">Cancel</v-btn>
                         <v-btn color="primary" :loading="acSaving" @click="saveUserAccess">Save</v-btn>
-                    </v-card-actions>
+                    </v-card-actions></div>
                 </v-card>
             </v-dialog>
 
             <!-- Menu Permissions Dialog (Access Control) -->
             <v-dialog v-model="permissionsDialog" max-width="900" persistent>
-                <v-card>
-                    <v-card-title class="d-flex align-center">
+                <v-card class="app-dialog">
+                    <div class="app-dialog-header"><v-card-title class="d-flex align-center">
                         <v-icon class="mr-2">mdi-shield-key</v-icon>
                         Menu Permissions: {{ permissionsUser?.username }}
                     </v-card-title>
@@ -494,9 +492,9 @@
                     <v-card-subtitle>
                         Configure which resources and actions this user can access. Check the boxes to grant specific
                         CRUD permissions for each resource.
-                    </v-card-subtitle>
+                    </v-card-subtitle></div>
 
-                    <v-card-text>
+                    <div class="app-dialog-body"><v-card-text>
                         <v-btn size="small" variant="outlined" class="mr-2 mb-3"
                             prepend-icon="mdi-checkbox-marked-outline" @click="selectAllPermissions">
                             Select All
@@ -533,13 +531,13 @@
                                 </tr>
                             </tbody>
                         </v-table>
-                    </v-card-text>
+                    </v-card-text></div>
 
-                    <v-card-actions>
+                    <div class="app-dialog-footer"><v-card-actions>
                         <v-spacer />
                         <v-btn variant="text" @click="permissionsDialog = false">Cancel</v-btn>
                         <v-btn color="primary" :loading="acSaving" @click="savePermissions">Save Permissions</v-btn>
-                    </v-card-actions>
+                    </v-card-actions></div>
                 </v-card>
             </v-dialog>
         </v-container>

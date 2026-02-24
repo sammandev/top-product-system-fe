@@ -42,12 +42,12 @@
                     <v-text-field v-model="generalForm.version" label="Application Version" :rules="[rules.required]"
                       prepend-inner-icon="mdi-tag" variant="outlined" class="mb-3" />
 
-                    <v-textarea v-model="generalForm.description" label="Description"
-                      prepend-inner-icon="mdi-text-long" variant="outlined" rows="3" auto-grow class="mb-3" />
+                    <v-textarea v-model="generalForm.description" label="Description" prepend-inner-icon="mdi-text-long"
+                      variant="outlined" rows="3" auto-grow class="mb-3" />
 
-                    <v-text-field v-model="generalForm.tab_title" label="Browser Tab Title"
-                      prepend-inner-icon="mdi-tab" variant="outlined" class="mb-3"
-                      hint="Text shown in the browser tab. Leave empty for default." persistent-hint />
+                    <v-text-field v-model="generalForm.tab_title" label="Browser Tab Title" prepend-inner-icon="mdi-tab"
+                      variant="outlined" class="mb-3" hint="Text shown in the browser tab. Leave empty for default."
+                      persistent-hint />
 
                     <v-alert v-if="generalError" type="error" density="compact" class="mb-3">
                       {{ generalError }}
@@ -168,8 +168,8 @@
                 </template>
                 <template #item.actions="{ item }">
                   <div class="d-flex ga-1">
-                    <v-btn v-if="!item.is_active" icon size="x-small" variant="text" color="success"
-                      title="Activate" @click="handleActivateIplas(item.id)">
+                    <v-btn v-if="!item.is_active" icon size="x-small" variant="text" color="success" title="Activate"
+                      @click="handleActivateIplas(item.id)">
                       <v-icon size="small">mdi-check-circle</v-icon>
                     </v-btn>
                     <v-btn icon size="x-small" variant="text" color="primary" title="Edit"
@@ -219,8 +219,8 @@
                 </template>
                 <template #item.actions="{ item }">
                   <div class="d-flex ga-1">
-                    <v-btn v-if="!item.is_active" icon size="x-small" variant="text" color="success"
-                      title="Activate" @click="handleActivateSfistsp(item.id)">
+                    <v-btn v-if="!item.is_active" icon size="x-small" variant="text" color="success" title="Activate"
+                      @click="handleActivateSfistsp(item.id)">
                       <v-icon size="small">mdi-check-circle</v-icon>
                     </v-btn>
                     <v-btn icon size="x-small" variant="text" color="primary" title="Edit"
@@ -270,8 +270,8 @@
                 </template>
                 <template #item.actions="{ item }">
                   <div class="d-flex ga-1">
-                    <v-btn v-if="!item.is_active" icon size="x-small" variant="text" color="success"
-                      title="Activate" @click="handleActivateGuest(item.id)">
+                    <v-btn v-if="!item.is_active" icon size="x-small" variant="text" color="success" title="Activate"
+                      @click="handleActivateGuest(item.id)">
                       <v-icon size="small">mdi-check-circle</v-icon>
                     </v-btn>
                     <v-btn icon size="x-small" variant="text" color="primary" title="Edit"
@@ -296,15 +296,18 @@
 
       <!-- ==================== iPLAS Token Dialog ==================== -->
       <v-dialog v-model="iplasDialogOpen" max-width="560" persistent>
-        <v-card>
-          <v-card-title>{{ iplasEditId ? 'Edit' : 'Add' }} iPLAS Token</v-card-title>
-          <v-card-text>
+        <v-card class="app-dialog">
+          <div class="app-dialog-header">
+            <v-card-title>{{ iplasEditId ? 'Edit' : 'Add' }} iPLAS Token</v-card-title>
+          </div>
+          <div class="app-dialog-body">
+            <v-card-text>
             <v-form ref="iplasFormRef" v-model="iplasFormValid">
-              <v-select v-model="iplasForm.site" label="Site" :items="IPLAS_SITE_OPTIONS"
-                :rules="[rules.required]" variant="outlined" class="mb-3" />
+              <v-select v-model="iplasForm.site" label="Site" :items="IPLAS_SITE_OPTIONS" :rules="[rules.required]"
+                variant="outlined" class="mb-3" />
 
-              <v-text-field v-model="iplasForm.base_url" label="Base URL" :rules="[rules.required]"
-                variant="outlined" class="mb-3" placeholder="http://10.176.33.89" />
+              <v-text-field v-model="iplasForm.base_url" label="Base URL" :rules="[rules.required]" variant="outlined"
+                class="mb-3" placeholder="http://10.176.33.89" />
 
               <v-text-field v-model="iplasForm.token_value" label="Token Value"
                 :rules="iplasEditId ? [] : [rules.required]" variant="outlined" class="mb-3"
@@ -314,26 +317,31 @@
 
               <v-switch v-model="iplasForm.is_active" label="Active" color="success" hide-details class="mb-3" />
             </v-form>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn variant="text" @click="iplasDialogOpen = false">Cancel</v-btn>
-            <v-btn color="primary" :loading="iplasLoading" :disabled="!iplasFormValid"
-              @click="handleSaveIplas">
-              Save
-            </v-btn>
-          </v-card-actions>
+            </v-card-text>
+          </div>
+          <div class="app-dialog-footer">
+            <v-card-actions>
+              <v-spacer />
+              <v-btn variant="text" @click="iplasDialogOpen = false">Cancel</v-btn>
+              <v-btn color="primary" :loading="iplasLoading" :disabled="!iplasFormValid" @click="handleSaveIplas">
+                Save
+              </v-btn>
+            </v-card-actions>
+          </div>
         </v-card>
       </v-dialog>
 
       <!-- ==================== SFISTSP Config Dialog ==================== -->
       <v-dialog v-model="sfistspDialogOpen" max-width="560" persistent>
-        <v-card>
-          <v-card-title>{{ sfistspEditId ? 'Edit' : 'Add' }} SFISTSP Config</v-card-title>
-          <v-card-text>
+        <v-card class="app-dialog">
+          <div class="app-dialog-header">
+            <v-card-title>{{ sfistspEditId ? 'Edit' : 'Add' }} SFISTSP Config</v-card-title>
+          </div>
+          <div class="app-dialog-body">
+            <v-card-text>
             <v-form ref="sfistspFormRef" v-model="sfistspFormValid">
-              <v-text-field v-model="sfistspForm.base_url" label="Base URL" :rules="[rules.required]"
-                variant="outlined" class="mb-3" placeholder="https://sfistsp.example.com" />
+              <v-text-field v-model="sfistspForm.base_url" label="Base URL" :rules="[rules.required]" variant="outlined"
+                class="mb-3" placeholder="https://sfistsp.example.com" />
 
               <v-text-field v-model="sfistspForm.program_id" label="Program ID" :rules="[rules.required]"
                 variant="outlined" class="mb-3" />
@@ -352,31 +360,34 @@
 
               <v-switch v-model="sfistspForm.is_active" label="Active" color="success" hide-details class="mb-3" />
             </v-form>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn variant="text" @click="sfistspDialogOpen = false">Cancel</v-btn>
-            <v-btn color="primary" :loading="sfistspLoading" :disabled="!sfistspFormValid"
-              @click="handleSaveSfistsp">
-              Save
-            </v-btn>
-          </v-card-actions>
+            </v-card-text>
+          </div>
+          <div class="app-dialog-footer">
+            <v-card-actions>
+              <v-spacer />
+              <v-btn variant="text" @click="sfistspDialogOpen = false">Cancel</v-btn>
+              <v-btn color="primary" :loading="sfistspLoading" :disabled="!sfistspFormValid" @click="handleSaveSfistsp">
+                Save
+              </v-btn>
+            </v-card-actions>
+          </div>
         </v-card>
       </v-dialog>
 
       <!-- ==================== Guest Credential Dialog ==================== -->
       <v-dialog v-model="guestDialogOpen" max-width="560" persistent>
-        <v-card>
-          <v-card-title>{{ guestEditId ? 'Edit' : 'Add' }} Guest Credential</v-card-title>
-          <v-card-text>
+        <v-card class="app-dialog">
+          <div class="app-dialog-header">
+            <v-card-title>{{ guestEditId ? 'Edit' : 'Add' }} Guest Credential</v-card-title>
+          </div>
+          <div class="app-dialog-body">
+            <v-card-text>
             <v-form ref="guestFormRef" v-model="guestFormValid">
-              <v-text-field v-model="guestForm.username" label="Username"
-                :rules="guestEditId ? [] : [rules.required]" variant="outlined" class="mb-3"
-                :placeholder="guestEditId ? '(leave blank to keep current)' : ''" />
+              <v-text-field v-model="guestForm.username" label="Username" :rules="guestEditId ? [] : [rules.required]"
+                variant="outlined" class="mb-3" :placeholder="guestEditId ? '(leave blank to keep current)' : ''" />
 
-              <v-text-field v-model="guestForm.password" label="Password"
-                :rules="guestEditId ? [] : [rules.required]" variant="outlined" class="mb-3"
-                :type="showGuestPassword ? 'text' : 'password'"
+              <v-text-field v-model="guestForm.password" label="Password" :rules="guestEditId ? [] : [rules.required]"
+                variant="outlined" class="mb-3" :type="showGuestPassword ? 'text' : 'password'"
                 :append-inner-icon="showGuestPassword ? 'mdi-eye-off' : 'mdi-eye'"
                 :placeholder="guestEditId ? '(leave blank to keep current)' : ''"
                 @click:append-inner="showGuestPassword = !showGuestPassword" />
@@ -385,33 +396,41 @@
 
               <v-switch v-model="guestForm.is_active" label="Active" color="success" hide-details class="mb-3" />
             </v-form>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn variant="text" @click="guestDialogOpen = false">Cancel</v-btn>
-            <v-btn color="primary" :loading="guestLoading" :disabled="!guestFormValid"
-              @click="handleSaveGuest">
-              Save
-            </v-btn>
-          </v-card-actions>
+            </v-card-text>
+          </div>
+          <div class="app-dialog-footer">
+            <v-card-actions>
+              <v-spacer />
+              <v-btn variant="text" @click="guestDialogOpen = false">Cancel</v-btn>
+              <v-btn color="primary" :loading="guestLoading" :disabled="!guestFormValid" @click="handleSaveGuest">
+                Save
+              </v-btn>
+            </v-card-actions>
+          </div>
         </v-card>
       </v-dialog>
 
       <!-- ==================== Delete Confirmation Dialog ==================== -->
       <v-dialog v-model="deleteDialogOpen" max-width="420">
-        <v-card>
-          <v-card-title class="text-error">Confirm Delete</v-card-title>
-          <v-card-text>
+        <v-card class="app-dialog">
+          <div class="app-dialog-header">
+            <v-card-title>Confirm Delete</v-card-title>
+          </div>
+          <div class="app-dialog-body">
+            <v-card-text>
             Are you sure you want to delete this {{ deleteTarget.type }}?
             This action cannot be undone.
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn variant="text" @click="deleteDialogOpen = false">Cancel</v-btn>
-            <v-btn color="error" :loading="deleteLoading" @click="handleConfirmDelete">
-              Delete
-            </v-btn>
-          </v-card-actions>
+            </v-card-text>
+          </div>
+          <div class="app-dialog-footer">
+            <v-card-actions>
+              <v-spacer />
+              <v-btn variant="text" @click="deleteDialogOpen = false">Cancel</v-btn>
+              <v-btn color="error" :loading="deleteLoading" @click="handleConfirmDelete">
+                Delete
+              </v-btn>
+            </v-card-actions>
+          </div>
         </v-card>
       </v-dialog>
 

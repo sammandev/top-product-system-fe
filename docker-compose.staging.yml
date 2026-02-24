@@ -73,7 +73,7 @@ services:
       driver: json-file
       options:
         max-size: "10m"
-        max-file: "3"
+        max-file: "2"
     extra_hosts:
       # Allow nginx to access backend on host network
       - "host.docker.internal:host-gateway"

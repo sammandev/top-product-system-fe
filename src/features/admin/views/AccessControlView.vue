@@ -161,13 +161,16 @@
 
             <!-- Edit Role/Status Dialog -->
             <v-dialog v-model="editDialog" max-width="500" persistent>
-                <v-card>
-                    <v-card-title class="d-flex align-center">
-                        <v-icon class="mr-2">mdi-account-cog</v-icon>
-                        Edit Access: {{ editingUser?.username }}
-                    </v-card-title>
+                <v-card class="app-dialog">
+                    <div class="app-dialog-header">
+                        <v-card-title class="d-flex align-center">
+                            <v-icon class="mr-2">mdi-account-cog</v-icon>
+                            Edit Access: {{ editingUser?.username }}
+                        </v-card-title>
+                    </div>
 
-                    <v-card-text>
+                    <div class="app-dialog-body">
+                        <v-card-text>
                         <v-select v-model="editForm.role" :items="availableRoles" label="Role" variant="outlined"
                             :disabled="!authStore.isDeveloper && editForm.role === 'superadmin'"
                             hint="Only developers can grant superadmin role" persistent-hint />
@@ -177,29 +180,35 @@
                         <v-switch v-model="editForm.is_ptb_admin" label="PTB Admin" color="info"
                             hint="Synced from external API on login" persistent-hint />
                     </v-card-text>
+                    </div>
 
-                    <v-card-actions>
-                        <v-spacer />
-                        <v-btn variant="text" @click="editDialog = false">Cancel</v-btn>
-                        <v-btn color="primary" :loading="saving" @click="saveUserAccess">Save</v-btn>
-                    </v-card-actions>
+                    <div class="app-dialog-footer">
+                        <v-card-actions>
+                            <v-spacer />
+                            <v-btn variant="text" @click="editDialog = false">Cancel</v-btn>
+                            <v-btn color="primary" :loading="saving" @click="saveUserAccess">Save</v-btn>
+                        </v-card-actions>
+                    </div>
                 </v-card>
             </v-dialog>
 
             <!-- Menu Permissions Dialog -->
             <v-dialog v-model="permissionsDialog" max-width="900" persistent>
-                <v-card>
-                    <v-card-title class="d-flex align-center">
-                        <v-icon class="mr-2">mdi-shield-key</v-icon>
-                        Menu Permissions: {{ permissionsUser?.username }}
-                    </v-card-title>
+                <v-card class="app-dialog">
+                    <div class="app-dialog-header">
+                        <v-card-title class="d-flex align-center">
+                            <v-icon class="mr-2">mdi-shield-key</v-icon>
+                            Menu Permissions: {{ permissionsUser?.username }}
+                        </v-card-title>
 
-                    <v-card-subtitle>
-                        Configure which resources and actions this user can access. Check the boxes to grant specific
-                        CRUD permissions for each resource.
-                    </v-card-subtitle>
+                        <v-card-subtitle>
+                            Configure which resources and actions this user can access. Check the boxes to grant specific
+                            CRUD permissions for each resource.
+                        </v-card-subtitle>
+                    </div>
 
-                    <v-card-text>
+                    <div class="app-dialog-body">
+                        <v-card-text>
                         <v-btn size="small" variant="outlined" class="mr-2 mb-3"
                             prepend-icon="mdi-checkbox-marked-outline" @click="selectAllPermissions">
                             Select All
@@ -237,12 +246,15 @@
                             </tbody>
                         </v-table>
                     </v-card-text>
+                    </div>
 
-                    <v-card-actions>
-                        <v-spacer />
-                        <v-btn variant="text" @click="permissionsDialog = false">Cancel</v-btn>
-                        <v-btn color="primary" :loading="saving" @click="savePermissions">Save Permissions</v-btn>
-                    </v-card-actions>
+                    <div class="app-dialog-footer">
+                        <v-card-actions>
+                            <v-spacer />
+                            <v-btn variant="text" @click="permissionsDialog = false">Cancel</v-btn>
+                            <v-btn color="primary" :loading="saving" @click="savePermissions">Save Permissions</v-btn>
+                        </v-card-actions>
+                    </div>
                 </v-card>
             </v-dialog>
         </v-container>
