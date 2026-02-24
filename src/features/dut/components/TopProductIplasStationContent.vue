@@ -107,7 +107,8 @@
     <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
       :calculating-scores="calculatingScores" :loading="loadingTestItems" :exporting-all="exportingAll"
       @row-click="handleRowClick" @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords"
-      @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores" />
+      @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores"
+      @save-to-db="handleSaveToDb" />
 
     <!-- Station Selection Dialog -->
     <StationSelectionDialog v-model:show="showStationSelectionDialog" :site="selectedSite || ''"
@@ -141,6 +142,14 @@ import type {
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { getErrorMessage } from '@/shared/utils'
+import { getApiErrorDetail } from '@/shared/utils/error'
+import { isStatusPass } from '@/shared/utils/helpers'
+import { useNotification } from '@/shared/composables/useNotification'
+import {
+  createTopProductsBulk,
+  type TopProductCreate,
+  type TopProductMeasurementCreate,
+} from '@/features/top-products/api/topProducts.api'
 import { useScoring } from '../composables/useScoring'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
@@ -152,6 +161,8 @@ const emit = defineEmits<{
   (e: 'show-details', record: NormalizedRecord): void
   (e: 'show-settings'): void
 }>()
+
+const { showSuccess, showError: showErrorNotification } = useNotification()
 
 // Scoring composable
 const {
@@ -573,6 +584,76 @@ async function handleExportAllRecords(payload: {
     console.error('Export all failed:', error)
   } finally {
     exportingAll.value = false
+  }
+}
+
+// Handle save selected records to database
+async function handleSaveToDb(payload: {
+  records: CsvTestItemData[]
+  scores: Record<string, number>
+}): Promise<void> {
+  if (payload.records.length === 0) return
+
+  try {
+    const products: TopProductCreate[] = payload.records.map((record) => {
+      const isn = record.ISN || record.DeviceId || 'UNKNOWN'
+      const station = record.station || record.TSP || ''
+      const testEndTime = record['Test end Time'] || ''
+      const key = `${isn}_${station}_${testEndTime}`
+      const score = payload.scores[key] ?? recordScores.value[key] ?? 0
+
+      const measurements: TopProductMeasurementCreate[] = (record.TestItem || []).map((item) => {
+        const usl = item.UCL ? parseFloat(item.UCL) : null
+        const lsl = item.LCL ? parseFloat(item.LCL) : null
+        const actualValue = parseFloat(item.VALUE)
+        return {
+          test_item: item.NAME,
+          usl: usl !== null && !isNaN(usl) ? usl : null,
+          lsl: lsl !== null && !isNaN(lsl) ? lsl : null,
+          target_value: null,
+          actual_value: !isNaN(actualValue) ? actualValue : null,
+          deviation: null,
+        }
+      })
+
+      // Calculate duration from start/end times
+      const startTime = record['Test Start Time']
+      const endTime = record['Test end Time']
+      let duration: number | undefined
+      if (startTime && endTime) {
+        const start = new Date(startTime).getTime()
+        const end = new Date(endTime).getTime()
+        if (!isNaN(start) && !isNaN(end)) {
+          duration = Math.floor((end - start) / 1000)
+        }
+      }
+
+      const isPassed = isStatusPass(record.ErrorCode)
+
+      return {
+        dut_isn: isn,
+        site_name: record.Site || selectedSite.value || null,
+        project_name: record.Project || selectedProject.value || null,
+        station_name: station,
+        device_name: record.DeviceId || null,
+        test_date: endTime ? new Date(endTime).toISOString() : null,
+        test_duration: duration,
+        pass_count: isPassed ? 1 : 0,
+        fail_count: isPassed ? 0 : 1,
+        retest_count: 0,
+        score,
+        measurements,
+      } satisfies TopProductCreate
+    })
+
+    const response = await createTopProductsBulk({ products })
+
+    if (response.success) {
+      showSuccess(`Saved ${response.created_count} item(s) to database`)
+    }
+  } catch (err: unknown) {
+    console.error('Failed to save to database:', err)
+    showErrorNotification(getApiErrorDetail(err, 'Failed to save to database'))
   }
 }
 

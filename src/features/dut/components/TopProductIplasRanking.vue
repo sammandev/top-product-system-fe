@@ -7,6 +7,11 @@
         {{ hasScores ? 'iPLAS Data Ranking by Test Station' : 'iPLAS Data Result' }}
       </div>
       <div class="d-flex align-center gap-2 flex-wrap">
+        <!-- Save to DB Button -->
+        <v-btn v-if="selectedItems.length > 0" color="primary" variant="tonal" size="small"
+          prepend-icon="mdi-database-plus" :loading="savingToDb" @click="handleSaveToDb">
+          Save to DB ({{ selectedItems.length }})
+        </v-btn>
         <!-- Export All Button -->
         <v-btn v-if="totalRecords > 0" color="primary" variant="outlined" size="small" prepend-icon="mdi-file-export"
           :loading="props.exportingAll" @click="handleExportAll">
@@ -232,6 +237,7 @@ const emit = defineEmits<{
   (e: 'export', payload: { records: CsvTestItemData[]; stationName: string }): void
   (e: 'export-all', payload: { records: CsvTestItemData[]; filenamePrefix: string }): void
   (e: 'calculate-scores'): void
+  (e: 'save-to-db', payload: { records: CsvTestItemData[]; scores: Record<string, number> }): void
 }>()
 
 const selectedTab = ref<string>('')
@@ -250,6 +256,7 @@ const scoreRangeInput = ref<string>('') // For "between" filter input (e.g., "8-
 const selectedItems = ref<RankingItem[]>([])
 const bulkDownloading = ref(false)
 const exporting = ref(false)
+const savingToDb = ref(false)
 
 // Debounce search query updates (300ms delay)
 const updateDebouncedSearch = useDebounceFn((value: string) => {
@@ -617,6 +624,26 @@ async function copyToClipboard(text: string): Promise<void> {
     }
     document.body.removeChild(textArea)
   }
+}
+
+/**
+ * Handle save selected records to database
+ */
+function handleSaveToDb(): void {
+  if (selectedItems.value.length === 0) return
+
+  savingToDb.value = true
+  const records = selectedItems.value.map((item) => item.originalRecord)
+  // Build a scores map for the selected records
+  const selectedScores: Record<string, number> = {}
+  for (const item of selectedItems.value) {
+    if (item.score !== null) {
+      const key = `${item.isn}_${selectedTab.value}_${item.testEndTime}`
+      selectedScores[key] = item.score
+    }
+  }
+  emit('save-to-db', { records, scores: selectedScores })
+  savingToDb.value = false
 }
 
 /**
