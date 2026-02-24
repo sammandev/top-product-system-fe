@@ -1,5 +1,21 @@
 <template>
     <v-row>
+        <!-- Connected Server Indicator -->
+        <v-col cols="12">
+            <v-alert type="info" variant="tonal" density="compact" class="mb-2">
+                Data is sourced directly from iPLAS.
+                <span class="text-caption ml-2">
+                    Connected to: <strong>{{ selectedServer?.name }}</strong> ({{ selectedServer?.baseIp }})
+                    <v-chip v-if="isSystemMode" size="x-small" color="success" variant="tonal" label class="ml-1">
+                        System
+                    </v-chip>
+                    <v-chip v-else size="x-small" color="warning" variant="tonal" label class="ml-1">
+                        Custom
+                    </v-chip>
+                </span>
+            </v-alert>
+        </v-col>
+
         <!-- Sub-tabs for different search modes -->
         <v-col cols="12">
             <v-tabs v-model="searchMode" color="secondary" class="mb-4" density="compact">
@@ -38,6 +54,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
@@ -47,6 +64,9 @@ import TopProductIplasStationContent from './TopProductIplasStationContent.vue'
 
 // Search mode tab - persisted in URL
 const searchMode = useTabPersistence<'station' | 'isn'>('subTab', 'station')
+
+// iPLAS Settings
+const { selectedServer, isSystemMode } = useIplasSettings()
 
 // Settings dialog
 const showSettingsDialog = ref(false)

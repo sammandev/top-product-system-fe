@@ -1,10 +1,18 @@
 /**
  * iPLAS Settings Composable
  *
- * Manages iPLAS API configuration including server selection and access tokens
+ * Manages iPLAS API configuration including server selection and access tokens.
+ * Supports two modes:
+ * - "system": Uses admin-configured tokens from the database (read-only for users)
+ * - "custom": Users provide their own IP addresses and tokens (localStorage-backed)
  */
 
 import { computed, ref, watch } from 'vue'
+import { appConfigApi } from '@/core/api/appConfigApi'
+import type { IplasToken } from '@/core/types'
+
+/** Settings mode: system (admin DB tokens) or custom (user-provided) */
+export type IplasSettingsMode = 'system' | 'custom'
 
 // iPLAS Server configuration
 export interface IplasServerConfig {
@@ -79,6 +87,10 @@ const STORAGE_KEY = 'iplas_settings'
 // Module-level state (singleton pattern)
 const servers = ref<IplasServerConfig[]>([])
 const selectedServerId = ref<string>('PTB')
+const settingsMode = ref<IplasSettingsMode>('system')
+const systemTokens = ref<IplasToken[]>([])
+const systemTokensLoading = ref(false)
+const systemTokensLoaded = ref(false)
 const isInitialized = ref(false)
 
 /**
@@ -92,6 +104,9 @@ function loadSettings(): void {
     if (stored) {
       const parsed = JSON.parse(stored)
       const storedServers = (parsed.servers as IplasServerConfig[]) || []
+
+      // Restore settings mode (default to 'system' if not present)
+      settingsMode.value = parsed.settingsMode === 'custom' ? 'custom' : 'system'
 
       // Merge stored settings with defaults, using env token if stored token is empty
       servers.value = defaultServers.map((defaultServer) => {
@@ -112,11 +127,13 @@ function loadSettings(): void {
       // Initialize with defaults from environment
       servers.value = [...defaultServers]
       selectedServerId.value = 'PTB'
+      settingsMode.value = 'system'
     }
   } catch (error) {
     console.error('Failed to load iPLAS settings:', error)
     servers.value = [...defaultServers]
     selectedServerId.value = 'PTB'
+    settingsMode.value = 'system'
   }
   isInitialized.value = true
 }
@@ -131,6 +148,7 @@ function saveSettings(): void {
       JSON.stringify({
         servers: servers.value,
         selectedServerId: selectedServerId.value,
+        settingsMode: settingsMode.value,
       }),
     )
   } catch (error) {
@@ -140,7 +158,7 @@ function saveSettings(): void {
 
 // Watch for changes and auto-save
 watch(
-  [servers, selectedServerId],
+  [servers, selectedServerId, settingsMode],
   () => {
     if (isInitialized.value) {
       saveSettings()
@@ -158,9 +176,19 @@ export function useIplasSettings() {
     loadSettings()
   }
 
+  // Computed: whether using system settings
+  const isSystemMode = computed(() => settingsMode.value === 'system')
+
   // Computed
   const selectedServer = computed(() => {
     return servers.value.find((s) => s.id === selectedServerId.value) || servers.value[0]
+  })
+
+  // UPDATED: Get system token info for the selected server (if available)
+  const selectedSystemToken = computed<IplasToken | undefined>(() => {
+    return systemTokens.value.find(
+      (t) => t.site === selectedServerId.value && t.is_active,
+    )
   })
 
   const v1ApiBaseUrl = computed(() => {
@@ -183,9 +211,31 @@ export function useIplasSettings() {
     return `http://${server.baseIp}:${server.port}/api/v2`
   })
 
+  // UPDATED: In system mode, return empty token so backend uses its DB-configured token
   const apiToken = computed(() => {
+    if (isSystemMode.value) {
+      return ''
+    }
     return selectedServer.value?.token || ''
   })
+
+  /**
+   * Load system tokens from admin-configured database via API
+   */
+  async function loadSystemTokens(): Promise<void> {
+    if (systemTokensLoading.value) return
+    systemTokensLoading.value = true
+    try {
+      const response = await appConfigApi.getIplasTokens()
+      systemTokens.value = response.tokens
+      systemTokensLoaded.value = true
+    } catch (error) {
+      console.error('Failed to load system iPLAS tokens:', error)
+      systemTokens.value = []
+    } finally {
+      systemTokensLoading.value = false
+    }
+  }
 
   /**
    * Update a server configuration
@@ -223,6 +273,7 @@ export function useIplasSettings() {
   function resetToDefaults(): void {
     servers.value = getDefaultServers()
     selectedServerId.value = 'PTB'
+    settingsMode.value = 'system'
   }
 
   /**
@@ -236,9 +287,15 @@ export function useIplasSettings() {
     // State
     servers,
     selectedServerId,
+    settingsMode,
+    systemTokens,
+    systemTokensLoading,
+    systemTokensLoaded,
 
     // Computed
     selectedServer,
+    selectedSystemToken,
+    isSystemMode,
     v1ApiBaseUrl,
     v2ApiBaseUrl,
     apiToken,
@@ -248,5 +305,6 @@ export function useIplasSettings() {
     selectServer,
     resetToDefaults,
     getServers,
+    loadSystemTokens,
   }
 }

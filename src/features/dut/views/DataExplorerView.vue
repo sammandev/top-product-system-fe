@@ -38,6 +38,12 @@
                     Data is sourced directly from iPLAS but cannot display all test station data at the same time.
                     <span class="text-caption ml-2">
                         Connected to: <strong>{{ selectedServer?.name }}</strong> ({{ selectedServer?.baseIp }})
+                        <v-chip v-if="isSystemMode" size="x-small" color="success" variant="tonal" label class="ml-1">
+                            System
+                        </v-chip>
+                        <v-chip v-else size="x-small" color="warning" variant="tonal" label class="ml-1">
+                            Custom
+                        </v-chip>
                     </span>
                 </v-alert>
 
@@ -78,5 +84,5 @@ const activeTab = useTabPersistence('tab', 'iplas')
 const showSettingsDialog = ref(false)
 
 // iPLAS Settings
-const { selectedServer } = useIplasSettings()
+const { selectedServer, isSystemMode } = useIplasSettings()
 </script>
