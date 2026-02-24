@@ -14,7 +14,6 @@
       <v-card-text class="app-dialog-body pa-4">
         <!-- Settings Mode Toggle -->
         <div class="text-subtitle-2 mb-2">
-          <v-icon size="small" class="mr-1">mdi-toggle-switch</v-icon>
           Settings Mode
         </div>
         <v-btn-toggle v-model="localSettingsMode" mandatory color="primary" variant="outlined" density="compact"
@@ -30,8 +29,7 @@
         <!-- System mode info -->
         <v-alert v-if="localSettingsMode === 'system'" type="info" variant="tonal" density="compact" class="mb-4">
           <div class="text-caption">
-            Using admin-configured server settings. IP addresses and tokens are managed by the
-            system administrator.
+            iPLAS default system tokens are managed by the system administrator.
           </div>
         </v-alert>
 

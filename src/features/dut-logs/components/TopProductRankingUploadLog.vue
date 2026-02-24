@@ -545,6 +545,7 @@ import {
 } from '@/features/top-products/api/topProducts.api'
 import { getApiErrorDetail } from '@/shared'
 import { useNotification } from '@/shared/composables/useNotification'
+import IplasCompareDialog from './IplasCompareDialog.vue'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
