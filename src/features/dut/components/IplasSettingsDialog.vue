@@ -14,7 +14,6 @@
       <v-card-text class="app-dialog-body pa-4">
         <!-- Settings Mode Toggle -->
         <div class="text-subtitle-2 mb-2">
-          <v-icon size="small" class="mr-1">mdi-toggle-switch</v-icon>
           Settings Mode
         </div>
         <v-btn-toggle v-model="localSettingsMode" mandatory color="primary" variant="outlined" density="compact"
@@ -30,8 +29,7 @@
         <!-- System mode info -->
         <v-alert v-if="localSettingsMode === 'system'" type="info" variant="tonal" density="compact" class="mb-4">
           <div class="text-caption">
-            Using admin-configured server settings. IP addresses and tokens are managed by the
-            system administrator.
+            iPLAS default system tokens are managed by the system administrator.
           </div>
         </v-alert>
 
@@ -83,17 +81,12 @@
             variant="tonal" density="compact" class="mt-2">
             <div class="text-caption">
               <template v-if="currentSystemToken">
-                <v-icon size="x-small" class="mr-1">mdi-check-circle</v-icon>
                 System token configured
-                <span v-if="currentSystemToken.label"> &mdash; {{ currentSystemToken.label }}</span>
-                <span v-if="currentSystemToken.updated_by" class="ml-1 text-medium-emphasis">
-                  (by {{ currentSystemToken.updated_by }})
-                </span>
+                <!-- <span v-if="currentSystemToken.label"> &mdash; {{ currentSystemToken.label }}</span> -->
               </template>
               <template v-else>
-                <v-icon size="x-small" class="mr-1">mdi-alert</v-icon>
                 No active system token configured for {{ currentServer.name }}.
-                Contact your administrator.
+                Contact the administrator.
               </template>
             </div>
           </v-alert>

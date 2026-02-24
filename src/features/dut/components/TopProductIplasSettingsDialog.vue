@@ -56,9 +56,9 @@
           <v-row dense>
             <v-col cols="12">
               <v-text-field :model-value="displayBaseIp" @update:model-value="localBaseIp = $event ?? ''"
-                label="Server IP Address" variant="outlined" density="comfortable"
-                prepend-inner-icon="mdi-ip-network" hint="e.g., 10.176.33.89" persistent-hint
-                :readonly="localSettingsMode === 'system'" :bg-color="localSettingsMode === 'system' ? 'grey-lighten-4' : undefined" />
+                label="Server IP Address" variant="outlined" density="comfortable" prepend-inner-icon="mdi-ip-network"
+                hint="e.g., 10.176.33.89" persistent-hint :readonly="localSettingsMode === 'system'"
+                :bg-color="localSettingsMode === 'system' ? 'grey-lighten-4' : undefined" />
             </v-col>
           </v-row>
 
@@ -83,15 +83,10 @@
             variant="tonal" density="compact" class="mt-2">
             <div class="text-caption">
               <template v-if="currentSystemToken">
-                <v-icon size="x-small" class="mr-1">mdi-check-circle</v-icon>
                 System token configured
-                <span v-if="currentSystemToken.label"> &mdash; {{ currentSystemToken.label }}</span>
-                <span v-if="currentSystemToken.updated_by" class="ml-1 text-medium-emphasis">
-                  (by {{ currentSystemToken.updated_by }})
-                </span>
+                <!-- <span v-if="currentSystemToken.label"> &mdash; {{ currentSystemToken.label }}</span> -->
               </template>
               <template v-else>
-                <v-icon size="x-small" class="mr-1">mdi-alert</v-icon>
                 No active system token configured for {{ currentServer.name }}.
                 Contact your administrator.
               </template>

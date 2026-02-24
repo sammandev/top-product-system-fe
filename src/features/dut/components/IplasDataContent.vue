@@ -1,468 +1,447 @@
 <template>
-    <div>
-        <!-- Sub-tabs for different search modes -->
-        <v-tabs v-model="searchMode" color="secondary" class="mb-4" density="compact">
-            <v-tab value="station">
-                <v-icon start>mdi-router-wireless</v-icon>
-                Station Search
-            </v-tab>
-            <v-tab value="isn">
-                <v-icon start>mdi-barcode-scan</v-icon>
-                ISN Search
-            </v-tab>
-        </v-tabs>
+  <div>
+    <!-- Sub-tabs for different search modes -->
+    <v-tabs v-model="searchMode" color="secondary" class="mb-4" density="compact">
+      <v-tab value="station">
+        <v-icon start>mdi-router-wireless</v-icon>
+        Station Search
+      </v-tab>
+      <v-tab value="isn">
+        <v-icon start>mdi-barcode-scan</v-icon>
+        ISN Search
+      </v-tab>
+    </v-tabs>
 
-        <v-window v-model="searchMode">
-            <!-- Station Search Mode -->
-            <v-window-item value="station" eager>
-                <!-- Error Alert -->
-                <v-alert v-if="error" type="error" class="mb-4" closable @click:close="error = null">
-                    {{ error }}
+    <v-window v-model="searchMode">
+      <!-- Station Search Mode -->
+      <v-window-item value="station" eager>
+        <!-- Error Alert -->
+        <v-alert v-if="error" type="error" class="mb-4" closable @click:close="error = null">
+          {{ error }}
+        </v-alert>
+
+        <!-- Combined Data Selection Card -->
+        <v-card elevation="2" class="mb-4">
+          <v-card-title class="d-flex align-center justify-space-between bg-primary">
+            <div class="d-flex align-center">
+              <v-icon class="mr-2">mdi-filter-variant</v-icon>
+              Data Selection
+            </div>
+            <!-- UPDATED: Added iPLAS Settings button and Refresh button -->
+            <div class="d-flex gap-2">
+              <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading"
+                @click="handleRefresh">
+                Refresh
+              </v-btn>
+            </div>
+          </v-card-title>
+          <v-card-text class="pt-4">
+            <v-row>
+              <!-- Site Selection -->
+              <v-col cols="12" md="3">
+                <v-autocomplete v-model="selectedSite" :items="uniqueSites" label="Site" variant="outlined"
+                  density="comfortable" prepend-inner-icon="mdi-map-marker" :loading="loading" clearable hide-details
+                  @update:model-value="handleSiteChange" />
+              </v-col>
+
+              <!-- Project Selection -->
+              <v-col cols="12" md="3">
+                <v-autocomplete v-model="selectedProject" :items="availableProjects" label="Project" variant="outlined"
+                  density="comfortable" prepend-inner-icon="mdi-folder" :loading="loadingStations"
+                  :disabled="!selectedSite" clearable hide-details @update:model-value="handleProjectChange" />
+              </v-col>
+
+              <!-- Date Range Preset -->
+              <v-col cols="12" md="6">
+                <v-select v-model="dateRangePreset" :items="dateRangePresets" label="Date Range" variant="outlined"
+                  density="comfortable" prepend-inner-icon="mdi-calendar-clock" hide-details
+                  @update:model-value="applyDateRangePreset" />
+              </v-col>
+            </v-row>
+
+            <v-row class="mt-2">
+              <!-- Start Time -->
+              <v-col cols="12" md="6">
+                <v-text-field v-model="startTime" label="Start Time" type="datetime-local" variant="outlined"
+                  density="comfortable" prepend-inner-icon="mdi-calendar-start" hide-details
+                  :disabled="dateRangePreset !== 'custom'" />
+              </v-col>
+
+              <!-- End Time -->
+              <v-col cols="12" md="6">
+                <v-text-field v-model="endTime" label="End Time" type="datetime-local" variant="outlined"
+                  density="comfortable" prepend-inner-icon="mdi-calendar-end" hide-details
+                  :disabled="dateRangePreset !== 'custom'" />
+              </v-col>
+            </v-row>
+
+            <v-row class="mt-2">
+              <!-- Station Selection (Multiple) -->
+              <v-col cols="12">
+                <v-autocomplete v-model="selectedStations" :items="stationOptions" item-title="displayText"
+                  item-value="value" label="Select Test Stations (Multiple)" variant="outlined" density="comfortable"
+                  prepend-inner-icon="mdi-router-wireless" :loading="loadingStations" :disabled="!selectedProject"
+                  multiple chips closable-chips clearable hide-details @update:model-value="handleStationChange">
+                  <template #chip="{ props, item }">
+                    <v-chip v-bind="props" :text="item.raw.chipText" size="small" />
+                  </template>
+                  <template #item="{ props, item }">
+                    <v-list-item v-bind="props" :title="undefined">
+                      <v-list-item-title class="font-weight-medium">
+                        {{ item.raw.displayName }}
+                      </v-list-item-title>
+                      <v-list-item-subtitle class="text-caption">
+                        {{ item.raw.stationName }}
+                      </v-list-item-subtitle>
+                    </v-list-item>
+                  </template>
+                </v-autocomplete>
+              </v-col>
+            </v-row>
+
+            <!-- Device ID Selection per Station -->
+            <v-row v-if="selectedStations.length > 0" class="mt-2">
+              <v-col v-for="stationValue in selectedStations" :key="stationValue" cols="12"
+                :md="selectedStations.length === 1 ? 12 : 6">
+                <v-autocomplete v-model="stationDeviceIds[stationValue]" :items="getDeviceIdsForStation(stationValue)"
+                  :label="`${getStationDisplayName(stationValue)} - Device IDs (Default All)`" variant="outlined"
+                  density="comfortable" prepend-inner-icon="mdi-chip" :loading="loadingDevicesByStation[stationValue]"
+                  multiple chips closable-chips clearable hide-details placeholder="Select Device IDs - (Empty = ALL)">
+                  <template #chip="{ props, item }">
+                    <v-chip v-bind="props" :text="item.value" size="small" />
+                  </template>
+                </v-autocomplete>
+              </v-col>
+            </v-row>
+
+            <!-- Search Test Data Section -->
+            <v-row v-if="selectedStations.length > 0" class="mt-4">
+              <v-col cols="12" class="d-flex align-center gap-3 flex-wrap">
+                <v-select v-model="testStatusFilter" :items="['ALL', 'PASS', 'FAIL']" label="Test Status"
+                  variant="outlined" density="compact" hide-details style="max-width: 150px" />
+
+                <!-- IndexedDB Mode Toggle -->
+                <v-tooltip location="top">
+                  <template #activator="{ props }">
+                    <v-switch v-bind="props" v-model="useIndexedDbMode" label="Stream to Disk" color="success"
+                      density="compact" hide-details class="flex-grow-0" />
+                  </template>
+                  <span>
+                    Enable IndexedDB streaming for large datasets (10,000+ records).<br>
+                    Data is stored locally on disk, reducing memory usage.
+                  </span>
+                </v-tooltip>
+
+                <v-btn color="primary" :loading="loadingTestItems || isStreaming" :disabled="isStreaming"
+                  @click="fetchTestItems">
+                  <v-icon start>mdi-download</v-icon>
+                  {{ useIndexedDbMode ? 'Stream' : 'Search' }} Test Data ({{ selectedStations.length }} station{{
+                    selectedStations.length > 1 ? 's' : '' }})
+                </v-btn>
+
+                <!-- Abort Stream Button -->
+                <v-btn v-if="isStreaming" color="error" variant="outlined" size="small" @click="abortIndexedDbStream">
+                  <v-icon start size="small">mdi-stop</v-icon>
+                  Stop Stream
+                </v-btn>
+
+                <!-- Chunk Progress Indicator (regular mode) -->
+                <div v-if="loadingTestItems && chunkProgress && !useIndexedDbMode" class="d-flex align-center gap-2">
+                  <v-progress-circular :model-value="(chunkProgress.fetched / chunkProgress.total) * 100" :size="24"
+                    :width="3" color="primary" />
+                  <span class="text-body-2 text-medium-emphasis">
+                    Fetching chunk {{ chunkProgress.fetched }} of {{ chunkProgress.total }}...
+                  </span>
+                </div>
+
+                <!-- IndexedDB Stream Progress Indicator -->
+                <div v-if="isStreaming" class="d-flex align-center gap-2">
+                  <v-progress-circular :model-value="streamProgress" :size="24" :width="3" color="success" />
+                  <span class="text-body-2 text-medium-emphasis">
+                    Streaming... {{ streamStatus.recordsWritten.toLocaleString() }} records saved
+                    <template v-if="streamStatus.totalEstimated > 0">
+                      of {{ streamStatus.totalEstimated.toLocaleString() }}
+                    </template>
+                  </span>
+                </div>
+              </v-col>
+            </v-row>
+            <!-- Possibly Truncated Warning -->
+            <v-row v-if="possiblyTruncated && hasRegularModeData" class="mt-2">
+              <v-col cols="12">
+                <v-alert type="warning" density="compact" variant="tonal" closable>
+                  <v-icon start>mdi-alert</v-icon>
+                  Results may be truncated due to iPLAS API limits. Consider narrowing your date range
+                  or filters.
                 </v-alert>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
 
-                <!-- Combined Data Selection Card -->
-                <v-card elevation="2" class="mb-4">
-                    <v-card-title class="d-flex align-center justify-space-between bg-primary">
-                        <div class="d-flex align-center">
-                            <v-icon class="mr-2">mdi-filter-variant</v-icon>
-                            Data Selection
-                        </div>
-                        <!-- UPDATED: Added iPLAS Settings button and Refresh button -->
-                        <div class="d-flex gap-2">
-                            <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-cog"
-                                @click="emit('show-settings')">
-                                iPLAS Settings
-                            </v-btn>
-                            <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-refresh"
-                                :loading="loading" @click="handleRefresh">
-                                Refresh
-                            </v-btn>
-                        </div>
-                    </v-card-title>
-                    <v-card-text class="pt-4">
-                        <v-row>
-                            <!-- Site Selection -->
-                            <v-col cols="12" md="3">
-                                <v-autocomplete v-model="selectedSite" :items="uniqueSites" label="Site"
-                                    variant="outlined" density="comfortable" prepend-inner-icon="mdi-map-marker"
-                                    :loading="loading" clearable hide-details @update:model-value="handleSiteChange" />
-                            </v-col>
+        <!-- Test Items Results (Regular Mode) -->
+        <v-card v-if="!useIndexedDbMode && hasRegularModeData" elevation="2" class="mb-4">
+          <v-card-title class="d-flex align-center justify-space-between flex-wrap">
+            <div class="d-flex align-center">
+              <v-icon class="mr-2" color="info">mdi-format-list-checks</v-icon>
+              Test Results
+              <v-chip size="small" color="info" class="ml-2">{{ regularModeRecordCount }} records</v-chip>
+            </div>
+            <div class="d-flex align-center gap-2">
+              <!-- Download All (TXT + CSV) -->
+              <v-btn v-if="selectedRecordIndices.length > 0" color="secondary" variant="flat" size="small"
+                :loading="downloading || downloadingCsv" @click="downloadAllSelectedRecords">
+                <v-icon start size="small">mdi-download-multiple</v-icon>
+                Download All Logs ({{ selectedRecordIndices.length }})
+              </v-btn>
+              <!-- Bulk TXT Download -->
+              <v-btn v-if="selectedRecordIndices.length > 0" color="primary" variant="outlined" size="small"
+                :loading="downloading" @click="downloadSelectedRecords">
+                <v-icon start size="small">mdi-download-multiple</v-icon>
+                Download TXT ({{ selectedRecordIndices.length }})
+              </v-btn>
+              <!-- Bulk CSV Download -->
+              <v-btn v-if="selectedRecordIndices.length > 0" color="success" variant="outlined" size="small"
+                :loading="downloadingCsv" @click="downloadSelectedRecordsCsv">
+                <v-icon start size="small">mdi-file-delimited</v-icon>
+                Download CSV ({{ selectedRecordIndices.length }})
+              </v-btn>
+            </div>
+          </v-card-title>
+          <v-card-text>
+            <!-- Station Sub-Tabs -->
+            <v-tabs v-model="activeStationTab" color="secondary" class="mb-4" show-arrows>
+              <v-tab v-for="(stationGroup, index) in groupedByStation" :key="stationGroup.stationName" :value="index">
+                <v-icon start size="small">mdi-router-wireless</v-icon>
+                {{ stationGroup.displayName }}
+                <v-chip size="x-small" color="info" class="ml-2">{{ getFilteredStationRecords(stationGroup).length
+                  }}</v-chip>
+              </v-tab>
+            </v-tabs>
 
-                            <!-- Project Selection -->
-                            <v-col cols="12" md="3">
-                                <v-autocomplete v-model="selectedProject" :items="availableProjects" label="Project"
-                                    variant="outlined" density="comfortable" prepend-inner-icon="mdi-folder"
-                                    :loading="loadingStations" :disabled="!selectedSite" clearable hide-details
-                                    @update:model-value="handleProjectChange" />
-                            </v-col>
+            <v-window v-model="activeStationTab">
+              <v-window-item v-for="(stationGroup, stationIndex) in groupedByStation" :key="stationGroup.stationName"
+                :value="stationIndex" eager>
+                <!-- Search, Status and Device ID Filter -->
+                <v-row class="mb-4" dense>
+                  <v-col cols="12" md="4">
+                    <v-text-field v-model="recordSearchQueries[stationGroup.stationName]" label="Search Records"
+                      prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details clearable
+                      placeholder="Search ISN, Device ID, Error Code, Error Name..." />
+                  </v-col>
+                  <v-col cols="12" md="2">
+                    <v-select v-model="stationStatusFilters[stationGroup.stationName]" :items="['ALL', 'PASS', 'FAIL']"
+                      label="Status" variant="outlined" density="compact" hide-details />
+                  </v-col>
+                  <v-col cols="12" md="6">
+                    <v-autocomplete v-model="selectedFilterDeviceIds[stationGroup.stationName]"
+                      :items="getUniqueDeviceIdsForStation(stationGroup)" label="Filter by Device ID" variant="outlined"
+                      density="compact" prepend-inner-icon="mdi-chip" multiple chips closable-chips clearable
+                      hide-details placeholder="All Device IDs">
+                      <template #chip="{ props, item }">
+                        <v-chip v-bind="props" :text="item.raw" size="small" />
+                      </template>
+                    </v-autocomplete>
+                  </v-col>
+                </v-row>
 
-                            <!-- Date Range Preset -->
-                            <v-col cols="12" md="6">
-                                <v-select v-model="dateRangePreset" :items="dateRangePresets" label="Date Range"
-                                    variant="outlined" density="comfortable" prepend-inner-icon="mdi-calendar-clock"
-                                    hide-details @update:model-value="applyDateRangePreset" />
-                            </v-col>
-                        </v-row>
+                <!-- UPDATED: Client-Side Data Table with Selection (changed from server-side for better UX) -->
+                <IplasRecordTable :items="getFilteredStationRecords(stationGroup)"
+                  :total-items="getFilteredStationRecords(stationGroup).length" :loading="false"
+                  :downloading-record="downloadingKey" :downloading-csv-record="downloadingCsvKey" :selectable="true"
+                  :selected-keys="getSelectedKeysForStation(stationGroup.stationName)" :server-side="false"
+                  @update:selected-keys="handleTableSelectionChange(stationGroup.stationName, $event)"
+                  @row-click="openFullscreen" @download="downloadSingleRecord($event, stationGroup.stationName, 0)"
+                  @download-csv="downloadCsvRecord($event, stationGroup.stationName, 0)" />
+              </v-window-item>
+            </v-window>
+          </v-card-text>
+        </v-card>
 
-                        <v-row class="mt-2">
-                            <!-- Start Time -->
-                            <v-col cols="12" md="6">
-                                <v-text-field v-model="startTime" label="Start Time" type="datetime-local"
-                                    variant="outlined" density="comfortable" prepend-inner-icon="mdi-calendar-start"
-                                    hide-details :disabled="dateRangePreset !== 'custom'" />
-                            </v-col>
+        <!-- IndexedDB Mode Results -->
+        <v-card v-if="useIndexedDbMode && (indexedDbTotalItems > 0 || isStreaming)" elevation="2" class="mb-4">
+          <v-card-title class="d-flex align-center justify-space-between flex-wrap">
+            <div class="d-flex align-center">
+              <v-icon class="mr-2" color="success">mdi-database</v-icon>
+              IndexedDB Results
+              <v-chip size="small" color="success" class="ml-2" variant="outlined">
+                <v-icon start size="small">mdi-harddisk</v-icon>
+                {{ indexedDbTotalItems.toLocaleString() }} records on disk
+              </v-chip>
+              <v-chip v-if="isStreaming" size="small" color="warning" class="ml-2">
+                <v-icon start size="small">mdi-loading mdi-spin</v-icon>
+                Streaming...
+              </v-chip>
+            </div>
+            <div class="d-flex align-center gap-2">
+              <!-- Bulk TXT Download for IndexedDB -->
+              <v-btn v-if="indexedDbSelectedKeys.length > 0" color="primary" variant="outlined" size="small"
+                :loading="downloading" @click="downloadIndexedDbSelectedRecords">
+                <v-icon start size="small">mdi-download-multiple</v-icon>
+                Download TXT ({{ indexedDbSelectedKeys.length }})
+              </v-btn>
+              <!-- Bulk CSV Download for IndexedDB -->
+              <v-btn v-if="indexedDbSelectedKeys.length > 0" color="success" variant="outlined" size="small"
+                :loading="downloadingCsv" @click="downloadIndexedDbSelectedRecordsCsv">
+                <v-icon start size="small">mdi-file-delimited</v-icon>
+                Download CSV ({{ indexedDbSelectedKeys.length }})
+              </v-btn>
+            </div>
+          </v-card-title>
+          <v-card-text>
+            <!-- Stream Status Alert -->
+            <v-alert v-if="streamStatus.error" type="error" class="mb-4" closable>
+              {{ streamStatus.error }}
+            </v-alert>
 
-                            <!-- End Time -->
-                            <v-col cols="12" md="6">
-                                <v-text-field v-model="endTime" label="End Time" type="datetime-local"
-                                    variant="outlined" density="comfortable" prepend-inner-icon="mdi-calendar-end"
-                                    hide-details :disabled="dateRangePreset !== 'custom'" />
-                            </v-col>
-                        </v-row>
+            <!-- Station Tabs for IndexedDB Results -->
+            <v-tabs v-if="indexedDbStationList.length > 0 && !isStreaming" v-model="indexedDbActiveStationTab"
+              color="secondary" class="mb-4" show-arrows>
+              <v-tab :value="0">
+                <v-icon start size="small">mdi-view-list</v-icon>
+                All Stations
+                <v-chip size="x-small" color="info" class="ml-2">{{ indexedDbTotalItems }}</v-chip>
+              </v-tab>
+              <v-tab v-for="(stationName, index) in indexedDbStationList" :key="stationName" :value="index + 1">
+                <v-icon start size="small">mdi-router-wireless</v-icon>
+                {{ stationName }}
+              </v-tab>
+            </v-tabs>
 
-                        <v-row class="mt-2">
-                            <!-- Station Selection (Multiple) -->
-                            <v-col cols="12">
-                                <v-autocomplete v-model="selectedStations" :items="stationOptions"
-                                    item-title="displayText" item-value="value" label="Select Test Stations (Multiple)"
-                                    variant="outlined" density="comfortable" prepend-inner-icon="mdi-router-wireless"
-                                    :loading="loadingStations" :disabled="!selectedProject" multiple chips
-                                    closable-chips clearable hide-details @update:model-value="handleStationChange">
-                                    <template #chip="{ props, item }">
-                                        <v-chip v-bind="props" :text="item.raw.chipText" size="small" />
-                                    </template>
-                                    <template #item="{ props, item }">
-                                        <v-list-item v-bind="props" :title="undefined">
-                                            <v-list-item-title class="font-weight-medium">
-                                                {{ item.raw.displayName }}
-                                            </v-list-item-title>
-                                            <v-list-item-subtitle class="text-caption">
-                                                {{ item.raw.stationName }}
-                                            </v-list-item-subtitle>
-                                        </v-list-item>
-                                    </template>
-                                </v-autocomplete>
-                            </v-col>
-                        </v-row>
+            <!-- IndexedDB Table using v-data-table (client-side pagination) -->
+            <v-data-table v-model="indexedDbSelectedKeys" v-model:items-per-page="indexedDbTableOptions.itemsPerPage"
+              v-model:page="indexedDbTableOptions.page" v-model:sort-by="indexedDbTableOptions.sortBy"
+              :headers="indexedDbHeaders" :items="indexedDbItems" :loading="indexedDbLoading || isStreaming"
+              item-value="id" show-select hover class="elevation-1" @click:row="handleIndexedDbRowClick">
+              <!-- ISN Column with Copy Button -->
+              <template #item.ISN="{ item }">
+                <div class="d-flex align-center gap-1">
+                  <v-btn icon size="x-small" variant="text" color="primary" @click.stop="copyToClipboard(item.ISN)">
+                    <v-icon size="small">mdi-content-copy</v-icon>
+                    <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
+                  </v-btn>
+                  <span class="font-weight-medium cursor-pointer">{{ item.ISN || '-' }}</span>
+                </div>
+              </template>
 
-                        <!-- Device ID Selection per Station -->
-                        <v-row v-if="selectedStations.length > 0" class="mt-2">
-                            <v-col v-for="stationValue in selectedStations" :key="stationValue" cols="12"
-                                :md="selectedStations.length === 1 ? 12 : 6">
-                                <v-autocomplete v-model="stationDeviceIds[stationValue]"
-                                    :items="getDeviceIdsForStation(stationValue)"
-                                    :label="`${getStationDisplayName(stationValue)} - Device IDs (Default All)`"
-                                    variant="outlined" density="comfortable" prepend-inner-icon="mdi-chip"
-                                    :loading="loadingDevicesByStation[stationValue]" multiple chips closable-chips
-                                    clearable hide-details placeholder="Select Device IDs - (Empty = ALL)">
-                                    <template #chip="{ props, item }">
-                                        <v-chip v-bind="props" :text="item.value" size="small" />
-                                    </template>
-                                </v-autocomplete>
-                            </v-col>
-                        </v-row>
+              <!-- Device ID Column -->
+              <template #item.DeviceId="{ item }">
+                <v-chip size="x-small" color="secondary" variant="outlined" class="cursor-pointer"
+                  @click.stop="copyToClipboard(item.DeviceId)">
+                  {{ item.DeviceId }}
+                  <v-tooltip activator="parent" location="top">Click to copy</v-tooltip>
+                </v-chip>
+              </template>
 
-                        <!-- Search Test Data Section -->
-                        <v-row v-if="selectedStations.length > 0" class="mt-4">
-                            <v-col cols="12" class="d-flex align-center gap-3 flex-wrap">
-                                <v-select v-model="testStatusFilter" :items="['ALL', 'PASS', 'FAIL']"
-                                    label="Test Status" variant="outlined" density="compact" hide-details
-                                    style="max-width: 150px" />
+              <!-- Test End Time Column -->
+              <template #item.TestEndTime="{ item }">
+                {{ item.TestEndTime ? adjustIplasDisplayTime(item.TestEndTime, 1) :
+                  adjustIplasDisplayTime(item.TestStartTime, 1) }}
+              </template>
 
-                                <!-- IndexedDB Mode Toggle -->
-                                <v-tooltip location="top">
-                                    <template #activator="{ props }">
-                                        <v-switch v-bind="props" v-model="useIndexedDbMode" label="Stream to Disk"
-                                            color="success" density="compact" hide-details class="flex-grow-0" />
-                                    </template>
-                                    <span>
-                                        Enable IndexedDB streaming for large datasets (10,000+ records).<br>
-                                        Data is stored locally on disk, reducing memory usage.
-                                    </span>
-                                </v-tooltip>
+              <!-- Duration Column -->
+              <template #item.Duration="{ item }">
+                <v-chip size="x-small" variant="outlined">
+                  {{ calculateIndexedDbDuration(item) }}
+                </v-chip>
+              </template>
 
-                                <v-btn color="primary" :loading="loadingTestItems || isStreaming"
-                                    :disabled="isStreaming" @click="fetchTestItems">
-                                    <v-icon start>mdi-download</v-icon>
-                                    {{ useIndexedDbMode ? 'Stream' : 'Search' }} Test Data ({{ selectedStations.length }} station{{ selectedStations.length > 1 ? 's' : '' }})
-                                </v-btn>
+              <!-- Status Column -->
+              <template #item.TestStatus="{ item }">
+                <v-chip :color="item.TestStatus === 'PASS' ? 'success' : 'error'" size="x-small">
+                  {{ item.TestStatus }}
+                </v-chip>
+              </template>
 
-                                <!-- Abort Stream Button -->
-                                <v-btn v-if="isStreaming" color="error" variant="outlined" size="small"
-                                    @click="abortIndexedDbStream">
-                                    <v-icon start size="small">mdi-stop</v-icon>
-                                    Stop Stream
-                                </v-btn>
+              <!-- Actions Column -->
+              <template #item.actions="{ item }">
+                <div class="d-flex gap-1">
+                  <v-btn icon size="x-small" variant="outlined" color="primary" :loading="downloading"
+                    @click.stop="downloadIndexedDbRecord(item)">
+                    <v-icon size="small">mdi-download</v-icon>
+                    <v-tooltip activator="parent" location="top">Download Test Log</v-tooltip>
+                  </v-btn>
+                </div>
+              </template>
 
-                                <!-- Chunk Progress Indicator (regular mode) -->
-                                <div v-if="loadingTestItems && chunkProgress && !useIndexedDbMode"
-                                    class="d-flex align-center gap-2">
-                                    <v-progress-circular
-                                        :model-value="(chunkProgress.fetched / chunkProgress.total) * 100" :size="24"
-                                        :width="3" color="primary" />
-                                    <span class="text-body-2 text-medium-emphasis">
-                                        Fetching chunk {{ chunkProgress.fetched }} of {{ chunkProgress.total }}...
-                                    </span>
-                                </div>
+              <!-- No Data Template (during streaming) -->
+              <template #no-data>
+                <div v-if="isStreaming" class="text-center py-4">
+                  <v-progress-circular indeterminate color="success" size="32" />
+                  <div class="text-body-2 mt-2 text-medium-emphasis">
+                    Streaming data to disk...
+                    <br>
+                    {{ streamStatus.recordsWritten.toLocaleString() }} records saved
+                  </div>
+                </div>
+                <div v-else class="text-center py-4">
+                  <v-icon size="48" color="grey">mdi-database-off-outline</v-icon>
+                  <div class="text-h6 mt-2 text-grey">No data in IndexedDB</div>
+                  <div class="text-body-2 text-grey">Start a search with "Stream to Disk" enabled
+                  </div>
+                </div>
+              </template>
 
-                                <!-- IndexedDB Stream Progress Indicator -->
-                                <div v-if="isStreaming" class="d-flex align-center gap-2">
-                                    <v-progress-circular :model-value="streamProgress" :size="24" :width="3"
-                                        color="success" />
-                                    <span class="text-body-2 text-medium-emphasis">
-                                        Streaming... {{ streamStatus.recordsWritten.toLocaleString() }} records saved
-                                        <template v-if="streamStatus.totalEstimated > 0">
-                                            of {{ streamStatus.totalEstimated.toLocaleString() }}
-                                        </template>
-                                    </span>
-                                </div>
-                            </v-col>
-                        </v-row>
-                        <!-- Possibly Truncated Warning -->
-                        <v-row v-if="possiblyTruncated && hasRegularModeData" class="mt-2">
-                            <v-col cols="12">
-                                <v-alert type="warning" density="compact" variant="tonal" closable>
-                                    <v-icon start>mdi-alert</v-icon>
-                                    Results may be truncated due to iPLAS API limits. Consider narrowing your date range
-                                    or filters.
-                                </v-alert>
-                            </v-col>
-                        </v-row>
-                    </v-card-text>
-                </v-card>
+              <!-- Loading Template -->
+              <template #loading>
+                <v-skeleton-loader type="table-row@5" />
+              </template>
+            </v-data-table>
+          </v-card-text>
+        </v-card>
 
-                <!-- Test Items Results (Regular Mode) -->
-                <v-card v-if="!useIndexedDbMode && hasRegularModeData" elevation="2" class="mb-4">
-                    <v-card-title class="d-flex align-center justify-space-between flex-wrap">
-                        <div class="d-flex align-center">
-                            <v-icon class="mr-2" color="info">mdi-format-list-checks</v-icon>
-                            Test Results
-                            <v-chip size="small" color="info" class="ml-2">{{ regularModeRecordCount }} records</v-chip>
-                        </div>
-                        <div class="d-flex align-center gap-2">
-                            <!-- Download All (TXT + CSV) -->
-                            <v-btn v-if="selectedRecordIndices.length > 0" color="secondary" variant="flat" size="small"
-                                :loading="downloading || downloadingCsv" @click="downloadAllSelectedRecords">
-                                <v-icon start size="small">mdi-download-multiple</v-icon>
-                                Download All Logs ({{ selectedRecordIndices.length }})
-                            </v-btn>
-                            <!-- Bulk TXT Download -->
-                            <v-btn v-if="selectedRecordIndices.length > 0" color="primary" variant="outlined"
-                                size="small" :loading="downloading" @click="downloadSelectedRecords">
-                                <v-icon start size="small">mdi-download-multiple</v-icon>
-                                Download TXT ({{ selectedRecordIndices.length }})
-                            </v-btn>
-                            <!-- Bulk CSV Download -->
-                            <v-btn v-if="selectedRecordIndices.length > 0" color="success" variant="outlined"
-                                size="small" :loading="downloadingCsv" @click="downloadSelectedRecordsCsv">
-                                <v-icon start size="small">mdi-file-delimited</v-icon>
-                                Download CSV ({{ selectedRecordIndices.length }})
-                            </v-btn>
-                        </div>
-                    </v-card-title>
-                    <v-card-text>
-                        <!-- Station Sub-Tabs -->
-                        <v-tabs v-model="activeStationTab" color="secondary" class="mb-4" show-arrows>
-                            <v-tab v-for="(stationGroup, index) in groupedByStation" :key="stationGroup.stationName"
-                                :value="index">
-                                <v-icon start size="small">mdi-router-wireless</v-icon>
-                                {{ stationGroup.displayName }}
-                                <v-chip size="x-small" color="info" class="ml-2">{{ getFilteredStationRecords(stationGroup).length }}</v-chip>
-                            </v-tab>
-                        </v-tabs>
+        <!-- Statistics Summary -->
+        <v-card v-if="siteProjects.length > 0" variant="outlined">
+          <v-card-text>
+            <v-row>
+              <v-col cols="6" sm="3">
+                <div class="text-center">
+                  <div class="text-h4 font-weight-bold text-primary">{{ uniqueSites.length }}</div>
+                  <div class="text-caption text-medium-emphasis">Sites</div>
+                </div>
+              </v-col>
+              <v-col cols="6" sm="3">
+                <div class="text-center">
+                  <div class="text-h4 font-weight-bold text-success">{{ siteProjects.length }}</div>
+                  <div class="text-caption text-medium-emphasis">Projects</div>
+                </div>
+              </v-col>
+              <v-col cols="6" sm="3">
+                <div class="text-center">
+                  <div class="text-h4 font-weight-bold text-warning">{{ stations.length }}</div>
+                  <div class="text-caption text-medium-emphasis">Stations (based on Selected Project)
+                  </div>
+                </div>
+              </v-col>
+              <v-col cols="6" sm="3">
+                <div class="text-center">
+                  <div class="text-h4 font-weight-bold text-info">{{ totalDeviceCount }}</div>
+                  <div class="text-caption text-medium-emphasis">Devices (based on Selected Station)
+                  </div>
+                </div>
+              </v-col>
+            </v-row>
+          </v-card-text>
+        </v-card>
+      </v-window-item>
 
-                        <v-window v-model="activeStationTab">
-                            <v-window-item v-for="(stationGroup, stationIndex) in groupedByStation"
-                                :key="stationGroup.stationName" :value="stationIndex" eager>
-                                <!-- Search, Status and Device ID Filter -->
-                                <v-row class="mb-4" dense>
-                                    <v-col cols="12" md="4">
-                                        <v-text-field v-model="recordSearchQueries[stationGroup.stationName]"
-                                            label="Search Records" prepend-inner-icon="mdi-magnify" variant="outlined"
-                                            density="compact" hide-details clearable
-                                            placeholder="Search ISN, Device ID, Error Code, Error Name..." />
-                                    </v-col>
-                                    <v-col cols="12" md="2">
-                                        <v-select v-model="stationStatusFilters[stationGroup.stationName]"
-                                            :items="['ALL', 'PASS', 'FAIL']" label="Status" variant="outlined"
-                                            density="compact" hide-details />
-                                    </v-col>
-                                    <v-col cols="12" md="6">
-                                        <v-autocomplete v-model="selectedFilterDeviceIds[stationGroup.stationName]"
-                                            :items="getUniqueDeviceIdsForStation(stationGroup)"
-                                            label="Filter by Device ID" variant="outlined" density="compact"
-                                            prepend-inner-icon="mdi-chip" multiple chips closable-chips clearable
-                                            hide-details placeholder="All Device IDs">
-                                            <template #chip="{ props, item }">
-                                                <v-chip v-bind="props" :text="item.raw" size="small" />
-                                            </template>
-                                        </v-autocomplete>
-                                    </v-col>
-                                </v-row>
+      <!-- ISN Search Mode -->
+      <v-window-item value="isn" eager>
+        <IplasIsnSearchContent />
+      </v-window-item>
+    </v-window>
 
-                                <!-- UPDATED: Client-Side Data Table with Selection (changed from server-side for better UX) -->
-                                <IplasRecordTable :items="getFilteredStationRecords(stationGroup)"
-                                    :total-items="getFilteredStationRecords(stationGroup).length" :loading="false"
-                                    :downloading-record="downloadingKey" :downloading-csv-record="downloadingCsvKey"
-                                    :selectable="true"
-                                    :selected-keys="getSelectedKeysForStation(stationGroup.stationName)"
-                                    :server-side="false"
-                                    @update:selected-keys="handleTableSelectionChange(stationGroup.stationName, $event)"
-                                    @row-click="openFullscreen"
-                                    @download="downloadSingleRecord($event, stationGroup.stationName, 0)"
-                                    @download-csv="downloadCsvRecord($event, stationGroup.stationName, 0)" />
-                            </v-window-item>
-                        </v-window>
-                    </v-card-text>
-                </v-card>
+    <!-- Test Items Details Dialog -->
+    <TopProductIplasDetailsDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
+      :downloading="fullscreenDownloading" :loading-test-items="loadingFullscreenTestItems"
+      @download="downloadFromFullscreen" />
 
-                <!-- IndexedDB Mode Results -->
-                <v-card v-if="useIndexedDbMode && (indexedDbTotalItems > 0 || isStreaming)" elevation="2" class="mb-4">
-                    <v-card-title class="d-flex align-center justify-space-between flex-wrap">
-                        <div class="d-flex align-center">
-                            <v-icon class="mr-2" color="success">mdi-database</v-icon>
-                            IndexedDB Results
-                            <v-chip size="small" color="success" class="ml-2" variant="outlined">
-                                <v-icon start size="small">mdi-harddisk</v-icon>
-                                {{ indexedDbTotalItems.toLocaleString() }} records on disk
-                            </v-chip>
-                            <v-chip v-if="isStreaming" size="small" color="warning" class="ml-2">
-                                <v-icon start size="small">mdi-loading mdi-spin</v-icon>
-                                Streaming...
-                            </v-chip>
-                        </div>
-                        <div class="d-flex align-center gap-2">
-                            <!-- Bulk TXT Download for IndexedDB -->
-                            <v-btn v-if="indexedDbSelectedKeys.length > 0" color="primary" variant="outlined"
-                                size="small" :loading="downloading" @click="downloadIndexedDbSelectedRecords">
-                                <v-icon start size="small">mdi-download-multiple</v-icon>
-                                Download TXT ({{ indexedDbSelectedKeys.length }})
-                            </v-btn>
-                            <!-- Bulk CSV Download for IndexedDB -->
-                            <v-btn v-if="indexedDbSelectedKeys.length > 0" color="success" variant="outlined"
-                                size="small" :loading="downloadingCsv" @click="downloadIndexedDbSelectedRecordsCsv">
-                                <v-icon start size="small">mdi-file-delimited</v-icon>
-                                Download CSV ({{ indexedDbSelectedKeys.length }})
-                            </v-btn>
-                        </div>
-                    </v-card-title>
-                    <v-card-text>
-                        <!-- Stream Status Alert -->
-                        <v-alert v-if="streamStatus.error" type="error" class="mb-4" closable>
-                            {{ streamStatus.error }}
-                        </v-alert>
-
-                        <!-- Station Tabs for IndexedDB Results -->
-                        <v-tabs v-if="indexedDbStationList.length > 0 && !isStreaming"
-                            v-model="indexedDbActiveStationTab" color="secondary" class="mb-4" show-arrows>
-                            <v-tab :value="0">
-                                <v-icon start size="small">mdi-view-list</v-icon>
-                                All Stations
-                                <v-chip size="x-small" color="info" class="ml-2">{{ indexedDbTotalItems }}</v-chip>
-                            </v-tab>
-                            <v-tab v-for="(stationName, index) in indexedDbStationList" :key="stationName"
-                                :value="index + 1">
-                                <v-icon start size="small">mdi-router-wireless</v-icon>
-                                {{ stationName }}
-                            </v-tab>
-                        </v-tabs>
-
-                        <!-- IndexedDB Table using v-data-table (client-side pagination) -->
-                        <v-data-table v-model="indexedDbSelectedKeys"
-                            v-model:items-per-page="indexedDbTableOptions.itemsPerPage"
-                            v-model:page="indexedDbTableOptions.page" v-model:sort-by="indexedDbTableOptions.sortBy"
-                            :headers="indexedDbHeaders" :items="indexedDbItems"
-                            :loading="indexedDbLoading || isStreaming" item-value="id" show-select hover
-                            class="elevation-1" @click:row="handleIndexedDbRowClick">
-                            <!-- ISN Column with Copy Button -->
-                            <template #item.ISN="{ item }">
-                                <div class="d-flex align-center gap-1">
-                                    <v-btn icon size="x-small" variant="text" color="primary"
-                                        @click.stop="copyToClipboard(item.ISN)">
-                                        <v-icon size="small">mdi-content-copy</v-icon>
-                                        <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
-                                    </v-btn>
-                                    <span class="font-weight-medium cursor-pointer">{{ item.ISN || '-' }}</span>
-                                </div>
-                            </template>
-
-                            <!-- Device ID Column -->
-                            <template #item.DeviceId="{ item }">
-                                <v-chip size="x-small" color="secondary" variant="outlined" class="cursor-pointer"
-                                    @click.stop="copyToClipboard(item.DeviceId)">
-                                    {{ item.DeviceId }}
-                                    <v-tooltip activator="parent" location="top">Click to copy</v-tooltip>
-                                </v-chip>
-                            </template>
-
-                            <!-- Test End Time Column -->
-                            <template #item.TestEndTime="{ item }">
-                                {{ item.TestEndTime ? adjustIplasDisplayTime(item.TestEndTime, 1) : adjustIplasDisplayTime(item.TestStartTime, 1) }}
-                            </template>
-
-                            <!-- Duration Column -->
-                            <template #item.Duration="{ item }">
-                                <v-chip size="x-small" variant="outlined">
-                                    {{ calculateIndexedDbDuration(item) }}
-                                </v-chip>
-                            </template>
-
-                            <!-- Status Column -->
-                            <template #item.TestStatus="{ item }">
-                                <v-chip :color="item.TestStatus === 'PASS' ? 'success' : 'error'" size="x-small">
-                                    {{ item.TestStatus }}
-                                </v-chip>
-                            </template>
-
-                            <!-- Actions Column -->
-                            <template #item.actions="{ item }">
-                                <div class="d-flex gap-1">
-                                    <v-btn icon size="x-small" variant="outlined" color="primary" :loading="downloading"
-                                        @click.stop="downloadIndexedDbRecord(item)">
-                                        <v-icon size="small">mdi-download</v-icon>
-                                        <v-tooltip activator="parent" location="top">Download Test Log</v-tooltip>
-                                    </v-btn>
-                                </div>
-                            </template>
-
-                            <!-- No Data Template (during streaming) -->
-                            <template #no-data>
-                                <div v-if="isStreaming" class="text-center py-4">
-                                    <v-progress-circular indeterminate color="success" size="32" />
-                                    <div class="text-body-2 mt-2 text-medium-emphasis">
-                                        Streaming data to disk...
-                                        <br>
-                                        {{ streamStatus.recordsWritten.toLocaleString() }} records saved
-                                    </div>
-                                </div>
-                                <div v-else class="text-center py-4">
-                                    <v-icon size="48" color="grey">mdi-database-off-outline</v-icon>
-                                    <div class="text-h6 mt-2 text-grey">No data in IndexedDB</div>
-                                    <div class="text-body-2 text-grey">Start a search with "Stream to Disk" enabled
-                                    </div>
-                                </div>
-                            </template>
-
-                            <!-- Loading Template -->
-                            <template #loading>
-                                <v-skeleton-loader type="table-row@5" />
-                            </template>
-                        </v-data-table>
-                    </v-card-text>
-                </v-card>
-
-                <!-- Statistics Summary -->
-                <v-card v-if="siteProjects.length > 0" variant="outlined">
-                    <v-card-text>
-                        <v-row>
-                            <v-col cols="6" sm="3">
-                                <div class="text-center">
-                                    <div class="text-h4 font-weight-bold text-primary">{{ uniqueSites.length }}</div>
-                                    <div class="text-caption text-medium-emphasis">Sites</div>
-                                </div>
-                            </v-col>
-                            <v-col cols="6" sm="3">
-                                <div class="text-center">
-                                    <div class="text-h4 font-weight-bold text-success">{{ siteProjects.length }}</div>
-                                    <div class="text-caption text-medium-emphasis">Projects</div>
-                                </div>
-                            </v-col>
-                            <v-col cols="6" sm="3">
-                                <div class="text-center">
-                                    <div class="text-h4 font-weight-bold text-warning">{{ stations.length }}</div>
-                                    <div class="text-caption text-medium-emphasis">Stations (based on Selected Project)
-                                    </div>
-                                </div>
-                            </v-col>
-                            <v-col cols="6" sm="3">
-                                <div class="text-center">
-                                    <div class="text-h4 font-weight-bold text-info">{{ totalDeviceCount }}</div>
-                                    <div class="text-caption text-medium-emphasis">Devices (based on Selected Station)
-                                    </div>
-                                </div>
-                            </v-col>
-                        </v-row>
-                    </v-card-text>
-                </v-card>
-            </v-window-item>
-
-            <!-- ISN Search Mode -->
-            <v-window-item value="isn" eager>
-                <IplasIsnSearchContent />
-            </v-window-item>
-        </v-window>
-
-        <!-- Test Items Details Dialog -->
-        <TopProductIplasDetailsDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
-            :downloading="fullscreenDownloading" :loading-test-items="loadingFullscreenTestItems"
-            @download="downloadFromFullscreen" />
-
-        <!-- Copy Success Snackbar -->
-        <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
-            <v-icon start>mdi-check</v-icon>
-            Copied to clipboard!
-        </v-snackbar>
-    </div>
+    <!-- Copy Success Snackbar -->
+    <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
+      <v-icon start>mdi-check</v-icon>
+      Copied to clipboard!
+    </v-snackbar>
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -2112,27 +2091,27 @@ onUnmounted(() => {
 
 <style scoped>
 .w-100 {
-    width: 100%;
+  width: 100%;
 }
 
 .gap-2 {
-    gap: 0.5rem;
+  gap: 0.5rem;
 }
 
 .gap-3 {
-    gap: 0.75rem;
+  gap: 0.75rem;
 }
 
 .cursor-pointer {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 /* Striped table styling */
 :deep(.v-table--striped tbody tr:nth-of-type(even)) {
-    background-color: rgba(0, 0, 0, 0.02);
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 :deep(.v-theme--dark .v-table--striped tbody tr:nth-of-type(even)) {
-    background-color: rgba(255, 255, 255, 0.02);
+  background-color: rgba(255, 255, 255, 0.02);
 }
 </style>
