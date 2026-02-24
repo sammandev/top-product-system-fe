@@ -59,6 +59,15 @@ export const authApi = {
   },
 
   /**
+   * Guest login using server-side stored credentials.
+   * No credentials are sent from the frontend — the backend reads them from the database.
+   */
+  async guestLogin(): Promise<LoginResponse> {
+    const { data } = await apiClient.post<LoginResponse>('/api/auth/guest-login')
+    return data
+  },
+
+  /**
    * Logout (if backend has logout endpoint)
    */
   async logout(): Promise<void> {

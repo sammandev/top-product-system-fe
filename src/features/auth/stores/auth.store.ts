@@ -203,26 +203,37 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   /**
-   * Guest Login - Uses predefined credentials from environment variables
-   * Logs in via external auth but marks the session as guest mode
+   * Guest Login - Uses server-side stored credentials (DB) with env var fallback.
+   * First tries the backend /api/auth/guest-login endpoint which reads credentials from DB.
+   * Falls back to env var credentials if the server-side endpoint is not available.
    */
   async function guestLogin() {
-    const guestUsername = import.meta.env.VITE_GUEST_API_USERNAME
-    const guestPassword = import.meta.env.VITE_GUEST_API_PASSWORD
-
-    if (!guestUsername || !guestPassword) {
-      error.value = 'Guest login is not configured'
-      throw new Error('Guest credentials not configured')
-    }
-
     loading.value = true
     error.value = null
 
     try {
-      const response = await authApi.externalLogin({
-        username: guestUsername,
-        password: guestPassword,
-      })
+      // Try server-side guest login first (credentials stored in DB)
+      let response: Awaited<ReturnType<typeof authApi.externalLogin>>
+      try {
+        response = await authApi.guestLogin()
+      } catch (serverErr: unknown) {
+        // Fallback to env var credentials if server-side endpoint fails with 503
+        const status = getErrorStatus(serverErr)
+        if (status === 503) {
+          const guestUsername = import.meta.env.VITE_GUEST_API_USERNAME
+          const guestPassword = import.meta.env.VITE_GUEST_API_PASSWORD
+          if (!guestUsername || !guestPassword) {
+            error.value = 'Guest login is not configured'
+            throw new Error('Guest credentials not configured')
+          }
+          response = await authApi.externalLogin({
+            username: guestUsername,
+            password: guestPassword,
+          })
+        } else {
+          throw serverErr
+        }
+      }
 
       accessToken.value = response.access_token
       refreshTokenValue.value = response.refresh_token

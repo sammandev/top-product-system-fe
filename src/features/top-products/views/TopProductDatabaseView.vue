@@ -1025,6 +1025,7 @@ async function handleBulkDelete() {
   bulkDeleting.value = true
   try {
     const ids = selectedProducts.value.map((p) => p.id)
+    console.log('🗑️ Bulk deleting products with ids:', ids, 'from selected:', selectedProducts.value.map((p) => ({ id: p.id, isn: p.dut_isn })))
     const result = await bulkDeleteTopProducts(ids)
 
     console.log(`Bulk deleted ${result.deleted_count} products`)
