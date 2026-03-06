@@ -1053,6 +1053,8 @@ import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useStickyColumns } from '@/shared/composables'
 import { formatDate } from '@/shared/utils/helpers'
 import { dutApi } from '../api/dut.api'
+import ScoreBreakdownDialog from './ScoreBreakdownDialog.vue'
+import TopProductRanking from './TopProductRanking.vue'
 import type {
   ScoreBreakdown,
   TopProductError,
