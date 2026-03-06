@@ -1052,8 +1052,8 @@
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import { useStickyColumns } from '@/shared/composables'
 import { formatDate } from '@/shared/utils/helpers'
+import ScoreBreakdownDialog from '@/features/dut-logs/components/ScoreBreakdownDialog.vue'
 import { dutApi } from '../api/dut.api'
-import ScoreBreakdownDialog from './ScoreBreakdownDialog.vue'
 import TopProductRanking from './TopProductRanking.vue'
 import type {
   ScoreBreakdown,
