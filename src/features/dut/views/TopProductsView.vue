@@ -37,13 +37,13 @@
         <v-icon class="mr-2">mdi-access-point</v-icon>
         By Station
       </v-tab> -->
-      <v-tab value="dut-isn">
-        <v-icon class="mr-2">mdi-barcode-scan</v-icon>
-        By DUT ISN
-      </v-tab>
       <v-tab value="iplas-data">
         <v-icon class="mr-2">mdi-database-search</v-icon>
         By iPLAS Data
+      </v-tab>
+      <v-tab value="dut-isn">
+        <v-icon class="mr-2">mdi-barcode-scan</v-icon>
+        By DUT ISN
       </v-tab>
       <v-tab value="upload-log">
         <v-icon class="mr-2">mdi-upload</v-icon>
@@ -58,24 +58,24 @@
 
     <!-- Tab Content -->
     <v-window v-model="activeTab">
-      <!-- Tab 1: By Station (Existing) -->
-      <v-window-item value="station">
-        <TopProductsByStationTab @export="handleExport" />
-      </v-window-item>
-
-      <!-- Tab 2: By DUT ISN (New) -->
-      <v-window-item value="dut-isn">
-        <TopProductsByISNTab />
-      </v-window-item>
-
-      <!-- Tab 3: By iPLAS Data -->
+      <!-- Tab 1: By iPLAS Data -->
       <v-window-item value="iplas-data">
         <TopProductsByIplasDataTab />
       </v-window-item>
 
-      <!-- Tab 4: By Upload Log (New) -->
+      <!-- Tab 2: By DUT ISN -->
+      <v-window-item value="dut-isn">
+        <TopProductsByISNTab />
+      </v-window-item>
+
+      <!-- Tab 3: By Upload Log -->
       <v-window-item value="upload-log">
         <TopProductsByUploadLogTab />
+      </v-window-item>
+
+      <!-- Hidden legacy tab -->
+      <v-window-item value="station">
+        <TopProductsByStationTab @export="handleExport" />
       </v-window-item>
     </v-window>
   </DefaultLayout>

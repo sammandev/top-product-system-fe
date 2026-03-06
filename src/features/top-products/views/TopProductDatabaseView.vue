@@ -650,12 +650,12 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
-import apiClient from '@/core/api/client'
 import { formatDateTimeCompact } from '@/core/utils/dateTime'
 import { useAuthStore } from '@/features/auth/stores'
 import { getApiErrorDetail } from '@/shared/utils'
 import {
   bulkDeleteTopProducts,
+  deleteTopProduct,
   getTopProductDetail,
   getTopProductsList,
   getTopProductsStats,
@@ -981,7 +981,7 @@ async function handleDelete() {
 
   deleting.value = true
   try {
-    await apiClient.delete(`/api/top-products/${productToDelete.value.id}`)
+    await deleteTopProduct(productToDelete.value.id)
 
     // Show success message
     console.log('Product deleted successfully')

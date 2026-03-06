@@ -70,6 +70,29 @@
             <v-chip value="all" color="primary" variant="outlined">All ({{ comparisonItems.length }})</v-chip>
           </v-chip-group>
 
+          <v-row dense class="mb-4 flex-shrink-0">
+            <v-col cols="12" md="6">
+              <v-card variant="tonal" color="primary">
+                <v-card-text class="text-center">
+                  <div class="text-caption text-medium-emphasis">Uploaded Overall Score</div>
+                  <div class="text-h5 font-weight-bold">
+                    {{ formatOverallScore(uploadOverallScore) }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+            <v-col cols="12" md="6">
+              <v-card variant="tonal" color="info">
+                <v-card-text class="text-center">
+                  <div class="text-caption text-medium-emphasis">iPLAS Overall Score</div>
+                  <div class="text-h5 font-weight-bold">
+                    {{ formatOverallScore(iplasOverallScore) }}
+                  </div>
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+
           <div class="flex-grow-1" style="overflow: auto;">
             <v-data-table :headers="comparisonHeaders" :items="filteredComparisonItems" :items-per-page="50"
               density="comfortable" class="elevation-1">
@@ -252,6 +275,8 @@ const breakdownSource = ref<'upload' | 'iplas'>('upload')
 // Rescored data
 const uploadScoredMap = ref<Map<string, RescoreItemResult>>(new Map())
 const iplasScoredMap = ref<Map<string, RescoreItemResult>>(new Map())
+const uploadOverallScore = ref<number | null>(null)
+const iplasOverallScore = ref<number | null>(null)
 
 // Scoring configuration dialog state
 const showScoringConfig = ref(false)
@@ -548,6 +573,10 @@ function showScoreBreakdown(item: ComparisonItem, source: 'upload' | 'iplas') {
   showBreakdownDialog.value = true
 }
 
+function formatOverallScore(score: number | null): string {
+  return score === null ? 'N/A' : score.toFixed(2)
+}
+
 // Rescore items using the backend API
 async function rescoreAllItems() {
   if (localScoringConfigs.value.length === 0) return
@@ -576,6 +605,10 @@ async function rescoreAllItems() {
       uploadResult.test_item_scores.forEach((score) => {
         uploadScoredMap.value.set(score.test_item.toLowerCase(), score)
       })
+      uploadOverallScore.value = uploadResult.overall_score
+    } else {
+      uploadScoredMap.value.clear()
+      uploadOverallScore.value = null
     }
 
     // Rescore iPLAS items with the same config - only criteria items by default
@@ -598,9 +631,15 @@ async function rescoreAllItems() {
       iplasResult.test_item_scores.forEach((score) => {
         iplasScoredMap.value.set(score.test_item.toLowerCase(), score)
       })
+      iplasOverallScore.value = iplasResult.overall_score
+    } else {
+      iplasScoredMap.value.clear()
+      iplasOverallScore.value = null
     }
   } catch (err) {
     console.error('Failed to rescore items:', err)
+    uploadOverallScore.value = null
+    iplasOverallScore.value = null
   }
 }
 
@@ -614,6 +653,8 @@ watch(
       iplasTestItems.value = []
       uploadScoredMap.value.clear()
       iplasScoredMap.value.clear()
+      uploadOverallScore.value = null
+      iplasOverallScore.value = null
       // Reset filters
       searchQuery.value = ''
       typeFilter.value = 'all'
