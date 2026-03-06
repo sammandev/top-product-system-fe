@@ -476,8 +476,7 @@ const filteredRanking = computed(() => {
 
   // Apply score filter (only when scores are available and filter is set)
   if (hasScores.value && scoreFilterType.value && scoreFilterValue.value !== null) {
-    // Score is stored as 0-1, but displayed as 0-100 (score * 10 = 0-10 scale, displayed as 0-100)
-    // User inputs score in 0-100 scale, so we compare against item.score * 100
+    // Score is stored as 0-1 and displayed/filtered on the 0-10 scale.
     const filterValue = scoreFilterValue.value
     const filterValue2 = scoreFilterValue2.value
 
@@ -485,7 +484,7 @@ const filteredRanking = computed(() => {
       // Skip items without score (errors)
       if (item.score === null) return false
 
-      const displayScore = item.score * 100 // Convert to 0-100 scale
+      const displayScore = item.score * 10
 
       switch (scoreFilterType.value) {
         case 'gt':

@@ -997,7 +997,7 @@ async function handleSaveToDb(payload: {
       const station = record.station || record.TSP || ''
       const testEndTime = record['Test end Time'] || ''
       const key = `${isn}_${station}_${testEndTime}`
-      const score = payload.scores[key] ?? recordScores.value[key] ?? 0
+      const score = (payload.scores[key] ?? recordScores.value[key] ?? 0) * 10
 
       const measurements: TopProductMeasurementCreate[] = (record.TestItem || []).map((item) => {
         const usl = item.UCL ? parseFloat(item.UCL) : null

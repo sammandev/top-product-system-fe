@@ -9,7 +9,7 @@
 
     <v-col cols="12" md="6">
       <!-- Date Range Picker -->
-      <DateRangePicker v-model="dateRange" :max-days="30" :show-validation="attemptedAnalysis"
+      <DateRangePicker v-model="dateRange" :max-days="7" :show-validation="attemptedAnalysis"
         @change="handleDateChange" />
     </v-col>
 
@@ -136,8 +136,8 @@ const dateRange = ref({
 })
 
 const criteriaConfig = ref({
-  criteriaScore: 80,
-  limit: 100,
+  criteriaScore: 8,
+  limit: 5,
   criteriaFile: null as File | null,
 })
 
@@ -202,20 +202,15 @@ async function handleAnalyze() {
   loading.value = true
 
   try {
-    const formData = new FormData()
-
-    // Add required parameters
-    formData.append('site_id', String(selection.value.siteId))
-    formData.append('model_id', String(selection.value.modelId))
-    formData.append('station_id', String(selection.value.stationId))
-    formData.append('start_time', dateRange.value.startDate)
-    formData.append('end_time', dateRange.value.endDate)
-    formData.append('criteria_score', String(criteriaConfig.value.criteriaScore))
-    formData.append('limit', String(criteriaConfig.value.limit))
-
-    // Add optional criteria file
-    if (criteriaConfig.value.criteriaFile) {
-      formData.append('criteria_file', criteriaConfig.value.criteriaFile)
+    const request: TopProductsRequest = {
+      site_id: selection.value.siteId,
+      model_id: selection.value.modelId,
+      station_id: selection.value.stationId,
+      start_time: dateRange.value.startDate,
+      end_time: dateRange.value.endDate,
+      criteria_score: criteriaConfig.value.criteriaScore,
+      limit: criteriaConfig.value.limit,
+      criteria_file: criteriaConfig.value.criteriaFile ?? undefined,
     }
 
     const startTime = performance.now()
@@ -223,7 +218,7 @@ async function handleAnalyze() {
     // Call API (this should be moved to the API service)
     const response = await dutStore.fetchTopProducts(
       String(selection.value.stationId),
-      formData as unknown as TopProductsRequest,
+      request,
     )
 
     const endTime = performance.now()
@@ -257,8 +252,8 @@ function handleReset() {
     endDate: '',
   }
   criteriaConfig.value = {
-    criteriaScore: 80,
-    limit: 100,
+    criteriaScore: 8,
+    limit: 5,
     criteriaFile: null,
   }
   topProducts.value = []

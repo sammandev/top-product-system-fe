@@ -96,7 +96,7 @@ import TopProductsByStationTab from '../components/TopProductsByStationTab.vue'
 // const authStore = useAuthStore()
 
 // Tab State - persisted in URL
-const activeTab = useTabPersistence('tab', 'dut-isn')
+const activeTab = useTabPersistence('tab', 'iplas-data')
 
 // Shared State (minimal - most moved to tab components)
 const error = ref<string>('')
