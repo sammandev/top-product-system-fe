@@ -275,7 +275,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { formatDate } from '@/shared/utils/helpers'
 import type { TopProductResult } from '../types/dutTopProduct.types'
 
@@ -325,14 +325,15 @@ const rankingByStation = computed(() => {
   const stationMap: Record<string, RankingItem[]> = {}
 
   props.results.forEach((result) => {
-    result.test_result.forEach((station) => {
+    ;(result.test_result || []).forEach((station) => {
       const stationName = station.station_name
+      if (!stationName) return
 
       if (!stationMap[stationName]) {
         stationMap[stationName] = []
       }
 
-      const hasError = station.error_item !== null && station.error_item.trim() !== ''
+      const hasError = typeof station.error_item === 'string' && station.error_item.trim() !== ''
 
       stationMap[stationName].push({
         rank: 0, // Will be computed after sorting
@@ -375,14 +376,25 @@ const rankingByStation = computed(() => {
     stationMap[station] = [...passed, ...failed]
   })
 
-  // Set initial tab to first station
-  const firstStation = Object.keys(stationMap)[0]
-  if (selectedTab.value === '' && firstStation) {
-    selectedTab.value = firstStation
-  }
-
   return stationMap
 })
+
+const stationNames = computed(() => Object.keys(rankingByStation.value))
+
+watch(
+  stationNames,
+  (stations) => {
+    if (stations.length === 0) {
+      selectedTab.value = ''
+      return
+    }
+
+    if (!selectedTab.value || !stations.includes(selectedTab.value)) {
+      selectedTab.value = stations[0] || ''
+    }
+  },
+  { immediate: true },
+)
 
 const totalDUTs = computed(() => {
   const uniqueISNs = new Set<string>()
