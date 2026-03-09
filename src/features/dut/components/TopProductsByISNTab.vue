@@ -136,8 +136,8 @@
     <v-col cols="12">
       <v-card>
         <v-card-text>
-          <v-row class="align-stretch justify-center">
-            <v-col cols="12" sm="8" md="6" lg="4" class="mx-auto">
+          <v-row class="align-stretch">
+            <v-col cols="12">
               <v-btn color="primary" size="large" block :loading="loading" :disabled="!canAnalyze"
                 @click="handleAnalyze">
                 <v-icon class="mr-2">mdi-chart-line</v-icon>
