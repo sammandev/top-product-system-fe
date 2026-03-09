@@ -60,7 +60,7 @@
           variant="outlined"
           color="primary"
           prepend-icon="mdi-download"
-          title="Download criteria configuration template"
+          title="Download criteria JSON template"
           @click="downloadTemplate"
         >
           Download Template
@@ -69,14 +69,14 @@
 
       <v-file-input
         v-model="criteriaFile"
-        label="Upload criteria file"
-        accept=".ini,.txt,.json,.csv"
+        label="Upload criteria JSON file"
+        accept=".json,application/json"
         variant="outlined"
         density="comfortable"
         prepend-icon="mdi-paperclip"
         :clearable="true"
         :show-size="true"
-        hint="Upload custom criteria configuration file (.ini, .txt, .json, .csv)"
+        hint="Upload custom criteria configuration JSON file (.json)"
         persistent-hint
         @update:model-value="handleFileChange"
       >
@@ -127,6 +127,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { downloadCriteriaJsonTemplate } from '../utils/criteriaTemplate'
 
 interface Props {
   modelValue: {
@@ -251,51 +252,7 @@ function formatFileSize(bytes: number): string {
 }
 
 function downloadTemplate() {
-  const templateContent = `; TOP PRODUCT CRITERIA CONFIGURATION TEMPLATE
-; ================================================================
-; Format: (can define multiple [Model|Station] sections)
-; --------
-; [ModelName|StationName]
-; "TEST_ITEM" <USL,LSL>  ===> "TargetValue" (Test item names are case-insensitive)
-; ================================================================
-; Explanation of the fields:
-; ---------------------------
-; ModelName = DUT model name as defined in the DUT configuration file.
-; StationName = Station name as defined in the test plan.
-; TEST_ITEM = Uses regex function to determine the same item
-;             - Exact: "WiFi_TX1_POW_6175_11AX_MCS9_B20"
-;             - Pattern: "WiFi_TX_POW_6175_11AX_MCS9_B20" (matches TX1, TX2, TX3, TX4)
-; USL = Upper Specification Limit. If empty: "<,10>", then the higher (>10) the better.
-; LSL = Lower Specification Limit. If empty: "<0,>", then the lower (<0) the better.
-; TargetValue = Target value to be achieved. If empty, ensure data complies with USL or LSL.
-; ================================================================
-; Example: HH5K project
-; ---------------------
-; [HH5K|Wireless_Test_2_5G]
-; "WiFi_TX_FIXTURE_OR_DUT_PROBLEM_POW_2437_11N_MCS0_B20" <20,10>  ===> "15"
-; "WiFi_TX_FIXTURE_OR_DUT_PROBLEM_POW_5300_11AC_MCS8_B20" <20,10>  ===> "15"
-; "WiFi_RX_PER_2462_11B_CCK11_B20" <10,>  ===> "16"
-; "WiFi_TX1_POW_5190_11N_MCS7_B40" <19,16>  ===> "17.5"
-;
-; [HH5K|Wireless_Test_6G]
-; "WiFi_TX_FIXTURE_OR_DUT_PROBLEM_POW_6175_11AX_MCS9_B20" <20,10>  ===> "15"
-; "WiFi_TX_POW_6185_11AX_MCS11_B160" <17,14>  ===> "16"
-; ================================================================
-
-[ModelName|StationName]
-"TEST_ITEM" <USL,LSL>  ===> "TargetValue"
-`
-
-  const blob = new Blob([templateContent], { type: 'text/plain;charset=utf-8' })
-  const url = window.URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = 'top_product_criteria_configuration.ini'
-
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  window.URL.revokeObjectURL(url)
+  downloadCriteriaJsonTemplate()
 }
 
 watch(

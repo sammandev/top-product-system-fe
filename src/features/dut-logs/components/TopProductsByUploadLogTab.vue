@@ -429,6 +429,7 @@ import { getErrorMessage } from '@/shared/utils'
 import CriteriaBuilderDialog from './CriteriaBuilderDialog.vue'
 import TopProductRankingUploadLog from './TopProductRankingUploadLog.vue'
 import UploadScoringConfigDialog from './UploadScoringConfigDialog.vue'
+import { downloadUploadLogCriteriaTemplate } from '../utils/criteriaTemplate'
 
 // File inputs
 const logFiles = ref<File[] | null>(null)
@@ -1000,33 +1001,7 @@ const handleCriteriaCreated = (file: File) => {
 }
 
 const downloadCriteriaTemplate = () => {
-  const template = {
-    $comment: 'Criteria Configuration Template for Test Log Parser',
-    criteria: [
-      {
-        test_item: 'WiFi_TX_POW_2462_11B_CCK11_B20',
-        ucl: 20,
-        lcl: 10,
-        target: 15,
-      },
-      {
-        test_item: 'BT_FREQ_KHZ',
-        ucl: 2500000,
-        lcl: 2400000,
-        target: 2450000,
-      },
-    ],
-  }
-  const templateJson = JSON.stringify(template, null, 2)
-  const blob = new Blob([templateJson], { type: 'application/json' })
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = 'criteria_template.json'
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  downloadUploadLogCriteriaTemplate()
 }
 
 const getScoreColor = (score: number): string => {

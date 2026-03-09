@@ -83,10 +83,10 @@
 
                     <!-- Criteria File Upload -->
                     <v-col cols="12">
-                        <v-file-input v-model="criteriaFileArray" label="Criteria File (Optional)"
-                            placeholder="Upload criteria configuration" prepend-inner-icon="mdi-file-upload"
-                            accept=".ini,.txt,.json,.csv" clearable show-size
-                            hint="Upload .ini, .txt, .json, or .csv criteria file" persistent-hint
+                        <v-file-input v-model="criteriaFileArray" label="Criteria JSON File (Optional)"
+                            placeholder="Upload criteria JSON configuration" prepend-inner-icon="mdi-file-upload"
+                            accept=".json,application/json" clearable show-size
+                            hint="Upload .json criteria file" persistent-hint
                             @update:model-value="handleFileChange">
                             <template v-if="filters.criteria_file" #append>
                                 <v-chip size="small" color="primary">

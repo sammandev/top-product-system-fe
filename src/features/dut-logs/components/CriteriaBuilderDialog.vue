@@ -25,17 +25,17 @@
                   variant="outlined" density="comfortable" class="mt-4 mb-3" prepend-inner-icon="mdi-text-search" />
 
                 <!-- UCL Input -->
-                <v-text-field v-model.number="currentRule.ucl" type="number" label="UCL (Upper Criteria Limit)"
+                <v-text-field v-model="currentRule.ucl" label="UCL (Upper Criteria Limit)"
                   hint="Leave empty if no upper limit" persistent-hint clearable variant="outlined"
                   density="comfortable" class="mb-3" prepend-inner-icon="mdi-arrow-up-bold" />
 
                 <!-- LCL Input -->
-                <v-text-field v-model.number="currentRule.lcl" type="number" label="LCL (Lower Criteria Limit)"
+                <v-text-field v-model="currentRule.lcl" label="LCL (Lower Criteria Limit)"
                   hint="Leave empty if no lower limit" persistent-hint clearable variant="outlined"
                   density="comfortable" class="mb-3" prepend-inner-icon="mdi-arrow-down-bold" />
 
                 <!-- Target Input -->
-                <v-text-field v-model.number="currentRule.target" type="number" label="Target Value"
+                <v-text-field v-model="currentRule.target" label="Target Value"
                   hint="Leave empty to use median or (UCL+LCL)/2" persistent-hint clearable variant="outlined"
                   density="comfortable" class="mb-4" prepend-inner-icon="mdi-target" />
 
@@ -128,6 +128,10 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
+import {
+  buildUploadLogCriteriaJson,
+  type UploadLogCriteriaRule,
+} from '../utils/criteriaTemplate'
 
 const props = defineProps<{
   modelValue: boolean
@@ -142,18 +146,18 @@ const emit = defineEmits<{
 // UPDATED: Interface with UCL/LCL naming
 interface CriteriaRule {
   testItem: string
-  ucl: number | null
-  lcl: number | null
-  target: number | null
+  ucl: string
+  lcl: string
+  target: string
 }
 
 // State
 const rules = ref<CriteriaRule[]>([])
 const currentRule = ref<CriteriaRule>({
   testItem: '',
-  ucl: null,
-  lcl: null,
-  target: null,
+  ucl: '',
+  lcl: '',
+  target: '',
 })
 const editingIndex = ref<number | null>(null)
 
@@ -167,18 +171,18 @@ const canAddRule = computed(() => {
 
 // JSON preview
 const jsonPreview = computed(() => {
-  const criteria = rules.value.map((rule) => ({
+  const criteria: UploadLogCriteriaRule[] = rules.value.map((rule) => ({
     test_item: rule.testItem,
     ucl: rule.ucl,
     lcl: rule.lcl,
     target: rule.target,
   }))
-  return JSON.stringify({ criteria }, null, 2)
+  return buildUploadLogCriteriaJson(criteria)
 })
 
 // Methods
-const formatValue = (value: number | null): string => {
-  return value !== null ? value.toString() : 'N/A'
+const formatValue = (value: string): string => {
+  return value.trim() !== '' ? value : 'N/A'
 }
 
 const addRule = () => {
@@ -226,9 +230,9 @@ const removeRule = (index: number) => {
 const resetCurrentRule = () => {
   currentRule.value = {
     testItem: '',
-    ucl: null,
-    lcl: null,
-    target: null,
+    ucl: '',
+    lcl: '',
+    target: '',
   }
   editingIndex.value = null
 }

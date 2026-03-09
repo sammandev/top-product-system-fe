@@ -35,15 +35,15 @@
           Criteria Configuration
           <v-spacer />
           <v-btn size="small" variant="outlined" color="primary" prepend-icon="mdi-download"
-            @click="downloadCriteriaTemplate" title="Download criteria configuration template">
+            @click="downloadCriteriaTemplate" title="Download criteria JSON template">
             Download Template
           </v-btn>
         </v-card-title>
 
         <v-card-text>
-          <v-file-input v-model="criteriaFile" label="Criteria File (Optional)" placeholder="Upload criteria file"
-            accept=".ini,.txt,.conf" prepend-icon="mdi-paperclip" clearable
-            hint="Upload custom criteria file or use default rules" persistent-hint>
+          <v-file-input v-model="criteriaFile" label="Criteria JSON File (Optional)" placeholder="Upload criteria JSON file"
+            accept=".json,application/json" prepend-icon="mdi-paperclip" clearable
+            hint="Upload custom criteria JSON file or use default rules" persistent-hint>
             <template #selection="{ fileNames }">
               <v-chip v-for="fileName in fileNames" :key="fileName" color="primary" size="small">
                 {{ fileName }}
@@ -136,8 +136,8 @@
     <v-col cols="12">
       <v-card>
         <v-card-text>
-          <v-row class="align-stretch">
-            <v-col cols="12" sm="6" lg="3">
+          <v-row class="align-stretch justify-center">
+            <v-col cols="12" sm="8" md="6" lg="4" class="mx-auto">
               <v-btn color="primary" size="large" block :loading="loading" :disabled="!canAnalyze"
                 @click="handleAnalyze">
                 <v-icon class="mr-2">mdi-chart-line</v-icon>
@@ -145,23 +145,23 @@
               </v-btn>
             </v-col>
 
-            <v-col cols="12" sm="6" lg="3">
+            <!-- <v-col cols="12" sm="6" lg="3">
               <v-btn color="secondary" size="large" block variant="tonal" :loading="loading" :disabled="!canAnalyze"
                 @click="handleAnalyzeWithPATrends">
                 <v-icon class="mr-2">mdi-chart-timeline-variant</v-icon>
                 Analyze with PA Trends
               </v-btn>
-            </v-col>
+            </v-col> -->
 
-            <v-col cols="12" sm="6" lg="3">
+            <!-- <v-col cols="12" sm="6" lg="3">
               <v-btn color="info" size="large" block variant="tonal" :loading="loading" :disabled="!canAnalyze"
                 @click="handleAnalyzeHierarchical">
                 <v-icon class="mr-2">mdi-sitemap</v-icon>
                 Hierarchical Scoring
               </v-btn>
-            </v-col>
+            </v-col> -->
 
-            <v-col cols="12" sm="6" lg="3">
+            <!-- <v-col cols="12" sm="6" lg="3">
               <FormulaSelectorDialog v-model="showFormulaSelectorDialog" :universal-formula="universalFormula"
                 @update:universal-formula="universalFormula = $event" v-model:category-formulas="categoryFormulas"
                 @reset="handleResetFormulas" @apply="handleApplyFormulas">
@@ -174,7 +174,7 @@
                   </v-btn>
                 </template>
               </FormulaSelectorDialog>
-            </v-col>
+            </v-col> -->
           </v-row>
 
           <!-- Validation Alert -->
@@ -220,6 +220,7 @@ import type {
   TestItem,
   TopProductBatchResponse,
 } from '../types/dutTopProduct.types'
+import { downloadCriteriaJsonTemplate } from '../utils/criteriaTemplate'
 // biome-ignore lint/style/useImportType: value import required for template component resolution
 import DUTISNInput from './DUTISNInput.vue'
 import FormulaSelectorDialog from './FormulaSelectorDialog.vue'
@@ -1022,51 +1023,7 @@ async function exportToExcelZip(ExcelJS: any, JSZip: any) {
 }
 
 function downloadCriteriaTemplate() {
-  const templateContent = `; TOP PRODUCT CRITERIA CONFIGURATION TEMPLATE
-; ================================================================
-; Format: (can define multiple [Model|Station] sections)
-; --------
-; [ModelName|StationName]
-; "TEST_ITEM" <USL,LSL>  ===> "TargetValue" (Test item names are case-insensitive)
-; ================================================================
-; Explanation of the fields:
-; ---------------------------
-; ModelName = DUT model name as defined in the DUT configuration file.
-; StationName = Station name as defined in the test plan.
-; TEST_ITEM = Uses regex function to determine the same item 
-;			  - Exact: "WiFi_TX1_POW_6175_11AX_MCS9_B20"
-;			  - Pattern: "WiFi_TX_POW_6175_11AX_MCS9_B20" (matches TX1, TX2, TX3, TX4)
-; USL = Upper Specification Limit. If empty: "<,10>", then the higher (>10) the better.
-; LSL = Lower Specification Limit. If empty: "<0,>", then the lower (<0) the better.
-; TargetValue = Target value to be achieved. If empty, ensure data complies with USL or LSL.
-; ================================================================
-; Example: HH5K project
-; ----------------------
-; [HH5K|Wireless_Test_2_5G]
-; "WiFi_TX_FIXTURE_OR_DUT_PROBLEM_POW_2437_11N_MCS0_B20" <20,10>  ===> "15"
-; "WiFi_TX_FIXTURE_OR_DUT_PROBLEM_POW_5300_11AC_MCS8_B20" <20,10>  ===> "15"
-; "WiFi_RX_PER_2462_11B_CCK11_B20" <10,>  ===> "16"
-; "WiFi_TX1_POW_5190_11N_MCS7_B40" <19,16>  ===> "17.5"
-; 
-; [HH5K|Wireless_Test_6G]
-; "WiFi_TX_FIXTURE_OR_DUT_PROBLEM_POW_6175_11AX_MCS9_B20" <20,10>  ===> "15"
-; "WiFi_TX_POW_6185_11AX_MCS11_B160" <17,14>  ===> "16"
-; ================================================================
-
-[ModelName|StationName]
-"TEST_ITEM" <USL,LSL>  ===> "TargetValue"
-`
-
-  const blob = new Blob([templateContent], { type: 'text/plain;charset=utf-8' })
-  const url = window.URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.href = url
-  link.download = 'top_product_criteria_configuration.ini'
-
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  window.URL.revokeObjectURL(url)
+  downloadCriteriaJsonTemplate()
 }
 
 function formatFileSize(bytes: number): string {

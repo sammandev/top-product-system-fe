@@ -199,13 +199,18 @@ async function handleAnalyze() {
     return
   }
 
+  const { siteId, modelId, stationId } = selection.value
+  if (siteId === null || modelId === null || stationId === null) {
+    return
+  }
+
   loading.value = true
 
   try {
     const request: TopProductsRequest = {
-      site_id: selection.value.siteId,
-      model_id: selection.value.modelId,
-      station_id: selection.value.stationId,
+      site_id: siteId,
+      model_id: modelId,
+      station_id: stationId,
       start_time: dateRange.value.startDate,
       end_time: dateRange.value.endDate,
       criteria_score: criteriaConfig.value.criteriaScore,
@@ -217,7 +222,7 @@ async function handleAnalyze() {
 
     // Call API (this should be moved to the API service)
     const response = await dutStore.fetchTopProducts(
-      String(selection.value.stationId),
+      String(stationId),
       request,
     )
 
