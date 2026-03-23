@@ -73,6 +73,15 @@
                     </v-col>
                 </v-row>
 
+                <v-row dense class="mb-4">
+                    <v-col cols="12" md="6">
+                        <v-text-field v-model.number="localConfig.minimumItemScore" label="Minimum Test Item Score"
+                            type="number" variant="outlined" density="comfortable" prepend-inner-icon="mdi-chart-box-outline"
+                            min="0" max="10" step="0.1" hint="If any scored numeric test item is below this value, the DUT becomes a complete failure. Default: 6.5 / 10"
+                            persistent-hint />
+                    </v-col>
+                </v-row>
+
                 <!-- Error Alert for Device Loading -->
                 <v-alert v-if="deviceError" type="error" variant="tonal" class="mb-4" closable>
                     {{ deviceError }}
@@ -548,6 +557,7 @@ const localConfig = ref<StationConfig>({
   stationName: '',
   deviceIds: [],
   testStatus: 'PASS', // UPDATED: Default to PASS only
+  minimumItemScore: 6.5,
   selectedTestItems: [],
   testItemScoringConfigs: {},
 })
@@ -602,6 +612,7 @@ watch(
         // Load existing config
         localConfig.value = {
           ...props.existingConfig,
+          minimumItemScore: props.existingConfig.minimumItemScore ?? 6.5,
           testItemScoringConfigs: props.existingConfig.testItemScoringConfigs || {},
         }
       } else {
@@ -611,6 +622,7 @@ watch(
           stationName: props.station.station_name,
           deviceIds: [],
           testStatus: 'PASS', // UPDATED: Default to PASS only
+          minimumItemScore: 6.5,
           selectedTestItems: [],
           testItemScoringConfigs: {},
         }
@@ -715,6 +727,7 @@ function handleSave(): void {
 
   // If no test items selected, default to all CRITERIA and NON-CRITERIA items (exclude Bin)
   const configToSave = { ...localConfig.value }
+  configToSave.minimumItemScore = Math.min(10, Math.max(0, configToSave.minimumItemScore ?? 6.5))
   if (configToSave.selectedTestItems.length === 0) {
     configToSave.selectedTestItems = props.availableTestItems
       .filter((item) => !item.isBin)

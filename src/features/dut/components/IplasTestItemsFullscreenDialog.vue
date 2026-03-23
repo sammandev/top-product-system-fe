@@ -206,6 +206,7 @@ export interface NormalizedTestItem {
   policy?: 'symmetrical' | 'higher' | 'lower'
   target?: number
   weight?: number // Weight used for this test item in scoring (default 1.0)
+  forcedFailureThreshold?: number
 }
 
 // Normalized record interface that works for both Station Search and ISN Search
@@ -234,6 +235,10 @@ export interface NormalizedRecord {
   overallScore?: number
   valueItemsScore?: number | null
   binItemsScore?: number | null
+  isForcedFailure?: boolean
+  forcedFailureReason?: string
+  forcedFailureItems?: string[]
+  forcedFailureMinimumScore?: number
 }
 
 interface Props {

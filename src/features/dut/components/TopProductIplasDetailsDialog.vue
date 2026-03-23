@@ -214,6 +214,9 @@
       <!-- Overall Score Badge (if available) -->
       <div v-if="record.overallScore !== undefined" class="flex-shrink-0 px-3 py-2 bg-surface">
         <div class="d-flex align-center justify-end gap-4">
+          <v-chip v-if="record.isForcedFailure" color="warning" variant="flat" prepend-icon="mdi-alert-octagon">
+            Forced Fail: below {{ record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5' }} / 10
+          </v-chip>
           <v-chip color="primary" variant="tonal" prepend-icon="mdi-chart-line">
             <strong>Overall Score:</strong>&nbsp;
             <span :class="getScoreColorClass(record.overallScore)">
@@ -228,6 +231,9 @@
             variant="outlined" size="small">
             Binary Items: {{ (record.binItemsScore * 10).toFixed(2) }}
           </v-chip>
+        </div>
+        <div v-if="record.isForcedFailure && record.forcedFailureItems?.length" class="mt-2 text-caption text-warning-darken-2">
+          Failing items: {{ record.forcedFailureItems.join(', ') }}
         </div>
       </div>
     </v-card>

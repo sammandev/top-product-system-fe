@@ -71,6 +71,9 @@
               <v-badge :content="config.deviceIds.length || config.totalDeviceCount || 'All'" color="success" inline
                 class="ml-1" />
               <v-chip size="x-small" class="ml-1" variant="outlined">{{ config.testStatus }}</v-chip>
+              <v-chip size="x-small" class="ml-1" color="warning" variant="outlined">
+                Min {{ (config.minimumItemScore ?? 6.5).toFixed(1) }}
+              </v-chip>
             </v-chip>
           </v-card-text>
         </v-card>
@@ -105,6 +108,7 @@
 
     <!-- Results Section with Ranking Table -->
     <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
+      :forced-failures="forcedFailures"
       :calculating-scores="calculatingScores" :loading="loadingTestItems" :exporting-all="exportingAll"
       @row-click="handleRowClick" @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords"
       @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores"
@@ -151,6 +155,7 @@ import {
   type TopProductMeasurementCreate,
 } from '@/features/top-products/api/topProducts.api'
 import { useScoring } from '../composables/useScoring'
+import { evaluateForcedFailure } from '../utils/iplasForcedFailure'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
 import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
@@ -176,6 +181,7 @@ const {
 
 // Scoring state
 const recordScores = ref<Record<string, number>>({})
+const forcedFailures = ref<Record<string, { minimumItemScore: number; failingItems: string[] }>>({})
 const calculatingScores = ref(false)
 const exportingAll = ref(false)
 
@@ -340,6 +346,8 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
       r['Test end Time'] === record['Test end Time'],
   )
   const scoredRecord = recordIndex >= 0 ? scoredRecords.value[recordIndex] : null
+  const forcedFailureKey = `${record.ISN || record.DeviceId || '-'}_${record.station}_${record['Test end Time'] || ''}`
+  const forcedFailure = forcedFailures.value[forcedFailureKey]
 
   // Build test items with scoring data
   const testItems: NormalizedTestItem[] = (record.TestItem || []).map(
@@ -362,6 +370,7 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
         policy: itemScore?.policy ?? undefined,
         target: itemScore?.target ?? undefined,
         weight: itemScore?.weight ?? 1.0,
+        forcedFailureThreshold: forcedFailure?.minimumItemScore,
       }
     },
   )
@@ -381,9 +390,15 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
     testEndTime: record['Test end Time'] || '-',
     testItems,
     // Include overall scoring data if available
-    overallScore: scoredRecord?.overallScore,
+    overallScore: forcedFailure ? 0 : scoredRecord?.overallScore,
     valueItemsScore: scoredRecord?.valueItemsScore,
     binItemsScore: scoredRecord?.binItemsScore,
+    isForcedFailure: !!forcedFailure,
+    forcedFailureReason: forcedFailure
+      ? `Forced failure: one or more scored numeric items are below ${forcedFailure.minimumItemScore.toFixed(1)} / 10`
+      : undefined,
+    forcedFailureItems: forcedFailure?.failingItems,
+    forcedFailureMinimumScore: forcedFailure?.minimumItemScore,
   }
 }
 
@@ -629,6 +644,7 @@ async function handleSaveToDb(payload: {
       }
 
       const isPassed = isStatusPass(record.ErrorCode)
+      const forcedFailure = forcedFailures.value[key]
 
       return {
         dut_isn: isn,
@@ -638,8 +654,8 @@ async function handleSaveToDb(payload: {
         device_name: record.DeviceId || null,
         test_date: endTime ? new Date(endTime).toISOString() : null,
         test_duration: duration,
-        pass_count: isPassed ? 1 : 0,
-        fail_count: isPassed ? 0 : 1,
+        pass_count: isPassed && !forcedFailure ? 1 : 0,
+        fail_count: isPassed && !forcedFailure ? 0 : 1,
         retest_count: 0,
         score,
         measurements,
@@ -692,6 +708,7 @@ async function handleCalculateScores(): Promise<void> {
     // We need to match scored records back to original records by index
     // since scoring order is preserved
     const newScores: Record<string, number> = {}
+    const nextForcedFailures: Record<string, { minimumItemScore: number; failingItems: string[] }> = {}
 
     testItemData.value.forEach((record, index) => {
       const isn = record.ISN || record.DeviceId || '-'
@@ -702,11 +719,23 @@ async function handleCalculateScores(): Promise<void> {
       // Get score by index (order is preserved from backend)
       const scoredRecord = scoredRecords.value[index]
       if (scoredRecord) {
-        newScores[key] = scoredRecord.overallScore
+        const stationConfig = stationConfigs.value[record.TSP || record.station]
+        const forcedFailure = evaluateForcedFailure(scoredRecord, stationConfig)
+
+        if (forcedFailure.isForcedFailure && forcedFailure.minimumItemScore !== null) {
+          nextForcedFailures[key] = {
+            minimumItemScore: forcedFailure.minimumItemScore,
+            failingItems: forcedFailure.failingItems,
+          }
+          newScores[key] = 0
+        } else {
+          newScores[key] = scoredRecord.overallScore
+        }
       }
     })
 
     recordScores.value = newScores
+    forcedFailures.value = nextForcedFailures
   } catch (err) {
     console.error('Failed to calculate scores:', err)
     error.value = scoringError.value || 'Failed to calculate scores'
@@ -944,6 +973,7 @@ function handleSiteChange(): void {
   stations.value = []
   clearTestItemData()
   selectedRecordKeys.value.clear()
+  forcedFailures.value = {}
 }
 
 async function handleProjectChange(): Promise<void> {
@@ -951,6 +981,7 @@ async function handleProjectChange(): Promise<void> {
   stations.value = []
   clearTestItemData()
   selectedRecordKeys.value.clear()
+  forcedFailures.value = {}
 
   if (selectedSite.value && selectedProject.value) {
     await fetchStations(selectedSite.value, selectedProject.value)
@@ -963,6 +994,7 @@ function handleClearAll(): void {
   stationConfigs.value = {}
   clearTestItemData()
   selectedRecordKeys.value.clear()
+  forcedFailures.value = {}
   // UPDATED: Clear test item names cache
   testItemNamesCache.value.clear()
 }
@@ -975,6 +1007,7 @@ async function fetchTestItems(): Promise<void> {
   clearTestItemData()
   // Clear scores when fetching new data
   recordScores.value = {}
+  forcedFailures.value = {}
 
   // Iterate through each configured station
   for (const config of Object.values(stationConfigs.value)) {

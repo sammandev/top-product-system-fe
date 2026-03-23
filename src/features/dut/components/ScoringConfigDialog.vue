@@ -107,6 +107,7 @@
             Apply Configuration
           </v-btn>
         </v-card-actions>
+      </v-card-text>
     </v-card>
   </v-dialog>
 </template>

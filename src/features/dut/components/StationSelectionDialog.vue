@@ -114,6 +114,7 @@ export interface StationConfig {
   deviceIds: string[]
   totalDeviceCount?: number // Total available device count (used when deviceIds is empty)
   testStatus: 'ALL' | 'PASS' | 'FAIL'
+  minimumItemScore?: number
   selectedTestItems: string[] // Empty means all test items
   testItemScoringConfigs?: Record<string, TestItemScoringConfig> // Per-test-item scoring config
 }

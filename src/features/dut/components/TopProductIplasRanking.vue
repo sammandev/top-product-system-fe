@@ -78,6 +78,10 @@
                 </template>
               </v-autocomplete>
             </v-col>
+            <v-col cols="12" md="2">
+              <v-switch v-model="forcedFailuresOnly" color="warning" density="compact" hide-details
+                inset label="Forced Fails Only" />
+            </v-col>
             <!-- Score Filter (only shown when scores are calculated) -->
             <template v-if="hasScores">
               <v-col cols="12" md="2">
@@ -95,7 +99,7 @@
                   density="compact" hide-details min="0" max="10" step="0.1" placeholder="0-10" />
               </v-col>
             </template>
-            <v-col cols="12" :md="hasScores ? 1 : 5" class="d-flex align-center justify-end">
+            <v-col cols="12" :md="hasScores ? 1 : 3" class="d-flex align-center justify-end">
               <v-btn v-if="hasActiveFilters" variant="text" size="small" color="primary" @click="clearAllFilters">
                 <v-icon start size="small">mdi-filter-off</v-icon>
                 Clear
@@ -113,7 +117,7 @@
             <template #item.rank="{ item }">
               <div class="d-flex align-center">
                 <template v-if="item.hasError">
-                  <v-icon color="error" size="small">mdi-alert-circle</v-icon>
+                  <v-icon :color="item.isForcedFailure ? 'warning' : 'error'" size="small">mdi-alert-circle</v-icon>
                 </template>
                 <template v-else-if="item.rank === 1">
                   <v-icon color="warning">mdi-trophy</v-icon>
@@ -161,15 +165,15 @@
 
             <!-- Status Column -->
             <template #item.status="{ item }">
-              <v-chip :color="item.hasError ? 'error' : 'success'" size="small">
-                {{ item.hasError ? item.errorCode : 'PASS' }}
+              <v-chip :color="item.isForcedFailure ? 'warning' : (item.hasError ? 'error' : 'success')" size="small">
+                {{ item.isForcedFailure ? 'MIN SCORE FAIL' : (item.hasError ? item.errorCode : 'PASS') }}
               </v-chip>
             </template>
 
             <!-- Score Column -->
             <template #item.score="{ item }">
               <template v-if="item.hasError">
-                <v-chip size="small" color="error" variant="tonal">FAIL</v-chip>
+                <v-chip size="small" :color="item.isForcedFailure ? 'warning' : 'error'" variant="tonal">FAIL</v-chip>
               </template>
               <template v-else-if="item.score !== null">
                 <v-chip size="small" :color="getScoreColor(item.score)" variant="flat" class="font-weight-bold">
@@ -207,6 +211,7 @@ interface Props {
   records: CsvTestItemData[]
   stationDisplayNames?: Record<string, string>
   scores?: Record<string, number> // Map of ISN+station+time to score
+  forcedFailures?: Record<string, { minimumItemScore: number; failingItems: string[] }>
   calculatingScores?: boolean
   loading?: boolean // Whether data is still being fetched
   exportingAll?: boolean // Whether export all is in progress (controlled by parent)
@@ -223,6 +228,7 @@ interface RankingItem {
   duration: string // Formatted duration string
   score: number | null
   hasError: boolean
+  isForcedFailure: boolean
   errorCode: string
   errorName: string
   originalRecord: CsvTestItemData
@@ -245,6 +251,7 @@ const searchQuery = ref<string>('')
 // Debounced search query for performance - actual filtering uses this
 const debouncedSearchQuery = ref<string>('')
 const deviceFilter = ref<string[]>([])
+const forcedFailuresOnly = ref(false)
 
 // Score filter state
 const scoreFilterType = ref<string | null>(null)
@@ -343,6 +350,7 @@ const rankingByStation = computed(() => {
     // Get score from scores map if available
     const scoreKey = `${record.ISN || record.DeviceId}_${stationName}_${record['Test end Time']}`
     const score = props.scores?.[scoreKey] ?? null
+    const forcedFailure = props.forcedFailures?.[scoreKey]
 
     // Calculate duration from start and end times
     const startTime = record['Test Start Time']
@@ -361,10 +369,13 @@ const rankingByStation = computed(() => {
       testStartTime: record['Test Start Time'] || '',
       testEndTime: record['Test end Time'] || '',
       duration: duration,
-      score: hasError ? null : score,
-      hasError: hasError,
-      errorCode: record.ErrorCode || '-',
-      errorName: record.ErrorName || '',
+      score: hasError || forcedFailure ? 0 : score,
+      hasError: hasError || !!forcedFailure,
+      isForcedFailure: !!forcedFailure,
+      errorCode: forcedFailure ? 'MIN_SCORE_FAIL' : (record.ErrorCode || '-'),
+      errorName: forcedFailure
+        ? `One or more scored numeric items are below ${forcedFailure.minimumItemScore.toFixed(1)} / 10`
+        : (record.ErrorName || ''),
       originalRecord: record,
     })
   })
@@ -474,6 +485,10 @@ const filteredRanking = computed(() => {
     items = items.filter((item) => deviceFilter.value.includes(item.device))
   }
 
+  if (forcedFailuresOnly.value) {
+    items = items.filter((item) => item.isForcedFailure)
+  }
+
   // Apply score filter (only when scores are available and filter is set)
   if (hasScores.value && scoreFilterType.value && scoreFilterValue.value !== null) {
     // Score is stored as 0-1 and displayed/filtered on the 0-10 scale.
@@ -517,6 +532,7 @@ const hasActiveFilters = computed(() => {
   return !!(
     debouncedSearchQuery.value ||
     deviceFilter.value.length > 0 ||
+    forcedFailuresOnly.value ||
     (scoreFilterType.value && scoreFilterValue.value !== null)
   )
 })
@@ -525,6 +541,7 @@ const activeFilterCount = computed(() => {
   let count = 0
   if (debouncedSearchQuery.value) count++
   if (deviceFilter.value.length > 0) count++
+  if (forcedFailuresOnly.value) count++
   if (scoreFilterType.value && scoreFilterValue.value !== null) count++
   return count
 })
@@ -533,6 +550,7 @@ function clearAllFilters() {
   searchQuery.value = ''
   debouncedSearchQuery.value = ''
   deviceFilter.value = []
+  forcedFailuresOnly.value = false
   scoreFilterType.value = null
   scoreFilterValue.value = null
   scoreFilterValue2.value = null

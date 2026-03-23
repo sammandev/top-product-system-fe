@@ -8,21 +8,9 @@
     <v-card-text>
       <v-row>
         <v-col cols="12" md="6">
-          <v-text-field
-            v-model.number="criteriaScore"
-            label="Criteria Score"
-            type="number"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-star"
-            min="0"
-            max="10"
-            step="0.1"
-            :error-messages="scoreError"
-            hint="Minimum score threshold (0-10)"
-            persistent-hint
-            @update:model-value="handleScoreChange"
-          >
+          <v-text-field v-model.number="criteriaScore" label="Criteria Score" type="number" variant="outlined"
+            density="comfortable" prepend-inner-icon="mdi-star" min="0" max="10" step="0.1" :error-messages="scoreError"
+            hint="Minimum score threshold (0-10)" persistent-hint @update:model-value="handleScoreChange">
             <template #append>
               <v-chip size="small" :color="getScoreColor(criteriaScore)">
                 {{ criteriaScore.toFixed(1) }}
@@ -32,20 +20,10 @@
         </v-col>
 
         <v-col cols="12" md="6">
-          <v-text-field
-            v-model.number="resultLimit"
-            label="Results Limit"
-            type="number"
-            variant="outlined"
-            density="comfortable"
-            prepend-inner-icon="mdi-format-list-numbered"
-            min="1"
-            max="100"
-            :error-messages="limitError"
-            hint="Maximum number of results (1-100)"
-            persistent-hint
-            @update:model-value="handleLimitChange"
-          />
+          <v-text-field v-model.number="resultLimit" label="Results Limit" type="number" variant="outlined"
+            density="comfortable" prepend-inner-icon="mdi-format-list-numbered" min="1" max="100"
+            :error-messages="limitError" hint="Maximum number of results (1-100)" persistent-hint
+            @update:model-value="handleLimitChange" />
         </v-col>
       </v-row>
 
@@ -55,39 +33,18 @@
         <v-icon start size="small">mdi-file-upload</v-icon>
         Custom Criteria File (Optional)
         <v-spacer />
-        <v-btn
-          size="small"
-          variant="outlined"
-          color="primary"
-          prepend-icon="mdi-download"
-          title="Download criteria JSON template"
-          @click="downloadTemplate"
-        >
+        <v-btn size="small" variant="outlined" color="primary" prepend-icon="mdi-download"
+          title="Download criteria JSON template" @click="downloadTemplate">
           Download Template
         </v-btn>
       </div>
 
-      <v-file-input
-        v-model="criteriaFile"
-        label="Upload criteria JSON file"
-        accept=".json,application/json"
-        variant="outlined"
-        density="comfortable"
-        prepend-icon="mdi-paperclip"
-        :clearable="true"
-        :show-size="true"
-        hint="Upload custom criteria configuration JSON file (.json)"
-        persistent-hint
-        @update:model-value="handleFileChange"
-      >
+      <v-file-input v-model="criteriaFile" label="Upload criteria JSON file" accept=".json,application/json"
+        variant="outlined" density="comfortable" prepend-icon="mdi-paperclip" :clearable="true" :show-size="true"
+        hint="Upload custom criteria configuration JSON file (.json)" persistent-hint
+        @update:model-value="handleFileChange">
         <template #selection="{ fileNames }">
-          <v-chip
-            v-for="fileName in fileNames"
-            :key="fileName"
-            size="small"
-            color="primary"
-            class="me-2"
-          >
+          <v-chip v-for="fileName in fileNames" :key="fileName" size="small" color="primary" class="me-2">
             {{ fileName }}
           </v-chip>
         </template>
@@ -107,13 +64,7 @@
         </div>
       </v-alert>
 
-      <v-alert
-        v-else-if="showValidation"
-        type="warning"
-        variant="tonal"
-        density="compact"
-        class="mt-4"
-      >
+      <v-alert v-else-if="showValidation" type="warning" variant="tonal" density="compact" class="mt-4">
         <template #prepend>
           <v-icon>mdi-alert</v-icon>
         </template>
@@ -266,5 +217,4 @@ watch(
 )
 </script>
 
-<style scoped>
-</style>
+<style scoped></style>
