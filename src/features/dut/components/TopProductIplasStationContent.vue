@@ -98,6 +98,17 @@
       {{ error }}
     </v-alert>
 
+    <v-alert
+      v-if="stationSearchCacheAlert"
+      :type="stationSearchCacheAlert.type"
+      class="mb-4"
+      variant="tonal"
+      density="comfortable"
+      :icon="stationSearchCacheAlert.icon"
+    >
+      {{ stationSearchCacheAlert.message }}
+    </v-alert>
+
     <!-- Loading Indicator -->
     <v-card v-if="loadingTestItems" class="mb-4">
       <v-card-text class="text-center py-8">
@@ -145,15 +156,15 @@ import type {
 } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
-import { getErrorMessage } from '@/shared/utils'
-import { getApiErrorDetail } from '@/shared/utils/error'
-import { isStatusPass } from '@/shared/utils/helpers'
-import { useNotification } from '@/shared/composables/useNotification'
 import {
   createTopProductsBulk,
   type TopProductCreate,
   type TopProductMeasurementCreate,
 } from '@/features/top-products/api/topProducts.api'
+import { useNotification } from '@/shared/composables/useNotification'
+import { getErrorMessage } from '@/shared/utils'
+import { getApiErrorDetail } from '@/shared/utils/error'
+import { isStatusPass } from '@/shared/utils/helpers'
 import { useScoring } from '../composables/useScoring'
 import { evaluateForcedFailure } from '../utils/iplasForcedFailure'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
@@ -190,6 +201,7 @@ const {
   loadingStations,
   loadingTestItems,
   error,
+  stationSearchCacheMetadata,
   stations,
   testItemData,
   uniqueSites,
@@ -266,6 +278,56 @@ const canFetchData = computed(() => {
     startTime.value &&
     endTime.value
   )
+})
+
+function formatCacheTimestamp(value: string | null | undefined): string {
+  if (!value) return ''
+
+  const parsed = new Date(value)
+  if (Number.isNaN(parsed.getTime())) {
+    return value
+  }
+
+  return parsed.toLocaleString()
+}
+
+const stationSearchCacheAlert = computed(() => {
+  const metadata = stationSearchCacheMetadata.value
+  if (!metadata || metadata.bucketStats.length === 0 || loadingTestItems.value || error.value) {
+    return null
+  }
+
+  const cachedBuckets = metadata.bucketStats.filter((stat) => stat.source === 'cache').length
+  const refreshedBuckets = metadata.bucketStats.filter((stat) => stat.source === 'refresh').length
+  const unstableBuckets = metadata.bucketStats.filter((stat) =>
+    ['partial', 'hot', 'empty_hot'].includes(stat.state),
+  ).length
+
+  const validatedText = metadata.validatedUntil
+    ? ` Validated through ${formatCacheTimestamp(metadata.validatedUntil)}.`
+    : ''
+
+  if (metadata.cacheCoverage === 'full' && unstableBuckets === 0) {
+    return {
+      type: 'success' as const,
+      icon: 'mdi-database-check-outline',
+      message: `Served from Redis cache. Reused ${cachedBuckets} finalized bucket(s).${validatedText}`,
+    }
+  }
+
+  if (metadata.cacheCoverage === 'miss') {
+    return {
+      type: 'info' as const,
+      icon: 'mdi-cloud-refresh-outline',
+      message: `Fetched fresh data from iPLAS. Refreshed ${refreshedBuckets} bucket(s).${validatedText}`,
+    }
+  }
+
+  return {
+    type: 'info' as const,
+    icon: 'mdi-database-sync-outline',
+    message: `Partially reused Redis cache. Reused ${cachedBuckets} bucket(s) and refreshed ${refreshedBuckets} bucket(s).${unstableBuckets > 0 ? ` ${unstableBuckets} bucket(s) are still live or partial.` : ''}${validatedText}`,
+  }
 })
 
 // Apply date range preset
@@ -623,10 +685,10 @@ async function handleSaveToDb(payload: {
         const actualValue = parseFloat(item.VALUE)
         return {
           test_item: item.NAME,
-          usl: usl !== null && !isNaN(usl) ? usl : null,
-          lsl: lsl !== null && !isNaN(lsl) ? lsl : null,
+          usl: usl !== null && !Number.isNaN(usl) ? usl : null,
+          lsl: lsl !== null && !Number.isNaN(lsl) ? lsl : null,
           target_value: null,
-          actual_value: !isNaN(actualValue) ? actualValue : null,
+          actual_value: !Number.isNaN(actualValue) ? actualValue : null,
           deviation: null,
         }
       })
@@ -638,7 +700,7 @@ async function handleSaveToDb(payload: {
       if (startTime && endTime) {
         const start = new Date(startTime).getTime()
         const end = new Date(endTime).getTime()
-        if (!isNaN(start) && !isNaN(end)) {
+        if (!Number.isNaN(start) && !Number.isNaN(end)) {
           duration = Math.floor((end - start) / 1000)
         }
       }
@@ -708,7 +770,8 @@ async function handleCalculateScores(): Promise<void> {
     // We need to match scored records back to original records by index
     // since scoring order is preserved
     const newScores: Record<string, number> = {}
-    const nextForcedFailures: Record<string, { minimumItemScore: number; failingItems: string[] }> = {}
+    const nextForcedFailures: Record<string, { minimumItemScore: number; failingItems: string[] }> =
+      {}
 
     testItemData.value.forEach((record, index) => {
       const isn = record.ISN || record.DeviceId || '-'

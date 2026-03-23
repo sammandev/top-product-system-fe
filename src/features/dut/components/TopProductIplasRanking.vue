@@ -78,10 +78,6 @@
                 </template>
               </v-autocomplete>
             </v-col>
-            <v-col cols="12" md="2">
-              <v-switch v-model="forcedFailuresOnly" color="warning" density="compact" hide-details
-                inset label="Forced Fails Only" />
-            </v-col>
             <!-- Score Filter (only shown when scores are calculated) -->
             <template v-if="hasScores">
               <v-col cols="12" md="2">
@@ -251,7 +247,6 @@ const searchQuery = ref<string>('')
 // Debounced search query for performance - actual filtering uses this
 const debouncedSearchQuery = ref<string>('')
 const deviceFilter = ref<string[]>([])
-const forcedFailuresOnly = ref(false)
 
 // Score filter state
 const scoreFilterType = ref<string | null>(null)
@@ -372,10 +367,10 @@ const rankingByStation = computed(() => {
       score: hasError || forcedFailure ? 0 : score,
       hasError: hasError || !!forcedFailure,
       isForcedFailure: !!forcedFailure,
-      errorCode: forcedFailure ? 'MIN_SCORE_FAIL' : (record.ErrorCode || '-'),
+      errorCode: forcedFailure ? 'MIN_SCORE_FAIL' : record.ErrorCode || '-',
       errorName: forcedFailure
         ? `One or more scored numeric items are below ${forcedFailure.minimumItemScore.toFixed(1)} / 10`
-        : (record.ErrorName || ''),
+        : record.ErrorName || '',
       originalRecord: record,
     })
   })
@@ -485,10 +480,6 @@ const filteredRanking = computed(() => {
     items = items.filter((item) => deviceFilter.value.includes(item.device))
   }
 
-  if (forcedFailuresOnly.value) {
-    items = items.filter((item) => item.isForcedFailure)
-  }
-
   // Apply score filter (only when scores are available and filter is set)
   if (hasScores.value && scoreFilterType.value && scoreFilterValue.value !== null) {
     // Score is stored as 0-1 and displayed/filtered on the 0-10 scale.
@@ -532,7 +523,6 @@ const hasActiveFilters = computed(() => {
   return !!(
     debouncedSearchQuery.value ||
     deviceFilter.value.length > 0 ||
-    forcedFailuresOnly.value ||
     (scoreFilterType.value && scoreFilterValue.value !== null)
   )
 })
@@ -541,7 +531,6 @@ const activeFilterCount = computed(() => {
   let count = 0
   if (debouncedSearchQuery.value) count++
   if (deviceFilter.value.length > 0) count++
-  if (forcedFailuresOnly.value) count++
   if (scoreFilterType.value && scoreFilterValue.value !== null) count++
   return count
 })
@@ -550,7 +539,6 @@ function clearAllFilters() {
   searchQuery.value = ''
   debouncedSearchQuery.value = ''
   deviceFilter.value = []
-  forcedFailuresOnly.value = false
   scoreFilterType.value = null
   scoreFilterValue.value = null
   scoreFilterValue2.value = null

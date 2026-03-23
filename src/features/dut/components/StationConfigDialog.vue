@@ -10,7 +10,6 @@
             </v-card-title>
 
             <v-card-text class="pa-4" style="max-height: 70vh; overflow-y: auto;">
-                <!-- Test Status Selection - Dropdown -->
                 <v-row dense class="mb-4">
                     <v-col cols="12" md="6">
                         <v-select v-model="localConfig.testStatus" :items="testStatusOptions" item-title="title"
@@ -34,7 +33,15 @@
                         </v-select>
                     </v-col>
                     <v-col cols="12" md="6">
-                        <!-- Device IDs Selection - Dropdown -->
+                        <v-text-field v-model.number="localConfig.minimumItemScore" label="Minimum Test Item Score"
+                            type="number" variant="outlined" density="comfortable" prepend-inner-icon="mdi-chart-box-outline"
+                            min="0" max="10" step="0.1" hint="If any scored numeric test item is below this value, the DUT becomes a complete failure. Default: 6.5 / 10"
+                            persistent-hint />
+                    </v-col>
+                </v-row>
+
+                <v-row dense class="mb-4">
+                    <v-col cols="12">
                         <v-autocomplete v-model="localConfig.deviceIds" :items="availableDeviceIds"
                             label="Device IDs (Default All)" variant="outlined" density="comfortable"
                             prepend-inner-icon="mdi-devices" multiple chips closable-chips hide-details
@@ -70,15 +77,6 @@
                                     @click.stop="handleRefreshDevices" />
                             </template>
                         </v-autocomplete>
-                    </v-col>
-                </v-row>
-
-                <v-row dense class="mb-4">
-                    <v-col cols="12" md="6">
-                        <v-text-field v-model.number="localConfig.minimumItemScore" label="Minimum Test Item Score"
-                            type="number" variant="outlined" density="comfortable" prepend-inner-icon="mdi-chart-box-outline"
-                            min="0" max="10" step="0.1" hint="If any scored numeric test item is below this value, the DUT becomes a complete failure. Default: 6.5 / 10"
-                            persistent-hint />
                     </v-col>
                 </v-row>
 
@@ -547,16 +545,16 @@ const internalShow = computed({
 
 // Test Status Options
 const testStatusOptions = [
-  { title: 'All (PASS & FAIL)', value: 'ALL' },
-  { title: 'PASS Only', value: 'PASS' },
-  { title: 'FAIL Only', value: 'FAIL' },
+  { title: 'ALL', value: 'ALL' },
+  { title: 'PASS', value: 'PASS' },
+  { title: 'FAIL', value: 'FAIL' },
 ]
 
 const localConfig = ref<StationConfig>({
   displayName: '',
   stationName: '',
   deviceIds: [],
-  testStatus: 'PASS', // UPDATED: Default to PASS only
+  testStatus: 'PASS',
   minimumItemScore: 6.5,
   selectedTestItems: [],
   testItemScoringConfigs: {},
@@ -621,7 +619,7 @@ watch(
           displayName: props.station.display_station_name,
           stationName: props.station.station_name,
           deviceIds: [],
-          testStatus: 'PASS', // UPDATED: Default to PASS only
+          testStatus: 'PASS',
           minimumItemScore: 6.5,
           selectedTestItems: [],
           testItemScoringConfigs: {},

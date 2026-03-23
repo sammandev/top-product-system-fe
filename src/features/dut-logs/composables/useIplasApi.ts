@@ -25,6 +25,8 @@ import {
   type IplasDownloadCsvLogInfo,
   type IplasIsnSearchRecord,
   type IplasStation,
+  type IplasStationSearchBucketStat,
+  type IplasStationSearchCacheMetadata,
   type IplasTestItemInfo,
   iplasProxyApi,
   type SiteProject,
@@ -34,11 +36,11 @@ import { useIplasSettings } from './useIplasSettings'
 
 // Re-export types for backwards compatibility
 export type {
-  SiteProject,
-  IplasStation,
-  CsvTestItemData,
   CompactCsvTestItemData,
+  CsvTestItemData,
   IplasIsnSearchRecord,
+  IplasStation,
+  SiteProject,
   TestItem,
 }
 
@@ -139,6 +141,56 @@ function deduplicateRecords<T extends CsvTestItemData | CompactCsvTestItemData>(
   return [...existingRecords, ...uniqueNewRecords]
 }
 
+function mergeBucketStats(
+  existingStats: IplasStationSearchBucketStat[],
+  newStats: IplasStationSearchBucketStat[],
+): IplasStationSearchBucketStat[] {
+  const statMap = new Map<string, IplasStationSearchBucketStat>()
+
+  for (const stat of existingStats) {
+    statMap.set(`${stat.bucket_start}_${stat.bucket_end}_${stat.source}`, stat)
+  }
+
+  for (const stat of newStats) {
+    statMap.set(`${stat.bucket_start}_${stat.bucket_end}_${stat.source}`, stat)
+  }
+
+  return Array.from(statMap.values()).sort((a, b) => a.bucket_start.localeCompare(b.bucket_start))
+}
+
+function mergeStationSearchMetadata(
+  current: IplasStationSearchCacheMetadata | null,
+  response: Pick<IplasCsvTestItemResponse, 'cache_coverage' | 'validated_until' | 'bucket_stats'>,
+): IplasStationSearchCacheMetadata | null {
+  const mergedStats = mergeBucketStats(current?.bucketStats ?? [], response.bucket_stats ?? [])
+  const validatedCandidates = [current?.validatedUntil, response.validated_until]
+    .filter((value): value is string => Boolean(value))
+    .sort()
+
+  if (mergedStats.length === 0 && validatedCandidates.length === 0) {
+    return current
+  }
+
+  let cacheCoverage: 'full' | 'partial' | 'miss' = 'full'
+  const sources = new Set(mergedStats.map((stat) => stat.source))
+
+  if (sources.has('cache') && sources.has('refresh')) {
+    cacheCoverage = 'partial'
+  } else if (sources.has('refresh')) {
+    cacheCoverage = 'miss'
+  }
+
+  if (response.cache_coverage === 'partial') {
+    cacheCoverage = 'partial'
+  }
+
+  return {
+    cacheCoverage,
+    validatedUntil: validatedCandidates[0] ?? null,
+    bucketStats: mergedStats,
+  }
+}
+
 /**
  * Composable for iPLAS API operations
  */
@@ -163,6 +215,9 @@ export function useIplasApi() {
 
   // Chunk progress tracking (for multi-day queries)
   const chunkProgress = ref<{ fetched: number; total: number } | null>(null)
+
+  // Station Search cache metadata for lightweight UI status
+  const stationSearchCacheMetadata = ref<IplasStationSearchCacheMetadata | null>(null)
 
   // Data states (using shallowRef for large arrays to reduce reactivity overhead)
   const siteProjects = ref<SiteProject[]>([])
@@ -380,6 +435,11 @@ export function useIplasApi() {
         }
       }
 
+      stationSearchCacheMetadata.value = mergeStationSearchMetadata(
+        stationSearchCacheMetadata.value,
+        response,
+      )
+
       // Append to existing data with deduplication
       testItemData.value = deduplicateRecords(
         testItemData.value,
@@ -438,6 +498,11 @@ export function useIplasApi() {
           total: response.total_chunks,
         }
       }
+
+      stationSearchCacheMetadata.value = mergeStationSearchMetadata(
+        stationSearchCacheMetadata.value,
+        response,
+      )
 
       // Append to existing data with deduplication
       compactTestItemData.value = deduplicateRecords(
@@ -507,6 +572,11 @@ export function useIplasApi() {
         }
         chunkProgress.value = progress
       }
+
+      stationSearchCacheMetadata.value = mergeStationSearchMetadata(
+        stationSearchCacheMetadata.value,
+        response,
+      )
 
       return {
         items: response.data,
@@ -803,6 +873,8 @@ export function useIplasApi() {
     compactTestItemData.value = []
     testItemsCache.clear()
     possiblyTruncated.value = false
+    chunkProgress.value = null
+    stationSearchCacheMetadata.value = null
   }
 
   /**
@@ -818,6 +890,9 @@ export function useIplasApi() {
     compactTestItemData.value = []
     isnSearchData.value = []
     testItemsCache.clear()
+    possiblyTruncated.value = false
+    chunkProgress.value = null
+    stationSearchCacheMetadata.value = null
   }
 
   /**
@@ -941,6 +1016,22 @@ export function useIplasApi() {
         token: getUserToken(),
       })
 
+      if (response.possibly_truncated) {
+        possiblyTruncated.value = true
+      }
+
+      if (response.chunks_fetched && response.total_chunks) {
+        chunkProgress.value = {
+          fetched: response.chunks_fetched,
+          total: response.total_chunks,
+        }
+      }
+
+      stationSearchCacheMetadata.value = mergeStationSearchMetadata(
+        stationSearchCacheMetadata.value,
+        response,
+      )
+
       // Append to existing data with deduplication
       testItemData.value = deduplicateRecords(
         testItemData.value,
@@ -973,6 +1064,9 @@ export function useIplasApi() {
 
     // Chunk progress (for multi-day queries)
     chunkProgress,
+
+    // Station Search cache metadata
+    stationSearchCacheMetadata,
 
     // Data (full records with TestItem arrays)
     siteProjects,

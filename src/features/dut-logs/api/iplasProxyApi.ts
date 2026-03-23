@@ -94,6 +94,28 @@ export interface IplasCsvTestItemResponse {
   chunks_fetched?: number
   /** Total number of chunks (for queries >6 days) */
   total_chunks?: number
+  /** Bucket-cache coverage for this request */
+  cache_coverage?: 'full' | 'partial' | 'miss' | null
+  /** Earliest validated coverage timestamp across all buckets */
+  validated_until?: string | null
+  /** Bucket-level cache metadata for this request */
+  bucket_stats?: IplasStationSearchBucketStat[] | null
+}
+
+export interface IplasStationSearchBucketStat {
+  bucket_start: string
+  bucket_end: string
+  state: 'complete' | 'empty_complete' | 'partial' | 'hot' | 'empty_hot'
+  source: 'cache' | 'refresh'
+  record_count: number
+  validated_until?: string | null
+  latest_record_time?: string | null
+}
+
+export interface IplasStationSearchCacheMetadata {
+  cacheCoverage: 'full' | 'partial' | 'miss'
+  validatedUntil: string | null
+  bucketStats: IplasStationSearchBucketStat[]
 }
 
 export interface IplasTestItemNamesRequest {
@@ -503,6 +525,12 @@ export interface CompactCsvTestItemResponse {
   chunks_fetched?: number
   /** Total number of chunks (for queries >6 days) */
   total_chunks?: number
+  /** Bucket-cache coverage for this request */
+  cache_coverage?: 'full' | 'partial' | 'miss' | null
+  /** Earliest validated coverage timestamp across all buckets */
+  validated_until?: string | null
+  /** Bucket-level cache metadata for this request */
+  bucket_stats?: IplasStationSearchBucketStat[] | null
 }
 
 export interface RecordTestItemsRequest {
