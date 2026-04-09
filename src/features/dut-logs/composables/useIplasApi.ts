@@ -191,6 +191,22 @@ function mergeStationSearchMetadata(
   }
 }
 
+function ensureArrayResponse<T>(
+  data: T[] | null | undefined,
+  emptyMessage: string,
+  invalidMessage: string,
+): T[] {
+  if (!Array.isArray(data)) {
+    throw new Error(invalidMessage)
+  }
+
+  if (data.length === 0) {
+    throw new Error(emptyMessage)
+  }
+
+  return data
+}
+
 /**
  * Composable for iPLAS API operations
  */
@@ -421,6 +437,11 @@ export function useIplasApi() {
         test_status: testStatus,
         token: getUserToken(),
       })
+      const responseData = ensureArrayResponse(
+        response.data as CsvTestItemData[] | undefined,
+        'No iPLAS data was returned for the selected device and time range',
+        'iPLAS API returned an invalid response for test items',
+      )
 
       // Track truncation warning (any chunk hit 5000 limit)
       if (response.possibly_truncated) {
@@ -441,11 +462,8 @@ export function useIplasApi() {
       )
 
       // Append to existing data with deduplication
-      testItemData.value = deduplicateRecords(
-        testItemData.value,
-        response.data as CsvTestItemData[],
-      )
-      return response.data as CsvTestItemData[]
+      testItemData.value = deduplicateRecords(testItemData.value, responseData)
+      return responseData
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to fetch test items'
       throw err
@@ -656,9 +674,14 @@ export function useIplasApi() {
           token: getUserToken(),
         })
       })
+      const responseData = ensureArrayResponse(
+        response.data as unknown as IsnSearchData[] | undefined,
+        `No iPLAS data was returned for identifier ${isn}`,
+        'iPLAS API returned an invalid ISN search response',
+      )
 
       // Map proxy response to IsnSearchData format
-      isnSearchData.value = response.data as unknown as IsnSearchData[]
+      isnSearchData.value = responseData
       return isnSearchData.value
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to search by ISN'
@@ -1015,6 +1038,11 @@ export function useIplasApi() {
         offset,
         token: getUserToken(),
       })
+      const responseData = ensureArrayResponse(
+        response.data as CsvTestItemData[] | undefined,
+        'No iPLAS data was returned for the selected device and filters',
+        'iPLAS API returned an invalid filtered test-item response',
+      )
 
       if (response.possibly_truncated) {
         possiblyTruncated.value = true
@@ -1033,10 +1061,7 @@ export function useIplasApi() {
       )
 
       // Append to existing data with deduplication
-      testItemData.value = deduplicateRecords(
-        testItemData.value,
-        response.data as CsvTestItemData[],
-      )
+      testItemData.value = deduplicateRecords(testItemData.value, responseData)
       return response
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to fetch filtered test items'

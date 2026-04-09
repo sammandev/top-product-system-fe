@@ -70,7 +70,6 @@
               {{ displayName }}
               <v-badge :content="config.deviceIds.length || config.totalDeviceCount || 'All'" color="success" inline
                 class="ml-1" />
-              <v-chip size="x-small" class="ml-1" variant="outlined">{{ config.testStatus }}</v-chip>
               <v-chip size="x-small" class="ml-1" color="warning" variant="outlined">
                 Min {{ (config.minimumItemScore ?? 6.5).toFixed(1) }}
               </v-chip>
@@ -959,6 +958,13 @@ async function loadDefaultTestItemsForStation(
       end_time: new Date(endTime.value).toISOString(),
     })
 
+    if (!Array.isArray(response.data)) {
+      throw new Error('Default test items API returned an invalid response')
+    }
+    if (response.data.length === 0) {
+      throw new Error('No default test items were returned for the selected station and time range')
+    }
+
     const testItemInfos = mapDefaultLatestTestItemInfos(response.data)
     currentStationDefaultTestItems.value = testItemInfos
     defaultLatestTestItemsCache.value.set(cacheKey, testItemInfos)
@@ -1002,6 +1008,10 @@ async function loadIplasTestItemsForStation(station: Station, forceRefresh = fal
     )
 
     const testItemInfos = mapIplasTestItemInfos(response)
+    if (testItemInfos.length === 0) {
+      throw new Error('No iPLAS test items were returned for the selected station and time range')
+    }
+
     currentStationIplasTestItems.value = testItemInfos
     iplasTestItemNamesCache.value.set(cacheKey, testItemInfos)
 
@@ -1199,7 +1209,7 @@ async function fetchTestItems(): Promise<void> {
           deviceId,
           new Date(startTime.value),
           new Date(endTime.value),
-          config.testStatus,
+          'PASS',
           config.selectedTestItems,
         )
       } else {
@@ -1212,10 +1222,15 @@ async function fetchTestItems(): Promise<void> {
           deviceId,
           new Date(startTime.value),
           new Date(endTime.value),
-          config.testStatus,
+          'PASS',
         )
       }
     }
+  }
+
+  if (testItemData.value.length === 0) {
+    error.value =
+      'No iPLAS data was returned for the selected station configuration, device IDs, and time range.'
   }
 
   logStationSearchCacheStatus()

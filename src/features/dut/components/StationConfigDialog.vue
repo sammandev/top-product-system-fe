@@ -11,28 +11,7 @@
 
             <v-card-text class="pa-4" style="max-height: 70vh; overflow-y: auto;">
                 <v-row dense class="mb-4">
-                    <v-col cols="12" md="6">
-                        <v-select v-model="localConfig.testStatus" :items="testStatusOptions" item-title="title"
-                            item-value="value" label="Test Status Filter" variant="outlined" density="comfortable"
-                            prepend-inner-icon="mdi-filter" hide-details>
-                            <template #item="{ props: itemProps, item }">
-                                <v-list-item v-bind="itemProps">
-                                    <template #prepend>
-                                        <v-icon :color="getStatusColor(item.value)">
-                                            {{ getStatusIcon(item.value) }}
-                                        </v-icon>
-                                    </template>
-                                </v-list-item>
-                            </template>
-                            <template #selection="{ item }">
-                                <v-chip :color="getStatusColor(item.value)" size="small" variant="flat" class="mr-1">
-                                    <v-icon start size="small">{{ getStatusIcon(item.value) }}</v-icon>
-                                    {{ item.title }}
-                                </v-chip>
-                            </template>
-                        </v-select>
-                    </v-col>
-                    <v-col cols="12" md="6">
+                    <v-col cols="12">
                         <v-text-field v-model.number="localConfig.minimumItemScore" label="Minimum Test Item Score"
                             type="number" variant="outlined" density="comfortable" prepend-inner-icon="mdi-chart-box-outline"
                             min="0" max="10" step="0.1" hint="If any scored numeric test item is below this value, the DUT becomes a complete failure. Default: 6.5 / 10"
@@ -99,6 +78,7 @@
                                 density="compact"
                                 mandatory
                                 variant="outlined"
+                                class="test-item-source-toggle"
                                 @update:model-value="handleTestItemSourceChange"
                             >
                                 <v-btn value="default" size="small">Default</v-btn>
@@ -556,18 +536,11 @@ const internalShow = computed({
   set: (value) => emit('update:show', value),
 })
 
-// Test Status Options
-const testStatusOptions = [
-  { title: 'ALL', value: 'ALL' },
-  { title: 'PASS', value: 'PASS' },
-  { title: 'FAIL', value: 'FAIL' },
-]
-
 const localConfig = ref<StationConfig>({
   displayName: '',
   stationName: '',
   deviceIds: [],
-  testStatus: 'ALL',
+  testStatus: 'PASS',
   minimumItemScore: 6.5,
   selectedTestItems: [],
   testItemScoringConfigs: {},
@@ -632,7 +605,7 @@ watch(
           displayName: props.station.display_station_name,
           stationName: props.station.station_name,
           deviceIds: [],
-          testStatus: 'ALL',
+          testStatus: 'PASS',
           minimumItemScore: 6.5,
           selectedTestItems: [],
           testItemScoringConfigs: {},
@@ -644,29 +617,6 @@ watch(
     }
   },
 )
-
-// Helper functions
-function getStatusColor(value: string): string {
-  switch (value) {
-    case 'PASS':
-      return 'success'
-    case 'FAIL':
-      return 'error'
-    default:
-      return 'primary'
-  }
-}
-
-function getStatusIcon(value: string): string {
-  switch (value) {
-    case 'PASS':
-      return 'mdi-check-circle'
-    case 'FAIL':
-      return 'mdi-close-circle'
-    default:
-      return 'mdi-format-list-bulleted'
-  }
-}
 
 function toggleSelectAllDevices(): void {
   if (allDevicesSelected.value) {
@@ -991,6 +941,22 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .scoring-config-btn {
     text-transform: none;
     font-size: 0.7rem;
+}
+
+.test-item-source-toggle {
+    border-radius: 999px;
+    background-color: rgba(var(--v-theme-surface), 0.85);
+    padding: 0.125rem;
+}
+
+:deep(.test-item-source-toggle .v-btn) {
+    min-width: 78px;
+    color: rgb(var(--v-theme-on-surface));
+}
+
+:deep(.test-item-source-toggle .v-btn.v-btn--active) {
+    color: rgb(var(--v-theme-on-primary));
+    background-color: rgb(var(--v-theme-primary));
 }
 
 /* UPDATED: Fix icon cropping inside chips */

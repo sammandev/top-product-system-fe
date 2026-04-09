@@ -152,7 +152,6 @@
               {{ displayName }}
               <v-badge :content="config.deviceIds.length || config.totalDeviceCount || 'All'" color="success" inline
                 class="ml-1" />
-              <v-chip size="x-small" class="ml-1" variant="outlined">{{ config.testStatus }}</v-chip>
               <v-chip size="x-small" class="ml-1" color="warning" variant="outlined">
                 Min {{ (config.minimumItemScore ?? 6.5).toFixed(1) }}
               </v-chip>
@@ -639,10 +638,18 @@ async function handleLookupStations(): Promise<void> {
 
     // STEP 2: Search for ALL identifiers in parallel and aggregate results
     const searchPromises = allIdentifiers.map((identifier) =>
-      iplasProxyApi.searchByIsn({ isn: identifier }).catch((err) => {
-        console.warn(`Failed to search identifier "${identifier}":`, err)
-        return { data: [] as IplasIsnSearchRecord[] }
-      }),
+      iplasProxyApi
+        .searchByIsn({ isn: identifier })
+        .then((response) => {
+          if (!Array.isArray(response.data)) {
+            throw new Error('iPLAS API returned an invalid ISN search response')
+          }
+          return response
+        })
+        .catch((err) => {
+          console.warn(`Failed to search identifier "${identifier}":`, err)
+          return { data: [] as IplasIsnSearchRecord[] }
+        }),
     )
 
     const responses = await Promise.all(searchPromises)
@@ -978,6 +985,11 @@ async function fetchTestItems(): Promise<void> {
 
       return csvRecord
     })
+
+    if (transformedRecords.length === 0) {
+      error.value = 'No iPLAS data was returned for the selected station configuration.'
+      return
+    }
 
     // Update testItemData using the composable's internal array
     // Since we can't directly set, push to the reactive array after clearing

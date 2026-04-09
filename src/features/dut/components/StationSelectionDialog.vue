@@ -59,9 +59,6 @@
                                     <v-icon start size="small">mdi-tune</v-icon>
                                     {{ getScoringConfigsCount(station.display_station_name) }} Scoring
                                 </v-chip>
-                                <v-chip size="small" color="secondary" variant="tonal">
-                                    {{ getStationConfig(station.display_station_name)?.testStatus || 'ALL' }}
-                                </v-chip>
                             </div>
                             <v-icon>mdi-chevron-right</v-icon>
                         </template>
