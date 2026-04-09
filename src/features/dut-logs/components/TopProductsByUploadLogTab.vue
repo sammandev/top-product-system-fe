@@ -256,7 +256,8 @@
 
       <v-card-text class="pa-0 flex-grow-1" style="overflow: hidden;">
         <!-- Comparison Table Fullscreen -->
-        <v-data-table :headers="comparisonHeaders" :items="comparisonTableItems" :items-per-page="-1"
+        <v-data-table :headers="comparisonHeaders" :items="comparisonTableItems"
+          :items-per-page="comparisonItemsPerPage"
           density="comfortable" class="elevation-1" fixed-header :height="'calc(100vh - 180px)'">
           <!-- Custom row rendering -->
           <template #item="{ item, columns }">
@@ -451,6 +452,7 @@ const criteriaBuilderOpen = ref(false)
 const itemFilterType = ref<string>('all')
 const searchQuery = ref('')
 const exportingComparison = ref(false)
+const comparisonItemsPerPage = ref(100)
 
 // UPDATED: iPLAS comparison state
 const iplasDataByIsn = ref<Map<string, IplasIsnSearchRecord[]>>(new Map())

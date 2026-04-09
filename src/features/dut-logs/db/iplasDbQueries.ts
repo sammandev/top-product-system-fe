@@ -100,6 +100,67 @@ export interface RecordStatistics {
 
 const STORE_NAME = 'testRecords'
 
+function canUseDateCursorPagination(
+  options: TablePaginationOptions,
+  filter: RecordFilter,
+): boolean {
+  const sortConfig = options.sortBy[0] || { key: 'TestStartTime', order: 'desc' as const }
+
+  return (
+    sortConfig.key === 'TestStartTime' &&
+    (!filter.status || filter.status === 'ALL') &&
+    !filter.isn &&
+    !filter.site &&
+    !filter.project &&
+    !filter.search
+  )
+}
+
+async function queryRecordsByDateCursor(
+  db: IDBPDatabase<IplasDbSchema>,
+  options: TablePaginationOptions,
+  filter: RecordFilter,
+): Promise<TableQueryResult> {
+  const tx = db.transaction(STORE_NAME, 'readonly')
+  const store = tx.objectStore(STORE_NAME)
+  const sortConfig = options.sortBy[0] || { key: 'TestStartTime', order: 'desc' as const }
+  const offset = (options.page - 1) * options.itemsPerPage
+  const direction = sortConfig.order === 'desc' ? 'prev' : 'next'
+
+  let keyRange: IDBKeyRange | undefined
+  let cursorSource:
+    | ReturnType<typeof store.index>
+    | typeof store = store
+
+  if (filter.station) {
+    cursorSource = store.index('by-station-date')
+    const start = filter.dateRange?.start ?? ''
+    const end = filter.dateRange?.end ?? '\uffff'
+    keyRange = IDBKeyRange.bound([filter.station, start], [filter.station, end])
+  } else if (filter.dateRange) {
+    cursorSource = store.index('by-date')
+    keyRange = IDBKeyRange.bound(filter.dateRange.start, filter.dateRange.end)
+  } else {
+    cursorSource = store.index('by-date')
+  }
+
+  const total = await cursorSource.count(keyRange)
+  const items: IplasDbRecord[] = []
+
+  let seen = 0
+  let cursor = await cursorSource.openCursor(keyRange, direction)
+
+  while (cursor && items.length < options.itemsPerPage) {
+    if (seen >= offset) {
+      items.push(cursor.value)
+    }
+    seen++
+    cursor = await cursor.continue()
+  }
+
+  return { items, total }
+}
+
 // ============================================================================
 // Core Query Functions
 // ============================================================================
@@ -120,6 +181,10 @@ export async function queryRecordsForTable(
 ): Promise<TableQueryResult> {
   const db = await getDb()
   const { page, itemsPerPage, sortBy } = options
+
+  if (canUseDateCursorPagination(options, filter)) {
+    return queryRecordsByDateCursor(db, options, filter)
+  }
 
   // Get filtered records
   const allFiltered = await getFilteredRecords(db, filter)

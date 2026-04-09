@@ -75,6 +75,7 @@ export interface IplasCsvTestItemRequest {
   end_time: string // ISO format
   test_status: 'ALL' | 'PASS' | 'FAIL'
   test_item_filters?: string[]
+  include_test_items?: boolean
   limit?: number
   offset?: number
   sort_by?: string // Field name to sort by (e.g., 'TestStartTime', 'ISN')
@@ -82,12 +83,15 @@ export interface IplasCsvTestItemRequest {
   token?: string // Optional user token override
 }
 
-export interface IplasCsvTestItemResponse {
-  data: CsvTestItemData[]
+export interface IplasCsvTestItemResponse<
+  TRecord extends CsvTestItemData | CompactCsvTestItemData = CompactCsvTestItemData,
+> {
+  data: TRecord[]
   total_records: number
   returned_records: number
   filtered: boolean
   cached: boolean
+  includes_test_items?: boolean
   /** True if any chunk hit the 5000 record limit (data may be incomplete) */
   possibly_truncated?: boolean
   /** Number of API chunks fetched (for queries >6 days) */
@@ -520,6 +524,7 @@ export interface CompactCsvTestItemResponse {
   returned_records: number
   filtered: boolean
   cached: boolean
+  includes_test_items?: boolean
   possibly_truncated?: boolean
   /** Number of API chunks fetched (for queries >6 days) */
   chunks_fetched?: number
@@ -620,11 +625,11 @@ class IplasProxyApi {
    * @param options - Optional configuration including signal for cancellation
    * @returns Filtered test item data with cache metadata
    */
-  async getCsvTestItems(
+  async getCsvTestItems<TRecord extends CsvTestItemData | CompactCsvTestItemData = CompactCsvTestItemData>(
     request: IplasCsvTestItemRequest,
     options?: { signal?: AbortSignal },
-  ): Promise<IplasCsvTestItemResponse> {
-    const response = await apiClient.post<IplasCsvTestItemResponse>(
+  ): Promise<IplasCsvTestItemResponse<TRecord>> {
+    const response = await apiClient.post<IplasCsvTestItemResponse<TRecord>>(
       `${this.baseUrl}/csv-test-items`,
       request,
       { signal: options?.signal },

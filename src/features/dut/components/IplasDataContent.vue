@@ -166,6 +166,14 @@
                 </div>
               </v-col>
             </v-row>
+            <v-row v-if="autoIndexedDbReason" class="mt-2">
+              <v-col cols="12">
+                <v-alert type="info" density="compact" variant="tonal" closable @click:close="autoIndexedDbReason = null">
+                  <v-icon start>mdi-database-arrow-down-outline</v-icon>
+                  {{ autoIndexedDbReason }}
+                </v-alert>
+              </v-col>
+            </v-row>
             <!-- Possibly Truncated Warning -->
             <v-row v-if="possiblyTruncated && hasRegularModeData" class="mt-2">
               <v-col cols="12">
@@ -225,8 +233,10 @@
                 <!-- Search, Status and Device ID Filter -->
                 <v-row class="mb-4" dense>
                   <v-col cols="12" md="4">
-                    <v-text-field v-model="recordSearchQueries[stationGroup.stationName]" label="Search Records"
-                      prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" hide-details clearable
+                    <v-text-field :model-value="recordSearchQueries[stationGroup.stationName] || ''"
+                      label="Search Records" prepend-inner-icon="mdi-magnify" variant="outlined"
+                      density="compact" hide-details clearable
+                      @update:model-value="setRecordSearchQuery(stationGroup.stationName, $event)"
                       placeholder="Search ISN, Device ID, Error Code, Error Name..." />
                   </v-col>
                   <v-col cols="12" md="2">
@@ -308,11 +318,13 @@
               </v-tab>
             </v-tabs>
 
-            <!-- IndexedDB Table using v-data-table (client-side pagination) -->
-            <v-data-table v-model="indexedDbSelectedKeys" v-model:items-per-page="indexedDbTableOptions.itemsPerPage"
-              v-model:page="indexedDbTableOptions.page" v-model:sort-by="indexedDbTableOptions.sortBy"
-              :headers="indexedDbHeaders" :items="indexedDbItems" :loading="indexedDbLoading || isStreaming"
-              item-value="id" show-select hover class="elevation-1" @click:row="handleIndexedDbRowClick">
+            <!-- IndexedDB Table using v-data-table-server to keep streamed data paginated on disk -->
+            <v-data-table-server v-model="indexedDbSelectedKeys"
+              v-model:items-per-page="indexedDbTableOptions.itemsPerPage" v-model:page="indexedDbTableOptions.page"
+              v-model:sort-by="indexedDbTableOptions.sortBy" :headers="indexedDbHeaders" :items="indexedDbItems"
+              :items-length="indexedDbTotalItems" :loading="indexedDbLoading || isStreaming" item-value="id"
+              show-select hover class="elevation-1" @update:options="loadIndexedDbItems"
+              @click:row="handleIndexedDbRowClick">
               <!-- ISN Column with Copy Button -->
               <template #item.ISN="{ item }">
                 <div class="d-flex align-center gap-1">
@@ -386,7 +398,7 @@
               <template #loading>
                 <v-skeleton-loader type="table-row@5" />
               </template>
-            </v-data-table>
+            </v-data-table-server>
           </v-card-text>
         </v-card>
 
@@ -496,7 +508,7 @@ const {
   fetchSiteProjects,
   fetchStations,
   fetchDeviceIds,
-  fetchTestItems: fetchTestItemsApi,
+  fetchTestItemsFull: fetchTestItemsApi,
   fetchTestItemsCompact,
   fetchTestItemsPaginated,
   fetchRecordTestItems,
@@ -549,6 +561,11 @@ const regularModeRecordCount = computed(() => {
 // IndexedDB Mode: Stream data directly to disk instead of keeping in memory
 // This is the most memory-efficient mode for large datasets (10,000+ records)
 const useIndexedDbMode = ref(false)
+const autoIndexedDbReason = ref<string | null>(null)
+
+const AUTO_INDEXED_DB_LONG_RANGE_HOURS = 12
+const AUTO_INDEXED_DB_STATION_HOURS = 24
+const AUTO_INDEXED_DB_DEVICE_HOURS = 96
 
 // ============================================================================
 // IndexedDB Mode Setup (Stream-to-Disk Architecture)
@@ -564,7 +581,6 @@ const {
   isStreaming,
   streamProgress,
   loadItems: loadIndexedDbItems,
-  loadAllItems: loadAllIndexedDbItems,
   streamData: streamToIndexedDb,
   abortStream: abortIndexedDbStream,
   updateFilter: updateIndexedDbFilter,
@@ -747,16 +763,11 @@ const updateDebouncedSearch = useDebounceFn((stationName: string, value: string)
   }
 }, 300)
 
-// Watch for search query changes and debounce
-watch(
-  recordSearchQueries,
-  (newQueries) => {
-    Object.entries(newQueries).forEach(([stationName, value]) => {
-      updateDebouncedSearch(stationName, value)
-    })
-  },
-  { deep: true },
-)
+function setRecordSearchQuery(stationName: string, value: string | null): void {
+  const normalizedValue = value ?? ''
+  recordSearchQueries.value[stationName] = normalizedValue
+  updateDebouncedSearch(stationName, normalizedValue)
+}
 
 // Copy success snackbar
 const showCopySuccess = ref(false)
@@ -796,6 +807,42 @@ function getDeviceIdsForStation(stationValue: string): string[] {
 function getStationDisplayName(stationValue: string): string {
   const station = stations.value.find((s: Station) => s.display_station_name === stationValue)
   return station?.display_station_name || stationValue
+}
+
+function shouldAutoUseIndexedDb(
+  resolvedStations: { deviceIds: string[] }[],
+  beginTime: Date,
+  endTime: Date,
+): boolean {
+  const durationHours = Math.max((endTime.getTime() - beginTime.getTime()) / 3_600_000, 1)
+  const stationCount = Math.max(resolvedStations.length, 1)
+  const selectedDeviceCount = resolvedStations.reduce(
+    (total, entry) => total + Math.max(entry.deviceIds.length, 1),
+    0,
+  )
+  const includesAllDevices = resolvedStations.some(
+    (entry) => entry.deviceIds.length === 0 || entry.deviceIds.includes('ALL'),
+  )
+
+  return (
+    durationHours >= AUTO_INDEXED_DB_LONG_RANGE_HOURS ||
+    stationCount * durationHours >= AUTO_INDEXED_DB_STATION_HOURS ||
+    selectedDeviceCount * durationHours >= AUTO_INDEXED_DB_DEVICE_HOURS ||
+    (includesAllDevices && stationCount > 1 && durationHours >= 4)
+  )
+}
+
+async function refreshIndexedDbPage(resetPage = false): Promise<void> {
+  if (resetPage) {
+    indexedDbTableOptions.value = {
+      ...indexedDbTableOptions.value,
+      page: 1,
+    }
+  }
+
+  await loadIndexedDbItems({
+    ...indexedDbTableOptions.value,
+  })
 }
 
 // Download controls
@@ -1228,7 +1275,6 @@ watch(
       }
     }
   },
-  { deep: true },
 )
 
 // Initialize testItemFilters when records change - ensure 'value' is selected by default
@@ -1755,53 +1801,56 @@ async function fetchTestItems() {
   // Clear IndexedDB selection when fetching new data
   indexedDbSelectedKeys.value = []
 
-  // =========================================================================
-  // IndexedDB Mode: Stream directly to disk for large datasets
-  // =========================================================================
-  if (useIndexedDbMode.value) {
-    // Stream data for ALL selected stations
-    let totalRecords = 0
+  // STEP 1: Collect all stations and identify which need device ID fetching
+  const stationInfoList: {
+    stationInfo: Station
+    stationDisplayName: string
+    deviceIds: string[]
+  }[] = []
+  for (const stationDisplayName of selectedStations.value) {
+    const stationInfo = stations.value.find(
+      (s: Station) => s.display_station_name === stationDisplayName,
+    )
+    if (!stationInfo) continue
+    const deviceIds = stationDeviceIds.value[stationDisplayName] || []
+    stationInfoList.push({ stationInfo, stationDisplayName, deviceIds })
+  }
 
-    // STEP 1: Collect all stations and identify which need device ID fetching
-    const stationInfoList: {
-      stationInfo: Station
-      stationDisplayName: string
-      deviceIds: string[]
-    }[] = []
-    for (const stationDisplayName of selectedStations.value) {
-      const stationInfo = stations.value.find(
-        (s: Station) => s.display_station_name === stationDisplayName,
-      )
-      if (!stationInfo) continue
-      const deviceIds = stationDeviceIds.value[stationDisplayName] || []
-      stationInfoList.push({ stationInfo, stationDisplayName, deviceIds })
+  // STEP 2: Fetch device IDs in parallel for stations that don't have them
+  const deviceIdPromises = stationInfoList.map(async (entry) => {
+    if (entry.deviceIds.length === 0) {
+      try {
+        entry.deviceIds = await fetchDeviceIds(
+          // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+          selectedSite.value!,
+          // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
+          selectedProject.value!,
+          entry.stationInfo.display_station_name,
+          begintime,
+          endtime,
+        )
+      } catch (_err) {
+        console.warn(
+          `Failed to fetch device IDs for ${entry.stationDisplayName}, falling back to ALL`,
+        )
+        entry.deviceIds = ['ALL']
+      }
+    }
+    return entry
+  })
+  const resolvedStations = await Promise.all(deviceIdPromises)
+
+  const useDiskBackedResults =
+    useIndexedDbMode.value || shouldAutoUseIndexedDb(resolvedStations, begintime, endtime)
+
+  if (useDiskBackedResults) {
+    if (!useIndexedDbMode.value) {
+      useIndexedDbMode.value = true
+      autoIndexedDbReason.value =
+        'Switched to Stream to Disk automatically for a large search to keep the page responsive.'
     }
 
-    // STEP 2: Fetch device IDs in parallel for stations that don't have them
-    const deviceIdPromises = stationInfoList.map(async (entry) => {
-      if (entry.deviceIds.length === 0) {
-        try {
-          entry.deviceIds = await fetchDeviceIds(
-            // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
-            selectedSite.value!,
-            // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
-            selectedProject.value!,
-            entry.stationInfo.display_station_name,
-            begintime,
-            endtime,
-          )
-        } catch (_err) {
-          console.warn(
-            `Failed to fetch device IDs for ${entry.stationDisplayName}, falling back to ALL`,
-          )
-          entry.deviceIds = ['ALL']
-        }
-      }
-      return entry
-    })
-    const resolvedStations = await Promise.all(deviceIdPromises)
-
-    // STEP 3: Build list of all station+device combinations and fetch data in parallel
+    let totalRecords = 0
     const streamPromises: Promise<void>[] = []
     for (const { stationInfo, deviceIds } of resolvedStations) {
       for (const deviceId of deviceIds) {
@@ -1841,59 +1890,18 @@ async function fetchTestItems() {
       `[IndexedDB] Total: Streamed ${totalRecords} records from ${selectedStations.value.length} stations`,
     )
 
-    // Reset station tab to "All Stations" and clear filter
     indexedDbActiveStationTab.value = 0
     updateIndexedDbFilter({ station: undefined })
-
-    // Load the first page
-    await loadIndexedDbItems(indexedDbTableOptions.value)
+    await refreshIndexedDbPage(true)
     return
   }
 
+  autoIndexedDbReason.value = null
+
   // =========================================================================
-  // Regular Mode: Fetch to memory
+  // Regular Mode: Fetch to memory for bounded result sets only
   // =========================================================================
-  // Choose fetch method based on mode
   const fetchMethod = useCompactMode.value ? fetchTestItemsCompact : fetchTestItemsApi
-
-  // STEP 1: Collect all stations and identify which need device ID fetching
-  const stationInfoList: {
-    stationInfo: Station
-    stationDisplayName: string
-    deviceIds: string[]
-  }[] = []
-  for (const stationDisplayName of selectedStations.value) {
-    const stationInfo = stations.value.find(
-      (s: Station) => s.display_station_name === stationDisplayName,
-    )
-    if (!stationInfo) continue
-    const deviceIds = stationDeviceIds.value[stationDisplayName] || []
-    stationInfoList.push({ stationInfo, stationDisplayName, deviceIds })
-  }
-
-  // STEP 2: Fetch device IDs in parallel for stations that don't have them
-  const deviceIdPromises = stationInfoList.map(async (entry) => {
-    if (entry.deviceIds.length === 0) {
-      try {
-        entry.deviceIds = await fetchDeviceIds(
-          // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
-          selectedSite.value!,
-          // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
-          selectedProject.value!,
-          entry.stationInfo.display_station_name,
-          begintime,
-          endtime,
-        )
-      } catch (_err) {
-        console.warn(
-          `Failed to fetch device IDs for ${entry.stationDisplayName}, falling back to ALL`,
-        )
-        entry.deviceIds = ['ALL']
-      }
-    }
-    return entry
-  })
-  const resolvedStations = await Promise.all(deviceIdPromises)
 
   // STEP 3: Build list of all station+device combinations and fetch data in parallel
   const fetchPromises: Promise<unknown>[] = []
@@ -2027,8 +2035,7 @@ watch(
 // UPDATED: Watch for streaming completion to load all items for client-side table
 watch(isStreaming, async (streaming, wasStreaming) => {
   if (wasStreaming && !streaming && streamStatus.recordsWritten > 0) {
-    // Streaming completed - load all items for v-data-table client-side pagination
-    await loadAllIndexedDbItems()
+    await refreshIndexedDbPage(true)
   }
 })
 
@@ -2054,17 +2061,13 @@ watch(indexedDbActiveStationTab, async (newTab) => {
       updateIndexedDbFilter({ station: stationName })
     }
   }
-  // Reset to page 1 when changing tabs
-  indexedDbTableOptions.value.page = 1
-  // UPDATED: Load all items for client-side pagination with v-data-table
-  await loadAllIndexedDbItems()
+  await refreshIndexedDbPage(true)
 })
 
 // Initialize
 onMounted(async () => {
   await fetchSiteProjects()
-  // UPDATED: Load all IndexedDB items on mount for client-side table pagination
-  await loadAllIndexedDbItems()
+  await refreshIndexedDbPage(true)
 
   // UPDATED: Set default site based on connected iPLAS server
   const { selectedServer } = useIplasSettings()

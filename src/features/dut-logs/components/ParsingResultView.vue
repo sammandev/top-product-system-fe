@@ -189,7 +189,7 @@
               <span class="text-caption text-medium-emphasis">items</span>
             </div>
             <v-pagination
-              v-if="itemsPerPageValue !== -1 && itemsPerPageValue !== 0 && filteredValueItems.length > itemsPerPageValue"
+              v-if="itemsPerPageValue !== 0 && filteredValueItems.length > getEffectiveItemsPerPage(itemsPerPageValue)"
               v-model="currentPageValue" :length="totalPagesValue" :total-visible="7" size="small" density="compact" />
             <div style="width: 150px;"></div>
           </div>
@@ -268,7 +268,7 @@
               <span class="text-caption text-medium-emphasis">items</span>
             </div>
             <v-pagination
-              v-if="itemsPerPageNonValue !== -1 && itemsPerPageNonValue !== 0 && filteredNonValueItems.length > itemsPerPageNonValue"
+              v-if="itemsPerPageNonValue !== 0 && filteredNonValueItems.length > getEffectiveItemsPerPage(itemsPerPageNonValue)"
               v-model="currentPageNonValue" :length="totalPagesNonValue" :total-visible="7" size="small"
               density="compact" />
             <div style="width: 150px;"></div>
@@ -350,7 +350,7 @@
               <span class="text-caption text-medium-emphasis">items</span>
             </div>
             <v-pagination
-              v-if="itemsPerPageValue !== -1 && itemsPerPageValue !== 0 && filteredValueItems.length > itemsPerPageValue"
+              v-if="itemsPerPageValue !== 0 && filteredValueItems.length > getEffectiveItemsPerPage(itemsPerPageValue)"
               v-model="currentPageValue" :length="totalPagesValue" :total-visible="5" size="small" density="compact" />
             <div style="width: 150px;"></div>
           </div>
@@ -422,7 +422,7 @@
               <span class="text-caption text-medium-emphasis">items</span>
             </div>
             <v-pagination
-              v-if="itemsPerPageNonValue !== -1 && itemsPerPageNonValue !== 0 && filteredNonValueItems.length > itemsPerPageNonValue"
+              v-if="itemsPerPageNonValue !== 0 && filteredNonValueItems.length > getEffectiveItemsPerPage(itemsPerPageNonValue)"
               v-model="currentPageNonValue" :length="totalPagesNonValue" :total-visible="5" size="small"
               density="compact" />
             <div style="width: 150px;"></div>
@@ -438,7 +438,8 @@
       <div class="app-dialog-header"><v-card-title>Custom Items Per Page (Value Items)</v-card-title></div>
       <div class="app-dialog-body"><v-card-text>
         <v-text-field v-model.number="customItemsPerPageValue" type="number" label="Enter number of items"
-          variant="outlined" density="comfortable" min="1" autofocus @keyup.enter="applyCustomItemsPerPageValue" />
+          variant="outlined" density="comfortable" min="1" :max="MAX_TABLE_ITEMS_PER_PAGE" autofocus
+          @keyup.enter="applyCustomItemsPerPageValue" />
       </v-card-text></div>
       <div class="app-dialog-footer"><v-card-actions>
         <v-spacer />
@@ -454,7 +455,8 @@
       <div class="app-dialog-header"><v-card-title>Custom Items Per Page (Non-Value Items)</v-card-title></div>
       <div class="app-dialog-body"><v-card-text>
         <v-text-field v-model.number="customItemsPerPageNonValue" type="number" label="Enter number of items"
-          variant="outlined" density="comfortable" min="1" autofocus @keyup.enter="applyCustomItemsPerPageNonValue" />
+          variant="outlined" density="comfortable" min="1" :max="MAX_TABLE_ITEMS_PER_PAGE" autofocus
+          @keyup.enter="applyCustomItemsPerPageNonValue" />
       </v-card-text></div>
       <div class="app-dialog-footer"><v-card-actions>
         <v-spacer />
@@ -495,13 +497,13 @@ const currentPageValue = ref(1)
 const itemsPerPageNonValue = ref(10)
 const currentPageNonValue = ref(1)
 
+const MAX_TABLE_ITEMS_PER_PAGE = 200
 const itemsPerPageOptions = [
   { title: '5', value: 5 },
   { title: '10', value: 10 },
   { title: '25', value: 25 },
   { title: '50', value: 50 },
   { title: '100', value: 100 },
-  { title: 'All', value: -1 },
   { title: 'Custom', value: 0 },
 ]
 const showCustomInputValue = ref(false)
@@ -538,23 +540,29 @@ const filteredNonValueItems = computed(() => {
 })
 
 // Pagination computed for Value Items
+const normalizeItemsPerPage = (value: number) => {
+  if (value <= 0) {
+    return MAX_TABLE_ITEMS_PER_PAGE
+  }
+
+  return Math.min(Math.trunc(value), MAX_TABLE_ITEMS_PER_PAGE)
+}
+
+const getEffectiveItemsPerPage = (itemsPerPage: { value: number }) => {
+  if (itemsPerPage.value === 0) {
+    return 10
+  }
+
+  return normalizeItemsPerPage(itemsPerPage.value)
+}
+
 const totalPagesValue = computed(() => {
-  const perPage =
-    itemsPerPageValue.value === -1
-      ? filteredValueItems.value.length
-      : itemsPerPageValue.value === 0
-        ? 10
-        : itemsPerPageValue.value
+  const perPage = getEffectiveItemsPerPage(itemsPerPageValue)
   return Math.ceil(filteredValueItems.value.length / perPage)
 })
 
 const paginatedValueItems = computed(() => {
-  const perPage =
-    itemsPerPageValue.value === -1
-      ? filteredValueItems.value.length
-      : itemsPerPageValue.value === 0
-        ? 10
-        : itemsPerPageValue.value
+  const perPage = getEffectiveItemsPerPage(itemsPerPageValue)
   const start = (currentPageValue.value - 1) * perPage
   const end = start + perPage
   return filteredValueItems.value.slice(start, end)
@@ -562,22 +570,12 @@ const paginatedValueItems = computed(() => {
 
 // Pagination computed for Non-Value Items
 const totalPagesNonValue = computed(() => {
-  const perPage =
-    itemsPerPageNonValue.value === -1
-      ? filteredNonValueItems.value.length
-      : itemsPerPageNonValue.value === 0
-        ? 10
-        : itemsPerPageNonValue.value
+  const perPage = getEffectiveItemsPerPage(itemsPerPageNonValue)
   return Math.ceil(filteredNonValueItems.value.length / perPage)
 })
 
 const paginatedNonValueItems = computed(() => {
-  const perPage =
-    itemsPerPageNonValue.value === -1
-      ? filteredNonValueItems.value.length
-      : itemsPerPageNonValue.value === 0
-        ? 10
-        : itemsPerPageNonValue.value
+  const perPage = getEffectiveItemsPerPage(itemsPerPageNonValue)
   const start = (currentPageNonValue.value - 1) * perPage
   const end = start + perPage
   return filteredNonValueItems.value.slice(start, end)
@@ -598,6 +596,13 @@ watch(itemsPerPageValue, (newVal) => {
     showCustomInputValue.value = true
   } else {
     showCustomInputValue.value = false
+
+    const normalized = normalizeItemsPerPage(newVal)
+    if (normalized !== newVal) {
+      itemsPerPageValue.value = normalized
+      return
+    }
+
     currentPageValue.value = 1
   }
 })
@@ -607,6 +612,13 @@ watch(itemsPerPageNonValue, (newVal) => {
     showCustomInputNonValue.value = true
   } else {
     showCustomInputNonValue.value = false
+
+    const normalized = normalizeItemsPerPage(newVal)
+    if (normalized !== newVal) {
+      itemsPerPageNonValue.value = normalized
+      return
+    }
+
     currentPageNonValue.value = 1
   }
 })
@@ -614,7 +626,7 @@ watch(itemsPerPageNonValue, (newVal) => {
 // Apply custom value
 const applyCustomItemsPerPageValue = () => {
   if (customItemsPerPageValue.value > 0) {
-    itemsPerPageValue.value = customItemsPerPageValue.value
+    itemsPerPageValue.value = normalizeItemsPerPage(customItemsPerPageValue.value)
   }
   showCustomInputValue.value = false
 }
@@ -626,7 +638,7 @@ const cancelCustomInputValue = () => {
 
 const applyCustomItemsPerPageNonValue = () => {
   if (customItemsPerPageNonValue.value > 0) {
-    itemsPerPageNonValue.value = customItemsPerPageNonValue.value
+    itemsPerPageNonValue.value = normalizeItemsPerPage(customItemsPerPageNonValue.value)
   }
   showCustomInputNonValue.value = false
 }

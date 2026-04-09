@@ -80,6 +80,7 @@ const CACHE_KEY_SEPARATOR = '::'
 // Retry configuration for ISN search operations
 const ISN_SEARCH_RETRY_ATTEMPTS = 3
 const ISN_SEARCH_RETRY_DELAY_MS = 1000
+const MAX_RECORD_TEST_ITEM_CACHE_ENTRIES = 150
 
 /**
  * Retry an async operation with exponential backoff.
@@ -205,6 +206,40 @@ function ensureArrayResponse<T>(
   }
 
   return data
+}
+
+function getCachedRecordTestItems(
+  cache: Map<string, TestItem[]>,
+  cacheKey: string,
+): TestItem[] | undefined {
+  const cached = cache.get(cacheKey)
+  if (!cached) {
+    return undefined
+  }
+
+  cache.delete(cacheKey)
+  cache.set(cacheKey, cached)
+  return cached
+}
+
+function cacheRecordTestItems(
+  cache: Map<string, TestItem[]>,
+  cacheKey: string,
+  items: TestItem[],
+): void {
+  if (cache.has(cacheKey)) {
+    cache.delete(cacheKey)
+  }
+
+  cache.set(cacheKey, items)
+
+  while (cache.size > MAX_RECORD_TEST_ITEM_CACHE_ENTRIES) {
+    const oldestKey = cache.keys().next().value
+    if (!oldestKey) {
+      break
+    }
+    cache.delete(oldestKey)
+  }
 }
 
 /**
@@ -421,13 +456,13 @@ export function useIplasApi() {
     begintime: string | Date,
     endtime: string | Date,
     testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
-  ): Promise<CsvTestItemData[]> {
+  ): Promise<CompactCsvTestItemData[]> {
     loadingTestItems.value = true
     error.value = null
     chunkProgress.value = null
 
     try {
-      const response = await iplasProxyApi.getCsvTestItems({
+      const response = await iplasProxyApi.getCsvTestItems<CompactCsvTestItemData>({
         site,
         project,
         station,
@@ -435,10 +470,11 @@ export function useIplasApi() {
         begin_time: iplasProxyApi.formatDateForRequest(begintime),
         end_time: iplasProxyApi.formatDateForRequest(endtime),
         test_status: testStatus,
+        include_test_items: false,
         token: getUserToken(),
       })
       const responseData = ensureArrayResponse(
-        response.data as CsvTestItemData[] | undefined,
+        response.data as CompactCsvTestItemData[] | undefined,
         'No iPLAS data was returned for the selected device and time range',
         'iPLAS API returned an invalid response for test items',
       )
@@ -462,10 +498,71 @@ export function useIplasApi() {
       )
 
       // Append to existing data with deduplication
-      testItemData.value = deduplicateRecords(testItemData.value, responseData)
+      compactTestItemData.value = deduplicateRecords(compactTestItemData.value, responseData)
       return responseData
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to fetch test items'
+      throw err
+    } finally {
+      loadingTestItems.value = false
+    }
+  }
+
+  /**
+   * Get full CSV test items for flows that still require TestItem arrays.
+   * Use this only for explicit heavy-mode scenarios such as batched scoring.
+   */
+  async function fetchTestItemsFull(
+    site: string,
+    project: string,
+    station: string,
+    deviceid: string,
+    begintime: string | Date,
+    endtime: string | Date,
+    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
+  ): Promise<CsvTestItemData[]> {
+    loadingTestItems.value = true
+    error.value = null
+    chunkProgress.value = null
+
+    try {
+      const response = await iplasProxyApi.getCsvTestItems<CsvTestItemData>({
+        site,
+        project,
+        station,
+        device_id: deviceid,
+        begin_time: iplasProxyApi.formatDateForRequest(begintime),
+        end_time: iplasProxyApi.formatDateForRequest(endtime),
+        test_status: testStatus,
+        include_test_items: true,
+        token: getUserToken(),
+      })
+      const responseData = ensureArrayResponse(
+        response.data as CsvTestItemData[] | undefined,
+        'No iPLAS data was returned for the selected device and time range',
+        'iPLAS API returned an invalid response for test items',
+      )
+
+      if (response.possibly_truncated) {
+        possiblyTruncated.value = true
+      }
+
+      if (response.chunks_fetched && response.total_chunks) {
+        chunkProgress.value = {
+          fetched: response.chunks_fetched,
+          total: response.total_chunks,
+        }
+      }
+
+      stationSearchCacheMetadata.value = mergeStationSearchMetadata(
+        stationSearchCacheMetadata.value,
+        response,
+      )
+
+      testItemData.value = deduplicateRecords(testItemData.value, responseData)
+      return responseData
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch full test items'
       throw err
     } finally {
       loadingTestItems.value = false
@@ -627,9 +724,9 @@ export function useIplasApi() {
     const cacheKey = `${isn}_${testStartTime}`
 
     // Return cached if available
-    if (testItemsCache.has(cacheKey)) {
-      // biome-ignore lint/style/noNonNullAssertion: Guarded by .has() check above
-      return testItemsCache.get(cacheKey)!
+    const cachedItems = getCachedRecordTestItems(testItemsCache, cacheKey)
+    if (cachedItems) {
+      return cachedItems
     }
 
     loadingRecordTestItems.value = true
@@ -647,7 +744,7 @@ export function useIplasApi() {
       })
 
       // Cache the result
-      testItemsCache.set(cacheKey, response.test_items)
+      cacheRecordTestItems(testItemsCache, cacheKey, response.test_items)
       return response.test_items
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to fetch record test items'
@@ -1020,12 +1117,12 @@ export function useIplasApi() {
     testItemFilters?: string[],
     limit?: number,
     offset?: number,
-  ): Promise<IplasCsvTestItemResponse> {
+  ): Promise<IplasCsvTestItemResponse<CsvTestItemData>> {
     loadingTestItems.value = true
     error.value = null
 
     try {
-      const response = await iplasProxyApi.getCsvTestItems({
+      const response = await iplasProxyApi.getCsvTestItems<CsvTestItemData>({
         site,
         project,
         station,
@@ -1034,6 +1131,7 @@ export function useIplasApi() {
         end_time: iplasProxyApi.formatDateForRequest(endTime),
         test_status: testStatus,
         test_item_filters: testItemFilters,
+        include_test_items: true,
         limit,
         offset,
         token: getUserToken(),
@@ -1113,6 +1211,7 @@ export function useIplasApi() {
     fetchStations,
     fetchDeviceIds,
     fetchTestItems,
+    fetchTestItemsFull,
     fetchTestItemsCompact,
     fetchTestItemsPaginated,
     fetchRecordTestItems,

@@ -109,7 +109,7 @@
                 density="compact" hide-details />
               <span class="text-caption text-medium-emphasis">items</span>
             </div>
-            <v-pagination v-if="itemsPerPage !== -1 && itemsPerPage !== 0 && filteredRankings.length > itemsPerPage"
+            <v-pagination v-if="itemsPerPage !== 0 && filteredRankings.length > getPerPage()"
               v-model="currentPage" :length="totalPages" :total-visible="7" size="large" density="compact" />
             <div style="width: 150px;"></div>
           </div>
@@ -203,7 +203,7 @@
                   density="compact" size="small" hide-details />
                 <span class="text-caption text-medium-emphasis">items</span>
               </div>
-              <v-pagination v-if="itemsPerPage !== -1 && itemsPerPage !== 0 && filteredRankings.length > itemsPerPage"
+              <v-pagination v-if="itemsPerPage !== 0 && filteredRankings.length > getPerPage()"
                 v-model="currentPage" :length="totalPages" :total-visible="5" size="large" density="compact" />
               <div style="width: 150px;"></div>
             </div>
@@ -514,7 +514,8 @@
         <div class="app-dialog-header"><v-card-title>Custom Items Per Page</v-card-title></div>
         <div class="app-dialog-body"><v-card-text>
           <v-text-field v-model.number="customItemsPerPage" type="number" label="Enter number of items"
-            variant="outlined" density="comfortable" min="1" autofocus @keyup.enter="applyCustomItemsPerPage" />
+            variant="outlined" density="comfortable" min="1" :max="MAX_TABLE_ITEMS_PER_PAGE" autofocus
+            @keyup.enter="applyCustomItemsPerPage" />
         </v-card-text></div>
         <div class="app-dialog-footer"><v-card-actions>
           <v-spacer />
@@ -644,6 +645,7 @@ const testItemHeaders = [
 ]
 
 // Pagination
+const MAX_TABLE_ITEMS_PER_PAGE = 200
 const itemsPerPage = ref(10)
 const currentPage = ref(1)
 const itemsPerPageOptions = [
@@ -652,7 +654,6 @@ const itemsPerPageOptions = [
   { title: '25', value: 25 },
   { title: '50', value: 50 },
   { title: '100', value: 100 },
-  { title: 'All', value: -1 },
   { title: 'Custom', value: 0 },
 ]
 const showCustomInput = ref(false)
@@ -794,12 +795,20 @@ const filteredRankings = computed(() => {
 })
 
 // Pagination
+const normalizeItemsPerPage = (value: number) => {
+  if (value <= 0) {
+    return MAX_TABLE_ITEMS_PER_PAGE
+  }
+
+  return Math.min(Math.trunc(value), MAX_TABLE_ITEMS_PER_PAGE)
+}
+
 const getPerPage = () => {
-  return itemsPerPage.value === -1
-    ? filteredRankings.value.length
-    : itemsPerPage.value === 0
-      ? 10
-      : itemsPerPage.value
+  if (itemsPerPage.value === 0) {
+    return 10
+  }
+
+  return normalizeItemsPerPage(itemsPerPage.value)
 }
 
 const totalPages = computed(() => {
@@ -823,6 +832,13 @@ watch(itemsPerPage, (newVal) => {
     showCustomInput.value = true
   } else {
     showCustomInput.value = false
+
+    const normalized = normalizeItemsPerPage(newVal)
+    if (normalized !== newVal) {
+      itemsPerPage.value = normalized
+      return
+    }
+
     currentPage.value = 1
   }
 })
@@ -830,7 +846,7 @@ watch(itemsPerPage, (newVal) => {
 // Methods
 const applyCustomItemsPerPage = () => {
   if (customItemsPerPage.value > 0) {
-    itemsPerPage.value = customItemsPerPage.value
+    itemsPerPage.value = normalizeItemsPerPage(customItemsPerPage.value)
   }
   showCustomInput.value = false
 }

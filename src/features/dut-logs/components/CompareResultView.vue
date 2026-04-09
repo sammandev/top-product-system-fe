@@ -138,7 +138,7 @@
               <span class="text-caption text-medium-emphasis">items</span>
             </div>
             <v-pagination
-              v-if="valueItemsPerPage !== -1 && valueItemsPerPage !== 0 && filteredValueItems.length > valueItemsPerPage"
+              v-if="valueItemsPerPage !== 0 && filteredValueItems.length > getEffectiveItemsPerPage(valueItemsPerPage)"
               v-model="valueCurrentPage" :length="valueTotalPages" :total-visible="7" size="large" density="compact" />
             <div style="width: 150px;"></div>
           </div>
@@ -188,7 +188,7 @@
               <span class="text-caption text-medium-emphasis">items</span>
             </div>
             <v-pagination
-              v-if="nonValueItemsPerPage !== -1 && nonValueItemsPerPage !== 0 && filteredNonValueItems.length > nonValueItemsPerPage"
+              v-if="nonValueItemsPerPage !== 0 && filteredNonValueItems.length > getEffectiveItemsPerPage(nonValueItemsPerPage)"
               v-model="nonValueCurrentPage" :length="nonValueTotalPages" :total-visible="7" size="large"
               density="compact" />
             <div style="width: 150px;"></div>
@@ -289,7 +289,7 @@
               <span class="text-caption text-medium-emphasis">items</span>
             </div>
             <v-pagination
-              v-if="valueItemsPerPage !== -1 && valueItemsPerPage !== 0 && filteredValueItems.length > valueItemsPerPage"
+              v-if="valueItemsPerPage !== 0 && filteredValueItems.length > getEffectiveItemsPerPage(valueItemsPerPage)"
               v-model="valueCurrentPage" :length="valueTotalPages" :total-visible="5" size="small" density="compact" />
             <div style="width: 150px;"></div>
           </div>
@@ -345,7 +345,7 @@
               <span class="text-caption text-medium-emphasis">items</span>
             </div>
             <v-pagination
-              v-if="nonValueItemsPerPage !== -1 && nonValueItemsPerPage !== 0 && filteredNonValueItems.length > nonValueItemsPerPage"
+              v-if="nonValueItemsPerPage !== 0 && filteredNonValueItems.length > getEffectiveItemsPerPage(nonValueItemsPerPage)"
               v-model="nonValueCurrentPage" :length="nonValueTotalPages" :total-visible="5" size="large"
               density="compact" />
             <div style="width: 150px;"></div>
@@ -361,7 +361,7 @@
       <div class="app-dialog-header"><v-card-title>Custom Items Per Page</v-card-title></div>
       <div class="app-dialog-body"><v-card-text>
         <v-text-field v-model.number="customItemsPerPage" type="number" label="Enter number of items" variant="outlined"
-          density="comfortable" min="1" autofocus @keyup.enter="applyCustomItemsPerPage" />
+          density="comfortable" min="1" :max="MAX_TABLE_ITEMS_PER_PAGE" autofocus @keyup.enter="applyCustomItemsPerPage" />
       </v-card-text></div>
       <div class="app-dialog-footer"><v-card-actions>
         <v-spacer />
@@ -395,6 +395,7 @@ const emit = defineEmits<{
 }>()
 
 // Pagination - separate for value and non-value tables
+const MAX_TABLE_ITEMS_PER_PAGE = 200
 const valueItemsPerPage = ref(10)
 const nonValueItemsPerPage = ref(10)
 const itemsPerPageOptions = [
@@ -403,7 +404,6 @@ const itemsPerPageOptions = [
   { title: '25', value: 25 },
   { title: '50', value: 50 },
   { title: '100', value: 100 },
-  { title: 'All', value: -1 },
   { title: 'Custom', value: 0 },
 ]
 const showCustomInput = ref(false)
@@ -575,45 +575,41 @@ const filteredNonValueItems = computed(() => {
 })
 
 // Pagination
+const normalizeItemsPerPage = (value: number) => {
+  if (value <= 0) {
+    return MAX_TABLE_ITEMS_PER_PAGE
+  }
+
+  return Math.min(Math.trunc(value), MAX_TABLE_ITEMS_PER_PAGE)
+}
+
+const getEffectiveItemsPerPage = (itemsPerPage: { value: number }) => {
+  if (itemsPerPage.value === 0) {
+    return 10
+  }
+
+  return normalizeItemsPerPage(itemsPerPage.value)
+}
+
 const valueTotalPages = computed(() => {
-  const perPage =
-    valueItemsPerPage.value === -1
-      ? filteredValueItems.value.length
-      : valueItemsPerPage.value === 0
-        ? 10
-        : valueItemsPerPage.value
+  const perPage = getEffectiveItemsPerPage(valueItemsPerPage)
   return Math.ceil(filteredValueItems.value.length / perPage)
 })
 
 const nonValueTotalPages = computed(() => {
-  const perPage =
-    nonValueItemsPerPage.value === -1
-      ? filteredNonValueItems.value.length
-      : nonValueItemsPerPage.value === 0
-        ? 10
-        : nonValueItemsPerPage.value
+  const perPage = getEffectiveItemsPerPage(nonValueItemsPerPage)
   return Math.ceil(filteredNonValueItems.value.length / perPage)
 })
 
 const paginatedValueItems = computed(() => {
-  const perPage =
-    valueItemsPerPage.value === -1
-      ? filteredValueItems.value.length
-      : valueItemsPerPage.value === 0
-        ? 10
-        : valueItemsPerPage.value
+  const perPage = getEffectiveItemsPerPage(valueItemsPerPage)
   const start = (valueCurrentPage.value - 1) * perPage
   const end = start + perPage
   return filteredValueItems.value.slice(start, end)
 })
 
 const paginatedNonValueItems = computed(() => {
-  const perPage =
-    nonValueItemsPerPage.value === -1
-      ? filteredNonValueItems.value.length
-      : nonValueItemsPerPage.value === 0
-        ? 10
-        : nonValueItemsPerPage.value
+  const perPage = getEffectiveItemsPerPage(nonValueItemsPerPage)
   const start = (nonValueCurrentPage.value - 1) * perPage
   const end = start + perPage
   return filteredNonValueItems.value.slice(start, end)
@@ -649,6 +645,12 @@ watch(valueItemsPerPage, (newVal) => {
     customInputTarget.value = 'value'
     showCustomInput.value = true
   } else {
+    const normalized = normalizeItemsPerPage(newVal)
+    if (normalized !== newVal) {
+      valueItemsPerPage.value = normalized
+      return
+    }
+
     valueCurrentPage.value = 1
   }
 })
@@ -659,6 +661,12 @@ watch(nonValueItemsPerPage, (newVal) => {
     customInputTarget.value = 'non-value'
     showCustomInput.value = true
   } else {
+    const normalized = normalizeItemsPerPage(newVal)
+    if (normalized !== newVal) {
+      nonValueItemsPerPage.value = normalized
+      return
+    }
+
     nonValueCurrentPage.value = 1
   }
 })
@@ -667,9 +675,9 @@ watch(nonValueItemsPerPage, (newVal) => {
 const applyCustomItemsPerPage = () => {
   if (customItemsPerPage.value > 0) {
     if (customInputTarget.value === 'value') {
-      valueItemsPerPage.value = customItemsPerPage.value
+      valueItemsPerPage.value = normalizeItemsPerPage(customItemsPerPage.value)
     } else {
-      nonValueItemsPerPage.value = customItemsPerPage.value
+      nonValueItemsPerPage.value = normalizeItemsPerPage(customItemsPerPage.value)
     }
   }
   showCustomInput.value = false

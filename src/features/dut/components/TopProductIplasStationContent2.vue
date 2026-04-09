@@ -172,7 +172,7 @@ const {
     fetchSiteProjects,
     fetchStations,
     fetchDeviceIds,
-    fetchTestItems: fetchTestItemsApi,
+    fetchTestItemsFull: fetchTestItemsApi,
     fetchTestItemNamesCached,
     fetchTestItemsFiltered,
     downloadAttachments,
