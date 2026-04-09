@@ -98,17 +98,6 @@
       {{ error }}
     </v-alert>
 
-    <v-alert
-      v-if="stationSearchCacheAlert"
-      :type="stationSearchCacheAlert.type"
-      class="mb-4"
-      variant="tonal"
-      density="comfortable"
-      :icon="stationSearchCacheAlert.icon"
-    >
-      {{ stationSearchCacheAlert.message }}
-    </v-alert>
-
     <!-- Loading Indicator -->
     <v-card v-if="loadingTestItems" class="mb-4">
       <v-card-text class="text-center py-8">
@@ -135,9 +124,11 @@
       :site="selectedSite || ''" :project="selectedProject || ''" :start-time="startTime" :end-time="endTime"
       :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
       :loading-devices="loadingCurrentStationDevices" :device-error="deviceError"
-      :available-test-items="currentStationTestItems" :loading-test-items="loadingCurrentStationTestItems"
+      :available-test-items="currentStationTestItems" :test-item-source="currentStationTestItemSource"
+      :loading-test-items="loadingCurrentStationTestItems"
       :test-items-error="testItemsError" @save="handleStationConfigSave" @remove="handleStationConfigRemove"
-      @refresh-devices="refreshCurrentStationDevices" @refresh-test-items="refreshCurrentStationTestItems" />
+      @refresh-devices="refreshCurrentStationDevices" @refresh-test-items="refreshCurrentStationTestItems"
+      @change-test-item-source="handleTestItemSourceChange" />
   </div>
 </template>
 
@@ -165,6 +156,7 @@ import { useNotification } from '@/shared/composables/useNotification'
 import { getErrorMessage } from '@/shared/utils'
 import { getApiErrorDetail } from '@/shared/utils/error'
 import { isStatusPass } from '@/shared/utils/helpers'
+import { dutApi } from '../api/dut.api'
 import { useScoring } from '../composables/useScoring'
 import { evaluateForcedFailure } from '../utils/iplasForcedFailure'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
@@ -244,13 +236,35 @@ const loadingCurrentStationDevices = ref(false)
 const deviceError = ref<string | null>(null)
 
 // Test items state for config dialog
-const currentStationTestItems = ref<TestItemInfo[]>([])
-const loadingCurrentStationTestItems = ref(false)
-const testItemsError = ref<string | null>(null)
+type TestItemSource = 'default' | 'iplas'
+
+const currentStationTestItemSource = ref<TestItemSource>('default')
+const currentStationDefaultTestItems = ref<TestItemInfo[]>([])
+const currentStationIplasTestItems = ref<TestItemInfo[]>([])
+const currentStationTestItems = computed(() =>
+  currentStationTestItemSource.value === 'default'
+    ? currentStationDefaultTestItems.value
+    : currentStationIplasTestItems.value,
+)
+const loadingCurrentStationDefaultTestItems = ref(false)
+const loadingCurrentStationIplasTestItems = ref(false)
+const loadingCurrentStationTestItems = computed(() =>
+  currentStationTestItemSource.value === 'default'
+    ? loadingCurrentStationDefaultTestItems.value
+    : loadingCurrentStationIplasTestItems.value,
+)
+const currentStationDefaultTestItemsError = ref<string | null>(null)
+const currentStationIplasTestItemsError = ref<string | null>(null)
+const testItemsError = computed(() =>
+  currentStationTestItemSource.value === 'default'
+    ? currentStationDefaultTestItemsError.value
+    : currentStationIplasTestItemsError.value,
+)
 
 // UPDATED: Cache for test item names to avoid repeated API calls
 // Key format: `${site}_${project}_${station}_${deviceId}`
-const testItemNamesCache = ref<Map<string, TestItemInfo[]>>(new Map())
+const iplasTestItemNamesCache = ref<Map<string, TestItemInfo[]>>(new Map())
+const defaultLatestTestItemsCache = ref<Map<string, TestItemInfo[]>>(new Map())
 
 // For download
 const selectedRecordKeys = ref<Set<string>>(new Set())
@@ -291,10 +305,10 @@ function formatCacheTimestamp(value: string | null | undefined): string {
   return parsed.toLocaleString()
 }
 
-const stationSearchCacheAlert = computed(() => {
+function logStationSearchCacheStatus(): void {
   const metadata = stationSearchCacheMetadata.value
-  if (!metadata || metadata.bucketStats.length === 0 || loadingTestItems.value || error.value) {
-    return null
+  if (!metadata || metadata.bucketStats.length === 0) {
+    return
   }
 
   const cachedBuckets = metadata.bucketStats.filter((stat) => stat.source === 'cache').length
@@ -303,32 +317,25 @@ const stationSearchCacheAlert = computed(() => {
     ['partial', 'hot', 'empty_hot'].includes(stat.state),
   ).length
 
-  const validatedText = metadata.validatedUntil
-    ? ` Validated through ${formatCacheTimestamp(metadata.validatedUntil)}.`
-    : ''
-
-  if (metadata.cacheCoverage === 'full' && unstableBuckets === 0) {
-    return {
-      type: 'success' as const,
-      icon: 'mdi-database-check-outline',
-      message: `Served from Redis cache. Reused ${cachedBuckets} finalized bucket(s).${validatedText}`,
-    }
-  }
-
-  if (metadata.cacheCoverage === 'miss') {
-    return {
-      type: 'info' as const,
-      icon: 'mdi-cloud-refresh-outline',
-      message: `Fetched fresh data from iPLAS. Refreshed ${refreshedBuckets} bucket(s).${validatedText}`,
-    }
-  }
-
-  return {
-    type: 'info' as const,
-    icon: 'mdi-database-sync-outline',
-    message: `Partially reused Redis cache. Reused ${cachedBuckets} bucket(s) and refreshed ${refreshedBuckets} bucket(s).${unstableBuckets > 0 ? ` ${unstableBuckets} bucket(s) are still live or partial.` : ''}${validatedText}`,
-  }
-})
+  console.groupCollapsed('[Station Search] Cache bucket status')
+  console.log('Coverage:', metadata.cacheCoverage)
+  console.log('Validated until:', formatCacheTimestamp(metadata.validatedUntil) || 'N/A')
+  console.log('Cached buckets:', cachedBuckets)
+  console.log('Refreshed buckets:', refreshedBuckets)
+  console.log('Live/partial buckets:', unstableBuckets)
+  console.table(
+    metadata.bucketStats.map((stat) => ({
+      bucketStart: formatCacheTimestamp(stat.bucket_start),
+      bucketEnd: formatCacheTimestamp(stat.bucket_end),
+      state: stat.state,
+      source: stat.source,
+      recordCount: stat.record_count,
+      validatedUntil: formatCacheTimestamp(stat.validated_until) || 'N/A',
+      latestRecordTime: formatCacheTimestamp(stat.latest_record_time) || 'N/A',
+    })),
+  )
+  console.groupEnd()
+}
 
 // Apply date range preset
 function applyDateRangePreset(): void {
@@ -852,10 +859,15 @@ async function openStationSelectionDialog(): Promise<void> {
 
 function handleStationClick(station: Station): void {
   selectedStationForConfig.value = station
+  currentStationTestItemSource.value = 'default'
+  currentStationDefaultTestItems.value = []
+  currentStationIplasTestItems.value = []
+  currentStationDefaultTestItemsError.value = null
+  currentStationIplasTestItemsError.value = null
   showStationConfigDialog.value = true
   // Load device IDs first, then test items (test items need a device ID)
   loadDeviceIdsForStation(station).then(() => {
-    loadTestItemsForStation(station)
+    loadDefaultTestItemsForStation(station)
   })
 }
 
@@ -892,74 +904,151 @@ async function refreshCurrentStationDevices(): Promise<void> {
   }
 }
 
-async function loadTestItemsForStation(station: Station, forceRefresh = false): Promise<void> {
+function mapIplasTestItemInfos(
+  response: Awaited<ReturnType<typeof fetchTestItemNamesCached>>,
+): TestItemInfo[] {
+  return response.test_items.map((item) => ({
+    name: item.name,
+    isValue: item.is_value,
+    isBin: item.is_bin,
+    hasUcl: item.has_ucl,
+    hasLcl: item.has_lcl,
+  }))
+}
+
+function mapDefaultLatestTestItemInfos(
+  items: Array<{ name: string; upperlimit: number | null; lowerlimit: number | null }>,
+): TestItemInfo[] {
+  return items.map((item) => ({
+    name: item.name,
+    isValue: true,
+    isBin: false,
+    hasUcl: item.upperlimit !== null,
+    hasLcl: item.lowerlimit !== null,
+  }))
+}
+
+async function loadDefaultTestItemsForStation(
+  station: Station,
+  forceRefresh = false,
+): Promise<void> {
   if (!selectedSite.value || !selectedProject.value) {
     return
   }
 
-  // Use database-backed cache with session in-memory cache for instant response
-  const cacheKey = `${selectedSite.value}_${selectedProject.value}_${station.display_station_name}`
+  const cacheKey = `${selectedSite.value}_${selectedProject.value}_${station.display_station_name}_${startTime.value}_${endTime.value}`
 
-  // Check in-memory cache first (for instant response during session)
   if (!forceRefresh) {
-    const cachedData = testItemNamesCache.value.get(cacheKey)
+    const cachedData = defaultLatestTestItemsCache.value.get(cacheKey)
     if (cachedData) {
-      currentStationTestItems.value = cachedData
+      currentStationDefaultTestItems.value = cachedData
       return
     }
   }
 
-  loadingCurrentStationTestItems.value = true
-  testItemsError.value = null
-  currentStationTestItems.value = []
+  loadingCurrentStationDefaultTestItems.value = true
+  currentStationDefaultTestItemsError.value = null
+  currentStationDefaultTestItems.value = []
 
   try {
-    // UPDATED: Pass user's selected time range for use when fetching fresh data on cache miss
+    const response = await dutApi.getLatestTestItemsByRange({
+      site_name: selectedSite.value,
+      project_name: selectedProject.value,
+      station_name: station.display_station_name,
+      start_time: new Date(startTime.value).toISOString(),
+      end_time: new Date(endTime.value).toISOString(),
+    })
+
+    const testItemInfos = mapDefaultLatestTestItemInfos(response.data)
+    currentStationDefaultTestItems.value = testItemInfos
+    defaultLatestTestItemsCache.value.set(cacheKey, testItemInfos)
+    console.log('[TestItems] Loaded fast default test items from external DUT latest endpoint')
+  } catch (err: unknown) {
+    currentStationDefaultTestItemsError.value =
+      getErrorMessage(err) || 'Failed to load default test items'
+  } finally {
+    loadingCurrentStationDefaultTestItems.value = false
+  }
+}
+
+async function loadIplasTestItemsForStation(station: Station, forceRefresh = false): Promise<void> {
+  if (!selectedSite.value || !selectedProject.value) {
+    return
+  }
+
+  const cacheKey = `${selectedSite.value}_${selectedProject.value}_${station.display_station_name}`
+
+  if (!forceRefresh) {
+    const cachedData = iplasTestItemNamesCache.value.get(cacheKey)
+    if (cachedData) {
+      currentStationIplasTestItems.value = cachedData
+      return
+    }
+  }
+
+  loadingCurrentStationIplasTestItems.value = true
+  currentStationIplasTestItemsError.value = null
+  currentStationIplasTestItems.value = []
+
+  try {
     const response = await fetchTestItemNamesCached(
       selectedSite.value,
       selectedProject.value,
       station.display_station_name,
-      true, // Exclude BIN items - not needed for scoring
-      forceRefresh, // Force cache refresh if requested
-      startTime.value ? new Date(startTime.value) : undefined, // Pass current time range
+      true,
+      forceRefresh,
+      startTime.value ? new Date(startTime.value) : undefined,
       endTime.value ? new Date(endTime.value) : undefined,
     )
 
-    // Convert to TestItemInfo format expected by StationConfigDialog
-    const testItemInfos: TestItemInfo[] = response.test_items.map((item) => ({
-      name: item.name,
-      isValue: item.is_value,
-      isBin: item.is_bin,
-      hasUcl: item.has_ucl,
-      hasLcl: item.has_lcl,
-    }))
+    const testItemInfos = mapIplasTestItemInfos(response)
+    currentStationIplasTestItems.value = testItemInfos
+    iplasTestItemNamesCache.value.set(cacheKey, testItemInfos)
 
-    currentStationTestItems.value = testItemInfos
-
-    // Store in session cache for instant response
-    testItemNamesCache.value.set(cacheKey, testItemInfos)
-
-    // Log cache info
     if (response.cached) {
       console.log(`[TestItems] Loaded from DB cache (${response.cache_age_hours?.toFixed(1)}h old)`)
     } else {
       console.log('[TestItems] Fetched fresh from iPLAS and cached to DB')
     }
   } catch (err: unknown) {
-    testItemsError.value = getErrorMessage(err) || 'Failed to load test items'
+    currentStationIplasTestItemsError.value =
+      getErrorMessage(err) || 'Failed to load iPLAS test items'
   } finally {
-    loadingCurrentStationTestItems.value = false
+    loadingCurrentStationIplasTestItems.value = false
   }
 }
 
 async function refreshCurrentStationTestItems(): Promise<void> {
-  if (selectedStationForConfig.value) {
-    // UPDATED: Clear session cache and force-refresh from database
+  if (!selectedStationForConfig.value) {
+    return
+  }
+
+  if (currentStationTestItemSource.value === 'default') {
     if (selectedSite.value && selectedProject.value) {
-      const cacheKey = `${selectedSite.value}_${selectedProject.value}_${selectedStationForConfig.value.display_station_name}`
-      testItemNamesCache.value.delete(cacheKey)
+      const cacheKey = `${selectedSite.value}_${selectedProject.value}_${selectedStationForConfig.value.display_station_name}_${startTime.value}_${endTime.value}`
+      defaultLatestTestItemsCache.value.delete(cacheKey)
     }
-    await loadTestItemsForStation(selectedStationForConfig.value, true) // forceRefresh=true
+    await loadDefaultTestItemsForStation(selectedStationForConfig.value, true)
+    return
+  }
+
+  if (selectedSite.value && selectedProject.value) {
+    const cacheKey = `${selectedSite.value}_${selectedProject.value}_${selectedStationForConfig.value.display_station_name}`
+    iplasTestItemNamesCache.value.delete(cacheKey)
+  }
+
+  await loadIplasTestItemsForStation(selectedStationForConfig.value, true)
+}
+
+async function handleTestItemSourceChange(source: TestItemSource): Promise<void> {
+  currentStationTestItemSource.value = source
+
+  if (
+    source === 'iplas' &&
+    selectedStationForConfig.value &&
+    currentStationIplasTestItems.value.length === 0
+  ) {
+    await loadIplasTestItemsForStation(selectedStationForConfig.value)
   }
 }
 
@@ -1035,6 +1124,8 @@ function handleSiteChange(): void {
   stationConfigs.value = {}
   stations.value = []
   clearTestItemData()
+  defaultLatestTestItemsCache.value.clear()
+  iplasTestItemNamesCache.value.clear()
   selectedRecordKeys.value.clear()
   forcedFailures.value = {}
 }
@@ -1043,6 +1134,8 @@ async function handleProjectChange(): Promise<void> {
   stationConfigs.value = {}
   stations.value = []
   clearTestItemData()
+  defaultLatestTestItemsCache.value.clear()
+  iplasTestItemNamesCache.value.clear()
   selectedRecordKeys.value.clear()
   forcedFailures.value = {}
 
@@ -1058,8 +1151,8 @@ function handleClearAll(): void {
   clearTestItemData()
   selectedRecordKeys.value.clear()
   forcedFailures.value = {}
-  // UPDATED: Clear test item names cache
-  testItemNamesCache.value.clear()
+  defaultLatestTestItemsCache.value.clear()
+  iplasTestItemNamesCache.value.clear()
 }
 
 async function fetchTestItems(): Promise<void> {
@@ -1124,6 +1217,8 @@ async function fetchTestItems(): Promise<void> {
       }
     }
   }
+
+  logStationSearchCacheStatus()
 }
 
 // Initialize

@@ -11,6 +11,31 @@ import type {
   TopProductsResponse,
 } from '@/core/types'
 
+export interface LatestStationTestItemsByRangeRequest {
+  site_name: string
+  project_name: string
+  station_name: string
+  start_time: string
+  end_time: string
+}
+
+export interface LatestStationTestItemsByRangeResponse {
+  station_id: number | null
+  station_name: string | null
+  site_id: number | null
+  site_name: string | null
+  model_id: number | null
+  model_name: string | null
+  source: 'default'
+  data: Array<{
+    id: number
+    name: string
+    upperlimit: number | null
+    lowerlimit: number | null
+    status: number | null
+  }>
+}
+
 /**
  * DUT Management API
  *
@@ -146,6 +171,16 @@ export const dutApi = {
       dut_isn: dutIsn,
       station_identifiers: stationIdentifiers,
     })
+    return data
+  },
+
+  async getLatestTestItemsByRange(
+    payload: LatestStationTestItemsByRangeRequest,
+  ): Promise<LatestStationTestItemsByRangeResponse> {
+    const { data } = await apiClient.post<LatestStationTestItemsByRangeResponse>(
+      '/api/dut/test-items/latest',
+      payload,
+    )
     return data
   },
 

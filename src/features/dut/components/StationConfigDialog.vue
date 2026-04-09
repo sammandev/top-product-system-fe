@@ -92,7 +92,18 @@
                             <v-icon start color="primary">mdi-format-list-checks</v-icon>
                             Test Items Selection
                         </div>
-                        <div class="d-flex align-center gap-2">
+                        <div class="d-flex align-center gap-2 flex-wrap justify-end">
+                            <v-btn-toggle
+                                :model-value="testItemSource"
+                                color="primary"
+                                density="compact"
+                                mandatory
+                                variant="outlined"
+                                @update:model-value="handleTestItemSourceChange"
+                            >
+                                <v-btn value="default" size="small">Default</v-btn>
+                                <v-btn value="iplas" size="small">iPLAS</v-btn>
+                            </v-btn-toggle>
                             <v-chip v-if="localConfig.selectedTestItems.length > 0" size="small" color="success"
                                 variant="tonal">
                                 {{ localConfig.selectedTestItems.length }} / {{ availableTestItems.length }} Selected
@@ -518,6 +529,7 @@ interface Props {
   loadingDevices: boolean
   deviceError: string | null
   availableTestItems: TestItemInfo[]
+  testItemSource: 'default' | 'iplas'
   loadingTestItems: boolean
   testItemsError: string | null
 }
@@ -536,6 +548,7 @@ const emit = defineEmits<{
   (e: 'remove', displayName: string): void
   (e: 'refresh-devices'): void
   (e: 'refresh-test-items'): void
+  (e: 'change-test-item-source', source: 'default' | 'iplas'): void
 }>()
 
 const internalShow = computed({
@@ -554,7 +567,7 @@ const localConfig = ref<StationConfig>({
   displayName: '',
   stationName: '',
   deviceIds: [],
-  testStatus: 'PASS',
+  testStatus: 'ALL',
   minimumItemScore: 6.5,
   selectedTestItems: [],
   testItemScoringConfigs: {},
@@ -619,7 +632,7 @@ watch(
           displayName: props.station.display_station_name,
           stationName: props.station.station_name,
           deviceIds: [],
-          testStatus: 'PASS',
+          testStatus: 'ALL',
           minimumItemScore: 6.5,
           selectedTestItems: [],
           testItemScoringConfigs: {},
@@ -753,6 +766,14 @@ function handleRefreshDevices(): void {
 
 function handleRefreshTestItems(): void {
   emit('refresh-test-items')
+}
+
+function handleTestItemSourceChange(source: 'default' | 'iplas' | null): void {
+  if (!source || source === props.testItemSource) {
+    return
+  }
+
+  emit('change-test-item-source', source)
 }
 
 // Scoring configuration helper functions

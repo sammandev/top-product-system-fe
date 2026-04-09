@@ -185,9 +185,11 @@
       :site="isnProjectInfo?.site || ''" :project="isnProjectInfo?.project || ''"
       :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
       :loading-devices="loadingCurrentStationDevices" :device-error="deviceError"
-      :available-test-items="currentStationTestItems" :loading-test-items="loadingCurrentStationTestItems"
+      :available-test-items="currentStationTestItems" test-item-source="iplas"
+      :loading-test-items="loadingCurrentStationTestItems"
       :test-items-error="testItemsError" @save="handleStationConfigSave" @remove="handleStationConfigRemove"
-      @refresh-devices="refreshCurrentStationDevices" @refresh-test-items="refreshCurrentStationTestItems" />
+      @refresh-devices="refreshCurrentStationDevices" @refresh-test-items="refreshCurrentStationTestItems"
+      @change-test-item-source="() => {}" />
 
     <!-- Details Dialog -->
     <TopProductIplasDetailsDialog v-model="showDetailsDialog" :record="detailsRecord" :downloading="detailsDownloading"
@@ -218,15 +220,15 @@ import {
   type TestItem,
   useIplasApi,
 } from '@/features/dut-logs/composables/useIplasApi'
-import { getErrorMessage } from '@/shared/utils'
-import { getApiErrorDetail } from '@/shared/utils/error'
-import { isStatusPass } from '@/shared/utils/helpers'
-import { useNotification } from '@/shared/composables/useNotification'
 import {
   createTopProductsBulk,
   type TopProductCreate,
   type TopProductMeasurementCreate,
 } from '@/features/top-products/api/topProducts.api'
+import { useNotification } from '@/shared/composables/useNotification'
+import { getErrorMessage } from '@/shared/utils'
+import { getApiErrorDetail } from '@/shared/utils/error'
+import { isStatusPass } from '@/shared/utils/helpers'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
 import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
@@ -1013,10 +1015,10 @@ async function handleSaveToDb(payload: {
         const actualValue = parseFloat(item.VALUE)
         return {
           test_item: item.NAME,
-          usl: usl !== null && !isNaN(usl) ? usl : null,
-          lsl: lsl !== null && !isNaN(lsl) ? lsl : null,
+          usl: usl !== null && !Number.isNaN(usl) ? usl : null,
+          lsl: lsl !== null && !Number.isNaN(lsl) ? lsl : null,
           target_value: null,
-          actual_value: !isNaN(actualValue) ? actualValue : null,
+          actual_value: !Number.isNaN(actualValue) ? actualValue : null,
           deviation: null,
         }
       })
@@ -1028,7 +1030,7 @@ async function handleSaveToDb(payload: {
       if (startTime && endTime) {
         const start = new Date(startTime).getTime()
         const end = new Date(endTime).getTime()
-        if (!isNaN(start) && !isNaN(end)) {
+        if (!Number.isNaN(start) && !Number.isNaN(end)) {
           duration = Math.floor((end - start) / 1000)
         }
       }
@@ -1093,7 +1095,8 @@ async function handleCalculateScores(): Promise<void> {
 
     // Map scored records back to score map
     const newScores: Record<string, number> = {}
-    const nextForcedFailures: Record<string, { minimumItemScore: number; failingItems: string[] }> = {}
+    const nextForcedFailures: Record<string, { minimumItemScore: number; failingItems: string[] }> =
+      {}
     testItemData.value.forEach((record, index) => {
       const isn = record.ISN || record.DeviceId || '-'
       const station = record.station
