@@ -16,6 +16,33 @@ import { useAuthStore } from '@/features/auth/stores'
 
 // Router instance will be injected after router is created
 let routerInstance: Router | null = null
+const shouldLogInterceptorDebug = import.meta.env.DEV
+
+function debugLog(message: string, payload?: unknown): void {
+  if (!shouldLogInterceptorDebug) {
+    return
+  }
+
+  if (payload === undefined) {
+    console.log(message)
+    return
+  }
+
+  console.log(message, payload)
+}
+
+function debugError(message: string, payload?: unknown): void {
+  if (!shouldLogInterceptorDebug) {
+    return
+  }
+
+  if (payload === undefined) {
+    console.error(message)
+    return
+  }
+
+  console.error(message, payload)
+}
 
 /**
  * Set the router instance for navigation
@@ -50,7 +77,7 @@ export function createErrorResponseInterceptor(apiClient: AxiosInstance) {
   return async (error: AxiosError): Promise<unknown> => {
     const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
-    console.log('[API Interceptor] Error caught', {
+    debugLog('[API Interceptor] Error caught', {
       status: error.response?.status,
       url: originalRequest?.url,
       method: originalRequest?.method,
@@ -71,7 +98,7 @@ export function createErrorResponseInterceptor(apiClient: AxiosInstance) {
       !originalRequest._retry &&
       !isAuthEndpoint
     ) {
-      console.log('[API Interceptor] 401 Unauthorized - attempting token refresh', {
+      debugLog('[API Interceptor] 401 Unauthorized - attempting token refresh', {
         url: originalRequest.url,
         isRetry: originalRequest._retry,
       })
@@ -81,11 +108,11 @@ export function createErrorResponseInterceptor(apiClient: AxiosInstance) {
       try {
         const authStore = useAuthStore()
 
-        console.log('[API Interceptor] Attempting to refresh token...')
+        debugLog('[API Interceptor] Attempting to refresh token...')
         // Attempt to refresh the token
         await authStore.refreshToken()
 
-        console.log('[API Interceptor] Token refreshed successfully, retrying original request')
+        debugLog('[API Interceptor] Token refreshed successfully, retrying original request')
 
         // Update Authorization header with new token
         if (originalRequest.headers) {
@@ -96,14 +123,14 @@ export function createErrorResponseInterceptor(apiClient: AxiosInstance) {
         return apiClient(originalRequest)
       } catch (refreshError) {
         // Refresh failed - logout user and redirect to login
-        console.error('[API Interceptor] Token refresh failed - logging out user', refreshError)
+        debugError('[API Interceptor] Token refresh failed - logging out user', refreshError)
         const authStore = useAuthStore()
         authStore.logout()
 
         // Redirect to login page using Vue Router (avoids full page reload)
         // This preserves any in-memory state in other tabs/components
         if (routerInstance) {
-          console.log('[API Interceptor] Redirecting to login page via router')
+          debugLog('[API Interceptor] Redirecting to login page via router')
           routerInstance.push({
             name: 'Login',
             query: {
@@ -113,7 +140,7 @@ export function createErrorResponseInterceptor(apiClient: AxiosInstance) {
           })
         } else if (typeof window !== 'undefined') {
           // Fallback to window.location only if router is not available
-          console.log('[API Interceptor] Router not available, using window.location')
+          debugLog('[API Interceptor] Router not available, using window.location')
           window.location.href = '/login?reason=session_expired'
         }
 
@@ -123,7 +150,7 @@ export function createErrorResponseInterceptor(apiClient: AxiosInstance) {
 
     // Log other errors
     if (error.response?.status && error.response.status !== 401) {
-      console.error('[API Interceptor] HTTP error', {
+      debugError('[API Interceptor] HTTP error', {
         status: error.response.status,
         url: originalRequest?.url,
         detail: extractErrorDetail(error.response.data) || error.message,

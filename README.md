@@ -219,7 +219,7 @@ src/
   - Displays analysis results with Score Breakdown dialog
   - Fixed component lifecycle (always mounted, visibility-controlled)
   - Handles both standard and PA-adjusted measurements
-- [ScoreBreakdownDialog.vue](src/features/dut_logs/components/ScoreBreakdownDialog.vue) (442 lines)
+- [ScoreBreakdownDialog.vue](src/features/dut-logs/components/ScoreBreakdownDialog.vue) (442 lines)
   - Modal dialog showing score calculation details
   - Conditional rendering for standard vs PA-adjusted fields
   - Safe number formatting with `formatNumberSafe()` helper
@@ -239,7 +239,7 @@ src/
   - `ScoreBreakdown` interface: Supports both standard and PA fields
   - Optional standard fields: `usl?`, `lsl?`, `actual?`, `deviation?`
   - Optional PA fields: `comparison?`, `threshold?`, `current_value?`, `trend_mean?`, `deviation_from_mean?`
-- [useTestLogUpload.ts](src/features/dut_logs/composables/useTestLogUpload.ts) (198 lines)
+- [useTestLogUpload.ts](src/features/dut-logs/composables/useTestLogUpload.ts) (198 lines)
   - Synchronized `ScoreBreakdown` interface for consistency
   - Composable for test log upload functionality
 

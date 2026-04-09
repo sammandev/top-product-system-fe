@@ -66,8 +66,8 @@
 
                 <!-- Test Items Selection Section -->
                 <v-card variant="outlined">
-                    <v-card-title class="text-subtitle-1 bg-grey-lighten-5 d-flex align-center justify-space-between">
-                        <div>
+                    <v-card-title class="test-item-section-header d-flex align-center justify-space-between flex-wrap">
+                      <div class="test-item-section-title d-flex align-center">
                             <v-icon start color="primary">mdi-format-list-checks</v-icon>
                             Test Items Selection
                         </div>
@@ -943,20 +943,47 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
     font-size: 0.7rem;
 }
 
+.test-item-section-header {
+  background: linear-gradient(
+    135deg,
+    rgba(var(--v-theme-surface-variant), 0.18),
+    rgba(var(--v-theme-surface), 0.94)
+  );
+  color: rgb(var(--v-theme-on-surface));
+  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  gap: 0.75rem;
+  white-space: normal;
+}
+
+.test-item-section-title {
+  gap: 0.375rem;
+  font-weight: 600;
+}
+
 .test-item-source-toggle {
     border-radius: 999px;
-    background-color: rgba(var(--v-theme-surface), 0.85);
-    padding: 0.125rem;
+  background-color: rgba(var(--v-theme-background), 0.92);
+  border: 1px solid rgba(var(--v-theme-primary), 0.2);
+  box-shadow: inset 0 0 0 1px rgba(var(--v-theme-on-surface), 0.04);
+  padding: 0.1875rem;
 }
 
 :deep(.test-item-source-toggle .v-btn) {
-    min-width: 78px;
-    color: rgb(var(--v-theme-on-surface));
+  min-width: 84px;
+  color: rgba(var(--v-theme-on-surface), 0.82) !important;
+  border-color: transparent !important;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+:deep(.test-item-source-toggle .v-btn:hover) {
+  background-color: rgba(var(--v-theme-primary), 0.12);
 }
 
 :deep(.test-item-source-toggle .v-btn.v-btn--active) {
-    color: rgb(var(--v-theme-on-primary));
-    background-color: rgb(var(--v-theme-primary));
+  color: rgb(var(--v-theme-on-primary)) !important;
+  background-color: rgb(var(--v-theme-primary)) !important;
+  box-shadow: 0 4px 12px rgba(var(--v-theme-primary), 0.28);
 }
 
 /* UPDATED: Fix icon cropping inside chips */

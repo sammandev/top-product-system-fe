@@ -128,16 +128,16 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useIplasApi } from '@/features/dut_logs/composables/useIplasApi'
-import { iplasProxyApi, type ExportRecord, type ExportTestItem } from '@/features/dut_logs/api/iplasProxyApi'
-import { useIplasSettings } from '@/features/dut_logs/composables/useIplasSettings'
+import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
+import { iplasProxyApi, type ExportRecord, type ExportTestItem } from '@/features/dut-logs/api/iplasProxyApi'
+import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { useScoring } from '../composables/useScoring'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
 import StationSelectionDialog from './StationSelectionDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
 import type { StationConfig } from './StationSelectionDialog.vue'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
-import type { Station, TestItem, CsvTestItemData, DownloadCsvLogInfo } from '@/features/dut_logs/composables/useIplasApi'
+import type { Station, TestItem, CsvTestItemData, DownloadCsvLogInfo } from '@/features/dut-logs/composables/useIplasApi'
 
 // Emits
 const emit = defineEmits<{

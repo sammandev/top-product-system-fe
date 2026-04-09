@@ -197,16 +197,16 @@
 <script setup lang="ts">
 // UPDATED: Complete rewrite of script section for new UX flow
 import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useIplasApi, type Station, type CsvTestItemData, type TestItem } from '@/features/dut_logs/composables/useIplasApi'
+import { useIplasApi, type Station, type CsvTestItemData, type TestItem } from '@/features/dut-logs/composables/useIplasApi'
 import { useScoring } from '@/features/dut/composables/useScoring'
-import { iplasProxyApi, type IplasIsnProjectInfo, type IplasIsnSearchRecord } from '@/features/dut_logs/api/iplasProxyApi'
-import { lookupIsnsBatch, type SfistspIsnReferenceResponse } from '@/features/dut_logs/api/sfistspApi'
+import { iplasProxyApi, type IplasIsnProjectInfo, type IplasIsnSearchRecord } from '@/features/dut-logs/api/iplasProxyApi'
+import { lookupIsnsBatch, type SfistspIsnReferenceResponse } from '@/features/dut-logs/api/sfistspApi'
 import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
-import type { IplasDownloadCsvLogInfo } from '@/features/dut_logs/api/iplasProxyApi'
+import type { IplasDownloadCsvLogInfo } from '@/features/dut-logs/api/iplasProxyApi'
 
 // ============================================================================
 // State: ISN Input
