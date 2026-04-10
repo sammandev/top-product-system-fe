@@ -321,7 +321,7 @@
                 All Stations
                 <v-chip size="x-small" color="info" class="ml-2">{{ indexedDbTotalItems }}</v-chip>
               </v-tab>
-              <v-tab v-for="(stationName, index) in indexedDbStationList" :key="stationName" :value="index + 1">
+              <v-tab v-for="(stationName, index) in indexedDbStationList" :key="stationName" :value="Number(index) + 1">
                 <v-icon start size="small">mdi-router-wireless</v-icon>
                 {{ stationName }}
               </v-tab>
@@ -800,8 +800,15 @@ function getStationDeviceSummary(stationValue: string): string {
   return `${selectedDeviceCount} DeviceId${selectedDeviceCount > 1 ? 's' : ''} selected`
 }
 
-const configuredStations = computed(() => {
-  return selectedStations.value.map((stationValue) => ({
+const configuredStations = computed<
+  Array<{
+    stationValue: string
+    displayName: string
+    deviceSummary: string
+    testStatus: 'ALL' | 'PASS' | 'FAIL'
+  }>
+>(() => {
+  return selectedStations.value.map((stationValue: string) => ({
     stationValue,
     displayName: getStationDisplayName(stationValue),
     deviceSummary: getStationDeviceSummary(stationValue),
@@ -904,7 +911,7 @@ function handleDialogStationToggle(stationValue: string, selected: boolean): voi
 }
 
 function removeSelectedStation(stationValue: string): void {
-  updateSelectedStations(selectedStations.value.filter((value) => value !== stationValue))
+  updateSelectedStations(selectedStations.value.filter((value: string) => value !== stationValue))
 }
 
 function formatIndexedDbHours(durationHours: number): string {
@@ -963,7 +970,7 @@ async function refreshIndexedDbPage(resetPage = false): Promise<void> {
 }
 
 // Download controls
-const selectedRecordKeys = ref<Set<string>>(new Set())
+const selectedRecordKeys = ref<Set<string>>(new Set<string>())
 const downloadingKey = ref<string | null>(null)
 const downloadingCsvKey = ref<string | null>(null)
 const downloadingCsv = ref(false)
@@ -997,7 +1004,7 @@ const stationOptions = computed(() => {
 
 const totalDeviceCount = computed(() => {
   let count = 0
-  for (const deviceList of Object.values(deviceIdsByStation.value)) {
+  for (const deviceList of Object.values(deviceIdsByStation.value) as string[][]) {
     count += deviceList.length
   }
   return count
@@ -1350,44 +1357,29 @@ function getTestItemsForRecord(
 // Watch for station selection changes to fetch device IDs
 watch(
   selectedStations,
-  async (newStations, oldStations) => {
+  async (newStations: string[], oldStations: string[]) => {
     // Find newly added stations
-    const addedStations = newStations.filter((s) => !oldStations.includes(s))
+    const addedStations = newStations.filter((s: string) => !oldStations.includes(s))
     // Find removed stations
-    const removedStations = oldStations.filter((s) => !newStations.includes(s))
+    const removedStations = oldStations.filter((s: string) => !newStations.includes(s))
 
     // Remove device IDs and selections for removed stations
     for (const station of removedStations) {
       delete deviceIdsByStation.value[station]
       delete stationDeviceIds.value[station]
       delete loadingDevicesByStation.value[station]
+      stationDeviceRequestPromises.value.delete(station)
     }
 
     // Fetch device IDs for newly added stations
     if (selectedSite.value && selectedProject.value && startTime.value && endTime.value) {
       for (const station of addedStations) {
-        try {
-          loadingDevicesByStation.value[station] = true
-          const start = new Date(startTime.value).toISOString()
-          const end = new Date(endTime.value).toISOString()
-          const devices = await fetchDeviceIds(
-            selectedSite.value,
-            selectedProject.value,
-            station,
-            start,
-            end,
-          )
-          deviceIdsByStation.value[station] = devices
-          // Initialize with empty selection (will use 'ALL' if empty)
-          if (!stationDeviceIds.value[station]) {
-            stationDeviceIds.value[station] = []
-          }
-        } catch (error) {
-          console.error(`Failed to fetch device IDs for ${station}:`, error)
+        const devices = await ensureStationDeviceIdsLoaded(station)
+        if (!devices.length && !deviceIdsByStation.value[station]) {
           deviceIdsByStation.value[station] = []
+        }
+        if (!stationDeviceIds.value[station]) {
           stationDeviceIds.value[station] = []
-        } finally {
-          loadingDevicesByStation.value[station] = false
         }
       }
     }
@@ -1397,7 +1389,7 @@ watch(
 // Initialize testItemFilters when records change - ensure 'value' is selected by default
 watch(
   groupedByStation,
-  (groups) => {
+  (groups: StationGroup[]) => {
     for (const group of groups) {
       const filteredRecords = getFilteredStationRecords(group)
       for (let i = 0; i < filteredRecords.length; i++) {
@@ -1416,24 +1408,24 @@ watch(
  * Get selected record keys for a specific station (used by IplasRecordTable)
  */
 function getSelectedKeysForStation(stationName: string): string[] {
-  const stationGroup = groupedByStation.value.find((g) => g.stationName === stationName)
+  const stationGroup = groupedByStation.value.find((g: StationGroup) => g.stationName === stationName)
   if (!stationGroup) return []
 
-  const stationRecordKeys = stationGroup.records.map((r) => `${r.ISN}_${r['Test Start Time']}`)
+  const stationRecordKeys = stationGroup.records.map((r: CsvTestItemData | CompactCsvTestItemData) => `${r.ISN}_${r['Test Start Time']}`)
 
-  return Array.from(selectedRecordKeys.value).filter((key) => stationRecordKeys.includes(key))
+  return Array.from(selectedRecordKeys.value as Set<string>).filter((key) => stationRecordKeys.includes(key))
 }
 
 /**
  * Handle selection changes from IplasRecordTable
  */
 function handleTableSelectionChange(stationName: string, newSelectedKeys: string[]): void {
-  const stationGroup = groupedByStation.value.find((g) => g.stationName === stationName)
+  const stationGroup = groupedByStation.value.find((g: StationGroup) => g.stationName === stationName)
   if (!stationGroup) return
 
   // Get all record keys for this station
   const stationRecordKeys = new Set(
-    stationGroup.records.map((r) => `${r.ISN}_${r['Test Start Time']}`),
+    stationGroup.records.map((r: CsvTestItemData | CompactCsvTestItemData) => `${r.ISN}_${r['Test Start Time']}`),
   )
 
   // Remove old selections for this station
@@ -1966,7 +1958,6 @@ async function fetchTestItems() {
       }
     }
     return entry
-    stationDeviceRequestPromises.value.delete(station)
   })
   const resolvedStations = await Promise.all(deviceIdPromises)
 
@@ -2098,8 +2089,7 @@ async function handleTableOptionsUpdate(
     deviceId = filterDeviceIds[0]
   }
 
-  // Get status filter for this station (use per-station filter, fallback to global)
-  const statusFilter = stationStatusFilters.value[stationName] || testStatusFilter.value || 'ALL'
+  // Get status filter for this station
   const statusFilter = stationStatusFilters.value[stationName] || 'ALL'
 
   try {
@@ -2151,7 +2141,7 @@ async function handleRefresh() {
 // Watch for station data changes - initialize server pagination
 watch(
   groupedByStation,
-  async (groups) => {
+  async (groups: StationGroup[]) => {
     if (groups.length > 0) {
       // Initialize pagination for the active station tab
       const activeStation = groups[activeStationTab.value]
@@ -2164,14 +2154,14 @@ watch(
 )
 
 // UPDATED: Watch for streaming completion to load all items for client-side table
-watch(isStreaming, async (streaming, wasStreaming) => {
+watch(isStreaming, async (streaming: boolean, wasStreaming: boolean) => {
   if (wasStreaming && !streaming && streamStatus.recordsWritten > 0) {
     await refreshIndexedDbPage(true)
   }
 })
 
 // Watch for active station tab changes - initialize pagination if needed
-watch(activeStationTab, async (newTab) => {
+watch(activeStationTab, async (newTab: number) => {
   if (groupedByStation.value.length > newTab) {
     const station = groupedByStation.value[newTab]
     if (station && !serverPaginationState.value[station.stationName]) {
@@ -2181,7 +2171,7 @@ watch(activeStationTab, async (newTab) => {
 })
 
 // Watch for IndexedDB station tab changes - update filter
-watch(indexedDbActiveStationTab, async (newTab) => {
+watch(indexedDbActiveStationTab, async (newTab: number) => {
   if (newTab === 0) {
     // All stations - clear station filter
     updateIndexedDbFilter({ station: undefined })
