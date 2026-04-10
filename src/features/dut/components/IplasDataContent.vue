@@ -453,6 +453,12 @@
       <v-icon start>mdi-check</v-icon>
       Copied to clipboard!
     </v-snackbar>
+
+    <!-- Download Error Snackbar -->
+    <v-snackbar v-model="showDownloadError" :timeout="5000" color="error" location="bottom">
+      <v-icon start>mdi-alert-circle</v-icon>
+      {{ downloadErrorMessage }}
+    </v-snackbar>
   </div>
 </template>
 
@@ -771,6 +777,10 @@ function setRecordSearchQuery(stationName: string, value: string | null): void {
 
 // Copy success snackbar
 const showCopySuccess = ref(false)
+
+// Download error snackbar
+const showDownloadError = ref(false)
+const downloadErrorMessage = ref('')
 
 // Station tab and device filter controls
 const activeStationTab = ref(0)
@@ -1407,13 +1417,19 @@ async function openFullscreen(record: CsvTestItemData | CompactCsvTestItemData):
 }
 
 async function downloadFromFullscreen(): Promise<void> {
-  if (!fullscreenOriginalRecord.value || !selectedSite.value || !selectedProject.value) return
+  if (!fullscreenOriginalRecord.value || !selectedSite.value || !selectedProject.value) {
+    downloadErrorMessage.value = 'Missing site or project information for download'
+    showDownloadError.value = true
+    return
+  }
   fullscreenDownloading.value = true
   try {
     const attachmentInfo = createAttachmentInfo(fullscreenOriginalRecord.value)
     await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
   } catch (err) {
     console.error('Failed to download test log:', err)
+    downloadErrorMessage.value = err instanceof Error ? err.message : 'Failed to download test log'
+    showDownloadError.value = true
   } finally {
     fullscreenDownloading.value = false
   }

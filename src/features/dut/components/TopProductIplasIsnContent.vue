@@ -1239,38 +1239,43 @@ async function handleDownloadRecord(payload: {
 }): Promise<void> {
   if (!isnProjectInfo.value) return
 
-  const record = payload.record
-  const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-  // UPDATED: Time is already in local time format (YYYY-MM-DD HH:mm:ss) from transformIsnRecordToCsvData
-  // Just need to convert dashes to slashes for the download attachment API
-  const time =
-    (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
-  const deviceid = record.DeviceId
-  // UPDATED: Use display_station_name (record.station) first, as expected by iPLAS API
-  const station = record.station || record.TSP
+  try {
+    const record = payload.record
+    const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+    // UPDATED: Time is already in local time format (YYYY-MM-DD HH:mm:ss) from transformIsnRecordToCsvData
+    // Just need to convert dashes to slashes for the download attachment API
+    const time =
+      (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+    const deviceid = record.DeviceId
+    // Prefer raw station name (TSP) — display_station_name may not be recognized by iPLAS download API
+    const station = record.TSP || record.station
 
-  await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, [
-    { isn, time, deviceid, station },
-  ])
+    await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, [
+      { isn, time, deviceid, station },
+    ])
 
-  // Format time for CSV log download (needs .000 milliseconds)
-  const testEndTime = record['Test end Time'] || ''
-  const formattedEndTime = testEndTime.replace(/-/g, '/').replace('T', ' ')
-  const apiEndTime = formattedEndTime.includes('.') ? formattedEndTime : `${formattedEndTime}.000`
+    // Format time for CSV log download (needs .000 milliseconds)
+    const testEndTime = record['Test end Time'] || ''
+    const formattedEndTime = testEndTime.replace(/-/g, '/').replace('T', ' ')
+    const apiEndTime = formattedEndTime.includes('.') ? formattedEndTime : `${formattedEndTime}.000`
 
-  const csvLogInfo: IplasDownloadCsvLogInfo = {
-    site: isnProjectInfo.value.site,
-    project: isnProjectInfo.value.project,
-    station,
-    line: record.Line || 'NA',
-    model: record.Model || 'ALL',
-    deviceid,
-    isn,
-    test_end_time: apiEndTime,
-    data_source: 0,
+    const csvLogInfo: IplasDownloadCsvLogInfo = {
+      site: isnProjectInfo.value.site,
+      project: isnProjectInfo.value.project,
+      station,
+      line: record.Line || 'NA',
+      model: record.Model || 'ALL',
+      deviceid,
+      isn,
+      test_end_time: apiEndTime,
+      data_source: 0,
+    }
+
+    await downloadCsvLogs([csvLogInfo])
+  } catch (err) {
+    console.error('Failed to download test log:', err)
+    showErrorNotification(err instanceof Error ? err.message : 'Failed to download test log')
   }
-
-  await downloadCsvLogs([csvLogInfo])
 }
 
 async function handleBulkDownloadRecords(payload: {
@@ -1285,8 +1290,8 @@ async function handleBulkDownloadRecords(payload: {
     const time =
       (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
     const deviceid = record.DeviceId
-    // UPDATED: Use display_station_name (record.station) first, as expected by iPLAS API
-    const station = record.station || record.TSP
+    // Prefer raw station name (TSP) — display_station_name may not be recognized by iPLAS download API
+    const station = record.TSP || record.station
     return { isn, time, deviceid, station }
   })
 
@@ -1295,8 +1300,8 @@ async function handleBulkDownloadRecords(payload: {
   const csvLogInfos: IplasDownloadCsvLogInfo[] = payload.records.map((record) => {
     const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
     const deviceid = record.DeviceId
-    // UPDATED: Use display_station_name (record.station) first
-    const station = record.station || record.TSP
+    // Prefer raw station name (TSP)
+    const station = record.TSP || record.station
     const testEndTime = record['Test end Time'] || ''
     const formattedEndTime = testEndTime.replace(/-/g, '/').replace('T', ' ')
     const apiEndTime = formattedEndTime.includes('.') ? formattedEndTime : `${formattedEndTime}.000`

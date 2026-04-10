@@ -128,6 +128,32 @@
         </div>
 
         <v-divider class="flex-shrink-0" />
+
+        <!-- Overall Score Badges (moved here for more table space) -->
+        <div v-if="record.overallScore !== undefined" class="px-3 py-2 d-flex align-center flex-wrap gap-2">
+          <v-chip v-if="record.isForcedFailure" color="warning" variant="flat" size="small" prepend-icon="mdi-alert-octagon">
+            Forced Fail: below {{ record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5' }} / 10
+          </v-chip>
+          <v-chip v-if="record.isForcedFailure && record.forcedFailureItems?.length" color="warning" variant="outlined" size="small"
+            class="cursor-pointer" prepend-icon="mdi-format-list-bulleted" @click="showForcedFailDialog = true">
+            {{ record.forcedFailureItems.length }} failing item{{ record.forcedFailureItems.length === 1 ? '' : 's' }}
+          </v-chip>
+          <v-spacer />
+          <v-chip color="primary" variant="tonal" size="small" prepend-icon="mdi-chart-line">
+            <strong>Overall Score:</strong>&nbsp;
+            <span :class="getScoreColorClass(record.overallScore)">
+              {{ (record.overallScore * 10).toFixed(2) }} / 10
+            </span>
+          </v-chip>
+          <v-chip v-if="record.valueItemsScore !== null && record.valueItemsScore !== undefined" color="success"
+            variant="outlined" size="x-small">
+            Value: {{ (record.valueItemsScore * 10).toFixed(2) }}
+          </v-chip>
+          <v-chip v-if="record.binItemsScore !== null && record.binItemsScore !== undefined" color="info"
+            variant="outlined" size="x-small">
+            Binary: {{ (record.binItemsScore * 10).toFixed(2) }}
+          </v-chip>
+        </div>
       </div>
       <!-- End Sticky Header Container -->
 
@@ -211,44 +237,51 @@
         </v-data-table>
       </div>
 
-      <!-- Overall Score Badge (if available) -->
-      <div v-if="record.overallScore !== undefined" class="flex-shrink-0 px-3 py-2 bg-surface">
-        <div class="d-flex align-center justify-end gap-4">
-          <v-chip v-if="record.isForcedFailure" color="warning" variant="flat" prepend-icon="mdi-alert-octagon">
-            Forced Fail: below {{ record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5' }} / 10
-          </v-chip>
-          <v-chip color="primary" variant="tonal" prepend-icon="mdi-chart-line">
-            <strong>Overall Score:</strong>&nbsp;
-            <span :class="getScoreColorClass(record.overallScore)">
-              {{ (record.overallScore * 10).toFixed(2) }} / 10
-            </span>
-          </v-chip>
-          <v-chip v-if="record.valueItemsScore !== null && record.valueItemsScore !== undefined" color="success"
-            variant="outlined" size="small">
-            Value Items: {{ (record.valueItemsScore * 10).toFixed(2) }}
-          </v-chip>
-          <v-chip v-if="record.binItemsScore !== null && record.binItemsScore !== undefined" color="info"
-            variant="outlined" size="small">
-            Binary Items: {{ (record.binItemsScore * 10).toFixed(2) }}
-          </v-chip>
-        </div>
-        <div v-if="record.isForcedFailure && record.forcedFailureItems?.length" class="mt-2 text-caption text-warning-darken-2">
-          Failing items: {{ record.forcedFailureItems.join(', ') }}
-        </div>
-      </div>
+    </v-card>
+  </v-dialog>
+
+  <!-- Forced Fail Items Dialog -->
+  <v-dialog v-model="showForcedFailDialog" max-width="500px">
+    <v-card v-if="record">
+      <v-card-title class="d-flex align-center bg-warning">
+        <v-icon class="mr-2" color="white">mdi-alert-octagon</v-icon>
+        <span class="text-white">Forced Fail Items</span>
+        <v-spacer />
+        <v-btn icon="mdi-close" variant="text" color="white" size="small" @click="showForcedFailDialog = false" />
+      </v-card-title>
+      <v-card-text class="pt-4">
+        <v-alert color="warning" variant="tonal" density="compact" class="mb-4">
+          {{ record.forcedFailureItems?.length || 0 }} scored item(s) fell below the minimum score of
+          {{ record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5' }} / 10
+        </v-alert>
+        <v-list density="compact" class="rounded border" style="max-height: 400px; overflow-y: auto;">
+          <v-list-item v-for="(itemName, idx) in record.forcedFailureItems" :key="idx" :title="itemName" class="cursor-pointer" @click="copyToClipboard(itemName)">
+            <template #prepend>
+              <v-icon size="small" color="warning">mdi-alert-circle</v-icon>
+            </template>
+            <template #append>
+              <v-icon size="x-small" color="grey">mdi-content-copy</v-icon>
+            </template>
+          </v-list-item>
+        </v-list>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn color="warning" variant="tonal" @click="showForcedFailDialog = false">Close</v-btn>
+      </v-card-actions>
     </v-card>
   </v-dialog>
 
   <!-- Score Breakdown Dialog -->
   <v-dialog v-model="showBreakdownDialog" max-width="500px" persistent>
-    <v-card v-if="selectedTestItem">
-      <v-card-title class="d-flex align-center bg-primary">
+    <v-card v-if="selectedTestItem" class="d-flex flex-column" style="max-height: 80vh;">
+      <v-card-title class="d-flex align-center bg-primary flex-shrink-0">
         <v-icon class="mr-2" color="white">mdi-calculator-variant</v-icon>
         <span class="text-white">Score Breakdown</span>
         <v-spacer />
         <v-btn icon="mdi-close" variant="text" color="white" size="small" @click="showBreakdownDialog = false" />
       </v-card-title>
-      <v-card-text class="pt-4">
+      <v-card-text class="pt-4" style="flex: 1; overflow-y: auto;">
         <!-- Test Item Name -->
         <v-alert color="info" variant="tonal" density="compact" class="mb-4">
           <div class="text-subtitle-2 font-weight-bold">{{ selectedTestItem.NAME }}</div>
@@ -395,7 +428,7 @@
           </v-expansion-panel>
         </v-expansion-panels>
       </v-card-text>
-      <v-card-actions>
+      <v-card-actions class="flex-shrink-0">
         <v-spacer />
         <v-btn color="primary" variant="tonal" @click="showBreakdownDialog = false">Close</v-btn>
       </v-card-actions>
@@ -458,6 +491,9 @@ const scoreFilterValue = ref<number | null>(null)
 // Score breakdown dialog
 const showBreakdownDialog = ref(false)
 const selectedTestItem = ref<NormalizedTestItem | null>(null)
+
+// Forced fail items dialog
+const showForcedFailDialog = ref(false)
 
 // Filter options for dropdown
 const testItemFilterOptions = [

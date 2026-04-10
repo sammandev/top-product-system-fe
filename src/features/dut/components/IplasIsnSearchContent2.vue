@@ -998,31 +998,35 @@ function handleRowClick(payload: { record: CsvTestItemData; stationName: string 
 async function handleDownloadRecord(payload: { record: CsvTestItemData; stationName: string }): Promise<void> {
     if (!isnProjectInfo.value) return
 
-    const record = payload.record
-    const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-    const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
-    const deviceid = record.DeviceId
-    const station = record.TSP || record.station
+    try {
+        const record = payload.record
+        const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+        const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+        const deviceid = record.DeviceId
+        const station = record.TSP || record.station
 
-    await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, [{ isn, time, deviceid, station }])
+        await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, [{ isn, time, deviceid, station }])
 
-    const testEndTime = record['Test end Time'] || ''
-    const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
-    const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
+        const testEndTime = record['Test end Time'] || ''
+        const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+        const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
 
-    const csvLogInfo: IplasDownloadCsvLogInfo = {
-        site: isnProjectInfo.value.site,
-        project: isnProjectInfo.value.project,
-        station,
-        line: record.Line || 'NA',
-        model: record.Model || 'ALL',
-        deviceid,
-        isn,
-        test_end_time: apiEndTime,
-        data_source: 0
+        const csvLogInfo: IplasDownloadCsvLogInfo = {
+            site: isnProjectInfo.value.site,
+            project: isnProjectInfo.value.project,
+            station,
+            line: record.Line || 'NA',
+            model: record.Model || 'ALL',
+            deviceid,
+            isn,
+            test_end_time: apiEndTime,
+            data_source: 0
+        }
+
+        await downloadCsvLogs([csvLogInfo])
+    } catch (err) {
+        console.error('Failed to download test log:', err)
     }
-
-    await downloadCsvLogs([csvLogInfo])
 }
 
 async function handleBulkDownloadRecords(payload: { records: CsvTestItemData[]; stationName: string }): Promise<void> {

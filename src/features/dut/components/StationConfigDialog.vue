@@ -86,10 +86,10 @@
                             </v-btn-toggle>
                             <v-chip v-if="localConfig.selectedTestItems.length > 0" size="small" color="success"
                                 variant="tonal">
-                                {{ localConfig.selectedTestItems.length }} / {{ availableTestItems.length }} Selected
+                              {{ localConfig.selectedTestItems.length }} / {{ uniqueAvailableTestItems.length }} Selected
                             </v-chip>
                             <v-chip v-else size="small" color="info" variant="tonal">
-                                All Items ({{ availableTestItems.length }})
+                              All Items ({{ uniqueAvailableTestItems.length }})
                             </v-chip>
                             <v-btn v-if="!loadingTestItems" color="primary" variant="text" size="small"
                                 prepend-icon="mdi-refresh" @click="handleRefreshTestItems">
@@ -110,7 +110,7 @@
                         </v-alert>
 
                         <!-- No Test Items -->
-                        <v-alert v-else-if="availableTestItems.length === 0" type="info" variant="tonal">
+                        <v-alert v-else-if="uniqueAvailableTestItems.length === 0" type="info" variant="tonal">
                             No test items available. Click "Refresh" to load test items, or ensure device IDs and date
                             range are selected.
                         </v-alert>
@@ -574,9 +574,37 @@ const someDevicesSelected = computed(() => {
 })
 
 // Test Items filtering - only show Criteria and Non-Criteria items (exclude Bin)
+const uniqueAvailableTestItems = computed(() => {
+  const merged = new Map<string, TestItemInfo>()
+
+  for (const item of props.availableTestItems) {
+    const name = item.name.trim()
+    if (!name) {
+      continue
+    }
+
+    const existing = merged.get(name)
+    if (!existing) {
+      merged.set(name, { ...item, name })
+      continue
+    }
+
+    merged.set(name, {
+      ...existing,
+      name,
+      isValue: existing.isValue || item.isValue,
+      isBin: existing.isBin || item.isBin,
+      hasUcl: existing.hasUcl || item.hasUcl,
+      hasLcl: existing.hasLcl || item.hasLcl,
+    })
+  }
+
+  return Array.from(merged.values())
+})
+
 const filteredTestItems = computed(() => {
   // Filter out Bin items, only keep Criteria (isValue) and Non-Criteria (!isValue && !isBin)
-  let items = props.availableTestItems.filter((item) => !item.isBin)
+  let items = uniqueAvailableTestItems.value.filter((item) => !item.isBin)
 
   // Apply search query
   if (testItemSearchQuery.value) {
@@ -649,14 +677,14 @@ function selectDisplayedAndConfigureScore(): void {
 
 function selectValueTestItems(): void {
   // CRITERIA: test items with UCL OR LCL (criteria limits define criteria, regardless of value type)
-  localConfig.value.selectedTestItems = props.availableTestItems
+  localConfig.value.selectedTestItems = uniqueAvailableTestItems.value
     .filter((item) => item.isValue && (item.hasUcl || item.hasLcl))
     .map((item) => item.name)
 }
 
 function selectNonValueTestItems(): void {
   // NON-CRITERIA: test items with numeric VALUE but NO UCL AND NO LCL
-  localConfig.value.selectedTestItems = props.availableTestItems
+  localConfig.value.selectedTestItems = uniqueAvailableTestItems.value
     .filter((item) => item.isValue && !item.hasUcl && !item.hasLcl)
     .map((item) => item.name)
 }
@@ -690,7 +718,7 @@ function handleSave(): void {
   const configToSave = { ...localConfig.value }
   configToSave.minimumItemScore = Math.min(10, Math.max(0, configToSave.minimumItemScore ?? 6.5))
   if (configToSave.selectedTestItems.length === 0) {
-    configToSave.selectedTestItems = props.availableTestItems
+    configToSave.selectedTestItems = uniqueAvailableTestItems.value
       .filter((item) => !item.isBin)
       .map((item) => item.name)
   }
@@ -734,7 +762,7 @@ function getTestItemScoringConfig(testItemName: string): TestItemScoringConfig {
   }
 
   // Auto-detect scoring type for new items
-  const testItem = props.availableTestItems.find((item) => item.name === testItemName)
+  const testItem = uniqueAvailableTestItems.value.find((item) => item.name === testItemName)
 
   // UPDATED: Auto-detect PER/MASK items (UCL-only, lower is better)
   if (testItem && shouldUsePerMaskScoring(testItemName) && testItem.hasUcl && !testItem.hasLcl) {
@@ -831,7 +859,7 @@ function applyBulkScoringConfig(): void {
   }
 
   // Apply to all selected criteria test items (has VALUE + UCL or LCL)
-  const criteriaItems = props.availableTestItems.filter(
+  const criteriaItems = uniqueAvailableTestItems.value.filter(
     (item) =>
       item.isValue &&
       (item.hasUcl || item.hasLcl) &&
@@ -863,7 +891,7 @@ function applyBulkScoringConfig(): void {
 // Get count of selected criteria items for bulk config
 const selectedCriteriaCount = computed(() => {
   // CRITERIA: has VALUE + (UCL or LCL)
-  return props.availableTestItems.filter(
+  return uniqueAvailableTestItems.value.filter(
     (item) =>
       item.isValue &&
       (item.hasUcl || item.hasLcl) &&

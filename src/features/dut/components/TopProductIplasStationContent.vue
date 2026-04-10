@@ -484,38 +484,43 @@ async function handleDownloadRecord(payload: {
 }): Promise<void> {
   if (!selectedSite.value || !selectedProject.value) return
 
-  const record = payload.record
-  const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-  const time =
-    (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
-  const deviceid = record.DeviceId
-  const station = record.TSP || record.station
+  try {
+    const record = payload.record
+    const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+    const time =
+      (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+    const deviceid = record.DeviceId
+    const station = record.TSP || record.station
 
-  // Download TXT attachments
-  await downloadAttachments(selectedSite.value, selectedProject.value, [
-    { isn, time, deviceid, station },
-  ])
+    // Download TXT attachments
+    await downloadAttachments(selectedSite.value, selectedProject.value, [
+      { isn, time, deviceid, station },
+    ])
 
-  // Also download CSV test log via iPLAS API
-  // Format test_end_time with .000 milliseconds as required by iPLAS API
-  const testEndTime = record['Test end Time'] || ''
-  const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
-  // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
-  const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
+    // Also download CSV test log via iPLAS API
+    // Format test_end_time with .000 milliseconds as required by iPLAS API
+    const testEndTime = record['Test end Time'] || ''
+    const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+    // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
+    const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
 
-  const csvLogInfo: DownloadCsvLogInfo = {
-    site: selectedSite.value,
-    project: selectedProject.value,
-    station,
-    line: record.Line || 'NA',
-    model: record.Model || 'ALL',
-    deviceid,
-    isn,
-    test_end_time: apiEndTime,
-    data_source: 0,
+    const csvLogInfo: DownloadCsvLogInfo = {
+      site: selectedSite.value,
+      project: selectedProject.value,
+      station,
+      line: record.Line || 'NA',
+      model: record.Model || 'ALL',
+      deviceid,
+      isn,
+      test_end_time: apiEndTime,
+      data_source: 0,
+    }
+
+    await downloadCsvLogs([csvLogInfo])
+  } catch (err) {
+    console.error('Failed to download test log:', err)
+    showErrorNotification(err instanceof Error ? err.message : 'Failed to download test log')
   }
-
-  await downloadCsvLogs([csvLogInfo])
 }
 
 // Handle bulk download from ranking table
@@ -906,25 +911,57 @@ async function refreshCurrentStationDevices(): Promise<void> {
 function mapIplasTestItemInfos(
   response: Awaited<ReturnType<typeof fetchTestItemNamesCached>>,
 ): TestItemInfo[] {
-  return response.test_items.map((item) => ({
-    name: item.name,
-    isValue: item.is_value,
-    isBin: item.is_bin,
-    hasUcl: item.has_ucl,
-    hasLcl: item.has_lcl,
-  }))
+  return dedupeTestItemInfos(
+    response.test_items.map((item) => ({
+      name: item.name,
+      isValue: item.is_value,
+      isBin: item.is_bin,
+      hasUcl: item.has_ucl,
+      hasLcl: item.has_lcl,
+    })),
+  )
+}
+
+function dedupeTestItemInfos(items: TestItemInfo[]): TestItemInfo[] {
+  const merged = new Map<string, TestItemInfo>()
+
+  for (const item of items) {
+    const name = item.name.trim()
+    if (!name) {
+      continue
+    }
+
+    const existing = merged.get(name)
+    if (!existing) {
+      merged.set(name, { ...item, name })
+      continue
+    }
+
+    merged.set(name, {
+      ...existing,
+      name,
+      isValue: existing.isValue || item.isValue,
+      isBin: existing.isBin || item.isBin,
+      hasUcl: existing.hasUcl || item.hasUcl,
+      hasLcl: existing.hasLcl || item.hasLcl,
+    })
+  }
+
+  return Array.from(merged.values())
 }
 
 function mapDefaultLatestTestItemInfos(
   items: Array<{ name: string; upperlimit: number | null; lowerlimit: number | null }>,
 ): TestItemInfo[] {
-  return items.map((item) => ({
-    name: item.name,
-    isValue: true,
-    isBin: false,
-    hasUcl: item.upperlimit !== null,
-    hasLcl: item.lowerlimit !== null,
-  }))
+  return dedupeTestItemInfos(
+    items.map((item) => ({
+      name: item.name,
+      isValue: true,
+      isBin: false,
+      hasUcl: item.upperlimit !== null,
+      hasLcl: item.lowerlimit !== null,
+    })),
+  )
 }
 
 async function loadDefaultTestItemsForStation(
@@ -960,6 +997,11 @@ async function loadDefaultTestItemsForStation(
 
     if (!Array.isArray(response.data)) {
       throw new Error('Default test items API returned an invalid response')
+    }
+    if (response.source !== 'default') {
+      throw new Error(
+        'Default test items are unavailable because the backend had to fall back to the broader station list. Use iPLAS source or adjust the selected time range.',
+      )
     }
     if (response.data.length === 0) {
       throw new Error('No default test items were returned for the selected station and time range')

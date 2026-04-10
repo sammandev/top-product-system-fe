@@ -54,7 +54,10 @@
         <v-tab v-for="(ranking, station) in rankingByStation" :key="station" :value="station">
           <v-icon start size="small">mdi-router-wireless</v-icon>
           {{ getStationDisplayName(station) }}
-          <v-chip size="x-small" class="ml-2" :color="hasStationErrors(station) ? 'error' : 'success'">
+          <v-chip v-if="getStationFailCount(station) > 0" size="x-small" class="ml-2" color="warning">
+            {{ getStationFailCount(station) }} fail
+          </v-chip>
+          <v-chip v-else size="x-small" class="ml-2" color="success">
             {{ ranking.length }}
           </v-chip>
         </v-tab>
@@ -440,6 +443,11 @@ function getStationDisplayName(stationName: string): string {
 function hasStationErrors(stationName: string): boolean {
   const ranking = rankingByStation.value[stationName]
   return ranking?.some((item) => item.hasError) || false
+}
+
+function getStationFailCount(stationName: string): number {
+  const ranking = rankingByStation.value[stationName]
+  return ranking?.filter((item) => item.isForcedFailure).length ?? 0
 }
 
 function getUniqueDevices(stationName: string): string[] {

@@ -736,6 +736,12 @@
             Test log downloaded successfully!
         </v-snackbar>
 
+        <!-- Download Error Notification -->
+        <v-snackbar v-model="showDownloadError" color="error" timeout="5000" location="bottom">
+            <v-icon class="mr-2">mdi-alert-circle</v-icon>
+            {{ downloadErrorMessage }}
+        </v-snackbar>
+
         <!-- Copy Success Notification -->
         <v-snackbar v-model="showCopySuccess" color="info" timeout="2000" location="bottom">
             <v-icon class="mr-2">mdi-content-copy</v-icon>
@@ -876,6 +882,8 @@ const isSearching = ref(false) // Local state to track entire search operation (
 const groupedByISN = ref<ISNGroup[]>([])
 const activeISNTab = ref(0)
 const showSuccess = ref(false)
+const showDownloadError = ref(false)
+const downloadErrorMessage = ref('')
 
 // SFISTSP lookup state
 const loadingSfistspLookup = ref(false)
@@ -1117,6 +1125,8 @@ async function downloadSingleRecordFromFullscreen(): Promise<void> {
     showSuccess.value = true
   } catch (err) {
     console.error('Failed to download test log:', err)
+    downloadErrorMessage.value = err instanceof Error ? err.message : 'Failed to download test log'
+    showDownloadError.value = true
   } finally {
     fullscreenDownloading.value = false
   }
@@ -1189,8 +1199,8 @@ function createAttachmentInfo(record: IsnSearchData): DownloadAttachmentInfo {
     // CRITICAL: Use test_end_time with timezone adjustment based on site
     time: formatTimeForDownloadWithTimezone(record.test_end_time, record.site),
     deviceid: record.device_id || '',
-    // Use display_station_name as per API documentation
-    station: record.display_station_name || record.station_name,
+    // Prefer raw station_name — display_station_name may not be recognized by iPLAS download API
+    station: record.station_name || record.display_station_name,
   }
 }
 
@@ -1206,7 +1216,7 @@ function createCsvLogInfo(record: IsnSearchData): DownloadCsvLogInfo {
   return {
     site: record.site,
     project: record.project,
-    station: record.display_station_name || record.station_name,
+    station: record.station_name || record.display_station_name,
     line: record.line || 'ALL',
     model: 'ALL',
     deviceid: record.device_id || '',
@@ -1237,6 +1247,8 @@ async function downloadSingleRecord(
     showSuccess.value = true
   } catch (err) {
     console.error('Failed to download test log:', err)
+    downloadErrorMessage.value = err instanceof Error ? err.message : 'Failed to download test log'
+    showDownloadError.value = true
   } finally {
     downloadingKey.value = null
   }

@@ -359,35 +359,39 @@ function handleRowClick(payload: { record: CsvTestItemData; stationName: string 
 async function handleDownloadRecord(payload: { record: CsvTestItemData; stationName: string }): Promise<void> {
     if (!selectedSite.value || !selectedProject.value) return
 
-    const record = payload.record
-    const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-    const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
-    const deviceid = record.DeviceId
-    const station = record.TSP || record.station
+    try {
+        const record = payload.record
+        const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
+        const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+        const deviceid = record.DeviceId
+        const station = record.TSP || record.station
 
-    // Download TXT attachments
-    await downloadAttachments(selectedSite.value, selectedProject.value, [{ isn, time, deviceid, station }])
+        // Download TXT attachments
+        await downloadAttachments(selectedSite.value, selectedProject.value, [{ isn, time, deviceid, station }])
 
-    // Also download CSV test log via iPLAS API
-    // Format test_end_time with .000 milliseconds as required by iPLAS API
-    const testEndTime = record['Test end Time'] || ''
-    const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
-    // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
-    const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
+        // Also download CSV test log via iPLAS API
+        // Format test_end_time with .000 milliseconds as required by iPLAS API
+        const testEndTime = record['Test end Time'] || ''
+        const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
+        // Convert from 2026-01-22 18:57:05 format to 2026/01/22 18:57:05.000 format
+        const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
 
-    const csvLogInfo: DownloadCsvLogInfo = {
-        site: selectedSite.value,
-        project: selectedProject.value,
-        station,
-        line: record.Line || 'NA',
-        model: record.Model || 'ALL',
-        deviceid,
-        isn,
-        test_end_time: apiEndTime,
-        data_source: 0
+        const csvLogInfo: DownloadCsvLogInfo = {
+            site: selectedSite.value,
+            project: selectedProject.value,
+            station,
+            line: record.Line || 'NA',
+            model: record.Model || 'ALL',
+            deviceid,
+            isn,
+            test_end_time: apiEndTime,
+            data_source: 0
+        }
+
+        await downloadCsvLogs([csvLogInfo])
+    } catch (err) {
+        console.error('Failed to download test log:', err)
     }
-
-    await downloadCsvLogs([csvLogInfo])
 }
 
 // Handle bulk download from ranking table

@@ -26,7 +26,7 @@ export interface LatestStationTestItemsByRangeResponse {
   site_name: string | null
   model_id: number | null
   model_name: string | null
-  source: 'default'
+  source: 'default' | 'fallback_station_items'
   data: Array<{
     id: number
     name: string
