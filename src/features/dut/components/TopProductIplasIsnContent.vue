@@ -398,6 +398,23 @@ function formatTimeForDisplay(timeStr: string, site: string): string {
   return `${year}/${month}/${day}, ${hours}:${minutes}:${seconds}`
 }
 
+function formatTimeForDownload(timeStr: string): string {
+  if (!timeStr) return ''
+
+  return timeStr
+    .replace(',', '')
+    .replace('T', ' ')
+    .replace(/-/g, '/')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .split('.')[0] || ''
+}
+
+function formatTimeForCsvDownload(timeStr: string): string {
+  const formatted = formatTimeForDownload(timeStr)
+  return formatted ? `${formatted}.000` : ''
+}
+
 // ============================================================================
 // Helper Functions: Transform ISN Search Data to CsvTestItemData
 // ============================================================================
@@ -1244,8 +1261,7 @@ async function handleDownloadRecord(payload: {
     const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
     // UPDATED: Time is already in local time format (YYYY-MM-DD HH:mm:ss) from transformIsnRecordToCsvData
     // Just need to convert dashes to slashes for the download attachment API
-    const time =
-      (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+    const time = formatTimeForDownload(record['Test end Time'] || '')
     const deviceid = record.DeviceId
     // Prefer raw station name (TSP) — display_station_name may not be recognized by iPLAS download API
     const station = record.TSP || record.station
@@ -1255,9 +1271,7 @@ async function handleDownloadRecord(payload: {
     ])
 
     // Format time for CSV log download (needs .000 milliseconds)
-    const testEndTime = record['Test end Time'] || ''
-    const formattedEndTime = testEndTime.replace(/-/g, '/').replace('T', ' ')
-    const apiEndTime = formattedEndTime.includes('.') ? formattedEndTime : `${formattedEndTime}.000`
+    const apiEndTime = formatTimeForCsvDownload(record['Test end Time'] || '')
 
     const csvLogInfo: IplasDownloadCsvLogInfo = {
       site: isnProjectInfo.value.site,
@@ -1287,8 +1301,7 @@ async function handleBulkDownloadRecords(payload: {
   const attachments = payload.records.map((record) => {
     const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
     // UPDATED: Time is already in local time format from transformIsnRecordToCsvData
-    const time =
-      (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+    const time = formatTimeForDownload(record['Test end Time'] || '')
     const deviceid = record.DeviceId
     // Prefer raw station name (TSP) — display_station_name may not be recognized by iPLAS download API
     const station = record.TSP || record.station
@@ -1302,9 +1315,7 @@ async function handleBulkDownloadRecords(payload: {
     const deviceid = record.DeviceId
     // Prefer raw station name (TSP)
     const station = record.TSP || record.station
-    const testEndTime = record['Test end Time'] || ''
-    const formattedEndTime = testEndTime.replace(/-/g, '/').replace('T', ' ')
-    const apiEndTime = formattedEndTime.includes('.') ? formattedEndTime : `${formattedEndTime}.000`
+    const apiEndTime = formatTimeForCsvDownload(record['Test end Time'] || '')
 
     return {
       site: isnProjectInfo.value?.site ?? '',

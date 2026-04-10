@@ -1001,15 +1001,19 @@ async function handleDownloadRecord(payload: { record: CsvTestItemData; stationN
     try {
         const record = payload.record
         const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-        const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+        const time = (record['Test end Time'] || '')
+            .replace(',', '')
+            .replace('T', ' ')
+            .replace(/-/g, '/')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .split('.')[0] || ''
         const deviceid = record.DeviceId
         const station = record.TSP || record.station
 
         await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, [{ isn, time, deviceid, station }])
 
-        const testEndTime = record['Test end Time'] || ''
-        const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
-        const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
+        const apiEndTime = `${time}.000`
 
         const csvLogInfo: IplasDownloadCsvLogInfo = {
             site: isnProjectInfo.value.site,
@@ -1034,7 +1038,13 @@ async function handleBulkDownloadRecords(payload: { records: CsvTestItemData[]; 
 
     const attachments = payload.records.map(record => {
         const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-        const time = (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
+        const time = (record['Test end Time'] || '')
+            .replace(',', '')
+            .replace('T', ' ')
+            .replace(/-/g, '/')
+            .replace(/\s+/g, ' ')
+            .trim()
+            .split('.')[0] || ''
         const deviceid = record.DeviceId
         const station = record.TSP || record.station
         return { isn, time, deviceid, station }
@@ -1046,9 +1056,7 @@ async function handleBulkDownloadRecords(payload: { records: CsvTestItemData[]; 
         const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
         const deviceid = record.DeviceId
         const station = record.TSP || record.station
-        const testEndTime = record['Test end Time'] || ''
-        const formattedEndTime = testEndTime.includes('.') ? testEndTime : `${testEndTime}.000`
-        const apiEndTime = formattedEndTime.replace(/-/g, '/').replace('T', ' ')
+        const apiEndTime = `${attachments.find((item) => item.isn === isn && item.deviceid === deviceid && item.station === station)?.time || ''}.000`
 
         return {
             site: isnProjectInfo.value!.site,

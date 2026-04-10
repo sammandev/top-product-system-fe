@@ -207,10 +207,10 @@
           </div>
         </v-overlay>
 
-        <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="50" density="comfortable"
+        <v-data-table :headers="testItemHeaders" :items="tableTestItems" :items-per-page="50" density="comfortable"
           fixed-header fixed-footer style="height: 100%;" class="elevation-1 v-table--striped"
           :class="{ 'clickable-rows': hasScores }" @click:row="handleRowClick">
-          <template #item.STATUS="{ item }">
+          <template #item.statusSort="{ item }">
             <v-chip :color="getStatusColor(item.STATUS)" size="small">
               {{ normalizeStatus(item.STATUS) }}
             </v-chip>
@@ -224,7 +224,7 @@
           <template #item.LCL="{ item }">
             <span class="text-medium-emphasis">{{ item.LCL || '-' }}</span>
           </template>
-          <template #item.SCORE="{ item }">
+          <template #item.scoreSort="{ item }">
             <template v-if="item.score !== undefined && item.score !== null">
               <v-chip :color="getScoreColor(item.score)" size="small" variant="flat"
                 class="font-weight-bold cursor-pointer" @click.stop="showScoreBreakdown(item)">
@@ -241,7 +241,7 @@
   </v-dialog>
 
   <!-- Forced Fail Items Dialog -->
-  <v-dialog v-model="showForcedFailDialog" max-width="500px">
+  <v-dialog v-model="showForcedFailDialog" max-width="900px" width="min(90vw, 900px)">
     <v-card v-if="record">
       <v-card-title class="d-flex align-center bg-warning">
         <v-icon class="mr-2" color="white">mdi-alert-octagon</v-icon>
@@ -255,10 +255,13 @@
           {{ record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5' }} / 10
         </v-alert>
         <v-list density="compact" class="rounded border" style="max-height: 400px; overflow-y: auto;">
-          <v-list-item v-for="(itemName, idx) in record.forcedFailureItems" :key="idx" :title="itemName" class="cursor-pointer" @click="copyToClipboard(itemName)">
+          <v-list-item v-for="(itemName, idx) in record.forcedFailureItems" :key="idx" class="cursor-pointer forced-fail-item" @click="copyToClipboard(itemName)">
             <template #prepend>
               <v-icon size="small" color="warning">mdi-alert-circle</v-icon>
             </template>
+            <v-list-item-title class="forced-fail-item-title" :title="itemName">
+              {{ itemName }}
+            </v-list-item-title>
             <template #append>
               <v-icon size="x-small" color="grey">mdi-content-copy</v-icon>
             </template>
@@ -521,17 +524,25 @@ const hasScores = computed(() => {
 const testItemHeaders = computed(() => {
   const baseHeaders = [
     { title: 'Test Item', key: 'NAME', sortable: true },
-    { title: 'Status', key: 'STATUS', sortable: true },
+    { title: 'Status', key: 'statusSort', sortable: true },
     { title: 'Value', key: 'VALUE', sortable: true },
     { title: 'UCL', key: 'UCL', sortable: true },
     { title: 'LCL', key: 'LCL', sortable: true },
   ]
 
   if (hasScores.value) {
-    baseHeaders.push({ title: 'Score', key: 'SCORE', sortable: true })
+    baseHeaders.push({ title: 'Score', key: 'scoreSort', sortable: true })
   }
 
   return baseHeaders
+})
+
+const tableTestItems = computed(() => {
+  return filteredTestItems.value.map((item) => ({
+    ...item,
+    statusSort: normalizeStatus(item.STATUS),
+    scoreSort: item.score ?? Number.NEGATIVE_INFINITY,
+  }))
 })
 
 // Helper functions
@@ -907,5 +918,16 @@ watch(
 
 .clickable-rows :deep(tbody tr:hover) {
   background-color: rgba(var(--v-theme-primary), 0.08) !important;
+}
+
+.forced-fail-item :deep(.v-list-item__content) {
+  overflow: visible;
+}
+
+.forced-fail-item-title {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  line-height: 1.35;
 }
 </style>
