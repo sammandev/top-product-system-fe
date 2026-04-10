@@ -153,6 +153,7 @@ interface Props {
   selectedStations: string[]
   deviceIdsByStation?: Record<string, string[]>
   selectedDeviceIds?: Record<string, string[]>
+  selectedTestStatus?: Record<string, 'ALL' | 'PASS' | 'FAIL'>
   loadingDeviceIdsByStation?: Record<string, boolean>
   loading?: boolean
 }
@@ -161,6 +162,7 @@ const props = withDefaults(defineProps<Props>(), {
   loading: false,
   deviceIdsByStation: () => ({}),
   selectedDeviceIds: () => ({}),
+  selectedTestStatus: () => ({}),
   loadingDeviceIdsByStation: () => ({}),
 })
 
@@ -213,7 +215,7 @@ function syncLocalSelection(): void {
   localDeviceIds.value = { ...props.selectedDeviceIds }
   const ts: Record<string, 'ALL' | 'PASS' | 'FAIL'> = {}
   for (const station of props.selectedStations) {
-    ts[station] = localTestStatus.value[station] || 'ALL'
+    ts[station] = props.selectedTestStatus[station] || 'ALL'
   }
   localTestStatus.value = ts
 }

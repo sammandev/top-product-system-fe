@@ -38,54 +38,46 @@
           <v-card-text class="pt-4">
             <v-row>
               <!-- Site Selection -->
-              <v-col cols="12" md="3">
+              <v-col cols="12" md="6">
                 <v-autocomplete v-model="selectedSite" :items="uniqueSites" label="Site" variant="outlined"
                   density="comfortable" prepend-inner-icon="mdi-map-marker" :loading="loading" clearable hide-details
                   @update:model-value="handleSiteChange" />
               </v-col>
 
               <!-- Project Selection -->
-              <v-col cols="12" md="3">
+              <v-col cols="12" md="6">
                 <v-autocomplete v-model="selectedProject" :items="availableProjects" label="Project" variant="outlined"
                   density="comfortable" prepend-inner-icon="mdi-folder" :loading="loadingStations"
                   :disabled="!selectedSite" clearable hide-details @update:model-value="handleProjectChange" />
               </v-col>
+            </v-row>
 
+            <v-row class="mt-2">
               <!-- Date Range Preset -->
-              <v-col cols="12" md="6">
+              <v-col cols="12" md="4">
                 <v-select v-model="dateRangePreset" :items="dateRangePresets" label="Date Range" variant="outlined"
                   density="comfortable" prepend-inner-icon="mdi-calendar-clock" hide-details
                   @update:model-value="applyDateRangePreset" />
               </v-col>
-            </v-row>
 
-            <v-row class="mt-2">
               <!-- Start Time -->
-              <v-col cols="12" md="6">
+              <v-col cols="12" md="4">
                 <v-text-field v-model="startTime" label="Start Time" type="datetime-local" variant="outlined"
-                  density="comfortable" prepend-inner-icon="mdi-calendar-start" hide-details
-                  :disabled="dateRangePreset !== 'custom'" />
+                  density="comfortable" prepend-inner-icon="mdi-calendar-start" hide-details />
               </v-col>
 
               <!-- End Time -->
-              <v-col cols="12" md="6">
+              <v-col cols="12" md="4">
                 <v-text-field v-model="endTime" label="End Time" type="datetime-local" variant="outlined"
-                  density="comfortable" prepend-inner-icon="mdi-calendar-end" hide-details
-                  :disabled="dateRangePreset !== 'custom'" />
+                  density="comfortable" prepend-inner-icon="mdi-calendar-end" hide-details />
               </v-col>
             </v-row>
 
             <v-row class="mt-2">
-              <v-col cols="12" md="8">
-                <v-text-field :model-value="selectedStationSummary" label="Selected Test Stations" variant="outlined"
-                  density="comfortable" prepend-inner-icon="mdi-router-wireless" readonly hide-details
-                  :disabled="!selectedProject"
-                  placeholder="Use Select Station to choose one or more stations" />
-              </v-col>
-              <v-col cols="12" md="4" class="d-flex align-center">
+              <v-col cols="12">
                 <v-btn color="secondary" variant="outlined" block prepend-icon="mdi-format-list-checkbox"
                   :loading="loadingStations" :disabled="!selectedProject" @click="openStationSelectionDialog">
-                  Select Station
+                  Configure Station(s)
                   <v-chip v-if="selectedStations.length > 0" size="small" color="primary" variant="flat" class="ml-2">
                     {{ selectedStations.length }}
                   </v-chip>
@@ -93,20 +85,37 @@
               </v-col>
             </v-row>
 
-            <v-row v-if="selectedStations.length > 0" class="mt-2">
+            <v-row class="mt-2">
               <v-col cols="12">
-                <div class="d-flex flex-wrap gap-2">
-                  <v-chip v-for="stationValue in selectedStations" :key="stationValue" color="primary" variant="tonal"
-                    closable @click:close="removeSelectedStation(stationValue)">
-                    {{ getStationDisplayName(stationValue) }}
-                    <span v-if="stationDeviceIds[stationValue]?.length" class="text-caption ml-1">
-                      ({{ stationDeviceIds[stationValue].length }} devices)
-                    </span>
-                    <span v-if="stationTestStatus[stationValue] && stationTestStatus[stationValue] !== 'ALL'" class="text-caption ml-1">
-                      &middot; {{ stationTestStatus[stationValue] }}
-                    </span>
-                  </v-chip>
-                </div>
+                <div class="text-subtitle-2 mb-2">Configured Stations Summary</div>
+                <v-sheet border rounded class="pa-3">
+                  <div v-if="!selectedProject" class="text-body-2 text-medium-emphasis">
+                    Select a project to configure stations.
+                  </div>
+                  <div v-else-if="configuredStations.length === 0" class="text-body-2 text-medium-emphasis">
+                    No stations configured yet.
+                  </div>
+                  <div v-else class="d-flex flex-column gap-2">
+                    <div v-for="configuredStation in configuredStations" :key="configuredStation.stationValue"
+                      class="d-flex align-center justify-space-between flex-wrap gap-2">
+                      <div>
+                        <div class="font-weight-medium">{{ configuredStation.displayName }}</div>
+                        <div class="text-caption text-medium-emphasis">{{ configuredStation.deviceSummary }}</div>
+                      </div>
+                      <div class="d-flex align-center gap-2">
+                        <v-chip size="small" color="primary" variant="tonal">
+                          {{ configuredStation.deviceSummary }}
+                        </v-chip>
+                        <v-chip v-if="configuredStation.testStatus !== 'ALL'" size="small" color="secondary"
+                          variant="outlined">
+                          {{ configuredStation.testStatus }}
+                        </v-chip>
+                        <v-btn icon="mdi-close" size="x-small" variant="text"
+                          @click="removeSelectedStation(configuredStation.stationValue)" />
+                      </div>
+                    </div>
+                  </div>
+                </v-sheet>
               </v-col>
             </v-row>
 
@@ -161,7 +170,8 @@
             </v-row>
             <v-row v-if="autoIndexedDbReason" class="mt-2">
               <v-col cols="12">
-                <v-alert type="info" density="compact" variant="tonal" closable @click:close="autoIndexedDbReason = null">
+                <v-alert type="info" density="compact" variant="tonal" closable
+                  @click:close="autoIndexedDbReason = null">
                   <v-icon start>mdi-database-arrow-down-outline</v-icon>
                   {{ autoIndexedDbReason }}
                 </v-alert>
@@ -222,7 +232,7 @@
                 <v-icon start size="small">mdi-router-wireless</v-icon>
                 {{ stationGroup.displayName }}
                 <v-chip size="x-small" color="info" class="ml-2">{{ getFilteredStationRecords(stationGroup).length
-                  }}</v-chip>
+                }}</v-chip>
               </v-tab>
             </v-tabs>
 
@@ -233,8 +243,8 @@
                 <v-row class="mb-4" dense>
                   <v-col cols="12" md="4">
                     <v-text-field :model-value="recordSearchQueries[stationGroup.stationName] || ''"
-                      label="Search Records" prepend-inner-icon="mdi-magnify" variant="outlined"
-                      density="compact" hide-details clearable
+                      label="Search Records" prepend-inner-icon="mdi-magnify" variant="outlined" density="compact"
+                      hide-details clearable
                       @update:model-value="setRecordSearchQuery(stationGroup.stationName, $event)"
                       placeholder="Search ISN, Device ID, Error Code, Error Name..." />
                   </v-col>
@@ -321,9 +331,8 @@
             <v-data-table-server v-model="indexedDbSelectedKeys"
               v-model:items-per-page="indexedDbTableOptions.itemsPerPage" v-model:page="indexedDbTableOptions.page"
               v-model:sort-by="indexedDbTableOptions.sortBy" :headers="indexedDbHeaders" :items="indexedDbItems"
-              :items-length="indexedDbTotalItems" :loading="indexedDbLoading || isStreaming" item-value="id"
-              show-select hover class="elevation-1" @update:options="loadIndexedDbItems"
-              @click:row="handleIndexedDbRowClick">
+              :items-length="indexedDbTotalItems" :loading="indexedDbLoading || isStreaming" item-value="id" show-select
+              hover class="elevation-1" @update:options="loadIndexedDbItems" @click:row="handleIndexedDbRowClick">
               <!-- ISN Column with Copy Button -->
               <template #item.ISN="{ item }">
                 <div class="d-flex align-center gap-1">
@@ -400,40 +409,6 @@
             </v-data-table-server>
           </v-card-text>
         </v-card>
-
-        <!-- Statistics Summary -->
-        <v-card v-if="siteProjects.length > 0" variant="outlined">
-          <v-card-text>
-            <v-row>
-              <v-col cols="6" sm="3">
-                <div class="text-center">
-                  <div class="text-h4 font-weight-bold text-primary">{{ uniqueSites.length }}</div>
-                  <div class="text-caption text-medium-emphasis">Sites</div>
-                </div>
-              </v-col>
-              <v-col cols="6" sm="3">
-                <div class="text-center">
-                  <div class="text-h4 font-weight-bold text-success">{{ siteProjects.length }}</div>
-                  <div class="text-caption text-medium-emphasis">Projects</div>
-                </div>
-              </v-col>
-              <v-col cols="6" sm="3">
-                <div class="text-center">
-                  <div class="text-h4 font-weight-bold text-warning">{{ stations.length }}</div>
-                  <div class="text-caption text-medium-emphasis">Stations (based on Selected Project)
-                  </div>
-                </div>
-              </v-col>
-              <v-col cols="6" sm="3">
-                <div class="text-center">
-                  <div class="text-h4 font-weight-bold text-info">{{ totalDeviceCount }}</div>
-                  <div class="text-caption text-medium-emphasis">Devices (based on Selected Station)
-                  </div>
-                </div>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
       </v-window-item>
 
       <!-- ISN Search Mode -->
@@ -444,9 +419,9 @@
 
     <DataExplorerStationSelectionDialog v-model:show="showStationSelectionDialog" :stations="stationOptions"
       :selected-stations="selectedStations" :device-ids-by-station="deviceIdsByStation"
-      :selected-device-ids="stationDeviceIds" :loading-device-ids-by-station="loadingDevicesByStation"
-      :loading="loadingStations" @confirm="handleStationSelectionConfirm"
-      @station-toggled="handleDialogStationToggle" />
+      :selected-device-ids="stationDeviceIds" :selected-test-status="stationTestStatus"
+      :loading-device-ids-by-station="loadingDevicesByStation" :loading="loadingStations"
+      @confirm="handleStationSelectionConfirm" @station-toggled="handleDialogStationToggle" />
 
     <!-- Test Items Details Dialog -->
     <TopProductIplasDetailsDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
@@ -549,11 +524,11 @@ const dateRangePresets = [
   { title: 'This Week', value: 'week' },
   { title: 'Last Week', value: 'last_week' },
   { title: 'This Month', value: 'month' },
-  { title: 'Custom Date Range', value: 'custom' },
 ]
 
 // Device IDs grouped by station
 const deviceIdsByStation = ref<Record<string, string[]>>({})
+const stationDeviceRequestPromises = ref<Map<string, Promise<string[]>>>(new Map())
 
 // Mode: 'full' loads complete records, 'compact' uses lazy loading for test items
 // Compact mode is more memory efficient for large datasets
@@ -739,11 +714,6 @@ function getDateRangeForPreset(preset: string): { start: Date; end: Date } {
  * Apply selected date range preset
  */
 function applyDateRangePreset(preset: string): void {
-  if (preset === 'custom') {
-    // Don't change times for custom selection
-    return
-  }
-
   const { start, end } = getDateRangeForPreset(preset)
   startTime.value = getLocalTimeString(start)
   endTime.value = getLocalTimeString(end)
@@ -753,9 +723,6 @@ function applyDateRangePreset(preset: string): void {
 const { start: initialStart, end: initialEnd } = getDateRangeForPreset('current_shift')
 const startTime = ref(getLocalTimeString(initialStart))
 const endTime = ref(getLocalTimeString(initialEnd))
-
-// Display controls
-const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
 
 // Per-station status filters (for filtering records within each station tab)
 const stationStatusFilters = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
@@ -820,30 +787,26 @@ async function copyToClipboard(text: string): Promise<void> {
   }
 }
 
-// Helper functions for per-station device IDs
-function getDeviceIdsForStation(stationValue: string): string[] {
-  return deviceIdsByStation.value[stationValue] || []
-}
-
 function getStationDisplayName(stationValue: string): string {
   const station = stations.value.find((s: Station) => s.display_station_name === stationValue)
   return station?.display_station_name || stationValue
 }
 
-const selectedStationSummary = computed(() => {
-  if (selectedStations.value.length === 0) {
-    return ''
+function getStationDeviceSummary(stationValue: string): string {
+  const selectedDeviceCount = stationDeviceIds.value[stationValue]?.length || 0
+  if (selectedDeviceCount === 0) {
+    return 'All devices'
   }
+  return `${selectedDeviceCount} DeviceId${selectedDeviceCount > 1 ? 's' : ''} selected`
+}
 
-  if (selectedStations.value.length === 1) {
-    return getStationDisplayName(selectedStations.value[0] || '')
-  }
-
-  if (selectedStations.value.length === 2) {
-    return selectedStations.value.map((stationValue) => getStationDisplayName(stationValue)).join(', ')
-  }
-
-  return `${selectedStations.value.length} stations selected`
+const configuredStations = computed(() => {
+  return selectedStations.value.map((stationValue) => ({
+    stationValue,
+    displayName: getStationDisplayName(stationValue),
+    deviceSummary: getStationDeviceSummary(stationValue),
+    testStatus: stationTestStatus.value[stationValue] || 'ALL',
+  }))
 })
 
 function openStationSelectionDialog(): void {
@@ -896,12 +859,20 @@ function handleStationSelectionConfirm(result: StationSelectionResult): void {
   showStationSelectionDialog.value = false
 }
 
-async function handleDialogStationToggle(stationValue: string, selected: boolean): Promise<void> {
-  if (!selected || !selectedSite.value || !selectedProject.value) return
-  if (deviceIdsByStation.value[stationValue]?.length > 0) return
+async function ensureStationDeviceIdsLoaded(stationValue: string): Promise<string[]> {
+  if (!selectedSite.value || !selectedProject.value) {
+    return []
+  }
+  if (deviceIdsByStation.value[stationValue]?.length) {
+    return deviceIdsByStation.value[stationValue] || []
+  }
+  const pendingRequest = stationDeviceRequestPromises.value.get(stationValue)
+  if (pendingRequest) {
+    return pendingRequest
+  }
 
   loadingDevicesByStation.value[stationValue] = true
-  try {
+  const requestPromise = (async () => {
     const devices = await fetchDeviceIds(
       selectedSite.value,
       selectedProject.value,
@@ -910,12 +881,26 @@ async function handleDialogStationToggle(stationValue: string, selected: boolean
       new Date(endTime.value),
     )
     deviceIdsByStation.value[stationValue] = devices
+    return devices
+  })()
+
+  stationDeviceRequestPromises.value.set(stationValue, requestPromise)
+
+  try {
+    return await requestPromise
   } catch (err) {
     console.error(`Failed to fetch device IDs for ${stationValue}:`, err)
     deviceIdsByStation.value[stationValue] = []
+    return []
   } finally {
+    stationDeviceRequestPromises.value.delete(stationValue)
     loadingDevicesByStation.value[stationValue] = false
   }
+}
+
+function handleDialogStationToggle(stationValue: string, selected: boolean): void {
+  if (!selected) return
+  void ensureStationDeviceIdsLoaded(stationValue)
 }
 
 function removeSelectedStation(stationValue: string): void {
@@ -1906,6 +1891,8 @@ function handleSiteChange() {
   stations.value = []
   clearTestItemData()
   selectedRecordKeys.value.clear()
+  stationDeviceRequestPromises.value.clear()
+  stationTestStatus.value = {}
 }
 
 async function handleProjectChange() {
@@ -1914,6 +1901,8 @@ async function handleProjectChange() {
   stationDeviceIds.value = {}
   deviceIdsByStation.value = {}
   loadingDevicesByStation.value = {}
+  stationDeviceRequestPromises.value.clear()
+  stationTestStatus.value = {}
   clearTestItemData()
   selectedRecordKeys.value.clear()
 
@@ -1977,6 +1966,7 @@ async function fetchTestItems() {
       }
     }
     return entry
+    stationDeviceRequestPromises.value.delete(station)
   })
   const resolvedStations = await Promise.all(deviceIdPromises)
 
@@ -2110,6 +2100,7 @@ async function handleTableOptionsUpdate(
 
   // Get status filter for this station (use per-station filter, fallback to global)
   const statusFilter = stationStatusFilters.value[stationName] || testStatusFilter.value || 'ALL'
+  const statusFilter = stationStatusFilters.value[stationName] || 'ALL'
 
   try {
     const result = await fetchTestItemsPaginated(
