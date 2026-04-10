@@ -11,11 +11,6 @@
                     Search and download DUT test data from multiple sources
                 </p>
             </div>
-            <div v-if="activeTab === 'iplas'">
-                <v-btn color="secondary" variant="outlined" prepend-icon="mdi-cog" @click="showSettingsDialog = true">
-                    iPLAS Settings
-                </v-btn>
-            </div>
         </div>
 
         <!-- Tabs -->
@@ -33,22 +28,7 @@
         <v-window v-model="activeTab">
             <!-- iPLAS Data Tab -->
             <v-window-item value="iplas">
-                <!-- Info Alert -->
-                <v-alert type="info" variant="tonal" class="mb-4" density="compact">
-                    Data is sourced directly from iPLAS but cannot display all test station data at the same time.
-                    <span class="text-caption ml-2">
-                        Connected to: <strong>{{ selectedServer?.name }}</strong> ({{ selectedServer?.baseIp }})
-                        <v-chip v-if="isSystemMode" size="x-small" color="success" variant="tonal" label class="ml-1">
-                            System
-                        </v-chip>
-                        <v-chip v-else size="x-small" color="warning" variant="tonal" label class="ml-1">
-                            Custom
-                        </v-chip>
-                    </span>
-                </v-alert>
-
-                <!-- iPLAS Data Content - UPDATED: Added show-settings event handler -->
-                <IplasDataContent @show-settings="showSettingsDialog = true" />
+                <TopProductsByIplasDataTab />
             </v-window-item>
 
             <!-- Internal Data Tab -->
@@ -63,26 +43,14 @@
                 <InternalDataContent />
             </v-window-item>
         </v-window>
-
-        <!-- iPLAS Settings Dialog -->
-        <IplasSettingsDialog v-model="showSettingsDialog" />
     </DefaultLayout>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
-import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import InternalDataContent from '../components/InternalDataContent.vue'
-import IplasDataContent from '../components/IplasDataContent.vue'
-import IplasSettingsDialog from '../components/IplasSettingsDialog.vue'
+import TopProductsByIplasDataTab from '../components/TopProductsByIplasDataTab.vue'
 
 // Active tab state - persisted in URL
 const activeTab = useTabPersistence('tab', 'iplas')
-
-// Settings dialog
-const showSettingsDialog = ref(false)
-
-// iPLAS Settings
-const { selectedServer, isSystemMode } = useIplasSettings()
 </script>

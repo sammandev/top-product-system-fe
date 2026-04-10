@@ -7,17 +7,13 @@
                     <v-icon icon="mdi-barcode-scan" class="mr-2" /> DUT ISN Search
                 </div>
                 <v-btn color="error" variant="outlined" size="small" prepend-icon="mdi-close-circle"
-                    :disabled="loading || (!testRecords && !dutIsn)" @click="clearAll">
+                    :disabled="loading || !hasSearchState" @click="clearAll">
                     Clear All
                 </v-btn>
             </v-card-title>
             <v-card-text class="pa-4">
                 <!-- Input Mode Toggle -->
                 <v-btn-toggle v-model="inputMode" mandatory color="primary" class="mb-4">
-                    <v-btn value="single" size="small">
-                        <v-icon start>mdi-numeric-1-box</v-icon>
-                        Single ISN
-                    </v-btn>
                     <v-btn value="multiple" size="small">
                         <v-icon start>mdi-format-list-bulleted</v-icon>
                         Multiple ISNs
@@ -28,34 +24,20 @@
                     </v-btn>
                 </v-btn-toggle>
 
-                <!-- Single ISN Input -->
-                <v-row v-if="inputMode === 'single'">
-                    <v-col cols="12" md="10">
-                        <v-text-field v-model="dutIsn" label="DUT ISN"
-                            placeholder="e.g., 260884980003907 or DM2527470036123" prepend-inner-icon="mdi-barcode-scan"
-                            variant="outlined" clearable hint="Enter a DUT ISN identifier" persistent-hint
-                            @keyup.enter="fetchTestRecords" />
-                    </v-col>
-                    <v-col cols="12" md="2" class="d-flex align-center">
-                        <v-btn color="primary" variant="flat" size="large" :loading="loading" :disabled="!dutIsn.trim()"
-                            prepend-icon="mdi-magnify" block class="mb-5" @click="fetchTestRecords">
-                            Search
-                        </v-btn>
-                    </v-col>
-                </v-row>
-
                 <!-- Multiple ISNs Combobox -->
                 <v-row v-if="inputMode === 'multiple'">
                     <v-col cols="12">
                         <v-combobox v-model="selectedISNs" label="DUT ISNs" placeholder="Type ISN and press Enter"
-                            prepend-inner-icon="mdi-barcode-scan" variant="outlined" chips multiple closable-chips
-                            clearable hint="Type ISN and press Enter to add multiple" persistent-hint>
+                            v-model:search="multipleIsnSearchText" prepend-inner-icon="mdi-barcode-scan"
+                            variant="outlined" chips multiple closable-chips clearable
+                            hint="Press Enter once to add, then press Enter again to search" persistent-hint
+                            @keydown.enter="handleMultipleIsnsEnter">
                             <template #chip="{ props, item }">
                                 <v-chip v-bind="props" :text="String(item.value || item)" closable />
                             </template>
                             <template #append>
                                 <v-btn color="primary" variant="flat" size="small" :loading="loading"
-                                    :disabled="!selectedISNs || selectedISNs.length === 0" prepend-icon="mdi-magnify"
+                                    :disabled="multipleModeIdentifiers.length === 0" prepend-icon="mdi-magnify"
                                     @click="fetchTestRecords">
                                     Search
                                 </v-btn>
@@ -587,10 +569,27 @@ const showSuccess = ref(false)
 const viewMode = ref<'grid' | 'list' | 'table' | 'compact'>('grid')
 const expandedPanels = ref<number[]>([])
 const activeISNTab = ref(0)
-const inputMode = ref<'single' | 'multiple' | 'bulk'>('single')
+const inputMode = ref<'multiple' | 'bulk'>('multiple')
 const selectedISNs = ref<string[]>([])
+const multipleIsnSearchText = ref('')
 const carouselModels = ref<Record<number, number>>({})
 const compactExpanded = ref<Record<number, number[]>>({})
+
+const multipleModeIdentifiers = computed(() =>
+    normalizeIdentifierList([
+        ...selectedISNs.value.map((value) => String(value)),
+        multipleIsnSearchText.value,
+    ]),
+)
+
+const hasSearchState = computed(() => {
+    return (
+        groupedByISN.value.length > 0 ||
+        testRecords.value !== null ||
+        multipleModeIdentifiers.value.length > 0 ||
+        parseBulkIdentifiers(dutIsn.value).length > 0
+    )
+})
 
 // Table headers for table view
 const tableHeaders = [
@@ -603,21 +602,51 @@ const tableHeaders = [
   { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const },
 ]
 
-const fetchTestRecords = async () => {
-  // Determine ISN list based on input mode
-  let isnList: string[] = []
+const normalizeIdentifierList = (values: string[]): string[] => {
+    const identifiers = new Set<string>()
 
-  if (inputMode.value === 'multiple') {
-    // Use selected ISNs from combobox
-    isnList = selectedISNs.value.map((isn) => String(isn).trim()).filter((isn) => isn.length > 0)
-  } else {
-    // Parse from text input (single or bulk)
-    if (!dutIsn.value.trim()) return
-    isnList = dutIsn.value
-      .split(/[\n,\s]+/)
-      .map((isn) => isn.trim())
-      .filter((isn) => isn && isn.length > 0)
-  }
+    for (const value of values) {
+        const trimmed = value.trim()
+        if (trimmed) {
+            identifiers.add(trimmed)
+        }
+    }
+
+    return Array.from(identifiers)
+}
+
+const parseBulkIdentifiers = (input: string): string[] => {
+    return normalizeIdentifierList(input.split(/[\n,\s]+/))
+}
+
+const getCurrentInputIdentifiers = (): string[] => {
+    if (inputMode.value === 'multiple') {
+        return multipleModeIdentifiers.value
+    }
+
+    return parseBulkIdentifiers(dutIsn.value)
+}
+
+const handleMultipleIsnsEnter = async (event: KeyboardEvent) => {
+    if (loading.value) {
+        event.preventDefault()
+        return
+    }
+
+    if (multipleIsnSearchText.value.trim()) {
+        return
+    }
+
+    if (multipleModeIdentifiers.value.length === 0) {
+        return
+    }
+
+    event.preventDefault()
+    await fetchTestRecords()
+}
+
+const fetchTestRecords = async () => {
+    const isnList = getCurrentInputIdentifiers()
 
   if (isnList.length === 0) {
     error.value = 'Please enter at least one valid ISN'
@@ -767,6 +796,7 @@ const formatDate = (isoDate: string): string => {
 const clearAll = () => {
   dutIsn.value = ''
   selectedISNs.value = []
+    multipleIsnSearchText.value = ''
   testRecords.value = null
   groupedByISN.value = []
   fetchedISNs.value = []

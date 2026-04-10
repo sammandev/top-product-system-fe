@@ -16,10 +16,6 @@
         <!-- Input Mode Toggle -->
         <div class="d-flex align-center mb-4">
           <v-btn-toggle v-model="inputMode" mandatory color="primary">
-            <v-btn value="single" size="small">
-              <v-icon start>mdi-numeric-1-box</v-icon>
-              Single ISN
-            </v-btn>
             <v-btn value="multiple" size="small">
               <v-icon start>mdi-format-list-bulleted</v-icon>
               Multiple ISNs
@@ -44,33 +40,19 @@
           </v-switch>
         </div>
 
-        <!-- Single ISN Input -->
-        <v-row v-if="inputMode === 'single'">
-          <v-col cols="12" md="10">
-            <v-text-field v-model="searchIsn" label="DUT ISN" placeholder="e.g., DM2520270073965"
-              prepend-inner-icon="mdi-barcode-scan" variant="outlined" density="comfortable" clearable
-              hint="Enter ISN to lookup available stations" persistent-hint @keyup.enter="handleLookupStations" />
-          </v-col>
-          <v-col cols="12" md="2" class="d-flex align-center">
-            <v-btn color="secondary" size="large" :loading="loadingStationLookup" :disabled="!searchIsn?.trim()"
-              prepend-icon="mdi-magnify" block class="mb-5" @click="handleLookupStations">
-              Search
-            </v-btn>
-          </v-col>
-        </v-row>
-
         <!-- Multiple ISNs Combobox -->
         <v-row v-if="inputMode === 'multiple'">
           <v-col cols="12">
             <v-combobox v-model="selectedISNs" label="DUT ISNs" placeholder="Type ISN and press Enter"
-              prepend-inner-icon="mdi-barcode-scan" variant="outlined" chips multiple closable-chips clearable
-              hint="Type ISN and press Enter to add multiple" persistent-hint>
+              v-model:search="multipleIsnSearchText" prepend-inner-icon="mdi-barcode-scan" variant="outlined"
+              chips multiple closable-chips clearable hint="Press Enter once to add, then press Enter again to search"
+              persistent-hint @keydown.enter="handleMultipleIsnsEnter">
               <template #chip="{ props, item }">
                 <v-chip v-bind="props" :text="String(item.value || item)" closable />
               </template>
               <template #append>
                 <v-btn color="secondary" variant="flat" size="small" :loading="loadingStationLookup"
-                  :disabled="!selectedISNs || selectedISNs.length === 0" prepend-icon="mdi-magnify"
+                  :disabled="multipleModeIdentifiers.length === 0" prepend-icon="mdi-magnify"
                   @click="handleLookupStations">
                   Search
                 </v-btn>
@@ -235,13 +217,15 @@ import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
 
 const { showSuccess, showError: showErrorNotification } = useNotification()
+const ISN_SEARCH_BATCH_LIMIT = 100
 
 // ============================================================================
 // State: ISN Input
 // ============================================================================
-const inputMode = ref<'single' | 'multiple' | 'bulk'>('single')
+const inputMode = ref<'multiple' | 'bulk'>('multiple')
 const searchIsn = ref('')
 const selectedISNs = ref<string[]>([])
+const multipleIsnSearchText = ref('')
 
 // ============================================================================
 // State: SFISTSP Reference Lookup
@@ -264,6 +248,7 @@ const availableStations = ref<Station[]>([])
 const parsedIsns = ref<string[]>([])
 /** Raw ISN search records from the API - contains all test data */
 const isnSearchRecords = ref<IplasIsnSearchRecord[]>([])
+const activeLookupRequestId = ref(0)
 
 // ============================================================================
 // State: Configuration (like Station Search)
@@ -330,6 +315,10 @@ const exportingAll = ref(false)
 const configuredStationsCount = computed(() => {
   return Object.keys(stationConfigs.value).length
 })
+
+const multipleModeIdentifiers = computed(() =>
+  normalizeIdentifierList([...selectedISNs.value.map((value) => String(value)), multipleIsnSearchText.value]),
+)
 
 const currentStationConfig = computed(() => {
   if (!selectedStationForConfig.value) return undefined
@@ -413,6 +402,144 @@ function formatTimeForDownload(timeStr: string): string {
 function formatTimeForCsvDownload(timeStr: string): string {
   const formatted = formatTimeForDownload(timeStr)
   return formatted ? `${formatted}.000` : ''
+}
+
+function normalizeIdentifierList(values: string[]): string[] {
+  const uniqueValues = new Set<string>()
+
+  for (const value of values) {
+    const trimmed = value.trim()
+    if (trimmed) {
+      uniqueValues.add(trimmed)
+    }
+  }
+
+  return Array.from(uniqueValues)
+}
+
+function parseBulkIdentifiers(input: string): string[] {
+  return normalizeIdentifierList(input.split(/[\n,\s]+/))
+}
+
+function getCurrentInputIdentifiers(): string[] {
+  if (inputMode.value === 'multiple') {
+    return multipleModeIdentifiers.value
+  }
+
+  return parseBulkIdentifiers(searchIsn.value)
+}
+
+function chunkArray<T>(items: T[], chunkSize: number): T[][] {
+  const chunks: T[][] = []
+
+  for (let index = 0; index < items.length; index += chunkSize) {
+    chunks.push(items.slice(index, index + chunkSize))
+  }
+
+  return chunks
+}
+
+function startLookupRequest(): number {
+  activeLookupRequestId.value += 1
+  return activeLookupRequestId.value
+}
+
+function isLookupRequestActive(requestId: number): boolean {
+  return activeLookupRequestId.value === requestId
+}
+
+async function handleMultipleIsnsEnter(event: KeyboardEvent): Promise<void> {
+  if (loadingStationLookup.value) {
+    event.preventDefault()
+    return
+  }
+
+  if (multipleIsnSearchText.value.trim()) {
+    return
+  }
+
+  if (multipleModeIdentifiers.value.length === 0) {
+    return
+  }
+
+  event.preventDefault()
+  await handleLookupStations()
+}
+
+async function searchIdentifiersInBatches(identifiers: string[]): Promise<{
+  allRecords: IplasIsnSearchRecord[]
+  foundIdentifiers: string[]
+  notFoundIdentifiers: string[]
+}> {
+  const allRecords: IplasIsnSearchRecord[] = []
+  const foundIdentifiers: string[] = []
+  const notFoundIdentifiers: string[] = []
+  const recordKeys = new Set<string>()
+
+  for (const batch of chunkArray(identifiers, ISN_SEARCH_BATCH_LIMIT)) {
+    const response = await iplasProxyApi.searchByIsnBatch({ isns: batch })
+
+    if (!Array.isArray(response.results)) {
+      throw new Error('iPLAS API returned an invalid batch ISN search response')
+    }
+
+    for (const result of response.results) {
+      const records = Array.isArray(result.data) ? result.data : []
+
+      if (records.length === 0) {
+        notFoundIdentifiers.push(result.isn)
+        if (result.error) {
+          console.warn(`Failed to search identifier "${result.isn}":`, result.error)
+        }
+        continue
+      }
+
+      foundIdentifiers.push(result.isn)
+
+      for (const record of records) {
+        const key = `${record.isn}_${record.display_station_name}_${record.test_end_time}`
+        if (!recordKeys.has(key)) {
+          recordKeys.add(key)
+          allRecords.push(record)
+        }
+      }
+    }
+  }
+
+  return {
+    allRecords,
+    foundIdentifiers,
+    notFoundIdentifiers,
+  }
+}
+
+async function refreshStationOrderingForLookup(
+  identifier: string,
+  records: IplasIsnSearchRecord[],
+  requestId: number,
+): Promise<void> {
+  loadingStations.value = true
+
+  try {
+    const stationsFromApi = await fetchStationListFromIsn(identifier)
+
+    if (!isLookupRequestActive(requestId) || stationsFromApi.length === 0) {
+      return
+    }
+
+    const stationsWithRecords = new Set(records.map((record) => record.display_station_name))
+    availableStations.value = stationsFromApi
+      .filter((station) => stationsWithRecords.has(station.display_station_name))
+      .sort((stationA, stationB) => stationA.order - stationB.order)
+
+    console.info(`Using ${availableStations.value.length} stations from API list (ordered)`)
+  } catch (err) {
+    console.warn(`Failed to refresh ordered station list for identifier ${identifier}:`, err)
+  } finally {
+    if (isLookupRequestActive(requestId)) {
+      loadingStations.value = false
+    }
+  }
 }
 
 // ============================================================================
@@ -607,23 +734,14 @@ async function fetchStationListFromIsn(identifier: string): Promise<Station[]> {
 }
 
 async function handleLookupStations(): Promise<void> {
-  // Parse ISN list based on input mode
-  let isnList: string[] = []
-
-  if (inputMode.value === 'multiple') {
-    isnList = selectedISNs.value.map((isn) => String(isn).trim()).filter((isn) => isn.length > 0)
-  } else {
-    if (!searchIsn.value?.trim()) return
-    isnList = searchIsn.value
-      .split(/[\n,\s]+/)
-      .map((isn) => isn.trim())
-      .filter((isn) => isn && isn.length > 0)
-  }
+  const isnList = getCurrentInputIdentifiers()
 
   if (isnList.length === 0) {
     error.value = 'Please enter at least one valid ISN'
     return
   }
+
+  const requestId = startLookupRequest()
 
   // Store parsed ISNs
   parsedIsns.value = isnList
@@ -638,6 +756,7 @@ async function handleLookupStations(): Promise<void> {
   clearTestItemData()
   recordScores.value = {}
   forcedFailures.value = {}
+  loadingStations.value = false
 
   loadingStationLookup.value = true
   error.value = null
@@ -651,53 +770,20 @@ async function handleLookupStations(): Promise<void> {
       // Skip SFISTSP lookup - use original ISN list only
       allIdentifiers = isnList
     }
+
+    if (!isLookupRequestActive(requestId)) {
+      return
+    }
+
     allIdentifiersToSearch.value = allIdentifiers
 
-    // STEP 2: Search for ALL identifiers in parallel and aggregate results
-    const searchPromises = allIdentifiers.map((identifier) =>
-      iplasProxyApi
-        .searchByIsn({ isn: identifier })
-        .then((response) => {
-          if (!Array.isArray(response.data)) {
-            throw new Error('iPLAS API returned an invalid ISN search response')
-          }
-          return response
-        })
-        .catch((err) => {
-          console.warn(`Failed to search identifier "${identifier}":`, err)
-          return { data: [] as IplasIsnSearchRecord[] }
-        }),
+    // STEP 2: Search for all identifiers in batch requests and aggregate results
+    const { allRecords, foundIdentifiers, notFoundIdentifiers } = await searchIdentifiersInBatches(
+      allIdentifiers,
     )
 
-    const responses = await Promise.all(searchPromises)
-
-    // Aggregate all records from all ISN/SSN/MAC searches
-    const allRecords: IplasIsnSearchRecord[] = []
-    const foundIdentifiers: string[] = []
-    const notFoundIdentifiers: string[] = []
-
-    // Use a Set to deduplicate records by unique key (ISN + station + test_end_time)
-    const recordKeys = new Set<string>()
-
-    for (let i = 0; i < responses.length; i++) {
-      // biome-ignore lint/style/noNonNullAssertion: index i is within bounds of responses
-      const response = responses[i]!
-      // biome-ignore lint/style/noNonNullAssertion: allIdentifiers has same length as responses
-      const identifier = allIdentifiers[i]!
-
-      if (response.data.length === 0) {
-        notFoundIdentifiers.push(identifier)
-      } else {
-        foundIdentifiers.push(identifier)
-        for (const record of response.data) {
-          // Create unique key to avoid duplicates
-          const key = `${record.isn}_${record.display_station_name}_${record.test_end_time}`
-          if (!recordKeys.has(key)) {
-            recordKeys.add(key)
-            allRecords.push(record)
-          }
-        }
-      }
+    if (!isLookupRequestActive(requestId)) {
+      return
     }
 
     if (allRecords.length === 0) {
@@ -723,32 +809,24 @@ async function handleLookupStations(): Promise<void> {
       found: true,
     }
 
-    // STEP 3: Get station list with proper ordering from iPLAS API
-    // Use the first found identifier to get the station list
-    const stationsFromApi = await fetchStationListFromIsn(firstRecord.isn)
+    availableStations.value = extractStationsFromIsnRecords(allRecords)
+    console.info(`Using ${availableStations.value.length} stations from search results`)
 
-    if (stationsFromApi.length > 0) {
-      // Use API station list with proper ordering
-      // But only keep stations that have records in the search results
-      const stationsWithRecords = new Set(allRecords.map((r) => r.display_station_name))
-      availableStations.value = stationsFromApi
-        .filter((s) => stationsWithRecords.has(s.display_station_name))
-        .sort((a, b) => a.order - b.order)
+    preCacheStationData(allRecords, isnProjectInfo.value)
 
-      console.info(`Using ${availableStations.value.length} stations from API list (ordered)`)
-    } else {
-      // Fallback: Extract unique stations from search results (no ordering)
-      availableStations.value = extractStationsFromIsnRecords(allRecords)
-      console.info(`Fallback: Using ${availableStations.value.length} stations from search results`)
+    // STEP 3: Refresh station ordering in the background without blocking initial results
+    void refreshStationOrderingForLookup(firstRecord.isn, allRecords, requestId)
+  } catch (err) {
+    if (!isLookupRequestActive(requestId)) {
+      return
     }
 
-    // Pre-cache test items and device IDs for all stations (performance optimization)
-    preCacheStationData(allRecords, isnProjectInfo.value)
-  } catch (err) {
     console.error('ISN lookup failed:', err)
     error.value = err instanceof Error ? getErrorMessage(err) : 'Failed to lookup ISN'
   } finally {
-    loadingStationLookup.value = false
+    if (isLookupRequestActive(requestId)) {
+      loadingStationLookup.value = false
+    }
   }
 }
 
@@ -1458,13 +1536,17 @@ async function handleDownloadFromDetails(): Promise<void> {
 // Clear & Lifecycle
 // ============================================================================
 function handleClearAll(): void {
+  activeLookupRequestId.value += 1
   searchIsn.value = ''
   selectedISNs.value = []
+  multipleIsnSearchText.value = ''
   parsedIsns.value = []
   isnProjectInfo.value = null
   availableStations.value = []
   isnSearchRecords.value = []
   stationConfigs.value = {}
+  loadingStations.value = false
+  loadingStationLookup.value = false
   clearTestItemData()
   recordScores.value = {}
   forcedFailures.value = {}
@@ -1476,6 +1558,7 @@ onMounted(() => {
 })
 
 onUnmounted(() => {
+  activeLookupRequestId.value += 1
   clearTestItemData()
   recordScores.value = {}
   forcedFailures.value = {}
