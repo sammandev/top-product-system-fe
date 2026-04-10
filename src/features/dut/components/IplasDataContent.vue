@@ -99,32 +99,20 @@
                   <v-chip v-for="stationValue in selectedStations" :key="stationValue" color="primary" variant="tonal"
                     closable @click:close="removeSelectedStation(stationValue)">
                     {{ getStationDisplayName(stationValue) }}
+                    <span v-if="stationDeviceIds[stationValue]?.length" class="text-caption ml-1">
+                      ({{ stationDeviceIds[stationValue].length }} devices)
+                    </span>
+                    <span v-if="stationTestStatus[stationValue] && stationTestStatus[stationValue] !== 'ALL'" class="text-caption ml-1">
+                      &middot; {{ stationTestStatus[stationValue] }}
+                    </span>
                   </v-chip>
                 </div>
-              </v-col>
-            </v-row>
-
-            <!-- Device ID Selection per Station -->
-            <v-row v-if="selectedStations.length > 0" class="mt-2">
-              <v-col v-for="stationValue in selectedStations" :key="stationValue" cols="12"
-                :md="selectedStations.length === 1 ? 12 : 6">
-                <v-autocomplete v-model="stationDeviceIds[stationValue]" :items="getDeviceIdsForStation(stationValue)"
-                  :label="`${getStationDisplayName(stationValue)} - Device IDs (Default All)`" variant="outlined"
-                  density="comfortable" prepend-inner-icon="mdi-chip" :loading="loadingDevicesByStation[stationValue]"
-                  multiple chips closable-chips clearable hide-details placeholder="Select Device IDs - (Empty = ALL)">
-                  <template #chip="{ props, item }">
-                    <v-chip v-bind="props" :text="item.value" size="small" />
-                  </template>
-                </v-autocomplete>
               </v-col>
             </v-row>
 
             <!-- Search Test Data Section -->
             <v-row v-if="selectedStations.length > 0" class="mt-4">
               <v-col cols="12" class="d-flex align-center gap-3 flex-wrap">
-                <v-select v-model="testStatusFilter" :items="['ALL', 'PASS', 'FAIL']" label="Test Status"
-                  variant="outlined" density="compact" hide-details style="max-width: 150px" />
-
                 <!-- IndexedDB Mode Toggle -->
                 <v-tooltip location="top">
                   <template #activator="{ props }">
@@ -455,7 +443,10 @@
     </v-window>
 
     <DataExplorerStationSelectionDialog v-model:show="showStationSelectionDialog" :stations="stationOptions"
-      :selected-stations="selectedStations" :loading="loadingStations" @confirm="handleStationSelectionConfirm" />
+      :selected-stations="selectedStations" :device-ids-by-station="deviceIdsByStation"
+      :selected-device-ids="stationDeviceIds" :loading-device-ids-by-station="loadingDevicesByStation"
+      :loading="loadingStations" @confirm="handleStationSelectionConfirm"
+      @station-toggled="handleDialogStationToggle" />
 
     <!-- Test Items Details Dialog -->
     <TopProductIplasDetailsDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
@@ -492,6 +483,7 @@ import { useIplasLocalData } from '@/features/dut-logs/composables/useIplasLocal
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 import DataExplorerStationSelectionDialog from './DataExplorerStationSelectionDialog.vue'
+import type { StationSelectionResult } from './DataExplorerStationSelectionDialog.vue'
 import IplasIsnSearchContent from './IplasIsnSearchContent.vue'
 import IplasRecordTable from './IplasRecordTable.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
@@ -584,6 +576,7 @@ const regularModeRecordCount = computed(() => {
 const useIndexedDbMode = ref(false)
 const autoIndexedDbReason = ref<string | null>(null)
 const showStationSelectionDialog = ref(false)
+const stationTestStatus = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
 
 const FORCE_STREAM_RANGE_DAYS = 7
 const FORCE_STREAM_RANGE_HOURS = FORCE_STREAM_RANGE_DAYS * 24
@@ -887,15 +880,42 @@ function updateSelectedStations(nextSelectedStations: string[]): void {
   debouncedRecordSearchQueries.value = Object.fromEntries(
     Object.entries(debouncedRecordSearchQueries.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
   )
+  stationTestStatus.value = Object.fromEntries(
+    Object.entries(stationTestStatus.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+  )
 
   if (hasChanged) {
     handleStationChange()
   }
 }
 
-function handleStationSelectionConfirm(nextSelectedStations: string[]): void {
-  updateSelectedStations(nextSelectedStations)
+function handleStationSelectionConfirm(result: StationSelectionResult): void {
+  stationDeviceIds.value = result.deviceIds
+  stationTestStatus.value = result.testStatus
+  updateSelectedStations(result.stations)
   showStationSelectionDialog.value = false
+}
+
+async function handleDialogStationToggle(stationValue: string, selected: boolean): Promise<void> {
+  if (!selected || !selectedSite.value || !selectedProject.value) return
+  if (deviceIdsByStation.value[stationValue]?.length > 0) return
+
+  loadingDevicesByStation.value[stationValue] = true
+  try {
+    const devices = await fetchDeviceIds(
+      selectedSite.value,
+      selectedProject.value,
+      stationValue,
+      new Date(startTime.value),
+      new Date(endTime.value),
+    )
+    deviceIdsByStation.value[stationValue] = devices
+  } catch (err) {
+    console.error(`Failed to fetch device IDs for ${stationValue}:`, err)
+    deviceIdsByStation.value[stationValue] = []
+  } finally {
+    loadingDevicesByStation.value[stationValue] = false
+  }
 }
 
 function removeSelectedStation(stationValue: string): void {
@@ -1986,7 +2006,7 @@ async function fetchTestItems() {
                 deviceId,
                 beginTime: begintime,
                 endTime: endtime,
-                testStatus: testStatusFilter.value,
+                testStatus: stationTestStatus.value[stationInfo.display_station_name] || 'ALL',
               })
               console.log(
                 `[IndexedDB] Streamed ${recordCount} records for station ${stationInfo.display_station_name} device ${deviceId}`,
@@ -2037,7 +2057,7 @@ async function fetchTestItems() {
           deviceId,
           begintime,
           endtime,
-          testStatusFilter.value,
+          stationTestStatus.value[stationInfo.display_station_name] || 'ALL',
         ),
       )
     }

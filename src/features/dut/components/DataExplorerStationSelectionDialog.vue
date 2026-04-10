@@ -4,7 +4,7 @@
       <v-card-title class="d-flex align-center justify-space-between bg-primary">
         <div class="d-flex align-center">
           <v-icon class="mr-2">mdi-format-list-checkbox</v-icon>
-          Select Stations
+          Select &amp; Configure Stations
         </div>
         <v-btn icon="mdi-close" variant="text" color="white" @click="handleClose" />
       </v-card-title>
@@ -46,27 +46,65 @@
 
           <v-divider />
 
-          <v-list-item
-            v-for="station in filteredStations"
-            :key="station.value"
-            @click="toggleStation(station.value)"
-            class="station-item"
-          >
-            <template #prepend>
-              <v-checkbox-btn
-                :model-value="localSelectedStations.includes(station.value)"
-                @click.stop="toggleStation(station.value)"
-              />
-            </template>
+          <template v-for="station in filteredStations" :key="station.value">
+            <v-list-item class="station-item" @click="toggleStation(station.value)">
+              <template #prepend>
+                <v-checkbox-btn
+                  :model-value="localSelectedStations.includes(station.value)"
+                  @click.stop="toggleStation(station.value)"
+                />
+              </template>
 
-            <v-list-item-title class="font-weight-medium">
-              {{ station.displayName }}
-            </v-list-item-title>
+              <v-list-item-title class="font-weight-medium">
+                {{ station.displayName }}
+              </v-list-item-title>
 
-            <v-list-item-subtitle>
-              {{ station.stationName }}
-            </v-list-item-subtitle>
-          </v-list-item>
+              <v-list-item-subtitle>
+                {{ station.stationName }}
+              </v-list-item-subtitle>
+            </v-list-item>
+
+            <!-- Per-station configuration (Device IDs + Test Status) -->
+            <div
+              v-if="localSelectedStations.includes(station.value)"
+              class="px-4 pb-3 pt-1 bg-grey-lighten-5"
+              @click.stop
+            >
+              <v-row dense>
+                <v-col cols="12" sm="8">
+                  <v-autocomplete
+                    v-model="localDeviceIds[station.value]"
+                    :items="deviceIdsByStation[station.value] || []"
+                    :loading="loadingDeviceIdsByStation[station.value]"
+                    label="Device IDs (Empty = ALL)"
+                    variant="outlined"
+                    density="compact"
+                    prepend-inner-icon="mdi-chip"
+                    multiple
+                    chips
+                    closable-chips
+                    clearable
+                    hide-details
+                    placeholder="All Device IDs"
+                  >
+                    <template #chip="{ props: chipProps, item }">
+                      <v-chip v-bind="chipProps" :text="item.value" size="x-small" />
+                    </template>
+                  </v-autocomplete>
+                </v-col>
+                <v-col cols="12" sm="4">
+                  <v-select
+                    v-model="localTestStatus[station.value]"
+                    :items="testStatusOptions"
+                    label="Test Status"
+                    variant="outlined"
+                    density="compact"
+                    hide-details
+                  />
+                </v-col>
+              </v-row>
+            </div>
+          </template>
 
           <v-list-item v-if="filteredStations.length === 0">
             <v-list-item-title class="text-center text-medium-emphasis">
@@ -103,20 +141,33 @@ export interface DataExplorerStationOption {
   stationName: string
 }
 
+export interface StationSelectionResult {
+  stations: string[]
+  deviceIds: Record<string, string[]>
+  testStatus: Record<string, 'ALL' | 'PASS' | 'FAIL'>
+}
+
 interface Props {
   show: boolean
   stations: DataExplorerStationOption[]
   selectedStations: string[]
+  deviceIdsByStation?: Record<string, string[]>
+  selectedDeviceIds?: Record<string, string[]>
+  loadingDeviceIdsByStation?: Record<string, boolean>
   loading?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   loading: false,
+  deviceIdsByStation: () => ({}),
+  selectedDeviceIds: () => ({}),
+  loadingDeviceIdsByStation: () => ({}),
 })
 
 const emit = defineEmits<{
   (e: 'update:show', value: boolean): void
-  (e: 'confirm', value: string[]): void
+  (e: 'confirm', value: StationSelectionResult): void
+  (e: 'station-toggled', stationValue: string, selected: boolean): void
 }>()
 
 const internalShow = computed({
@@ -126,6 +177,9 @@ const internalShow = computed({
 
 const searchQuery = ref('')
 const localSelectedStations = ref<string[]>([])
+const localDeviceIds = ref<Record<string, string[]>>({})
+const localTestStatus = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
+const testStatusOptions = ['ALL', 'PASS', 'FAIL']
 
 const filteredStations = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
@@ -156,34 +210,62 @@ const someFilteredSelected = computed(() => {
 
 function syncLocalSelection(): void {
   localSelectedStations.value = [...props.selectedStations]
+  localDeviceIds.value = { ...props.selectedDeviceIds }
+  const ts: Record<string, 'ALL' | 'PASS' | 'FAIL'> = {}
+  for (const station of props.selectedStations) {
+    ts[station] = localTestStatus.value[station] || 'ALL'
+  }
+  localTestStatus.value = ts
 }
 
 function toggleStation(stationValue: string): void {
   if (localSelectedStations.value.includes(stationValue)) {
     localSelectedStations.value = localSelectedStations.value.filter((value) => value !== stationValue)
+    emit('station-toggled', stationValue, false)
     return
   }
 
   localSelectedStations.value = [...localSelectedStations.value, stationValue]
+  if (!localTestStatus.value[stationValue]) {
+    localTestStatus.value[stationValue] = 'ALL'
+  }
+  emit('station-toggled', stationValue, true)
 }
 
 function toggleSelectAllFiltered(): void {
   if (allFilteredSelected.value) {
     const filteredSet = new Set(filteredValues.value)
+    const removed = localSelectedStations.value.filter((v) => filteredSet.has(v))
     localSelectedStations.value = localSelectedStations.value.filter((value) => !filteredSet.has(value))
+    for (const val of removed) emit('station-toggled', val, false)
     return
   }
 
+  const newlyAdded = filteredValues.value.filter((v) => !localSelectedStations.value.includes(v))
   const merged = new Set([...localSelectedStations.value, ...filteredValues.value])
   localSelectedStations.value = Array.from(merged)
+  for (const val of newlyAdded) {
+    if (!localTestStatus.value[val]) localTestStatus.value[val] = 'ALL'
+    emit('station-toggled', val, true)
+  }
 }
 
 function clearSelection(): void {
+  const cleared = [...localSelectedStations.value]
   localSelectedStations.value = []
+  localDeviceIds.value = {}
+  localTestStatus.value = {}
+  for (const val of cleared) emit('station-toggled', val, false)
 }
 
 function handleConfirm(): void {
-  emit('confirm', localSelectedStations.value)
+  const deviceIds: Record<string, string[]> = {}
+  const testStatus: Record<string, 'ALL' | 'PASS' | 'FAIL'> = {}
+  for (const station of localSelectedStations.value) {
+    deviceIds[station] = localDeviceIds.value[station] || []
+    testStatus[station] = localTestStatus.value[station] || 'ALL'
+  }
+  emit('confirm', { stations: localSelectedStations.value, deviceIds, testStatus })
   internalShow.value = false
 }
 
