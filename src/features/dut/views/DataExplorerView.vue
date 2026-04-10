@@ -28,7 +28,7 @@
         <v-window v-model="activeTab">
             <!-- iPLAS Data Tab -->
             <v-window-item value="iplas">
-                <TopProductsByIplasDataTab />
+                <IplasDataContent />
             </v-window-item>
 
             <!-- Internal Data Tab -->
@@ -48,8 +48,8 @@
 
 <script setup lang="ts">
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
+import IplasDataContent from '../components/IplasDataContent.vue'
 import InternalDataContent from '../components/InternalDataContent.vue'
-import TopProductsByIplasDataTab from '../components/TopProductsByIplasDataTab.vue'
 
 // Active tab state - persisted in URL
 const activeTab = useTabPersistence('tab', 'iplas')

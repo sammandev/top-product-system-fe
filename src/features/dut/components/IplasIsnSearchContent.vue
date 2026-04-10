@@ -17,10 +17,6 @@
                 <!-- Input Mode Toggle -->
                 <div class="d-flex align-center flex-wrap gap-4 mb-4">
                     <v-btn-toggle v-model="inputMode" mandatory color="primary">
-                        <v-btn value="single" size="small">
-                            <v-icon start>mdi-numeric-1-box</v-icon>
-                            Single ISN
-                        </v-btn>
                         <v-btn value="multiple" size="small">
                             <v-icon start>mdi-format-list-bulleted</v-icon>
                             Multiple ISNs
@@ -45,40 +41,15 @@
                     </v-switch>
                 </div>
 
-                <!-- Single ISN Input -->
-                <v-row v-if="inputMode === 'single'">
-                    <v-col cols="12" md="8">
-                        <v-text-field v-model="searchIsn" label="DUT ISN / SSN / MAC"
-                            placeholder="e.g., DM2520270073965 or BCD5EDA7830D" prepend-inner-icon="mdi-barcode-scan"
-                            variant="outlined" density="comfortable" clearable
-                            hint="Enter ISN, SSN, or MAC address to search across all stations" persistent-hint
-                            @keyup.enter="handleSearch" />
-                    </v-col>
-                    <v-col cols="12" md="2" class="d-flex align-center gap-2">
-                        <v-btn color="primary" :loading="isSearching || loadingIsnSearch" :disabled="!searchIsn?.trim()"
-                            prepend-icon="mdi-magnify" class="mb-5 flex-grow-1" @click="handleSearch">
-                            Search
-                        </v-btn>
-                    </v-col>
-                    <v-col cols="12" md="2" class="d-flex align-center gap-2">
-                        <v-btn color="secondary" variant="outlined" :loading="loadingSfistspLookup"
-                            :disabled="!searchIsn?.trim()" prepend-icon="mdi-link-variant" class="mb-5 flex-grow-1"
-                            @click="handleSfistspLookup">
-                            ISN Ref
-                            <v-tooltip activator="parent" location="top">
-                                Look up ISN references (SSN, MAC) from SFISTSP
-                            </v-tooltip>
-                        </v-btn>
-                    </v-col>
-                </v-row>
-
                 <!-- Multiple ISNs Combobox -->
                 <v-row v-if="inputMode === 'multiple'">
                     <v-col cols="12">
                         <v-combobox v-model="selectedISNs" label="DUT ISNs / SSNs / MACs"
-                            placeholder="Type ISN, SSN, or MAC and press Enter" prepend-inner-icon="mdi-barcode-scan"
-                            variant="outlined" chips multiple closable-chips clearable
-                            hint="Type ISN, SSN, or MAC and press Enter to add multiple" persistent-hint>
+                        v-model:search="multipleIsnSearchText"
+                        placeholder="Type ISN, SSN, or MAC and press Enter" prepend-inner-icon="mdi-barcode-scan"
+                        variant="outlined" chips multiple closable-chips clearable
+                        hint="Press Enter once to add, then press Enter again to search" persistent-hint
+                        @keydown.enter="handleMultipleIsnsEnter">
                             <template #chip="{ props, item }">
                                 <v-chip v-bind="props" :text="String(item.value || item)" closable />
                             </template>
@@ -86,7 +57,7 @@
                                 <div class="d-flex gap-2">
                                     <v-btn color="secondary" variant="outlined" size="small"
                                         :loading="loadingSfistspLookup"
-                                        :disabled="!selectedISNs || selectedISNs.length === 0"
+                              :disabled="multipleModeIdentifiers.length === 0"
                                         prepend-icon="mdi-link-variant" @click="handleSfistspLookup">
                                         ISN Ref
                                         <v-tooltip activator="parent" location="top">
@@ -95,7 +66,7 @@
                                     </v-btn>
                                     <v-btn color="primary" variant="flat" size="small"
                                         :loading="isSearching || loadingIsnSearch"
-                                        :disabled="!selectedISNs || selectedISNs.length === 0"
+                                      :disabled="multipleModeIdentifiers.length === 0"
                                         prepend-icon="mdi-magnify" @click="handleSearch">
                                         Search
                                     </v-btn>
@@ -758,7 +729,6 @@
 import { computed, ref } from 'vue'
 import { iplasProxyApi } from '@/features/dut-logs/api/iplasProxyApi'
 import {
-  lookupIsn,
   lookupIsnsBatch,
   type SfistspIsnReferenceResponse,
 } from '@/features/dut-logs/api/sfistspApi'
@@ -872,9 +842,10 @@ const {
 } = useIplasApi()
 
 // Input mode
-const inputMode = ref<'single' | 'multiple' | 'bulk'>('single')
+const inputMode = ref<'multiple' | 'bulk'>('multiple')
 const searchIsn = ref('')
 const selectedISNs = ref<string[]>([])
+const multipleIsnSearchText = ref('')
 
 // Search state
 const hasSearched = ref(false)
@@ -914,6 +885,41 @@ const displayLimits = ref<Record<string, number>>({})
 
 function getDisplayLimit(isn: string): number {
   return displayLimits.value[isn] || INITIAL_DISPLAY_LIMIT
+}
+
+function normalizeIdentifierList(values: string[]): string[] {
+  return Array.from(
+    new Set(values.map((value) => value.trim()).filter((value) => value.length > 0)),
+  )
+}
+
+function parseBulkIdentifiers(value: string): string[] {
+  return normalizeIdentifierList(value.split(/[\n,\s]+/))
+}
+
+const multipleModeIdentifiers = computed(() => {
+  return normalizeIdentifierList(selectedISNs.value.map((value) => String(value ?? '')))
+})
+
+function getCurrentInputIdentifiers(): string[] {
+  if (inputMode.value === 'multiple') {
+    return multipleModeIdentifiers.value
+  }
+
+  return parseBulkIdentifiers(searchIsn.value)
+}
+
+async function handleMultipleIsnsEnter(event: KeyboardEvent): Promise<void> {
+  if (multipleIsnSearchText.value.trim()) {
+    return
+  }
+
+  if (multipleModeIdentifiers.value.length === 0 || isSearching.value || loadingIsnSearch.value) {
+    return
+  }
+
+  event.preventDefault()
+  await handleSearch()
 }
 
 // Fullscreen dialog controls
@@ -1374,6 +1380,7 @@ function groupDataByISN(
 function clearAll(): void {
   searchIsn.value = ''
   selectedISNs.value = []
+  multipleIsnSearchText.value = ''
   groupedByISN.value = []
   hasSearched.value = false
   isSearching.value = false
@@ -1406,18 +1413,7 @@ function formatMacAddress(mac: string | undefined): string {
  * Handle SFISTSP ISN reference lookup
  */
 async function handleSfistspLookup(): Promise<void> {
-  // Determine ISN list based on input mode
-  let isnList: string[] = []
-
-  if (inputMode.value === 'multiple') {
-    isnList = selectedISNs.value.map((isn) => String(isn).trim()).filter((isn) => isn.length > 0)
-  } else {
-    if (!searchIsn.value?.trim()) return
-    isnList = searchIsn.value
-      .split(/[\n,\s]+/)
-      .map((isn) => isn.trim())
-      .filter((isn) => isn && isn.length > 0)
-  }
+  const isnList = getCurrentInputIdentifiers()
 
   if (isnList.length === 0) {
     error.value = 'Please enter at least one valid ISN for SFISTSP lookup'
@@ -1428,34 +1424,16 @@ async function handleSfistspLookup(): Promise<void> {
   sfistspReferences.value = []
 
   try {
-    if (isnList.length === 1) {
-      // Single ISN lookup
-      // biome-ignore lint/style/noNonNullAssertion: length === 1 guarantees index 0 exists
-      const response = await lookupIsn(isnList[0]!)
-      sfistspReferences.value = [
-        {
-          isn_searched: response.isn_searched,
-          isn: response.isn,
-          success: response.success,
-          ssn: response.ssn || undefined,
-          mac: response.mac || undefined,
-          errorMessage: response.error_message || undefined,
-          isn_references: response.isn_references,
-        },
-      ]
-    } else {
-      // Batch lookup
-      const response = await lookupIsnsBatch(isnList)
-      sfistspReferences.value = response.results.map((r: SfistspIsnReferenceResponse) => ({
-        isn_searched: r.isn_searched,
-        isn: r.isn,
-        success: r.success,
-        ssn: r.ssn || undefined,
-        mac: r.mac || undefined,
-        errorMessage: r.error_message || undefined,
-        isn_references: r.isn_references,
-      }))
-    }
+    const response = await lookupIsnsBatch(isnList)
+    sfistspReferences.value = response.results.map((r: SfistspIsnReferenceResponse) => ({
+      isn_searched: r.isn_searched,
+      isn: r.isn,
+      success: r.success,
+      ssn: r.ssn || undefined,
+      mac: r.mac || undefined,
+      errorMessage: r.error_message || undefined,
+      isn_references: r.isn_references,
+    }))
   } catch (err: unknown) {
     const errorMessage = err instanceof Error ? err.message : 'Unknown error'
     console.error('SFISTSP lookup failed:', err)
@@ -1466,18 +1444,7 @@ async function handleSfistspLookup(): Promise<void> {
 }
 
 async function handleSearch(): Promise<void> {
-  // Determine ISN list based on input mode
-  let isnList: string[] = []
-
-  if (inputMode.value === 'multiple') {
-    isnList = selectedISNs.value.map((isn) => String(isn).trim()).filter((isn) => isn.length > 0)
-  } else {
-    if (!searchIsn.value?.trim()) return
-    isnList = searchIsn.value
-      .split(/[\n,\s]+/)
-      .map((isn) => isn.trim())
-      .filter((isn) => isn && isn.length > 0)
-  }
+  const isnList = getCurrentInputIdentifiers()
 
   if (isnList.length === 0) {
     error.value = 'Please enter at least one valid ISN'
@@ -1500,56 +1467,27 @@ async function handleSearch(): Promise<void> {
       const allIdentifiers = new Set<string>(isnList)
 
       try {
-        if (isnList.length === 1) {
-          // Single ISN lookup
-          // biome-ignore lint/style/noNonNullAssertion: length === 1 guarantees index 0 exists
-          const response = await lookupIsn(isnList[0]!)
-          if (response.success && response.isn) {
-            const primaryIsn = response.isn
-            // Map the searched term to primary ISN
-            // biome-ignore lint/style/noNonNullAssertion: length === 1 guarantees index 0 exists
-            identifierToPrimaryIsn.set(isnList[0]!, primaryIsn)
-            // Add and map primary ISN
-            allIdentifiers.add(primaryIsn)
-            identifierToPrimaryIsn.set(primaryIsn, primaryIsn)
-            // Add and map SSN if available
-            if (response.ssn) {
-              allIdentifiers.add(response.ssn)
-              identifierToPrimaryIsn.set(response.ssn, primaryIsn)
-            }
-            // Add and map MAC if available
-            if (response.mac) {
-              allIdentifiers.add(response.mac)
-              identifierToPrimaryIsn.set(response.mac, primaryIsn)
-            }
+        const response = await lookupIsnsBatch(isnList)
+        for (let i = 0; i < response.results.length; i++) {
+          const result = response.results[i]
+          const searchedIsn = isnList[i]
+          if (!result?.success || !result.isn || !searchedIsn) {
+            continue
           }
-        } else {
-          // Batch lookup
-          const response = await lookupIsnsBatch(isnList)
-          for (let i = 0; i < response.results.length; i++) {
-            // biome-ignore lint/style/noNonNullAssertion: index i is within bounds of response.results
-            const result = response.results[i]!
-            const searchedIsn = isnList[i]
-            if (result.success && result.isn) {
-              const primaryIsn = result.isn
-              // Map the searched term to primary ISN
-              if (searchedIsn) {
-                identifierToPrimaryIsn.set(searchedIsn, primaryIsn)
-              }
-              // Add and map primary ISN
-              allIdentifiers.add(primaryIsn)
-              identifierToPrimaryIsn.set(primaryIsn, primaryIsn)
-              // Add and map SSN if available
-              if (result.ssn) {
-                allIdentifiers.add(result.ssn)
-                identifierToPrimaryIsn.set(result.ssn, primaryIsn)
-              }
-              // Add and map MAC if available
-              if (result.mac) {
-                allIdentifiers.add(result.mac)
-                identifierToPrimaryIsn.set(result.mac, primaryIsn)
-              }
-            }
+
+          const primaryIsn = result.isn
+          identifierToPrimaryIsn.set(searchedIsn, primaryIsn)
+          allIdentifiers.add(primaryIsn)
+          identifierToPrimaryIsn.set(primaryIsn, primaryIsn)
+
+          if (result.ssn) {
+            allIdentifiers.add(result.ssn)
+            identifierToPrimaryIsn.set(result.ssn, primaryIsn)
+          }
+
+          if (result.mac) {
+            allIdentifiers.add(result.mac)
+            identifierToPrimaryIsn.set(result.mac, primaryIsn)
           }
         }
       } catch (err) {

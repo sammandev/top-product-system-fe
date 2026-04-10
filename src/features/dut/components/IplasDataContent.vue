@@ -76,26 +76,31 @@
             </v-row>
 
             <v-row class="mt-2">
-              <!-- Station Selection (Multiple) -->
+              <v-col cols="12" md="8">
+                <v-text-field :model-value="selectedStationSummary" label="Selected Test Stations" variant="outlined"
+                  density="comfortable" prepend-inner-icon="mdi-router-wireless" readonly hide-details
+                  :disabled="!selectedProject"
+                  placeholder="Use Select Station to choose one or more stations" />
+              </v-col>
+              <v-col cols="12" md="4" class="d-flex align-center">
+                <v-btn color="secondary" variant="outlined" block prepend-icon="mdi-format-list-checkbox"
+                  :loading="loadingStations" :disabled="!selectedProject" @click="openStationSelectionDialog">
+                  Select Station
+                  <v-chip v-if="selectedStations.length > 0" size="small" color="primary" variant="flat" class="ml-2">
+                    {{ selectedStations.length }}
+                  </v-chip>
+                </v-btn>
+              </v-col>
+            </v-row>
+
+            <v-row v-if="selectedStations.length > 0" class="mt-2">
               <v-col cols="12">
-                <v-autocomplete v-model="selectedStations" :items="stationOptions" item-title="displayText"
-                  item-value="value" label="Select Test Stations (Multiple)" variant="outlined" density="comfortable"
-                  prepend-inner-icon="mdi-router-wireless" :loading="loadingStations" :disabled="!selectedProject"
-                  multiple chips closable-chips clearable hide-details @update:model-value="handleStationChange">
-                  <template #chip="{ props, item }">
-                    <v-chip v-bind="props" :text="item.raw.chipText" size="small" />
-                  </template>
-                  <template #item="{ props, item }">
-                    <v-list-item v-bind="props" :title="undefined">
-                      <v-list-item-title class="font-weight-medium">
-                        {{ item.raw.displayName }}
-                      </v-list-item-title>
-                      <v-list-item-subtitle class="text-caption">
-                        {{ item.raw.stationName }}
-                      </v-list-item-subtitle>
-                    </v-list-item>
-                  </template>
-                </v-autocomplete>
+                <div class="d-flex flex-wrap gap-2">
+                  <v-chip v-for="stationValue in selectedStations" :key="stationValue" color="primary" variant="tonal"
+                    closable @click:close="removeSelectedStation(stationValue)">
+                    {{ getStationDisplayName(stationValue) }}
+                  </v-chip>
+                </div>
               </v-col>
             </v-row>
 
@@ -127,8 +132,8 @@
                       density="compact" hide-details class="flex-grow-0" />
                   </template>
                   <span>
-                    Enable IndexedDB streaming for large datasets (10,000+ records).<br>
-                    Data is stored locally on disk, reducing memory usage.
+                    Enable IndexedDB streaming for long or high-volume searches.<br>
+                    Searches over 7 days are forced to stream to disk automatically.
                   </span>
                 </v-tooltip>
 
@@ -178,9 +183,15 @@
             <v-row v-if="possiblyTruncated && hasRegularModeData" class="mt-2">
               <v-col cols="12">
                 <v-alert type="warning" density="compact" variant="tonal" closable>
-                  <v-icon start>mdi-alert</v-icon>
-                  Results may be truncated due to iPLAS API limits. Consider narrowing your date range
-                  or filters.
+                  <div class="d-flex align-center flex-wrap gap-2">
+                    <v-chip size="small" color="warning" variant="flat">
+                      5,000-row limit reached
+                    </v-chip>
+                    <span>
+                      Results may be incomplete because the upstream iPLAS API caps each response at 5,000 rows.
+                      Narrow the date range or keep Stream to Disk enabled for large searches.
+                    </span>
+                  </div>
                 </v-alert>
               </v-col>
             </v-row>
@@ -443,6 +454,9 @@
       </v-window-item>
     </v-window>
 
+    <DataExplorerStationSelectionDialog v-model:show="showStationSelectionDialog" :stations="stationOptions"
+      :selected-stations="selectedStations" :loading="loadingStations" @confirm="handleStationSelectionConfirm" />
+
     <!-- Test Items Details Dialog -->
     <TopProductIplasDetailsDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
       :downloading="fullscreenDownloading" :loading-test-items="loadingFullscreenTestItems"
@@ -477,6 +491,7 @@ import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasLocalData } from '@/features/dut-logs/composables/useIplasLocalData'
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
+import DataExplorerStationSelectionDialog from './DataExplorerStationSelectionDialog.vue'
 import IplasIsnSearchContent from './IplasIsnSearchContent.vue'
 import IplasRecordTable from './IplasRecordTable.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
@@ -568,7 +583,10 @@ const regularModeRecordCount = computed(() => {
 // This is the most memory-efficient mode for large datasets (10,000+ records)
 const useIndexedDbMode = ref(false)
 const autoIndexedDbReason = ref<string | null>(null)
+const showStationSelectionDialog = ref(false)
 
+const FORCE_STREAM_RANGE_DAYS = 7
+const FORCE_STREAM_RANGE_HOURS = FORCE_STREAM_RANGE_DAYS * 24
 const AUTO_INDEXED_DB_LONG_RANGE_HOURS = 12
 const AUTO_INDEXED_DB_STATION_HOURS = 24
 const AUTO_INDEXED_DB_DEVICE_HOURS = 96
@@ -819,11 +837,80 @@ function getStationDisplayName(stationValue: string): string {
   return station?.display_station_name || stationValue
 }
 
-function shouldAutoUseIndexedDb(
+const selectedStationSummary = computed(() => {
+  if (selectedStations.value.length === 0) {
+    return ''
+  }
+
+  if (selectedStations.value.length === 1) {
+    return getStationDisplayName(selectedStations.value[0] || '')
+  }
+
+  if (selectedStations.value.length === 2) {
+    return selectedStations.value.map((stationValue) => getStationDisplayName(stationValue)).join(', ')
+  }
+
+  return `${selectedStations.value.length} stations selected`
+})
+
+function openStationSelectionDialog(): void {
+  if (!selectedProject.value) return
+  showStationSelectionDialog.value = true
+}
+
+function updateSelectedStations(nextSelectedStations: string[]): void {
+  const nextStations = Array.from(new Set(nextSelectedStations))
+  const nextStationSet = new Set(nextStations)
+  const hasChanged =
+    nextStations.length !== selectedStations.value.length ||
+    nextStations.some((stationValue) => !selectedStations.value.includes(stationValue))
+
+  selectedStations.value = nextStations
+  stationDeviceIds.value = Object.fromEntries(
+    Object.entries(stationDeviceIds.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+  )
+  deviceIdsByStation.value = Object.fromEntries(
+    Object.entries(deviceIdsByStation.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+  )
+  loadingDevicesByStation.value = Object.fromEntries(
+    Object.entries(loadingDevicesByStation.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+  )
+  selectedFilterDeviceIds.value = Object.fromEntries(
+    Object.entries(selectedFilterDeviceIds.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+  )
+  stationStatusFilters.value = Object.fromEntries(
+    Object.entries(stationStatusFilters.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+  )
+  recordSearchQueries.value = Object.fromEntries(
+    Object.entries(recordSearchQueries.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+  )
+  debouncedRecordSearchQueries.value = Object.fromEntries(
+    Object.entries(debouncedRecordSearchQueries.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+  )
+
+  if (hasChanged) {
+    handleStationChange()
+  }
+}
+
+function handleStationSelectionConfirm(nextSelectedStations: string[]): void {
+  updateSelectedStations(nextSelectedStations)
+  showStationSelectionDialog.value = false
+}
+
+function removeSelectedStation(stationValue: string): void {
+  updateSelectedStations(selectedStations.value.filter((value) => value !== stationValue))
+}
+
+function formatIndexedDbHours(durationHours: number): string {
+  return Number.isInteger(durationHours) ? `${durationHours}` : durationHours.toFixed(1)
+}
+
+function getAutoIndexedDbReason(
   resolvedStations: { deviceIds: string[] }[],
   beginTime: Date,
   endTime: Date,
-): boolean {
+): string | null {
   const durationHours = Math.max((endTime.getTime() - beginTime.getTime()) / 3_600_000, 1)
   const stationCount = Math.max(resolvedStations.length, 1)
   const selectedDeviceCount = resolvedStations.reduce(
@@ -834,12 +921,27 @@ function shouldAutoUseIndexedDb(
     (entry) => entry.deviceIds.length === 0 || entry.deviceIds.includes('ALL'),
   )
 
-  return (
-    durationHours >= AUTO_INDEXED_DB_LONG_RANGE_HOURS ||
-    stationCount * durationHours >= AUTO_INDEXED_DB_STATION_HOURS ||
-    selectedDeviceCount * durationHours >= AUTO_INDEXED_DB_DEVICE_HOURS ||
-    (includesAllDevices && stationCount > 1 && durationHours >= 4)
-  )
+  if (durationHours > FORCE_STREAM_RANGE_HOURS) {
+    return `Date range exceeds ${FORCE_STREAM_RANGE_DAYS} days (${formatIndexedDbHours(durationHours)} hours). Stream to Disk is required for this search.`
+  }
+
+  if (durationHours >= AUTO_INDEXED_DB_LONG_RANGE_HOURS) {
+    return `Long date range detected (${formatIndexedDbHours(durationHours)} hours). Stream to Disk was enabled automatically to keep the page responsive.`
+  }
+
+  if (stationCount * durationHours >= AUTO_INDEXED_DB_STATION_HOURS) {
+    return `${stationCount} stations across ${formatIndexedDbHours(durationHours)} hours can return a large result set. Stream to Disk was enabled automatically.`
+  }
+
+  if (selectedDeviceCount * durationHours >= AUTO_INDEXED_DB_DEVICE_HOURS) {
+    return `${selectedDeviceCount} device selections across ${formatIndexedDbHours(durationHours)} hours can return a large result set. Stream to Disk was enabled automatically.`
+  }
+
+  if (includesAllDevices && stationCount > 1 && durationHours >= 4) {
+    return `Multiple stations with all devices selected can exceed the in-memory limit. Stream to Disk was enabled automatically.`
+  }
+
+  return null
 }
 
 async function refreshIndexedDbPage(resetPage = false): Promise<void> {
@@ -875,7 +977,7 @@ const availableProjects = computed(() => {
 })
 
 const stationOptions = computed(() => {
-  return stations.value
+  return [...stations.value]
     .sort((a: Station, b: Station) => a.order - b.order)
     .map((s: Station) => ({
       displayName: s.display_station_name,
@@ -1777,6 +1879,7 @@ async function downloadAllSelectedRecords(): Promise<void> {
 function handleSiteChange() {
   selectedProject.value = null
   selectedStations.value = []
+  showStationSelectionDialog.value = false
   stationDeviceIds.value = {}
   deviceIdsByStation.value = {}
   loadingDevicesByStation.value = {}
@@ -1787,6 +1890,7 @@ function handleSiteChange() {
 
 async function handleProjectChange() {
   selectedStations.value = []
+  showStationSelectionDialog.value = false
   stationDeviceIds.value = {}
   deviceIdsByStation.value = {}
   loadingDevicesByStation.value = {}
@@ -1856,15 +1960,15 @@ async function fetchTestItems() {
   })
   const resolvedStations = await Promise.all(deviceIdPromises)
 
-  const useDiskBackedResults =
-    useIndexedDbMode.value || shouldAutoUseIndexedDb(resolvedStations, begintime, endtime)
+  const automaticIndexedDbReason = getAutoIndexedDbReason(resolvedStations, begintime, endtime)
+  const useDiskBackedResults = useIndexedDbMode.value || automaticIndexedDbReason !== null
 
   if (useDiskBackedResults) {
-    if (!useIndexedDbMode.value) {
+    if (!useIndexedDbMode.value && automaticIndexedDbReason) {
       useIndexedDbMode.value = true
-      autoIndexedDbReason.value =
-        'Switched to Stream to Disk automatically for a large search to keep the page responsive.'
     }
+
+    autoIndexedDbReason.value = automaticIndexedDbReason
 
     let totalRecords = 0
     const streamPromises: Promise<void>[] = []
