@@ -28,8 +28,8 @@
           <!-- Primary Information -->
           <v-card variant="tonal" color="primary" class="mb-3">
             <v-card-text class="py-3">
-              <v-row dense>
-                <v-col cols="12" md="6">
+              <v-row dense class="align-center">
+                <v-col cols="12" md="4">
                   <div class="d-flex align-center cursor-pointer" @click="copyToClipboard(record.isn)">
                     <v-icon size="large" class="mr-3" color="primary">mdi-barcode</v-icon>
                     <div>
@@ -39,13 +39,33 @@
                     <v-tooltip activator="parent" location="top">Click to copy ISN</v-tooltip>
                   </div>
                 </v-col>
-                <v-col cols="12" md="6">
+                <v-col cols="12" md="4">
                   <div class="d-flex align-center">
                     <v-icon size="large" class="mr-3" color="primary">mdi-factory</v-icon>
                     <div>
                       <div class="text-caption text-medium-emphasis">Station</div>
                       <div class="text-h6 font-weight-bold">
                         {{ record.displayStationName || record.stationName }}
+                      </div>
+                    </div>
+                  </div>
+                </v-col>
+                <v-col v-if="scoreSummaryPrimary" cols="12" md="4">
+                  <div class="score-hero" :class="scoreHeroClass">
+                    <div class="score-hero__header">
+                      <div>
+                        <div class="score-hero__label">{{ scoreHeroLabel }}</div>
+                        <div class="score-hero__caption">{{ scoreHeroCaption }}</div>
+                      </div>
+                      <v-icon :icon="scoreHeroIcon" size="small" class="score-hero__icon" />
+                    </div>
+                    <div class="score-hero__value" :class="[getScoreColorClass(scoreSummaryPrimary.score), scoreHeroValueClass]">
+                      {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}
+                    </div>
+                    <div v-if="scoreSummarySecondaryMetrics.length" class="d-flex flex-wrap gap-2 mt-2">
+                      <div v-for="metric in scoreSummarySecondaryMetrics" :key="metric.key" class="score-summary-metric">
+                        <span class="score-summary-metric__label">{{ metric.label }}</span>
+                        <span class="score-summary-metric__value">{{ formatScoreValue(metric.score) }}</span>
                       </div>
                     </div>
                   </div>
@@ -92,32 +112,38 @@
           </v-card>
 
           <!-- Timing & Status -->
-          <div class="d-flex align-center flex-wrap gap-2 text-caption">
-            <v-chip size="small" variant="tonal" color="primary" prepend-icon="mdi-calendar-clock" label>
+          <div class="d-flex align-center flex-wrap gap-2 timing-status-row">
+            <v-chip size="default" variant="tonal" color="primary" prepend-icon="mdi-calendar-clock" label class="timing-meta-chip">
               <span class="text-medium-emphasis mr-1">Start:</span>
               {{ formatTime(record.testStartTime) }}
             </v-chip>
-            <v-chip size="small" variant="tonal" color="primary" prepend-icon="mdi-calendar-check" label>
+            <v-chip size="default" variant="tonal" color="primary" prepend-icon="mdi-calendar-check" label class="timing-meta-chip">
               <span class="text-medium-emphasis mr-1">End:</span>
               {{ formatTime(record.testEndTime) }}
             </v-chip>
-            <v-chip size="small" variant="tonal" color="secondary" prepend-icon="mdi-timer" label>
+            <v-chip size="default" variant="tonal" color="secondary" prepend-icon="mdi-timer" label class="timing-meta-chip">
               <span class="text-medium-emphasis mr-1">Duration:</span>
               {{ calculateDuration(record.testStartTime, record.testEndTime) }}
             </v-chip>
-            <v-chip size="small" variant="tonal" color="info" prepend-icon="mdi-list-box" label>
+            <v-chip size="default" variant="tonal" color="info" prepend-icon="mdi-list-box" label class="timing-meta-chip">
               <span class="text-medium-emphasis mr-1">Test Items:</span>
               {{ record.testItems?.length || 0 }}
             </v-chip>
-            <v-chip size="small" :color="getStatusColor(record.errorCode)"
+            <v-chip size="default" :color="getStatusColor(record.errorCode)"
               :prepend-icon="isStatusPass(record.errorCode) ? 'mdi-check-circle' : 'mdi-alert-circle'"
-              class="cursor-pointer" label @click="copyToClipboard(record.errorCode)">
+              class="cursor-pointer timing-meta-chip" label @click="copyToClipboard(record.errorCode)">
               <span class="text-medium-emphasis mr-1">Status:</span>
               {{ record.errorCode }}
               <v-tooltip activator="parent" location="top">Click to copy Error Code</v-tooltip>
             </v-chip>
+            <component :is="forcedFailSummary?.clickable ? 'button' : 'div'" v-if="forcedFailSummary"
+              class="score-summary-alert timing-meta-chip" :class="{ 'score-summary-alert--interactive': forcedFailSummary.clickable }"
+              :type="forcedFailSummary.clickable ? 'button' : undefined" @click="openForcedFailDialog">
+              <v-icon size="small" class="score-summary-alert__icon">mdi-alert-octagon</v-icon>
+              <span class="score-summary-alert__text">{{ forcedFailSummary.text }}</span>
+            </component>
             <template v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)">
-              <v-chip size="small" color="error" variant="outlined" class="cursor-pointer" label
+              <v-chip size="default" color="error" variant="outlined" class="cursor-pointer timing-meta-chip" label
                 prepend-icon="mdi-alert-octagon" @click="copyToClipboard(record.errorName)">
                 <span class="text-medium-emphasis mr-1">Error:</span>
                 {{ record.errorName }}
@@ -128,28 +154,6 @@
         </div>
 
         <v-divider class="flex-shrink-0" />
-
-        <div v-if="hasScoreSummary" class="px-3 py-3 d-flex align-center flex-wrap gap-3 score-summary-bar">
-          <component :is="forcedFailSummary?.clickable ? 'button' : 'div'" v-if="forcedFailSummary"
-            class="score-summary-alert" :class="{ 'score-summary-alert--interactive': forcedFailSummary.clickable }"
-            :type="forcedFailSummary.clickable ? 'button' : undefined" @click="openForcedFailDialog">
-            <v-icon size="small" class="score-summary-alert__icon">mdi-alert-octagon</v-icon>
-            <span class="score-summary-alert__text">{{ forcedFailSummary.text }}</span>
-          </component>
-          <v-spacer />
-          <div v-if="scoreSummaryPrimary" class="d-flex align-center flex-wrap gap-2 score-summary-metrics">
-            <div class="score-summary-primary">
-              <div class="score-summary-label">{{ scoreSummaryPrimary.label }}</div>
-              <div class="score-summary-value" :class="getScoreColorClass(scoreSummaryPrimary.score)">
-                {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}
-              </div>
-            </div>
-            <div v-for="metric in scoreSummarySecondaryMetrics" :key="metric.key" class="score-summary-metric">
-              <span class="score-summary-metric__label">{{ metric.label }}</span>
-              <span class="score-summary-metric__value">{{ formatScoreValue(metric.score) }}</span>
-            </div>
-          </div>
-        </div>
       </div>
       <!-- End Sticky Header Container -->
 
@@ -629,14 +633,66 @@ const forcedFailSummary = computed<ForcedFailSummary | null>(() => {
   return {
     text:
       failingItemCount > 0
-        ? `Forced fail · ${failingItemCount} ${itemLabel} below ${threshold} / 10`
-        : `Forced fail · below ${threshold} / 10`,
+        ? `Forced Fail: ${failingItemCount} ${itemLabel} below ${threshold} / 10`
+        : `Forced Fail: below ${threshold} / 10`,
     clickable: failingItemCount > 0,
   }
 })
 
-const hasScoreSummary = computed(() => {
-  return Boolean(scoreSummaryPrimary.value || forcedFailSummary.value)
+const scoreHeroLabel = computed(() => {
+  if (props.record?.isForcedFailure) {
+    return 'Forced Fail Score'
+  }
+
+  return scoreSummaryPrimary.value?.label ?? 'Score'
+})
+
+const scoreHeroCaption = computed(() => {
+  const record = props.record
+
+  if (record?.isForcedFailure) {
+    return `Minimum score ${record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5'} / 10 triggered fail`
+  }
+
+  if (scoreSummaryPrimary.value?.key === 'overall') {
+    return 'Overall scored result'
+  }
+
+  return `${scoreSummaryPrimary.value?.label ?? 'Score'} scored result`
+})
+
+const scoreHeroClass = computed(() => {
+  const score = scoreSummaryPrimary.value?.score
+
+  if (props.record?.isForcedFailure) {
+    return 'score-hero--forced-fail'
+  }
+
+  if (score === undefined) {
+    return 'score-hero--neutral'
+  }
+
+  if (score >= 0.9) {
+    return 'score-hero--pass'
+  }
+
+  return 'score-hero--neutral'
+})
+
+const scoreHeroIcon = computed(() => {
+  if (props.record?.isForcedFailure) {
+    return 'mdi-alert-octagon'
+  }
+
+  if ((scoreSummaryPrimary.value?.score ?? 0) >= 0.9) {
+    return 'mdi-check-decagram'
+  }
+
+  return 'mdi-chart-line'
+})
+
+const scoreHeroValueClass = computed(() => {
+  return props.record?.isForcedFailure ? 'score-hero__value--forced-fail' : ''
 })
 
 // Dynamic headers - add Score column if scores are available
@@ -1073,12 +1129,13 @@ watch(
   cursor: pointer;
 }
 
-.score-summary-bar {
-  background: linear-gradient(180deg, rgba(var(--v-theme-primary), 0.05), rgba(var(--v-theme-surface), 0.9));
+.timing-status-row {
+  align-items: center;
 }
 
-.score-summary-metrics {
-  justify-content: flex-end;
+.timing-meta-chip {
+  font-size: 0.92rem;
+  font-weight: 600;
 }
 
 .score-summary-alert {
@@ -1086,6 +1143,7 @@ watch(
   align-items: center;
   gap: 0.55rem;
   padding: 0.55rem 0.8rem;
+  font: inherit;
   border-radius: 12px;
   border: 1px solid rgba(var(--v-theme-warning), 0.26);
   background: rgba(var(--v-theme-warning), 0.12);
@@ -1111,25 +1169,61 @@ watch(
   font-weight: 600;
 }
 
-.score-summary-primary {
-  min-width: 150px;
-  padding: 0.6rem 0.85rem;
+.score-hero {
+  padding: 0.85rem 1rem;
   border-radius: 12px;
-  background: rgba(var(--v-theme-primary), 0.08);
   border: 1px solid rgba(var(--v-theme-primary), 0.14);
+  background: rgba(var(--v-theme-surface), 0.9);
+  color: rgba(var(--v-theme-on-surface), 0.88);
 }
 
-.score-summary-label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
+.score-hero--pass {
+  background: linear-gradient(135deg, rgba(var(--v-theme-success), 0.18), rgba(var(--v-theme-primary), 0.08));
+  border-color: rgba(var(--v-theme-success), 0.3);
+}
+
+.score-hero--forced-fail {
+  background: linear-gradient(135deg, rgba(var(--v-theme-warning), 0.24), rgba(var(--v-theme-error), 0.1));
+  border-color: rgba(var(--v-theme-warning), 0.42);
+}
+
+.score-hero--neutral {
+  background: rgba(var(--v-theme-primary), 0.08);
+}
+
+.score-hero__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.score-hero__label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: rgba(var(--v-theme-on-surface), 0.62);
+  color: rgba(var(--v-theme-on-surface), 0.64);
 }
 
-.score-summary-value {
-  font-size: 1.05rem;
-  line-height: 1.2;
+.score-hero__caption {
+  margin-top: 0.1rem;
+  font-size: 0.8rem;
+  color: rgba(var(--v-theme-on-surface), 0.68);
+}
+
+.score-hero__icon {
+  opacity: 0.9;
+}
+
+.score-hero__value {
+  margin-top: 0.55rem;
+  font-size: 1.4rem;
+  line-height: 1.1;
+}
+
+.score-hero__value--forced-fail {
+  color: rgb(var(--v-theme-error)) !important;
 }
 
 .score-summary-metric {
@@ -1212,9 +1306,8 @@ watch(
 }
 
 @media (max-width: 960px) {
-  .score-summary-metrics {
+  .score-hero {
     width: 100%;
-    justify-content: flex-start;
   }
 }
 </style>

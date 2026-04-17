@@ -140,7 +140,7 @@
                 </v-col>
                 <v-col cols="12" lg="5">
                   <div class="d-flex align-center justify-start justify-lg-end gap-2 flex-wrap">
-                    <v-btn size="small" variant="outlined" prepend-icon="mdi-tune-variant" color="black"
+                    <v-btn size="small" variant="outlined" prepend-icon="mdi-tune-variant" color="secondary"
                       @click="openBulkScoringConfig" :disabled="selectedCriteriaCount === 0">
                       Bulk Scoring ({{ selectedCriteriaCount }})
                     </v-btn>
