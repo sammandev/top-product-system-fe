@@ -129,30 +129,24 @@
 
         <v-divider class="flex-shrink-0" />
 
-        <!-- Overall Score Badges (moved here for more table space) -->
-        <div v-if="record.overallScore !== undefined" class="px-3 py-3 d-flex align-center flex-wrap gap-3 score-summary-bar">
-          <v-chip v-if="record.isForcedFailure" color="warning" variant="flat" size="small" prepend-icon="mdi-alert-octagon">
-            Forced Fail: below {{ record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5' }} / 10
-          </v-chip>
-          <v-chip v-if="record.isForcedFailure && record.forcedFailureDetails?.length" color="warning" variant="outlined" size="small"
-            class="cursor-pointer" prepend-icon="mdi-format-list-bulleted" @click="showForcedFailDialog = true">
-            {{ record.forcedFailureDetails.length }} failing item{{ record.forcedFailureDetails.length === 1 ? '' : 's' }}
-          </v-chip>
+        <div v-if="hasScoreSummary" class="px-3 py-3 d-flex align-center flex-wrap gap-3 score-summary-bar">
+          <component :is="forcedFailSummary?.clickable ? 'button' : 'div'" v-if="forcedFailSummary"
+            class="score-summary-alert" :class="{ 'score-summary-alert--interactive': forcedFailSummary.clickable }"
+            :type="forcedFailSummary.clickable ? 'button' : undefined" @click="openForcedFailDialog">
+            <v-icon size="small" class="score-summary-alert__icon">mdi-alert-octagon</v-icon>
+            <span class="score-summary-alert__text">{{ forcedFailSummary.text }}</span>
+          </component>
           <v-spacer />
-          <div class="d-flex align-center flex-wrap gap-2 score-summary-metrics">
+          <div v-if="scoreSummaryPrimary" class="d-flex align-center flex-wrap gap-2 score-summary-metrics">
             <div class="score-summary-primary">
-              <div class="score-summary-label">Overall Score</div>
-              <div class="score-summary-value" :class="getScoreColorClass(record.overallScore)">
-                {{ formatScoreOutOfTen(record.overallScore) }}
+              <div class="score-summary-label">{{ scoreSummaryPrimary.label }}</div>
+              <div class="score-summary-value" :class="getScoreColorClass(scoreSummaryPrimary.score)">
+                {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}
               </div>
             </div>
-            <div v-if="record.valueItemsScore !== null && record.valueItemsScore !== undefined" class="score-summary-metric">
-              <span class="score-summary-metric__label">Value</span>
-              <span class="score-summary-metric__value">{{ formatScoreValue(record.valueItemsScore) }}</span>
-            </div>
-            <div v-if="record.binItemsScore !== null && record.binItemsScore !== undefined" class="score-summary-metric">
-              <span class="score-summary-metric__label">Binary</span>
-              <span class="score-summary-metric__value">{{ formatScoreValue(record.binItemsScore) }}</span>
+            <div v-for="metric in scoreSummarySecondaryMetrics" :key="metric.key" class="score-summary-metric">
+              <span class="score-summary-metric__label">{{ metric.label }}</span>
+              <span class="score-summary-metric__value">{{ formatScoreValue(metric.score) }}</span>
             </div>
           </div>
         </div>
@@ -213,9 +207,9 @@
           fixed-header fixed-footer style="height: 100%;" class="elevation-1 v-table--striped"
           :class="{ 'clickable-rows': hasScores }" @click:row="handleRowClick">
           <template #item.statusSort="{ item }">
-            <v-chip :color="getStatusColor(item.STATUS)" size="small" variant="tonal" class="status-pill" label>
+            <span class="status-text" :class="getStatusTextClass(item.STATUS)">
               {{ normalizeStatus(item.STATUS) }}
-            </v-chip>
+            </span>
           </template>
           <template #item.VALUE="{ item }">
             <span class="table-value" :class="getValueClass(item)">{{ formatTableValue(item) }}</span>
@@ -229,7 +223,7 @@
           <template #item.scoreSort="{ item }">
             <template v-if="item.score !== undefined && item.score !== null">
               <v-chip :color="getScoreColor(item.score)" size="small" variant="tonal"
-                class="font-weight-medium cursor-pointer score-cell-chip" @click.stop="showScoreBreakdown(item)">
+                class="font-weight-bold cursor-pointer score-cell-chip" @click.stop="showScoreBreakdown(item)">
                 {{ formatScoreValue(item.score) }}
               </v-chip>
             </template>
@@ -473,6 +467,21 @@ import type { ScoringType } from '../types/scoring.types'
 import { getScoreColor, SCORING_TYPE_INFO } from '../types/scoring.types'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
 
+type TestItemFilter = 'all' | 'value' | 'non-value' | 'bin'
+type ScoreFilterType = 'gt' | 'gte' | 'lt' | 'lte' | 'eq'
+type ScoreSummaryMetricKey = 'overall' | 'value' | 'binary'
+
+interface ScoreSummaryMetric {
+  key: ScoreSummaryMetricKey
+  label: string
+  score: number
+}
+
+interface ForcedFailSummary {
+  text: string
+  clickable: boolean
+}
+
 interface Props {
   modelValue: boolean
   record: NormalizedRecord | null
@@ -491,19 +500,19 @@ const emit = defineEmits<Emits>()
 // Dialog state
 const isOpen = computed({
   get: () => props.modelValue,
-  set: (val) => emit('update:modelValue', val),
+  set: (val: boolean) => emit('update:modelValue', val),
 })
 
 const isFullscreen = ref(false)
 
 // Filter controls
 // UPDATED: Default to 'all' (Show All) instead of 'value'
-const testItemFilter = ref<('all' | 'value' | 'non-value' | 'bin')[]>(['all'])
+const testItemFilter = ref<TestItemFilter[]>(['all'])
 const searchTerms = ref<string[]>([])
 const showCopySuccess = ref(false)
 
 // UPDATED: Score filter state
-const scoreFilterType = ref<'gt' | 'gte' | 'lt' | 'lte' | 'eq' | null>(null)
+const scoreFilterType = ref<ScoreFilterType | null>(null)
 const scoreFilterValue = ref<number | null>(null)
 
 // Score breakdown dialog
@@ -515,7 +524,7 @@ const showForcedFailDialog = ref(false)
 const forcedFailSearch = ref('')
 
 // Filter options for dropdown
-const testItemFilterOptions = [
+const testItemFilterOptions: { title: string; value: TestItemFilter }[] = [
   { title: 'Criteria Data ★', value: 'value' },
   { title: 'Show All', value: 'all' },
   { title: 'Non-Criteria', value: 'non-value' },
@@ -523,7 +532,7 @@ const testItemFilterOptions = [
 ]
 
 // UPDATED: Score filter options
-const scoreFilterOptions = [
+const scoreFilterOptions: { title: string; value: ScoreFilterType }[] = [
   { title: '> Greater than', value: 'gt' },
   { title: '≥ Greater or equal', value: 'gte' },
   { title: '< Less than', value: 'lt' },
@@ -533,7 +542,101 @@ const scoreFilterOptions = [
 
 // Computed: check if scores are available
 const hasScores = computed(() => {
-  return props.record?.testItems?.some((item) => item.score !== undefined) ?? false
+  return props.record?.testItems?.some((item: NormalizedTestItem) => item.score !== undefined) ?? false
+})
+
+function hasScore(score: number | null | undefined): score is number {
+  return score !== null && score !== undefined
+}
+
+function areDisplayedScoresEqual(left: number | null | undefined, right: number | null | undefined): boolean {
+  if (!hasScore(left) || !hasScore(right)) {
+    return false
+  }
+
+  return formatScoreValue(left) === formatScoreValue(right)
+}
+
+const scoreSummaryPrimary = computed<ScoreSummaryMetric | null>(() => {
+  const record = props.record
+
+  if (!record) {
+    return null
+  }
+
+  if (hasScore(record.overallScore)) {
+    return { key: 'overall', label: 'Overall Score', score: record.overallScore }
+  }
+
+  if (hasScore(record.valueItemsScore)) {
+    return { key: 'value', label: 'Value', score: record.valueItemsScore }
+  }
+
+  if (hasScore(record.binItemsScore)) {
+    return { key: 'binary', label: 'Binary', score: record.binItemsScore }
+  }
+
+  return null
+})
+
+const scoreSummarySecondaryMetrics = computed<ScoreSummaryMetric[]>(() => {
+  const record = props.record
+  const primaryMetric = scoreSummaryPrimary.value
+
+  if (!record || !primaryMetric) {
+    return []
+  }
+
+  const candidates: ScoreSummaryMetric[] = []
+
+  if (hasScore(record.valueItemsScore)) {
+    candidates.push({ key: 'value', label: 'Value', score: record.valueItemsScore })
+  }
+
+  if (hasScore(record.binItemsScore)) {
+    candidates.push({ key: 'binary', label: 'Binary', score: record.binItemsScore })
+  }
+
+  return candidates.reduce<ScoreSummaryMetric[]>((visibleMetrics, metric) => {
+    if (metric.key === primaryMetric.key || areDisplayedScoresEqual(metric.score, primaryMetric.score)) {
+      return visibleMetrics
+    }
+
+    if (
+      visibleMetrics.some((visibleMetric: ScoreSummaryMetric) =>
+        areDisplayedScoresEqual(visibleMetric.score, metric.score),
+      )
+    ) {
+      return visibleMetrics
+    }
+
+    visibleMetrics.push(metric)
+    return visibleMetrics
+  }, [])
+})
+
+const forcedFailSummary = computed<ForcedFailSummary | null>(() => {
+  const record = props.record
+
+  if (!record?.isForcedFailure) {
+    return null
+  }
+
+  const threshold = record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5'
+  const failingItemCount = record.forcedFailureDetails?.length ?? 0
+  const itemLabel = failingItemCount === 1 ? 'item' : 'items'
+
+  return {
+    text:
+      failingItemCount > 0
+        ? `Forced fail · ${failingItemCount} ${itemLabel} below ${threshold} / 10`
+        : `Forced fail · below ${threshold} / 10`,
+    clickable: failingItemCount > 0,
+  }
+})
+
+const hasScoreSummary = computed(() => {
+  return Boolean(scoreSummaryPrimary.value || forcedFailSummary.value)
 })
 
 // Dynamic headers - add Score column if scores are available
@@ -554,7 +657,7 @@ const testItemHeaders = computed(() => {
 })
 
 const tableTestItems = computed(() => {
-  return filteredTestItems.value.map((item) => ({
+  return filteredTestItems.value.map((item: NormalizedTestItem) => ({
     ...item,
     statusSort: normalizeStatus(item.STATUS),
     scoreSort: item.score ?? Number.NEGATIVE_INFINITY,
@@ -610,6 +713,12 @@ function getValueClass(item: NormalizedTestItem): string {
   if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
   if (value === '-999') return 'text-medium-emphasis'
   return 'text-high-emphasis'
+}
+
+function getStatusTextClass(status: string | undefined): string {
+  if (isStatusPass(status ?? '')) return 'text-success'
+  if (isStatusFail(status ?? '')) return 'text-error'
+  return 'text-medium-emphasis'
 }
 
 function formatScoreValue(score: number | null | undefined): string {
@@ -674,7 +783,7 @@ async function copyToClipboard(text: string): Promise<void> {
   }
 }
 
-watch(showForcedFailDialog, (isOpen) => {
+watch(showForcedFailDialog, (isOpen: boolean) => {
   if (!isOpen) {
     forcedFailSearch.value = ''
   }
@@ -688,8 +797,8 @@ const filteredTestItems = computed(() => {
 
   // Apply test item type filter (supports multiple selections)
   if (testItemFilter.value.length > 0 && !testItemFilter.value.includes('all')) {
-    items = items.filter((item) => {
-      return testItemFilter.value.some((filterType) => {
+    items = items.filter((item: NormalizedTestItem) => {
+      return testItemFilter.value.some((filterType: TestItemFilter) => {
         switch (filterType) {
           case 'value':
             return isValueData(item)
@@ -706,11 +815,11 @@ const filteredTestItems = computed(() => {
 
   // UPDATED: Apply multi-term regex search (AND logic - all terms must match)
   if (searchTerms.value.length > 0) {
-    items = items.filter((item) => {
+    items = items.filter((item: NormalizedTestItem) => {
       const searchableText =
         `${item.NAME || ''} ${item.STATUS || ''} ${item.VALUE || ''}`.toLowerCase()
       // AND logic: every term must match
-      return searchTerms.value.every((term) => {
+      return searchTerms.value.every((term: string) => {
         const trimmedTerm = term.trim().toLowerCase()
         if (!trimmedTerm) return true // Empty terms don't affect filtering
         try {
@@ -725,7 +834,7 @@ const filteredTestItems = computed(() => {
 
   // UPDATED: Apply score filter if active
   if (scoreFilterType.value && scoreFilterValue.value !== null && hasScores.value) {
-    items = items.filter((item) => {
+    items = items.filter((item: NormalizedTestItem) => {
       if (item.score === undefined || item.score === null) return true // Keep items without scores
       const score = item.score * 10 // Convert to 0-10 scale for comparison
       // biome-ignore lint/style/noNonNullAssertion: scoreFilterValue !== null is checked in outer condition
@@ -758,6 +867,12 @@ function close(): void {
 
 function handleDownload(): void {
   emit('download')
+}
+
+function openForcedFailDialog(): void {
+  if (forcedFailSummary.value?.clickable) {
+    showForcedFailDialog.value = true
+  }
 }
 
 // Score-related helpers
@@ -966,6 +1081,36 @@ watch(
   justify-content: flex-end;
 }
 
+.score-summary-alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.55rem 0.8rem;
+  border-radius: 12px;
+  border: 1px solid rgba(var(--v-theme-warning), 0.26);
+  background: rgba(var(--v-theme-warning), 0.12);
+  color: rgba(var(--v-theme-on-surface), 0.84);
+}
+
+.score-summary-alert--interactive {
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.score-summary-alert--interactive:hover {
+  background: rgba(var(--v-theme-warning), 0.18);
+  border-color: rgba(var(--v-theme-warning), 0.38);
+}
+
+.score-summary-alert__icon {
+  color: rgb(var(--v-theme-warning));
+}
+
+.score-summary-alert__text {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
 .score-summary-primary {
   min-width: 150px;
   padding: 0.6rem 0.85rem;
@@ -1010,10 +1155,11 @@ watch(
   color: rgba(var(--v-theme-on-surface), 0.84);
 }
 
-.status-pill {
-  min-width: 74px;
-  justify-content: center;
+.status-text {
+  display: inline-block;
+  min-width: 52px;
   font-weight: 600;
+  letter-spacing: 0.01em;
 }
 
 .table-value {
