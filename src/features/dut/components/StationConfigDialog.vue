@@ -1,44 +1,64 @@
 <template>
-    <v-dialog v-model="internalShow" max-width="900px" persistent scrollable>
-        <v-card>
+    <v-dialog v-model="internalShow" :fullscreen="isFullscreen" :max-width="isFullscreen ? undefined : 900" persistent scrollable>
+        <v-card class="station-config-card">
             <v-card-title class="d-flex align-center justify-space-between bg-secondary">
-                <div class="d-flex align-center">
+                <div class="d-flex align-center station-config-title">
                     <v-icon class="mr-2">mdi-cog</v-icon>
-                    Configure Station: {{ station?.display_station_name }}
+                    <span class="text-truncate">Configure Station: {{ station?.display_station_name }}</span>
                 </div>
-                <v-btn icon="mdi-close" variant="text" color="white" @click="handleClose" />
+                <div class="d-flex align-center gap-1">
+                    <v-btn
+                      :icon="isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'"
+                      variant="text"
+                      color="white"
+                      :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'"
+                      @click="toggleFullscreen"
+                    />
+                    <v-btn icon="mdi-close" variant="text" color="white" @click="handleClose" />
+                </div>
             </v-card-title>
 
-            <v-card-text class="pa-4" style="max-height: 70vh; overflow-y: auto;">
-                <v-card variant="tonal" color="warning" class="mb-4 min-score-card">
-                  <v-card-text class="pa-4">
-                    <div class="d-flex align-start justify-space-between flex-wrap gap-3">
-                      <div>
-                        <div class="text-subtitle-1 font-weight-medium">Test Item Minimum Score</div>
-                        <div class="text-caption text-medium-emphasis mt-1">
-                          Applies only to scored numeric test items. If any scored numeric item falls below
-                          this threshold, the DUT keeps its calculated score but its status becomes
+            <v-card-text class="pa-4 station-config-body" :class="{ 'station-config-body--fullscreen': isFullscreen }">
+                <v-card variant="outlined" class="mb-4 min-score-section">
+                  <v-card-text class="pa-3">
+                    <div class="d-flex align-center justify-space-between flex-wrap gap-3">
+                      <div class="min-score-summary">
+                        <div class="text-subtitle-2 font-weight-medium">Minimum Test Item Score</div>
+                        <div class="text-caption text-medium-emphasis">
+                          Applies only to scored numeric items. Low items keep their score and switch to
                           <strong>Min. Score Fail</strong>.
                         </div>
                       </div>
-                      <v-switch v-model="localConfig.minimumItemScoreEnabled" color="warning" inset
-                        label="Enabled" hide-details class="min-score-switch" />
-                    </div>
-
-                    <v-expand-transition>
-                      <div v-if="localConfig.minimumItemScoreEnabled" class="mt-4">
-                        <v-text-field v-model.number="localConfig.minimumItemScore" label="Threshold"
-                          type="number" variant="outlined" density="comfortable"
-                          prepend-inner-icon="mdi-chart-box-outline" min="0" max="10" step="0.1"
-                          suffix="/ 10" hint="Default threshold is 6.5 / 10"
-                          persistent-hint />
+                      <div class="d-flex align-center gap-3 flex-wrap min-score-controls">
+                        <v-switch
+                          v-model="localConfig.minimumItemScoreEnabled"
+                          color="warning"
+                          inset
+                          density="compact"
+                          label="Enabled"
+                          hide-details
+                          class="min-score-switch"
+                        />
+                        <v-text-field
+                          v-if="localConfig.minimumItemScoreEnabled"
+                          v-model.number="localConfig.minimumItemScore"
+                          label="Threshold"
+                          type="number"
+                          variant="outlined"
+                          density="compact"
+                          prepend-inner-icon="mdi-chart-box-outline"
+                          min="0"
+                          max="10"
+                          step="0.1"
+                          suffix="/ 10"
+                          hide-details
+                          class="min-score-input"
+                        />
+                        <v-chip v-else size="small" color="grey" variant="outlined">
+                          Check disabled
+                        </v-chip>
                       </div>
-                    </v-expand-transition>
-
-                    <v-chip v-if="!localConfig.minimumItemScoreEnabled" size="small" color="grey"
-                      variant="outlined" class="mt-4">
-                      Minimum score check disabled
-                    </v-chip>
+                    </div>
                   </v-card-text>
                 </v-card>
 
@@ -140,16 +160,14 @@
 
                         <!-- No Test Items -->
                         <v-alert v-else-if="uniqueAvailableTestItems.length === 0" type="info" variant="tonal">
-                            No test items available. Click "Refresh" to load test items, or ensure device IDs and date
-                            range are selected.
+                            No test items available. Refresh the source after device IDs and date range are ready.
                         </v-alert>
 
                         <!-- Test Items Selection -->
                         <div v-else>
                           <v-row dense class="mb-3">
-                            <v-col cols="12" md="7">
+                            <v-col cols="12" lg="7">
                               <div class="d-flex align-center gap-2 flex-wrap">
-                                <span class="text-caption text-medium-emphasis">Editing list:</span>
                                 <v-btn-toggle v-model="selectionTarget" color="primary" density="compact"
                                   mandatory variant="outlined">
                                   <v-btn value="include" size="small"
@@ -159,114 +177,178 @@
                                 </v-btn-toggle>
                                 <v-chip :color="selectionTarget === 'include' ? 'success' : 'warning'"
                                   size="small" variant="tonal">
-                                  {{ activeSelectionLabel }} List
+                                  Editing {{ activeSelectionLabel }}
+                                </v-chip>
+                                <v-chip size="small" variant="outlined">
+                                  {{ activeSelectionCount }} Selected
+                                </v-chip>
+                                <v-chip size="small" variant="outlined">
+                                  {{ filteredTestItems.length }} Showing
                                 </v-chip>
                               </div>
                             </v-col>
-                            <v-col cols="12" md="5">
-                              <div class="text-caption text-medium-emphasis selection-help-text">
-                                Add items to Include to analyze them. Add items to Exclude to remove them.
-                                If an item appears in both lists, Exclude wins.
+                            <v-col cols="12" lg="5">
+                              <div class="d-flex align-center justify-start justify-lg-end gap-2 flex-wrap">
+                                <v-btn size="small" variant="flat" color="secondary"
+                                  prepend-icon="mdi-tune-variant" @click="openBulkScoringConfig"
+                                  :disabled="selectedCriteriaCount === 0">
+                                  Bulk Scoring ({{ selectedCriteriaCount }})
+                                </v-btn>
+                                <v-menu location="bottom end">
+                                  <template #activator="{ props: menuProps }">
+                                    <v-btn v-bind="menuProps" size="small" variant="text"
+                                      prepend-icon="mdi-lightning-bolt-outline">
+                                      Quick Actions
+                                    </v-btn>
+                                  </template>
+                                  <v-list density="compact" min-width="260">
+                                    <v-list-item @click="selectDisplayedTestItems"
+                                      :disabled="filteredTestItems.length === 0">
+                                      <template #prepend>
+                                        <v-icon color="info">mdi-text-box-plus-outline</v-icon>
+                                      </template>
+                                      <v-list-item-title>
+                                        Add Displayed to {{ activeSelectionLabel }}
+                                      </v-list-item-title>
+                                      <v-list-item-subtitle>
+                                        {{ filteredTestItems.length }} visible item(s)
+                                      </v-list-item-subtitle>
+                                    </v-list-item>
+                                    <v-list-item @click="selectValueTestItems">
+                                      <template #prepend>
+                                        <v-icon color="success">mdi-filter-check-outline</v-icon>
+                                      </template>
+                                      <v-list-item-title>
+                                        Add Criteria to {{ activeSelectionLabel }}
+                                      </v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item @click="selectNonValueTestItems">
+                                      <template #prepend>
+                                        <v-icon color="warning">mdi-format-list-bulleted-square</v-icon>
+                                      </template>
+                                      <v-list-item-title>
+                                        Add Non-Criteria to {{ activeSelectionLabel }}
+                                      </v-list-item-title>
+                                    </v-list-item>
+                                    <v-list-item @click="clearTestItemSelection"
+                                      :disabled="activeSelectionCount === 0">
+                                      <template #prepend>
+                                        <v-icon color="error">mdi-playlist-remove</v-icon>
+                                      </template>
+                                      <v-list-item-title>
+                                        Clear {{ activeSelectionLabel }}
+                                      </v-list-item-title>
+                                    </v-list-item>
+                                    <v-divider class="my-1" />
+                                    <v-list-item @click="selectDisplayedAndConfigureScore"
+                                      :disabled="displayedCriteriaCount === 0">
+                                      <template #prepend>
+                                        <v-icon color="primary">mdi-playlist-check</v-icon>
+                                      </template>
+                                      <v-list-item-title>
+                                        Add Displayed Criteria And Configure Score
+                                      </v-list-item-title>
+                                      <v-list-item-subtitle>
+                                        {{ displayedCriteriaCount }} criteria item(s)
+                                      </v-list-item-subtitle>
+                                    </v-list-item>
+                                  </v-list>
+                                </v-menu>
                               </div>
                             </v-col>
                           </v-row>
 
+                          <div class="text-caption text-medium-emphasis mb-3">
+                            Add items to Include for analysis, add items to Exclude to remove them, and let
+                            Exclude win on overlap.
+                          </div>
+
                           <v-row dense class="mb-3">
                             <v-col cols="12">
-                              <v-text-field v-model="testItemSearchQuery" label="Search Test Items"
+                              <v-text-field v-model="testItemSearchQuery" :label="`Search ${activeSelectionLabel} Candidates`"
                                 prepend-inner-icon="mdi-magnify" variant="outlined" density="compact"
                                 hide-details clearable placeholder="Search by test item name..." />
                             </v-col>
                           </v-row>
 
-                          <v-row dense class="mb-3">
-                            <v-col cols="12" class="d-flex align-center gap-2 flex-wrap">
-                              <span class="text-caption text-medium-emphasis">Quick add to {{ activeSelectionLabel }}:</span>
-                              <v-btn size="x-small" variant="tonal" color="info" @click="selectDisplayedTestItems"
-                                :disabled="filteredTestItems.length === 0">
-                                Add Displayed ({{ filteredTestItems.length }})
-                              </v-btn>
-                              <v-btn size="x-small" variant="tonal" color="success" @click="selectValueTestItems">
-                                Add Criteria
-                              </v-btn>
-                              <v-btn size="x-small" variant="tonal" color="warning"
-                                @click="selectNonValueTestItems">
-                                Add Non-Criteria
-                              </v-btn>
-                              <v-btn size="x-small" variant="outlined" color="error"
-                                @click="clearTestItemSelection">
-                                Clear {{ activeSelectionLabel }}
-                              </v-btn>
-                              <v-divider vertical class="mx-2" />
-                              <v-btn size="x-small" variant="flat" color="secondary"
-                                prepend-icon="mdi-tune-variant" @click="openBulkScoringConfig"
-                                :disabled="selectedCriteriaCount === 0">
-                                Bulk Config ({{ selectedCriteriaCount }})
-                              </v-btn>
-                              <v-btn size="x-small" variant="flat" color="primary"
-                                prepend-icon="mdi-playlist-check" @click="selectDisplayedAndConfigureScore"
-                                :disabled="filteredTestItems.length === 0">
-                                Select Displayed & Configure Score ({{ displayedCriteriaCount }})
-                              </v-btn>
-                            </v-col>
-                          </v-row>
-
-                          <v-row dense class="mb-3">
-                            <v-col cols="12" md="6">
-                              <v-card variant="outlined" class="selection-bucket include-bucket">
-                                <v-card-title class="d-flex align-center justify-space-between py-2 px-3">
-                                  <div class="d-flex align-center gap-2">
-                                    <v-icon color="success">mdi-playlist-check</v-icon>
-                                    <span class="text-subtitle-2">Included In Analysis</span>
-                                  </div>
-                                  <v-btn size="x-small" variant="text" color="error"
-                                    :disabled="includedTestItems.length === 0"
-                                    @click="clearIncludedTestItems">
-                                    Clear
-                                  </v-btn>
-                                </v-card-title>
-                                <v-card-text class="pt-0 px-3 pb-3">
-                                  <div v-if="includedTestItems.length > 0" class="d-flex flex-wrap gap-1">
-                                    <v-chip v-for="itemName in includedTestItems" :key="`include-${itemName}`"
-                                      size="small" color="success" variant="tonal" closable
-                                      @click:close="removeIncludedTestItem(itemName)">
-                                      {{ itemName }}
-                                    </v-chip>
-                                  </div>
-                                  <div v-else class="text-caption text-medium-emphasis">
-                                    Empty means all available non-bin items will be included when saved.
-                                  </div>
-                                </v-card-text>
-                              </v-card>
-                            </v-col>
-                            <v-col cols="12" md="6">
-                              <v-card variant="outlined" class="selection-bucket exclude-bucket">
-                                <v-card-title class="d-flex align-center justify-space-between py-2 px-3">
-                                  <div class="d-flex align-center gap-2">
-                                    <v-icon color="warning">mdi-playlist-remove</v-icon>
-                                    <span class="text-subtitle-2">Excluded From Analysis</span>
-                                  </div>
-                                  <v-btn size="x-small" variant="text" color="error"
-                                    :disabled="excludedTestItems.length === 0"
-                                    @click="clearExcludedTestItems">
-                                    Clear
-                                  </v-btn>
-                                </v-card-title>
-                                <v-card-text class="pt-0 px-3 pb-3">
-                                  <div v-if="excludedTestItems.length > 0" class="d-flex flex-wrap gap-1">
-                                    <v-chip v-for="itemName in excludedTestItems" :key="`exclude-${itemName}`"
-                                      size="small" color="warning" variant="tonal" closable
-                                      @click:close="removeExcludedTestItem(itemName)">
-                                      {{ itemName }}
-                                    </v-chip>
-                                  </div>
-                                  <div v-else class="text-caption text-medium-emphasis">
-                                    Use this list to remove specific items after inclusion rules are applied.
-                                  </div>
-                                </v-card-text>
-                              </v-card>
-                            </v-col>
-                          </v-row>
+                          <v-expansion-panels variant="accordion" class="mb-3 selection-review-panels">
+                            <v-expansion-panel>
+                              <v-expansion-panel-title>
+                                <div class="d-flex align-center gap-2 flex-wrap selection-review-summary">
+                                  <span class="text-body-2 font-weight-medium">Review selections</span>
+                                  <v-chip size="small" color="success" variant="tonal">
+                                    <v-icon start size="small">mdi-playlist-check</v-icon>
+                                    {{ includedTestItems.length }} Included
+                                  </v-chip>
+                                  <v-chip size="small" color="warning" variant="tonal">
+                                    <v-icon start size="small">mdi-playlist-remove</v-icon>
+                                    {{ excludedTestItems.length }} Excluded
+                                  </v-chip>
+                                  <v-chip v-if="includedTestItems.length === 0" size="small" color="info" variant="tonal">
+                                    Defaults to all analyzable items on save
+                                  </v-chip>
+                                </div>
+                              </v-expansion-panel-title>
+                              <v-expansion-panel-text>
+                                <v-row dense>
+                                  <v-col cols="12" md="6">
+                                    <v-card variant="outlined" class="selection-review-card">
+                                      <v-card-title class="d-flex align-center justify-space-between py-2 px-3">
+                                        <div class="d-flex align-center gap-2">
+                                          <v-icon color="success">mdi-playlist-check</v-icon>
+                                          <span class="text-subtitle-2">Included In Analysis</span>
+                                        </div>
+                                        <v-btn size="x-small" variant="text" color="error"
+                                          :disabled="includedTestItems.length === 0"
+                                          @click="clearIncludedTestItems">
+                                          Clear
+                                        </v-btn>
+                                      </v-card-title>
+                                      <v-card-text class="pt-0 px-3 pb-3">
+                                        <div v-if="includedTestItems.length > 0" class="d-flex flex-wrap gap-1">
+                                          <v-chip v-for="itemName in includedTestItems" :key="`include-${itemName}`"
+                                            size="small" color="success" variant="tonal" closable
+                                            @click:close="removeIncludedTestItem(itemName)">
+                                            {{ itemName }}
+                                          </v-chip>
+                                        </div>
+                                        <div v-else class="text-caption text-medium-emphasis">
+                                          Empty means all available non-bin items will be included when saved.
+                                        </div>
+                                      </v-card-text>
+                                    </v-card>
+                                  </v-col>
+                                  <v-col cols="12" md="6">
+                                    <v-card variant="outlined" class="selection-review-card">
+                                      <v-card-title class="d-flex align-center justify-space-between py-2 px-3">
+                                        <div class="d-flex align-center gap-2">
+                                          <v-icon color="warning">mdi-playlist-remove</v-icon>
+                                          <span class="text-subtitle-2">Excluded From Analysis</span>
+                                        </div>
+                                        <v-btn size="x-small" variant="text" color="error"
+                                          :disabled="excludedTestItems.length === 0"
+                                          @click="clearExcludedTestItems">
+                                          Clear
+                                        </v-btn>
+                                      </v-card-title>
+                                      <v-card-text class="pt-0 px-3 pb-3">
+                                        <div v-if="excludedTestItems.length > 0" class="d-flex flex-wrap gap-1">
+                                          <v-chip v-for="itemName in excludedTestItems" :key="`exclude-${itemName}`"
+                                            size="small" color="warning" variant="tonal" closable
+                                            @click:close="removeExcludedTestItem(itemName)">
+                                            {{ itemName }}
+                                          </v-chip>
+                                        </div>
+                                        <div v-else class="text-caption text-medium-emphasis">
+                                          Use this list to remove specific items after inclusion rules are applied.
+                                        </div>
+                                      </v-card-text>
+                                    </v-card>
+                                  </v-col>
+                                </v-row>
+                              </v-expansion-panel-text>
+                            </v-expansion-panel>
+                          </v-expansion-panels>
 
                           <v-alert v-if="overlapItems.length > 0" type="warning" variant="tonal" density="compact"
                             class="mb-3">
@@ -274,7 +356,8 @@
                             excluded from analysis.
                           </v-alert>
 
-                          <div style="max-height: 300px; overflow-y: auto;" class="border rounded">
+                          <div class="border rounded test-item-list-container"
+                            :class="{ 'test-item-list-container--fullscreen': isFullscreen }">
                             <v-list density="compact" class="pa-0">
                               <v-list-item v-for="item in filteredTestItems" :key="item.name"
                                 @click="toggleTestItem(item.name)" class="test-item-row">
@@ -325,9 +408,7 @@
 
                           <div class="text-caption text-medium-emphasis mt-2">
                             <v-icon size="x-small">mdi-information</v-icon>
-                            Leave the Include list empty to default to all CRITERIA and NON-CRITERIA items when
-                            you save. Excluded items are removed afterward. Use the scoring button on included
-                            criteria items to configure the scoring algorithm.
+                            Leave Include empty to default to all analyzable items on save. Use the scoring button on included criteria items when you need custom scoring.
                           </div>
                         </div>
                     </v-card-text>
@@ -667,6 +748,7 @@ const localConfig = ref<StationConfig>({
   testItemScoringConfigs: {},
 })
 
+const isFullscreen = ref(false)
 const testItemSearchQuery = ref('')
 const selectionTarget = ref<'include' | 'exclude'>('include')
 
@@ -740,6 +822,7 @@ const filteredTestItems = computed(() => {
 const includedTestItems = computed(() => localConfig.value.includedTestItems ?? [])
 const excludedTestItems = computed(() => localConfig.value.excludedTestItems ?? [])
 const activeSelectionLabel = computed(() => (selectionTarget.value === 'include' ? 'Include' : 'Exclude'))
+const activeSelectionCount = computed(() => getSelectionItems(selectionTarget.value).length)
 const overlapItems = computed(() => {
   const excludeSet = new Set(excludedTestItems.value)
   return includedTestItems.value.filter((itemName) => excludeSet.has(itemName))
@@ -820,6 +903,7 @@ watch(
   () => props.show,
   (newShow) => {
     if (newShow && props.station) {
+      isFullscreen.value = false
       if (props.existingConfig) {
         localConfig.value = migrateStationConfig(props.existingConfig)
       } else {
@@ -829,9 +913,15 @@ watch(
       selectionTarget.value = 'include'
       scoringConfigItem.value = null
       scoringConfigDialog.value = false
+    } else if (!newShow) {
+      isFullscreen.value = false
     }
   },
 )
+
+function toggleFullscreen(): void {
+  isFullscreen.value = !isFullscreen.value
+}
 
 function toggleSelectAllDevices(): void {
   if (allDevicesSelected.value) {
@@ -947,17 +1037,20 @@ function handleSave(): void {
   }
 
   emit('save', configToSave)
+  isFullscreen.value = false
   internalShow.value = false
 }
 
 function handleRemove(): void {
   if (props.station) {
     emit('remove', props.station.display_station_name)
+    isFullscreen.value = false
     internalShow.value = false
   }
 }
 
 function handleClose(): void {
+  isFullscreen.value = false
   internalShow.value = false
 }
 
@@ -1173,6 +1266,23 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
     border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
+.station-config-card {
+  height: 100%;
+}
+
+.station-config-title {
+  min-width: 0;
+}
+
+.station-config-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+
+.station-config-body--fullscreen {
+  max-height: calc(100vh - 64px);
+}
+
 .gap-1 {
     gap: 0.25rem;
 }
@@ -1250,27 +1360,68 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
     overflow: visible;
 }
 
-.min-score-card {
-  border: 1px solid rgba(255, 193, 7, 0.25);
+.min-score-section {
+  border-color: rgba(255, 193, 7, 0.28);
+  background: linear-gradient(180deg, rgba(255, 193, 7, 0.08), rgba(255, 193, 7, 0.02));
+}
+
+.min-score-summary {
+  flex: 1 1 320px;
 }
 
 .min-score-switch {
   min-width: 120px;
 }
 
-.selection-help-text {
-  line-height: 1.5;
+.min-score-controls {
+  justify-content: flex-end;
 }
 
-.selection-bucket {
-  min-height: 104px;
+.min-score-input {
+  width: 150px;
 }
 
-.include-bucket {
-  border-color: rgba(76, 175, 80, 0.4);
+.selection-review-panels :deep(.v-expansion-panel-title) {
+  min-height: 60px;
 }
 
-.exclude-bucket {
-  border-color: rgba(255, 193, 7, 0.4);
+.selection-review-summary {
+  min-width: 0;
+}
+
+.selection-review-card {
+  height: 100%;
+}
+
+.test-item-list-container {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.test-item-list-container--fullscreen {
+  max-height: 48vh;
+}
+
+@media (max-width: 960px) {
+  .min-score-controls {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .min-score-input {
+    width: 100%;
+    max-width: 220px;
+  }
+}
+
+@media (max-width: 600px) {
+  .station-config-body {
+    padding: 12px !important;
+  }
+
+  .test-item-list-container,
+  .test-item-list-container--fullscreen {
+    max-height: 42vh;
+  }
 }
 </style>
