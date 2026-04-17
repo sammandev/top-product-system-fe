@@ -36,7 +36,7 @@ export interface ScoringPolicyInfo {
   value: ScoringPolicy
   label: string
   description: string
-  icon: string
+  // icon: string
 }
 
 // Available scoring policies for asymmetrical type
@@ -45,19 +45,19 @@ export const SCORING_POLICIES: ScoringPolicyInfo[] = [
     value: 'symmetrical',
     label: 'Based on Target',
     description: 'Peak score at target, linear decay to both limits',
-    icon: 'mdi-arrow-left-right',
+    // icon: 'mdi-arrow-left-right',
   },
   {
     value: 'higher',
     label: 'Higher than Target',
     description: 'Perfect score at/above target, decay below target to LCL',
-    icon: 'mdi-arrow-up-bold',
+    // icon: 'mdi-arrow-up-bold',
   },
   {
     value: 'lower',
     label: 'Lower than Target',
     description: 'Perfect score at/below target, decay above target to UCL',
-    icon: 'mdi-arrow-down-bold',
+    // icon: 'mdi-arrow-down-bold',
   },
 ]
 
@@ -142,7 +142,7 @@ export interface ScoringTypeInfo {
   label: string
   description: string
   useCase: string
-  icon: string
+  // icon: string
   color: string
   parameters: ScoringParameter[]
   formulaLatex?: string
@@ -175,10 +175,10 @@ export interface ScoringParameter {
 export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
   symmetrical: {
     type: 'symmetrical',
-    label: 'Symmetrical (Target Centered)',
+    label: 'Target Centered',
     description: 'Target is midpoint between UCL and LCL.',
     useCase: 'Most test items with UCL and LCL limits',
-    icon: 'mdi-arrow-left-right',
+    // icon: 'mdi-arrow-left-right',
     color: 'primary',
     formulaLatex: String.raw`score = 1 + 9 \cdot \frac{L - |x - T|}{L}`,
     variables: {
@@ -190,10 +190,10 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
   },
   asymmetrical: {
     type: 'asymmetrical',
-    label: 'Asymmetrical (Custom Target)',
+    label: 'Custom Target',
     description: 'Policy options: Based on Target, Higher than Target, or Lower than Target.',
     useCase: 'When optimal value is not centered between limits',
-    icon: 'mdi-arrow-left-right-bold',
+    // icon: 'mdi-arrow-left-right-bold',
     color: 'warning',
     formulaLatex: String.raw`score = 1 + 9 \cdot \frac{L - d}{L}`,
     variables: {
@@ -216,9 +216,9 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
   per_mask: {
     type: 'per_mask',
     label: 'Near Zero',
-    description: 'Near zero is ideal (e.g., PER/MASK).',
+    description: 'Near Zero is ideal (e.g., PER/MASK).',
     useCase: 'Packet Error Rate (PER) and MASK test items where 0 is ideal',
-    icon: 'mdi-target',
+    // icon: 'mdi-target',
     color: 'error',
     formulaLatex: String.raw`score = 1 + 9 \cdot \frac{UCL - x}{UCL}`,
     variables: {
@@ -232,7 +232,7 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     label: 'EVM',
     description: 'EVM scoring with exponent decay.',
     useCase: 'Error Vector Magnitude (EVM) test items where lower dB values are better',
-    icon: 'mdi-signal-cellular-3',
+    // icon: 'mdi-signal-cellular-3',
     color: 'info',
     formulaLatex: String.raw`score = 1 + 9 \cdot \left(1 - \frac{x - ref}{UCL - ref}\right)^{0.25}`,
     variables: {
@@ -248,7 +248,7 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     label: 'Binary (PASS/FAIL)',
     description: 'PASS = 10.0, FAIL = 0.0',
     useCase: 'Non-numeric test items (status-based)',
-    icon: 'mdi-toggle-switch',
+    // icon: 'mdi-toggle-switch',
     color: 'grey',
     formulaLatex: String.raw`score = \begin{cases} 10.0 & \text{STATUS} = \text{PASS} \\ 0.0 & \text{STATUS} = \text{FAIL} \end{cases}`,
     variables: {},
@@ -260,7 +260,7 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     label: 'Symmetrical (Legacy)',
     description: 'Legacy type - now uses standard symmetrical scoring',
     useCase: 'Legacy compatibility',
-    icon: 'mdi-chart-bell-curve',
+    // icon: 'mdi-chart-bell-curve',
     color: 'secondary',
     parameters: [],
   },
@@ -269,7 +269,7 @@ export const SCORING_TYPE_INFO: Record<ScoringType, ScoringTypeInfo> = {
     label: 'Throughput (Legacy)',
     description: 'Legacy type - now uses standard symmetrical scoring',
     useCase: 'Legacy compatibility',
-    icon: 'mdi-speedometer',
+    // icon: 'mdi-speedometer',
     color: 'success',
     parameters: [],
   },
