@@ -130,7 +130,7 @@
         <v-divider class="flex-shrink-0" />
 
         <!-- Overall Score Badges (moved here for more table space) -->
-        <div v-if="record.overallScore !== undefined" class="px-3 py-2 d-flex align-center flex-wrap gap-2">
+        <div v-if="record.overallScore !== undefined" class="px-3 py-3 d-flex align-center flex-wrap gap-3 score-summary-bar">
           <v-chip v-if="record.isForcedFailure" color="warning" variant="flat" size="small" prepend-icon="mdi-alert-octagon">
             Forced Fail: below {{ record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5' }} / 10
           </v-chip>
@@ -139,20 +139,22 @@
             {{ record.forcedFailureDetails.length }} failing item{{ record.forcedFailureDetails.length === 1 ? '' : 's' }}
           </v-chip>
           <v-spacer />
-          <v-chip color="primary" variant="tonal" size="small" prepend-icon="mdi-chart-line">
-            <strong>Overall Score:</strong>&nbsp;
-            <span :class="getScoreColorClass(record.overallScore)">
-              {{ (record.overallScore * 10).toFixed(2) }} / 10
-            </span>
-          </v-chip>
-          <v-chip v-if="record.valueItemsScore !== null && record.valueItemsScore !== undefined" color="success"
-            variant="outlined" size="x-small">
-            Value: {{ (record.valueItemsScore * 10).toFixed(2) }}
-          </v-chip>
-          <v-chip v-if="record.binItemsScore !== null && record.binItemsScore !== undefined" color="info"
-            variant="outlined" size="x-small">
-            Binary: {{ (record.binItemsScore * 10).toFixed(2) }}
-          </v-chip>
+          <div class="d-flex align-center flex-wrap gap-2 score-summary-metrics">
+            <div class="score-summary-primary">
+              <div class="score-summary-label">Overall Score</div>
+              <div class="score-summary-value" :class="getScoreColorClass(record.overallScore)">
+                {{ formatScoreOutOfTen(record.overallScore) }}
+              </div>
+            </div>
+            <div v-if="record.valueItemsScore !== null && record.valueItemsScore !== undefined" class="score-summary-metric">
+              <span class="score-summary-metric__label">Value</span>
+              <span class="score-summary-metric__value">{{ formatScoreValue(record.valueItemsScore) }}</span>
+            </div>
+            <div v-if="record.binItemsScore !== null && record.binItemsScore !== undefined" class="score-summary-metric">
+              <span class="score-summary-metric__label">Binary</span>
+              <span class="score-summary-metric__value">{{ formatScoreValue(record.binItemsScore) }}</span>
+            </div>
+          </div>
         </div>
       </div>
       <!-- End Sticky Header Container -->
@@ -211,25 +213,24 @@
           fixed-header fixed-footer style="height: 100%;" class="elevation-1 v-table--striped"
           :class="{ 'clickable-rows': hasScores }" @click:row="handleRowClick">
           <template #item.statusSort="{ item }">
-            <v-chip :color="getStatusColor(item.STATUS)" size="small">
+            <v-chip :color="getStatusColor(item.STATUS)" size="small" variant="tonal" class="status-pill" label>
               {{ normalizeStatus(item.STATUS) }}
             </v-chip>
           </template>
           <template #item.VALUE="{ item }">
-            <span :class="getValueClass(item)">{{ item.VALUE }}</span>
+            <span class="table-value" :class="getValueClass(item)">{{ formatTableValue(item) }}</span>
           </template>
           <template #item.UCL="{ item }">
-            <span class="text-medium-emphasis">{{ item.UCL || '-' }}</span>
+            <span class="table-limit">{{ item.UCL || '-' }}</span>
           </template>
           <template #item.LCL="{ item }">
-            <span class="text-medium-emphasis">{{ item.LCL || '-' }}</span>
+            <span class="table-limit">{{ item.LCL || '-' }}</span>
           </template>
           <template #item.scoreSort="{ item }">
             <template v-if="item.score !== undefined && item.score !== null">
-              <v-chip :color="getScoreColor(item.score)" size="small" variant="flat"
-                class="font-weight-bold cursor-pointer" @click.stop="showScoreBreakdown(item)">
-                {{ (item.score * 10).toFixed(2) }}
-                <v-icon size="x-small" end>mdi-information-outline</v-icon>
+              <v-chip :color="getScoreColor(item.score)" size="small" variant="tonal"
+                class="font-weight-medium cursor-pointer score-cell-chip" @click.stop="showScoreBreakdown(item)">
+                {{ formatScoreValue(item.score) }}
               </v-chip>
             </template>
             <span v-else class="text-medium-emphasis">-</span>
@@ -607,8 +608,26 @@ function getValueClass(item: NormalizedTestItem): string {
   const value = item.VALUE?.toUpperCase() || ''
   if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
   if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
-  if (value === '-999') return 'text-warning'
-  return ''
+  if (value === '-999') return 'text-medium-emphasis'
+  return 'text-high-emphasis'
+}
+
+function formatScoreValue(score: number | null | undefined): string {
+  if (score === null || score === undefined) return '-'
+  return (score * 10).toFixed(2)
+}
+
+function formatScoreOutOfTen(score: number | null | undefined): string {
+  const formattedScore = formatScoreValue(score)
+  return formattedScore === '-' ? formattedScore : `${formattedScore} / 10`
+}
+
+function formatTableValue(item: NormalizedTestItem): string {
+  const rawValue = item.VALUE?.trim() || ''
+  if (!rawValue || rawValue === '-999') return '-'
+  if (rawValue.toUpperCase() === 'PASS' || rawValue === '1') return 'PASS'
+  if (rawValue.toUpperCase() === 'FAIL' || rawValue === '0') return 'FAIL'
+  return rawValue
 }
 
 function formatTime(timeStr: string): string {
@@ -931,8 +950,86 @@ watch(
   gap: 0.5rem;
 }
 
+.gap-3 {
+  gap: 0.75rem;
+}
+
 .cursor-pointer {
   cursor: pointer;
+}
+
+.score-summary-bar {
+  background: linear-gradient(180deg, rgba(var(--v-theme-primary), 0.05), rgba(var(--v-theme-surface), 0.9));
+}
+
+.score-summary-metrics {
+  justify-content: flex-end;
+}
+
+.score-summary-primary {
+  min-width: 150px;
+  padding: 0.6rem 0.85rem;
+  border-radius: 12px;
+  background: rgba(var(--v-theme-primary), 0.08);
+  border: 1px solid rgba(var(--v-theme-primary), 0.14);
+}
+
+.score-summary-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(var(--v-theme-on-surface), 0.62);
+}
+
+.score-summary-value {
+  font-size: 1.05rem;
+  line-height: 1.2;
+}
+
+.score-summary-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  background: rgba(var(--v-theme-on-surface), 0.04);
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+}
+
+.score-summary-metric__label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(var(--v-theme-on-surface), 0.58);
+}
+
+.score-summary-metric__value {
+  font-weight: 700;
+  color: rgba(var(--v-theme-on-surface), 0.84);
+}
+
+.status-pill {
+  min-width: 74px;
+  justify-content: center;
+  font-weight: 600;
+}
+
+.table-value {
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.01em;
+}
+
+.table-limit {
+  color: rgba(var(--v-theme-on-surface), 0.56);
+  font-variant-numeric: tabular-nums;
+}
+
+.score-cell-chip {
+  min-width: 70px;
+  justify-content: center;
+  font-variant-numeric: tabular-nums;
 }
 
 :deep(.v-table--striped tbody tr:nth-of-type(even)) {
@@ -966,5 +1063,12 @@ watch(
 
 .forced-fail-item-append {
   flex-wrap: nowrap;
+}
+
+@media (max-width: 960px) {
+  .score-summary-metrics {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 </style>

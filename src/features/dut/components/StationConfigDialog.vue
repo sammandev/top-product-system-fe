@@ -140,7 +140,7 @@
                 </v-col>
                 <v-col cols="12" lg="5">
                   <div class="d-flex align-center justify-start justify-lg-end gap-2 flex-wrap">
-                    <v-btn size="small" variant="outlined" prepend-icon="mdi-tune-variant"
+                    <v-btn size="small" variant="outlined" prepend-icon="mdi-tune-variant" color="black"
                       @click="openBulkScoringConfig" :disabled="selectedCriteriaCount === 0">
                       Bulk Scoring ({{ selectedCriteriaCount }})
                     </v-btn>
@@ -188,7 +188,8 @@
                           </v-list-item-title>
                         </v-list-item>
                         <v-divider class="my-1" />
-                        <v-list-item @click="selectDisplayedAndConfigureScore" :disabled="displayedCriteriaCount === 0">
+                        <v-list-item v-if="selectionTarget === 'include'" @click="selectDisplayedAndConfigureScore"
+                          :disabled="displayedCriteriaCount === 0">
                           <template #prepend>
                             <v-icon color="primary">mdi-playlist-check</v-icon>
                           </template>
@@ -206,8 +207,8 @@
               </v-row>
 
               <div class="text-caption text-medium-emphasis mb-3">
-                Add items to Include for analysis, add items to Exclude to remove them, and moving
-                an item between lists automatically removes it from the other list.
+                Add items to Include for analysis, add items to Exclude to remove them, and items
+                already assigned to one list are locked while you edit the other list.
               </div>
 
               <v-row dense class="mb-3">
@@ -236,10 +237,12 @@
                 :class="{ 'test-item-list-container--fullscreen': isFullscreen }">
                 <v-virtual-scroll :items="filteredTestItemEntries" :height="testItemListHeight" item-height="56">
                   <template #default="{ item: entry }">
-                    <v-list-item :key="entry.name" @click="toggleTestItem(entry.name)" class="test-item-row">
+                    <v-list-item :key="entry.name" @click="toggleTestItem(entry.name)" class="test-item-row"
+                      :class="{ 'test-item-row--disabled': entry.isLockedByOppositeSelection }"
+                      :disabled="entry.isLockedByOppositeSelection">
                       <template #prepend>
                         <v-checkbox-btn :model-value="entry.isActiveSelection" @click.stop="toggleTestItem(entry.name)"
-                          density="compact" />
+                          density="compact" :disabled="entry.isLockedByOppositeSelection" />
                       </template>
                       <v-list-item-title class="text-body-2">
                         {{ entry.name }}
@@ -701,6 +704,9 @@ const excludedSet = computed(() => new Set(excludedTestItems.value))
 const activeSelectionSet = computed(() =>
   selectionTarget.value === 'include' ? includedSet.value : excludedSet.value,
 )
+const oppositeSelectionSet = computed(() =>
+  selectionTarget.value === 'include' ? excludedSet.value : includedSet.value,
+)
 const activeSelectionLabel = computed(() => (selectionTarget.value === 'include' ? 'Include' : 'Exclude'))
 const activeSelectionCount = computed(() => activeSelectionSet.value.size)
 const overlapItems = computed(() => {
@@ -718,6 +724,7 @@ const filteredTestItemEntries = computed(() => {
       isActiveSelection: activeSelectionSet.value.has(item.name),
       isIncluded,
       isExcluded,
+      isLockedByOppositeSelection: oppositeSelectionSet.value.has(item.name),
       canConfigureScoring: isIncluded && item.isValue,
       scoringLabel: scoringInfo?.label,
       scoringColor: scoringInfo?.color ?? 'primary',
@@ -807,11 +814,9 @@ function getSelectionItems(target: 'include' | 'exclude'): string[] {
 function setSelectionItems(target: 'include' | 'exclude', items: string[]): void {
   const normalized = normalizeTestItemNames(items)
   if (target === 'include') {
-    localConfig.value.includedTestItems = normalized
-    localConfig.value.excludedTestItems = excludedTestItems.value.filter((item: string) => !normalized.includes(item))
+    localConfig.value.includedTestItems = normalized.filter((item: string) => !excludedSet.value.has(item))
   } else {
-    localConfig.value.excludedTestItems = normalized
-    localConfig.value.includedTestItems = includedTestItems.value.filter((item: string) => !normalized.includes(item))
+    localConfig.value.excludedTestItems = normalized.filter((item: string) => !includedSet.value.has(item))
   }
 }
 
@@ -869,6 +874,10 @@ function toggleSelectAllDevices(): void {
 }
 
 function toggleTestItem(name: string): void {
+  if (oppositeSelectionSet.value.has(name)) {
+    return
+  }
+
   const activeItems = [...getSelectionItems(selectionTarget.value)]
   const index = activeItems.indexOf(name)
   if (index > -1) {
@@ -1222,6 +1231,15 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 
 .test-item-row:hover {
   background-color: rgba(0, 0, 0, 0.04);
+}
+
+.test-item-row--disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.test-item-row--disabled:hover {
+  background-color: transparent;
 }
 
 .scoring-config-btn {
