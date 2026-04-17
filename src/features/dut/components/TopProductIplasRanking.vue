@@ -165,14 +165,14 @@
             <!-- Status Column -->
             <template #item.status="{ item }">
               <v-chip :color="item.isForcedFailure ? 'warning' : (item.hasError ? 'error' : 'success')" size="small">
-                {{ item.isForcedFailure ? 'MIN SCORE FAIL' : (item.hasError ? item.errorCode : 'PASS') }}
+                {{ item.status }}
               </v-chip>
             </template>
 
             <!-- Score Column -->
             <template #item.score="{ item }">
-              <template v-if="item.hasError">
-                <v-chip size="small" :color="item.isForcedFailure ? 'warning' : 'error'" variant="tonal">FAIL</v-chip>
+              <template v-if="item.hasError && !item.isForcedFailure">
+                <v-chip size="small" color="error" variant="tonal">FAIL</v-chip>
               </template>
               <template v-else-if="item.score !== null">
                 <v-chip size="small" :color="getScoreColor(item.score)" variant="flat" class="font-weight-bold">
@@ -226,6 +226,7 @@ interface RankingItem {
   testEndTime: string
   duration: string // Formatted duration string
   score: number | null
+  status: string // Sortable status: 'PASS', 'Min. Score Fail', or error code
   hasError: boolean
   isForcedFailure: boolean
   errorCode: string
@@ -367,7 +368,8 @@ const rankingByStation = computed(() => {
       testStartTime: record['Test Start Time'] || '',
       testEndTime: record['Test end Time'] || '',
       duration: duration,
-      score: hasError || forcedFailure ? 0 : score,
+      score: hasError ? (forcedFailure ? score : 0) : score,
+      status: forcedFailure ? 'Min. Score Fail' : (hasError ? (record.ErrorCode || '-') : 'PASS'),
       hasError: hasError || !!forcedFailure,
       isForcedFailure: !!forcedFailure,
       errorCode: forcedFailure ? 'MIN_SCORE_FAIL' : record.ErrorCode || '-',
@@ -379,14 +381,16 @@ const rankingByStation = computed(() => {
   })
 
   // Sort by score (if available) or test date, and assign ranks
+  // Order: PASS first, then Min. Score Fail (by score desc), then real errors
   Object.keys(stationMap).forEach((station) => {
     const items = stationMap[station]
 
     if (!items) return
 
-    // Separate passed and failed
+    // Separate into three groups: passed, forced failures, real errors
     const passed = items.filter((item) => !item.hasError)
-    const failed = items.filter((item) => item.hasError)
+    const forcedFails = items.filter((item) => item.isForcedFailure)
+    const realErrors = items.filter((item) => item.hasError && !item.isForcedFailure)
 
     // Check if we have scores to sort by
     const hasScores = passed.some((item) => item.score !== null)
@@ -410,19 +414,35 @@ const rankingByStation = computed(() => {
       item.rank = index + 1
     })
 
-    // Failed don't get a rank
-    failed.forEach((item) => {
-      item.rank = 999
-    })
-
-    // Sort failed by test date descending
-    failed.sort((a, b) => {
+    // Sort forced failures by score descending (highest score first)
+    forcedFails.sort((a, b) => {
+      const scoreA = a.score ?? -Infinity
+      const scoreB = b.score ?? -Infinity
+      if (scoreA !== scoreB) return scoreB - scoreA
+      // Fallback to test date descending
       const dateA = new Date(a.testDate).getTime()
       const dateB = new Date(b.testDate).getTime()
       return dateB - dateA
     })
 
-    stationMap[station] = [...passed, ...failed]
+    // Forced failures don't get a numbered rank
+    forcedFails.forEach((item) => {
+      item.rank = 999
+    })
+
+    // Sort real errors by test date descending
+    realErrors.sort((a, b) => {
+      const dateA = new Date(a.testDate).getTime()
+      const dateB = new Date(b.testDate).getTime()
+      return dateB - dateA
+    })
+
+    // Real errors don't get a rank
+    realErrors.forEach((item) => {
+      item.rank = 999
+    })
+
+    stationMap[station] = [...passed, ...forcedFails, ...realErrors]
   })
 
   // Set initial tab
@@ -560,6 +580,7 @@ function getRowProps({ item }: { item: RankingItem }) {
 }
 
 function getRankingRowClass(item: RankingItem): string {
+  if (item.isForcedFailure) return 'forced-fail-row'
   if (item.hasError) return 'error-row'
   if (item.rank === 1) return 'rank-1-row'
   if (item.rank === 2) return 'rank-2-row'
@@ -715,6 +736,10 @@ function handleExportAll(): void {
 
 :deep(.error-row) {
   background-color: rgba(244, 67, 54, 0.05) !important;
+}
+
+:deep(.forced-fail-row) {
+  background-color: rgba(255, 152, 0, 0.05) !important;
 }
 
 .ranking-table {

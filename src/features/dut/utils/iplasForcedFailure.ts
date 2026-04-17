@@ -15,6 +15,16 @@ export function evaluateForcedFailure(
   scoredRecord: RecordScoreResult,
   stationConfig?: StationConfig,
 ): ForcedFailureInfo {
+  // If minimum item score check is disabled, never flag as forced failure
+  const minimumItemScoreEnabled = stationConfig?.minimumItemScoreEnabled ?? true
+  if (!minimumItemScoreEnabled) {
+    return {
+      isForcedFailure: false,
+      minimumItemScore: null,
+      failingItems: [],
+    }
+  }
+
   const minimumItemScore = stationConfig?.minimumItemScore ?? 6.5
   const threshold = minimumItemScore / 10
 

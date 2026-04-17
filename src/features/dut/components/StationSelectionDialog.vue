@@ -112,7 +112,9 @@ export interface StationConfig {
   totalDeviceCount?: number // Total available device count (used when deviceIds is empty)
   testStatus: 'ALL' | 'PASS' | 'FAIL'
   minimumItemScore?: number
+  minimumItemScoreEnabled?: boolean // Whether minimum item score check is enabled (default: true)
   selectedTestItems: string[] // Empty means all test items
+  testItemSelectionMode?: 'include' | 'exclude' // Whether selectedTestItems is include or exclude list (default: 'include')
   testItemScoringConfigs?: Record<string, TestItemScoringConfig> // Per-test-item scoring config
 }
 
@@ -168,7 +170,8 @@ function getTestItemsLabel(displayName: string): string {
   if (!config || config.selectedTestItems.length === 0) {
     return 'All Items'
   }
-  return `${config.selectedTestItems.length} Item(s)`
+  const mode = config.testItemSelectionMode === 'exclude' ? 'Excl' : 'Incl'
+  return `${config.selectedTestItems.length} ${mode}`
 }
 
 function getScoringConfigsCount(displayName: string): number {

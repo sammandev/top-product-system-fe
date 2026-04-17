@@ -70,8 +70,9 @@
               {{ displayName }}
               <v-badge :content="config.deviceIds.length || config.totalDeviceCount || 'All'" color="success" inline
                 class="ml-1" />
-              <v-chip size="x-small" class="ml-1" color="warning" variant="outlined">
-                Min {{ (config.minimumItemScore ?? 6.5).toFixed(1) }}
+              <v-chip size="x-small" class="ml-1"
+                :color="(config.minimumItemScoreEnabled ?? true) ? 'warning' : 'grey'" variant="outlined">
+                {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` : 'Min Off' }}
               </v-chip>
             </v-chip>
           </v-card-text>
@@ -801,7 +802,7 @@ async function handleCalculateScores(): Promise<void> {
             minimumItemScore: forcedFailure.minimumItemScore,
             failingItems: forcedFailure.failingItems,
           }
-          newScores[key] = 0
+          newScores[key] = scoredRecord.overallScore
         } else {
           newScores[key] = scoredRecord.overallScore
         }
@@ -1239,10 +1240,11 @@ async function fetchTestItems(): Promise<void> {
     }
 
     const hasTestItemFilters = config.selectedTestItems && config.selectedTestItems.length > 0
+    const isIncludeMode = (config.testItemSelectionMode ?? 'include') === 'include'
 
     // Fetch data for each device ID
     for (const deviceId of deviceIds) {
-      if (hasTestItemFilters) {
+      if (hasTestItemFilters && isIncludeMode) {
         // Use the filtered backend proxy endpoint (server-side filtering + caching)
         await fetchTestItemsFiltered(
           selectedSite.value,
@@ -1256,6 +1258,7 @@ async function fetchTestItems(): Promise<void> {
         )
       } else {
         // Use the direct API endpoint (no filtering needed)
+        // For exclude mode, fetch all items and filter locally before scoring
         // Pass Date objects - the composable handles ISO format conversion
         await fetchTestItemsApi(
           selectedSite.value,
@@ -1267,6 +1270,21 @@ async function fetchTestItems(): Promise<void> {
           'PASS',
         )
       }
+    }
+
+    // For exclude mode, remove excluded test items from fetched records
+    if (hasTestItemFilters && !isIncludeMode) {
+      const excludeSet = new Set(config.selectedTestItems)
+      testItemData.value = testItemData.value.map((record) => {
+        if (record.station !== config.displayName) return record
+        if (!record.TestItem) return record
+        return {
+          ...record,
+          TestItem: record.TestItem.filter(
+            (item: { NAME?: string }) => !excludeSet.has(item.NAME ?? ''),
+          ),
+        }
+      })
     }
   }
 

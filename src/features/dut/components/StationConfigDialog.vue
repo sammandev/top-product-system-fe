@@ -12,10 +12,14 @@
             <v-card-text class="pa-4" style="max-height: 70vh; overflow-y: auto;">
                 <v-row dense class="mb-4">
                     <v-col cols="12">
-                        <v-text-field v-model.number="localConfig.minimumItemScore" label="Minimum Test Item Score"
-                            type="number" variant="outlined" density="comfortable" prepend-inner-icon="mdi-chart-box-outline"
-                            min="0" max="10" step="0.1" hint="If any scored numeric test item is below this value, the DUT becomes a complete failure. Default: 6.5 / 10"
-                            persistent-hint />
+                        <div class="d-flex align-center gap-2">
+                            <v-switch v-model="localConfig.minimumItemScoreEnabled" color="primary" density="compact"
+                                hide-details class="flex-shrink-0" />
+                            <v-text-field v-model.number="localConfig.minimumItemScore" label="Minimum Test Item Score"
+                                type="number" variant="outlined" density="comfortable" prepend-inner-icon="mdi-chart-box-outline"
+                                min="0" max="10" step="0.1" hint="If any scored numeric test item is below this value, the DUT becomes a complete failure. Default: 6.5 / 10"
+                                persistent-hint :disabled="!localConfig.minimumItemScoreEnabled" />
+                        </div>
                     </v-col>
                 </v-row>
 
@@ -84,9 +88,11 @@
                                 <v-btn value="default" size="small">Default</v-btn>
                                 <v-btn value="iplas" size="small">iPLAS</v-btn>
                             </v-btn-toggle>
-                            <v-chip v-if="localConfig.selectedTestItems.length > 0" size="small" color="success"
+                            <v-chip v-if="localConfig.selectedTestItems.length > 0" size="small"
+                                :color="localConfig.testItemSelectionMode === 'exclude' ? 'warning' : 'success'"
                                 variant="tonal">
-                              {{ localConfig.selectedTestItems.length }} / {{ uniqueAvailableTestItems.length }} Selected
+                              {{ localConfig.selectedTestItems.length }} / {{ uniqueAvailableTestItems.length }}
+                              {{ localConfig.testItemSelectionMode === 'exclude' ? 'Excluded' : 'Selected' }}
                             </v-chip>
                             <v-chip v-else size="small" color="info" variant="tonal">
                               All Items ({{ uniqueAvailableTestItems.length }})
@@ -117,6 +123,23 @@
 
                         <!-- Test Items Selection -->
                         <div v-else>
+                            <!-- Mode Toggle: Include / Exclude -->
+                            <v-row dense class="mb-3">
+                                <v-col cols="12" class="d-flex align-center gap-2">
+                                    <span class="text-caption text-medium-emphasis">Mode:</span>
+                                    <v-btn-toggle v-model="localConfig.testItemSelectionMode" color="primary"
+                                        density="compact" mandatory variant="outlined">
+                                        <v-btn value="include" size="small" prepend-icon="mdi-check-circle-outline">Include</v-btn>
+                                        <v-btn value="exclude" size="small" prepend-icon="mdi-close-circle-outline">Exclude</v-btn>
+                                    </v-btn-toggle>
+                                    <span class="text-caption text-medium-emphasis ml-2">
+                                        {{ localConfig.testItemSelectionMode === 'exclude'
+                                            ? 'Selected items will be EXCLUDED from analysis'
+                                            : 'Selected items will be INCLUDED in analysis (empty = all)' }}
+                                    </span>
+                                </v-col>
+                            </v-row>
+
                             <!-- Quick Actions and Search -->
                             <v-row dense class="mb-3">
                                 <v-col cols="12">
@@ -206,9 +229,14 @@
 
                             <div class="text-caption text-medium-emphasis mt-2">
                                 <v-icon size="x-small">mdi-information</v-icon>
-                                Leave empty to include all CRITERIA and NON-CRITERIA test items (excludes Bin items).
-                                Select specific items to filter results. Click on scoring type button to configure
-                                scoring algorithm.
+                                <template v-if="localConfig.testItemSelectionMode === 'exclude'">
+                                    Selected items will be EXCLUDED from scoring analysis. All other items will be included.
+                                </template>
+                                <template v-else>
+                                    Leave empty to include all CRITERIA and NON-CRITERIA test items (excludes Bin items).
+                                    Select specific items to filter results. Click on scoring type button to configure
+                                    scoring algorithm.
+                                </template>
                             </div>
                         </div>
                     </v-card-text>
@@ -542,7 +570,9 @@ const localConfig = ref<StationConfig>({
   deviceIds: [],
   testStatus: 'PASS',
   minimumItemScore: 6.5,
+  minimumItemScoreEnabled: true,
   selectedTestItems: [],
+  testItemSelectionMode: 'include',
   testItemScoringConfigs: {},
 })
 
@@ -625,6 +655,8 @@ watch(
         localConfig.value = {
           ...props.existingConfig,
           minimumItemScore: props.existingConfig.minimumItemScore ?? 6.5,
+          minimumItemScoreEnabled: props.existingConfig.minimumItemScoreEnabled ?? true,
+          testItemSelectionMode: props.existingConfig.testItemSelectionMode ?? 'include',
           testItemScoringConfigs: props.existingConfig.testItemScoringConfigs || {},
         }
       } else {
@@ -635,7 +667,9 @@ watch(
           deviceIds: [],
           testStatus: 'PASS',
           minimumItemScore: 6.5,
+          minimumItemScoreEnabled: true,
           selectedTestItems: [],
+          testItemSelectionMode: 'include',
           testItemScoringConfigs: {},
         }
       }

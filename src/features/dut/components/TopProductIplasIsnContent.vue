@@ -134,8 +134,9 @@
               {{ displayName }}
               <v-badge :content="config.deviceIds.length || config.totalDeviceCount || 'All'" color="success" inline
                 class="ml-1" />
-              <v-chip size="x-small" class="ml-1" color="warning" variant="outlined">
-                Min {{ (config.minimumItemScore ?? 6.5).toFixed(1) }}
+              <v-chip size="x-small" class="ml-1"
+                :color="(config.minimumItemScoreEnabled ?? true) ? 'warning' : 'grey'" variant="outlined">
+                {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` : 'Min Off' }}
               </v-chip>
             </v-chip>
           </v-card-text>
@@ -1075,7 +1076,10 @@ async function fetchTestItems(): Promise<void> {
       const config = stationConfigs.value[record.display_station_name]
       if (config?.selectedTestItems && config.selectedTestItems.length > 0) {
         const testItemSet = new Set(config.selectedTestItems)
-        csvRecord.TestItem = csvRecord.TestItem.filter((item) => testItemSet.has(item.NAME))
+        const isIncludeMode = (config.testItemSelectionMode ?? 'include') === 'include'
+        csvRecord.TestItem = csvRecord.TestItem.filter((item) =>
+          isIncludeMode ? testItemSet.has(item.NAME) : !testItemSet.has(item.NAME),
+        )
       }
 
       return csvRecord
@@ -1220,7 +1224,7 @@ async function handleCalculateScores(): Promise<void> {
             minimumItemScore: forcedFailure.minimumItemScore,
             failingItems: forcedFailure.failingItems,
           }
-          newScores[key] = 0
+          newScores[key] = scoredRecord.overallScore
         } else {
           newScores[key] = scoredRecord.overallScore
         }
