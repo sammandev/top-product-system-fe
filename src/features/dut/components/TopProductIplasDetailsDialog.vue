@@ -51,24 +51,24 @@
                   </div>
                 </v-col>
                 <v-col v-if="scoreSummaryPrimary" cols="12" md="4">
-                  <div class="score-hero" :class="scoreHeroClass">
-                    <div class="score-hero__header">
-                      <div>
-                        <div class="score-hero__label">{{ scoreHeroLabel }}</div>
-                        <div class="score-hero__caption">{{ scoreHeroCaption }}</div>
+                  <button type="button" class="summary-stat-button" @click="openOverallScoreDialog">
+                    <div class="d-flex align-center">
+                      <v-icon size="large" class="mr-3" :color="scoreSummaryIconColor">{{ scoreSummaryIcon }}</v-icon>
+                      <div class="summary-stat-button__content">
+                        <div class="text-caption text-medium-emphasis">{{ scoreSummaryLabel }}</div>
+                        <div class="text-h6 font-weight-bold" :class="getScoreColorClass(scoreSummaryPrimary.score)">
+                          {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}
+                        </div>
+                        <div class="text-body-2 text-medium-emphasis">
+                          {{ scoreSummaryCaption }}
+                        </div>
+                        <div v-if="scoreSummarySecondaryText" class="text-caption text-medium-emphasis mt-1">
+                          {{ scoreSummarySecondaryText }}
+                        </div>
                       </div>
-                      <v-icon :icon="scoreHeroIcon" size="small" class="score-hero__icon" />
                     </div>
-                    <div class="score-hero__value" :class="[getScoreColorClass(scoreSummaryPrimary.score), scoreHeroValueClass]">
-                      {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}
-                    </div>
-                    <div v-if="scoreSummarySecondaryMetrics.length" class="d-flex flex-wrap gap-2 mt-2">
-                      <div v-for="metric in scoreSummarySecondaryMetrics" :key="metric.key" class="score-summary-metric">
-                        <span class="score-summary-metric__label">{{ metric.label }}</span>
-                        <span class="score-summary-metric__value">{{ formatScoreValue(metric.score) }}</span>
-                      </div>
-                    </div>
-                  </div>
+                    <v-tooltip activator="parent" location="top">Open score calculation details</v-tooltip>
+                  </button>
                 </v-col>
               </v-row>
             </v-card-text>
@@ -136,12 +136,13 @@
               {{ record.errorCode }}
               <v-tooltip activator="parent" location="top">Click to copy Error Code</v-tooltip>
             </v-chip>
-            <component :is="forcedFailSummary?.clickable ? 'button' : 'div'" v-if="forcedFailSummary"
-              class="score-summary-alert timing-meta-chip" :class="{ 'score-summary-alert--interactive': forcedFailSummary.clickable }"
-              :type="forcedFailSummary.clickable ? 'button' : undefined" @click="openForcedFailDialog">
-              <v-icon size="small" class="score-summary-alert__icon">mdi-alert-octagon</v-icon>
-              <span class="score-summary-alert__text">{{ forcedFailSummary.text }}</span>
-            </component>
+            <v-chip v-if="forcedFailSummary" size="default" color="warning"
+              :variant="forcedFailSummary.clickable ? 'flat' : 'tonal'" prepend-icon="mdi-alert-octagon"
+              class="timing-meta-chip" :class="{ 'cursor-pointer': forcedFailSummary.clickable }" label
+              @click="openForcedFailDialog">
+              <span class="text-medium-emphasis mr-1">Forced Fail:</span>
+              {{ forcedFailSummary.detailText }}
+            </v-chip>
             <template v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)">
               <v-chip size="default" color="error" variant="outlined" class="cursor-pointer timing-meta-chip" label
                 prepend-icon="mdi-alert-octagon" @click="copyToClipboard(record.errorName)">
@@ -451,6 +452,94 @@
     </v-card>
   </v-dialog>
 
+  <v-dialog v-model="showOverallScoreDialog" max-width="640px">
+    <v-card v-if="record && scoreSummaryPrimary && overallScoreExplanation">
+      <v-card-title class="d-flex align-center bg-primary">
+        <v-icon class="mr-2" color="white">mdi-chart-line</v-icon>
+        <span class="text-white">{{ scoreSummaryLabel }} Calculation</span>
+        <v-spacer />
+        <v-btn icon="mdi-close" variant="text" color="white" size="small" @click="showOverallScoreDialog = false" />
+      </v-card-title>
+      <v-card-text class="pt-4">
+        <v-alert :color="record.isForcedFailure ? 'warning' : 'info'" variant="tonal" class="mb-4">
+          <div class="text-subtitle-2 font-weight-bold">{{ scoreSummaryLabel }}</div>
+          <div class="text-h6 mt-1" :class="getScoreColorClass(scoreSummaryPrimary.score)">
+            {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}
+          </div>
+          <div class="text-body-2 mt-2">
+            {{ scoreSummaryCaption }}
+          </div>
+        </v-alert>
+
+        <div class="text-body-2 mb-3">
+          The backend calculates this aggregate score as a weighted average across scored test items.
+        </div>
+
+        <v-alert color="info" variant="tonal" density="comfortable" class="mb-4">
+          <div class="text-subtitle-2 font-weight-bold mb-1">Formula</div>
+          <code class="text-body-2 score-formula-code">
+            Aggregate = sum(item score × effective weight) / sum(effective weight)
+          </code>
+          <div class="text-caption mt-2">
+            Effective weight = configured weight × configured weight.
+          </div>
+          <div class="text-caption mt-1">
+            Displayed scores are shown on a /10 scale. The backend stores and averages them on a 0-1 scale.
+          </div>
+        </v-alert>
+
+        <v-row dense>
+          <v-col cols="12" sm="6">
+            <div class="score-explanation-stat">
+              <div class="text-caption text-medium-emphasis">Scored Test Items</div>
+              <div class="text-h6 font-weight-bold">{{ overallScoreExplanation.scoredItemCount }}</div>
+              <div class="text-caption text-medium-emphasis mt-1">
+                {{ overallScoreExplanation.valueItemCount }} value, {{ overallScoreExplanation.binaryItemCount }} binary
+              </div>
+            </div>
+          </v-col>
+          <v-col cols="12" sm="6">
+            <div class="score-explanation-stat">
+              <div class="text-caption text-medium-emphasis">Total Effective Weight</div>
+              <div class="text-h6 font-weight-bold">{{ formatCompactNumber(overallScoreExplanation.totalEffectiveWeight) }}</div>
+              <div class="text-caption text-medium-emphasis mt-1">
+                Based on squared per-item weights.
+              </div>
+            </div>
+          </v-col>
+        </v-row>
+
+        <div v-if="scoreExplanationMetrics.length" class="mt-4">
+          <div class="text-subtitle-2 font-weight-bold mb-2">Available Aggregate Scores</div>
+          <div class="d-flex flex-wrap gap-2">
+            <v-chip v-for="metric in scoreExplanationMetrics" :key="metric.key" size="small"
+              :color="metric.key === scoreSummaryPrimary.key ? 'primary' : undefined"
+              :variant="metric.key === scoreSummaryPrimary.key ? 'flat' : 'tonal'">
+              {{ metric.label }}: {{ formatScoreOutOfTen(metric.score) }}
+            </v-chip>
+          </div>
+        </div>
+
+        <v-alert v-if="record.isForcedFailure" color="warning" variant="tonal" class="mt-4">
+          <div class="text-subtitle-2 font-weight-bold mb-1">Forced Fail Override</div>
+          <div class="text-body-2">
+            This record is marked as forced fail because
+            {{ overallScoreExplanation.failingItemCount }}
+            {{ overallScoreExplanation.failingItemCount === 1 ? 'item fell' : 'items fell' }} below the minimum score of
+            {{ overallScoreExplanation.forcedFailureThreshold }} / 10.
+          </div>
+          <div class="text-caption mt-2">
+            That threshold rule is separate from the aggregate weighted-average score shown above.
+          </div>
+        </v-alert>
+      </v-card-text>
+      <v-card-actions>
+        <v-spacer />
+        <v-btn color="primary" variant="tonal" @click="showOverallScoreDialog = false">Close</v-btn>
+      </v-card-actions>
+    </v-card>
+  </v-dialog>
+
   <!-- Copy Success Snackbar -->
   <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
     <v-icon start>mdi-check</v-icon>
@@ -482,8 +571,17 @@ interface ScoreSummaryMetric {
 }
 
 interface ForcedFailSummary {
-  text: string
+  detailText: string
   clickable: boolean
+}
+
+interface OverallScoreExplanation {
+  scoredItemCount: number
+  valueItemCount: number
+  binaryItemCount: number
+  totalEffectiveWeight: number
+  failingItemCount: number
+  forcedFailureThreshold: string
 }
 
 interface Props {
@@ -522,6 +620,7 @@ const scoreFilterValue = ref<number | null>(null)
 // Score breakdown dialog
 const showBreakdownDialog = ref(false)
 const selectedTestItem = ref<NormalizedTestItem | null>(null)
+const showOverallScoreDialog = ref(false)
 
 // Forced fail items dialog
 const showForcedFailDialog = ref(false)
@@ -619,6 +718,30 @@ const scoreSummarySecondaryMetrics = computed<ScoreSummaryMetric[]>(() => {
   }, [])
 })
 
+const scoreExplanationMetrics = computed<ScoreSummaryMetric[]>(() => {
+  const record = props.record
+
+  if (!record) {
+    return []
+  }
+
+  const metrics: ScoreSummaryMetric[] = []
+
+  if (hasScore(record.overallScore)) {
+    metrics.push({ key: 'overall', label: 'Overall Score', score: record.overallScore })
+  }
+
+  if (hasScore(record.valueItemsScore)) {
+    metrics.push({ key: 'value', label: 'Value', score: record.valueItemsScore })
+  }
+
+  if (hasScore(record.binItemsScore)) {
+    metrics.push({ key: 'binary', label: 'Binary', score: record.binItemsScore })
+  }
+
+  return metrics
+})
+
 const forcedFailSummary = computed<ForcedFailSummary | null>(() => {
   const record = props.record
 
@@ -631,15 +754,15 @@ const forcedFailSummary = computed<ForcedFailSummary | null>(() => {
   const itemLabel = failingItemCount === 1 ? 'item' : 'items'
 
   return {
-    text:
+    detailText:
       failingItemCount > 0
-        ? `Forced Fail: ${failingItemCount} ${itemLabel} below ${threshold} / 10`
-        : `Forced Fail: below ${threshold} / 10`,
+        ? `${failingItemCount} ${itemLabel} below ${threshold} / 10`
+        : `Below ${threshold} / 10`,
     clickable: failingItemCount > 0,
   }
 })
 
-const scoreHeroLabel = computed(() => {
+const scoreSummaryLabel = computed(() => {
   if (props.record?.isForcedFailure) {
     return 'Forced Fail Score'
   }
@@ -647,39 +770,21 @@ const scoreHeroLabel = computed(() => {
   return scoreSummaryPrimary.value?.label ?? 'Score'
 })
 
-const scoreHeroCaption = computed(() => {
+const scoreSummaryCaption = computed(() => {
   const record = props.record
 
   if (record?.isForcedFailure) {
-    return `Minimum score ${record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5'} / 10 triggered fail`
+    return `Minimum score ${record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5'} / 10 triggered fail. Click for details.`
   }
 
   if (scoreSummaryPrimary.value?.key === 'overall') {
-    return 'Overall scored result'
+    return 'Overall scored result. Click for calculation details.'
   }
 
-  return `${scoreSummaryPrimary.value?.label ?? 'Score'} scored result`
+  return `${scoreSummaryPrimary.value?.label ?? 'Score'} scored result. Click for calculation details.`
 })
 
-const scoreHeroClass = computed(() => {
-  const score = scoreSummaryPrimary.value?.score
-
-  if (props.record?.isForcedFailure) {
-    return 'score-hero--forced-fail'
-  }
-
-  if (score === undefined) {
-    return 'score-hero--neutral'
-  }
-
-  if (score >= 0.9) {
-    return 'score-hero--pass'
-  }
-
-  return 'score-hero--neutral'
-})
-
-const scoreHeroIcon = computed(() => {
+const scoreSummaryIcon = computed(() => {
   if (props.record?.isForcedFailure) {
     return 'mdi-alert-octagon'
   }
@@ -691,8 +796,51 @@ const scoreHeroIcon = computed(() => {
   return 'mdi-chart-line'
 })
 
-const scoreHeroValueClass = computed(() => {
-  return props.record?.isForcedFailure ? 'score-hero__value--forced-fail' : ''
+const scoreSummaryIconColor = computed(() => {
+  if (props.record?.isForcedFailure) {
+    return 'warning'
+  }
+
+  if ((scoreSummaryPrimary.value?.score ?? 0) >= 0.9) {
+    return 'success'
+  }
+
+  return 'primary'
+})
+
+const scoreSummarySecondaryText = computed(() => {
+  if (scoreSummarySecondaryMetrics.value.length === 0) {
+    return ''
+  }
+
+  return scoreSummarySecondaryMetrics.value
+    .map((metric: ScoreSummaryMetric) => `${metric.label}: ${formatScoreOutOfTen(metric.score)}`)
+    .join(' | ')
+})
+
+const overallScoreExplanation = computed<OverallScoreExplanation | null>(() => {
+  const record = props.record
+
+  if (!record || !scoreSummaryPrimary.value) {
+    return null
+  }
+
+  const scoredItems = record.testItems.filter((item: NormalizedTestItem) => hasScore(item.score))
+  const binaryItemCount = scoredItems.filter((item: NormalizedTestItem) => isBinData(item)).length
+  const valueItemCount = scoredItems.length - binaryItemCount
+  const totalEffectiveWeight = scoredItems.reduce((total: number, item: NormalizedTestItem) => {
+    const weight = item.weight ?? 1.0
+    return total + (weight * weight)
+  }, 0)
+
+  return {
+    scoredItemCount: scoredItems.length,
+    valueItemCount,
+    binaryItemCount,
+    totalEffectiveWeight,
+    failingItemCount: record.forcedFailureDetails?.length ?? 0,
+    forcedFailureThreshold: record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5',
+  }
 })
 
 // Dynamic headers - add Score column if scores are available
@@ -801,21 +949,63 @@ function formatTime(timeStr: string): string {
   return adjustIplasDisplayTime(timeStr, 1)
 }
 
+function parseDurationDate(value: string): Date | null {
+  if (!value) {
+    return null
+  }
+
+  const trimmedValue = value.trim()
+
+  if (trimmedValue.includes('/') && trimmedValue.includes(',')) {
+    const normalizedValue = trimmedValue.replace(',', '').replace(/\//g, '-').replace(/\s+/g, 'T')
+    const parsedDate = new Date(normalizedValue)
+    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate
+  }
+
+  const sanitizedValue = trimmedValue.replace('%:z', '').replace(/\.\d+$/, '')
+  const isoCandidate = sanitizedValue.includes('T') ? sanitizedValue : sanitizedValue.replace(' ', 'T')
+
+  const utcParsedDate = new Date(`${isoCandidate}Z`)
+  if (!Number.isNaN(utcParsedDate.getTime())) {
+    return utcParsedDate
+  }
+
+  const localParsedDate = new Date(isoCandidate)
+  return Number.isNaN(localParsedDate.getTime()) ? null : localParsedDate
+}
+
 function calculateDuration(startStr: string, endStr: string): string {
   if (!startStr || !endStr) return '-'
-  try {
-    const cleanStart = startStr.replace('%:z', '').replace('T', ' ')
-    const cleanEnd = endStr.replace('%:z', '').replace('T', ' ')
-    const start = new Date(`${cleanStart.replace(' ', 'T')}Z`)
-    const end = new Date(`${cleanEnd.replace(' ', 'T')}Z`)
-    const diffMs = end.getTime() - start.getTime()
-    const diffSeconds = Math.floor(diffMs / 1000)
-    const minutes = Math.floor(diffSeconds / 60)
-    const seconds = diffSeconds % 60
-    return `${minutes}m ${seconds}s`
-  } catch {
+  const start = parseDurationDate(startStr)
+  const end = parseDurationDate(endStr)
+
+  if (!start || !end) {
     return '-'
   }
+
+  const diffMs = end.getTime() - start.getTime()
+  if (Number.isNaN(diffMs) || diffMs < 0) {
+    return '-'
+  }
+
+  const diffSeconds = Math.floor(diffMs / 1000)
+  const hours = Math.floor(diffSeconds / 3600)
+  const minutes = Math.floor((diffSeconds % 3600) / 60)
+  const seconds = diffSeconds % 60
+
+  if (hours > 0) {
+    return `${hours}h ${minutes}m ${seconds}s`
+  }
+
+  return `${minutes}m ${seconds}s`
+}
+
+function formatCompactNumber(value: number): string {
+  if (!Number.isFinite(value)) {
+    return '-'
+  }
+
+  return value.toFixed(2).replace(/\.00$/, '').replace(/(\.\d*[1-9])0$/, '$1')
 }
 
 async function copyToClipboard(text: string): Promise<void> {
@@ -923,6 +1113,12 @@ function close(): void {
 
 function handleDownload(): void {
   emit('download')
+}
+
+function openOverallScoreDialog(): void {
+  if (scoreSummaryPrimary.value) {
+    showOverallScoreDialog.value = true
+  }
 }
 
 function openForcedFailDialog(): void {
@@ -1138,115 +1334,44 @@ watch(
   font-weight: 600;
 }
 
-.score-summary-alert {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55rem;
-  padding: 0.55rem 0.8rem;
+.summary-stat-button {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
   font: inherit;
-  border-radius: 12px;
-  border: 1px solid rgba(var(--v-theme-warning), 0.26);
-  background: rgba(var(--v-theme-warning), 0.12);
-  color: rgba(var(--v-theme-on-surface), 0.84);
-}
-
-.score-summary-alert--interactive {
+  text-align: left;
   cursor: pointer;
-  transition: background-color 0.15s ease, border-color 0.15s ease;
 }
 
-.score-summary-alert--interactive:hover {
-  background: rgba(var(--v-theme-warning), 0.18);
-  border-color: rgba(var(--v-theme-warning), 0.38);
+.summary-stat-button__content {
+  min-width: 0;
 }
 
-.score-summary-alert__icon {
-  color: rgb(var(--v-theme-warning));
+.summary-stat-button:hover .text-body-2,
+.summary-stat-button:focus-visible .text-body-2 {
+  color: rgba(var(--v-theme-on-surface), 0.88) !important;
 }
 
-.score-summary-alert__text {
-  font-size: 0.9rem;
-  font-weight: 600;
+.summary-stat-button:focus-visible {
+  outline: 2px solid rgba(var(--v-theme-primary), 0.4);
+  outline-offset: 4px;
+  border-radius: 10px;
 }
 
-.score-hero {
-  padding: 0.85rem 1rem;
+.score-explanation-stat {
+  height: 100%;
+  padding: 0.9rem 1rem;
   border-radius: 12px;
-  border: 1px solid rgba(var(--v-theme-primary), 0.14);
-  background: rgba(var(--v-theme-surface), 0.9);
-  color: rgba(var(--v-theme-on-surface), 0.88);
-}
-
-.score-hero--pass {
-  background: linear-gradient(135deg, rgba(var(--v-theme-success), 0.18), rgba(var(--v-theme-primary), 0.08));
-  border-color: rgba(var(--v-theme-success), 0.3);
-}
-
-.score-hero--forced-fail {
-  background: linear-gradient(135deg, rgba(var(--v-theme-warning), 0.24), rgba(var(--v-theme-error), 0.1));
-  border-color: rgba(var(--v-theme-warning), 0.42);
-}
-
-.score-hero--neutral {
-  background: rgba(var(--v-theme-primary), 0.08);
-}
-
-.score-hero__header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-}
-
-.score-hero__label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: rgba(var(--v-theme-on-surface), 0.64);
-}
-
-.score-hero__caption {
-  margin-top: 0.1rem;
-  font-size: 0.8rem;
-  color: rgba(var(--v-theme-on-surface), 0.68);
-}
-
-.score-hero__icon {
-  opacity: 0.9;
-}
-
-.score-hero__value {
-  margin-top: 0.55rem;
-  font-size: 1.4rem;
-  line-height: 1.1;
-}
-
-.score-hero__value--forced-fail {
-  color: rgb(var(--v-theme-error)) !important;
-}
-
-.score-summary-metric {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  padding: 0.45rem 0.7rem;
-  border-radius: 999px;
-  background: rgba(var(--v-theme-on-surface), 0.04);
   border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  background: rgba(var(--v-theme-on-surface), 0.03);
 }
 
-.score-summary-metric__label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: rgba(var(--v-theme-on-surface), 0.58);
-}
-
-.score-summary-metric__value {
-  font-weight: 700;
-  color: rgba(var(--v-theme-on-surface), 0.84);
+.score-formula-code {
+  display: inline-block;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .status-text {
@@ -1306,7 +1431,7 @@ watch(
 }
 
 @media (max-width: 960px) {
-  .score-hero {
+  .summary-stat-button {
     width: 100%;
   }
 }
