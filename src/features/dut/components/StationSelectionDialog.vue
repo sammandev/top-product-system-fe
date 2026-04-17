@@ -113,8 +113,10 @@ export interface StationConfig {
   testStatus: 'ALL' | 'PASS' | 'FAIL'
   minimumItemScore?: number
   minimumItemScoreEnabled?: boolean // Whether minimum item score check is enabled (default: true)
-  selectedTestItems: string[] // Empty means all test items
-  testItemSelectionMode?: 'include' | 'exclude' // Whether selectedTestItems is include or exclude list (default: 'include')
+  includedTestItems?: string[] // Empty means all items are included unless explicitly excluded
+  excludedTestItems?: string[] // Items removed from analysis after inclusion rules are applied
+  selectedTestItems?: string[] // Legacy field for migration
+  testItemSelectionMode?: 'include' | 'exclude' // Legacy field for migration
   testItemScoringConfigs?: Record<string, TestItemScoringConfig> // Per-test-item scoring config
 }
 
@@ -167,11 +169,26 @@ function getStationConfig(displayName: string): StationConfig | undefined {
 
 function getTestItemsLabel(displayName: string): string {
   const config = props.selectedConfigs[displayName]
-  if (!config || config.selectedTestItems.length === 0) {
+  if (!config) {
     return 'All Items'
   }
-  const mode = config.testItemSelectionMode === 'exclude' ? 'Excl' : 'Incl'
-  return `${config.selectedTestItems.length} ${mode}`
+
+  const includeCount = config.includedTestItems?.length ?? 0
+  const excludeCount = config.excludedTestItems?.length ?? 0
+
+  if (includeCount === 0 && excludeCount === 0) {
+    return 'All Items'
+  }
+
+  if (includeCount > 0 && excludeCount > 0) {
+    return `${includeCount} In / ${excludeCount} Out`
+  }
+
+  if (includeCount > 0) {
+    return `${includeCount} Included`
+  }
+
+  return `${excludeCount} Excluded`
 }
 
 function getScoringConfigsCount(displayName: string): number {

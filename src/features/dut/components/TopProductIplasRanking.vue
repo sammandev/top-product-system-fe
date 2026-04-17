@@ -210,7 +210,7 @@ interface Props {
   records: CsvTestItemData[]
   stationDisplayNames?: Record<string, string>
   scores?: Record<string, number> // Map of ISN+station+time to score
-  forcedFailures?: Record<string, { minimumItemScore: number; failingItems: string[] }>
+  forcedFailures?: Record<string, { minimumItemScore: number; failingItems: { name: string; score: number }[] }>
   calculatingScores?: boolean
   loading?: boolean // Whether data is still being fetched
   exportingAll?: boolean // Whether export all is in progress (controlled by parent)

@@ -75,6 +75,7 @@ export interface IplasCsvTestItemRequest {
   end_time: string // ISO format
   test_status: 'ALL' | 'PASS' | 'FAIL'
   test_item_filters?: string[]
+  exclude_test_item_filters?: string[]
   include_test_items?: boolean
   limit?: number
   offset?: number

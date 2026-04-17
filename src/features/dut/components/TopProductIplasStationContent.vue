@@ -184,7 +184,7 @@ const {
 
 // Scoring state
 const recordScores = ref<Record<string, number>>({})
-const forcedFailures = ref<Record<string, { minimumItemScore: number; failingItems: string[] }>>({})
+const forcedFailures = ref<Record<string, { minimumItemScore: number; failingItems: { name: string; score: number }[] }>>({})
 const calculatingScores = ref(false)
 const exportingAll = ref(false)
 
@@ -459,14 +459,15 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
     testEndTime: record['Test end Time'] || '-',
     testItems,
     // Include overall scoring data if available
-    overallScore: forcedFailure ? 0 : scoredRecord?.overallScore,
+    overallScore: scoredRecord?.overallScore,
     valueItemsScore: scoredRecord?.valueItemsScore,
     binItemsScore: scoredRecord?.binItemsScore,
     isForcedFailure: !!forcedFailure,
     forcedFailureReason: forcedFailure
       ? `Forced failure: one or more scored numeric items are below ${forcedFailure.minimumItemScore.toFixed(1)} / 10`
       : undefined,
-    forcedFailureItems: forcedFailure?.failingItems,
+    forcedFailureItems: forcedFailure?.failingItems.map((item) => item.name),
+    forcedFailureDetails: forcedFailure?.failingItems,
     forcedFailureMinimumScore: forcedFailure?.minimumItemScore,
   }
 }
@@ -782,7 +783,7 @@ async function handleCalculateScores(): Promise<void> {
     // We need to match scored records back to original records by index
     // since scoring order is preserved
     const newScores: Record<string, number> = {}
-    const nextForcedFailures: Record<string, { minimumItemScore: number; failingItems: string[] }> =
+    const nextForcedFailures: Record<string, { minimumItemScore: number; failingItems: { name: string; score: number }[] }> =
       {}
 
     testItemData.value.forEach((record, index) => {
@@ -1239,12 +1240,13 @@ async function fetchTestItems(): Promise<void> {
       }
     }
 
-    const hasTestItemFilters = config.selectedTestItems && config.selectedTestItems.length > 0
-    const isIncludeMode = (config.testItemSelectionMode ?? 'include') === 'include'
+    const includeFilters = config.includedTestItems?.length ? config.includedTestItems : undefined
+    const excludeFilters = config.excludedTestItems?.length ? config.excludedTestItems : undefined
+    const hasTestItemFilters = !!(includeFilters?.length || excludeFilters?.length)
 
     // Fetch data for each device ID
     for (const deviceId of deviceIds) {
-      if (hasTestItemFilters && isIncludeMode) {
+      if (hasTestItemFilters) {
         // Use the filtered backend proxy endpoint (server-side filtering + caching)
         await fetchTestItemsFiltered(
           selectedSite.value,
@@ -1254,11 +1256,11 @@ async function fetchTestItems(): Promise<void> {
           new Date(startTime.value),
           new Date(endTime.value),
           'PASS',
-          config.selectedTestItems,
+          includeFilters,
+          excludeFilters,
         )
       } else {
         // Use the direct API endpoint (no filtering needed)
-        // For exclude mode, fetch all items and filter locally before scoring
         // Pass Date objects - the composable handles ISO format conversion
         await fetchTestItemsApi(
           selectedSite.value,
@@ -1270,21 +1272,6 @@ async function fetchTestItems(): Promise<void> {
           'PASS',
         )
       }
-    }
-
-    // For exclude mode, remove excluded test items from fetched records
-    if (hasTestItemFilters && !isIncludeMode) {
-      const excludeSet = new Set(config.selectedTestItems)
-      testItemData.value = testItemData.value.map((record) => {
-        if (record.station !== config.displayName) return record
-        if (!record.TestItem) return record
-        return {
-          ...record,
-          TestItem: record.TestItem.filter(
-            (item: { NAME?: string }) => !excludeSet.has(item.NAME ?? ''),
-          ),
-        }
-      })
     }
   }
 

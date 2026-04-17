@@ -134,9 +134,9 @@
           <v-chip v-if="record.isForcedFailure" color="warning" variant="flat" size="small" prepend-icon="mdi-alert-octagon">
             Forced Fail: below {{ record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5' }} / 10
           </v-chip>
-          <v-chip v-if="record.isForcedFailure && record.forcedFailureItems?.length" color="warning" variant="outlined" size="small"
+          <v-chip v-if="record.isForcedFailure && record.forcedFailureDetails?.length" color="warning" variant="outlined" size="small"
             class="cursor-pointer" prepend-icon="mdi-format-list-bulleted" @click="showForcedFailDialog = true">
-            {{ record.forcedFailureItems.length }} failing item{{ record.forcedFailureItems.length === 1 ? '' : 's' }}
+            {{ record.forcedFailureDetails.length }} failing item{{ record.forcedFailureDetails.length === 1 ? '' : 's' }}
           </v-chip>
           <v-spacer />
           <v-chip color="primary" variant="tonal" size="small" prepend-icon="mdi-chart-line">
@@ -251,21 +251,35 @@
       </v-card-title>
       <v-card-text class="pt-4">
         <v-alert color="warning" variant="tonal" density="compact" class="mb-4">
-          {{ record.forcedFailureItems?.length || 0 }} scored item(s) fell below the minimum score of
+          {{ record.forcedFailureDetails?.length || 0 }} scored item(s) fell below the minimum score of
           {{ record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5' }} / 10
         </v-alert>
+
+        <v-text-field v-model="forcedFailSearch" label="Search Failed Items" prepend-inner-icon="mdi-magnify"
+          variant="outlined" density="compact" hide-details clearable class="mb-3"
+          placeholder="Search by test item name..." />
+
         <v-list density="compact" class="rounded border" style="max-height: 400px; overflow-y: auto;">
-          <v-list-item v-for="(itemName, idx) in record.forcedFailureItems" :key="idx" class="cursor-pointer forced-fail-item" @click="copyToClipboard(itemName)">
+          <v-list-item v-for="item in filteredForcedFailureDetails" :key="item.name" class="cursor-pointer forced-fail-item"
+            @click="copyToClipboard(item.name)">
             <template #prepend>
               <v-icon size="small" color="warning">mdi-alert-circle</v-icon>
             </template>
-            <v-list-item-title class="forced-fail-item-title" :title="itemName">
-              {{ itemName }}
+            <v-list-item-title class="forced-fail-item-title" :title="item.name">
+              {{ item.name }}
             </v-list-item-title>
             <template #append>
-              <v-icon size="x-small" color="grey">mdi-content-copy</v-icon>
+              <div class="d-flex align-center gap-2 forced-fail-item-append">
+                <v-chip size="small" :color="getScoreColor(item.score)" variant="flat" class="font-weight-bold">
+                  {{ (item.score * 10).toFixed(2) }} / 10
+                </v-chip>
+                <v-icon size="x-small" color="grey">mdi-content-copy</v-icon>
+              </div>
             </template>
           </v-list-item>
+          <div v-if="filteredForcedFailureDetails.length === 0" class="text-center text-medium-emphasis pa-4">
+            No failed items match the current search.
+          </div>
         </v-list>
       </v-card-text>
       <v-card-actions>
@@ -497,6 +511,7 @@ const selectedTestItem = ref<NormalizedTestItem | null>(null)
 
 // Forced fail items dialog
 const showForcedFailDialog = ref(false)
+const forcedFailSearch = ref('')
 
 // Filter options for dropdown
 const testItemFilterOptions = [
@@ -543,6 +558,18 @@ const tableTestItems = computed(() => {
     statusSort: normalizeStatus(item.STATUS),
     scoreSort: item.score ?? Number.NEGATIVE_INFINITY,
   }))
+})
+
+const filteredForcedFailureDetails = computed(() => {
+  const details = [...(props.record?.forcedFailureDetails || [])]
+    .sort((left, right) => left.score - right.score)
+
+  const query = forcedFailSearch.value.trim().toLowerCase()
+  if (!query) {
+    return details
+  }
+
+  return details.filter((item) => item.name.toLowerCase().includes(query))
 })
 
 // Helper functions
@@ -627,6 +654,12 @@ async function copyToClipboard(text: string): Promise<void> {
     console.error('Failed to copy:', err)
   }
 }
+
+watch(showForcedFailDialog, (isOpen) => {
+  if (!isOpen) {
+    forcedFailSearch.value = ''
+  }
+})
 
 // Computed filtered test items
 const filteredTestItems = computed(() => {
@@ -929,5 +962,9 @@ watch(
   overflow-wrap: anywhere;
   word-break: break-word;
   line-height: 1.35;
+}
+
+.forced-fail-item-append {
+  flex-wrap: nowrap;
 }
 </style>

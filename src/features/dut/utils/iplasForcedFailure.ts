@@ -1,10 +1,15 @@
 import type { RecordScoreResult, TestItemScoreResult } from '../types/scoring.types'
 import type { StationConfig } from '../components/StationSelectionDialog.vue'
 
+export interface ForcedFailureItemDetail {
+  name: string
+  score: number
+}
+
 export interface ForcedFailureInfo {
   isForcedFailure: boolean
   minimumItemScore: number | null
-  failingItems: string[]
+  failingItems: ForcedFailureItemDetail[]
 }
 
 function isNumericScoredItem(item: TestItemScoreResult): boolean {
@@ -30,7 +35,10 @@ export function evaluateForcedFailure(
 
   const failingItems = scoredRecord.testItemScores
     .filter((item) => isNumericScoredItem(item) && item.score < threshold)
-    .map((item) => item.testItemName)
+    .map((item) => ({
+      name: item.testItemName,
+      score: item.score,
+    }))
 
   return {
     isForcedFailure: failingItems.length > 0,

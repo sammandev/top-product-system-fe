@@ -209,6 +209,11 @@ export interface NormalizedTestItem {
   forcedFailureThreshold?: number
 }
 
+export interface ForcedFailureItemDetail {
+  name: string
+  score: number
+}
+
 // Normalized record interface that works for both Station Search and ISN Search
 export interface NormalizedRecord {
   // Identifiers
@@ -238,6 +243,7 @@ export interface NormalizedRecord {
   isForcedFailure?: boolean
   forcedFailureReason?: string
   forcedFailureItems?: string[]
+  forcedFailureDetails?: ForcedFailureItemDetail[]
   forcedFailureMinimumScore?: number
 }
 

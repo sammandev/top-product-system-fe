@@ -295,7 +295,7 @@ const {
   setScoringType,
 } = useScoring()
 const recordScores = ref<Record<string, number>>({})
-const forcedFailures = ref<Record<string, { minimumItemScore: number; failingItems: string[] }>>({})
+const forcedFailures = ref<Record<string, { minimumItemScore: number; failingItems: { name: string; score: number }[] }>>({})
 const calculatingScores = ref(false)
 
 // ============================================================================
@@ -1074,16 +1074,19 @@ async function fetchTestItems(): Promise<void> {
 
       // Apply test item filters if configured
       const config = stationConfigs.value[record.display_station_name]
-      if (config?.selectedTestItems && config.selectedTestItems.length > 0) {
-        const testItemSet = new Set(config.selectedTestItems)
-        const isIncludeMode = (config.testItemSelectionMode ?? 'include') === 'include'
-        csvRecord.TestItem = csvRecord.TestItem.filter((item) =>
-          isIncludeMode ? testItemSet.has(item.NAME) : !testItemSet.has(item.NAME),
-        )
+      const includeSet = new Set(config?.includedTestItems ?? [])
+      const excludeSet = new Set(config?.excludedTestItems ?? [])
+
+      if (includeSet.size > 0) {
+        csvRecord.TestItem = csvRecord.TestItem.filter((item) => includeSet.has(item.NAME))
+      }
+
+      if (excludeSet.size > 0) {
+        csvRecord.TestItem = csvRecord.TestItem.filter((item) => !excludeSet.has(item.NAME))
       }
 
       return csvRecord
-    })
+    }).filter((record) => (record.TestItem?.length ?? 0) > 0)
 
     if (transformedRecords.length === 0) {
       error.value = 'No iPLAS data was returned for the selected station configuration.'
@@ -1206,7 +1209,7 @@ async function handleCalculateScores(): Promise<void> {
 
     // Map scored records back to score map
     const newScores: Record<string, number> = {}
-    const nextForcedFailures: Record<string, { minimumItemScore: number; failingItems: string[] }> =
+    const nextForcedFailures: Record<string, { minimumItemScore: number; failingItems: { name: string; score: number }[] }> =
       {}
     testItemData.value.forEach((record, index) => {
       const isn = record.ISN || record.DeviceId || '-'
@@ -1311,14 +1314,15 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
     testStartTime: record['Test Start Time'] || '-',
     testEndTime: record['Test end Time'] || '-',
     testItems,
-    overallScore: forcedFailure ? 0 : scoredRecord?.overallScore,
+    overallScore: scoredRecord?.overallScore,
     valueItemsScore: scoredRecord?.valueItemsScore,
     binItemsScore: scoredRecord?.binItemsScore,
     isForcedFailure: !!forcedFailure,
     forcedFailureReason: forcedFailure
       ? `Forced failure: one or more scored numeric items are below ${forcedFailure.minimumItemScore.toFixed(1)} / 10`
       : undefined,
-    forcedFailureItems: forcedFailure?.failingItems,
+    forcedFailureItems: forcedFailure?.failingItems.map((item) => item.name),
+    forcedFailureDetails: forcedFailure?.failingItems,
     forcedFailureMinimumScore: forcedFailure?.minimumItemScore,
   }
 }

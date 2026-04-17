@@ -1115,6 +1115,7 @@ export function useIplasApi() {
     endTime: string | Date,
     testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
     testItemFilters?: string[],
+    excludeTestItemFilters?: string[],
     limit?: number,
     offset?: number,
   ): Promise<IplasCsvTestItemResponse<CsvTestItemData>> {
@@ -1131,6 +1132,7 @@ export function useIplasApi() {
         end_time: iplasProxyApi.formatDateForRequest(endTime),
         test_status: testStatus,
         test_item_filters: testItemFilters,
+        exclude_test_item_filters: excludeTestItemFilters,
         include_test_items: true,
         limit,
         offset,
