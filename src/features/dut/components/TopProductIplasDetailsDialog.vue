@@ -456,23 +456,30 @@
     <v-card v-if="record && scoreSummaryPrimary && overallScoreExplanation">
       <v-card-title class="d-flex align-center bg-primary">
         <v-icon class="mr-2" color="white">mdi-chart-line</v-icon>
-        <span class="text-white">{{ scoreSummaryLabel }} Calculation</span>
+        <span class="text-white">How This Score Is Calculated</span>
         <v-spacer />
         <v-btn icon="mdi-close" variant="text" color="white" size="small" @click="showOverallScoreDialog = false" />
       </v-card-title>
       <v-card-text class="pt-4">
-        <v-alert :color="record.isForcedFailure ? 'warning' : 'info'" variant="tonal" class="mb-4">
-          <div class="text-subtitle-2 font-weight-bold">{{ scoreSummaryLabel }}</div>
-          <div class="text-h6 mt-1" :class="getScoreColorClass(scoreSummaryPrimary.score)">
-            {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}
+        <div class="score-explanation-primary mb-4">
+          <div class="d-flex justify-space-between align-start flex-wrap gap-3">
+            <div>
+              <div class="text-caption text-medium-emphasis">{{ scoreSummaryLabel }}</div>
+              <div class="text-h4 font-weight-bold score-explanation-primary__score"
+                :class="getScoreColorClass(scoreSummaryPrimary.score)">
+                {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}
+              </div>
+              <div class="text-body-2 text-medium-emphasis mt-1">
+                Weighted average of all scored test items.
+              </div>
+            </div>
+            <v-chip v-if="record.isForcedFailure" color="warning" variant="tonal" size="small">
+              Min. Score Fail
+            </v-chip>
           </div>
-          <div class="text-body-2 mt-2">
-            {{ scoreSummaryCaption }}
+          <div v-if="scoreSummarySecondaryText" class="text-caption text-medium-emphasis mt-2">
+            {{ scoreSummarySecondaryText }}
           </div>
-        </v-alert>
-
-        <div class="text-body-2 mb-3">
-          The backend calculates this aggregate score as a weighted average across scored test items.
         </div>
 
         <v-alert color="info" variant="tonal" density="comfortable" class="mb-4">
@@ -508,17 +515,6 @@
             </div>
           </v-col>
         </v-row>
-
-        <div v-if="scoreExplanationMetrics.length" class="mt-4">
-          <div class="text-subtitle-2 font-weight-bold mb-2">Available Aggregate Scores</div>
-          <div class="d-flex flex-wrap gap-2">
-            <v-chip v-for="metric in scoreExplanationMetrics" :key="metric.key" size="small"
-              :color="metric.key === scoreSummaryPrimary.key ? 'primary' : undefined"
-              :variant="metric.key === scoreSummaryPrimary.key ? 'flat' : 'tonal'">
-              {{ metric.label }}: {{ formatScoreOutOfTen(metric.score) }}
-            </v-chip>
-          </div>
-        </div>
 
         <v-alert v-if="record.isForcedFailure" color="warning" variant="tonal" class="mt-4">
           <div class="text-subtitle-2 font-weight-bold mb-1">Forced Fail Override</div>
@@ -718,30 +714,6 @@ const scoreSummarySecondaryMetrics = computed<ScoreSummaryMetric[]>(() => {
   }, [])
 })
 
-const scoreExplanationMetrics = computed<ScoreSummaryMetric[]>(() => {
-  const record = props.record
-
-  if (!record) {
-    return []
-  }
-
-  const metrics: ScoreSummaryMetric[] = []
-
-  if (hasScore(record.overallScore)) {
-    metrics.push({ key: 'overall', label: 'Overall Score', score: record.overallScore })
-  }
-
-  if (hasScore(record.valueItemsScore)) {
-    metrics.push({ key: 'value', label: 'Value', score: record.valueItemsScore })
-  }
-
-  if (hasScore(record.binItemsScore)) {
-    metrics.push({ key: 'binary', label: 'Binary', score: record.binItemsScore })
-  }
-
-  return metrics
-})
-
 const forcedFailSummary = computed<ForcedFailSummary | null>(() => {
   const record = props.record
 
@@ -770,19 +742,7 @@ const scoreSummaryLabel = computed(() => {
   return scoreSummaryPrimary.value?.label ?? 'Score'
 })
 
-const scoreSummaryCaption = computed(() => {
-  const record = props.record
-
-  if (record?.isForcedFailure) {
-    return `Minimum score ${record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5'} / 10 triggered fail. Click for details.`
-  }
-
-  if (scoreSummaryPrimary.value?.key === 'overall') {
-    return 'Overall scored result. Click for calculation details.'
-  }
-
-  return `${scoreSummaryPrimary.value?.label ?? 'Score'} scored result. Click for calculation details.`
-})
+const scoreSummaryCaption = computed(() => 'Click for details.')
 
 const scoreSummaryIcon = computed(() => {
   if (props.record?.isForcedFailure) {
@@ -1366,6 +1326,18 @@ watch(
   border-radius: 12px;
   border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
   background: rgba(var(--v-theme-on-surface), 0.03);
+}
+
+.score-explanation-primary {
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  background: rgba(var(--v-theme-on-surface), 0.03);
+}
+
+.score-explanation-primary__score {
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 
 .score-formula-code {
