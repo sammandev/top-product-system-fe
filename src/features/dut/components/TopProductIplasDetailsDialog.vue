@@ -212,8 +212,8 @@
           fixed-header fixed-footer style="height: 100%;" class="elevation-1 v-table--striped"
           :class="{ 'clickable-rows': hasScores }" @click:row="handleRowClick">
           <template #item.statusSort="{ item }">
-            <span class="status-text" :class="getStatusTextClass(item.STATUS)">
-              {{ normalizeStatus(item.STATUS) }}
+            <span class="status-text" :class="getStatusTextClass(item.statusDisplay)">
+              {{ item.statusDisplay }}
             </span>
           </template>
           <template #item.VALUE="{ item }">
@@ -482,18 +482,41 @@
           </div>
         </div>
 
-        <v-alert color="info" variant="tonal" density="comfortable" class="mb-4">
-          <div class="text-subtitle-2 font-weight-bold mb-1">Formula</div>
-          <code class="text-body-2 score-formula-code">
+        <div class="score-formula-panel mb-4">
+          <div class="text-subtitle-2 font-weight-bold mb-3">Formula</div>
+          <div class="score-formula-equation text-body-2 mb-3">
             Aggregate = sum(item score × effective weight) / sum(effective weight)
-          </code>
-          <div class="text-caption mt-2">
-            Effective weight = configured weight × configured weight.
           </div>
-          <div class="text-caption mt-1">
-            Displayed scores are shown on a /10 scale. The backend stores and averages them on a 0-1 scale.
+          <div class="score-formula-steps">
+            <div class="score-formula-step">
+              <div class="score-formula-step__index">1</div>
+              <div>
+                <div class="text-body-2">Convert each configured weight into an effective weight.</div>
+                <div class="text-caption text-medium-emphasis mt-1">
+                  Effective weight = configured weight × configured weight.
+                </div>
+              </div>
+            </div>
+            <div class="score-formula-step">
+              <div class="score-formula-step__index">2</div>
+              <div>
+                <div class="text-body-2">Use only test items that actually have a score.</div>
+                <div class="text-caption text-medium-emphasis mt-1">
+                  Each scored item contributes score × effective weight to the numerator.
+                </div>
+              </div>
+            </div>
+            <div class="score-formula-step">
+              <div class="score-formula-step__index">3</div>
+              <div>
+                <div class="text-body-2">Divide by the total effective weight, then display the result on a /10 scale.</div>
+                <div class="text-caption text-medium-emphasis mt-1">
+                  The backend stores and averages scores on a 0-1 scale before the UI formats them as /10.
+                </div>
+              </div>
+            </div>
           </div>
-        </v-alert>
+        </div>
 
         <v-row dense>
           <v-col cols="12" sm="6">
@@ -823,7 +846,8 @@ const testItemHeaders = computed(() => {
 const tableTestItems = computed(() => {
   return filteredTestItems.value.map((item: NormalizedTestItem) => ({
     ...item,
-    statusSort: normalizeStatus(item.STATUS),
+    statusDisplay: getItemStatusLabel(item),
+    statusSort: getItemStatusSortValue(item),
     scoreSort: item.score ?? Number.NEGATIVE_INFINITY,
   }))
 })
@@ -879,7 +903,48 @@ function getValueClass(item: NormalizedTestItem): string {
   return 'text-high-emphasis'
 }
 
+function getItemScoreThreshold(item: NormalizedTestItem): number | null {
+  return item.forcedFailureThreshold ?? props.record?.forcedFailureMinimumScore ?? null
+}
+
+function isItemBelowScoreThreshold(item: NormalizedTestItem): boolean {
+  const threshold = getItemScoreThreshold(item)
+
+  if (!hasScore(item.score) || threshold === null) {
+    return false
+  }
+
+  return item.score * 10 < threshold
+}
+
+function getItemStatusLabel(item: NormalizedTestItem): string {
+  if (isItemBelowScoreThreshold(item)) {
+    return 'SCORE FAIL'
+  }
+
+  return normalizeStatus(item.STATUS)
+}
+
+function getItemStatusSortValue(item: NormalizedTestItem): string {
+  const statusLabel = getItemStatusLabel(item)
+
+  if (statusLabel === 'PASS') {
+    return '0_PASS'
+  }
+
+  if (statusLabel === 'SCORE FAIL') {
+    return '1_SCORE FAIL'
+  }
+
+  if (statusLabel === 'FAIL') {
+    return '2_FAIL'
+  }
+
+  return `3_${statusLabel}`
+}
+
 function getStatusTextClass(status: string | undefined): string {
+  if ((status ?? '').toUpperCase() === 'SCORE FAIL') return 'text-warning'
   if (isStatusPass(status ?? '')) return 'text-success'
   if (isStatusFail(status ?? '')) return 'text-error'
   return 'text-medium-emphasis'
@@ -1346,9 +1411,50 @@ watch(
   overflow-wrap: anywhere;
 }
 
+.score-formula-panel {
+  padding: 1rem;
+  border-radius: 14px;
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  background: linear-gradient(180deg, rgba(var(--v-theme-primary), 0.05), rgba(var(--v-theme-on-surface), 0.02));
+}
+
+.score-formula-equation {
+  padding: 0.85rem 1rem;
+  border-radius: 12px;
+  background: rgba(var(--v-theme-surface), 0.88);
+  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  font-family: Consolas, 'Courier New', monospace;
+  overflow-wrap: anywhere;
+}
+
+.score-formula-steps {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.score-formula-step {
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.score-formula-step__index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  background: rgba(var(--v-theme-primary), 0.12);
+  color: rgb(var(--v-theme-primary));
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
 .status-text {
   display: inline-block;
-  min-width: 52px;
+  min-width: 84px;
   font-weight: 600;
   letter-spacing: 0.01em;
 }
