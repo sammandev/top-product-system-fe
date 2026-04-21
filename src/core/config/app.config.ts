@@ -55,10 +55,8 @@ export const APP_CONFIG = {
     debounceDelay: 300,
     toastDuration: 2000,
     animationDuration: 200,
-    headerHeight: 68,
-    footerHeight: 44,
-    sidebarWidth: 280,
-    sidebarRailWidth: 84,
+    sidebarWidth: 256,
+    sidebarRailWidth: 72,
   },
 
   // Theme
