@@ -6,9 +6,6 @@
       :page-title="pageTitle"
       :page-eyebrow="pageEyebrow"
       :page-description="pageDescription"
-      :page-icon="pageIcon"
-      :page-accent="pageAccent"
-      :page-breadcrumbs="pageBreadcrumbs"
       :display-name="authStore.displayName"
       :display-role="authStore.displayRole"
       :is-guest="authStore.isGuest"
@@ -26,7 +23,6 @@
       :search-query="searchQuery"
       :sections="visibleSections"
       :current-path="route.path"
-      :active-section-key="activeSectionKey"
       :app-name="appName"
       :display-name="authStore.displayName"
       :access-label="accessLabel"
@@ -94,13 +90,9 @@ const { drawer, rail } = useDrawerState(true, false)
 const {
   searchQuery,
   visibleSections,
-  activeSectionKey,
   pageTitle,
   pageEyebrow,
   pageDescription,
-  pageIcon,
-  pageAccent,
-  pageBreadcrumbs,
   menuStatusTone,
   menuStatusLabel,
   menuStatusDetail,
@@ -165,7 +157,9 @@ watch(
 
 <style scoped>
 .default-layout {
-  background: rgb(var(--v-theme-background));
+  background:
+    radial-gradient(circle at top right, rgba(var(--v-theme-primary), 0.08), transparent 26%),
+    linear-gradient(180deg, rgb(var(--v-theme-background)), rgba(var(--v-theme-background), 0.98));
 }
 
 .default-layout__progress {
@@ -183,7 +177,7 @@ watch(
 .default-layout__content {
   flex: 1 1 0;
   min-height: 0;
-  padding: 22px 20px 18px;
+  padding: 26px 28px 22px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -215,13 +209,13 @@ watch(
 
 @media (max-width: 960px) {
   .default-layout__content {
-    padding: 16px 14px 14px;
+    padding: 18px 16px 16px;
   }
 }
 
 @media (max-width: 600px) {
   .default-layout__content {
-    padding: 12px;
+    padding: 14px 12px 14px;
   }
 }
 </style>

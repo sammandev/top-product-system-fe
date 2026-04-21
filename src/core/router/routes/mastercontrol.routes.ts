@@ -20,12 +20,6 @@ export const mastercontrolRoutes: RouteRecordRaw[] = [
         { title: 'Tools', disabled: true },
         { title: 'MasterControl Analyze', disabled: true },
       ],
-      shell: {
-        eyebrow: 'Tools',
-        description: 'Analyze MasterControl files with a tighter review surface built for specification-heavy work.',
-        icon: 'mdi-file-chart-outline',
-        accent: 'info',
-      },
     },
   },
 ]

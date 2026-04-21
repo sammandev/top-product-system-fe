@@ -19,12 +19,6 @@ export const comparisonRoutes: RouteRecordRaw[] = [
         { title: 'Dashboard', to: '/dashboard' },
         { title: 'File Comparison', disabled: true },
       ],
-      shell: {
-        eyebrow: 'Tools',
-        description: 'Compare uploaded files side by side and isolate meaningful differences without leaving the workspace.',
-        icon: 'mdi-file-compare-outline',
-        accent: 'info',
-      },
     },
   },
   {
@@ -39,12 +33,6 @@ export const comparisonRoutes: RouteRecordRaw[] = [
         { title: 'Dashboard', to: '/dashboard' },
         { title: 'DVT-MC2 Compare', disabled: true },
       ],
-      shell: {
-        eyebrow: 'Tools',
-        description: 'Validate DVT and MC2 outputs with a targeted comparison flow built for fast mismatch review.',
-        icon: 'mdi-compare-horizontal',
-        accent: 'info',
-      },
     },
   },
 ]

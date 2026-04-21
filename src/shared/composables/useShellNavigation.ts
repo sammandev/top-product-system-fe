@@ -1,12 +1,10 @@
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute } from 'vue-router'
 import { APP_CONFIG } from '@/core/config'
-import type { AppRouteBreadcrumbItem } from '@/core/router/route-meta'
 import { useMenuAccessStore } from '@/features/admin/stores/menuAccess.store'
 import { useAuthStore } from '@/features/auth/stores'
 
 type MenuSectionKey = 'main' | 'tools' | 'system'
-type ShellSectionTone = 'primary' | 'info' | 'warning'
 
 export interface ShellMenuItem {
   title: string
@@ -19,8 +17,6 @@ export interface ShellMenuSection {
   key: MenuSectionKey
   label: string
   caption: string
-  icon: string
-  tone: ShellSectionTone
   items: ShellMenuItem[]
 }
 
@@ -238,8 +234,6 @@ export function useShellNavigation() {
         key: 'main',
         label: 'Main',
         caption: 'Core workspace',
-        icon: 'mdi-compass-outline',
-        tone: 'primary',
         items: visibleMainItems.value,
       },
     ]
@@ -249,8 +243,6 @@ export function useShellNavigation() {
         key: 'tools',
         label: 'Tools',
         caption: 'Processing and analysis',
-        icon: 'mdi-hammer-wrench',
-        tone: 'info',
         items: visibleToolsItems.value,
       })
     }
@@ -260,8 +252,6 @@ export function useShellNavigation() {
         key: 'system',
         label: 'System',
         caption: 'Administration and control',
-        icon: 'mdi-shield-crown-outline',
-        tone: 'warning',
         items: visibleSystemItems.value,
       })
     }
@@ -270,7 +260,6 @@ export function useShellNavigation() {
   })
 
   const currentMatch = computed(() => findCurrentMenuMatch(visibleSections.value, route.path))
-  const currentShellMeta = computed(() => route.meta.shell)
 
   const pageTitle = computed(() => {
     if (typeof route.meta.title === 'string' && route.meta.title.trim().length > 0) {
@@ -280,41 +269,9 @@ export function useShellNavigation() {
     return currentMatch.value?.item.title || formatRouteName(route.name)
   })
 
-  const pageEyebrow = computed(
-    () => currentShellMeta.value?.eyebrow || currentMatch.value?.section.label || 'Workspace',
-  )
-
-  const pageIcon = computed(
-    () => currentShellMeta.value?.icon || route.meta.icon || currentMatch.value?.section.icon || 'mdi-compass-outline',
-  )
-
-  const pageAccent = computed<'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error'>(
-    () => currentShellMeta.value?.accent || currentMatch.value?.section.tone || 'primary',
-  )
-
-  const pageBreadcrumbs = computed<AppRouteBreadcrumbItem[]>(() => {
-    if (Array.isArray(route.meta.breadcrumb) && route.meta.breadcrumb.length > 0) {
-      return route.meta.breadcrumb
-    }
-
-    if (currentMatch.value?.parentTitle) {
-      return [
-        { title: currentMatch.value.section.label, disabled: true },
-        { title: currentMatch.value.parentTitle, disabled: true },
-        { title: currentMatch.value.item.title, disabled: true },
-      ]
-    }
-
-    return [{ title: pageTitle.value, disabled: true }]
-  })
-
-  const activeSectionKey = computed(() => currentMatch.value?.section.key || null)
+  const pageEyebrow = computed(() => currentMatch.value?.section.label || 'Workspace')
 
   const pageDescription = computed(() => {
-    if (currentShellMeta.value?.description) {
-      return currentShellMeta.value.description
-    }
-
     if (menuAccessStore.loading) {
       return 'Synchronizing role-aware navigation for this workspace.'
     }
@@ -410,13 +367,9 @@ export function useShellNavigation() {
   return {
     searchQuery,
     visibleSections,
-    activeSectionKey,
     pageTitle,
     pageEyebrow,
     pageDescription,
-    pageIcon,
-    pageAccent,
-    pageBreadcrumbs,
     menuStatusTone,
     menuStatusLabel,
     menuStatusDetail,

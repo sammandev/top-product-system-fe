@@ -25,11 +25,8 @@
       </div>
 
       <div class="app-shell-header__context">
-        <div v-if="$vuetify.display.mdAndUp && pageEyebrow" class="app-shell-header__eyebrow">{{ pageEyebrow }}</div>
+        <div class="app-shell-header__eyebrow">{{ pageEyebrow }}</div>
         <div class="app-shell-header__title-row">
-          <div v-if="$vuetify.display.mdAndUp" class="app-shell-header__context-icon" :class="`tone-${pageAccent}`">
-            <v-icon size="16">{{ pageIcon }}</v-icon>
-          </div>
           <h1 class="app-shell-header__title">{{ pageTitle }}</h1>
           <v-chip
             v-if="hasDutAccess && !isGuest && $vuetify.display.mdAndUp"
@@ -41,6 +38,9 @@
             DUT connected
           </v-chip>
         </div>
+        <p v-if="$vuetify.display.mdAndUp" class="app-shell-header__description">
+          {{ pageDescription }}
+        </p>
       </div>
 
       <div class="app-shell-header__actions">
@@ -108,17 +108,12 @@
 </template>
 
 <script setup lang="ts">
-import type { AppRouteBreadcrumbItem } from '@/core/router/route-meta'
-
 defineProps<{
   appName: string
   appVersion: string
   pageTitle: string
   pageEyebrow: string
   pageDescription: string
-  pageIcon: string
-  pageAccent: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error'
-  pageBreadcrumbs: AppRouteBreadcrumbItem[]
   displayName: string
   displayRole: string
   isGuest: boolean
@@ -137,17 +132,20 @@ defineEmits<{
 <style scoped>
 .app-shell-header {
   border-bottom: 1px solid rgba(var(--v-border-color), calc(var(--v-border-opacity) + 0.04));
-  background: rgb(var(--v-theme-surface));
+  background:
+    linear-gradient(135deg, rgba(var(--v-theme-surface), 0.98), rgba(var(--v-theme-background), 0.92)),
+    radial-gradient(circle at top left, rgba(var(--v-theme-primary), 0.11), transparent 34%);
+  backdrop-filter: blur(18px);
 }
 
 .app-shell-header__inner {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 12px;
+  gap: 18px;
   width: 100%;
   height: 100%;
-  padding: 0 12px 0 8px;
+  padding: 0 18px 0 10px;
 }
 
 .app-shell-header__left {
@@ -165,7 +163,7 @@ defineEmits<{
 .app-shell-header__brand {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   min-width: 0;
 }
 
@@ -173,12 +171,14 @@ defineEmits<{
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
-  border-radius: 10px;
-  background: rgba(var(--v-theme-primary), 0.1);
+  width: 40px;
+  height: 40px;
+  border-radius: 14px;
+  background:
+    linear-gradient(160deg, rgba(var(--v-theme-primary), 0.18), rgba(var(--v-theme-info), 0.14)),
+    rgba(var(--v-theme-surface), 0.92);
   color: rgb(var(--v-theme-primary));
-  box-shadow: inset 0 0 0 1px rgba(var(--v-theme-primary), 0.1);
+  box-shadow: inset 0 0 0 1px rgba(var(--v-theme-primary), 0.14);
 }
 
 .app-shell-header__brand-copy {
@@ -188,14 +188,16 @@ defineEmits<{
 }
 
 .app-shell-header__brand-label {
-  font-size: 0.88rem;
+  font-size: 0.92rem;
   font-weight: 700;
   line-height: 1.1;
   color: rgba(var(--v-theme-on-surface), 0.9);
 }
 
 .app-shell-header__brand-meta {
-  font-size: 0.68rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
   color: rgba(var(--v-theme-on-surface), 0.52);
 }
 
@@ -204,59 +206,18 @@ defineEmits<{
   overflow: hidden;
 }
 
-.app-shell-header__context-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 26px;
-  height: 26px;
-  border-radius: 8px;
-  flex-shrink: 0;
-}
-
-.app-shell-header__context-icon.tone-primary {
-  background: rgba(var(--v-theme-primary), 0.12);
-  color: rgb(var(--v-theme-primary));
-}
-
-.app-shell-header__context-icon.tone-secondary {
-  background: rgba(var(--v-theme-secondary), 0.12);
-  color: rgb(var(--v-theme-secondary));
-}
-
-.app-shell-header__context-icon.tone-success {
-  background: rgba(var(--v-theme-success), 0.14);
-  color: rgb(var(--v-theme-success));
-}
-
-.app-shell-header__context-icon.tone-info {
-  background: rgba(var(--v-theme-info), 0.14);
-  color: rgb(var(--v-theme-info));
-}
-
-.app-shell-header__context-icon.tone-warning {
-  background: rgba(var(--v-theme-warning), 0.16);
-  color: rgba(var(--v-theme-on-warning), 0.92);
-}
-
-.app-shell-header__context-icon.tone-error {
-  background: rgba(var(--v-theme-error), 0.14);
-  color: rgb(var(--v-theme-error));
-}
-
 .app-shell-header__eyebrow {
-  margin-bottom: 2px;
-  font-size: 0.64rem;
+  font-size: 0.68rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  color: rgba(var(--v-theme-on-surface), 0.52);
+  color: rgba(var(--v-theme-primary), 0.84);
 }
 
 .app-shell-header__title-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   min-width: 0;
 }
 
@@ -264,16 +225,24 @@ defineEmits<{
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: clamp(0.98rem, 0.6vw + 0.84rem, 1.16rem);
-  line-height: 1.2;
+  font-size: clamp(1.02rem, 1vw + 0.72rem, 1.35rem);
+  line-height: 1.15;
   font-weight: 700;
-  color: rgba(var(--v-theme-on-surface), 0.9);
+  color: rgba(var(--v-theme-on-surface), 0.94);
+}
+
+.app-shell-header__description {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  margin-top: 4px;
+  font-size: 0.82rem;
+  color: rgba(var(--v-theme-on-surface), 0.58);
 }
 
 .app-shell-header__dut-chip {
   flex-shrink: 0;
   font-weight: 600;
-  height: 24px;
 }
 
 .app-shell-header__actions {
@@ -284,11 +253,12 @@ defineEmits<{
 }
 
 .app-shell-header__account {
-  height: 40px;
-  padding: 0 8px;
-  border-radius: 12px;
+  height: 46px;
+  padding: 0 10px;
+  border-radius: 18px;
   color: rgba(var(--v-theme-on-surface), 0.88);
-  background: transparent;
+  background: rgba(var(--v-theme-on-surface), 0.03);
+  box-shadow: inset 0 0 0 1px rgba(var(--v-border-color), var(--v-border-opacity));
 }
 
 .app-shell-header__account-copy {
@@ -304,7 +274,7 @@ defineEmits<{
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.82rem;
+  font-size: 0.86rem;
   font-weight: 700;
 }
 
@@ -313,7 +283,7 @@ defineEmits<{
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   color: rgba(var(--v-theme-on-surface), 0.55);
 }
 
@@ -325,12 +295,12 @@ defineEmits<{
 @media (max-width: 959px) {
   .app-shell-header__inner {
     grid-template-columns: auto 1fr auto;
-    gap: 8px;
-    padding-inline: 6px 10px;
+    gap: 12px;
+    padding-inline: 8px 12px;
   }
 
   .app-shell-header__title {
-    font-size: 0.96rem;
+    font-size: 1rem;
   }
 }
 
@@ -339,9 +309,8 @@ defineEmits<{
     min-width: 0;
   }
 
-  .app-shell-header__brand-mark {
-    width: 32px;
-    height: 32px;
+  .app-shell-header__eyebrow {
+    font-size: 0.62rem;
   }
 }
 </style>
