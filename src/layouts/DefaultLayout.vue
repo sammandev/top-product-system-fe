@@ -31,9 +31,9 @@
             </v-btn>
 
             <!-- User Menu -->
-            <v-menu location="bottom">
+            <v-menu location="bottom end">
                 <template #activator="{ props }">
-                    <v-btn v-bind="props" variant="text" class="text-none">
+                <v-btn v-bind="props" variant="text" class="text-none px-2" rounded="xl">
                         <v-avatar size="32" :color="authStore.isGuest ? 'warning' : 'secondary'" class="mr-2">
                             <v-icon size="small">{{ authStore.isGuest ? 'mdi-account-question' : 'mdi-account' }}</v-icon>
                         </v-avatar>
@@ -44,7 +44,7 @@
                     </v-btn>
                 </template>
 
-                <v-list min-width="250">
+                <v-list min-width="240" class="py-2">
                     <v-list-item>
                         <template #prepend>
                             <v-avatar :color="authStore.isGuest ? 'warning' : 'secondary'" size="40">
@@ -59,34 +59,23 @@
                         </v-list-item-subtitle>
                     </v-list-item>
 
-                    <!-- Guest Mode Indicator -->
-                    <template v-if="authStore.isGuest">
-                        <v-divider class="my-2" />
-                        <v-list-item prepend-icon="mdi-information" title="Guest Mode"
-                            subtitle="Limited access - login for full features">
-                            <template #append>
-                                <v-chip color="warning" size="small">Guest</v-chip>
-                            </template>
-                        </v-list-item>
-                    </template>
-
                     <v-divider class="my-2" />
 
-                    <v-list-item v-if="!authStore.isGuest" prepend-icon="mdi-account-cog" title="Profile Settings" />
-                    <v-list-item v-if="!authStore.isGuest" prepend-icon="mdi-cog" title="Preferences" />
-
-                    <v-divider v-if="!authStore.isGuest" class="my-2" />
-
-                    <v-list-item v-if="authStore.hasDUTAccess && !authStore.isGuest" prepend-icon="mdi-cloud-check"
-                        title="DUT Access" subtitle="External login active">
+                    <v-list-item
+                        :prepend-icon="authStore.isGuest ? 'mdi-shield-account' : authStore.loginType === 'external' ? 'mdi-cloud-check' : 'mdi-account-check'"
+                        :title="authStore.isGuest ? 'Guest access' : authStore.loginType === 'external' ? 'External access' : 'Local access'"
+                        :subtitle="authStore.isGuest ? 'Limited access mode' : authStore.hasDUTAccess ? 'DUT session available' : 'App session only'">
                         <template #append>
-                            <v-chip color="success" size="small">Active</v-chip>
+                            <v-chip :color="authStore.isGuest ? 'warning' : authStore.hasDUTAccess ? 'success' : 'info'"
+                                size="small" variant="flat">
+                                {{ authStore.isGuest ? 'Guest' : authStore.hasDUTAccess ? 'Connected' : 'Standard' }}
+                            </v-chip>
                         </template>
                     </v-list-item>
 
-                    <v-divider v-if="authStore.hasDUTAccess && !authStore.isGuest" class="my-2" />
+                    <v-divider class="my-2" />
 
-                    <v-list-item prepend-icon="mdi-logout" title="Logout" @click="handleLogout" />
+                    <v-list-item prepend-icon="mdi-logout" title="Logout" base-color="error" @click="handleLogout" />
                 </v-list>
             </v-menu>
         </v-app-bar>
@@ -177,21 +166,14 @@
             <!-- Drawer Footer -->
             <template #append>
                 <v-divider />
-                <v-list density="compact" nav>
-                    <!-- User Info with Logout Button -->
-                    <v-list-item v-if="!rail" prepend-icon="mdi-account-circle" :title="authStore.displayName"
-                        :subtitle="authStore.isGuest ? 'Guest Access' : (authStore.loginType === 'external' ? 'External Access' : 'Local Access')"
-                        rounded="xl" class="my-1">
-                        <template #append>
-                            <v-btn icon="mdi-logout" size="small" variant="text" color="error" @click="handleLogout" />
-                        </template>
-                    </v-list-item>
-
-                    <!-- Collapse/Expand Toggle -->
-                    <v-list-item v-if="$vuetify.display.lgAndUp"
-                        :prepend-icon="rail ? 'mdi-menu-close' : 'mdi-menu-open'" :title="rail ? 'Expand' : 'Collapse'"
-                        @click="rail = !rail" rounded="xl" class="my-1" />
-                </v-list>
+                <div class="default-layout__drawer-footer pa-2">
+                    <v-list v-if="$vuetify.display.lgAndUp" density="compact" nav
+                        class="default-layout__drawer-footer-list">
+                        <v-list-item :prepend-icon="rail ? 'mdi-menu-close' : 'mdi-menu-open'"
+                    :title="rail ? 'Expand navigation' : 'Collapse navigation'" @click="rail = !rail"
+                            rounded="xl" class="default-layout__drawer-footer-toggle" />
+                    </v-list>
+                </div>
             </template>
         </v-navigation-drawer>
 
@@ -570,6 +552,19 @@ watch(
 /* Drawer footer styling */
 :deep(.v-navigation-drawer .v-navigation-drawer__append) {
     flex-shrink: 0;
+    padding: 0;
+}
+
+.default-layout__drawer-footer {
+    background-color: rgb(var(--v-theme-surface));
+}
+
+.default-layout__drawer-footer-list {
+    padding: 0;
+}
+
+.default-layout__drawer-footer-toggle {
+    margin: 0;
 }
 
 /* Hover expand animation */
