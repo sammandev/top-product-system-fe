@@ -165,9 +165,7 @@ watch(
 
 <style scoped>
 .default-layout {
-  background:
-    radial-gradient(circle at top right, rgba(var(--v-theme-primary), 0.08), transparent 26%),
-    linear-gradient(180deg, rgb(var(--v-theme-background)), rgba(var(--v-theme-background), 0.98));
+  background: rgb(var(--v-theme-background));
 }
 
 .default-layout__progress {
@@ -185,7 +183,7 @@ watch(
 .default-layout__content {
   flex: 1 1 0;
   min-height: 0;
-  padding: 26px 28px 22px;
+  padding: 22px 20px 18px;
   overflow-y: auto;
   overflow-x: hidden;
   scrollbar-width: thin;
@@ -217,13 +215,13 @@ watch(
 
 @media (max-width: 960px) {
   .default-layout__content {
-    padding: 18px 16px 16px;
+    padding: 16px 14px 14px;
   }
 }
 
 @media (max-width: 600px) {
   .default-layout__content {
-    padding: 14px 12px 14px;
+    padding: 12px;
   }
 }
 </style>
