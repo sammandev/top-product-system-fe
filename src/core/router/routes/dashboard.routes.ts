@@ -16,6 +16,16 @@ export const dashboardRoutes: RouteRecordRaw[] = [
       requiresAdmin: true,
       title: 'Dashboard',
       icon: 'mdi-view-dashboard',
+      breadcrumb: [
+        { title: 'Operations', disabled: true },
+        { title: 'Dashboard', disabled: true },
+      ],
+      shell: {
+        eyebrow: 'Main',
+        description: 'Track system health, recent activity, and the current operational snapshot at a glance.',
+        icon: 'mdi-view-dashboard-outline',
+        accent: 'primary',
+      },
     },
   },
 ]

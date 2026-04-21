@@ -127,7 +127,13 @@ export interface RouteMeta {
   title?: string
   icon?: string
   layout?: string
-  breadcrumb?: string
+  breadcrumb?: BreadcrumbItem[]
+  shell?: {
+    eyebrow?: string
+    description?: string
+    icon?: string
+    accent?: 'primary' | 'secondary' | 'success' | 'info' | 'warning' | 'error'
+  }
 }
 
 // Notification
@@ -161,7 +167,8 @@ export interface ThemeConfig {
 
 // Breadcrumb
 export interface BreadcrumbItem {
-  text: string
+  title: string
+  text?: string
   to?: string
   disabled?: boolean
   icon?: string

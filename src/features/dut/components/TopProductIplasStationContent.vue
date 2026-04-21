@@ -956,13 +956,18 @@ function mapDefaultLatestTestItemInfos(
   items: Array<{ name: string; upperlimit: number | null; lowerlimit: number | null }>,
 ): TestItemInfo[] {
   return dedupeTestItemInfos(
-    items.map((item) => ({
-      name: item.name,
-      isValue: true,
-      isBin: false,
-      hasUcl: item.upperlimit !== null,
-      hasLcl: item.lowerlimit !== null,
-    })),
+    items.map((item) => {
+      const hasUcl = item.upperlimit !== null && item.upperlimit !== 0
+      const hasLcl = item.lowerlimit !== null && item.lowerlimit !== 0
+
+      return {
+        name: item.name,
+        isValue: true,
+        isBin: false,
+        hasUcl,
+        hasLcl,
+      }
+    }),
   )
 }
 
@@ -1000,11 +1005,6 @@ async function loadDefaultTestItemsForStation(
     if (!Array.isArray(response.data)) {
       throw new Error('Default test items API returned an invalid response')
     }
-    if (response.source !== 'default') {
-      throw new Error(
-        'Default test items are unavailable because the backend had to fall back to the broader station list. Use iPLAS source or adjust the selected time range.',
-      )
-    }
     if (response.data.length === 0) {
       throw new Error('No default test items were returned for the selected station and time range')
     }
@@ -1012,7 +1012,11 @@ async function loadDefaultTestItemsForStation(
     const testItemInfos = mapDefaultLatestTestItemInfos(response.data)
     currentStationDefaultTestItems.value = testItemInfos
     defaultLatestTestItemsCache.value.set(cacheKey, testItemInfos)
-    console.log('[TestItems] Loaded fast default test items from external DUT latest endpoint')
+    if (response.source === 'fallback_station_items') {
+      console.warn('[TestItems] Latest endpoint unavailable, loaded broader station test item list instead')
+    } else {
+      console.log('[TestItems] Loaded fast default test items from external DUT latest endpoint')
+    }
   } catch (err: unknown) {
     currentStationDefaultTestItemsError.value =
       getErrorMessage(err) || 'Failed to load default test items'

@@ -20,6 +20,12 @@ export const dutRoutes: RouteRecordRaw[] = [
         { title: 'DUT Management', disabled: true },
         { title: 'Top Products', disabled: true },
       ],
+      shell: {
+        eyebrow: 'Main',
+        description: 'Review ranking trends, score outcomes, and test-item behavior across top-product workflows.',
+        icon: 'mdi-trophy-outline',
+        accent: 'info',
+      },
     },
   },
   {
@@ -35,6 +41,12 @@ export const dutRoutes: RouteRecordRaw[] = [
         { title: 'DUT Management', disabled: true },
         { title: 'Analysis', disabled: true },
       ],
+      shell: {
+        eyebrow: 'Main',
+        description: 'Inspect DUT performance with focused analysis tools for measurements, failures, and correlations.',
+        icon: 'mdi-chart-line-variant',
+        accent: 'info',
+      },
     },
   },
   {
@@ -50,6 +62,12 @@ export const dutRoutes: RouteRecordRaw[] = [
         { title: 'DUT Management', disabled: true },
         { title: 'PA Trend', disabled: true },
       ],
+      shell: {
+        eyebrow: 'Main',
+        description: 'Follow PA movement over time to spot drift, stability changes, and outlier periods early.',
+        icon: 'mdi-chart-timeline-variant',
+        accent: 'info',
+      },
     },
   },
   {
@@ -65,6 +83,12 @@ export const dutRoutes: RouteRecordRaw[] = [
         { title: 'DUT Management', disabled: true },
         { title: 'Data Explorer', disabled: true },
       ],
+      shell: {
+        eyebrow: 'Main',
+        description: 'Slice DUT records, inspect raw data, and move quickly between stations, ISNs, and result sets.',
+        icon: 'mdi-database-search-outline',
+        accent: 'info',
+      },
     },
   },
   // iPLAS Integration Routes - Redirect to combined Data Explorer

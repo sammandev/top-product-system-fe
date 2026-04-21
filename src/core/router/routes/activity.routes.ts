@@ -8,6 +8,16 @@ export const activityRoutes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: true,
       title: 'Activity History',
+      breadcrumb: [
+        { title: 'Operations', disabled: true },
+        { title: 'Activity History', disabled: true },
+      ],
+      shell: {
+        eyebrow: 'Main',
+        description: 'Review recent user actions and background events to understand who changed what and when.',
+        icon: 'mdi-history',
+        accent: 'primary',
+      },
     },
   },
 ]

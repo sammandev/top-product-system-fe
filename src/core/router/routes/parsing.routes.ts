@@ -19,6 +19,12 @@ export const parsingRoutes: RouteRecordRaw[] = [
         { title: 'Dashboard', to: '/dashboard' },
         { title: 'File Parsing', disabled: true },
       ],
+      shell: {
+        eyebrow: 'Tools',
+        description: 'Prepare uploaded data for downstream analysis with a cleaner parsing workspace and clearer outputs.',
+        icon: 'mdi-file-document-edit-outline',
+        accent: 'info',
+      },
     },
   },
   {
@@ -33,6 +39,12 @@ export const parsingRoutes: RouteRecordRaw[] = [
         { title: 'Dashboard', to: '/dashboard' },
         { title: 'Parse & Download Format', disabled: true },
       ],
+      shell: {
+        eyebrow: 'Tools',
+        description: 'Generate export-ready parsed outputs with the exact structure needed for downstream use.',
+        icon: 'mdi-file-export-outline',
+        accent: 'info',
+      },
     },
   },
 ]

@@ -20,6 +20,12 @@ export const conversionRoutes: RouteRecordRaw[] = [
         { title: 'Tools', disabled: true },
         { title: 'DVT to MC2 Converter', disabled: true },
       ],
+      shell: {
+        eyebrow: 'Tools',
+        description: 'Convert DVT files into MC2-ready outputs with a more focused utility workflow.',
+        icon: 'mdi-swap-horizontal-bold',
+        accent: 'info',
+      },
     },
   },
 ]
