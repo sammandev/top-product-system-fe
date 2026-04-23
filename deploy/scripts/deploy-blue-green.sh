@@ -147,6 +147,14 @@ get_target_color() {
   fi
 }
 
+container_health() {
+  docker inspect -f '{{.State.Status}}{{if .State.Health}} {{.State.Health.Status}}{{end}}' "$1" 2>/dev/null || true
+}
+
+container_is_healthy() {
+  [ "$(container_health "$1")" = "running healthy" ]
+}
+
 wait_for_health() {
   local container_name="$1"
 
@@ -179,6 +187,68 @@ switch_frontend_color() {
   TOP_PRODUCT_EDGE_NETWORK="$EDGE_NETWORK" bash "$EDGE_SCRIPT_DIR/switch-frontend-color.sh" "$1"
 }
 
+resolve_active_color() {
+  local recorded_color="${1:-}"
+  local blue_healthy=false
+  local green_healthy=false
+
+  if container_is_healthy "ast-tools-frontend-blue"; then
+    blue_healthy=true
+  fi
+
+  if container_is_healthy "ast-tools-frontend-green"; then
+    green_healthy=true
+  fi
+
+  if [ "$recorded_color" = "blue" ] && [ "$blue_healthy" = true ]; then
+    echo "blue"
+    return
+  fi
+
+  if [ "$recorded_color" = "green" ] && [ "$green_healthy" = true ]; then
+    echo "green"
+    return
+  fi
+
+  if [ "$recorded_color" = "blue" ] && [ "$green_healthy" = true ] && [ "$blue_healthy" = false ]; then
+    echo "green"
+    return
+  fi
+
+  if [ "$recorded_color" = "green" ] && [ "$blue_healthy" = true ] && [ "$green_healthy" = false ]; then
+    echo "blue"
+    return
+  fi
+
+  if [ -z "$recorded_color" ]; then
+    if [ "$blue_healthy" = true ] && [ "$green_healthy" = false ]; then
+      echo "blue"
+      return
+    fi
+
+    if [ "$green_healthy" = true ] && [ "$blue_healthy" = false ]; then
+      echo "green"
+      return
+    fi
+  fi
+
+  echo "$recorded_color"
+}
+
+reconcile_active_slot() {
+  local recorded_color="${1:-}"
+  local resolved_color
+
+  resolved_color="$(resolve_active_color "$recorded_color")"
+
+  if [ -n "$resolved_color" ] && [ "$resolved_color" != "$recorded_color" ]; then
+    echo "Recorded active slot '${recorded_color:-none}' is stale; switching traffic to healthy '$resolved_color' slot" >&2
+    switch_frontend_color "$resolved_color"
+  fi
+
+  echo "$resolved_color"
+}
+
 cleanup_frontend_images() {
   if [ -f "$EDGE_SCRIPT_DIR/cleanup-images.sh" ]; then
     bash "$EDGE_SCRIPT_DIR/cleanup-images.sh" frontend
@@ -188,7 +258,14 @@ cleanup_frontend_images() {
   docker image prune -f --filter 'label=com.ast-tools.project=top-product' >/dev/null 2>&1 || true
 }
 
-ACTIVE_COLOR="$(get_active_color || true)"
+prepare_target_slot() {
+  if docker inspect "$TARGET_CONTAINER" >/dev/null 2>&1; then
+    echo "Removing existing target container: $TARGET_CONTAINER"
+    docker rm -f "$TARGET_CONTAINER" >/dev/null 2>&1 || true
+  fi
+}
+
+ACTIVE_COLOR="$(reconcile_active_slot "$(get_active_color || true)")"
 TARGET_COLOR="$(get_target_color "$ACTIVE_COLOR")"
 TARGET_SERVICE="frontend-$TARGET_COLOR"
 TARGET_CONTAINER="ast-tools-frontend-$TARGET_COLOR"
@@ -205,6 +282,8 @@ ensure_edge_network
 if [ "$SKIP_BUILD" = false ]; then
   docker compose -f "$COMPOSE_FILE" build "$TARGET_SERVICE"
 fi
+
+prepare_target_slot
 
 docker compose -f "$COMPOSE_FILE" up -d "$TARGET_SERVICE"
 
