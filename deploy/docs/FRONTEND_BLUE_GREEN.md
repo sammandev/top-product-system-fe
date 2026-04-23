@@ -71,7 +71,7 @@ Important: this edge-proxy template now sets an explicit Docker Compose project 
 Useful operator commands:
 
 ```bash
-cd /srv/top-product-deployment/edge-proxy
+cd /data/ptb/TOP_PROD/deployment-infra/edge-proxy
 bash ./scripts/status.sh
 bash ./scripts/switch-frontend-color.sh blue
 bash ./scripts/switch-frontend-color.sh green

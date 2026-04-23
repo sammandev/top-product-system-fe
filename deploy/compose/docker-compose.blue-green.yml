@@ -1,3 +1,5 @@
+name: top-product-frontend-blue-green
+
 x-frontend-service: &frontend-service
   build:
     context: ../..

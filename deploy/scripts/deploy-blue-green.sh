@@ -161,7 +161,7 @@ wait_for_health() {
 }
 
 ensure_edge_network() {
-  if [ -x "$EDGE_SCRIPT_DIR/ensure-network.sh" ]; then
+  if [ -f "$EDGE_SCRIPT_DIR/ensure-network.sh" ]; then
     TOP_PRODUCT_EDGE_NETWORK="$EDGE_NETWORK" bash "$EDGE_SCRIPT_DIR/ensure-network.sh"
     return
   fi
@@ -170,7 +170,7 @@ ensure_edge_network() {
 }
 
 switch_frontend_color() {
-  if [ ! -x "$EDGE_SCRIPT_DIR/switch-frontend-color.sh" ]; then
+  if [ ! -f "$EDGE_SCRIPT_DIR/switch-frontend-color.sh" ]; then
     echo "Missing switch-frontend-color.sh in $EDGE_SCRIPT_DIR"
     echo "Bootstrap the shared edge-proxy home from deploy/server-template/edge-proxy before deploying."
     exit 1
@@ -180,7 +180,7 @@ switch_frontend_color() {
 }
 
 cleanup_frontend_images() {
-  if [ -x "$EDGE_SCRIPT_DIR/cleanup-images.sh" ]; then
+  if [ -f "$EDGE_SCRIPT_DIR/cleanup-images.sh" ]; then
     bash "$EDGE_SCRIPT_DIR/cleanup-images.sh" frontend
     return
   fi
