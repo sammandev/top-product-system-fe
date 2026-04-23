@@ -54,7 +54,6 @@ export function useNotification() {
 
   function show(options: NotificationOptions) {
     const normalized: NormalizedNotificationOptions = {
-      message: options.message,
       type: 'info',
       timeout: 3000,
       position: 'bottom',

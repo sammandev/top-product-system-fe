@@ -1658,7 +1658,6 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
     transform: rotate(360deg);
   }
 }
-}
 
 @media (max-width: 840px) {
   .min-score-controls {

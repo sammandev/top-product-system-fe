@@ -1004,7 +1004,10 @@ function handleStationSelectionConfirm(result: StationSelectionResult): void {
 }
 
 async function ensureStationDeviceIdsLoaded(stationValue: string): Promise<string[]> {
-  if (!selectedSite.value || !selectedProject.value) {
+  const siteValue = selectedSite.value
+  const projectValue = selectedProject.value
+
+  if (!siteValue || !projectValue) {
     return []
   }
   if (deviceIdsByStation.value[stationValue]?.length) {
@@ -1018,8 +1021,8 @@ async function ensureStationDeviceIdsLoaded(stationValue: string): Promise<strin
   loadingDevicesByStation.value[stationValue] = true
   const requestPromise = (async () => {
     const devices = await fetchDeviceIds(
-      selectedSite.value,
-      selectedProject.value,
+      siteValue,
+      projectValue,
       stationValue,
       new Date(startTime.value),
       new Date(endTime.value),

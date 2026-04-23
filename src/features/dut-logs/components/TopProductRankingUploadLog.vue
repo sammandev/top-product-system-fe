@@ -923,10 +923,11 @@ const filteredRankings = computed(() => {
   }
 
   if (scoreFilterType.value && scoreFilterValue.value !== null) {
+    const scoreValue = scoreFilterValue.value
     filtered = filtered.filter((item) => {
-      if (scoreFilterType.value === 'gt') return item.score > scoreFilterValue.value
-      if (scoreFilterType.value === 'lt') return item.score < scoreFilterValue.value
-      if (scoreFilterType.value === 'eq') return Math.abs(item.score - scoreFilterValue.value) < 0.01
+      if (scoreFilterType.value === 'gt') return item.score > scoreValue
+      if (scoreFilterType.value === 'lt') return item.score < scoreValue
+      if (scoreFilterType.value === 'eq') return Math.abs(item.score - scoreValue) < 0.01
       return true
     })
   }

@@ -218,6 +218,8 @@ import {
 } from '@/shared/utils/helpers'
 import type { ScoringType } from '../types/scoring.types'
 
+type TestItemFilterValue = 'all' | 'value' | 'non-value' | 'bin'
+
 // Normalized test item interface with optional scoring data
 export interface NormalizedTestItem {
   NAME: string
@@ -296,7 +298,7 @@ const isOpen = computed({
 })
 
 // Filter controls
-const testItemFilter = ref<('all' | 'value' | 'non-value' | 'bin')[]>(['all'])
+const testItemFilter = ref<TestItemFilterValue[]>(['all'])
 const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
 const searchTerms = ref<string[]>([])
 const searchEntry = ref('')
@@ -304,7 +306,7 @@ const isFullscreen = ref(false)
 const { showInfo: showInfoNotification } = useNotification()
 
 // Filter options for dropdown (Criteria Data is default)
-const testItemFilterOptions = [
+const testItemFilterOptions: Array<{ title: string; value: TestItemFilterValue }> = [
   { title: 'Criteria Data ★', value: 'value' },
   { title: 'Show All', value: 'all' },
   { title: 'Non-Criteria', value: 'non-value' },
@@ -319,9 +321,19 @@ const testItemColumns = [
   { key: 'LCL', field: 'LCL', header: 'LCL', sortable: true, style: { width: '8rem' } },
 ]
 
+const FULLSCREEN_DIALOG_BREAKPOINTS: Record<string, string> = {
+  '960px': '98vw',
+  '640px': '100vw',
+}
+
+const STANDARD_DIALOG_BREAKPOINTS: Record<string, string> = {
+  '1200px': '94vw',
+  '768px': '98vw',
+}
+
 const dialogWidth = computed(() => (isFullscreen.value ? '98vw' : 'min(96vw, 88rem)'))
-const dialogBreakpoints = computed(() =>
-  isFullscreen.value ? { '960px': '98vw', '640px': '100vw' } : { '1200px': '94vw', '768px': '98vw' },
+const dialogBreakpoints = computed<Record<string, string>>(() =>
+  isFullscreen.value ? FULLSCREEN_DIALOG_BREAKPOINTS : STANDARD_DIALOG_BREAKPOINTS,
 )
 
 const hasActiveFilters = computed(() => {
@@ -443,7 +455,7 @@ function removeSearchTerm(term: string): void {
   searchTerms.value = searchTerms.value.filter((value) => value !== term)
 }
 
-function toggleTestItemFilter(value: 'all' | 'value' | 'non-value' | 'bin'): void {
+function toggleTestItemFilter(value: TestItemFilterValue): void {
   if (value === 'all') {
     testItemFilter.value = ['all']
     return

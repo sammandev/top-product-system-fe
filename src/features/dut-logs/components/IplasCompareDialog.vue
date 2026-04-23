@@ -476,14 +476,22 @@ const breakdownScoringType = computed(() => {
     : breakdownItem.value.iplas_scoring_type || 'symmetrical'
 })
 
-const breakdownTarget = computed(() => {
+const breakdownTarget = computed<number | null>(() => {
   if (!breakdownItem.value) return null
-  return breakdownSource.value === 'upload' ? breakdownItem.value.upload_target : breakdownItem.value.iplas_target
+  return (
+    breakdownSource.value === 'upload'
+      ? breakdownItem.value.upload_target
+      : breakdownItem.value.iplas_target
+  ) ?? null
 })
 
-const breakdownDeviation = computed(() => {
+const breakdownDeviation = computed<number | null>(() => {
   if (!breakdownItem.value) return null
-  return breakdownSource.value === 'upload' ? breakdownItem.value.upload_deviation : breakdownItem.value.iplas_deviation
+  return (
+    breakdownSource.value === 'upload'
+      ? breakdownItem.value.upload_deviation
+      : breakdownItem.value.iplas_deviation
+  ) ?? null
 })
 
 const comparisonItems = computed<ComparisonItem[]>(() => {

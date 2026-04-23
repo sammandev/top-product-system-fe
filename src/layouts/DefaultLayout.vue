@@ -508,9 +508,9 @@ const staticSystemItems: MenuItem[] = [
   { title: 'System Cleanup', icon: 'mdi-delete-sweep', path: '/admin/cleanup' },
 ]
 
-const shellTheme = computed(() => (isDark.value ? 'dark' : 'light'))
-const isDark = computed(() => theme.global.current.value.dark)
 const resolvedThemeMode = computed(() => resolveThemeMode(themePreferences.value.mode))
+const isDark = computed(() => resolvedThemeMode.value === 'dark')
+const shellTheme = computed(() => (isDark.value ? 'dark' : 'light'))
 const currentRouteTitle = computed(() => {
   const title = route.meta.title
   return typeof title === 'string' && title.trim().length > 0 ? title : appName.value

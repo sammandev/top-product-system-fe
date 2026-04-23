@@ -135,12 +135,14 @@ const resolvedInvalidMessage = computed(
   () => props.invalidMessage || localInvalidMessage.value || 'Selected file is invalid.',
 )
 const selectionTitle = computed(() => {
+  const firstFile = selectedFiles.value[0]
+
   if (!hasSelection.value) {
     return props.label
   }
 
-  if (selectedFiles.value.length === 1) {
-    return selectedFiles.value[0].name
+  if (selectedFiles.value.length === 1 && firstFile) {
+    return firstFile.name
   }
 
   return `${selectedFiles.value.length} files selected`
@@ -208,7 +210,7 @@ function commitSelection(files: File[]) {
     return
   }
 
-  const normalizedFiles = props.multiple ? files : [files[0]]
+  const normalizedFiles = props.multiple ? files : files.slice(0, 1)
 
   if (props.maxFileSizeMb !== null) {
     const maxBytes = props.maxFileSizeMb * 1024 * 1024
@@ -222,7 +224,8 @@ function commitSelection(files: File[]) {
   }
 
   localInvalidMessage.value = ''
-  const value: FilePickerValue = props.multiple ? normalizedFiles : normalizedFiles[0] ?? null
+  const singleFile = normalizedFiles[0] ?? null
+  const value: FilePickerValue = props.multiple ? normalizedFiles : singleFile
 
   emit('update:modelValue', value)
   emit('select', value)
