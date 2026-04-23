@@ -66,6 +66,8 @@ bash ./scripts/bootstrap-edge.sh
 
 That creates the shared Docker network when needed, starts the public Nginx edge proxy on port `9090`, and initializes frontend upstream state.
 
+Important: this edge-proxy template now sets an explicit Docker Compose project name so it does not collide with PTB_OT. Without that, two different folders both named `edge-proxy` can share the same default Compose project identity and Docker may try to recreate the wrong proxy container.
+
 Useful operator commands:
 
 ```bash
