@@ -39,6 +39,34 @@ The script will also auto-detect these common sibling paths when present:
 - `../top-product-deployment/edge-proxy`
 - `../deployment-infra/edge-proxy`
 
+## Bootstrapping Edge Proxy
+
+The frontend release containers only expose port `3333` on the shared Docker network. Public traffic at `172.18.220.56:9090` is owned by the separate edge proxy, so the site will not become reachable until that edge-proxy home exists and is started.
+
+This repo now includes a server template under `deploy/server-template/edge-proxy`.
+
+Recommended one-time Ubuntu setup:
+
+```bash
+mkdir -p /srv/top-product-deployment
+rm -rf /srv/top-product-deployment/edge-proxy
+cp -r /data/ptb/TOP_PROD/top-product-system-fe/deploy/server-template/edge-proxy /srv/top-product-deployment/edge-proxy
+
+cd /srv/top-product-deployment/edge-proxy
+bash ./scripts/bootstrap-edge.sh
+```
+
+That creates the shared Docker network when needed, starts the public Nginx edge proxy on port `9090`, and initializes frontend upstream state.
+
+Useful operator commands:
+
+```bash
+cd /srv/top-product-deployment/edge-proxy
+bash ./scripts/status.sh
+bash ./scripts/switch-frontend-color.sh blue
+bash ./scripts/switch-frontend-color.sh green
+```
+
 ## Build-Time API Strategy
 
 For this first rollout, the frontend keeps using an explicit backend URL at build time.

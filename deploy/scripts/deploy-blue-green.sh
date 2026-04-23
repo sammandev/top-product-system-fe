@@ -172,6 +172,7 @@ ensure_edge_network() {
 switch_frontend_color() {
   if [ ! -x "$EDGE_SCRIPT_DIR/switch-frontend-color.sh" ]; then
     echo "Missing switch-frontend-color.sh in $EDGE_SCRIPT_DIR"
+    echo "Bootstrap the shared edge-proxy home from deploy/server-template/edge-proxy before deploying."
     exit 1
   fi
 
