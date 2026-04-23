@@ -30,9 +30,9 @@ x-frontend-service: &frontend-service
   image: ast-tools-frontend:blue-green
   restart: unless-stopped
   expose:
-    - "3333"
+    - "19090"
   healthcheck:
-    test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3333/health || exit 1"]
+    test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:19090/health || exit 1"]
     interval: 30s
     timeout: 10s
     retries: 3

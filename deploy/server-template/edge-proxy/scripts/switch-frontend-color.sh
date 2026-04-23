@@ -35,7 +35,7 @@ fi
 
 cat > "$UPSTREAM_FILE" <<EOF
 map \$server_port \$frontend_upstream {
-    default ast-tools-frontend-${COLOR}:3333;
+  default ast-tools-frontend-${COLOR}:19090;
 }
 EOF
 

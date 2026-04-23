@@ -6,6 +6,8 @@ This implementation is intentionally frontend-only for the first phase:
 
 - Public frontend entry stays at `172.18.220.56:9090`.
 - Backend stays stable at `172.18.220.56:7070`.
+- Internal frontend slot traffic uses Docker-network port `19090` only and is never exposed publicly.
+- Port `8008` is not used anywhere in the top-product-system deployment flow.
 - The shared edge proxy and active-color state do **not** live in this repo because frontend and backend are split across repositories.
 
 ## Canonical Frontend Files
@@ -28,6 +30,12 @@ Recommended operator variable:
 export TOP_PRODUCT_EDGE_DIR=/srv/top-product-deployment/edge-proxy
 ```
 
+If your deploy user cannot write under `/srv`, use a writable sibling path under `/data/ptb/TOP_PROD` instead:
+
+```bash
+export TOP_PRODUCT_EDGE_DIR=/data/ptb/TOP_PROD/deployment-infra/edge-proxy
+```
+
 Optional network override:
 
 ```bash
@@ -41,18 +49,18 @@ The script will also auto-detect these common sibling paths when present:
 
 ## Bootstrapping Edge Proxy
 
-The frontend release containers only expose port `3333` on the shared Docker network. Public traffic at `172.18.220.56:9090` is owned by the separate edge proxy, so the site will not become reachable until that edge-proxy home exists and is started.
+The frontend release containers only expose port `19090` on the shared Docker network. Public traffic at `172.18.220.56:9090` is owned by the separate edge proxy, so the site will not become reachable until that edge-proxy home exists and is started.
 
 This repo now includes a server template under `deploy/server-template/edge-proxy`.
 
 Recommended one-time Ubuntu setup:
 
 ```bash
-mkdir -p /srv/top-product-deployment
-rm -rf /srv/top-product-deployment/edge-proxy
-cp -r /data/ptb/TOP_PROD/top-product-system-fe/deploy/server-template/edge-proxy /srv/top-product-deployment/edge-proxy
+mkdir -p /data/ptb/TOP_PROD/deployment-infra
+rm -rf /data/ptb/TOP_PROD/deployment-infra/edge-proxy
+cp -r /data/ptb/TOP_PROD/top-product-system-fe/deploy/server-template/edge-proxy /data/ptb/TOP_PROD/deployment-infra/edge-proxy
 
-cd /srv/top-product-deployment/edge-proxy
+cd /data/ptb/TOP_PROD/deployment-infra/edge-proxy
 bash ./scripts/bootstrap-edge.sh
 ```
 
@@ -148,7 +156,7 @@ You can automate the server worktree layout with:
 
 ```bash
 cd /data/ptb/TOP_PROD/top-product-system-fe
-bash ./deploy/scripts/bootstrap-ubuntu-worktrees.sh
+./deploy/scripts/bootstrap-ubuntu-worktrees.sh
 ```
 
 Recommended meaning of each folder:
@@ -173,7 +181,7 @@ To force operators through the canonical PrimeVue checkout even when they are cu
 
 ```bash
 cd /data/ptb/TOP_PROD/top-product-system-fe
-bash ./deploy/scripts/deploy-primevue.sh
+./deploy/scripts/deploy-primevue.sh
 ```
 
 The wrapper always changes into `/data/ptb/TOP_PROD/top-product-system-fe` before it invokes `deploy-blue-green.sh`, and it refuses to continue if that canonical checkout is not currently on `main`.
