@@ -107,6 +107,7 @@ PrimeVue deployment preparation remains in the existing folder:
 
 ```bash
 cd /data/ptb/TOP_PROD/top-product-system-fe
+git config core.filemode false
 git fetch origin --prune
 git switch main
 git pull --ff-only origin main
@@ -119,8 +120,7 @@ You can automate the server worktree layout with:
 
 ```bash
 cd /data/ptb/TOP_PROD/top-product-system-fe
-chmod +x ./deploy/scripts/bootstrap-ubuntu-worktrees.sh
-./deploy/scripts/bootstrap-ubuntu-worktrees.sh
+bash ./deploy/scripts/bootstrap-ubuntu-worktrees.sh
 ```
 
 Recommended meaning of each folder:
@@ -145,11 +145,18 @@ To force operators through the canonical PrimeVue checkout even when they are cu
 
 ```bash
 cd /data/ptb/TOP_PROD/top-product-system-fe
-chmod +x ./deploy/scripts/deploy-primevue.sh
-./deploy/scripts/deploy-primevue.sh
+bash ./deploy/scripts/deploy-primevue.sh
 ```
 
 The wrapper always changes into `/data/ptb/TOP_PROD/top-product-system-fe` before it invokes `deploy-blue-green.sh`, and it refuses to continue if that canonical checkout is not currently on `main`.
+
+If the deployed branch on Ubuntu does not yet preserve executable bits for these scripts, prefer invoking them with `bash ...` instead of `chmod +x ...`. Using `chmod` on a tracked non-executable script makes the git tree look dirty and the deploy preflight will refuse to continue.
+
+For existing server checkouts, run this once in each frontend worktree to ignore chmod-only changes:
+
+```bash
+git config core.filemode false
+```
 
 ## One-Time Cutover
 

@@ -70,8 +70,10 @@ ensure_vuetify_worktree() {
 
 ensure_directory_exists "$CANONICAL_FRONTEND_DIR"
 ensure_git_worktree "$CANONICAL_FRONTEND_DIR"
+git -C "$CANONICAL_FRONTEND_DIR" config core.filemode false
 ensure_branch_up_to_date "$CANONICAL_FRONTEND_DIR" "$REMOTE_MAIN_BRANCH"
 ensure_vuetify_worktree
+git -C "$VUETIFY_WORKTREE_DIR" config core.filemode false
 
 echo "Ubuntu frontend worktrees are ready"
 echo "PrimeVue checkout : $CANONICAL_FRONTEND_DIR"

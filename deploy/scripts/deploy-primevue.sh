@@ -39,9 +39,8 @@ fi
 
 DEPLOY_SCRIPT="$CANONICAL_FRONTEND_DIR/$DEPLOY_SCRIPT_RELATIVE"
 
-if [ ! -x "$DEPLOY_SCRIPT" ]; then
-  echo "Missing executable deploy script: $DEPLOY_SCRIPT"
-  echo "Run: chmod +x $DEPLOY_SCRIPT"
+if [ ! -f "$DEPLOY_SCRIPT" ]; then
+  echo "Missing deploy script: $DEPLOY_SCRIPT"
   exit 1
 fi
 
