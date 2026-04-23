@@ -16,6 +16,17 @@ export interface NotificationOptions {
   closable?: boolean
 }
 
+type NotificationType = NonNullable<NotificationOptions['type']>
+type NotificationPosition = NonNullable<NotificationOptions['position']>
+
+interface NormalizedNotificationOptions {
+  message: string
+  type: NotificationType
+  timeout: number
+  position: NotificationPosition
+  closable: boolean
+}
+
 const notification = ref<NotificationOptions | null>(null)
 const isVisible = ref(false)
 
@@ -34,9 +45,16 @@ const isVisible = ref(false)
  */
 export function useNotification() {
   const toast = useToast()
+  const severityMap: Record<NotificationType, 'success' | 'error' | 'warn' | 'info'> = {
+    success: 'success',
+    error: 'error',
+    warning: 'warn',
+    info: 'info',
+  }
 
   function show(options: NotificationOptions) {
-    const normalized = {
+    const normalized: NormalizedNotificationOptions = {
+      message: options.message,
       type: 'info',
       timeout: 3000,
       position: 'bottom',
@@ -47,16 +65,9 @@ export function useNotification() {
     notification.value = normalized
     isVisible.value = true
 
-    const severityMap = {
-      success: 'success',
-      error: 'error',
-      warning: 'warn',
-      info: 'info',
-    } as const
-
     toast.add({
-      severity: severityMap[normalized.type ?? 'info'],
-      summary: (normalized.type ?? 'info').toUpperCase(),
+      severity: severityMap[normalized.type],
+      summary: normalized.type.toUpperCase(),
       detail: normalized.message,
       life: normalized.timeout,
       closable: normalized.closable,

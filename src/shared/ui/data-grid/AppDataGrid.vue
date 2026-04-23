@@ -16,11 +16,11 @@
       :scrollable="scrollable"
       :scrollHeight="scrollHeight"
       :sortField="sortField"
-      :sortOrder="sortOrder"
+      :sortOrder="sortOrder ?? undefined"
       :tableStyle="tableStyle"
       :stateStorage="stateStorage"
       :stateKey="stateKey"
-      :rowClass="rowClass"
+      :rowClass="rowClass ?? undefined"
       removableSort
       showGridlines
       stripedRows
@@ -71,7 +71,7 @@
         </template>
 
         <template v-else-if="column.body" #body="slotProps">
-          {{ column.body(slotProps.data, column, resolveFieldValue(slotProps.data, column.field)) }}
+          {{ renderBody(column, slotProps.data) }}
         </template>
       </Column>
 
@@ -89,11 +89,11 @@ import DataTable from 'primevue/datatable'
 
 defineOptions({ inheritAttrs: false })
 
-type GridRow = Record<string, unknown>
+type GridRow = any
 type GridSelectionMode = 'single' | 'multiple'
 
 interface AppDataGridColumn {
-  key: string
+  key?: string
   header: string
   field?: string
   sortable?: boolean
@@ -103,6 +103,10 @@ interface AppDataGridColumn {
   headerStyle?: Record<string, string> | string
   bodyStyle?: Record<string, string> | string
   body?: (row: GridRow, column: AppDataGridColumn, value: unknown) => unknown
+}
+
+interface NormalizedAppDataGridColumn extends AppDataGridColumn {
+  key: string
 }
 
 const props = withDefaults(
@@ -137,19 +141,13 @@ const props = withDefaults(
     rowsPerPageOptions: () => [10, 25, 50, 100],
     totalRecords: 0,
     lazy: false,
-    selection: null,
-    selectionMode: undefined,
     showSelectionColumn: false,
     metaKeySelection: false,
     scrollable: true,
     scrollHeight: 'flex',
-    sortField: undefined,
-    sortOrder: null,
+    sortOrder: undefined,
     tableStyle: () => ({ minWidth: '100%' }),
-    stateStorage: undefined,
-    stateKey: undefined,
     emptyMessage: 'No records found.',
-    rowClass: undefined,
   },
 )
 
@@ -163,7 +161,14 @@ const emit = defineEmits<{
 const attrs = useAttrs()
 const slots = useSlots()
 
-const visibleColumns = computed(() => props.columns.filter((column) => !column.hidden))
+const visibleColumns = computed<NormalizedAppDataGridColumn[]>(() => {
+  return props.columns
+    .filter((column) => !column.hidden)
+    .map((column, index) => ({
+      ...column,
+      key: column.key ?? column.field ?? `column-${index}`,
+    }))
+})
 
 function hasCellSlot(key: string) {
   return Boolean(slots[`cell-${key}`])
@@ -171,6 +176,10 @@ function hasCellSlot(key: string) {
 
 function onSelectionChange(value: unknown) {
   emit('update:selection', value)
+}
+
+function renderBody(column: NormalizedAppDataGridColumn, row: GridRow) {
+  return column.body?.(row, column, resolveFieldValue(row, column.field))
 }
 
 function resolveFieldValue(row: GridRow, field?: string) {

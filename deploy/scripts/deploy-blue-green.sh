@@ -36,6 +36,60 @@ for arg in "$@"; do
   esac
 done
 
+require_clean_git_tree() {
+  local status_output
+
+  status_output="$(git status --porcelain --untracked-files=normal 2>/dev/null || true)"
+  if [ -n "$status_output" ]; then
+    echo "Refusing to deploy with a dirty git tree in $FRONTEND_DIR"
+    echo "$status_output"
+    echo "Commit, stash, or discard the local changes first."
+    exit 1
+  fi
+}
+
+require_current_origin_main() {
+  local current_head
+  local remote_main
+
+  if ! git fetch origin --prune; then
+    echo "Refusing to deploy because origin could not be refreshed."
+    echo "Check git network access and retry."
+    exit 1
+  fi
+
+  if ! git rev-parse --verify --quiet 'origin/main^{commit}' >/dev/null; then
+    echo "Refusing to deploy because origin/main is unavailable."
+    echo "Verify the remote branch configuration and retry."
+    exit 1
+  fi
+
+  current_head="$(git rev-parse HEAD)"
+  remote_main="$(git rev-parse origin/main)"
+
+  if [ "$current_head" = "$remote_main" ]; then
+    return
+  fi
+
+  if git merge-base --is-ancestor "$current_head" "$remote_main"; then
+    echo "Refusing to deploy because this checkout is behind origin/main."
+    echo "Current HEAD: $current_head"
+    echo "origin/main: $remote_main"
+    echo "Update the PrimeVue deployment worktree with 'git pull --ff-only origin main' and retry."
+    exit 1
+  fi
+}
+
+run_preflight_checks() {
+  if ! git rev-parse --is-inside-work-tree >/dev/null 2>&1; then
+    echo "Refusing to deploy because $FRONTEND_DIR is not a git worktree."
+    exit 1
+  fi
+
+  require_clean_git_tree
+  require_current_origin_main
+}
+
 discover_edge_dir() {
   local candidate
 
@@ -56,6 +110,10 @@ discover_edge_dir() {
 }
 
 EDGE_DIR="$(discover_edge_dir || true)"
+
+cd "$FRONTEND_DIR"
+
+run_preflight_checks
 
 if [ -z "$EDGE_DIR" ]; then
   echo "Unable to locate the shared edge-proxy home."
@@ -138,6 +196,7 @@ echo "Preparing frontend blue-green deployment"
 echo "Edge proxy home: $EDGE_DIR"
 echo "Active color: ${ACTIVE_COLOR:-none}"
 echo "Target color: $TARGET_COLOR"
+echo "Frontend checkout: $(git branch --show-current || echo detached) @ $(git rev-parse --short HEAD)"
 echo "Backend API URL for this build: ${VITE_API_BASE_URL:-http://172.18.220.56:7070}"
 
 ensure_edge_network

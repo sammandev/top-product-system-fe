@@ -1,7 +1,7 @@
 <template>
   <Dialog
     v-bind="attrs"
-    :visible="modelValue"
+    :visible="resolvedVisible"
     :modal="modal"
     :dismissableMask="!persistent && dismissableMask"
     :closable="!persistent && closable"
@@ -11,7 +11,7 @@
     :style="{ width }"
     :breakpoints="breakpoints"
     class="app-dialog"
-    @update:visible="emit('update:modelValue', $event)"
+    @update:visible="handleVisibleUpdate"
     @show="emit('show')"
     @hide="emit('hide')"
   >
@@ -37,14 +37,15 @@
 </template>
 
 <script setup lang="ts">
-import { useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import Dialog from 'primevue/dialog'
 
 defineOptions({ inheritAttrs: false })
 
 const props = withDefaults(
   defineProps<{
-    modelValue: boolean
+    modelValue?: boolean
+    visible?: boolean
     title?: string
     description?: string
     width?: string
@@ -76,11 +77,19 @@ void props
 
 const emit = defineEmits<{
   (event: 'update:modelValue', value: boolean): void
+  (event: 'update:visible', value: boolean): void
   (event: 'show'): void
   (event: 'hide'): void
 }>()
 
 const attrs = useAttrs()
+
+const resolvedVisible = computed(() => props.modelValue ?? props.visible ?? false)
+
+function handleVisibleUpdate(value: boolean) {
+  emit('update:modelValue', value)
+  emit('update:visible', value)
+}
 </script>
 
 <style scoped>
