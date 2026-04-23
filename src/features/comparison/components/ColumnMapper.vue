@@ -230,7 +230,7 @@ function emitMappings() {
   gap: 0.45rem;
   border: 1px solid var(--app-border);
   border-radius: 999px;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
   padding: 0.72rem 0.95rem;
@@ -322,7 +322,7 @@ function emitMappings() {
 }
 
 .mapping-arrow--active {
-  color: #145847;
+  color: var(--app-accent);
 }
 
 .mapping-select {
@@ -344,7 +344,7 @@ function emitMappings() {
   gap: 0.75rem;
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.9);
+  background: var(--app-panel);
   box-shadow: var(--app-shadow-soft);
   padding: 0.7rem 0.8rem;
 }
@@ -378,7 +378,7 @@ function emitMappings() {
 }
 
 .mapping-notice--info {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .mapping-notice--warning {

@@ -1,43 +1,39 @@
 <template>
   <PublicScaffold
     :app-name="appName"
-    eyebrow="Fallback"
-    title="The route map stops here"
-    description="This page is already on the new scaffold, which makes it a safe place to validate the migration shell before the authenticated application moves over."
+    title="Page not found"
+    description="The page you're looking for doesn't exist or may have been moved."
     panel-eyebrow="404"
-    panel-description="The address you requested does not match an active route in the frontend router."
+    panel-description="This address does not match any active route."
   >
     <template #hero>
-      <div class="rounded-[1.6rem] border border-[var(--app-border)] bg-white/70 p-5 shadow-[var(--app-shadow-soft)]">
+      <div class="rounded-[1.25rem] border border-[var(--app-border)] bg-white/70 p-5 shadow-[var(--app-shadow-soft)]">
         <div class="flex items-center gap-4">
-          <div class="rounded-[1.4rem] bg-[rgba(165,101,71,0.14)] p-4 text-4xl text-[rgb(141,87,62)]">
+          <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[0.75rem] bg-[var(--app-warning-soft)] text-2xl text-[var(--app-warning)]">
             <Icon icon="solar:danger-triangle-bold-duotone" />
           </div>
           <div>
-            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]">Response</p>
-            <p class="mt-1 text-base text-[var(--app-ink)]">No matching route was found.</p>
+            <p class="text-sm font-semibold text-[var(--app-ink)]">No matching route</p>
+            <p class="mt-1 text-sm text-[var(--app-muted)]">Check the URL and try again.</p>
           </div>
         </div>
       </div>
     </template>
 
     <div class="space-y-6">
-      <div class="rounded-[1.4rem] border border-[var(--app-border)] bg-white/75 p-5 shadow-[var(--app-shadow-soft)]">
-        <p class="text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]">Next best move</p>
-        <p class="mt-3 text-sm leading-7 text-[var(--app-muted)]">
-          Return to the dashboard if you are signed in, or go back to login if you reached this page from an expired or malformed link.
-        </p>
-      </div>
+      <p class="text-sm leading-7 text-[var(--app-muted)]">
+        Return to the dashboard if you are signed in, or go back to login if you reached this page from an expired or malformed link.
+      </p>
 
       <div class="grid gap-3 sm:grid-cols-2">
         <RouterLink
-          class="rounded-full bg-[var(--app-accent)] px-5 py-3 text-center text-sm font-semibold uppercase tracking-[0.22em] text-white shadow-[var(--app-shadow-soft)] transition hover:bg-[var(--app-accent-strong)]"
+          class="rounded-[0.75rem] bg-[var(--app-accent)] px-5 py-3 text-center text-sm font-semibold text-white shadow-[var(--app-shadow-soft)] transition hover:bg-[var(--app-accent-strong)]"
           to="/dashboard"
         >
           Go to Dashboard
         </RouterLink>
         <RouterLink
-          class="rounded-full border border-[var(--app-border)] bg-white/70 px-5 py-3 text-center text-sm font-semibold uppercase tracking-[0.22em] text-[var(--app-ink)] shadow-[var(--app-shadow-soft)] transition hover:border-[var(--app-accent)]"
+          class="rounded-[0.75rem] border border-[var(--app-border)] bg-white/70 px-5 py-3 text-center text-sm font-semibold text-[var(--app-ink)] shadow-[var(--app-shadow-soft)] transition hover:border-[var(--app-accent)]"
           to="/login"
         >
           Back to Login

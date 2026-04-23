@@ -1095,7 +1095,7 @@ const hasLatestError = (station: Station): boolean => {
     width: 3.5rem;
     height: 3.5rem;
     border-radius: 1.2rem;
-    background: linear-gradient(135deg, rgba(161, 104, 57, 0.18), rgba(20, 88, 71, 0.14));
+    background: linear-gradient(135deg, rgba(45, 212, 191, 0.18), rgba(15, 118, 110, 0.14));
     color: var(--app-accent);
     font-size: 1.6rem;
     box-shadow: var(--app-shadow-soft);
@@ -1146,7 +1146,7 @@ const hasLatestError = (station: Station): boolean => {
     gap: 0.55rem;
     border: 1px solid var(--app-border);
     border-radius: 999px;
-    background: rgba(255, 251, 247, 0.94);
+    background: var(--app-panel);
     color: var(--app-ink);
     font: inherit;
     cursor: pointer;
@@ -1166,14 +1166,14 @@ const hasLatestError = (station: Station): boolean => {
 .test-log-view__token:hover,
 .test-log-view__icon-action:hover {
     transform: translateY(-1px);
-    border-color: rgba(20, 88, 71, 0.45);
+    border-color: rgba(15, 118, 110, 0.45);
 }
 
 .test-log-view__mode-button--active,
 .test-log-view__view-button--active,
 .test-log-view__button--primary {
-    border-color: rgba(20, 88, 71, 0.28);
-    background: linear-gradient(135deg, rgba(20, 88, 71, 0.96), rgba(40, 96, 163, 0.88));
+    border-color: rgba(15, 118, 110, 0.28);
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.96), rgba(40, 96, 163, 0.88));
     color: #f8f5f0;
 }
 
@@ -1212,7 +1212,7 @@ const hasLatestError = (station: Station): boolean => {
     width: 100%;
     border: 1px solid var(--app-border);
     border-radius: 1rem;
-    background: rgba(255, 251, 247, 0.94);
+    background: var(--app-panel);
     color: var(--app-ink);
     padding: 0.95rem 1rem;
     font: inherit;
@@ -1307,7 +1307,7 @@ const hasLatestError = (station: Station): boolean => {
     padding: 0.95rem 1rem;
     border: 1px solid var(--app-border);
     border-radius: 1.15rem;
-    background: rgba(255, 251, 247, 0.94);
+    background: var(--app-panel);
 }
 
 .test-log-view__summary-card span {
@@ -1328,12 +1328,12 @@ const hasLatestError = (station: Station): boolean => {
 }
 
 .test-log-view__summary-card--accent {
-    background: rgba(20, 88, 71, 0.08);
+    background: rgba(15, 118, 110, 0.08);
 }
 
 .test-log-view__result-divider {
     height: 1px;
-    background: linear-gradient(90deg, rgba(20, 88, 71, 0.18), rgba(20, 88, 71, 0));
+    background: linear-gradient(90deg, rgba(15, 118, 110, 0.18), rgba(15, 118, 110, 0));
 }
 
 .test-log-view__grid-table {

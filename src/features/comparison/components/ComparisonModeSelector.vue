@@ -213,7 +213,7 @@ function updateNumericTolerance(value: number) {
   gap: 0.3rem;
   border: 1px solid var(--app-border);
   border-radius: 1.15rem;
-  background: rgba(255, 251, 247, 0.88);
+  background: var(--app-panel);
   padding: 1rem;
   cursor: pointer;
   box-shadow: var(--app-shadow-soft);
@@ -237,7 +237,7 @@ function updateNumericTolerance(value: number) {
 
 .compare-mode-card--active {
   border-color: var(--app-accent);
-  background: linear-gradient(180deg, rgba(20, 88, 71, 0.1), rgba(255, 251, 247, 0.98));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), var(--app-panel));
   box-shadow: 0 0 0 4px var(--app-ring);
   transform: translateY(-1px);
 }
@@ -289,7 +289,7 @@ function updateNumericTolerance(value: number) {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   box-shadow: var(--app-shadow-soft);
 }
@@ -367,11 +367,11 @@ function updateNumericTolerance(value: number) {
 }
 
 .compare-mode-notice--info {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .compare-mode-notice--success {
-  background: rgba(20, 88, 71, 0.08);
+  background: rgba(15, 118, 110, 0.06);
 }
 
 .compare-mode-notice--warning {
@@ -384,7 +384,7 @@ function updateNumericTolerance(value: number) {
   gap: 0.45rem;
   border: 1px solid var(--app-border);
   border-radius: 999px;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
   padding: 0.72rem 0.95rem;

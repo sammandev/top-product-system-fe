@@ -515,7 +515,7 @@ const getDeviationColorClass = (deviation: number): string => {
 
 .score-breakdown-dialog__button--ghost {
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
 }
 
@@ -534,7 +534,7 @@ const getDeviationColorClass = (deviation: number): string => {
 .score-breakdown-dialog__panel {
   border: 1px solid var(--app-border);
   border-radius: 1.15rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .score-breakdown-dialog__summary-card {
@@ -544,7 +544,7 @@ const getDeviationColorClass = (deviation: number): string => {
 }
 
 .score-breakdown-dialog__summary-card--highlight {
-  background: linear-gradient(145deg, rgba(20, 88, 71, 0.12), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(15, 118, 110, 0.12), var(--app-panel));
 }
 
 .score-breakdown-dialog__summary-card small,
@@ -594,12 +594,12 @@ const getDeviationColorClass = (deviation: number): string => {
 }
 
 .score-breakdown-dialog__formula-surface {
-  background: rgba(255, 248, 240, 0.88);
+  background: var(--app-surface);
   border: 1px solid var(--app-border);
 }
 
 .score-breakdown-dialog__formula-surface--custom {
-  background: rgba(20, 88, 71, 0.06);
+  background: rgba(15, 118, 110, 0.06);
 }
 
 .score-breakdown-dialog__pill {
@@ -613,8 +613,8 @@ const getDeviationColorClass = (deviation: number): string => {
 }
 
 .score-breakdown-dialog__pill--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .score-breakdown-dialog__pill--warning {
@@ -650,7 +650,7 @@ const getDeviationColorClass = (deviation: number): string => {
   gap: 1rem;
   padding: 0.85rem 1rem;
   border-top: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .score-breakdown-dialog__detail-row:first-child {
@@ -682,7 +682,7 @@ const getDeviationColorClass = (deviation: number): string => {
 }
 
 .score-breakdown-dialog__value--success {
-  color: #145847;
+  color: var(--app-accent);
 }
 
 .score-breakdown-dialog__value--warning {

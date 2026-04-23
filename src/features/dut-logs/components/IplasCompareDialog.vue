@@ -912,7 +912,7 @@ function comparisonRowClass(row: Record<string, unknown>) {
   border: 1px solid var(--app-border);
   border-radius: 0.95rem;
   padding: 0.75rem 0.9rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
 }
 
@@ -928,13 +928,13 @@ function comparisonRowClass(row: Record<string, unknown>) {
 
 .iplas-compare-dialog__button--ghost {
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
 }
 
 .iplas-compare-dialog__button--primary {
-  border: 1px solid rgba(20, 88, 71, 0.1);
-  background: linear-gradient(135deg, rgba(20, 88, 71, 0.95), rgba(40, 96, 163, 0.92));
+  border: 1px solid rgba(15, 118, 110, 0.1);
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.95), rgba(40, 96, 163, 0.92));
   color: #fff;
 }
 
@@ -945,14 +945,14 @@ function comparisonRowClass(row: Record<string, unknown>) {
   border: 1px solid var(--app-border);
   border-radius: 999px;
   padding: 0.55rem 0.9rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
 }
 
 .iplas-compare-dialog__chip--active {
-  border-color: rgba(20, 88, 71, 0.35);
-  background: rgba(20, 88, 71, 0.1);
+  border-color: rgba(15, 118, 110, 0.35);
+  background: rgba(15, 118, 110, 0.1);
 }
 
 .iplas-compare-dialog__summary-card {
@@ -961,15 +961,15 @@ function comparisonRowClass(row: Record<string, unknown>) {
   border: 1px solid var(--app-border);
   border-radius: 1.1rem;
   padding: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .iplas-compare-dialog__summary-card--primary {
-  background: linear-gradient(145deg, rgba(40, 96, 163, 0.14), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(40, 96, 163, 0.14), var(--app-panel));
 }
 
 .iplas-compare-dialog__summary-card--secondary {
-  background: linear-gradient(145deg, rgba(20, 88, 71, 0.12), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(15, 118, 110, 0.12), var(--app-panel));
 }
 
 .iplas-compare-dialog__summary-card small,
@@ -1000,8 +1000,8 @@ function comparisonRowClass(row: Record<string, unknown>) {
 }
 
 .iplas-compare-dialog__score-pill--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .iplas-compare-dialog__score-pill--info {
@@ -1052,7 +1052,7 @@ function comparisonRowClass(row: Record<string, unknown>) {
   gap: 1rem;
   padding: 0.85rem 1rem;
   border-top: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .iplas-compare-dialog__detail-row:first-child {

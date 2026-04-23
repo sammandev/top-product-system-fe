@@ -333,7 +333,7 @@ function resetForm() {
     width: 3.4rem;
     height: 3.4rem;
     border-radius: 1.1rem;
-    background: linear-gradient(135deg, rgba(20, 88, 71, 0.16), rgba(161, 104, 57, 0.18));
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(45, 212, 191, 0.16));
     color: var(--app-accent);
     box-shadow: var(--app-shadow-soft);
 }
@@ -370,7 +370,7 @@ function resetForm() {
 .dvt-converter-file-summary {
     border: 1px solid var(--app-border);
     border-radius: 1.25rem;
-    background: rgba(255, 251, 247, 0.88);
+    background: var(--app-panel);
     box-shadow: var(--app-shadow-soft);
 }
 
@@ -409,8 +409,8 @@ function resetForm() {
 }
 
 .dvt-converter-notice--success {
-    background: rgba(20, 88, 71, 0.08);
-    border-color: rgba(20, 88, 71, 0.24);
+    background: rgba(15, 118, 110, 0.06);
+    border-color: rgba(15, 118, 110, 0.2);
 }
 
 .dvt-converter-notice button {
@@ -445,9 +445,9 @@ function resetForm() {
 .dvt-converter-progress-item,
 .dvt-converter-result-item,
 .dvt-converter-detail-card {
-    border: 1px solid rgba(20, 88, 71, 0.1);
+    border: 1px solid var(--app-border);
     border-radius: 1rem;
-    background: rgba(255, 255, 255, 0.68);
+    background: var(--app-panel);
     padding: 0.95rem 1rem;
 }
 
@@ -480,18 +480,18 @@ function resetForm() {
     overflow: hidden;
     height: 0.5rem;
     border-radius: 999px;
-    background: rgba(20, 88, 71, 0.12);
+    background: rgba(15, 118, 110, 0.1);
 }
 
 .dvt-converter-progress-bar {
     height: 100%;
     border-radius: inherit;
-    background: linear-gradient(90deg, rgba(20, 88, 71, 0.8), rgba(161, 104, 57, 0.8));
+    background: linear-gradient(90deg, var(--app-accent), rgba(45, 212, 191, 0.8));
     transition: width 0.2s ease;
 }
 
 .dvt-converter-result-item--success {
-    border-color: rgba(20, 88, 71, 0.2);
+    border-color: rgba(15, 118, 110, 0.18);
 }
 
 .dvt-converter-result-item--error {
@@ -518,7 +518,7 @@ function resetForm() {
     padding: 0.78rem 1rem;
     cursor: pointer;
     font-weight: 700;
-    background: rgba(255, 251, 247, 0.92);
+    background: var(--app-panel);
     color: var(--app-ink);
 }
 
@@ -534,14 +534,14 @@ function resetForm() {
 }
 
 .dvt-converter-button--ghost {
-    background: rgba(255, 251, 247, 0.92);
+    background: var(--app-panel);
     color: var(--app-ink);
 }
 
 .dvt-converter-button--success-ghost {
-    background: rgba(20, 88, 71, 0.08);
-    border-color: rgba(20, 88, 71, 0.24);
-    color: #145847;
+    background: rgba(15, 118, 110, 0.06);
+    border-color: rgba(15, 118, 110, 0.2);
+    color: var(--app-accent);
 }
 
 .dvt-converter-button--block {

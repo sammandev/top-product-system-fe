@@ -537,8 +537,8 @@ function handleReset() {
   border-radius: 1.5rem;
   padding: 1.2rem;
   background:
-    radial-gradient(circle at top right, rgba(20, 88, 71, 0.08), transparent 32%),
-    rgba(255, 251, 247, 0.94);
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.06), transparent 32%),
+    var(--app-panel);
   box-shadow: var(--app-shadow-soft);
 }
 
@@ -611,7 +611,7 @@ function handleReset() {
   border: 1px solid var(--app-border);
   border-radius: 999px;
   padding: 0.78rem 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
   font-weight: 700;
@@ -629,13 +629,13 @@ function handleReset() {
 }
 
 .parsing-view-button--secondary {
-  background: rgba(20, 88, 71, 0.08);
-  border-color: rgba(20, 88, 71, 0.24);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.06);
+  border-color: rgba(15, 118, 110, 0.2);
+  color: var(--app-accent);
 }
 
 .parsing-view-button--ghost {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .parsing-view-button--block {
@@ -726,7 +726,7 @@ function handleReset() {
   gap: 0.7rem;
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   box-shadow: var(--app-shadow-soft);
   padding: 0.95rem 1rem;
@@ -757,7 +757,7 @@ function handleReset() {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   box-shadow: var(--app-shadow-soft);
   padding: 0.85rem 0.95rem;
@@ -779,7 +779,7 @@ function handleReset() {
   gap: 0.3rem;
   border: 1px solid var(--app-border);
   border-radius: 1.15rem;
-  background: rgba(255, 251, 247, 0.88);
+  background: var(--app-panel);
   padding: 1rem;
   cursor: pointer;
   box-shadow: var(--app-shadow-soft);
@@ -803,13 +803,13 @@ function handleReset() {
 
 .parsing-view-mode-card--active {
   border-color: var(--app-accent);
-  background: linear-gradient(180deg, rgba(20, 88, 71, 0.1), rgba(255, 251, 247, 0.98));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), var(--app-panel));
   box-shadow: 0 0 0 4px var(--app-ring);
   transform: translateY(-1px);
 }
 
 .parsing-view-summary {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   line-height: 1.6;
 }
 

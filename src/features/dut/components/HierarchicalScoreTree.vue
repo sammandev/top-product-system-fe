@@ -304,7 +304,7 @@ function getCategoryAvgScore(scoreData: any): number {
   border-radius: 1.25rem;
   background:
     radial-gradient(circle at top left, rgba(40, 96, 163, 0.1), transparent 32%),
-    rgba(255, 251, 247, 0.86);
+    var(--app-panel);
   padding: 1rem;
   display: grid;
   gap: 1rem;
@@ -360,7 +360,7 @@ function getCategoryAvgScore(scoreData: any): number {
 .hierarchical-score-tree__button,
 .tree-node__header {
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
 }
 
@@ -482,8 +482,8 @@ function getCategoryAvgScore(scoreData: any): number {
 }
 
 .hierarchical-score-tree__pill--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .hierarchical-score-tree__pill--info {

@@ -913,7 +913,7 @@ function clearFilters() {
   flex: 1;
   border: 1px solid var(--app-border);
   border-radius: 0.9rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   padding: 0.8rem 0.95rem;
 }
@@ -926,7 +926,7 @@ function clearFilters() {
 .station-filter-config__suggestion-row {
   border: 1px solid var(--app-border);
   border-radius: 999px;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
   transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
@@ -953,9 +953,9 @@ function clearFilters() {
 }
 
 .station-filter-config__button--success {
-  background: rgba(20, 88, 71, 0.12);
-  border-color: rgba(20, 88, 71, 0.22);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  border-color: rgba(15, 118, 110, 0.22);
+  color: var(--app-accent);
 }
 
 .station-filter-config__button--danger {
@@ -980,16 +980,16 @@ function clearFilters() {
 .station-filter-config__section {
   border: 1px solid var(--app-border);
   border-radius: 1.15rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   padding: 1rem;
 }
 
 .station-filter-config__section--success {
-  background: linear-gradient(145deg, rgba(20, 88, 71, 0.06), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(15, 118, 110, 0.06), var(--app-panel));
 }
 
 .station-filter-config__section--danger {
-  background: linear-gradient(145deg, rgba(189, 64, 64, 0.06), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(189, 64, 64, 0.06), var(--app-panel));
 }
 
 .station-filter-config__pill {
@@ -1018,8 +1018,8 @@ function clearFilters() {
 }
 
 .station-filter-config__pill--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .station-filter-config__pill--danger {
@@ -1056,9 +1056,9 @@ function clearFilters() {
 }
 
 .station-filter-config__token--success {
-  border-color: rgba(20, 88, 71, 0.22);
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  border-color: rgba(15, 118, 110, 0.22);
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .station-filter-config__token--danger {
@@ -1105,8 +1105,8 @@ function clearFilters() {
 }
 
 .station-filter-config__notice--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .station-filter-config__dialog-list {

@@ -363,7 +363,7 @@ const testExpression = () => {
   display: grid;
   gap: 0.85rem;
   padding: 1rem;
-  border: 1px solid rgba(20, 88, 71, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.55);
 }
@@ -484,7 +484,7 @@ const testExpression = () => {
 }
 
 .formula-editor__toggle input:checked + .formula-editor__toggle-track {
-  background: rgba(20, 88, 71, 0.7);
+  background: rgba(15, 118, 110, 0.7);
 }
 
 .formula-editor__toggle input:checked + .formula-editor__toggle-track .formula-editor__toggle-thumb {
@@ -496,7 +496,7 @@ const testExpression = () => {
   min-height: 2.75rem;
   border-radius: 0.95rem;
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   font-weight: 700;
   cursor: pointer;
@@ -545,9 +545,9 @@ const testExpression = () => {
 }
 
 .formula-editor__notice--success {
-  border-color: rgba(20, 88, 71, 0.16);
-  background: rgba(20, 88, 71, 0.08);
-  color: #145847;
+  border-color: rgba(15, 118, 110, 0.16);
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--app-accent);
 }
 
 .formula-editor__notice--danger {

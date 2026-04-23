@@ -528,7 +528,7 @@ watch(results, (nextResults) => {
 .deep-dive-view__header-icon {
   width: 3.5rem;
   height: 3.5rem;
-  background: linear-gradient(135deg, rgba(20, 88, 71, 0.14), rgba(161, 104, 57, 0.18));
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(45, 212, 191, 0.18));
   color: var(--app-accent);
   font-size: 1.55rem;
   box-shadow: var(--app-shadow-soft);
@@ -559,7 +559,7 @@ watch(results, (nextResults) => {
 
 .deep-dive-view__divider {
   height: 1px;
-  background: linear-gradient(90deg, rgba(20, 88, 71, 0.14), rgba(20, 88, 71, 0));
+  background: linear-gradient(90deg, rgba(15, 118, 110, 0.14), rgba(15, 118, 110, 0));
 }
 
 .deep-dive-view__actions,
@@ -579,7 +579,7 @@ watch(results, (nextResults) => {
   padding: 0.75rem 1.1rem;
   border: 1px solid var(--app-border);
   border-radius: 999px;
-  background: rgba(255, 251, 247, 0.95);
+  background: var(--app-panel);
   color: var(--app-ink);
   font: inherit;
   font-weight: 600;
@@ -589,7 +589,7 @@ watch(results, (nextResults) => {
 
 .deep-dive-view__button:hover:not(:disabled) {
   transform: translateY(-1px);
-  border-color: rgba(20, 88, 71, 0.28);
+  border-color: rgba(15, 118, 110, 0.28);
   box-shadow: var(--app-shadow-soft);
 }
 
@@ -599,13 +599,13 @@ watch(results, (nextResults) => {
 }
 
 .deep-dive-view__button--primary {
-  border-color: rgba(20, 88, 71, 0.28);
-  background: linear-gradient(135deg, rgba(20, 88, 71, 0.98), rgba(161, 104, 57, 0.92));
+  border-color: rgba(15, 118, 110, 0.28);
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.98), rgba(45, 212, 191, 0.92));
   color: #fff;
 }
 
 .deep-dive-view__button--ghost {
-  background: rgba(255, 251, 247, 0.85);
+  background: var(--app-panel);
 }
 
 .deep-dive-view__notice {
@@ -660,7 +660,7 @@ watch(results, (nextResults) => {
   gap: 1rem;
   padding: 1rem 1.1rem;
   border: 0;
-  background: rgba(255, 248, 240, 0.92);
+  background: var(--app-surface);
   color: inherit;
   text-align: left;
   cursor: pointer;
@@ -678,7 +678,7 @@ watch(results, (nextResults) => {
 .deep-dive-view__empty-icon {
   width: 2.4rem;
   height: 2.4rem;
-  background: rgba(20, 88, 71, 0.12);
+  background: rgba(15, 118, 110, 0.12);
   color: var(--app-accent);
 }
 
@@ -697,10 +697,10 @@ watch(results, (nextResults) => {
 .deep-dive-view__result-block {
   display: grid;
   gap: 0.9rem;
-  border: 1px solid rgba(20, 88, 71, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 1rem;
   padding: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .deep-dive-view__result-block-header {
@@ -786,7 +786,7 @@ watch(results, (nextResults) => {
 }
 
 .deep-dive-view__export-option--active {
-  border-color: rgba(20, 88, 71, 0.3);
+  border-color: rgba(15, 118, 110, 0.3);
   background: rgba(240, 250, 245, 0.95);
 }
 

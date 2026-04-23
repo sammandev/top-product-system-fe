@@ -300,15 +300,15 @@ function applyQuickSelect() {
   align-items: center;
   justify-content: center;
   padding: 0.35rem 0.8rem;
-  background: rgba(255, 251, 247, 0.9);
+  background: var(--app-panel);
   color: var(--app-muted);
   font-size: 0.78rem;
   font-weight: 700;
 }
 
 .column-selector-pill--active {
-  background: rgba(20, 88, 71, 0.1);
-  border-color: rgba(20, 88, 71, 0.24);
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.24);
   color: var(--app-accent);
 }
 
@@ -326,7 +326,7 @@ function applyQuickSelect() {
   gap: 0.45rem;
   justify-content: center;
   padding: 0.62rem 0.85rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
   font-weight: 700;
@@ -337,7 +337,7 @@ function applyQuickSelect() {
   overflow-y: auto;
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.88);
+  background: var(--app-panel);
 }
 
 .column-item {
@@ -345,7 +345,7 @@ function applyQuickSelect() {
   justify-content: space-between;
   gap: 1rem;
   align-items: center;
-  border-bottom: 1px solid rgba(20, 88, 71, 0.08);
+  border-bottom: 1px solid rgba(15, 118, 110, 0.08);
   padding: 0.85rem 1rem;
 }
 
@@ -354,7 +354,7 @@ function applyQuickSelect() {
 }
 
 .column-item:hover {
-  background-color: rgba(20, 88, 71, 0.04);
+  background-color: rgba(15, 118, 110, 0.04);
 }
 
 .column-selector-tools {
@@ -381,7 +381,7 @@ function applyQuickSelect() {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   box-shadow: var(--app-shadow-soft);
 }
@@ -414,7 +414,7 @@ function applyQuickSelect() {
 .column-selector-field__action button {
   border: 0;
   border-radius: 0.85rem;
-  background: rgba(20, 88, 71, 0.1);
+  background: rgba(15, 118, 110, 0.1);
   color: var(--app-accent);
   cursor: pointer;
   font-weight: 700;
@@ -446,7 +446,7 @@ function applyQuickSelect() {
 .column-selector-notice {
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   padding: 0.9rem 1rem;
   color: var(--app-muted);
 }
@@ -467,7 +467,7 @@ function applyQuickSelect() {
 .column-selector-divider {
   height: 1px;
   margin: 1rem 0;
-  background: rgba(20, 88, 71, 0.1);
+  background: rgba(15, 118, 110, 0.1);
 }
 
 .column-selector-summary strong {

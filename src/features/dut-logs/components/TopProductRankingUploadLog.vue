@@ -1463,16 +1463,16 @@ function rankingRowClass(row: Record<string, unknown>) {
   border: 1px solid var(--app-border);
   border-radius: 1.1rem;
   padding: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .top-product-ranking-upload-log__stat-card--cool {
-  background: linear-gradient(145deg, rgba(40, 96, 163, 0.12), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(40, 96, 163, 0.12), var(--app-panel));
 }
 
 .top-product-ranking-upload-log__stat-card--warm,
 .top-product-ranking-upload-log__summary-card--highlight {
-  background: linear-gradient(145deg, rgba(184, 118, 38, 0.12), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(184, 118, 38, 0.12), var(--app-panel));
 }
 
 .top-product-ranking-upload-log__stat-card small,
@@ -1512,7 +1512,7 @@ function rankingRowClass(row: Record<string, unknown>) {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: rgba(20, 88, 71, 0.12);
+  background: rgba(15, 118, 110, 0.12);
   color: var(--app-accent);
 }
 
@@ -1529,7 +1529,7 @@ function rankingRowClass(row: Record<string, unknown>) {
 
 .top-product-ranking-upload-log__pill {
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .top-product-ranking-upload-log__pill--cool {
@@ -1543,8 +1543,8 @@ function rankingRowClass(row: Record<string, unknown>) {
 }
 
 .top-product-ranking-upload-log__badge--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .top-product-ranking-upload-log__badge--warning {
@@ -1585,7 +1585,7 @@ function rankingRowClass(row: Record<string, unknown>) {
   border: 1px solid var(--app-border);
   border-radius: 0.95rem;
   padding: 0.75rem 0.9rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
 }
 
@@ -1606,19 +1606,19 @@ function rankingRowClass(row: Record<string, unknown>) {
 .top-product-ranking-upload-log__ghost-button,
 .top-product-ranking-upload-log__pager-button {
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   padding: 0.65rem 0.95rem;
 }
 
 .top-product-ranking-upload-log__station-tab--active {
-  border-color: rgba(20, 88, 71, 0.35);
-  background: rgba(20, 88, 71, 0.1);
+  border-color: rgba(15, 118, 110, 0.35);
+  background: rgba(15, 118, 110, 0.1);
 }
 
 .top-product-ranking-upload-log__primary-button {
-  border: 1px solid rgba(20, 88, 71, 0.1);
-  background: linear-gradient(135deg, rgba(20, 88, 71, 0.95), rgba(40, 96, 163, 0.92));
+  border: 1px solid rgba(15, 118, 110, 0.1);
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.95), rgba(40, 96, 163, 0.92));
   color: #fff;
   padding: 0.65rem 1rem;
 }
@@ -1629,8 +1629,8 @@ function rankingRowClass(row: Record<string, unknown>) {
 }
 
 .top-product-ranking-upload-log__score-button--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .top-product-ranking-upload-log__score-button--info {
@@ -1656,8 +1656,8 @@ function rankingRowClass(row: Record<string, unknown>) {
 }
 
 .top-product-ranking-upload-log__pager-button--active {
-  border-color: rgba(20, 88, 71, 0.35);
-  background: rgba(20, 88, 71, 0.1);
+  border-color: rgba(15, 118, 110, 0.35);
+  background: rgba(15, 118, 110, 0.1);
 }
 
 .top-product-ranking-upload-log__detail-table {
@@ -1673,7 +1673,7 @@ function rankingRowClass(row: Record<string, unknown>) {
   gap: 1rem;
   padding: 0.85rem 1rem;
   border-top: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .top-product-ranking-upload-log__detail-row:first-child {

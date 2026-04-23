@@ -416,7 +416,7 @@ function valuePillClass(value: string, isCalculated?: boolean): string {
 .parsing-result-view__stat-card {
   border: 1px solid var(--app-border);
   border-radius: 1.2rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .parsing-result-view__metadata-panel,
@@ -478,19 +478,19 @@ function valuePillClass(value: string, isCalculated?: boolean): string {
 }
 
 .parsing-result-view__stat-card--primary {
-  background: linear-gradient(145deg, rgba(40, 96, 163, 0.1), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(40, 96, 163, 0.1), var(--app-panel));
 }
 
 .parsing-result-view__stat-card--secondary {
-  background: linear-gradient(145deg, rgba(95, 64, 176, 0.1), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(95, 64, 176, 0.1), var(--app-panel));
 }
 
 .parsing-result-view__stat-card--info {
-  background: linear-gradient(145deg, rgba(20, 113, 153, 0.1), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(20, 113, 153, 0.1), var(--app-panel));
 }
 
 .parsing-result-view__stat-card--success {
-  background: linear-gradient(145deg, rgba(20, 88, 71, 0.1), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(15, 118, 110, 0.1), var(--app-panel));
 }
 
 .parsing-result-view__section-heading--info {
@@ -531,8 +531,8 @@ function valuePillClass(value: string, isCalculated?: boolean): string {
 }
 
 .parsing-result-view__pill--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .parsing-result-view__pill--warning {
@@ -578,7 +578,7 @@ function valuePillClass(value: string, isCalculated?: boolean): string {
   width: 2.5rem;
   height: 2.5rem;
   border-radius: 999px;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   border: 1px solid var(--app-border);
 }
@@ -588,7 +588,7 @@ function valuePillClass(value: string, isCalculated?: boolean): string {
 }
 
 .parsing-result-view__criteria-icon--success {
-  color: #145847;
+  color: var(--app-accent);
 }
 
 .parsing-result-view__criteria-icon--neutral {
@@ -617,7 +617,7 @@ function valuePillClass(value: string, isCalculated?: boolean): string {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   box-shadow: var(--app-shadow-soft);
   padding: 0.85rem 0.95rem;

@@ -574,7 +574,7 @@ function handleScoreFilterValueInput(event: Event) {
   align-items: flex-start;
   border: 1px solid var(--app-border);
   border-radius: 1.2rem;
-  background: linear-gradient(145deg, rgba(255, 244, 223, 0.9), rgba(255, 251, 247, 0.95));
+  background: linear-gradient(145deg, rgba(255, 244, 223, 0.9), var(--app-panel));
   padding: 1rem 1.1rem;
 }
 
@@ -615,7 +615,7 @@ function handleScoreFilterValueInput(event: Event) {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 0.95rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   padding: 0.82rem 0.95rem;
 }
@@ -653,8 +653,8 @@ function handleScoreFilterValueInput(event: Event) {
 
 .top-product-ranking__pill--success,
 .top-product-ranking__score-pill--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .top-product-ranking__pill--warning,
@@ -718,7 +718,7 @@ function handleScoreFilterValueInput(event: Event) {
 .top-product-ranking__button,
 .top-product-ranking__token {
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: #4f5d6d;
   cursor: pointer;
 }

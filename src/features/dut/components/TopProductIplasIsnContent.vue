@@ -1697,7 +1697,7 @@ onUnmounted(() => {
   min-height: 2.75rem;
   border-radius: 0.95rem;
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   font-weight: 700;
   cursor: pointer;
@@ -1720,8 +1720,8 @@ onUnmounted(() => {
 
 .top-product-iplas-isn-button--primary,
 .top-product-iplas-isn-toggle-chip.is-active {
-  background: linear-gradient(135deg, #145847, #1b6c58);
-  border-color: #145847;
+  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  border-color: var(--app-accent);
   color: white;
 }
 
@@ -1732,7 +1732,7 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-isn-button--ghost {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .top-product-iplas-isn-toggle-card,
@@ -1742,7 +1742,7 @@ onUnmounted(() => {
 .top-product-iplas-isn-notice {
   padding: 1rem;
   border-radius: 1rem;
-  border: 1px solid rgba(20, 88, 71, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   background: rgba(255, 255, 255, 0.72);
 }
 
@@ -1780,9 +1780,9 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-isn-pill--primary {
-  background: rgba(20, 88, 71, 0.1);
-  border-color: rgba(20, 88, 71, 0.16);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.16);
+  color: var(--app-accent);
 }
 
 .top-product-iplas-isn-pill--info {
@@ -1792,9 +1792,9 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-isn-pill--success {
-  background: rgba(20, 88, 71, 0.08);
-  border-color: rgba(20, 88, 71, 0.14);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.08);
+  border-color: rgba(15, 118, 110, 0.14);
+  color: var(--app-accent);
 }
 
 .top-product-iplas-isn-pill--warning {

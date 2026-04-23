@@ -261,7 +261,7 @@ watch(
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 0.95rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   padding: 0.82rem 0.95rem;
 }
@@ -296,8 +296,8 @@ watch(
 }
 
 .criteria-config__pill--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .criteria-config__pill--primary {
@@ -318,7 +318,7 @@ watch(
 .criteria-config__upload-card {
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.9);
+  background: var(--app-panel);
   padding: 1rem;
   margin-top: 1rem;
 }
@@ -340,7 +340,7 @@ watch(
   gap: 0.45rem;
   border: 1px solid var(--app-border);
   border-radius: 999px;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: #4f5d6d;
   cursor: pointer;
   padding: 0.72rem 0.95rem;
@@ -368,8 +368,8 @@ watch(
 }
 
 .criteria-config__notice--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .criteria-config__notice--warning {

@@ -1677,11 +1677,11 @@ function stationRowClass(row: Record<string, unknown>) {
   border: 1px solid var(--app-border);
   border-radius: 1.1rem;
   padding: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .top-product-isn-results__summary-card--highlight {
-  background: linear-gradient(145deg, rgba(20, 88, 71, 0.14), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(15, 118, 110, 0.14), var(--app-panel));
 }
 
 .top-product-isn-results__summary-icon {
@@ -1691,7 +1691,7 @@ function stationRowClass(row: Record<string, unknown>) {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: rgba(20, 88, 71, 0.12);
+  background: rgba(15, 118, 110, 0.12);
   color: var(--app-accent);
 }
 
@@ -1732,7 +1732,7 @@ function stationRowClass(row: Record<string, unknown>) {
 .top-product-isn-results__token {
   border: 1px solid var(--app-border);
   border-radius: 999px;
-  background: rgba(255, 248, 240, 0.92);
+  background: var(--app-surface);
   color: var(--app-ink);
   padding: 0.45rem 0.85rem;
   cursor: pointer;
@@ -1746,7 +1746,7 @@ function stationRowClass(row: Record<string, unknown>) {
   border: 1px solid var(--app-border);
   border-radius: 1rem;
   padding: 0.55rem 0.8rem;
-  background: rgba(255, 251, 247, 0.85);
+  background: var(--app-panel);
 }
 
 .top-product-isn-results__linked-details summary {
@@ -1774,7 +1774,7 @@ function stationRowClass(row: Record<string, unknown>) {
 }
 
 .top-product-isn-results__status-card--success {
-  background: rgba(20, 88, 71, 0.08);
+  background: rgba(15, 118, 110, 0.08);
 }
 
 .top-product-isn-results__filter-grid {
@@ -1806,7 +1806,7 @@ function stationRowClass(row: Record<string, unknown>) {
   border: 1px solid var(--app-border);
   border-radius: 0.95rem;
   padding: 0.75rem 0.9rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
 }
 
@@ -1818,7 +1818,7 @@ function stationRowClass(row: Record<string, unknown>) {
   border: 1px solid var(--app-border);
   border-radius: 1.25rem;
   overflow: hidden;
-  background: rgba(255, 251, 247, 0.94);
+  background: var(--app-panel);
 }
 
 .top-product-isn-results__data-table :deep(.p-datatable-table) {
@@ -1857,8 +1857,8 @@ function stationRowClass(row: Record<string, unknown>) {
 }
 
 .top-product-isn-results__badge--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .top-product-isn-results__badge--warning {
@@ -1907,14 +1907,14 @@ function stationRowClass(row: Record<string, unknown>) {
 }
 
 .top-product-isn-results__primary-button {
-  border: 1px solid rgba(20, 88, 71, 0.12);
-  background: linear-gradient(135deg, rgba(20, 88, 71, 0.95), rgba(40, 96, 163, 0.92));
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.95), rgba(40, 96, 163, 0.92));
   color: #fff;
 }
 
 .top-product-isn-results__ghost-button {
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.9);
+  background: var(--app-panel);
   color: var(--app-ink);
 }
 
@@ -1952,7 +1952,7 @@ function stationRowClass(row: Record<string, unknown>) {
 .top-product-isn-results__dut-disclosure {
   border: 1px solid var(--app-border);
   border-radius: 1.4rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   overflow: hidden;
 }
 

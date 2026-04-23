@@ -937,14 +937,14 @@ const hasLatestError = (station: Station): boolean => {
 }
 
 .internal-data-button--ghost {
-    background: rgba(255, 248, 240, 0.84);
-    border-color: rgba(20, 88, 71, 0.16);
+    background: var(--app-surface);
+    border-color: rgba(15, 118, 110, 0.16);
     color: var(--app-ink);
 }
 
 .internal-data-button--primary {
-    background: #145847;
-    border-color: #145847;
+    background: var(--app-accent);
+    border-color: var(--app-accent);
     color: white;
 }
 
@@ -961,16 +961,16 @@ const hasLatestError = (station: Station): boolean => {
 
 .internal-data-mode-toggle__button,
 .internal-data-view-toggle__button {
-    background: rgba(255, 248, 240, 0.84);
-    border-color: rgba(20, 88, 71, 0.12);
+    background: var(--app-surface);
+    border-color: rgba(15, 118, 110, 0.12);
     color: var(--app-muted);
 }
 
 .internal-data-mode-toggle__button--active,
 .internal-data-view-toggle__button--active {
-    background: rgba(20, 88, 71, 0.12);
-    border-color: rgba(20, 88, 71, 0.22);
-    color: #145847;
+    background: rgba(15, 118, 110, 0.12);
+    border-color: rgba(15, 118, 110, 0.22);
+    color: var(--app-accent);
 }
 
 .internal-data-notice {
@@ -1017,7 +1017,7 @@ const hasLatestError = (station: Station): boolean => {
     border: 1px solid var(--app-border);
     border-radius: 1.15rem;
     padding: 1rem;
-    background: rgba(255, 251, 247, 0.92);
+    background: var(--app-panel);
 }
 
 .internal-data-input-card--textarea {
@@ -1041,13 +1041,13 @@ const hasLatestError = (station: Station): boolean => {
 
 .internal-data-input-icon {
     font-size: 1.2rem;
-    color: #145847;
+    color: var(--app-accent);
 }
 
 .internal-data-text-input,
 .internal-data-textarea {
     width: 100%;
-    border: 1px solid rgba(20, 88, 71, 0.16);
+    border: 1px solid rgba(15, 118, 110, 0.16);
     border-radius: 0.95rem;
     padding: 0.9rem 1rem;
     background: rgba(255, 255, 255, 0.94);
@@ -1057,7 +1057,7 @@ const hasLatestError = (station: Station): boolean => {
 
 .internal-data-text-input:focus,
 .internal-data-textarea:focus {
-    outline: 2px solid rgba(20, 88, 71, 0.2);
+    outline: 2px solid rgba(15, 118, 110, 0.2);
     outline-offset: 1px;
 }
 
@@ -1076,11 +1076,11 @@ const hasLatestError = (station: Station): boolean => {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    border: 1px solid rgba(20, 88, 71, 0.14);
+    border: 1px solid rgba(15, 118, 110, 0.14);
     border-radius: 999px;
     padding: 0.45rem 0.75rem;
-    background: rgba(20, 88, 71, 0.1);
-    color: #145847;
+    background: rgba(15, 118, 110, 0.1);
+    color: var(--app-accent);
     font: inherit;
     font-weight: 700;
     cursor: pointer;
@@ -1099,8 +1099,8 @@ const hasLatestError = (station: Station): boolean => {
     gap: 0.45rem;
     border-radius: 999px;
     padding: 0.42rem 0.78rem;
-    background: rgba(20, 88, 71, 0.1);
-    color: #145847;
+    background: rgba(15, 118, 110, 0.1);
+    color: var(--app-accent);
     font-size: 0.78rem;
     font-weight: 800;
 }
@@ -1137,11 +1137,11 @@ const hasLatestError = (station: Station): boolean => {
     border: 1px solid var(--app-border);
     border-radius: 1rem;
     padding: 0.95rem 1rem;
-    background: rgba(255, 251, 247, 0.92);
+    background: var(--app-panel);
 }
 
 .internal-data-summary-card--cool {
-    background: linear-gradient(180deg, rgba(36, 116, 184, 0.12), rgba(255, 251, 247, 0.96));
+    background: linear-gradient(180deg, rgba(36, 116, 184, 0.12), var(--app-panel));
 }
 
 .internal-data-summary-card span {
@@ -1173,7 +1173,7 @@ const hasLatestError = (station: Station): boolean => {
     border: 1px solid var(--app-border);
     border-radius: 1.25rem;
     padding: 1rem;
-    background: rgba(255, 251, 247, 0.96);
+    background: var(--app-panel);
 }
 
 .internal-data-section-card--alert {
@@ -1195,7 +1195,7 @@ const hasLatestError = (station: Station): boolean => {
     border: 1px solid var(--app-border);
     border-radius: 1.25rem;
     padding: 1rem;
-    background: rgba(255, 251, 247, 0.96);
+    background: var(--app-panel);
 }
 
 .internal-data-station-card--alert {
@@ -1262,9 +1262,9 @@ const hasLatestError = (station: Station): boolean => {
     justify-content: center;
     width: 2rem;
     height: 2rem;
-    border: 1px solid rgba(20, 88, 71, 0.12);
+    border: 1px solid rgba(15, 118, 110, 0.12);
     border-radius: 999px;
-    background: rgba(255, 248, 240, 0.88);
+    background: var(--app-surface);
     color: var(--app-ink);
     cursor: pointer;
 }
@@ -1319,7 +1319,7 @@ const hasLatestError = (station: Station): boolean => {
     justify-items: center;
     gap: 0.45rem;
     padding: 1.4rem 1rem;
-    border: 1px dashed rgba(20, 88, 71, 0.16);
+    border: 1px dashed rgba(15, 118, 110, 0.16);
     border-radius: 1rem;
     text-align: center;
     color: var(--app-muted);
@@ -1370,11 +1370,11 @@ const hasLatestError = (station: Station): boolean => {
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
-    border: 1px solid rgba(20, 88, 71, 0.16);
+    border: 1px solid rgba(15, 118, 110, 0.16);
     border-radius: 999px;
     padding: 0.42rem 0.78rem;
-    background: rgba(20, 88, 71, 0.1);
-    color: #145847;
+    background: rgba(15, 118, 110, 0.1);
+    color: var(--app-accent);
     font: inherit;
     font-weight: 700;
     cursor: pointer;

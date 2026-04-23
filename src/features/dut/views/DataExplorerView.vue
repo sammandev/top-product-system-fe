@@ -10,8 +10,7 @@
                         <p class="data-explorer-header__eyebrow">DUT Workspace</p>
                         <h1>Data Explorer</h1>
                         <p>
-                            Search and download DUT test data from iPLAS or internal sources while the heavier
-                            child workflows migrate underneath a shared scaffold-era route shell.
+                            Search and download DUT test data from iPLAS or internal sources.
                         </p>
                     </div>
                 </div>
@@ -88,8 +87,8 @@ const tabItems = [
     width: 3.2rem;
     height: 3.2rem;
     border-radius: 1rem;
-    background: linear-gradient(135deg, rgba(20, 88, 71, 0.16), rgba(161, 104, 57, 0.16));
-    color: #145847;
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.16), rgba(45, 212, 191, 0.16));
+    color: var(--app-accent);
     font-size: 1.5rem;
 }
 

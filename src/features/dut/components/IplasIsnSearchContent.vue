@@ -209,7 +209,7 @@
           v-if="groupedByISN.length > 0"
           eyebrow="Results"
           title="Test Records Results"
-          description="Review grouped iPLAS records per ISN, switch display modes, and drill into station-level histories from the scaffold-first results workspace."
+          description="Review grouped iPLAS records per ISN, switch display modes, and drill into station-level histories."
           tone="warm"
           split-header
           class="iplas-isn-results-panel"
@@ -1594,7 +1594,7 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-reference-code {
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   font: inherit;
   transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
@@ -1623,8 +1623,8 @@ async function handleSearch(): Promise<void> {
 
 .iplas-isn-toggle-chip.is-active,
 .iplas-isn-button--primary {
-  background: linear-gradient(135deg, #145847, #1b6c58);
-  border-color: #145847;
+  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  border-color: var(--app-accent);
   color: white;
 }
 
@@ -1635,7 +1635,7 @@ async function handleSearch(): Promise<void> {
 }
 
 .iplas-isn-button--ghost {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .iplas-isn-toggle-card,
@@ -1656,7 +1656,7 @@ async function handleSearch(): Promise<void> {
 
 .iplas-isn-toggle-card input {
   margin-top: 0.15rem;
-  accent-color: #145847;
+  accent-color: var(--app-accent);
 }
 
 .iplas-isn-toggle-card p,
@@ -1797,11 +1797,11 @@ async function handleSearch(): Promise<void> {
 
 .iplas-isn-summary-card--primary {
   cursor: pointer;
-  background: linear-gradient(135deg, rgba(20, 88, 71, 0.12), rgba(255, 251, 247, 0.94));
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), var(--app-panel));
 }
 
 .iplas-isn-summary-card--success {
-  background: rgba(20, 88, 71, 0.08);
+  background: rgba(15, 118, 110, 0.08);
 }
 
 .iplas-isn-summary-card--danger {
@@ -1823,7 +1823,7 @@ async function handleSearch(): Promise<void> {
   width: 100%;
   padding: 1rem 1.1rem;
   border: 0;
-  background: rgba(20, 88, 71, 0.08);
+  background: rgba(15, 118, 110, 0.08);
   color: var(--app-ink);
   text-align: left;
   cursor: pointer;
@@ -1851,13 +1851,13 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-compact-card {
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .iplas-isn-record-card.is-pass,
 .iplas-isn-list-row.is-pass,
 .iplas-isn-compact-card.is-pass {
-  background: rgba(20, 88, 71, 0.06);
+  background: rgba(15, 118, 110, 0.06);
 }
 
 .iplas-isn-record-card.is-fail,
@@ -1872,7 +1872,7 @@ async function handleSearch(): Promise<void> {
 }
 
 .iplas-isn-record-card__status.is-pass {
-  color: #145847;
+  color: var(--app-accent);
 }
 
 .iplas-isn-record-card__status.is-fail,
@@ -1891,7 +1891,7 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-inline-button {
   border: 1px solid var(--app-border);
   border-radius: 0.85rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   padding: 0.55rem 0.8rem;
   font: inherit;
@@ -1932,16 +1932,16 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-reference-card {
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   padding: 1rem;
 }
 
 .iplas-isn-reference-card--success {
-  background: linear-gradient(180deg, rgba(20, 88, 71, 0.08), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), var(--app-panel));
 }
 
 .iplas-isn-reference-card--error {
-  background: linear-gradient(180deg, rgba(164, 52, 58, 0.08), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(180deg, rgba(164, 52, 58, 0.08), var(--app-panel));
 }
 
 .iplas-isn-reference-card__topline {
@@ -2004,9 +2004,9 @@ async function handleSearch(): Promise<void> {
 }
 
 .iplas-isn-pill--success {
-  background: rgba(20, 88, 71, 0.1);
-  border-color: rgba(20, 88, 71, 0.16);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.16);
+  color: var(--app-accent);
 }
 
 .iplas-isn-pill--danger {

@@ -277,7 +277,7 @@ watch(
       gap: 0.3rem;
       border: 1px solid var(--app-border);
       border-radius: 1.15rem;
-      background: rgba(255, 251, 247, 0.88);
+      background: var(--app-panel);
       padding: 1rem;
       cursor: pointer;
       box-shadow: var(--app-shadow-soft);
@@ -300,7 +300,7 @@ watch(
 
     .row-selector-mode-card--active {
       border-color: var(--app-accent);
-      background: linear-gradient(180deg, rgba(20, 88, 71, 0.1), rgba(255, 251, 247, 0.98));
+      background: linear-gradient(180deg, rgba(15, 118, 110, 0.1), var(--app-panel));
       box-shadow: 0 0 0 4px var(--app-ring);
     }
 
@@ -334,7 +334,7 @@ watch(
       width: 100%;
       border: 1px solid var(--app-border);
       border-radius: 1rem;
-      background: rgba(255, 251, 247, 0.92);
+      background: var(--app-panel);
       color: var(--app-ink);
       box-shadow: var(--app-shadow-soft);
     }
@@ -367,7 +367,7 @@ watch(
     .row-selector-field__action button {
       border: 0;
       border-radius: 0.85rem;
-      background: rgba(20, 88, 71, 0.1);
+      background: rgba(15, 118, 110, 0.1);
       color: var(--app-accent);
       cursor: pointer;
       font-weight: 700;
@@ -390,9 +390,9 @@ watch(
       align-items: center;
       justify-content: center;
       gap: 0.4rem;
-      border: 1px solid rgba(20, 88, 71, 0.24);
+      border: 1px solid rgba(15, 118, 110, 0.24);
       border-radius: 999px;
-      background: rgba(20, 88, 71, 0.08);
+      background: rgba(15, 118, 110, 0.08);
       color: var(--app-accent);
       cursor: pointer;
       font-weight: 700;
@@ -407,11 +407,11 @@ watch(
     }
 
     .row-selector-notice--info {
-      background: rgba(255, 251, 247, 0.92);
+      background: var(--app-panel);
     }
 
     .row-selector-notice--success {
-      background: rgba(20, 88, 71, 0.08);
+      background: rgba(15, 118, 110, 0.08);
     }
 
     .row-selector-notice--error {
@@ -426,7 +426,7 @@ watch(
     .row-selector-divider {
       height: 1px;
       margin: 1rem 0;
-      background: rgba(20, 88, 71, 0.1);
+      background: rgba(15, 118, 110, 0.1);
     }
 
     .row-selector-summary strong {

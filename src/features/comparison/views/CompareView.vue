@@ -373,7 +373,7 @@ function handleReset() {
   padding: 0.78rem 1rem;
   cursor: pointer;
   font-weight: 700;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
 }
 
@@ -389,13 +389,13 @@ function handleReset() {
 }
 
 .compare-view-button--success {
-  background: #145847;
-  border-color: #145847;
+  background: var(--app-accent);
+  border-color: var(--app-accent);
   color: #f8f3ec;
 }
 
 .compare-view-button--ghost {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
 }
 
@@ -433,7 +433,7 @@ function handleReset() {
 
 .compare-view-notice--warning,
 .compare-view-preview {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .compare-view-preview__icon {
@@ -441,7 +441,7 @@ function handleReset() {
 }
 
 .compare-view-preview__icon--success {
-  color: #145847;
+  color: var(--app-accent);
 }
 
 .compare-view-notice button {

@@ -1372,9 +1372,9 @@ watch(selectedIplasStation, async () => {
 
 .upload-log-shell__primary-button {
   flex: 1 1 15rem;
-  background: linear-gradient(135deg, #145847, #2860a3);
+  background: linear-gradient(135deg, #0f766e, #2860a3);
   color: white;
-  box-shadow: 0 16px 30px rgba(20, 88, 71, 0.18);
+  box-shadow: 0 16px 30px rgba(15, 118, 110, 0.18);
 }
 
 .upload-log-shell__pill {
@@ -1385,7 +1385,7 @@ watch(selectedIplasStation, async () => {
   height: 1.65rem;
   padding: 0 0.4rem;
   border-radius: 999px;
-  background: rgba(20, 88, 71, 0.12);
+  background: rgba(15, 118, 110, 0.12);
   color: var(--app-accent);
   font-size: 0.8rem;
   font-weight: 700;
@@ -1413,12 +1413,12 @@ watch(selectedIplasStation, async () => {
 }
 
 .upload-log-shell__notice--success {
-  background: rgba(20, 88, 71, 0.08);
+  background: rgba(15, 118, 110, 0.08);
 }
 
 .upload-log-shell__summary {
   padding: 1rem;
-  background: rgba(255, 251, 247, 0.72);
+  background: var(--app-panel);
 }
 
 .upload-log-shell__link {
@@ -1470,7 +1470,7 @@ watch(selectedIplasStation, async () => {
 }
 
 .upload-log-comparison__pill--success {
-  background: rgba(20, 88, 71, 0.08);
+  background: rgba(15, 118, 110, 0.08);
   color: var(--app-accent);
 }
 
@@ -1530,8 +1530,8 @@ watch(selectedIplasStation, async () => {
 }
 
 .upload-log-comparison__notice--success {
-  border-color: rgba(20, 88, 71, 0.12);
-  background: rgba(20, 88, 71, 0.08);
+  border-color: rgba(15, 118, 110, 0.12);
+  background: rgba(15, 118, 110, 0.08);
   color: var(--app-accent);
 }
 
@@ -1545,19 +1545,19 @@ watch(selectedIplasStation, async () => {
   border-radius: 1.25rem;
   overflow: hidden;
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   box-shadow: var(--app-shadow-soft);
 }
 
 .upload-log-comparison__table :deep(.p-datatable-header),
 .upload-log-comparison__table :deep(.p-datatable-footer) {
   border: 0;
-  background: rgba(20, 88, 71, 0.05);
+  background: rgba(15, 118, 110, 0.05);
 }
 
 .upload-log-comparison__table :deep(.p-datatable-thead > tr > th) {
   border-color: var(--app-border);
-  background: rgba(255, 248, 240, 0.96);
+  background: var(--app-surface);
   color: var(--app-ink);
   font-size: 0.74rem;
   font-weight: 700;
@@ -1598,7 +1598,7 @@ watch(selectedIplasStation, async () => {
   padding: 1rem;
   border: 1px solid var(--app-border);
   border-radius: 1.5rem;
-  background: rgba(255, 251, 247, 0.98);
+  background: var(--app-panel);
   box-shadow: var(--app-shadow);
 }
 
@@ -1637,7 +1637,7 @@ watch(selectedIplasStation, async () => {
 .upload-log-breakdown__table-wrap {
   border: 1px solid var(--app-border);
   border-radius: 1.2rem;
-  background: rgba(255, 251, 247, 0.9);
+  background: var(--app-panel);
 }
 
 .upload-log-breakdown__summary-card {
@@ -1654,7 +1654,7 @@ watch(selectedIplasStation, async () => {
   flex: 1 1 10rem;
   padding: 0.85rem 0.9rem;
   border-radius: 1rem;
-  background: rgba(20, 88, 71, 0.06);
+  background: rgba(15, 118, 110, 0.06);
 }
 
 .upload-log-breakdown__summary-grid strong,
@@ -1708,7 +1708,7 @@ watch(selectedIplasStation, async () => {
 }
 
 .upload-log-score-chip.is-green {
-  background: rgba(20, 88, 71, 0.12);
+  background: rgba(15, 118, 110, 0.12);
   color: var(--app-accent);
 }
 

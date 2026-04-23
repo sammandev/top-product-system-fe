@@ -309,7 +309,7 @@ function handleReset(): void {
   min-height: 2.7rem;
   border-radius: 0.95rem;
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   font-weight: 700;
   cursor: pointer;
@@ -336,13 +336,13 @@ function handleReset(): void {
 .iplas-settings-dialog__button--primary,
 .iplas-settings-dialog__toggle-chip.is-active,
 .iplas-settings-dialog__site-chip.is-active {
-  background: linear-gradient(135deg, #145847, #1b6c58);
-  border-color: #145847;
+  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  border-color: var(--app-accent);
   color: white;
 }
 
 .iplas-settings-dialog__button--ghost {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .iplas-settings-dialog__chip-row {
@@ -353,7 +353,7 @@ function handleReset(): void {
 
 .iplas-settings-dialog__section {
   padding: 1rem;
-  border: 1px solid rgba(20, 88, 71, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.72);
 }
@@ -405,9 +405,9 @@ function handleReset(): void {
 }
 
 .iplas-settings-dialog__notice--success {
-  border-color: rgba(20, 88, 71, 0.16);
-  background: rgba(20, 88, 71, 0.08);
-  color: #145847;
+  border-color: rgba(15, 118, 110, 0.16);
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--app-accent);
 }
 
 .iplas-settings-dialog__notice--warning {

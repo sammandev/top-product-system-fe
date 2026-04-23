@@ -55,30 +55,28 @@ const hasHeader = computed(
   display: grid;
   gap: 1rem;
   border: 1px solid var(--app-border);
-  border-radius: 1.5rem;
+  border-radius: 1rem;
   padding: 1.2rem;
-  background:
-    radial-gradient(circle at top right, rgba(20, 88, 71, 0.08), transparent 32%),
-    rgba(255, 251, 247, 0.94);
+  background: var(--app-panel);
   box-shadow: var(--app-shadow-soft);
 }
 
 .app-panel--warm {
   background:
-    radial-gradient(circle at top right, rgba(161, 104, 57, 0.12), transparent 34%),
-    rgba(255, 251, 247, 0.96);
+    radial-gradient(circle at top right, rgba(217, 119, 6, 0.06), transparent 34%),
+    var(--app-panel);
 }
 
 .app-panel--cool {
   background:
-    radial-gradient(circle at top right, rgba(40, 96, 163, 0.12), transparent 34%),
-    rgba(255, 251, 247, 0.96);
+    radial-gradient(circle at top right, rgba(2, 132, 199, 0.06), transparent 34%),
+    var(--app-panel);
 }
 
 .app-panel--success {
   background:
-    radial-gradient(circle at top right, rgba(20, 88, 71, 0.12), transparent 34%),
-    rgba(249, 255, 251, 0.97);
+    radial-gradient(circle at top right, rgba(22, 163, 74, 0.06), transparent 34%),
+    var(--app-panel);
 }
 
 .app-panel__header {

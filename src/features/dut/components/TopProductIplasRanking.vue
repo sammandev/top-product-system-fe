@@ -895,7 +895,7 @@ function scoreTone(score: number) {
   min-height: 2.6rem;
   border-radius: 0.95rem;
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   font-weight: 700;
   cursor: pointer;
@@ -915,8 +915,8 @@ function scoreTone(score: number) {
 }
 
 .ranking-button--primary {
-  background: linear-gradient(135deg, #145847, #1b6c58);
-  border-color: #145847;
+  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  border-color: var(--app-accent);
   color: white;
 }
 
@@ -928,13 +928,13 @@ function scoreTone(score: number) {
 
 .ranking-button--success,
 .ranking-inline-icon--success {
-  background: rgba(20, 88, 71, 0.08);
-  border-color: rgba(20, 88, 71, 0.16);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.08);
+  border-color: rgba(15, 118, 110, 0.16);
+  color: var(--app-accent);
 }
 
 .ranking-button--ghost {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .ranking-pill,
@@ -952,9 +952,9 @@ function scoreTone(score: number) {
 
 .ranking-pill--success,
 .ranking-score-chip--success {
-  background: rgba(20, 88, 71, 0.1);
-  border-color: rgba(20, 88, 71, 0.16);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.16);
+  color: var(--app-accent);
 }
 
 .ranking-pill--primary,

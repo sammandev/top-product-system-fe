@@ -1,33 +1,32 @@
 <template>
     <PublicScaffold
         :app-name="appName"
-        eyebrow="Batch 1"
-        title="Operational sign in"
-        description="This route runs on the scaffold-first shell while preserving the existing authentication flow and backend contracts."
-        panel-eyebrow="Access"
-        panel-description="Use your external account for full access, or continue as guest for a limited read-only session."
+        title="Sign in to your account"
+        description="Access product analytics, data exploration, and workflow tools from one unified platform."
+        panel-eyebrow="Sign In"
+        panel-description="Use your credentials for full access, or continue as guest for a limited read-only session."
     >
         <template #hero>
             <ul role="list" class="grid gap-3 sm:grid-cols-2">
-                <li class="rounded-[1.5rem] border border-[var(--app-border)] bg-white/70 p-4 shadow-[var(--app-shadow-soft)]">
+                <li class="rounded-[1.25rem] border border-[var(--app-border)] bg-white/70 p-4 shadow-[var(--app-shadow-soft)]">
                     <div class="flex items-center gap-3">
-                        <div class="rounded-2xl bg-[var(--app-accent-soft)] p-3 text-2xl text-[var(--app-accent)]">
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.75rem] bg-[var(--app-accent-soft)] text-xl text-[var(--app-accent)]">
                             <Icon icon="solar:shield-user-bold-duotone" />
                         </div>
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]">Mode</p>
-                            <p class="mt-1 text-sm text-[var(--app-ink)]">External or guest access</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--app-muted)]">Secure</p>
+                            <p class="mt-1 text-sm text-[var(--app-ink)]">Role-based access control</p>
                         </div>
                     </div>
                 </li>
-                <li class="rounded-[1.5rem] border border-[var(--app-border)] bg-white/70 p-4 shadow-[var(--app-shadow-soft)]">
+                <li class="rounded-[1.25rem] border border-[var(--app-border)] bg-white/70 p-4 shadow-[var(--app-shadow-soft)]">
                     <div class="flex items-center gap-3">
-                        <div class="rounded-2xl bg-[rgba(165,101,71,0.14)] p-3 text-2xl text-[rgb(141,87,62)]">
-                            <Icon icon="solar:server-path-bold-duotone" />
+                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.75rem] bg-[var(--app-info-soft)] text-xl text-[var(--app-info)]">
+                            <Icon icon="solar:chart-2-bold-duotone" />
                         </div>
                         <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]">Boundary</p>
-                            <p class="mt-1 text-sm text-[var(--app-ink)]">Backend contracts stay unchanged</p>
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--app-muted)]">Analytics</p>
+                            <p class="mt-1 text-sm text-[var(--app-ink)]">Real-time product insights</p>
                         </div>
                     </div>
                 </li>

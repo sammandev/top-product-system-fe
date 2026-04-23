@@ -346,7 +346,7 @@ function resetForm() {
     width: 3.4rem;
     height: 3.4rem;
     border-radius: 1.1rem;
-    background: linear-gradient(135deg, rgba(20, 88, 71, 0.16), rgba(161, 104, 57, 0.18));
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(45, 212, 191, 0.16));
     color: var(--app-accent);
     box-shadow: var(--app-shadow-soft);
 }
@@ -442,7 +442,7 @@ function resetForm() {
     padding: 0.78rem 1rem;
     cursor: pointer;
     font-weight: 700;
-    background: rgba(255, 251, 247, 0.92);
+    background: var(--app-panel);
     color: var(--app-ink);
 }
 
@@ -458,13 +458,13 @@ function resetForm() {
 }
 
 .analyze-view-button--success {
-    background: #145847;
-    border-color: #145847;
+    background: var(--app-accent);
+    border-color: var(--app-accent);
     color: #f8f3ec;
 }
 
 .analyze-view-button--ghost {
-    background: rgba(255, 251, 247, 0.92);
+    background: var(--app-panel);
     color: var(--app-ink);
 }
 
@@ -475,9 +475,9 @@ function resetForm() {
 }
 
 .analyze-view-button--success-ghost {
-    background: rgba(20, 88, 71, 0.08);
-    border-color: rgba(20, 88, 71, 0.24);
-    color: #145847;
+    background: rgba(15, 118, 110, 0.06);
+    border-color: rgba(15, 118, 110, 0.2);
+    color: var(--app-accent);
 }
 
 .analyze-view-button--block {
@@ -505,7 +505,7 @@ function resetForm() {
 }
 
 .analyze-view-file-note--accent {
-    border-color: rgba(20, 88, 71, 0.24);
+    border-color: rgba(15, 118, 110, 0.2);
 }
 
 .analyze-view-notice {
@@ -521,8 +521,8 @@ function resetForm() {
 }
 
 .analyze-view-notice--success {
-    background: rgba(20, 88, 71, 0.08);
-    border-color: rgba(20, 88, 71, 0.24);
+    background: rgba(15, 118, 110, 0.06);
+    border-color: rgba(15, 118, 110, 0.2);
 }
 
 .analyze-view-notice button {

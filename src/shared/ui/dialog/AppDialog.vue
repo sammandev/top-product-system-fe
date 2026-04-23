@@ -103,8 +103,8 @@ function handleVisibleUpdate(value: boolean) {
 
 .app-dialog :deep(.p-dialog-header) {
   align-items: flex-start;
-  border-bottom: 1px solid rgba(20, 88, 71, 0.1);
-  background: linear-gradient(180deg, rgba(20, 88, 71, 0.08), rgba(20, 88, 71, 0.02));
+  border-bottom: 1px solid var(--app-border);
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.06), rgba(15, 118, 110, 0.01));
 }
 
 .app-dialog :deep(.p-dialog-content) {
@@ -114,7 +114,7 @@ function handleVisibleUpdate(value: boolean) {
 
 .app-dialog :deep(.p-dialog-footer) {
   border-top: 1px solid var(--app-border);
-  background: rgba(255, 248, 240, 0.78);
+  background: var(--app-surface);
 }
 
 .app-dialog__header-copy {

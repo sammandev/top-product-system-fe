@@ -1,40 +1,76 @@
 :root {
-  --app-canvas: #f2ede5;
-  --app-canvas-strong: #e4d7c6;
-  --app-panel: rgba(255, 251, 247, 0.86);
-  --app-panel-strong: rgba(255, 248, 240, 0.95);
-  --app-ink: #18120d;
-  --app-muted: #685f56;
-  --app-accent: #145847;
-  --app-accent-strong: #0d3d31;
-  --app-accent-soft: #d8eee7;
-  --app-border: rgba(24, 18, 13, 0.12);
-  --app-ring: rgba(20, 88, 71, 0.28);
-  --app-info: #0e7490;
-  --app-info-strong: #155e75;
-  --app-info-soft: rgba(6, 182, 212, 0.14);
-  --app-info-line: rgba(6, 182, 212, 0.28);
-  --app-success: #15803d;
-  --app-success-strong: #166534;
-  --app-success-soft: rgba(34, 197, 94, 0.12);
-  --app-success-line: rgba(34, 197, 94, 0.22);
-  --app-warning: #b45309;
-  --app-warning-strong: #92400e;
-  --app-warning-soft: rgba(245, 158, 11, 0.12);
-  --app-warning-line: rgba(245, 158, 11, 0.24);
-  --app-danger: #a33d2d;
-  --app-danger-soft: rgba(163, 61, 45, 0.12);
-  --app-danger-line: rgba(163, 61, 45, 0.24);
-  --app-shadow: 0 24px 64px rgba(63, 39, 14, 0.18);
-  --app-shadow-soft: 0 12px 36px rgba(63, 39, 14, 0.08);
-  --app-shell-bg: #efe6db;
-  --app-shell-header: rgba(255, 249, 241, 0.84);
-  --app-shell-sidebar: rgba(250, 244, 236, 0.92);
-  --app-display: 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
-  --app-body: 'Segoe UI', 'Trebuchet MS', Arial, sans-serif;
+  /* Canvas & surfaces */
+  --app-canvas: #f8fafc;
+  --app-canvas-strong: #e2e8f0;
+  --app-panel: rgba(255, 255, 255, 0.88);
+  --app-panel-strong: rgba(255, 255, 255, 0.96);
+
+  /* Typography */
+  --app-ink: #0f172a;
+  --app-muted: #64748b;
+
+  /* Brand accent */
+  --app-accent: #0f766e;
+  --app-accent-strong: #115e59;
+  --app-accent-soft: #f0fdfa;
+  --app-border: rgba(15, 23, 42, 0.08);
+  --app-ring: rgba(15, 118, 110, 0.24);
+
+  /* Status — info */
+  --app-info: #0284c7;
+  --app-info-strong: #0369a1;
+  --app-info-soft: rgba(14, 165, 233, 0.08);
+  --app-info-line: rgba(14, 165, 233, 0.18);
+
+  /* Status — success */
+  --app-success: #16a34a;
+  --app-success-strong: #15803d;
+  --app-success-soft: rgba(34, 197, 94, 0.08);
+  --app-success-line: rgba(34, 197, 94, 0.16);
+
+  /* Status — warning */
+  --app-warning: #d97706;
+  --app-warning-strong: #b45309;
+  --app-warning-soft: rgba(245, 158, 11, 0.08);
+  --app-warning-line: rgba(245, 158, 11, 0.16);
+
+  /* Status — danger */
+  --app-danger: #dc2626;
+  --app-danger-soft: rgba(239, 68, 68, 0.08);
+  --app-danger-line: rgba(239, 68, 68, 0.16);
+
+  /* Elevation */
+  --app-shadow: 0 16px 48px rgba(15, 23, 42, 0.1);
+  --app-shadow-soft: 0 2px 12px rgba(15, 23, 42, 0.05);
+
+  /* Shell */
+  --app-shell-bg: #f1f5f9;
+  --app-shell-header: rgba(255, 255, 255, 0.82);
+  --app-shell-sidebar: rgba(255, 255, 255, 0.92);
+
+  /* Fonts — clean sans-serif */
+  --app-display: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --app-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
+
   color-scheme: light;
 }
 
 :root.app-dark {
+  --app-canvas: #0f172a;
+  --app-canvas-strong: #1e293b;
+  --app-panel: rgba(30, 41, 59, 0.88);
+  --app-panel-strong: rgba(30, 41, 59, 0.96);
+  --app-ink: #f1f5f9;
+  --app-muted: #94a3b8;
+  --app-accent: #2dd4bf;
+  --app-accent-strong: #14b8a6;
+  --app-accent-soft: rgba(45, 212, 191, 0.1);
+  --app-border: rgba(241, 245, 249, 0.08);
+  --app-ring: rgba(45, 212, 191, 0.24);
+  --app-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
+  --app-shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.2);
+  --app-shell-bg: #0f172a;
+  --app-shell-header: rgba(15, 23, 42, 0.85);
+  --app-shell-sidebar: rgba(15, 23, 42, 0.92);
   color-scheme: dark;
 }

@@ -1200,7 +1200,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   min-height: 2.75rem;
   border-radius: 0.95rem;
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   font-weight: 700;
   cursor: pointer;
@@ -1221,8 +1221,8 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 .station-config-dialog__button--primary {
-  background: linear-gradient(135deg, #145847, #1b6c58);
-  border-color: #145847;
+  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  border-color: var(--app-accent);
   color: white;
 }
 
@@ -1232,7 +1232,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 .station-config-dialog__button--ghost {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .station-config-dialog__modal-stack {
@@ -1364,7 +1364,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   justify-content: center;
   min-height: 2.4rem;
   padding: 0.5rem 0.8rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
 }
 
@@ -1377,9 +1377,9 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-dialog__choice-chip.is-active,
 .station-config-dialog__toggle-chip.is-active,
 .station-config-dialog__toggle-pill.is-active {
-  background: rgba(20, 88, 71, 0.1);
-  border-color: rgba(20, 88, 71, 0.18);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.18);
+  color: var(--app-accent);
 }
 
 .station-config-dialog__token {
@@ -1397,9 +1397,9 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 
 .station-config-dialog__pill--success,
 .station-config-dialog__pill-button--success {
-  background: rgba(20, 88, 71, 0.1);
-  border-color: rgba(20, 88, 71, 0.16);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.16);
+  color: var(--app-accent);
 }
 
 .station-config-dialog__pill--warning,
@@ -1435,7 +1435,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   min-height: 5.25rem;
   padding: 0.9rem 1rem;
   border-radius: 1rem;
-  border-color: rgba(20, 88, 71, 0.12);
+  border-color: rgba(15, 118, 110, 0.12);
   background: rgba(255, 255, 255, 0.72);
   color: var(--app-ink);
   text-align: left;
@@ -1461,8 +1461,8 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  border: 3px solid rgba(20, 88, 71, 0.16);
-  border-top-color: #145847;
+  border: 3px solid rgba(15, 118, 110, 0.16);
+  border-top-color: var(--app-accent);
   animation: station-config-spin 0.9s linear infinite;
 }
 
@@ -1592,7 +1592,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 .test-item-list-container {
-  border: 1px solid rgba(20, 88, 71, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.72);
   overflow: hidden;
@@ -1614,7 +1614,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 .test-item-row.is-active {
-  border-color: rgba(20, 88, 71, 0.18);
+  border-color: rgba(15, 118, 110, 0.18);
 }
 
 .test-item-row-actions {
@@ -1627,13 +1627,13 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   width: 1.1rem;
   height: 1.1rem;
   border-radius: 0.3rem;
-  border: 1px solid rgba(20, 88, 71, 0.24);
+  border: 1px solid rgba(15, 118, 110, 0.24);
   background: white;
 }
 
 .station-config-dialog__checkmark.is-active {
-  background: #145847;
-  border-color: #145847;
+  background: var(--app-accent);
+  border-color: var(--app-accent);
   box-shadow: inset 0 0 0 0.2rem white;
 }
 

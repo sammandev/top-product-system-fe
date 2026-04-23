@@ -351,7 +351,7 @@ function onSelectionChange(selection: unknown) {
 }
 
 .clickable-rows :deep(.p-datatable-tbody > tr.iplas-record-table-row:hover) {
-  background-color: rgba(20, 88, 71, 0.08);
+  background-color: rgba(15, 118, 110, 0.08);
 }
 
 .font-mono {
@@ -396,8 +396,8 @@ function onSelectionChange(selection: unknown) {
 
 .iplas-record-table-copy-pill {
   padding: 0.28rem 0.65rem;
-  background: rgba(20, 88, 71, 0.08);
-  border-color: rgba(20, 88, 71, 0.12);
+  background: rgba(15, 118, 110, 0.08);
+  border-color: rgba(15, 118, 110, 0.12);
   color: var(--app-ink);
 }
 

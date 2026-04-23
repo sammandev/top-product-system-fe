@@ -1381,8 +1381,8 @@ watch(
 <style scoped>
 .iplas-details-dialog {
   --iplas-border: var(--app-border);
-  --iplas-panel: rgba(255, 251, 247, 0.9);
-  --iplas-panel-strong: rgba(255, 248, 240, 0.96);
+  --iplas-panel: var(--app-panel);
+  --iplas-panel-strong: var(--app-surface);
   --iplas-muted: var(--app-muted);
   --iplas-ink: var(--app-ink);
   --iplas-accent: var(--app-accent);
@@ -1464,7 +1464,7 @@ watch(
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 0.95rem;
-  background: rgba(20, 88, 71, 0.12);
+  background: rgba(15, 118, 110, 0.12);
   color: var(--iplas-accent);
   font-size: 1.25rem;
   flex-shrink: 0;
@@ -1517,7 +1517,7 @@ watch(
 
 .iplas-details-dialog__summary-card--highlight,
 .iplas-details-dialog__summary-card--score {
-  background: linear-gradient(180deg, rgba(20, 88, 71, 0.08), rgba(255, 251, 247, 0.95));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), var(--app-panel));
 }
 
 .iplas-details-dialog__info-button,
@@ -1579,7 +1579,7 @@ watch(
   padding: 0.55rem 0.8rem;
   border-radius: 999px;
   border: 1px solid var(--iplas-border);
-  background: rgba(255, 248, 240, 0.94);
+  background: var(--app-surface);
   color: var(--iplas-ink);
   width: fit-content;
 }
@@ -1687,7 +1687,7 @@ watch(
 .iplas-details-dialog__chip-option,
 .iplas-details-dialog__ghost-action,
 .iplas-details-dialog__button--ghost {
-  background: rgba(20, 88, 71, 0.08);
+  background: rgba(15, 118, 110, 0.08);
   color: var(--iplas-accent);
 }
 
@@ -1742,7 +1742,7 @@ watch(
 }
 
 .iplas-details-dialog__metric-row--score {
-  background: linear-gradient(180deg, rgba(20, 88, 71, 0.08), rgba(255, 255, 255, 0.76));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(255, 255, 255, 0.76));
 }
 
 .iplas-details-dialog__simple-list {
@@ -1790,7 +1790,7 @@ watch(
 }
 
 .iplas-details-dialog__score-chip--primary {
-  background: rgba(20, 88, 71, 0.14);
+  background: rgba(15, 118, 110, 0.14);
   color: var(--iplas-accent);
 }
 

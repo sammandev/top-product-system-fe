@@ -286,7 +286,7 @@ watch(
   min-height: 2.75rem;
   border-radius: 0.95rem;
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   font-weight: 700;
   cursor: pointer;
@@ -307,13 +307,13 @@ watch(
 }
 
 .station-selection-dialog__button--primary {
-  background: linear-gradient(135deg, #145847, #1b6c58);
-  border-color: #145847;
+  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  border-color: var(--app-accent);
   color: white;
 }
 
 .station-selection-dialog__button--ghost {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .station-selection-dialog__field {
@@ -359,7 +359,7 @@ watch(
   gap: 1rem;
   align-items: center;
   padding: 1rem;
-  border: 1px solid rgba(20, 88, 71, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.72);
   cursor: pointer;
@@ -367,12 +367,12 @@ watch(
 }
 
 .station-item:hover {
-  border-color: rgba(20, 88, 71, 0.18);
+  border-color: rgba(15, 118, 110, 0.18);
   background-color: rgba(246, 255, 250, 0.88);
 }
 
 .station-configured {
-  border-color: rgba(20, 88, 71, 0.18);
+  border-color: rgba(15, 118, 110, 0.18);
   background-color: rgba(246, 255, 250, 0.88);
 }
 
@@ -384,13 +384,13 @@ watch(
   width: 1.15rem;
   height: 1.15rem;
   border-radius: 0.35rem;
-  border: 1px solid rgba(20, 88, 71, 0.24);
+  border: 1px solid rgba(15, 118, 110, 0.24);
   background: white;
 }
 
 .station-selection-dialog__checkmark.is-active {
-  background: #145847;
-  border-color: #145847;
+  background: var(--app-accent);
+  border-color: var(--app-accent);
   box-shadow: inset 0 0 0 0.2rem white;
 }
 
@@ -429,9 +429,9 @@ watch(
 }
 
 .station-selection-dialog__pill--success {
-  background: rgba(20, 88, 71, 0.1);
-  border-color: rgba(20, 88, 71, 0.16);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.16);
+  color: var(--app-accent);
 }
 
 .station-selection-dialog__pill--primary {

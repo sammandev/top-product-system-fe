@@ -512,15 +512,15 @@ function statusPillClass(value: string, isCalculated?: boolean): string {
 .compare-result-view__action-button,
 .compare-result-view__icon-button {
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   padding: 0.65rem 0.95rem;
   cursor: pointer;
 }
 
 .compare-result-view__action-button--success {
-  border-color: rgba(20, 88, 71, 0.18);
-  color: #145847;
+  border-color: rgba(15, 118, 110, 0.18);
+  color: var(--app-accent);
 }
 
 .compare-result-view__action-button--danger {
@@ -538,7 +538,7 @@ function statusPillClass(value: string, isCalculated?: boolean): string {
 .compare-result-view__section {
   border: 1px solid var(--app-border);
   border-radius: 1.2rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .compare-result-view__stat-card {
@@ -564,15 +564,15 @@ function statusPillClass(value: string, isCalculated?: boolean): string {
 }
 
 .compare-result-view__stat-card--primary {
-  background: linear-gradient(145deg, rgba(20, 88, 71, 0.1), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(15, 118, 110, 0.1), var(--app-panel));
 }
 
 .compare-result-view__stat-card--secondary {
-  background: linear-gradient(145deg, rgba(95, 64, 176, 0.1), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(95, 64, 176, 0.1), var(--app-panel));
 }
 
 .compare-result-view__stat-card--info {
-  background: linear-gradient(145deg, rgba(40, 96, 163, 0.1), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(40, 96, 163, 0.1), var(--app-panel));
 }
 
 .compare-result-view__section {
@@ -646,8 +646,8 @@ function statusPillClass(value: string, isCalculated?: boolean): string {
 
 .compare-result-view__score-pill--success,
 .compare-result-view__status-pill--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .compare-result-view__score-pill--warning {
@@ -703,7 +703,7 @@ function statusPillClass(value: string, isCalculated?: boolean): string {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   box-shadow: var(--app-shadow-soft);
   padding: 0.85rem 0.95rem;

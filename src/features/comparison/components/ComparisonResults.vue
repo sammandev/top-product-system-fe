@@ -382,7 +382,7 @@ function formatValue(value: unknown): string {
 }
 
 .comparison-results__stat-card--success {
-  background: rgba(20, 88, 71, 0.1);
+  background: rgba(15, 118, 110, 0.08);
 }
 
 .comparison-results__stat-card--warning {
@@ -418,7 +418,7 @@ function formatValue(value: unknown): string {
 .comparison-results__bucket {
   display: grid;
   gap: 0.85rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .comparison-results__bucket header {
@@ -433,15 +433,15 @@ function formatValue(value: unknown): string {
 }
 
 .comparison-results__bucket--success {
-  background: linear-gradient(180deg, rgba(20, 88, 71, 0.08), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.06), var(--app-panel));
 }
 
 .comparison-results__bucket--danger {
-  background: linear-gradient(180deg, rgba(163, 61, 45, 0.08), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(180deg, rgba(163, 61, 45, 0.06), var(--app-panel));
 }
 
 .comparison-results__bucket--info {
-  background: linear-gradient(180deg, rgba(20, 113, 153, 0.08), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(180deg, rgba(20, 113, 153, 0.06), var(--app-panel));
 }
 
 .comparison-results__chip-row {
@@ -463,8 +463,8 @@ function formatValue(value: unknown): string {
 .comparison-results__chip--success,
 .comparison-results__pill--success,
 .text-success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.1);
+  color: var(--app-accent);
 }
 
 .comparison-results__chip--danger,

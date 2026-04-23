@@ -387,7 +387,7 @@ watch(
   border-radius: 1.25rem;
   background:
     radial-gradient(circle at top right, rgba(20, 113, 153, 0.1), transparent 34%),
-    rgba(255, 251, 247, 0.82);
+    var(--app-panel);
   overflow: hidden;
 }
 
@@ -481,7 +481,7 @@ watch(
 .advanced-filters-panel__section {
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.9);
+  background: var(--app-panel);
   padding: 1rem;
   display: grid;
   gap: 0.9rem;
@@ -496,11 +496,11 @@ watch(
 }
 
 .advanced-filters-panel__section--success {
-  background: linear-gradient(145deg, rgba(20, 88, 71, 0.06), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(15, 118, 110, 0.06), var(--app-panel));
 }
 
 .advanced-filters-panel__section--danger {
-  background: linear-gradient(145deg, rgba(189, 64, 64, 0.06), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(145deg, rgba(189, 64, 64, 0.06), var(--app-panel));
 }
 
 .advanced-filters-panel__field {
@@ -518,7 +518,7 @@ watch(
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 0.9rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   padding: 0.82rem 0.95rem;
 }
@@ -541,7 +541,7 @@ watch(
 .advanced-filters-panel__token {
   border: 1px solid var(--app-border);
   border-radius: 999px;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
   gap: 0.45rem;
@@ -570,9 +570,9 @@ watch(
 }
 
 .advanced-filters-panel__button--success {
-  border-color: rgba(20, 88, 71, 0.22);
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  border-color: rgba(15, 118, 110, 0.22);
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .advanced-filters-panel__button--danger {
@@ -586,9 +586,9 @@ watch(
 }
 
 .advanced-filters-panel__token--success {
-  border-color: rgba(20, 88, 71, 0.22);
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  border-color: rgba(15, 118, 110, 0.22);
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .advanced-filters-panel__token--danger {
@@ -617,8 +617,8 @@ watch(
 }
 
 .advanced-filters-panel__pill--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .advanced-filters-panel__pill--danger {

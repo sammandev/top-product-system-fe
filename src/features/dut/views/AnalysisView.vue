@@ -706,8 +706,8 @@ function formatScore(score: number | null | undefined) {
   width: 3.2rem;
   height: 3.2rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, rgba(20, 88, 71, 0.16), rgba(36, 116, 184, 0.16));
-  color: #145847;
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.16), rgba(36, 116, 184, 0.16));
+  color: var(--app-accent);
   font-size: 1.5rem;
 }
 
@@ -766,7 +766,7 @@ function formatScore(score: number | null | undefined) {
 .analysis-view-field input,
 .analysis-view-field textarea {
   width: 100%;
-  border: 1px solid rgba(20, 88, 71, 0.18);
+  border: 1px solid rgba(15, 118, 110, 0.18);
   border-radius: 1rem;
   padding: 0.82rem 0.95rem;
   background: rgba(255, 255, 255, 0.92);
@@ -781,8 +781,8 @@ function formatScore(score: number | null | undefined) {
 .analysis-view-field input:focus,
 .analysis-view-field textarea:focus {
   outline: none;
-  border-color: rgba(20, 88, 71, 0.4);
-  box-shadow: 0 0 0 3px rgba(20, 88, 71, 0.12);
+  border-color: rgba(15, 118, 110, 0.4);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
 .analysis-view-field small {
@@ -810,8 +810,8 @@ function formatScore(score: number | null | undefined) {
 }
 
 .analysis-view-token-entry button {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
   white-space: nowrap;
 }
 
@@ -825,11 +825,11 @@ function formatScore(score: number | null | undefined) {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  border: 1px solid rgba(20, 88, 71, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 999px;
   padding: 0.4rem 0.7rem;
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
   cursor: pointer;
 }
 
@@ -858,8 +858,8 @@ function formatScore(score: number | null | undefined) {
 
 .analysis-view-inline-summary span,
 .analysis-view-pill--neutral {
-  border: 1px solid rgba(20, 88, 71, 0.14);
-  background: rgba(255, 248, 240, 0.8);
+  border: 1px solid rgba(15, 118, 110, 0.14);
+  background: var(--app-surface);
   color: var(--app-ink);
 }
 
@@ -869,8 +869,8 @@ function formatScore(score: number | null | undefined) {
 }
 
 .analysis-view-pill--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .analysis-view-pill--warning {
@@ -898,14 +898,14 @@ function formatScore(score: number | null | undefined) {
 }
 
 .analysis-view-button--primary {
-  background: linear-gradient(135deg, #145847, #1c7c62);
+  background: linear-gradient(135deg, #0f766e, #1c7c62);
   color: #fff;
 }
 
 .analysis-view-button--ghost,
 .analysis-view-notice button {
-  background: rgba(255, 248, 240, 0.84);
-  border-color: rgba(20, 88, 71, 0.16);
+  background: var(--app-surface);
+  border-color: rgba(15, 118, 110, 0.16);
   color: var(--app-ink);
 }
 
@@ -947,7 +947,7 @@ function formatScore(score: number | null | undefined) {
   align-items: center;
   text-align: center;
   border: 1px solid var(--app-border);
-  background: rgba(255, 251, 247, 0.94);
+  background: var(--app-panel);
 }
 
 .analysis-view-empty-state--compact {
@@ -958,14 +958,14 @@ function formatScore(score: number | null | undefined) {
   width: 2rem;
   height: 2rem;
   border-radius: 999px;
-  border: 3px solid rgba(20, 88, 71, 0.14);
-  border-top-color: #145847;
+  border: 3px solid rgba(15, 118, 110, 0.14);
+  border-top-color: var(--app-accent);
   animation: analysis-view-spin 0.9s linear infinite;
 }
 
 .analysis-view-empty-state svg {
   font-size: 2.6rem;
-  color: rgba(20, 88, 71, 0.45);
+  color: rgba(15, 118, 110, 0.45);
 }
 
 .analysis-view-stat-grid,
@@ -983,20 +983,20 @@ function formatScore(score: number | null | undefined) {
   border: 1px solid var(--app-border);
   border-radius: 1.25rem;
   padding: 1rem 1.1rem;
-  background: rgba(255, 251, 247, 0.94);
+  background: var(--app-panel);
   box-shadow: var(--app-shadow-soft);
 }
 
 .analysis-view-stat-card--cool {
-  background: linear-gradient(180deg, rgba(36, 116, 184, 0.12), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(180deg, rgba(36, 116, 184, 0.12), var(--app-panel));
 }
 
 .analysis-view-stat-card--warm {
-  background: linear-gradient(180deg, rgba(184, 122, 40, 0.12), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(180deg, rgba(184, 122, 40, 0.12), var(--app-panel));
 }
 
 .analysis-view-stat-card--success {
-  background: linear-gradient(180deg, rgba(20, 88, 71, 0.12), rgba(249, 255, 251, 0.97));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.12), rgba(249, 255, 251, 0.97));
 }
 
 .analysis-view-stat-card span {
@@ -1029,13 +1029,13 @@ function formatScore(score: number | null | undefined) {
 
 .analysis-view-station-card:hover {
   transform: translateY(-2px);
-  border-color: rgba(20, 88, 71, 0.28);
+  border-color: rgba(15, 118, 110, 0.28);
 }
 
 .analysis-view-station-card--active {
-  border-color: rgba(20, 88, 71, 0.42);
-  box-shadow: 0 18px 40px rgba(20, 88, 71, 0.12);
-  background: linear-gradient(180deg, rgba(20, 88, 71, 0.09), rgba(255, 251, 247, 0.98));
+  border-color: rgba(15, 118, 110, 0.42);
+  box-shadow: 0 18px 40px rgba(15, 118, 110, 0.12);
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.09), var(--app-panel));
 }
 
 .analysis-view-station-card__header {
@@ -1082,7 +1082,7 @@ function formatScore(score: number | null | undefined) {
   border: 1px solid var(--app-border);
   border-radius: 1.35rem;
   padding: 1rem 1.1rem;
-  background: linear-gradient(180deg, rgba(255, 248, 240, 0.86), rgba(255, 255, 255, 0.96));
+  background: linear-gradient(180deg, var(--app-surface), rgba(255, 255, 255, 0.96));
 }
 
 .analysis-view-station-focus__header,
@@ -1114,7 +1114,7 @@ function formatScore(score: number | null | undefined) {
   border: 1px solid var(--app-border);
   border-radius: 1.15rem;
   padding: 1rem 1.05rem;
-  background: rgba(255, 248, 240, 0.7);
+  background: var(--app-surface);
   color: var(--app-ink);
   text-align: left;
   cursor: pointer;
@@ -1130,9 +1130,9 @@ function formatScore(score: number | null | undefined) {
 }
 
 .analysis-view-export-option--active {
-  border-color: rgba(20, 88, 71, 0.42);
-  background: rgba(20, 88, 71, 0.08);
-  box-shadow: 0 14px 28px rgba(20, 88, 71, 0.1);
+  border-color: rgba(15, 118, 110, 0.42);
+  background: rgba(15, 118, 110, 0.08);
+  box-shadow: 0 14px 28px rgba(15, 118, 110, 0.1);
 }
 
 @media (max-width: 960px) {

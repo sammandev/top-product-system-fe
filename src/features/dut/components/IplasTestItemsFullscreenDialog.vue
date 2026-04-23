@@ -630,8 +630,8 @@ watch(
   width: 3rem;
   height: 3rem;
   border-radius: 1rem;
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .fullscreen-dialog__header-actions {
@@ -650,7 +650,7 @@ watch(
 .fullscreen-dialog__pill {
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
 }
@@ -696,7 +696,7 @@ watch(
 }
 
 .fullscreen-dialog__button--ghost {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .fullscreen-dialog__summary-grid {
@@ -712,7 +712,7 @@ watch(
 }
 
 .fullscreen-dialog__summary-card--highlight {
-  background: linear-gradient(135deg, rgba(20, 88, 71, 0.14), rgba(255, 251, 247, 0.94));
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), var(--app-panel));
 }
 
 .fullscreen-dialog__info-button {
@@ -765,9 +765,9 @@ watch(
 }
 
 .fullscreen-dialog__pill--success {
-  background: rgba(20, 88, 71, 0.1);
-  border-color: rgba(20, 88, 71, 0.16);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.16);
+  color: var(--app-accent);
 }
 
 .fullscreen-dialog__pill--danger {
@@ -816,9 +816,9 @@ watch(
 }
 
 .fullscreen-dialog__option--active {
-  background: rgba(20, 88, 71, 0.1);
-  border-color: rgba(20, 88, 71, 0.18);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.18);
+  color: var(--app-accent);
 }
 
 .fullscreen-dialog__filter-actions {

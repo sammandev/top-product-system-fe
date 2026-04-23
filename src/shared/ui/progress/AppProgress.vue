@@ -41,13 +41,13 @@ const displayWidth = computed(() => Math.max(clampedValue.value, props.minVisibl
   overflow: hidden;
   height: 0.5rem;
   border-radius: 999px;
-  background: rgba(20, 88, 71, 0.12);
+  background: rgba(15, 118, 110, 0.1);
 }
 
 .app-progress__bar {
   height: 100%;
   border-radius: inherit;
-  background: linear-gradient(90deg, rgba(20, 88, 71, 0.8), rgba(161, 104, 57, 0.8));
+  background: linear-gradient(90deg, var(--app-accent), rgba(45, 212, 191, 0.8));
   transition: width 0.2s ease;
 }
 

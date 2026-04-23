@@ -280,9 +280,9 @@ function formatBytes(bytes: number) {
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.1rem;
-  border: 1px dashed rgba(20, 88, 71, 0.28);
+  border: 1px dashed rgba(15, 118, 110, 0.24);
   border-radius: 1.25rem;
-  background: rgba(255, 251, 247, 0.84);
+  background: var(--app-panel);
   box-shadow: var(--app-shadow-soft);
   cursor: pointer;
   transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
@@ -306,7 +306,7 @@ function formatBytes(bytes: number) {
   height: 2.6rem;
   place-items: center;
   border-radius: 999px;
-  background: rgba(20, 88, 71, 0.12);
+  background: rgba(15, 118, 110, 0.1);
   color: var(--app-accent);
   font-size: 1.2rem;
   flex-shrink: 0;

@@ -799,9 +799,9 @@ watch(
   align-items: center;
   gap: 0.6rem;
   padding: 0.85rem 1rem;
-  border: 1px solid rgba(20, 88, 71, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.88);
+  background: var(--app-panel);
 }
 
 .upload-scoring-dialog__action-band--secondary {
@@ -849,9 +849,9 @@ watch(
 }
 
 .upload-scoring-dialog__selection-banner {
-  background: rgba(20, 88, 71, 0.08);
-  border-color: rgba(20, 88, 71, 0.14);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.08);
+  border-color: rgba(15, 118, 110, 0.14);
+  color: var(--app-accent);
 }
 
 .upload-scoring-dialog__notice--info {
@@ -867,9 +867,9 @@ watch(
 }
 
 .upload-scoring-dialog__notice--success {
-  background: rgba(20, 88, 71, 0.08);
-  border-color: rgba(20, 88, 71, 0.16);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.08);
+  border-color: rgba(15, 118, 110, 0.16);
+  color: var(--app-accent);
 }
 
 .upload-scoring-dialog__list {
@@ -885,7 +885,7 @@ watch(
   align-items: center;
   padding: 0.95rem 1rem;
   border-radius: 1rem;
-  border: 1px solid rgba(20, 88, 71, 0.1);
+  border: 1px solid rgba(15, 118, 110, 0.1);
   background: rgba(255, 255, 255, 0.7);
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
@@ -894,13 +894,13 @@ watch(
 .upload-scoring-dialog__item-row:hover,
 .upload-scoring-dialog__item-row:focus-visible {
   transform: translateY(-1px);
-  border-color: rgba(20, 88, 71, 0.22);
-  box-shadow: 0 0.9rem 1.8rem rgba(20, 88, 71, 0.08);
+  border-color: rgba(15, 118, 110, 0.22);
+  box-shadow: 0 0.9rem 1.8rem rgba(15, 118, 110, 0.08);
   outline: none;
 }
 
 .upload-scoring-dialog__item-row.is-selected {
-  border-color: rgba(20, 88, 71, 0.28);
+  border-color: rgba(15, 118, 110, 0.28);
   background: rgba(246, 255, 250, 0.9);
 }
 
@@ -920,15 +920,15 @@ watch(
   width: 1.2rem;
   height: 1.2rem;
   border-radius: 0.35rem;
-  border: 1px solid rgba(20, 88, 71, 0.25);
+  border: 1px solid rgba(15, 118, 110, 0.25);
   background: white;
-  box-shadow: inset 0 0 0 0 rgba(20, 88, 71, 0.95);
+  box-shadow: inset 0 0 0 0 rgba(15, 118, 110, 0.95);
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .upload-scoring-dialog__checkbox input:checked + span {
-  border-color: rgba(20, 88, 71, 0.9);
-  box-shadow: inset 0 0 0 0.45rem rgba(20, 88, 71, 0.95);
+  border-color: rgba(15, 118, 110, 0.9);
+  box-shadow: inset 0 0 0 0.45rem rgba(15, 118, 110, 0.95);
 }
 
 .upload-scoring-dialog__item-copy {
@@ -1008,9 +1008,9 @@ watch(
 
 .upload-scoring-dialog__pill--success,
 .upload-scoring-dialog__chip-button--success {
-  background: rgba(20, 88, 71, 0.1);
-  border-color: rgba(20, 88, 71, 0.16);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.16);
+  color: var(--app-accent);
 }
 
 .upload-scoring-dialog__pill--warning,
@@ -1043,8 +1043,8 @@ watch(
 }
 
 .upload-scoring-dialog__button--primary {
-  background: linear-gradient(135deg, #145847, #1b6c58);
-  border-color: #145847;
+  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  border-color: var(--app-accent);
   color: white;
 }
 
@@ -1056,7 +1056,7 @@ watch(
 
 .upload-scoring-dialog__button--ghost,
 .upload-scoring-dialog__ghost-button {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
 }
 

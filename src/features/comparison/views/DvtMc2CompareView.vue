@@ -445,7 +445,7 @@ function handleReset() {
     width: 3.4rem;
     height: 3.4rem;
     border-radius: 1.1rem;
-    background: linear-gradient(135deg, rgba(20, 88, 71, 0.16), rgba(161, 104, 57, 0.18));
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(45, 212, 191, 0.16));
     color: var(--app-accent);
     box-shadow: var(--app-shadow-soft);
 }
@@ -488,7 +488,7 @@ function handleReset() {
     padding: 0.78rem 1rem;
     cursor: pointer;
     font-weight: 700;
-    background: rgba(255, 251, 247, 0.92);
+    background: var(--app-panel);
     color: var(--app-ink);
 }
 
@@ -504,13 +504,13 @@ function handleReset() {
 }
 
 .dvt-compare-button--success {
-    background: #145847;
-    border-color: #145847;
+    background: var(--app-accent);
+    border-color: var(--app-accent);
     color: #f8f3ec;
 }
 
 .dvt-compare-button--ghost {
-    background: rgba(255, 251, 247, 0.92);
+    background: var(--app-panel);
     color: var(--app-ink);
 }
 
@@ -540,7 +540,7 @@ function handleReset() {
 }
 
 .dvt-compare-file-note {
-    background: rgba(255, 251, 247, 0.92);
+    background: var(--app-panel);
 }
 
 .dvt-compare-file-note--info {
@@ -566,8 +566,8 @@ function handleReset() {
 }
 
 .dvt-compare-notice--success {
-    background: rgba(20, 88, 71, 0.08);
-    border-color: rgba(20, 88, 71, 0.24);
+    background: rgba(15, 118, 110, 0.06);
+    border-color: rgba(15, 118, 110, 0.2);
 }
 
 .dvt-compare-notice button {
@@ -602,7 +602,7 @@ function handleReset() {
     width: 100%;
     border: 1px solid var(--app-border);
     border-radius: 1rem;
-    background: rgba(255, 251, 247, 0.92);
+    background: var(--app-panel);
     color: var(--app-ink);
     box-shadow: var(--app-shadow-soft);
     padding: 0.85rem 0.95rem;
@@ -643,8 +643,8 @@ function handleReset() {
 }
 
 .dvt-compare-pill--success {
-    background: rgba(20, 88, 71, 0.12);
-    color: #145847;
+    background: rgba(15, 118, 110, 0.1);
+    color: var(--app-accent);
 }
 
 .dvt-compare-pill--danger {

@@ -338,7 +338,7 @@ onMounted(() => {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 0.95rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   padding: 0.82rem 0.95rem;
 }
@@ -382,8 +382,8 @@ onMounted(() => {
 }
 
 .site-model-station-selector__notice--success {
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .site-model-station-selector__notice--warning {

@@ -491,7 +491,7 @@ function handleClose() {
   width: 3rem;
   height: 3rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, rgba(20, 88, 71, 0.18), rgba(161, 104, 57, 0.2));
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.18), rgba(45, 212, 191, 0.2));
   color: var(--app-accent);
   font-size: 1.55rem;
 }
@@ -510,7 +510,7 @@ function handleClose() {
   border: 1px solid var(--app-border);
   border-radius: 999px;
   padding: 0.6rem 0.9rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
   font-weight: 700;
@@ -525,7 +525,7 @@ function handleClose() {
 .spec-builder__panel {
   border: 1px solid var(--app-border);
   border-radius: 1.25rem;
-  background: rgba(255, 251, 247, 0.86);
+  background: var(--app-panel);
   box-shadow: var(--app-shadow-soft);
   padding: 1rem;
   display: grid;
@@ -604,7 +604,7 @@ function handleClose() {
   border-radius: 999px;
   border: 1px solid var(--app-border);
   padding: 0.78rem 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
   font-weight: 700;
@@ -628,13 +628,13 @@ function handleClose() {
 }
 
 .spec-builder__button--success {
-  background: #145847;
-  border-color: #145847;
+  background: var(--app-accent);
+  border-color: var(--app-accent);
   color: #f8f3ec;
 }
 
 .spec-builder__button--ghost {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .spec-builder__button--info-ghost {
@@ -662,7 +662,7 @@ function handleClose() {
   display: flex;
   gap: 0.9rem;
   align-items: flex-start;
-  border: 1px solid rgba(20, 88, 71, 0.1);
+  border: 1px solid rgba(15, 118, 110, 0.1);
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.7);
   padding: 0.85rem 0.95rem;
@@ -691,7 +691,7 @@ function handleClose() {
   gap: 0.5rem;
   min-height: 12rem;
   text-align: center;
-  border: 1px dashed rgba(20, 88, 71, 0.2);
+  border: 1px dashed rgba(15, 118, 110, 0.2);
   border-radius: 1rem;
   background: rgba(255, 255, 255, 0.56);
   padding: 1rem;

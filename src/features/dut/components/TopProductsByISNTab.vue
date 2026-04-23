@@ -1106,7 +1106,7 @@ function formatFileSize(bytes: number): string {
 .top-products-isn-field textarea:focus {
   outline: none;
   border-color: var(--app-accent);
-  box-shadow: 0 0 0 4px rgba(20, 88, 71, 0.12);
+  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
 }
 
 .top-products-isn-entry-row button,
@@ -1127,7 +1127,7 @@ function formatFileSize(bytes: number): string {
 .top-products-isn-entry-row button {
   min-width: 5rem;
   padding: 0.78rem 0.95rem;
-  background: rgba(20, 88, 71, 0.08);
+  background: rgba(15, 118, 110, 0.08);
   color: var(--app-accent);
   font-weight: 700;
 }
@@ -1159,8 +1159,8 @@ function formatFileSize(bytes: number): string {
 }
 
 .top-products-isn-choice.is-active {
-  border-color: rgba(20, 88, 71, 0.24);
-  background: rgba(20, 88, 71, 0.12);
+  border-color: rgba(15, 118, 110, 0.24);
+  background: rgba(15, 118, 110, 0.12);
   color: var(--app-accent);
 }
 
@@ -1169,9 +1169,9 @@ function formatFileSize(bytes: number): string {
   align-items: center;
   gap: 0.45rem;
   padding: 0.42rem 0.78rem;
-  border: 1px solid rgba(20, 88, 71, 0.18);
+  border: 1px solid rgba(15, 118, 110, 0.18);
   border-radius: 999px;
-  background: rgba(20, 88, 71, 0.08);
+  background: rgba(15, 118, 110, 0.08);
   color: var(--app-accent);
   cursor: pointer;
 }
@@ -1200,7 +1200,7 @@ function formatFileSize(bytes: number): string {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.85rem 1rem;
-  background: rgba(20, 88, 71, 0.06);
+  background: rgba(15, 118, 110, 0.06);
 }
 
 .top-products-isn-notice {
@@ -1229,7 +1229,7 @@ function formatFileSize(bytes: number): string {
   border-radius: 1.35rem;
   background:
     radial-gradient(circle at top right, rgba(40, 96, 163, 0.08), transparent 30%),
-    rgba(255, 251, 247, 0.94);
+    var(--app-panel);
   box-shadow: var(--app-shadow-soft);
   overflow: hidden;
 }
@@ -1272,7 +1272,7 @@ function formatFileSize(bytes: number): string {
 .top-products-isn-loading-bar {
   height: 0.42rem;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(20, 88, 71, 0.18), rgba(40, 96, 163, 0.5), rgba(20, 88, 71, 0.18));
+  background: linear-gradient(90deg, rgba(15, 118, 110, 0.18), rgba(40, 96, 163, 0.5), rgba(15, 118, 110, 0.18));
   background-size: 200% 100%;
   animation: top-products-isn-loading 1.1s linear infinite;
 }
@@ -1295,10 +1295,10 @@ function formatFileSize(bytes: number): string {
 .top-products-isn-primary-button {
   min-height: 3rem;
   padding: 0.85rem 1.2rem;
-  background: linear-gradient(135deg, #145847, #2860a3);
+  background: linear-gradient(135deg, #0f766e, #2860a3);
   color: white;
   font-weight: 700;
-  box-shadow: 0 16px 30px rgba(20, 88, 71, 0.18);
+  box-shadow: 0 16px 30px rgba(15, 118, 110, 0.18);
 }
 
 .top-products-isn-primary-button:disabled {
@@ -1319,7 +1319,7 @@ function formatFileSize(bytes: number): string {
 
 .top-products-isn-results {
   padding: 1rem;
-  background: rgba(255, 251, 247, 0.74);
+  background: var(--app-panel);
 }
 
 @keyframes top-products-isn-loading {

@@ -7,8 +7,8 @@
             <p class="dashboard-eyebrow">Operational overview</p>
             <h1 class="dashboard-title">Welcome back, {{ userName }}.</h1>
             <p class="dashboard-lead">
-              Review current platform health, jump into the highest-value workflows, and spot recent
-              activity without leaving the new authenticated shell.
+              Review platform health, jump into key workflows, and spot recent
+              activity at a glance.
             </p>
 
             <div v-if="error" class="dashboard-alert" role="status">
@@ -533,7 +533,7 @@ function formatStorageAmount(amount: number) {
   height: 3rem;
   place-items: center;
   border-radius: 1rem;
-  background: var(--dashboard-accent-soft, rgba(20, 88, 71, 0.12));
+  background: var(--dashboard-accent-soft, rgba(15, 118, 110, 0.1));
   color: var(--dashboard-accent, var(--app-accent));
   font-size: 1.35rem;
   flex-shrink: 0;

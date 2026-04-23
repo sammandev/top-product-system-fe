@@ -3,11 +3,10 @@
     <section class="activity-page">
       <header class="activity-hero">
         <div>
-          <p class="activity-eyebrow">Low-risk route batch</p>
-          <h1 class="activity-title">Activity history</h1>
+          <p class="activity-eyebrow">History</p>
+          <h1 class="activity-title">Activity History</h1>
           <p class="activity-lead">
-            Review analysis output, filter by time window, and inspect DUT execution signals without
-            leaving the scaffold-era authenticated shell.
+            Review analysis output, filter by time window, and inspect DUT execution signals.
           </p>
         </div>
 
@@ -373,7 +372,7 @@ function activityVars(activity: Activity) {
   const palette = {
     success: { solid: '#2f7f59', soft: 'rgba(47, 127, 89, 0.14)', line: 'rgba(47, 127, 89, 0.24)' },
     error: { solid: '#a33d2d', soft: 'rgba(163, 61, 45, 0.14)', line: 'rgba(163, 61, 45, 0.24)' },
-    primary: { solid: '#145847', soft: 'rgba(20, 88, 71, 0.14)', line: 'rgba(20, 88, 71, 0.24)' },
+    primary: { solid: '#0f766e', soft: 'rgba(15, 118, 110, 0.14)', line: 'rgba(15, 118, 110, 0.24)' },
     info: { solid: '#2b6a88', soft: 'rgba(43, 106, 136, 0.14)', line: 'rgba(43, 106, 136, 0.24)' },
   } as const
   const resolved = palette[color as keyof typeof palette] ?? palette.primary
@@ -445,7 +444,7 @@ onMounted(() => {
 .activity-item__card,
 .activity-item__marker {
   border: 1px solid var(--app-border);
-  background: linear-gradient(180deg, rgba(255, 251, 247, 0.96), rgba(255, 248, 240, 0.88));
+  background: var(--app-panel);
   box-shadow: var(--app-shadow-soft);
 }
 
@@ -493,9 +492,9 @@ onMounted(() => {
 .activity-hero {
   gap: 1rem;
   background:
-    radial-gradient(circle at top right, rgba(20, 88, 71, 0.12), transparent 34%),
-    radial-gradient(circle at bottom left, rgba(156, 100, 31, 0.12), transparent 28%),
-    linear-gradient(135deg, rgba(255, 251, 247, 0.96), rgba(244, 235, 223, 0.92));
+    radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 34%),
+    radial-gradient(circle at bottom left, rgba(45, 212, 191, 0.08), transparent 28%),
+    var(--app-panel);
 }
 
 .activity-eyebrow,
@@ -559,7 +558,7 @@ onMounted(() => {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.84);
+  background: var(--app-panel);
   padding: 0.85rem 0.95rem;
   color: var(--app-ink);
   outline: none;
@@ -727,7 +726,7 @@ onMounted(() => {
 .activity-pagination button {
   border: 1px solid var(--app-border);
   border-radius: 999px;
-  background: rgba(255, 251, 247, 0.84);
+  background: var(--app-panel);
   padding: 0.65rem 0.95rem;
   color: var(--app-ink);
   cursor: pointer;

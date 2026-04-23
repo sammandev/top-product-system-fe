@@ -315,7 +315,7 @@ const handleClose = () => {
 .criteria-builder-dialog__button {
   border: 1px solid var(--app-border);
   border-radius: 999px;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
   transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
@@ -375,7 +375,7 @@ const handleClose = () => {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 0.9rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   padding: 0.82rem 0.95rem;
 }
@@ -405,9 +405,9 @@ const handleClose = () => {
 }
 
 .criteria-builder-dialog__button--success {
-  border-color: rgba(20, 88, 71, 0.22);
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  border-color: rgba(15, 118, 110, 0.22);
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .criteria-builder-dialog__button--danger {
@@ -429,7 +429,7 @@ const handleClose = () => {
   align-items: flex-start;
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.88);
+  background: var(--app-panel);
   padding: 0.85rem 1rem;
 }
 

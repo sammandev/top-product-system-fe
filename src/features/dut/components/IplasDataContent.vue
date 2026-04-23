@@ -406,7 +406,7 @@
                 <div class="iplas-result-summary-card">
                   <div>
                     <strong>{{ panel.stationName }}</strong>
-                    <p>Use the existing server-side table below while the active station filter is applied from the scaffold-era tab shell.</p>
+                    <p>Use the server-side table below while the active station filter is applied.</p>
                   </div>
                   <span class="iplas-pill iplas-pill--cool">Station filter active</span>
                 </div>
@@ -2597,7 +2597,7 @@ onUnmounted(() => {
 .iplas-field select,
 .iplas-field input {
   width: 100%;
-  border: 1px solid rgba(20, 88, 71, 0.18);
+  border: 1px solid rgba(15, 118, 110, 0.18);
   padding: 0.82rem 0.95rem;
   background: rgba(255, 255, 255, 0.92);
   color: var(--app-ink);
@@ -2606,8 +2606,8 @@ onUnmounted(() => {
 .iplas-field select:focus,
 .iplas-field input:focus {
   outline: none;
-  border-color: rgba(20, 88, 71, 0.4);
-  box-shadow: 0 0 0 3px rgba(20, 88, 71, 0.12);
+  border-color: rgba(15, 118, 110, 0.4);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
 .iplas-input-with-icon {
@@ -2615,7 +2615,7 @@ onUnmounted(() => {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 0.65rem;
-  border: 1px solid rgba(20, 88, 71, 0.18);
+  border: 1px solid rgba(15, 118, 110, 0.18);
   border-radius: 1rem;
   padding: 0 0.95rem;
   background: rgba(255, 255, 255, 0.92);
@@ -2633,8 +2633,8 @@ onUnmounted(() => {
 }
 
 .iplas-input-with-icon:focus-within {
-  border-color: rgba(20, 88, 71, 0.4);
-  box-shadow: 0 0 0 3px rgba(20, 88, 71, 0.12);
+  border-color: rgba(15, 118, 110, 0.4);
+  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
 }
 
 .iplas-button,
@@ -2657,7 +2657,7 @@ onUnmounted(() => {
 }
 
 .iplas-button--primary {
-  background: linear-gradient(135deg, #145847, #1c7c62);
+  background: linear-gradient(135deg, #0f766e, #1c7c62);
   color: #fff;
 }
 
@@ -2669,8 +2669,8 @@ onUnmounted(() => {
 .iplas-button--ghost,
 .iplas-notice button,
 .iplas-summary-remove {
-  background: rgba(255, 248, 240, 0.84);
-  border-color: rgba(20, 88, 71, 0.16);
+  background: var(--app-surface);
+  border-color: rgba(15, 118, 110, 0.16);
   color: var(--app-ink);
 }
 
@@ -2680,8 +2680,8 @@ onUnmounted(() => {
 }
 
 .iplas-button--success {
-  background: rgba(20, 88, 71, 0.14);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.14);
+  color: var(--app-accent);
 }
 
 .iplas-inline-action {
@@ -2698,10 +2698,10 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border: 1px solid rgba(20, 88, 71, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 999px;
   padding: 0.35rem 0.7rem;
-  background: rgba(255, 248, 240, 0.84);
+  background: var(--app-surface);
   color: var(--app-ink);
   font-size: 0.82rem;
   font-weight: 700;
@@ -2718,8 +2718,8 @@ onUnmounted(() => {
 }
 
 .iplas-pill--neutral {
-  background: rgba(20, 88, 71, 0.08);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.08);
+  color: var(--app-accent);
 }
 
 .iplas-selection-actions {
@@ -2748,7 +2748,7 @@ onUnmounted(() => {
   border: 1px solid var(--app-border);
   border-radius: 1.25rem;
   padding: 1rem 1.1rem;
-  background: rgba(255, 251, 247, 0.94);
+  background: var(--app-panel);
 }
 
 .iplas-summary-panel__header {
@@ -2777,7 +2777,7 @@ onUnmounted(() => {
 .iplas-result-summary-card {
   grid-template-columns: 1fr auto;
   align-items: center;
-  background: linear-gradient(180deg, rgba(20, 88, 71, 0.06), rgba(255, 255, 255, 0.92));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.06), rgba(255, 255, 255, 0.92));
 }
 
 .iplas-result-summary-card strong {
@@ -2788,7 +2788,7 @@ onUnmounted(() => {
 .iplas-indexeddb-status-bar {
   display: grid;
   gap: 0.85rem;
-  border: 1px solid rgba(20, 88, 71, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 1rem;
   padding: 0.9rem 1rem;
   background: rgba(255, 255, 255, 0.82);
@@ -2811,24 +2811,24 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  border: 1px solid rgba(20, 88, 71, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 999px;
   padding: 0.45rem 0.8rem;
-  background: rgba(255, 248, 240, 0.84);
+  background: var(--app-surface);
   color: var(--app-ink);
   font: inherit;
   cursor: pointer;
 }
 
 .iplas-device-chip--active {
-  border-color: rgba(20, 88, 71, 0.28);
-  background: rgba(20, 88, 71, 0.12);
-  color: #145847;
+  border-color: rgba(15, 118, 110, 0.28);
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
 }
 
 .iplas-indexeddb-status-bar {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  background: linear-gradient(180deg, rgba(20, 88, 71, 0.06), rgba(255, 255, 255, 0.94));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.06), rgba(255, 255, 255, 0.94));
 }
 
 .iplas-indexeddb-status-bar strong {
@@ -2836,7 +2836,7 @@ onUnmounted(() => {
 }
 
 .iplas-summary-item {
-  border: 1px solid rgba(20, 88, 71, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 1rem;
   padding: 0.9rem 1rem;
   background: rgba(255, 255, 255, 0.82);
@@ -2853,10 +2853,10 @@ onUnmounted(() => {
   display: flex;
   gap: 0.85rem;
   align-items: flex-start;
-  border: 1px solid rgba(20, 88, 71, 0.12);
+  border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 1rem;
   padding: 0.9rem 1rem;
-  background: rgba(20, 88, 71, 0.05);
+  background: rgba(15, 118, 110, 0.05);
 }
 
 .iplas-toggle-card input {
@@ -2890,8 +2890,8 @@ onUnmounted(() => {
   width: 2rem;
   height: 2rem;
   border-radius: 999px;
-  border: 3px solid rgba(20, 88, 71, 0.14);
-  border-top-color: #145847;
+  border: 3px solid rgba(15, 118, 110, 0.14);
+  border-top-color: var(--app-accent);
   animation: iplas-spin 0.9s linear infinite;
 }
 
@@ -2922,7 +2922,7 @@ onUnmounted(() => {
 
 .iplas-empty-state svg {
   font-size: 1.8rem;
-  color: rgba(20, 88, 71, 0.45);
+  color: rgba(15, 118, 110, 0.45);
 }
 
 .iplas-empty-state--compact {

@@ -1045,8 +1045,8 @@ onBeforeUnmount(() => {
     width: 3.25rem;
     height: 3.25rem;
     border-radius: 1rem;
-    background: linear-gradient(135deg, rgba(20, 88, 71, 0.18), rgba(161, 104, 57, 0.18));
-    color: #145847;
+    background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(45, 212, 191, 0.16));
+    color: var(--app-accent);
     font-size: 1.5rem;
 }
 
@@ -1094,14 +1094,14 @@ onBeforeUnmount(() => {
 }
 
 .top-product-db-button--primary {
-    background: linear-gradient(135deg, #145847, #1c7c62);
+    background: linear-gradient(135deg, var(--app-accent), #14b8a6);
     color: #fff;
-    box-shadow: 0 18px 32px rgba(20, 88, 71, 0.16);
+    box-shadow: 0 18px 32px rgba(15, 118, 110, 0.14);
 }
 
 .top-product-db-button--ghost {
-    border-color: rgba(20, 88, 71, 0.18);
-    background: rgba(255, 248, 240, 0.8);
+    border-color: var(--app-border);
+    background: var(--app-panel);
     color: var(--app-ink);
 }
 
@@ -1128,20 +1128,20 @@ onBeforeUnmount(() => {
     border: 1px solid var(--app-border);
     border-radius: 1.4rem;
     padding: 1rem 1.1rem;
-    background: rgba(255, 251, 247, 0.94);
+    background: var(--app-panel);
     box-shadow: var(--app-shadow-soft);
 }
 
 .top-product-db-stat-card--cool {
-    background: linear-gradient(180deg, rgba(36, 116, 184, 0.12), rgba(255, 251, 247, 0.96));
+    background: linear-gradient(180deg, rgba(36, 116, 184, 0.1), var(--app-panel));
 }
 
 .top-product-db-stat-card--indigo {
-    background: linear-gradient(180deg, rgba(79, 70, 229, 0.12), rgba(255, 251, 247, 0.96));
+    background: linear-gradient(180deg, rgba(79, 70, 229, 0.1), var(--app-panel));
 }
 
 .top-product-db-stat-card--success {
-    background: linear-gradient(180deg, rgba(20, 88, 71, 0.12), rgba(249, 255, 251, 0.97));
+    background: linear-gradient(180deg, rgba(15, 118, 110, 0.1), var(--app-panel));
 }
 
 .top-product-db-stat-card__icon {
@@ -1193,7 +1193,7 @@ onBeforeUnmount(() => {
 .top-product-db-field input,
 .top-product-db-field select {
     width: 100%;
-    border: 1px solid rgba(20, 88, 71, 0.18);
+    border: 1px solid var(--app-border);
     border-radius: 1rem;
     padding: 0.78rem 0.95rem;
     background: rgba(255, 255, 255, 0.92);
@@ -1207,8 +1207,8 @@ onBeforeUnmount(() => {
 .top-product-db-field input:focus,
 .top-product-db-field select:focus {
     outline: none;
-    border-color: rgba(20, 88, 71, 0.42);
-    box-shadow: 0 0 0 3px rgba(20, 88, 71, 0.12);
+    border-color: rgba(15, 118, 110, 0.4);
+    box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.1);
 }
 
 .top-product-db-field small {
@@ -1225,9 +1225,9 @@ onBeforeUnmount(() => {
 
 .top-product-db-filter-summary span {
     border-radius: 999px;
-    border: 1px solid rgba(20, 88, 71, 0.14);
+    border: 1px solid var(--app-border);
     padding: 0.4rem 0.75rem;
-    background: rgba(255, 248, 240, 0.8);
+    background: var(--app-panel);
 }
 
 .top-product-db-toolbar {
@@ -1247,7 +1247,7 @@ onBeforeUnmount(() => {
 }
 
 .top-product-db-page-size select {
-    border: 1px solid rgba(20, 88, 71, 0.18);
+    border: 1px solid var(--app-border);
     border-radius: 999px;
     padding: 0.5rem 0.8rem;
     background: rgba(255, 255, 255, 0.92);
@@ -1282,7 +1282,7 @@ onBeforeUnmount(() => {
 }
 
 .top-product-db-grid :deep(.p-datatable-tbody > tr:hover > td) {
-    background: rgba(20, 88, 71, 0.05);
+    background: rgba(15, 118, 110, 0.04);
 }
 
 .top-product-db-cell {
@@ -1321,13 +1321,13 @@ onBeforeUnmount(() => {
 }
 
 .top-product-db-pill--outline {
-    border: 1px solid rgba(20, 88, 71, 0.18);
+    border: 1px solid var(--app-border);
     color: var(--app-ink);
 }
 
 .top-product-db-pill--success {
-    background: rgba(20, 88, 71, 0.12);
-    color: #145847;
+    background: rgba(15, 118, 110, 0.1);
+    color: var(--app-accent);
 }
 
 .top-product-db-pill--warning {
@@ -1363,7 +1363,7 @@ onBeforeUnmount(() => {
 }
 
 .top-product-db-progress__value--success {
-    background: linear-gradient(90deg, #145847, #2f9b74);
+    background: linear-gradient(90deg, var(--app-accent), #14b8a6);
 }
 
 .top-product-db-progress__value--warning {
@@ -1384,10 +1384,10 @@ onBeforeUnmount(() => {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    border: 1px solid rgba(20, 88, 71, 0.16);
+    border: 1px solid var(--app-border);
     border-radius: 999px;
     padding: 0.38rem 0.7rem;
-    background: rgba(255, 248, 240, 0.82);
+    background: var(--app-panel);
     color: var(--app-ink);
     cursor: pointer;
 }
@@ -1408,15 +1408,15 @@ onBeforeUnmount(() => {
 
 .top-product-db-empty-state svg {
     font-size: 2.6rem;
-    color: rgba(20, 88, 71, 0.5);
+    color: rgba(15, 118, 110, 0.5);
 }
 
 .top-product-db-empty-state__spinner {
     width: 2rem;
     height: 2rem;
     border-radius: 999px;
-    border: 3px solid rgba(20, 88, 71, 0.14);
-    border-top-color: #145847;
+    border: 3px solid rgba(15, 118, 110, 0.12);
+    border-top-color: var(--app-accent);
     animation: top-product-db-spin 0.9s linear infinite;
 }
 
@@ -1465,9 +1465,9 @@ onBeforeUnmount(() => {
     justify-content: center;
     width: 2.8rem;
     height: 2.8rem;
-    border: 1px solid rgba(20, 88, 71, 0.16);
+    border: 1px solid var(--app-border);
     border-radius: 999px;
-    background: rgba(255, 248, 240, 0.82);
+    background: var(--app-panel);
     color: var(--app-ink);
     cursor: pointer;
 }
@@ -1491,15 +1491,15 @@ onBeforeUnmount(() => {
     border: 1px solid var(--app-border);
     border-radius: 1.25rem;
     padding: 1rem 1.1rem;
-    background: rgba(255, 251, 247, 0.94);
+    background: var(--app-panel);
 }
 
 .top-product-db-detail-hero__card--primary {
-    background: linear-gradient(180deg, rgba(20, 88, 71, 0.13), rgba(255, 251, 247, 0.97));
+    background: linear-gradient(180deg, rgba(15, 118, 110, 0.1), var(--app-panel));
 }
 
 .top-product-db-detail-hero__card--cool {
-    background: linear-gradient(180deg, rgba(36, 116, 184, 0.13), rgba(255, 251, 247, 0.97));
+    background: linear-gradient(180deg, rgba(36, 116, 184, 0.1), var(--app-panel));
 }
 
 .top-product-db-detail-hero__card span,
@@ -1528,7 +1528,7 @@ onBeforeUnmount(() => {
 }
 
 .top-product-db-detail-meta-card--score {
-    background: linear-gradient(180deg, rgba(20, 88, 71, 0.08), rgba(255, 251, 247, 0.97));
+    background: linear-gradient(180deg, rgba(15, 118, 110, 0.06), var(--app-panel));
 }
 
 .top-product-db-detail-meta-card em {
@@ -1574,7 +1574,7 @@ onBeforeUnmount(() => {
     gap: 0.45rem;
     align-items: center;
     min-width: 18rem;
-    border: 1px solid rgba(20, 88, 71, 0.16);
+    border: 1px solid var(--app-border);
     border-radius: 999px;
     padding: 0.68rem 0.9rem;
     background: rgba(255, 255, 255, 0.92);
@@ -1605,8 +1605,8 @@ onBeforeUnmount(() => {
 
 .top-product-db-status-pill--success,
 .top-product-db-value--success {
-    color: #145847;
-    background: rgba(20, 88, 71, 0.12);
+    color: var(--app-accent);
+    background: rgba(15, 118, 110, 0.1);
 }
 
 .top-product-db-status-pill--danger,
@@ -1621,7 +1621,7 @@ onBeforeUnmount(() => {
 }
 
 .top-product-db-confirm-card--danger {
-    background: linear-gradient(180deg, rgba(180, 54, 45, 0.08), rgba(255, 251, 247, 0.96));
+    background: linear-gradient(180deg, rgba(180, 54, 45, 0.06), var(--app-panel));
 }
 
 .top-product-db-confirm-card--list {
@@ -1642,7 +1642,7 @@ onBeforeUnmount(() => {
     justify-content: space-between;
     gap: 0.75rem;
     align-items: center;
-    border: 1px solid rgba(20, 88, 71, 0.08);
+    border: 1px solid var(--app-border);
     border-radius: 1rem;
     padding: 0.75rem 0.85rem;
     background: rgba(255, 255, 255, 0.7);
@@ -1680,8 +1680,8 @@ onBeforeUnmount(() => {
 }
 
 .top-product-db-export-button--success {
-    background: rgba(20, 88, 71, 0.12);
-    color: #145847;
+    background: rgba(15, 118, 110, 0.1);
+    color: var(--app-accent);
 }
 
 .top-product-db-export-button--danger {

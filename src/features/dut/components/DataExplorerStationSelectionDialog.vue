@@ -484,8 +484,8 @@ watch(
 }
 
 .station-dialog__device-chip--active {
-  border-color: rgba(20, 88, 71, 0.28);
-  background: rgba(20, 88, 71, 0.12);
+  border-color: rgba(15, 118, 110, 0.28);
+  background: rgba(15, 118, 110, 0.12);
   color: var(--app-accent);
 }
 
@@ -496,8 +496,8 @@ watch(
 }
 
 .station-dialog__primary-action {
-  border-color: rgba(20, 88, 71, 0.32);
-  background: linear-gradient(135deg, rgba(20, 88, 71, 0.98), rgba(161, 104, 57, 0.92));
+  border-color: rgba(15, 118, 110, 0.32);
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.98), rgba(45, 212, 191, 0.92));
   color: #fff;
 }
 

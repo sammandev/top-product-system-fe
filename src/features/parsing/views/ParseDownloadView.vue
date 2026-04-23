@@ -593,7 +593,7 @@ function handleReset() {
 .parse-download-notice {
   border: 1px solid var(--app-border);
   border-radius: 1.25rem;
-  background: rgba(255, 251, 247, 0.88);
+  background: var(--app-panel);
   box-shadow: var(--app-shadow-soft);
 }
 
@@ -651,7 +651,7 @@ function handleReset() {
   border: 1px solid var(--app-border);
   border-radius: 999px;
   padding: 0.78rem 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
   font-weight: 700;
@@ -669,13 +669,13 @@ function handleReset() {
 }
 
 .parse-download-button--secondary {
-  background: rgba(20, 88, 71, 0.08);
-  border-color: rgba(20, 88, 71, 0.24);
-  color: #145847;
+  background: rgba(15, 118, 110, 0.06);
+  border-color: rgba(15, 118, 110, 0.2);
+  color: var(--app-accent);
 }
 
 .parse-download-button--ghost {
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
 }
 
 .parse-download-button--block {
@@ -724,7 +724,7 @@ function handleReset() {
 .parse-download-divider {
   height: 1px;
   margin: 1rem 0;
-  background: rgba(20, 88, 71, 0.1);
+  background: rgba(15, 118, 110, 0.08);
 }
 
 .parse-download-spin {
@@ -772,7 +772,7 @@ function handleReset() {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   box-shadow: var(--app-shadow-soft);
   padding: 0.85rem 0.95rem;
@@ -796,7 +796,7 @@ function handleReset() {
   gap: 0.7rem;
   border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 251, 247, 0.92);
+  background: var(--app-panel);
   color: var(--app-ink);
   box-shadow: var(--app-shadow-soft);
   padding: 0.95rem 1rem;
@@ -814,7 +814,7 @@ function handleReset() {
   gap: 0.3rem;
   border: 1px solid var(--app-border);
   border-radius: 1.15rem;
-  background: rgba(255, 251, 247, 0.84);
+  background: var(--app-panel);
   padding: 1rem;
   cursor: pointer;
   transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
@@ -838,7 +838,7 @@ function handleReset() {
 
 .parse-download-choice--active {
   border-color: var(--app-accent);
-  background: linear-gradient(180deg, rgba(20, 88, 71, 0.1), rgba(255, 251, 247, 0.96));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), var(--app-panel));
   box-shadow: 0 0 0 4px var(--app-ring);
   transform: translateY(-1px);
 }
@@ -920,11 +920,11 @@ function handleReset() {
 
 .parse-download-step {
   background: rgba(255, 255, 255, 0.64);
-  border: 1px solid rgba(20, 88, 71, 0.08);
+  border: 1px solid var(--app-border);
 }
 
 .parse-download-step--done {
-  background: linear-gradient(180deg, rgba(20, 88, 71, 0.12), rgba(255, 255, 255, 0.84));
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.1), rgba(255, 255, 255, 0.84));
 }
 
 .parse-download-step strong,
@@ -935,13 +935,13 @@ function handleReset() {
 }
 
 .parse-download-format-card {
-  border: 1px solid rgba(20, 88, 71, 0.08);
+  border: 1px solid var(--app-border);
   background: rgba(255, 255, 255, 0.65);
 }
 
 .parse-download-format-card--active {
   border-color: var(--app-accent);
-  background: rgba(20, 88, 71, 0.08);
+  background: rgba(15, 118, 110, 0.06);
 }
 
 .parse-download-note {

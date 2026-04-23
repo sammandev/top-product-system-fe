@@ -234,7 +234,7 @@
                     </div>
                     <span
                       class="rounded-full px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em]"
-                      :class="authStore.isGuest ? 'bg-[rgba(198,134,37,0.18)] text-[rgb(156,102,18)]' : authStore.hasDUTAccess ? 'bg-[rgba(20,88,71,0.18)] text-[var(--shell-accent)]' : 'bg-[rgba(35,83,134,0.14)] text-[rgb(33,87,145)]'"
+                      :class="authStore.isGuest ? 'bg-[rgba(198,134,37,0.18)] text-[rgb(156,102,18)]' : authStore.hasDUTAccess ? 'bg-[rgba(15,118,110,0.16)] text-[var(--shell-accent)]' : 'bg-[rgba(35,83,134,0.14)] text-[rgb(33,87,145)]'"
                     >
                       {{ accessBadge }}
                     </span>
@@ -355,23 +355,6 @@
           </div>
 
           <div class="mt-4 space-y-3 border-t border-[var(--shell-border)] pt-4">
-            <div v-if="!rail" class="rounded-[1.4rem] border border-[var(--shell-border)] bg-[var(--shell-panel)] px-3 py-3 shadow-[var(--shell-shadow-soft)]">
-              <div class="flex items-center justify-between gap-3">
-                <div>
-                  <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
-                    Navigation
-                  </p>
-                  <p class="mt-1 text-sm font-semibold text-[var(--shell-ink)]">
-                    {{ dynamicMenusLoaded ? 'Dynamic access map loaded' : 'Static fallback active' }}
-                  </p>
-                </div>
-                <span
-                  class="h-3 w-3 rounded-full"
-                  :class="dynamicMenusLoaded ? 'bg-[var(--shell-accent)]' : 'bg-[rgb(184,122,40)]'"
-                />
-              </div>
-            </div>
-
             <button
               class="hidden w-full items-center justify-center gap-3 rounded-[1.25rem] border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-3 py-3 text-sm font-semibold text-[var(--shell-ink)] shadow-[var(--shell-shadow-soft)] transition hover:-translate-y-px hover:border-[var(--shell-accent)] lg:flex"
               type="button"
@@ -845,7 +828,7 @@ watch(
   position: relative;
   height: 3px;
   overflow: hidden;
-  background: rgba(20, 88, 71, 0.12);
+  background: rgba(15, 118, 110, 0.08);
 }
 
 .default-layout__progress::after {

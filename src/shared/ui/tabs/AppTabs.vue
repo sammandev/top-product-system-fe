@@ -76,7 +76,7 @@ function panelSlotName(value: string | number) {
 .app-tabs :deep(.p-tablist-tab-list) {
   gap: 0.5rem;
   border-bottom: 1px solid var(--app-border);
-  background: rgba(255, 250, 246, 0.9);
+  background: var(--app-surface);
   padding: 0.8rem 0.8rem 0;
 }
 
