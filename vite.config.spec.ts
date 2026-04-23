@@ -14,10 +14,6 @@ describe('vite dev config', () => {
       '!src/**/__tests__/**',
       '!src/test/**',
     ])
-    expect(config.optimizeDeps?.include).toEqual([
-      'vuetify',
-      'vuetify/components',
-      'vuetify/directives',
-    ])
+    expect(config.optimizeDeps?.include).toBeUndefined()
   })
 })

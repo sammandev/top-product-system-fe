@@ -35,7 +35,7 @@ export interface ColumnSelection {
 /**
  * Row selection mode types
  */
-export type RowSelectionMode = 'all' | 'range' | 'exclude'
+export type RowSelectionMode = 'all' | 'range'
 
 /**
  * Row range selection
@@ -51,7 +51,7 @@ export interface RowRange {
 export interface RowSelection {
   mode: RowSelectionMode
   range?: RowRange
-  exclude?: number[]
+  excluded?: number[]
 }
 
 /**

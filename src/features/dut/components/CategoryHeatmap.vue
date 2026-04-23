@@ -1,39 +1,42 @@
 <template>
-    <v-card>
-        <v-card-title>
-            <v-icon class="mr-2">mdi-grid</v-icon>
-            Category Heatmap
-        </v-card-title>
+  <AppPanel
+    eyebrow="Category View"
+    title="Category Heatmap"
+    description="Inspect antenna and category performance across the selected scoring group."
+    tone="cool"
+    split-header
+  >
+    <template #header-aside>
+      <span v-if="selectedGroup" class="category-heatmap__group-pill">{{ selectedGroup }}</span>
+    </template>
 
-        <v-card-subtitle v-if="selectedGroup">
-            Group: {{ selectedGroup }}
-        </v-card-subtitle>
+    <label v-if="availableGroups.length > 1" class="category-heatmap__field">
+      <span>Group</span>
+      <select v-model="selectedGroup" class="category-heatmap__select">
+        <option v-for="group in availableGroups" :key="group" :value="group">{{ group }}</option>
+      </select>
+    </label>
 
-        <v-card-text>
-            <!-- Group Selector -->
-            <v-select v-if="availableGroups.length > 1" v-model="selectedGroup" :items="availableGroups"
-                label="Select Group" prepend-inner-icon="mdi-layers" density="compact" class="mb-4" />
+    <div v-if="!heatmapData || heatmapData.data.length === 0" class="category-heatmap__empty">
+      <strong>No category data available for the heatmap.</strong>
+      <p>Select a group with populated category scores to render the chart.</p>
+    </div>
 
-            <!-- Empty State -->
-            <div v-if="!heatmapData || heatmapData.data.length === 0" class="text-center py-8">
-                <v-icon size="64" color="grey">mdi-grid-off</v-icon>
-                <p class="text-body-1 text-medium-emphasis mt-4">
-                    No category data available for heatmap
-                </p>
-            </div>
-
-            <!-- Heatmap Chart -->
-            <v-chart v-else :option="chartOption" :style="{ height: `${chartHeight}px`, width: '100%' }" autoresize />
-        </v-card-text>
-    </v-card>
+    <VChart
+      v-else
+      :option="chartOption"
+      :style="{ height: `${chartHeight}px`, width: '100%' }"
+      autoresize
+    />
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
 import type { EChartsOption } from 'echarts'
 import { computed, type PropType, ref, watch } from 'vue'
 import type { GroupScores } from '@/core/types'
+import { AppPanel, VChart } from '@/shared/ui'
 
-// Props
 const props = defineProps({
   groupScores: {
     type: Object as PropType<GroupScores>,
@@ -41,17 +44,14 @@ const props = defineProps({
   },
 })
 
-// State
 const selectedGroup = ref<string>('')
 
-// Define heatmap data type
 interface HeatmapData {
   data: Array<[number, number, number]>
   antennas: string[]
   categories: string[]
 }
 
-// Computed
 const availableGroups = computed(() => {
   return Object.keys(props.groupScores || {})
 })
@@ -244,7 +244,6 @@ const chartOption = computed<EChartsOption>(() => {
   }
 })
 
-// Watch for group changes
 watch(
   availableGroups,
   (groups) => {
@@ -257,4 +256,56 @@ watch(
 </script>
 
 <style scoped>
+.category-heatmap__field {
+  display: grid;
+  gap: 0.45rem;
+  max-width: 18rem;
+}
+
+.category-heatmap__field span {
+  color: var(--app-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.category-heatmap__select {
+  min-height: 2.9rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  padding: 0.75rem 0.9rem;
+}
+
+.category-heatmap__group-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(40, 96, 163, 0.12);
+  color: var(--app-accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.category-heatmap__empty {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 250, 246, 0.72);
+  text-align: center;
+}
+
+.category-heatmap__empty strong {
+  color: var(--app-ink);
+}
+
+.category-heatmap__empty p {
+  margin: 0;
+  color: var(--app-muted);
+}
 </style>

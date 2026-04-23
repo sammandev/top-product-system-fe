@@ -1,186 +1,214 @@
 <template>
-  <v-dialog v-model="isOpen" fullscreen transition="dialog-bottom-transition">
-    <v-card v-if="record" class="d-flex flex-column" style="height: 100vh; overflow: hidden;">
-      <!-- Compact Sticky Header Container -->
-      <div class="dialog-sticky-header flex-shrink-0"
-        style="z-index: 10; background-color: rgb(var(--v-theme-surface));">
-        <v-card-title class="d-flex justify-space-between align-center flex-shrink-0 bg-primary pa-2 py-1">
-          <div class="d-flex align-center">
-            <v-icon class="mr-2" color="white" size="small">mdi-table-eye</v-icon>
-            <span class="text-white text-body-1">Test Items Details</span>
-          </div>
-          <div class="d-flex align-center gap-2">
-            <v-btn variant="outlined" color="white" size="x-small" :loading="downloading" @click="handleDownload">
-              <v-icon start size="x-small">mdi-download</v-icon>
-              Download
-            </v-btn>
-            <v-btn icon="mdi-close" variant="text" color="white" size="small" @click="close" />
-          </div>
-        </v-card-title>
-
-        <!-- DUT Information Section -->
-        <div class="flex-shrink-0 px-3 py-2">
-          <!-- Primary Information -->
-          <v-card variant="tonal" color="primary" class="mb-3">
-            <v-card-text class="py-3">
-              <v-row dense>
-                <v-col cols="12" md="6">
-                  <div class="d-flex align-center cursor-pointer" @click="copyToClipboard(record.isn)">
-                    <v-icon size="large" class="mr-3" color="primary">mdi-barcode</v-icon>
-                    <div>
-                      <div class="text-caption text-medium-emphasis">DUT ISN</div>
-                      <div class="text-h6 font-weight-bold">{{ record.isn || '-' }}</div>
-                    </div>
-                    <v-tooltip activator="parent" location="top">Click to copy ISN</v-tooltip>
-                  </div>
-                </v-col>
-                <v-col cols="12" md="6">
-                  <div class="d-flex align-center">
-                    <v-icon size="large" class="mr-3" color="primary">mdi-factory</v-icon>
-                    <div>
-                      <div class="text-caption text-medium-emphasis">Station</div>
-                      <div class="text-h6 font-weight-bold">
-                        {{ record.displayStationName || record.stationName }}
-                      </div>
-                    </div>
-                  </div>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-
-          <!-- Device & Identifiers -->
-          <v-card variant="outlined" class="mb-3">
-            <v-card-text class="py-2">
-              <v-row dense>
-                <v-col cols="12" md="4">
-                  <div class="d-flex align-center cursor-pointer" @click="copyToClipboard(record.deviceId)">
-                    <v-icon size="small" class="mr-2">mdi-chip</v-icon>
-                    <span class="text-body-2">
-                      <strong>Device ID:</strong>
-                      <span class="ml-2 font-mono">{{ record.deviceId }}</span>
-                    </span>
-                    <v-tooltip activator="parent" location="top">Click to copy Device
-                      ID</v-tooltip>
-                  </div>
-                </v-col>
-                <v-col cols="12" md="4">
-                  <div class="d-flex align-center">
-                    <v-icon size="small" class="mr-2">mdi-map-marker</v-icon>
-                    <span class="text-body-2">
-                      <strong>Site:</strong>
-                      <span class="ml-2">{{ record.site }}</span>
-                    </span>
-                  </div>
-                </v-col>
-                <v-col cols="12" md="4">
-                  <div class="d-flex align-center">
-                    <v-icon size="small" class="mr-2">mdi-folder</v-icon>
-                    <span class="text-body-2">
-                      <strong>Project:</strong>
-                      <span class="ml-2">{{ record.project }}</span>
-                    </span>
-                  </div>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-card>
-
-          <!-- Timing & Status -->
-          <div class="d-flex align-center flex-wrap gap-2 text-caption">
-            <v-chip size="small" variant="tonal" color="primary" prepend-icon="mdi-calendar-clock" label>
-              <span class="text-medium-emphasis mr-1">Start:</span>
-              {{ formatTime(record.testStartTime) }}
-            </v-chip>
-            <v-chip size="small" variant="tonal" color="primary" prepend-icon="mdi-calendar-check" label>
-              <span class="text-medium-emphasis mr-1">End:</span>
-              {{ formatTime(record.testEndTime) }}
-            </v-chip>
-            <v-chip size="small" variant="tonal" color="secondary" prepend-icon="mdi-timer" label>
-              <span class="text-medium-emphasis mr-1">Duration:</span>
-              {{ calculateDuration(record.testStartTime, record.testEndTime) }}
-            </v-chip>
-            <v-chip size="small" variant="tonal" color="info" prepend-icon="mdi-list-box" label>
-              <span class="text-medium-emphasis mr-1">Test Items:</span>
-              {{ record.testItems?.length || 0 }}
-            </v-chip>
-            <v-chip size="small" :color="getStatusColor(record.errorCode)"
-              :prepend-icon="isStatusPass(record.errorCode) ? 'mdi-check-circle' : 'mdi-alert-circle'"
-              class="cursor-pointer" label @click="copyToClipboard(record.errorCode)">
-              <span class="text-medium-emphasis mr-1">Status:</span>
-              {{ record.errorCode }}
-              <v-tooltip activator="parent" location="top">Click to copy Error Code</v-tooltip>
-            </v-chip>
-            <template v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)">
-              <v-chip size="small" color="error" variant="outlined" class="cursor-pointer" label
-                prepend-icon="mdi-alert-octagon" @click="copyToClipboard(record.errorName)">
-                <span class="text-medium-emphasis mr-1">Error:</span>
-                {{ record.errorName }}
-                <v-tooltip activator="parent" location="top">Click to copy Error Name</v-tooltip>
-              </v-chip>
-            </template>
+  <AppDialog
+    v-model="isOpen"
+    :width="dialogWidth"
+    :breakpoints="dialogBreakpoints"
+    :closable="false"
+    class="fullscreen-dialog"
+  >
+    <template #header>
+      <div class="fullscreen-dialog__header">
+        <div class="fullscreen-dialog__header-copy">
+          <span class="fullscreen-dialog__header-icon">
+            <Icon icon="mdi:table-eye" />
+          </span>
+          <div>
+            <p class="fullscreen-dialog__eyebrow">Record Detail</p>
+            <h2>Test Items Details</h2>
+            <p v-if="record">Inspect this DUT record, filter test items, and copy identifiers without leaving the ranking flow.</p>
           </div>
         </div>
 
-        <v-divider class="flex-shrink-0" />
+        <div class="fullscreen-dialog__header-actions">
+          <button type="button" class="fullscreen-dialog__button fullscreen-dialog__button--ghost" :disabled="downloading" @click="handleDownload">
+            <Icon :icon="downloading ? 'mdi:loading' : 'mdi:download'" :class="{ 'fullscreen-dialog__spin': downloading }" />
+            <span>{{ downloading ? 'Downloading...' : 'Download' }}</span>
+          </button>
+          <button type="button" class="fullscreen-dialog__button fullscreen-dialog__button--ghost" @click="isFullscreen = !isFullscreen">
+            <Icon :icon="isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" />
+            <span>{{ isFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }}</span>
+          </button>
+          <button type="button" class="fullscreen-dialog__button fullscreen-dialog__button--ghost" @click="close">
+            <Icon icon="mdi:close" />
+            <span>Close</span>
+          </button>
+        </div>
       </div>
-      <!-- End Sticky Header Container -->
+    </template>
 
-      <!-- Search and Filter Controls (Fixed, non-scrollable) -->
-      <v-card-text class="pb-2 pt-2 flex-shrink-0">
-        <v-row dense>
-          <v-col cols="12" md="6">
-            <v-combobox v-model="searchTerms" label="Search Test Items (Regex)" prepend-inner-icon="mdi-magnify"
-              variant="outlined" density="compact" hide-details clearable multiple chips closable-chips
-              placeholder="Type and press Enter (OR logic)..." hint="Multiple terms use OR logic">
-              <template #chip="{ props, item }">
-                <v-chip v-bind="props" :text="String(item.value || item)" size="small" color="primary" />
-              </template>
-            </v-combobox>
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-select v-model="testItemFilter" :items="testItemFilterOptions" item-title="title" item-value="value"
-              label="Data Type" variant="outlined" density="compact" hide-details multiple chips closable-chips>
-              <template #chip="{ props, item }">
-                <v-chip v-bind="props" :text="item.title" size="small" />
-              </template>
-            </v-select>
-          </v-col>
-        </v-row>
-      </v-card-text>
+    <div v-if="record" class="fullscreen-dialog__body" :class="{ 'fullscreen-dialog__body--fullscreen': isFullscreen }">
+      <section class="fullscreen-dialog__summary-grid">
+        <article class="fullscreen-dialog__summary-card fullscreen-dialog__summary-card--highlight">
+          <button type="button" class="fullscreen-dialog__info-button" @click="copyToClipboard(record.isn)">
+            <span class="fullscreen-dialog__info-icon"><Icon icon="mdi:barcode" /></span>
+            <span>
+              <small>DUT ISN</small>
+              <strong>{{ record.isn || '-' }}</strong>
+            </span>
+          </button>
+        </article>
 
-      <!-- Data Table Container -->
-      <div class="flex-grow-1" style="min-height: 0; overflow: hidden;">
-        <v-data-table :headers="testItemHeaders" :items="filteredTestItems" :items-per-page="50" density="comfortable"
-          fixed-header fixed-footer style="height: 100%;" class="elevation-1 v-table--striped">
-          <template #item.STATUS="{ item }">
-            <v-chip :color="getStatusColor(item.STATUS)" size="small">
-              {{ normalizeStatus(item.STATUS) }}
-            </v-chip>
-          </template>
-          <template #item.VALUE="{ item }">
-            <span :class="getValueClass(item)">{{ item.VALUE }}</span>
-          </template>
-          <template #item.UCL="{ item }">
-            <span class="text-medium-emphasis">{{ item.UCL || '-' }}</span>
-          </template>
-          <template #item.LCL="{ item }">
-            <span class="text-medium-emphasis">{{ item.LCL || '-' }}</span>
-          </template>
-        </v-data-table>
-      </div>
-    </v-card>
-  </v-dialog>
+        <article class="fullscreen-dialog__summary-card">
+          <div class="fullscreen-dialog__info-button fullscreen-dialog__info-button--static">
+            <span class="fullscreen-dialog__info-icon"><Icon icon="mdi:factory" /></span>
+            <span>
+              <small>Station</small>
+              <strong>{{ record.displayStationName || record.stationName }}</strong>
+            </span>
+          </div>
+        </article>
+      </section>
 
-  <!-- Copy Success Snackbar -->
-  <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
-    <v-icon start>mdi-check</v-icon>
-    Copied to clipboard!
-  </v-snackbar>
+      <section class="fullscreen-dialog__metadata-grid">
+        <article class="fullscreen-dialog__metadata-card">
+          <button type="button" class="fullscreen-dialog__copy-row" @click="copyToClipboard(record.deviceId)">
+            <Icon icon="mdi:chip" />
+            <span><strong>Device ID:</strong> {{ record.deviceId }}</span>
+          </button>
+        </article>
+        <article class="fullscreen-dialog__metadata-card">
+          <div class="fullscreen-dialog__copy-row fullscreen-dialog__copy-row--static">
+            <Icon icon="mdi:map-marker" />
+            <span><strong>Site:</strong> {{ record.site }}</span>
+          </div>
+        </article>
+        <article class="fullscreen-dialog__metadata-card">
+          <div class="fullscreen-dialog__copy-row fullscreen-dialog__copy-row--static">
+            <Icon icon="mdi:folder" />
+            <span><strong>Project:</strong> {{ record.project }}</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="fullscreen-dialog__meta-pills">
+        <span class="fullscreen-dialog__pill fullscreen-dialog__pill--cool">
+          <Icon icon="mdi:calendar-clock" />
+          <strong>Start:</strong>
+          <span>{{ formatTime(record.testStartTime) }}</span>
+        </span>
+        <span class="fullscreen-dialog__pill fullscreen-dialog__pill--cool">
+          <Icon icon="mdi:calendar-check" />
+          <strong>End:</strong>
+          <span>{{ formatTime(record.testEndTime) }}</span>
+        </span>
+        <span class="fullscreen-dialog__pill fullscreen-dialog__pill--neutral">
+          <Icon icon="mdi:timer" />
+          <strong>Duration:</strong>
+          <span>{{ calculateDuration(record.testStartTime, record.testEndTime) }}</span>
+        </span>
+        <span class="fullscreen-dialog__pill fullscreen-dialog__pill--neutral">
+          <Icon icon="mdi:list-box" />
+          <strong>Test Items:</strong>
+          <span>{{ record.testItems?.length || 0 }}</span>
+        </span>
+        <button type="button" class="fullscreen-dialog__pill" :class="statusPillClass(record.errorCode)" @click="copyToClipboard(record.errorCode)">
+          <Icon :icon="isStatusPass(record.errorCode) ? 'mdi:check-circle' : 'mdi:alert-circle'" />
+          <strong>Status:</strong>
+          <span>{{ record.errorCode }}</span>
+        </button>
+        <button
+          v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)"
+          type="button"
+          class="fullscreen-dialog__pill fullscreen-dialog__pill--danger"
+          @click="copyToClipboard(record.errorName)"
+        >
+          <Icon icon="mdi:alert-octagon" />
+          <strong>Error:</strong>
+          <span>{{ record.errorName }}</span>
+        </button>
+      </section>
+
+      <section class="fullscreen-dialog__filters">
+        <label class="fullscreen-dialog__field">
+          <span>Search Test Items</span>
+          <div class="fullscreen-dialog__search-shell">
+            <input
+              v-model="searchEntry"
+              type="text"
+              placeholder="Type regex or text and press Enter"
+              @keydown.enter.prevent="commitSearchEntry"
+              @blur="commitSearchEntry"
+            >
+            <button v-if="searchEntry" type="button" class="fullscreen-dialog__inline-button" @click="commitSearchEntry">
+              Add
+            </button>
+          </div>
+          <div v-if="searchTerms.length > 0" class="fullscreen-dialog__token-row">
+            <button v-for="term in searchTerms" :key="term" type="button" class="fullscreen-dialog__token" @click="removeSearchTerm(term)">
+              <span>{{ term }}</span>
+              <span aria-hidden="true">x</span>
+            </button>
+          </div>
+        </label>
+
+        <label class="fullscreen-dialog__field">
+          <span>Data Type</span>
+          <div class="fullscreen-dialog__option-row">
+            <button
+              v-for="option in testItemFilterOptions"
+              :key="option.value"
+              type="button"
+              class="fullscreen-dialog__option"
+              :class="{ 'fullscreen-dialog__option--active': testItemFilter.includes(option.value) }"
+              @click="toggleTestItemFilter(option.value)"
+            >
+              {{ option.title }}
+            </button>
+          </div>
+        </label>
+
+        <label class="fullscreen-dialog__field">
+          <span>Status</span>
+          <select v-model="testStatusFilter">
+            <option value="ALL">All statuses</option>
+            <option value="PASS">Pass</option>
+            <option value="FAIL">Fail</option>
+          </select>
+        </label>
+
+        <div class="fullscreen-dialog__filter-actions">
+          <button v-if="hasActiveFilters" type="button" class="fullscreen-dialog__button fullscreen-dialog__button--ghost" @click="clearFilters">
+            Clear Filters
+          </button>
+        </div>
+      </section>
+
+      <section class="fullscreen-dialog__table-shell">
+        <AppDataGrid
+          :columns="testItemColumns"
+          :rows="filteredTestItems"
+          data-key="NAME"
+          :paginator="true"
+          :rows-per-page="50"
+          scroll-height="32rem"
+          :table-style="{ minWidth: '54rem' }"
+        >
+          <template #cell-STATUS="{ data }">
+            <span class="fullscreen-dialog__pill" :class="statusPillClass(String(data.STATUS))">
+              {{ normalizeStatus(String(data.STATUS)) }}
+            </span>
+          </template>
+          <template #cell-VALUE="{ data }">
+            <span :class="getValueClass(data as NormalizedTestItem)">{{ data.VALUE }}</span>
+          </template>
+          <template #cell-UCL="{ value }">
+            <span class="fullscreen-dialog__muted">{{ value || '-' }}</span>
+          </template>
+          <template #cell-LCL="{ value }">
+            <span class="fullscreen-dialog__muted">{{ value || '-' }}</span>
+          </template>
+        </AppDataGrid>
+      </section>
+    </div>
+  </AppDialog>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
+import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
+import { AppDialog } from '@/shared/ui'
+import { useNotification } from '@/shared/composables/useNotification'
 import {
   adjustIplasDisplayTime,
   getStatusColor,
@@ -271,7 +299,9 @@ const isOpen = computed({
 const testItemFilter = ref<('all' | 'value' | 'non-value' | 'bin')[]>(['all'])
 const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
 const searchTerms = ref<string[]>([])
-const showCopySuccess = ref(false)
+const searchEntry = ref('')
+const isFullscreen = ref(false)
+const { showInfo: showInfoNotification } = useNotification()
 
 // Filter options for dropdown (Criteria Data is default)
 const testItemFilterOptions = [
@@ -281,13 +311,22 @@ const testItemFilterOptions = [
   { title: 'Bin Data', value: 'bin' },
 ]
 
-const testItemHeaders = [
-  { title: 'Test Item', key: 'NAME', sortable: true },
-  { title: 'Status', key: 'STATUS', sortable: true },
-  { title: 'Value', key: 'VALUE', sortable: true },
-  { title: 'UCL', key: 'UCL', sortable: true },
-  { title: 'LCL', key: 'LCL', sortable: true },
+const testItemColumns = [
+  { key: 'NAME', field: 'NAME', header: 'Test Item', sortable: true, style: { width: '24rem' } },
+  { key: 'STATUS', field: 'STATUS', header: 'Status', sortable: true, style: { width: '10rem' } },
+  { key: 'VALUE', field: 'VALUE', header: 'Value', sortable: true, style: { width: '10rem' } },
+  { key: 'UCL', field: 'UCL', header: 'UCL', sortable: true, style: { width: '8rem' } },
+  { key: 'LCL', field: 'LCL', header: 'LCL', sortable: true, style: { width: '8rem' } },
 ]
+
+const dialogWidth = computed(() => (isFullscreen.value ? '98vw' : 'min(96vw, 88rem)'))
+const dialogBreakpoints = computed(() =>
+  isFullscreen.value ? { '960px': '98vw', '640px': '100vw' } : { '1200px': '94vw', '768px': '98vw' },
+)
+
+const hasActiveFilters = computed(() => {
+  return searchTerms.value.length > 0 || testStatusFilter.value !== 'ALL' || !testItemFilter.value.includes('all')
+})
 
 // Helper functions
 function isValueData(item: NormalizedTestItem): boolean {
@@ -385,10 +424,51 @@ async function copyToClipboard(text: string): Promise<void> {
       document.execCommand('copy')
       document.body.removeChild(textArea)
     }
-    showCopySuccess.value = true
+    showInfoNotification('Copied to clipboard!')
   } catch (err) {
     console.error('Failed to copy:', err)
   }
+}
+
+function commitSearchEntry(): void {
+  const entry = searchEntry.value.trim()
+  searchEntry.value = ''
+  if (!entry || searchTerms.value.includes(entry)) {
+    return
+  }
+  searchTerms.value = [...searchTerms.value, entry]
+}
+
+function removeSearchTerm(term: string): void {
+  searchTerms.value = searchTerms.value.filter((value) => value !== term)
+}
+
+function toggleTestItemFilter(value: 'all' | 'value' | 'non-value' | 'bin'): void {
+  if (value === 'all') {
+    testItemFilter.value = ['all']
+    return
+  }
+
+  const next = testItemFilter.value.filter((item) => item !== 'all')
+  const exists = next.includes(value)
+  testItemFilter.value = exists ? next.filter((item) => item !== value) : [...next, value]
+
+  if (testItemFilter.value.length === 0) {
+    testItemFilter.value = ['all']
+  }
+}
+
+function clearFilters(): void {
+  searchEntry.value = ''
+  searchTerms.value = []
+  testStatusFilter.value = 'ALL'
+  testItemFilter.value = ['all']
+}
+
+function statusPillClass(status: string): string {
+  return isStatusPass(status)
+    ? 'fullscreen-dialog__pill--success'
+    : 'fullscreen-dialog__pill--danger'
 }
 
 // Computed filtered test items
@@ -447,8 +527,8 @@ const filteredTestItems = computed(() => {
 function close(): void {
   isOpen.value = false
   // Reset filters when closing - will be set again by watcher when reopened
-  testStatusFilter.value = 'ALL'
-  searchTerms.value = []
+  clearFilters()
+  isFullscreen.value = false
 }
 
 function handleDownload(): void {
@@ -467,34 +547,304 @@ watch(
     }
     testStatusFilter.value = 'ALL'
     searchTerms.value = []
+    searchEntry.value = ''
   },
 )
 </script>
 
 <style scoped>
-.fullscreen-content {
-  height: calc(100vh - 64px);
-  overflow-y: auto;
+.fullscreen-dialog__body {
+  display: grid;
+  gap: 1rem;
+  max-height: calc(100vh - 10rem);
+  overflow: auto;
+  padding-right: 0.25rem;
 }
 
-.gap-2 {
-  gap: 0.5rem;
+.fullscreen-dialog__body--fullscreen {
+  max-height: calc(100vh - 6rem);
 }
 
-.gap-4 {
+.fullscreen-dialog__header,
+.fullscreen-dialog__header-copy,
+.fullscreen-dialog__header-actions,
+.fullscreen-dialog__summary-grid,
+.fullscreen-dialog__metadata-grid,
+.fullscreen-dialog__meta-pills,
+.fullscreen-dialog__filters,
+.fullscreen-dialog__token-row,
+.fullscreen-dialog__option-row,
+.fullscreen-dialog__filter-actions,
+.fullscreen-dialog__search-shell {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.fullscreen-dialog__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
   gap: 1rem;
 }
 
-.cursor-pointer {
+.fullscreen-dialog__header-copy {
+  grid-template-columns: auto 1fr;
+  align-items: start;
+}
+
+.fullscreen-dialog__header-copy h2 {
+  margin: 0.2rem 0;
+  color: var(--app-ink);
+}
+
+.fullscreen-dialog__header-copy p {
+  margin: 0;
+  color: var(--app-muted);
+}
+
+.fullscreen-dialog__eyebrow {
+  color: var(--app-accent);
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.fullscreen-dialog__header-icon,
+.fullscreen-dialog__info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.fullscreen-dialog__header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.fullscreen-dialog__button,
+.fullscreen-dialog__inline-button,
+.fullscreen-dialog__token,
+.fullscreen-dialog__option,
+.fullscreen-dialog__copy-row,
+.fullscreen-dialog__info-button,
+.fullscreen-dialog__pill {
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.fullscreen-dialog__button,
+.fullscreen-dialog__inline-button,
+.fullscreen-dialog__token,
+.fullscreen-dialog__option,
+.fullscreen-dialog__copy-row,
+.fullscreen-dialog__info-button,
+.fullscreen-dialog__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  font: inherit;
+}
+
+.fullscreen-dialog__button,
+.fullscreen-dialog__inline-button,
+.fullscreen-dialog__token,
+.fullscreen-dialog__option,
+.fullscreen-dialog__copy-row,
+.fullscreen-dialog__info-button {
   cursor: pointer;
 }
 
-/* Striped table styling */
-:deep(.v-table--striped tbody tr:nth-of-type(even)) {
-  background-color: rgba(0, 0, 0, 0.02);
+.fullscreen-dialog__button:hover,
+.fullscreen-dialog__inline-button:hover,
+.fullscreen-dialog__token:hover,
+.fullscreen-dialog__option:hover,
+.fullscreen-dialog__copy-row:hover,
+.fullscreen-dialog__info-button:hover {
+  transform: translateY(-1px);
 }
 
-:deep(.v-theme--dark .v-table--striped tbody tr:nth-of-type(even)) {
-  background-color: rgba(255, 255, 255, 0.02);
+.fullscreen-dialog__button,
+.fullscreen-dialog__inline-button,
+.fullscreen-dialog__token,
+.fullscreen-dialog__option,
+.fullscreen-dialog__copy-row,
+.fullscreen-dialog__info-button {
+  padding: 0.7rem 0.95rem;
+}
+
+.fullscreen-dialog__button--ghost {
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.fullscreen-dialog__summary-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.fullscreen-dialog__summary-card,
+.fullscreen-dialog__metadata-card {
+  border: 1px solid var(--app-border);
+  border-radius: 1.25rem;
+  background: var(--app-panel-strong);
+  padding: 0.35rem;
+}
+
+.fullscreen-dialog__summary-card--highlight {
+  background: linear-gradient(135deg, rgba(20, 88, 71, 0.14), rgba(255, 251, 247, 0.94));
+}
+
+.fullscreen-dialog__info-button {
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.fullscreen-dialog__info-button--static,
+.fullscreen-dialog__copy-row--static {
+  cursor: default;
+}
+
+.fullscreen-dialog__info-button span,
+.fullscreen-dialog__copy-row span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.fullscreen-dialog__info-button small {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fullscreen-dialog__metadata-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.fullscreen-dialog__meta-pills {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.fullscreen-dialog__pill {
+  padding: 0.45rem 0.8rem;
+  font-weight: 700;
+}
+
+.fullscreen-dialog__pill--cool {
+  background: rgba(40, 96, 163, 0.08);
+  border-color: rgba(40, 96, 163, 0.16);
+  color: #1f4f89;
+}
+
+.fullscreen-dialog__pill--neutral {
+  background: rgba(95, 103, 122, 0.08);
+  border-color: rgba(95, 103, 122, 0.16);
+  color: #455065;
+}
+
+.fullscreen-dialog__pill--success {
+  background: rgba(20, 88, 71, 0.1);
+  border-color: rgba(20, 88, 71, 0.16);
+  color: #145847;
+}
+
+.fullscreen-dialog__pill--danger {
+  background: rgba(164, 52, 58, 0.08);
+  border-color: rgba(164, 52, 58, 0.16);
+  color: #8e3037;
+}
+
+.fullscreen-dialog__filters {
+  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.2fr) minmax(0, 0.8fr) auto;
+  align-items: end;
+}
+
+.fullscreen-dialog__field {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.fullscreen-dialog__field span {
+  color: var(--app-ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.fullscreen-dialog__field input,
+.fullscreen-dialog__field select {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  padding: 0.8rem 0.9rem;
+  font: inherit;
+}
+
+.fullscreen-dialog__search-shell {
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.fullscreen-dialog__token-row,
+.fullscreen-dialog__option-row {
+  display: flex;
+  flex-wrap: wrap;
+}
+
+.fullscreen-dialog__option--active {
+  background: rgba(20, 88, 71, 0.1);
+  border-color: rgba(20, 88, 71, 0.18);
+  color: #145847;
+}
+
+.fullscreen-dialog__filter-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.fullscreen-dialog__table-shell {
+  min-height: 0;
+}
+
+.fullscreen-dialog__muted {
+  color: var(--app-muted);
+}
+
+.fullscreen-dialog__spin {
+  animation: fullscreen-dialog-spin 1s linear infinite;
+}
+
+@keyframes fullscreen-dialog-spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 960px) {
+  .fullscreen-dialog__summary-grid,
+  .fullscreen-dialog__metadata-grid,
+  .fullscreen-dialog__filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .fullscreen-dialog__header {
+    flex-direction: column;
+  }
+
+  .fullscreen-dialog__header-actions,
+  .fullscreen-dialog__filter-actions {
+    justify-content: flex-start;
+  }
 }
 </style>

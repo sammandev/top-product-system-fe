@@ -1,671 +1,542 @@
 <template>
     <DefaultLayout>
-        <v-container fluid>
-            <!-- Header -->
-            <v-row class="mb-4">
-                <v-col cols="12">
-                    <div class="d-flex justify-space-between align-center">
-                        <div>
-                            <h1 class="text-h4 font-weight-bold mb-2">Top Product Database</h1>
-                            <p class="text-body-2 text-medium-emphasis">
-                                Browse and analyze top-performing products across all projects and stations
-                            </p>
+        <div class="top-product-db-shell">
+            <header class="top-product-db-header">
+                <div class="top-product-db-header__copy">
+                    <div class="top-product-db-header__icon">
+                        <Icon icon="mdi:database-search-outline" />
+                    </div>
+                    <div>
+                        <p class="top-product-db-header__eyebrow">Top Products Workspace</p>
+                        <h1>Top Product Database</h1>
+                        <p>
+                            Browse, filter, and inspect top-performing DUT records across projects and stations
+                            from one database-backed workflow.
+                        </p>
+                    </div>
+                </div>
+
+                <button type="button" class="top-product-db-button top-product-db-button--primary"
+                    :disabled="loading || statsLoading" @click="refreshData">
+                    <Icon :icon="loading || statsLoading ? 'mdi:loading' : 'mdi:refresh'"
+                        :class="{ 'top-product-db-spin': loading || statsLoading }" />
+                    <span>{{ loading || statsLoading ? 'Refreshing...' : 'Refresh' }}</span>
+                </button>
+            </header>
+
+            <section class="top-product-db-stats">
+                <article class="top-product-db-stat-card top-product-db-stat-card--cool">
+                    <div class="top-product-db-stat-card__icon">
+                        <Icon icon="mdi:folder-multiple-outline" />
+                    </div>
+                    <div>
+                        <span>Projects</span>
+                        <strong>{{ statsLoading ? '...' : stats.total_projects.toLocaleString() }}</strong>
+                    </div>
+                </article>
+
+                <article class="top-product-db-stat-card top-product-db-stat-card--indigo">
+                    <div class="top-product-db-stat-card__icon">
+                        <Icon icon="mdi:identifier" />
+                    </div>
+                    <div>
+                        <span>Unique ISNs</span>
+                        <strong>{{ statsLoading ? '...' : stats.total_unique_isns.toLocaleString() }}</strong>
+                    </div>
+                </article>
+
+                <article class="top-product-db-stat-card top-product-db-stat-card--success">
+                    <div class="top-product-db-stat-card__icon">
+                        <Icon icon="mdi:database-outline" />
+                    </div>
+                    <div>
+                        <span>Total Analysis</span>
+                        <strong>{{ statsLoading ? '...' : stats.total_products.toLocaleString() }}</strong>
+                    </div>
+                </article>
+            </section>
+
+            <AppPanel eyebrow="Filter Parameters" title="Analysis Scope"
+                description="Filter DUT records by identifier, project, station, and minimum score before reviewing details or exporting rows."
+                tone="warm" splitHeader>
+                <template #header-aside>
+                    <button type="button" class="top-product-db-button top-product-db-button--ghost"
+                        :disabled="!hasActiveFilters" @click="clearFilters">
+                        <Icon icon="mdi:filter-remove-outline" />
+                        <span>Clear All</span>
+                    </button>
+                </template>
+
+                <div class="top-product-db-filter-grid">
+                    <label class="top-product-db-field">
+                        <span>DUT ISN</span>
+                        <input v-model="filters.dut_isn" type="text" autocomplete="off" placeholder="Search DUT ISN"
+                            @input="debouncedFetch">
+                    </label>
+
+                    <label class="top-product-db-field">
+                        <span>Projects</span>
+                        <select v-model="filters.projects" multiple size="5" @change="debouncedFetch">
+                            <option v-for="project in projectOptions" :key="project.value" :value="project.value">
+                                {{ project.title }}
+                            </option>
+                        </select>
+                        <small>{{ filters.projects?.length || 0 }} selected</small>
+                    </label>
+
+                    <label class="top-product-db-field">
+                        <span>Stations</span>
+                        <select v-model="filters.stations" multiple size="5" @change="debouncedFetch">
+                            <option v-for="station in stationOptions" :key="station.value" :value="station.value">
+                                {{ station.stationName }}{{ station.project ? ` (${station.project})` : '' }}
+                            </option>
+                        </select>
+                        <small>{{ filters.stations?.length || 0 }} selected</small>
+                    </label>
+
+                    <label class="top-product-db-field">
+                        <span>Minimum Score</span>
+                        <input v-model.number="filters.min_score" type="number" min="0" step="0.01"
+                            placeholder="Optional threshold" @input="debouncedFetch">
+                    </label>
+                </div>
+
+                <div class="top-product-db-filter-summary">
+                    <span>{{ pagination.total.toLocaleString() }} total records</span>
+                    <span>{{ filters.projects?.length || 0 }} project filters</span>
+                    <span>{{ filters.stations?.length || 0 }} station filters</span>
+                    <span>{{ filters.min_score ?? 'Any' }} minimum score</span>
+                </div>
+            </AppPanel>
+
+            <AppPanel eyebrow="Database Records" title="Top Products"
+                description="Review the current result set, inspect individual rows, and queue export or deletion actions without leaving the page."
+                splitHeader>
+                <template #header-aside>
+                    <div class="top-product-db-toolbar">
+                        <span class="top-product-db-pill top-product-db-pill--neutral">
+                            {{ pagination.total.toLocaleString() }} total
+                        </span>
+                        <span v-if="selectedProducts.length > 0"
+                            class="top-product-db-pill top-product-db-pill--warning">
+                            {{ selectedProducts.length }} selected
+                        </span>
+                        <button v-if="canBulkDelete && selectedProducts.length > 0" type="button"
+                            class="top-product-db-button top-product-db-button--danger" @click="confirmBulkDelete">
+                            <Icon icon="mdi:delete-sweep-outline" />
+                            <span>Delete Selected</span>
+                        </button>
+                        <label class="top-product-db-page-size">
+                            <span>Rows</span>
+                            <select v-model.number="pagination.page_size" @change="handlePageSizeChange">
+                                <option v-for="size in pageSizeOptions" :key="size" :value="size">
+                                    {{ size }} per page
+                                </option>
+                            </select>
+                        </label>
+                    </div>
+                </template>
+
+                <div v-if="canBulkDelete" class="top-product-db-notice top-product-db-notice--warning">
+                    <div>
+                        <strong>Delete access enabled</strong>
+                        <p>Selection checkboxes are visible because your current role can remove top-product records.
+                        </p>
+                    </div>
+                </div>
+
+                <AppDataGrid class="top-product-db-grid" :columns="gridColumns" :rows="products" :loading="loading"
+                    dataKey="id" :selection="selectedProducts" selectionMode="multiple"
+                    :showSelectionColumn="canBulkDelete" :paginator="true" :rowsPerPage="pagination.page_size"
+                    :rowsPerPageOptions="pageSizeOptions" :totalRecords="pagination.total" :lazy="true"
+                    :first="(pagination.page - 1) * pagination.page_size" :sortField="filters.sort_by"
+                    :sortOrder="gridSortOrder" scrollHeight="38rem"
+                    @update:selection="selectedProducts = ($event as TopProductItem[]) || []"
+                    @row-click="handleGridRowClick" @page="handleGridPage" @sort="handleGridSort">
+                    <template #cell-dut_isn="slotProps">
+                        <div class="top-product-db-cell top-product-db-cell--primary">
+                            <Icon icon="mdi:barcode" />
+                            <span>{{ slotProps.data.dut_isn }}</span>
                         </div>
-                        <v-btn color="primary" prepend-icon="mdi-refresh" @click="refreshData"
-                            :loading="loading || statsLoading">
-                            Refresh
-                        </v-btn>
+                    </template>
+
+                    <template #cell-project_name="slotProps">
+                        <span v-if="slotProps.data.project_name" class="top-product-db-pill top-product-db-pill--cool">
+                            {{ slotProps.data.project_name }}
+                        </span>
+                        <span v-else class="top-product-db-muted">N/A</span>
+                    </template>
+
+                    <template #cell-station_name="slotProps">
+                        <span class="top-product-db-pill top-product-db-pill--neutral">
+                            {{ slotProps.data.station_name }}
+                        </span>
+                    </template>
+
+                    <template #cell-score="slotProps">
+                        <span class="top-product-db-pill" :class="scoreToneClass(slotProps.data.score)">
+                            <Icon :icon="getScoreIcon(slotProps.data.score)" />
+                            {{ slotProps.data.score?.toFixed(2) || '0.00' }}
+                        </span>
+                    </template>
+
+                    <template #cell-pass_count="slotProps">
+                        <span class="top-product-db-pill top-product-db-pill--success">{{ slotProps.data.pass_count
+                            }}</span>
+                    </template>
+
+                    <template #cell-fail_count="slotProps">
+                        <span class="top-product-db-pill"
+                            :class="slotProps.data.fail_count > 0 ? 'top-product-db-pill--danger' : 'top-product-db-pill--neutral'">
+                            {{ slotProps.data.fail_count }}
+                        </span>
+                    </template>
+
+                    <template #cell-pass_rate="slotProps">
+                        <div class="top-product-db-progress">
+                            <div class="top-product-db-progress__track">
+                                <span class="top-product-db-progress__value"
+                                    :class="passRateToneClass(getPassRateValue(slotProps.data))"
+                                    :style="{ width: `${getPassRateValue(slotProps.data)}%` }" />
+                            </div>
+                            <strong>{{ getPassRate(slotProps.data) }}%</strong>
+                        </div>
+                    </template>
+
+                    <template #cell-test_date="slotProps">
+                        <span>{{ formatDate(slotProps.data.test_date) }}</span>
+                    </template>
+
+                    <template #cell-measurements_count="slotProps">
+                        <span class="top-product-db-pill top-product-db-pill--outline">
+                            {{ slotProps.data.measurements_count || 0 }} items
+                        </span>
+                    </template>
+
+                    <template #cell-actions="slotProps">
+                        <div class="top-product-db-actions">
+                            <button type="button" @click.stop="viewDetail(slotProps.data.id)">
+                                <Icon icon="mdi:eye-outline" />
+                                <span>View</span>
+                            </button>
+                            <button type="button" @click.stop="handleExport(slotProps.data)">
+                                <Icon icon="mdi:download-outline" />
+                                <span>Export</span>
+                            </button>
+                            <button v-if="isAdmin" type="button" class="top-product-db-actions__danger"
+                                @click.stop="confirmDelete(slotProps.data)">
+                                <Icon icon="mdi:delete-outline" />
+                                <span>Delete</span>
+                            </button>
+                        </div>
+                    </template>
+
+                    <template #loading>
+                        <div class="top-product-db-empty-state">
+                            <div class="top-product-db-empty-state__spinner" />
+                            <strong>Loading top-product records...</strong>
+                            <p>Fetching the current database slice for the selected filters.</p>
+                        </div>
+                    </template>
+
+                    <template #empty>
+                        <div class="top-product-db-empty-state">
+                            <Icon icon="mdi:database-off-outline" />
+                            <strong>No products found</strong>
+                            <p>{{ hasActiveFilters ? 'Try adjusting your filters.' : 'No data is available yet.' }}</p>
+                        </div>
+                    </template>
+                </AppDataGrid>
+            </AppPanel>
+
+            <AppDialog v-model="detailDialog" :width="isFullscreen ? '96vw' : 'min(96vw, 88rem)'"
+                :closable="false" :draggable="false" :class="{ 'top-product-db-detail-dialog--expanded': isFullscreen }">
+                <template #header>
+                    <div class="top-product-db-dialog-header">
+                        <div>
+                            <p class="top-product-db-dialog-header__eyebrow">Record Detail</p>
+                            <h2>Product Details</h2>
+                            <p>Inspect measurements, score breakdown, and record metadata before exporting or deleting.</p>
+                        </div>
+                        <div class="top-product-db-dialog-header__actions">
+                            <button type="button" class="top-product-db-icon-button"
+                                :title="isFullscreen ? 'Return to windowed dialog' : 'Expand dialog'"
+                                @click="isFullscreen = !isFullscreen">
+                                <Icon :icon="isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" />
+                            </button>
+                            <button type="button" class="top-product-db-icon-button" @click="detailDialog = false">
+                                <Icon icon="mdi:close" />
+                            </button>
+                        </div>
                     </div>
-                </v-col>
-            </v-row>
+                </template>
 
-            <!-- Statistics Cards -->
-            <v-row class="mb-4">
-                <v-col cols="12" sm="6" md="4">
-                    <v-card color="info" variant="tonal">
-                        <v-card-text>
-                            <div class="d-flex align-center">
-                                <v-avatar color="info" size="48" class="mr-3">
-                                    <v-icon color="white">mdi-folder-multiple</v-icon>
-                                </v-avatar>
-                                <div>
-                                    <div class="text-overline">Projects</div>
-                                    <div class="text-h5 font-weight-bold">
-                                        {{ statsLoading ? '...' : stats.total_projects.toLocaleString() }}
-                                    </div>
-                                </div>
-                            </div>
-                        </v-card-text>
-                    </v-card>
-                </v-col>
-                <v-col cols="12" sm="6" md="4">
-                    <v-card color="indigo" variant="tonal">
-                        <v-card-text>
-                            <div class="d-flex align-center">
-                                <v-avatar color="indigo" size="48" class="mr-3">
-                                    <v-icon color="white">mdi-identifier</v-icon>
-                                </v-avatar>
-                                <div>
-                                    <div class="text-overline">Unique ISNs</div>
-                                    <div class="text-h5 font-weight-bold">
-                                        {{ statsLoading ? '...' : stats.total_unique_isns.toLocaleString() }}
-                                    </div>
-                                </div>
-                            </div>
-                        </v-card-text>
-                    </v-card>
-                </v-col>
-                <v-col cols="12" sm="6" md="4">
-                    <v-card color="teal" variant="tonal">
-                        <v-card-text>
-                            <div class="d-flex align-center">
-                                <v-avatar color="primary" size="48" class="mr-3">
-                                    <v-icon color="white">mdi-database</v-icon>
-                                </v-avatar>
-                                <div>
-                                    <div class="text-overline">Total Analysis</div>
-                                    <div class="text-h5 font-weight-bold">
-                                        {{ statsLoading ? '...' : stats.total_products.toLocaleString() }}
-                                    </div>
-                                </div>
-                            </div>
-                        </v-card-text>
-                    </v-card>
-                </v-col>
-            </v-row>
+                <div v-if="selectedProduct" class="top-product-db-detail-stack">
+                    <section class="top-product-db-detail-hero">
+                        <article class="top-product-db-detail-hero__card top-product-db-detail-hero__card--primary">
+                            <span>DUT ISN</span>
+                            <strong>{{ selectedProduct.dut_isn }}</strong>
+                        </article>
+                        <article class="top-product-db-detail-hero__card top-product-db-detail-hero__card--cool">
+                            <span>Station</span>
+                            <strong>{{ selectedProduct.station_name }}</strong>
+                        </article>
+                    </section>
 
-            <!-- Filters Card -->
-            <v-card class="mb-4">
-                <v-card-title class="d-flex align-center">
-                    <v-icon class="mr-2">mdi-filter</v-icon>
-                    <span>Filters</span>
-                    <v-spacer />
-                    <v-btn variant="text" color="error" prepend-icon="mdi-filter-remove" @click="clearFilters"
-                        :disabled="!hasActiveFilters">
-                        Clear All
-                    </v-btn>
-                </v-card-title>
-                <v-divider />
-                <v-card-text>
-                    <v-row>
-                        <v-col cols="12" sm="6" md="4">
-                            <v-text-field v-model="filters.dut_isn" label="DUT ISN" prepend-inner-icon="mdi-chip"
-                                variant="outlined" density="compact" clearable hide-details
-                                @update:model-value="debouncedFetch" />
-                        </v-col>
-                        <v-col cols="12" sm="6" md="3">
-                            <v-autocomplete v-model="filters.projects" :items="projectOptions" label="Projects"
-                                prepend-inner-icon="mdi-folder-outline" variant="outlined" density="compact" multiple
-                                chips closable-chips clearable hide-details @update:model-value="debouncedFetch">
-                                <template #chip="{ item, props }">
-                                    <v-chip v-bind="props" size="small" closable>
-                                        {{ item.title }}
-                                    </v-chip>
-                                </template>
-                            </v-autocomplete>
-                        </v-col>
-                        <v-col cols="12" sm="6" md="3">
-                            <v-autocomplete v-model="filters.stations" :items="stationOptions" label="Stations"
-                                prepend-inner-icon="mdi-access-point" variant="outlined" density="compact" multiple
-                                chips closable-chips clearable hide-details @update:model-value="debouncedFetch">
-                                <template #chip="{ item, props }">
-                                    <v-chip v-bind="props" size="small" closable>
-                                        {{ item.title }}
-                                    </v-chip>
-                                </template>
-                                <template #item="{ item, props }">
-                                    <v-list-item v-bind="props">
-                                        <template #title>
-                                            {{ item.raw.stationName }}
-                                        </template>
-                                        <template #subtitle v-if="item.raw.project">
-                                            <v-chip size="x-small" color="info" variant="tonal">
-                                                {{ item.raw.project }}
-                                            </v-chip>
-                                        </template>
-                                    </v-list-item>
-                                </template>
-                            </v-autocomplete>
-                        </v-col>
-                        <v-col cols="12" sm="6" md="2">
-                            <v-text-field v-model.number="filters.min_score" label="Minimum Score"
-                                prepend-inner-icon="mdi-numeric" variant="outlined" density="compact" type="number"
-                                clearable hide-details @update:model-value="debouncedFetch" />
-                        </v-col>
-                    </v-row>
-                </v-card-text>
-            </v-card>
+                    <section class="top-product-db-detail-meta-grid">
+                        <article class="top-product-db-detail-meta-card">
+                            <span>Project</span>
+                            <strong>{{ selectedProduct.project_name || 'N/A' }}</strong>
+                        </article>
+                        <article class="top-product-db-detail-meta-card">
+                            <span>Device</span>
+                            <strong>{{ selectedProduct.device_name || 'N/A' }}</strong>
+                        </article>
+                        <article class="top-product-db-detail-meta-card">
+                            <span>Test Date</span>
+                            <strong>{{ formatDate(selectedProduct.test_date) }}</strong>
+                        </article>
+                        <article class="top-product-db-detail-meta-card">
+                            <span>Test Duration</span>
+                            <strong>{{ selectedProduct.test_duration ? `${selectedProduct.test_duration.toFixed(2)}s` : 'N/A' }}</strong>
+                        </article>
+                        <article class="top-product-db-detail-meta-card">
+                            <span>Analysis Date</span>
+                            <strong>{{ formatDate(selectedProduct.created_at) }}</strong>
+                        </article>
+                        <article class="top-product-db-detail-meta-card top-product-db-detail-meta-card--score">
+                            <span>Overall Score</span>
+                            <strong>{{ selectedProduct.score?.toFixed(2) || 'N/A' }}</strong>
+                            <em class="top-product-db-pill" :class="scoreToneClass(selectedProduct.score)">
+                                <Icon :icon="getScoreIcon(selectedProduct.score)" />
+                                {{ getScoreColor(selectedProduct.score).toUpperCase() }}
+                            </em>
+                        </article>
+                    </section>
 
-            <!-- Data Table Card -->
-            <v-card>
-                <v-card-title class="d-flex align-center">
-                    <v-icon class="mr-2">mdi-database</v-icon>
-                    <span>Top Products</span>
-                    <v-chip class="ml-2" size="small" color="primary" variant="tonal">
-                        {{ pagination.total.toLocaleString() }} total
-                    </v-chip>
-                    <v-chip v-if="selectedProducts.length > 0" class="ml-2" size="small" color="warning" variant="flat">
-                        {{ selectedProducts.length }} selected
-                    </v-chip>
-                    <v-spacer />
-                    <div class="d-flex align-center gap-2">
-                        <v-btn v-if="canBulkDelete && selectedProducts.length > 0" color="error" variant="tonal"
-                            prepend-icon="mdi-delete-sweep" size="small" @click="confirmBulkDelete">
-                            Delete Selected ({{ selectedProducts.length }})
-                        </v-btn>
-                        <v-select v-model="pagination.page_size" :items="pageSizeOptions" label="Items"
-                            variant="outlined" density="compact" hide-details style="max-width: 180px"
-                            @update:model-value="handlePageSizeChange">
-                            <template #selection="{ item }">
-                                <span class="text-caption">{{ item.value }} per page</span>
-                            </template>
-                        </v-select>
-                    </div>
-                </v-card-title>
-                <v-divider />
-                <v-card-text class="pa-0">
-                    <v-data-table v-model="selectedProducts" :headers="computedHeaders" :items="products"
-                        :loading="loading" :items-per-page="pagination.page_size" hide-default-footer hover
-                        :show-select="canBulkDelete" item-value="id" return-object
-                        @click:row="(_event: unknown, row: any) => viewDetail(row.item.id)"
-                        @update:sort-by="handleSort" class="cursor-pointer">
-                        <template #item.dut_isn="{ item }">
-                            <div class="d-flex align-center">
-                                <v-icon size="small" class="mr-2" color="primary">mdi-barcode</v-icon>
-                                <span class="font-weight-medium">{{ item.dut_isn }}</span>
-                            </div>
-                        </template>
-                        <template #item.project_name="{ item }">
-                            <v-chip v-if="item.project_name" size="small" variant="outlined" color="info">
-                                {{ item.project_name }}
-                            </v-chip>
-                            <span v-else class="text-medium-emphasis">—</span>
-                        </template>
-                        <template #item.station_name="{ item }">
-                            <v-chip size="small" variant="tonal" color="default">
-                                {{ item.station_name }}
-                            </v-chip>
-                        </template>
-                        <template #item.test_date="{ item }">
-                            <div v-if="item.test_date" class="text-caption">
-                                {{ formatDate(item.test_date) }}
-                            </div>
-                            <span v-else class="text-medium-emphasis">—</span>
-                        </template>
-                        <template #item.score="{ item }">
-                            <v-chip :color="getScoreColor(item.score)" size="small" variant="flat">
-                                <v-icon size="x-small" class="mr-1">
-                                    {{ getScoreIcon(item.score) }}
-                                </v-icon>
-                                {{ item.score?.toFixed(2) || '0.00' }}
-                            </v-chip>
-                        </template>
-                        <template #item.pass_count="{ item }">
-                            <v-chip size="small" color="success" variant="tonal">
-                                <v-icon size="x-small" class="mr-1">mdi-check</v-icon>
-                                {{ item.pass_count }}
-                            </v-chip>
-                        </template>
-                        <template #item.fail_count="{ item }">
-                            <v-chip size="small" :color="item.fail_count > 0 ? 'error' : 'default'" variant="tonal">
-                                <v-icon size="x-small" class="mr-1">mdi-close</v-icon>
-                                {{ item.fail_count }}
-                            </v-chip>
-                        </template>
-                        <template #item.pass_rate="{ item }">
-                            <div class="d-flex align-center">
-                                <v-progress-linear :model-value="getPassRateValue(item)"
-                                    :color="getPassRateColor(getPassRateValue(item))" height="6" rounded class="mr-2"
-                                    style="max-width: 60px" />
-                                <span class="text-caption">{{ getPassRate(item) }}%</span>
-                            </div>
-                        </template>
-                        <template #item.measurements_count="{ item }">
-                            <v-chip size="small" variant="outlined">
-                                {{ item.measurements_count || 0 }}
-                            </v-chip>
-                        </template>
-                        <template #item.actions="{ item }">
-                            <v-menu>
-                                <template #activator="{ props }">
-                                    <v-btn icon="mdi-dots-vertical" size="small" variant="text" v-bind="props" />
-                                </template>
-                                <v-list density="compact">
-                                    <v-list-item @click="viewDetail(item.id)" prepend-icon="mdi-eye">
-                                        <v-list-item-title>View Details</v-list-item-title>
-                                    </v-list-item>
-                                    <v-list-item @click="handleExport(item)" prepend-icon="mdi-download">
-                                        <v-list-item-title>Export</v-list-item-title>
-                                    </v-list-item>
-                                    <v-divider v-if="isAdmin" />
-                                    <v-list-item v-if="isAdmin" @click="confirmDelete(item)" prepend-icon="mdi-delete"
-                                        class="text-error">
-                                        <v-list-item-title>Delete</v-list-item-title>
-                                    </v-list-item>
-                                </v-list>
-                            </v-menu>
-                        </template>
-                        <template #loading>
-                            <v-skeleton-loader type="table-row@10" />
-                        </template>
-                        <template #no-data>
-                            <div class="text-center pa-8">
-                                <v-icon size="64" color="grey-lighten-1">mdi-database-off</v-icon>
-                                <p class="text-h6 mt-4 mb-2">No products found</p>
-                                <p class="text-body-2 text-medium-emphasis">
-                                    {{ hasActiveFilters ? 'Try adjusting your filters' : 'No data available' }}
-                                </p>
-                            </div>
-                        </template>
-                    </v-data-table>
-                </v-card-text>
+                    <section class="top-product-db-detail-results">
+                        <div>
+                            <p class="top-product-db-detail-results__eyebrow">Test Results</p>
+                            <h3>Execution Summary</h3>
+                        </div>
+                        <div class="top-product-db-detail-results__chips">
+                            <span class="top-product-db-pill top-product-db-pill--neutral">
+                                Total: {{ (selectedProduct.pass_count + selectedProduct.fail_count) || 0 }}
+                            </span>
+                            <span class="top-product-db-pill top-product-db-pill--success">
+                                Pass: {{ selectedProduct.pass_count || 0 }}
+                            </span>
+                            <span class="top-product-db-pill top-product-db-pill--danger">
+                                Fail: {{ selectedProduct.fail_count || 0 }}
+                            </span>
+                            <span class="top-product-db-pill top-product-db-pill--warning">
+                                Retest: {{ selectedProduct.retest_count || 0 }}
+                            </span>
+                        </div>
+                    </section>
 
-                <!-- Pagination -->
-                <v-divider />
-                <v-card-actions class="justify-center pa-4">
-                    <v-pagination v-model="pagination.page" :length="pagination.total_pages" :total-visible="7"
-                        @update:model-value="fetchProducts" rounded="circle" show-first-last-page />
-                </v-card-actions>
-            </v-card>
-
-            <!-- Detail Dialog -->
-            <v-dialog v-model="detailDialog" :max-width="isFullscreen ? undefined : '1400px'" :fullscreen="isFullscreen"
-                :transition="isFullscreen ? 'dialog-bottom-transition' : 'dialog-transition'" scrollable>
-                <v-card v-if="selectedProduct" class="d-flex flex-column"
-                    :style="{ height: isFullscreen ? '100vh' : '90vh', overflow: 'hidden' }">
-                    <div class="dialog-sticky-header flex-shrink-0"
-                        style="z-index: 10; background-color: rgb(var(--v-theme-surface));">
-                        <v-card-title class="d-flex justify-space-between align-center flex-shrink-0">
+                    <section class="top-product-db-measurements">
+                        <div class="top-product-db-measurements__header">
                             <div>
-                                <v-icon class="mr-2">mdi-table-eye</v-icon>
-                                Product Details
+                                <p class="top-product-db-detail-results__eyebrow">Measurement Breakdown</p>
+                                <h3>Measurements</h3>
                             </div>
-                            <div class="d-flex align-center">
-                                <v-btn :icon="isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
-                                    @click="isFullscreen = !isFullscreen"
-                                    :title="isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'" />
-                                <v-btn icon="mdi-close" variant="text" @click="detailDialog = false" />
+                            <div class="top-product-db-measurements__tools">
+                                <span class="top-product-db-pill top-product-db-pill--cool">
+                                    {{ filteredMeasurements.length }} of {{ selectedProduct.measurements?.length || 0 }}
+                                </span>
+                                <label class="top-product-db-search-field">
+                                    <Icon icon="mdi:magnify" />
+                                    <input v-model="measurementSearch" type="text" autocomplete="off"
+                                        placeholder="Search measurements">
+                                </label>
                             </div>
-                        </v-card-title>
-                        <!-- DUT Information Section -->
-                        <div class="flex-shrink-0">
-                            <v-card-subtitle class="pa-4 py-2">
-                                <!-- Primary Information Card -->
-                                <v-card variant="tonal" color="primary" class="mb-3">
-                                    <v-card-text class="py-3">
-                                        <v-row dense>
-                                            <v-col cols="12" md="6">
-                                                <div class="d-flex align-center">
-                                                    <v-icon size="large" class="mr-3"
-                                                        color="primary">mdi-barcode</v-icon>
-                                                    <div>
-                                                        <div class="text-caption text-medium-emphasis">DUT ISN</div>
-                                                        <div class="text-h6 font-weight-bold">
-                                                            {{ selectedProduct.dut_isn }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </v-col>
-                                            <v-col cols="12" md="6">
-                                                <div class="d-flex align-center">
-                                                    <v-icon size="large" class="mr-3"
-                                                        color="primary">mdi-factory</v-icon>
-                                                    <div>
-                                                        <div class="text-caption text-medium-emphasis">Station</div>
-                                                        <div class="text-h6 font-weight-bold">
-                                                            {{ selectedProduct.station_name }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </v-col>
-                                        </v-row>
-                                    </v-card-text>
-                                </v-card>
+                        </div>
 
-                                <!-- Device & Project Info -->
-                                <v-card variant="outlined" class="mb-3">
-                                    <v-card-text class="py-2">
-                                        <v-row dense>
-                                            <v-col cols="12" md="6">
-                                                <div class="d-flex align-center">
-                                                    <v-icon size="small" class="mr-2">mdi-folder</v-icon>
-                                                    <span class="text-body-2">
-                                                        <strong>Project:</strong>
-                                                        <span class="ml-2">{{ selectedProduct.project_name || 'N/A'
-                                                            }}</span>
-                                                    </span>
-                                                </div>
-                                            </v-col>
-                                            <v-col cols="12" md="6">
-                                                <div class="d-flex align-center">
-                                                    <v-icon size="small" class="mr-2">mdi-devices</v-icon>
-                                                    <span class="text-body-2">
-                                                        <strong>Device:</strong>
-                                                        <span class="ml-2">{{ selectedProduct.device_name || 'N/A'
-                                                            }}</span>
-                                                    </span>
-                                                </div>
-                                            </v-col>
-                                        </v-row>
-                                    </v-card-text>
-                                </v-card>
+                        <AppDataGrid :columns="measurementGridColumns" :rows="filteredMeasurements" dataKey="test_item"
+                            paginator :rowsPerPage="10" :rowsPerPageOptions="[10, 25, 50, 100]"
+                            :tableStyle="{ minWidth: '100%' }" scrollHeight="34rem">
+                            <template #cell-test_item="slotProps">
+                                <span class="top-product-db-measurement-name">{{ slotProps.data.test_item }}</span>
+                            </template>
 
-                                <!-- Score & Timing Row -->
-                                <v-row dense class="mb-2">
-                                    <v-col cols="12" sm="6" md="3">
-                                        <v-card variant="outlined" class="h-100">
-                                            <v-card-text class="py-2">
-                                                <div class="d-flex align-center">
-                                                    <v-icon size="small" class="mr-2">mdi-calendar-clock</v-icon>
-                                                    <div class="text-body-2">
-                                                        <div><strong>Test Date</strong></div>
-                                                        <div class="text-caption">
-                                                            {{ formatDate(selectedProduct.test_date) }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </v-card-text>
-                                        </v-card>
-                                    </v-col>
-                                    <v-col cols="12" sm="6" md="3">
-                                        <v-card variant="outlined" class="h-100">
-                                            <v-card-text class="py-2">
-                                                <div class="d-flex align-center">
-                                                    <v-icon size="small" class="mr-2">mdi-timer</v-icon>
-                                                    <div class="text-body-2">
-                                                        <div><strong>Test Duration</strong></div>
-                                                        <div class="text-body-2 font-weight-medium">
-                                                            {{ selectedProduct.test_duration ?
-                                                                `${selectedProduct.test_duration.toFixed(2)}s` : 'N/A' }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </v-card-text>
-                                        </v-card>
-                                    </v-col>
-                                    <v-col cols="12" sm="6" md="3">
-                                        <v-card variant="outlined" class="h-100">
-                                            <v-card-text class="py-2">
-                                                <div class="d-flex align-center">
-                                                    <v-icon size="small" class="mr-2">mdi-database-clock</v-icon>
-                                                    <div class="text-body-2">
-                                                        <div><strong>Analysis Date</strong></div>
-                                                        <div class="text-caption">
-                                                            {{ formatDate(selectedProduct.created_at) }}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </v-card-text>
-                                        </v-card>
-                                    </v-col>
-                                    <v-col cols="12" sm="6" md="3">
-                                        <v-card variant="outlined" :color="getScoreColor(selectedProduct.score)"
-                                            class="h-100">
-                                            <v-card-text class="py-2">
-                                                <div class="d-flex align-center">
-                                                    <v-icon size="small" class="mr-2">mdi-star</v-icon>
-                                                    <div class="text-body-2">
-                                                        <div><strong>Overall Score</strong></div>
-                                                        <div>
-                                                            <v-chip :color="getScoreColor(selectedProduct.score)"
-                                                                size="small">
-                                                                {{ selectedProduct.score?.toFixed(2) }}
-                                                            </v-chip>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </v-card-text>
-                                        </v-card>
-                                    </v-col>
-                                </v-row>
+                            <template #cell-pass_status="slotProps">
+                                <span class="top-product-db-status-pill"
+                                    :class="isWithinLimits(slotProps.data) ? 'top-product-db-status-pill--success' : 'top-product-db-status-pill--danger'">
+                                    <Icon :icon="isWithinLimits(slotProps.data) ? 'mdi:check-circle' : 'mdi:alert-circle'" />
+                                    {{ isWithinLimits(slotProps.data) ? 'Pass' : 'Fail' }}
+                                </span>
+                            </template>
 
-                                <!-- Test Results Summary -->
-                                <v-row dense class="mb-2">
-                                    <v-col cols="12" md="12">
-                                        <v-card variant="outlined" class="h-100">
-                                            <v-card-text class="py-2">
-                                                <div class="d-flex align-center justify-space-between">
-                                                    <div class="d-flex align-center">
-                                                        <v-icon size="small" class="mr-2">mdi-check-circle</v-icon>
-                                                        <strong>Test Results:</strong>
-                                                        <v-chip size="x-small" color="primary"
-                                                            class="font-weight-bold mx-1">
-                                                            Total: {{ (selectedProduct.pass_count +
-                                                            selectedProduct.fail_count) || 0
-                                                            }}
-                                                        </v-chip>
-                                                    </div>
-                                                    <div class="d-flex align-center gap-2">
-                                                        <v-chip size="x-small" color="success" class="font-weight-bold">
-                                                            Pass: {{ selectedProduct.pass_count || 0 }}
-                                                        </v-chip>
-                                                        <v-chip size="x-small" color="error" class="font-weight-bold">
-                                                            Fail: {{ selectedProduct.fail_count || 0 }}
-                                                        </v-chip>
-                                                        <v-chip size="x-small" color="orange-darken-1"
-                                                            class="font-weight-bold">
-                                                            Retest: {{ selectedProduct.retest_count || 0 }}
-                                                        </v-chip>
-                                                    </div>
-                                                </div>
-                                            </v-card-text>
-                                        </v-card>
-                                    </v-col>
-                                </v-row>
-                            </v-card-subtitle>
+                            <template #cell-actual_value="slotProps">
+                                <span :class="isWithinLimits(slotProps.data) ? 'top-product-db-value--success' : 'top-product-db-value--danger'">
+                                    {{ slotProps.data.actual_value !== null && slotProps.data.actual_value !== undefined ? slotProps.data.actual_value : '—' }}
+                                </span>
+                            </template>
+
+                            <template #cell-deviation="slotProps">
+                                <span v-if="slotProps.data.deviation !== null">{{ slotProps.data.deviation.toFixed(2) }}</span>
+                                <span v-else class="top-product-db-muted">—</span>
+                            </template>
+                        </AppDataGrid>
+                    </section>
+                </div>
+            </AppDialog>
+
+            <AppDialog v-model="deleteDialog" title="Confirm Delete"
+                description="Delete a single top-product record and all of its persisted measurements." width="min(92vw, 34rem)"
+                persistent :closable="false">
+                <div class="top-product-db-confirm-stack">
+                    <section class="top-product-db-confirm-card top-product-db-confirm-card--danger">
+                        <div><strong>ISN</strong><span>{{ productToDelete?.dut_isn || 'N/A' }}</span></div>
+                        <div><strong>Project</strong><span>{{ productToDelete?.project_name || 'N/A' }}</span></div>
+                        <div><strong>Station</strong><span>{{ productToDelete?.station_name || 'N/A' }}</span></div>
+                        <div><strong>Score</strong><span>{{ productToDelete?.score?.toFixed(2) || 'N/A' }}</span></div>
+                    </section>
+
+                    <div class="top-product-db-notice top-product-db-notice--warning">
+                        <div>
+                            <strong>This action cannot be undone</strong>
+                            <p>Confirm only if this record and its measurements should be permanently removed.</p>
                         </div>
                     </div>
 
-                    <v-divider />
-                    <v-card-text class="flex-grow-1 overflow-y-auto pa-4">
-                        <!-- Measurements -->
-                        <div class="d-flex align-center justify-space-between mb-3">
-                            <h3 class="text-h6">
-                                <v-icon class="mr-2">mdi-gauge</v-icon>
-                                Measurements
-                                <v-chip class="ml-2" size="small" color="primary" variant="tonal">
-                                    {{ filteredMeasurements.length }} of {{ selectedProduct.measurements?.length || 0 }}
-                                </v-chip>
-                            </h3>
-                            <v-text-field v-model="measurementSearch" label="Search measurements"
-                                prepend-inner-icon="mdi-magnify" variant="outlined" density="compact" clearable
-                                hide-details style="max-width: 300px" />
-                        </div>
-                        <v-data-table :headers="measurementHeaders" :items="filteredMeasurements" :items-per-page="10"
-                            :items-per-page-options="[10, 25, 50, 100]" density="compact"
-                            :class="{ 'sticky-table-header': isFullscreen }">
-                            <template #item.test_item="{ item }">
-                                <span class="font-weight-medium">{{ item.test_item }}</span>
-                            </template>
-                            <template #item.pass_status="{ item }">
-                                <v-icon :color="isWithinLimits(item) ? 'success' : 'error'" size="small">
-                                    {{ isWithinLimits(item) ? 'mdi-check-circle' : 'mdi-alert-circle' }}
-                                </v-icon>
-                            </template>
-                            <template #item.actual_value="{ item }">
-                                <span :class="isWithinLimits(item) ? 'text-success' : 'text-error'">
-                                    {{ item.actual_value !== null && item.actual_value !== undefined ? item.actual_value
-                                    : '—' }}
-                                </span>
-                            </template>
-                            <template #item.deviation="{ item }">
-                                <span v-if="item.deviation !== null">
-                                    {{ item.deviation.toFixed(2) }}
-                                </span>
-                                <span v-else class="text-medium-emphasis">—</span>
-                            </template>
-                        </v-data-table>
-                    </v-card-text>
-                </v-card>
-            </v-dialog>
+                    <label class="top-product-db-field">
+                        <span>Type DELETE to confirm</span>
+                        <input v-model="deleteConfirmation" type="text" autocomplete="off" placeholder="DELETE"
+                            autofocus @keyup.enter="handleDelete">
+                    </label>
+                </div>
 
-            <!-- Delete Confirmation Dialog -->
-            <v-dialog v-model="deleteDialog" max-width="500px" persistent>
-                <v-card>
-                    <v-card-title class="text-h5 bg-error text-white">
-                        <v-icon start>mdi-alert</v-icon>
-                        Confirm Delete
-                    </v-card-title>
-                    <v-card-text class="pt-4">
-                        <div class="mb-4">
-                            <p class="text-body-1 mb-2">
-                                You are about to delete this top product record:
-                            </p>
-                            <v-card variant="outlined" class="mb-4">
-                                <v-card-text>
-                                    <div><strong>ISN:</strong> {{ productToDelete?.dut_isn || 'N/A' }}</div>
-                                    <div><strong>Project:</strong> {{ productToDelete?.project_name || 'N/A' }}</div>
-                                    <div><strong>Station:</strong> {{ productToDelete?.station_name || 'N/A' }}</div>
-                                    <div><strong>Score:</strong> {{ productToDelete?.score?.toFixed(2) || 'N/A' }}
-                                    </div>
-                                </v-card-text>
-                            </v-card>
-                            <v-alert type="warning" variant="tonal" color="orange-darken-1" class="mb-4">
-                                This action cannot be undone. Please make sure you have selected the correct data to
-                                delete.
-                            </v-alert>
-                        </div>
-                        <div>
-                            <p class="text-body-2 mb-2">
-                                Type <strong>DELETE</strong> to confirm:
-                            </p>
-                            <v-text-field v-model="deleteConfirmation" placeholder="DELETE" variant="outlined"
-                                density="comfortable" hide-details autofocus @keyup.enter="handleDelete" />
-                        </div>
-                    </v-card-text>
-                    <v-card-actions>
-                        <v-spacer />
-                        <v-btn color="default" variant="tonal" @click="cancelDelete" :disabled="deleting">
+                <template #footer>
+                    <div class="top-product-db-dialog-footer">
+                        <button type="button" class="top-product-db-button top-product-db-button--ghost"
+                            :disabled="deleting" @click="cancelDelete">
                             Cancel
-                        </v-btn>
-                        <v-btn color="error" variant="flat" @click="handleDelete"
-                            :disabled="deleteConfirmation !== 'DELETE' || deleting" :loading="deleting">
-                            Delete Data
-                        </v-btn>
-                    </v-card-actions>
-                </v-card>
-            </v-dialog>
+                        </button>
+                        <button type="button" class="top-product-db-button top-product-db-button--danger"
+                            :disabled="deleteConfirmation !== 'DELETE' || deleting" @click="handleDelete">
+                            <Icon v-if="deleting" icon="mdi:loading" class="top-product-db-spin" />
+                            <span>{{ deleting ? 'Deleting...' : 'Delete Data' }}</span>
+                        </button>
+                    </div>
+                </template>
+            </AppDialog>
 
-            <!-- Bulk Delete Confirmation Dialog -->
-            <v-dialog v-model="bulkDeleteDialog" max-width="600px" persistent>
-                <v-card>
-                    <v-card-title class="text-h5 bg-error text-white">
-                        <v-icon start>mdi-delete-sweep</v-icon>
-                        Confirm Bulk Delete
-                    </v-card-title>
-                    <v-card-text class="pt-4">
-                        <div class="mb-4">
-                            <p class="text-body-1 mb-2">
-                                You are about to delete <strong>{{ selectedProducts.length }}</strong> top product
-                                record(s):
-                            </p>
-                            <v-card variant="outlined" class="mb-4" style="max-height: 200px; overflow-y: auto">
-                                <v-list density="compact">
-                                    <v-list-item v-for="product in selectedProducts" :key="product.id">
-                                        <template #prepend>
-                                            <v-icon size="small" color="error">mdi-circle-small</v-icon>
-                                        </template>
-                                        <v-list-item-title class="text-body-2">
-                                            {{ product.dut_isn }} — {{ product.station_name }}
-                                            <v-chip v-if="product.project_name" size="x-small" color="info"
-                                                variant="tonal" class="ml-1">
-                                                {{ product.project_name }}
-                                            </v-chip>
-                                        </v-list-item-title>
-                                    </v-list-item>
-                                </v-list>
-                            </v-card>
-                            <v-alert type="warning" variant="tonal" color="orange-darken-1" class="mb-4">
-                                This action cannot be undone. All selected records and their measurements will be
-                                permanently deleted.
-                            </v-alert>
-                        </div>
+            <AppDialog v-model="bulkDeleteDialog" title="Confirm Bulk Delete"
+                description="Delete the current selection of top-product records in one action." width="min(92vw, 40rem)"
+                persistent :closable="false">
+                <div class="top-product-db-confirm-stack">
+                    <p class="top-product-db-dialog-copy">
+                        You are about to delete <strong>{{ selectedProducts.length }}</strong> top-product record(s).
+                    </p>
+
+                    <section class="top-product-db-confirm-card top-product-db-confirm-card--list">
+                        <ul class="top-product-db-selection-list">
+                            <li v-for="product in selectedProducts" :key="product.id">
+                                <div>
+                                    <strong>{{ product.dut_isn }}</strong>
+                                    <span>{{ product.station_name }}</span>
+                                </div>
+                                <span v-if="product.project_name" class="top-product-db-pill top-product-db-pill--cool">
+                                    {{ product.project_name }}
+                                </span>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <div class="top-product-db-notice top-product-db-notice--warning">
                         <div>
-                            <p class="text-body-2 mb-2">
-                                Type <strong>DELETE</strong> to confirm:
-                            </p>
-                            <v-text-field v-model="bulkDeleteConfirmation" placeholder="DELETE" variant="outlined"
-                                density="comfortable" hide-details autofocus @keyup.enter="handleBulkDelete" />
+                            <strong>This bulk delete is permanent</strong>
+                            <p>Every selected record and its measurements will be removed immediately.</p>
                         </div>
-                    </v-card-text>
-                    <v-card-actions>
-                        <v-spacer />
-                        <v-btn color="default" variant="tonal" @click="cancelBulkDelete" :disabled="bulkDeleting">
-                            Cancel
-                        </v-btn>
-                        <v-btn color="error" variant="flat" @click="handleBulkDelete"
-                            :disabled="bulkDeleteConfirmation !== 'DELETE' || bulkDeleting" :loading="bulkDeleting">
-                            Delete {{ selectedProducts.length }} Record(s)
-                        </v-btn>
-                    </v-card-actions>
-                </v-card>
-            </v-dialog>
+                    </div>
 
-            <!-- Export Dialog -->
-            <v-dialog v-model="exportDialog" max-width="500px">
-                <v-card>
-                    <v-card-title class="text-h5 bg-primary text-white">
-                        <v-icon start>mdi-download</v-icon>
-                        Export Product Data
-                    </v-card-title>
-                    <v-card-text>
-                        <div class="mb-2">
-                            <p class="text-body-1 mb-2">
-                                Export data for product:
-                            </p>
-                            <v-card variant="outlined" class="mb-4">
-                                <v-card-text>
-                                    <div><strong>ISN:</strong> {{ productToExport?.dut_isn || 'N/A' }}</div>
-                                    <div><strong>Project:</strong> {{ productToExport?.project_name || 'N/A' }}</div>
-                                    <div><strong>Station:</strong> {{ productToExport?.station_name || 'N/A' }}</div>
-                                </v-card-text>
-                            </v-card>
-                        </div>
-                        <div class="d-flex flex-column gap-2">
-                            <v-btn color="success" prepend-icon="mdi-file-excel" variant="tonal"
-                                @click="exportProduct('excel')" :loading="exporting" size="large">
-                                Export
-                            </v-btn>
-                            <v-btn color="error" prepend-icon="mdi-file-pdf-box" variant="tonal"
-                                @click="exportProduct('pdf')" :loading="exporting" size="large">
-                                Export to PDF
-                            </v-btn>
-                            <v-btn color="info" prepend-icon="mdi-content-copy" variant="tonal"
-                                @click="exportProduct('clipboard')" :loading="exporting" size="large">
-                                Copy to Clipboard
-                            </v-btn>
-                        </div>
-                    </v-card-text>
-                    <v-card-actions class="pt-2">
-                        <v-spacer />
-                        <v-btn color="default" variant="tonal" @click="exportDialog = false" :disabled="exporting">
+                    <label class="top-product-db-field">
+                        <span>Type DELETE to confirm</span>
+                        <input v-model="bulkDeleteConfirmation" type="text" autocomplete="off" placeholder="DELETE"
+                            autofocus @keyup.enter="handleBulkDelete">
+                    </label>
+                </div>
+
+                <template #footer>
+                    <div class="top-product-db-dialog-footer">
+                        <button type="button" class="top-product-db-button top-product-db-button--ghost"
+                            :disabled="bulkDeleting" @click="cancelBulkDelete">
+                            Cancel
+                        </button>
+                        <button type="button" class="top-product-db-button top-product-db-button--danger"
+                            :disabled="bulkDeleteConfirmation !== 'DELETE' || bulkDeleting" @click="handleBulkDelete">
+                            <Icon v-if="bulkDeleting" icon="mdi:loading" class="top-product-db-spin" />
+                            <span>{{ bulkDeleting ? 'Deleting...' : `Delete ${selectedProducts.length} Record(s)` }}</span>
+                        </button>
+                    </div>
+                </template>
+            </AppDialog>
+
+            <AppDialog v-model="exportDialog" title="Export Product Data"
+                description="Export the selected product record into a portable report or clipboard snapshot." width="min(92vw, 34rem)">
+                <div class="top-product-db-confirm-stack">
+                    <section class="top-product-db-confirm-card top-product-db-confirm-card--export">
+                        <div><strong>ISN</strong><span>{{ productToExport?.dut_isn || 'N/A' }}</span></div>
+                        <div><strong>Project</strong><span>{{ productToExport?.project_name || 'N/A' }}</span></div>
+                        <div><strong>Station</strong><span>{{ productToExport?.station_name || 'N/A' }}</span></div>
+                    </section>
+
+                    <div class="top-product-db-export-actions">
+                        <button type="button" class="top-product-db-export-button top-product-db-export-button--success"
+                            :disabled="exporting" @click="exportProduct('excel')">
+                            <Icon :icon="exporting ? 'mdi:loading' : 'mdi:file-excel-box'" :class="{ 'top-product-db-spin': exporting }" />
+                            <span>Export to Excel</span>
+                        </button>
+                        <button type="button" class="top-product-db-export-button top-product-db-export-button--danger"
+                            :disabled="exporting" @click="exportProduct('pdf')">
+                            <Icon :icon="exporting ? 'mdi:loading' : 'mdi:file-pdf-box'" :class="{ 'top-product-db-spin': exporting }" />
+                            <span>Export to PDF</span>
+                        </button>
+                        <button type="button" class="top-product-db-export-button top-product-db-export-button--cool"
+                            :disabled="exporting" @click="exportProduct('clipboard')">
+                            <Icon :icon="exporting ? 'mdi:loading' : 'mdi:content-copy'" :class="{ 'top-product-db-spin': exporting }" />
+                            <span>Copy to Clipboard</span>
+                        </button>
+                    </div>
+                </div>
+
+                <template #footer>
+                    <div class="top-product-db-dialog-footer">
+                        <button type="button" class="top-product-db-button top-product-db-button--ghost"
+                            :disabled="exporting" @click="exportDialog = false">
                             Close
-                        </v-btn>
-                    </v-card-actions>
-                </v-card>
-            </v-dialog>
-        </v-container>
+                        </button>
+                    </div>
+                </template>
+            </AppDialog>
+        </div>
     </DefaultLayout>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { formatDateTimeCompact } from '@/core/utils/dateTime'
-import { useAuthStore } from '@/features/auth/stores'
+import { useAuthStore } from '@/features/auth/stores/auth.store'
+import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
+import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
+import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import { getApiErrorDetail } from '@/shared/utils'
 import {
-  bulkDeleteTopProducts,
-  deleteTopProduct,
-  getTopProductDetail,
-  getTopProductsList,
-  getTopProductsStats,
-  getUniqueProjects,
-  getUniqueStations,
-  type TopProductDetail,
-  type TopProductItem,
-  type TopProductListParams,
-  type TopProductMeasurement,
-  type TopProductStats,
+    bulkDeleteTopProducts,
+    deleteTopProduct,
+    getTopProductDetail,
+    getTopProductsList,
+    getTopProductsStats,
+    getUniqueProjects,
+    getUniqueStations,
+    type TopProductDetail,
+    type TopProductItem,
+    type TopProductListParams,
+    type TopProductMeasurement,
+    type TopProductStats,
 } from '../api/topProducts.api'
 import { useTopProductExport } from '../composables/useTopProductExport'
 
@@ -676,16 +547,16 @@ const loading = ref(false)
 const statsLoading = ref(false)
 const products = ref<TopProductItem[]>([])
 const stats = ref<TopProductStats>({
-  total_products: 0,
-  total_unique_isns: 0,
-  total_projects: 0,
-  avg_score: null,
-  max_score: null,
-  min_score: null,
-  total_pass: 0,
-  total_fail: 0,
-  recent_products_24h: 0,
-  recent_products_7d: 0,
+    total_products: 0,
+    total_unique_isns: 0,
+    total_projects: 0,
+    avg_score: null,
+    max_score: null,
+    min_score: null,
+    total_pass: 0,
+    total_fail: 0,
+    recent_products_24h: 0,
+    recent_products_7d: 0,
 })
 const selectedProduct = ref<TopProductDetail | null>(null)
 const detailDialog = ref(false)
@@ -712,23 +583,23 @@ const bulkDeleting = ref(false)
 // Filter options
 const projectOptions = ref<{ title: string; value: string }[]>([])
 const stationOptions = ref<
-  { title: string; value: string; stationName: string; project: string | null }[]
+    { title: string; value: string; stationName: string; project: string | null }[]
 >([])
 
 const pagination = ref({
-  page: 1,
-  page_size: 20,
-  total: 0,
-  total_pages: 0,
+    page: 1,
+    page_size: 20,
+    total: 0,
+    total_pages: 0,
 })
 
 const filters = ref<TopProductListParams>({
-  dut_isn: undefined,
-  projects: [],
-  stations: [],
-  min_score: undefined,
-  sort_by: 'created_at',
-  sort_desc: true,
+    dut_isn: undefined,
+    projects: [],
+    stations: [],
+    min_score: undefined,
+    sort_by: 'created_at',
+    sort_desc: true,
 })
 
 const pageSizeOptions = [10, 20, 50, 100]
@@ -741,413 +612,1161 @@ const isAdmin = computed(() => authStore.user?.is_admin || false)
  * Only available to superadmin and developer roles, or users with explicit delete permission.
  */
 const canBulkDelete = computed(() => {
-  return authStore.isSuperAdmin || authStore.hasMenuPermission('top_product_database', 'delete')
+    return authStore.isSuperAdmin || authStore.hasMenuPermission('top_product_database', 'delete')
 })
 
 /**
  * Dynamic headers — same base headers for all users.
  */
-const computedHeaders = computed(() => headers)
+const gridSortOrder = computed(() => (filters.value.sort_desc ? -1 : 1))
 
 const hasActiveFilters = computed(() => {
-  return !!(
-    filters.value.dut_isn ||
-    (filters.value.projects && filters.value.projects.length > 0) ||
-    (filters.value.stations && filters.value.stations.length > 0) ||
-    filters.value.min_score
-  )
+    return !!(
+        filters.value.dut_isn ||
+        (filters.value.projects && filters.value.projects.length > 0) ||
+        (filters.value.stations && filters.value.stations.length > 0) ||
+        filters.value.min_score
+    )
 })
 
 const filteredMeasurements = computed(() => {
-  if (!selectedProduct.value?.measurements) return []
-  if (!measurementSearch.value) return selectedProduct.value.measurements
+    if (!selectedProduct.value?.measurements) return []
+    if (!measurementSearch.value) return selectedProduct.value.measurements
 
-  const search = measurementSearch.value.toLowerCase()
-  return selectedProduct.value.measurements.filter((m) =>
-    m.test_item.toLowerCase().includes(search),
-  )
+    const search = measurementSearch.value.toLowerCase()
+    return selectedProduct.value.measurements.filter((m) =>
+        m.test_item.toLowerCase().includes(search),
+    )
 })
 
 // ===== Table Headers =====
-const headers = [
-  { title: 'DUT ISN', key: 'dut_isn', sortable: true, width: '140px' },
-  { title: 'Project', key: 'project_name', sortable: true },
-  { title: 'Station', key: 'station_name', sortable: true },
-  { title: 'Score', key: 'score', sortable: true, align: 'center' as const },
-  { title: 'Passed', key: 'pass_count', sortable: true, align: 'center' as const },
-  { title: 'Failed', key: 'fail_count', sortable: true, align: 'center' as const },
-  { title: 'Pass Rate', key: 'pass_rate', sortable: false, align: 'center' as const },
-  { title: 'Test Date', key: 'test_date', sortable: true },
-  { title: 'Measurements', key: 'measurements_count', sortable: false, align: 'center' as const },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const, width: '120px' },
+const gridColumns = [
+    { key: 'dut_isn', field: 'dut_isn', header: 'DUT ISN', sortable: true, style: { minWidth: '12rem' } },
+    { key: 'project_name', field: 'project_name', header: 'Project', sortable: true, style: { minWidth: '10rem' } },
+    { key: 'station_name', field: 'station_name', header: 'Station', sortable: true, style: { minWidth: '10rem' } },
+    { key: 'score', field: 'score', header: 'Score', sortable: true, style: { minWidth: '8rem' } },
+    { key: 'pass_count', field: 'pass_count', header: 'Passed', sortable: true, style: { minWidth: '7rem' } },
+    { key: 'fail_count', field: 'fail_count', header: 'Failed', sortable: true, style: { minWidth: '7rem' } },
+    { key: 'pass_rate', header: 'Pass Rate', sortable: false, style: { minWidth: '10rem' } },
+    { key: 'test_date', field: 'test_date', header: 'Test Date', sortable: true, style: { minWidth: '11rem' } },
+    { key: 'measurements_count', field: 'measurements_count', header: 'Measurements', sortable: false, style: { minWidth: '10rem' } },
+    { key: 'actions', header: 'Actions', sortable: false, style: { minWidth: '14rem' } },
 ]
 
-const measurementHeaders = [
-  { title: 'Test Item', key: 'test_item' },
-  { title: 'Status', key: 'pass_status', align: 'center' as const },
-  { title: 'USL', key: 'usl', align: 'end' as const },
-  { title: 'LSL', key: 'lsl', align: 'end' as const },
-  { title: 'Target', key: 'target_value', align: 'end' as const },
-  { title: 'Actual', key: 'actual_value', align: 'end' as const },
-  { title: 'Deviation', key: 'deviation', align: 'end' as const },
+const measurementGridColumns = [
+    { key: 'test_item', field: 'test_item', header: 'Test Item', sortable: true, style: { minWidth: '16rem' } },
+    { key: 'pass_status', header: 'Status', sortable: false, style: { minWidth: '9rem' } },
+    { key: 'usl', field: 'usl', header: 'USL', sortable: true, style: { minWidth: '8rem' } },
+    { key: 'lsl', field: 'lsl', header: 'LSL', sortable: true, style: { minWidth: '8rem' } },
+    { key: 'target_value', field: 'target_value', header: 'Target', sortable: true, style: { minWidth: '8rem' } },
+    { key: 'actual_value', field: 'actual_value', header: 'Actual', sortable: true, style: { minWidth: '8rem' } },
+    { key: 'deviation', field: 'deviation', header: 'Deviation', sortable: true, style: { minWidth: '8rem' } },
 ]
 
 // ===== Methods =====
 async function fetchProducts() {
-  loading.value = true
-  try {
-    const params: TopProductListParams = {
-      page: pagination.value.page,
-      page_size: pagination.value.page_size,
-      ...filters.value,
+    loading.value = true
+    try {
+        const params: TopProductListParams = {
+            page: pagination.value.page,
+            page_size: pagination.value.page_size,
+            ...filters.value,
+        }
+
+        console.log('🔍 Fetching products with params:', params)
+        console.log('  - Projects filter:', filters.value.projects)
+        console.log('  - Stations filter:', filters.value.stations)
+
+        const response = await getTopProductsList(params)
+
+        console.log('✅ Received products:', response.top_products.length, 'total:', response.total)
+
+        products.value = response.top_products
+        pagination.value.total = response.total
+        pagination.value.total_pages = response.total_pages
+        // Clear selection when data changes
+        selectedProducts.value = []
+    } catch (error) {
+        console.error('❌ Failed to fetch products:', error)
+    } finally {
+        loading.value = false
     }
-
-    console.log('🔍 Fetching products with params:', params)
-    console.log('  - Projects filter:', filters.value.projects)
-    console.log('  - Stations filter:', filters.value.stations)
-
-    const response = await getTopProductsList(params)
-
-    console.log('✅ Received products:', response.top_products.length, 'total:', response.total)
-
-    products.value = response.top_products
-    pagination.value.total = response.total
-    pagination.value.total_pages = response.total_pages
-    // Clear selection when data changes
-    selectedProducts.value = []
-  } catch (error) {
-    console.error('❌ Failed to fetch products:', error)
-  } finally {
-    loading.value = false
-  }
 }
 
 async function fetchStats() {
-  statsLoading.value = true
-  try {
-    const result = await getTopProductsStats()
-    stats.value = result
-  } catch (error) {
-    console.error('Failed to fetch stats:', error)
-    // Stats already has default values from initialization
-  } finally {
-    statsLoading.value = false
-  }
+    statsLoading.value = true
+    try {
+        const result = await getTopProductsStats()
+        stats.value = result
+    } catch (error) {
+        console.error('Failed to fetch stats:', error)
+        // Stats already has default values from initialization
+    } finally {
+        statsLoading.value = false
+    }
 }
 
 async function viewDetail(productId: number) {
-  try {
-    selectedProduct.value = await getTopProductDetail(productId)
-    measurementSearch.value = '' // Reset search when opening dialog
-    detailDialog.value = true
-  } catch (error) {
-    console.error('Failed to fetch product detail:', error)
-  }
+    try {
+        selectedProduct.value = await getTopProductDetail(productId)
+        measurementSearch.value = '' // Reset search when opening dialog
+        detailDialog.value = true
+    } catch (error) {
+        console.error('Failed to fetch product detail:', error)
+    }
 }
 
 async function loadFilterOptions() {
-  try {
-    // Load projects
-    const projects = await getUniqueProjects()
-    projectOptions.value = projects.map((p) => ({
-      title: p.label,
-      value: p.value,
-    }))
+    try {
+        // Load projects
+        const projects = await getUniqueProjects()
+        projectOptions.value = projects.map((p) => ({
+            title: p.label,
+            value: p.value,
+        }))
 
-    // Load stations
-    const stations = await getUniqueStations()
-    stationOptions.value = stations.map((s) => ({
-      title: s.label,
-      value: s.value,
-      stationName: s.value,
-      project: s.project,
-    }))
-  } catch (error) {
-    console.error('Failed to load filter options:', error)
-  }
+        // Load stations
+        const stations = await getUniqueStations()
+        stationOptions.value = stations.map((s) => ({
+            title: s.label,
+            value: s.value,
+            stationName: s.value,
+            project: s.project,
+        }))
+    } catch (error) {
+        console.error('Failed to load filter options:', error)
+    }
 }
 
 function clearFilters() {
-  filters.value = {
-    dut_isn: undefined,
-    projects: [],
-    stations: [],
-    min_score: undefined,
-    sort_by: 'created_at',
-    sort_desc: true,
-  }
-  pagination.value.page = 1
-  fetchProducts()
+    filters.value = {
+        dut_isn: undefined,
+        projects: [],
+        stations: [],
+        min_score: undefined,
+        sort_by: 'created_at',
+        sort_desc: true,
+    }
+    pagination.value.page = 1
+    fetchProducts()
 }
 
 function refreshData() {
-  fetchStats()
-  fetchProducts()
-  loadFilterOptions()
+    fetchStats()
+    fetchProducts()
+    loadFilterOptions()
 }
 
 function handlePageSizeChange() {
-  pagination.value.page = 1
-  fetchProducts()
+    pagination.value.page = 1
+    fetchProducts()
+}
+
+function handleGridPage(event: unknown) {
+    const pageEvent = event as { page?: number; rows?: number } | null
+    if (!pageEvent) {
+        return
+    }
+
+    pagination.value.page = (pageEvent.page ?? 0) + 1
+    if (pageEvent.rows && pageEvent.rows !== pagination.value.page_size) {
+        pagination.value.page_size = pageEvent.rows
+    }
+    fetchProducts()
 }
 
 // Debounce helper
 let debounceTimer: number | undefined
 function debouncedFetch() {
-  clearTimeout(debounceTimer)
-  debounceTimer = setTimeout(() => {
-    pagination.value.page = 1
-    fetchProducts()
-  }, 500) as unknown as number
+    clearTimeout(debounceTimer)
+    debounceTimer = setTimeout(() => {
+        pagination.value.page = 1
+        fetchProducts()
+    }, 500) as unknown as number
 }
 
 // ===== Computed & Helpers =====
 function formatDate(dateString: string | null): string {
-  // Convert UTC to user's local timezone
-  return formatDateTimeCompact(dateString)
+    // Convert UTC to user's local timezone
+    return formatDateTimeCompact(dateString)
 }
 
 function getPassRate(item: TopProductItem): string {
-  const total = item.pass_count + item.fail_count
-  if (total === 0) return '0.00'
-  return ((item.pass_count / total) * 100).toFixed(2)
+    const total = item.pass_count + item.fail_count
+    if (total === 0) return '0.00'
+    return ((item.pass_count / total) * 100).toFixed(2)
 }
 
 function getPassRateValue(item: TopProductItem): number {
-  const total = item.pass_count + item.fail_count
-  if (total === 0) return 0
-  return (item.pass_count / total) * 100
+    const total = item.pass_count + item.fail_count
+    if (total === 0) return 0
+    return (item.pass_count / total) * 100
 }
 
 function getPassRateColor(passRate: number): string {
-  if (passRate >= 95) return 'success'
-  if (passRate >= 80) return 'warning'
-  return 'error'
+    if (passRate >= 95) return 'success'
+    if (passRate >= 80) return 'warning'
+    return 'error'
+}
+
+function passRateToneClass(passRate: number): string {
+    if (passRate >= 95) return 'top-product-db-progress__value--success'
+    if (passRate >= 80) return 'top-product-db-progress__value--warning'
+    return 'top-product-db-progress__value--danger'
 }
 
 function getScoreColor(score: number | null | undefined): string {
-  if (!score) return 'error'
-  if (score >= 8) return 'success'
-  if (score >= 6) return 'warning'
-  return 'error'
+    if (!score) return 'error'
+    if (score >= 8) return 'success'
+    if (score >= 6) return 'warning'
+    return 'error'
 }
 
 function getScoreIcon(score: number | null | undefined): string {
-  if (!score) return 'mdi-alert-circle'
-  if (score >= 8) return 'mdi-check-circle'
-  if (score >= 6) return 'mdi-alert'
-  return 'mdi-close-circle'
+    if (!score) return 'mdi-alert-circle'
+    if (score >= 8) return 'mdi-check-circle'
+    if (score >= 6) return 'mdi-alert'
+    return 'mdi-close-circle'
+}
+
+function scoreToneClass(score: number | null | undefined): string {
+    if (!score) return 'top-product-db-pill--danger'
+    if (score >= 8) return 'top-product-db-pill--success'
+    if (score >= 6) return 'top-product-db-pill--warning'
+    return 'top-product-db-pill--danger'
 }
 
 function isWithinLimits(measurement: TopProductMeasurement): boolean {
-  if (measurement.actual_value === null) return false
-  const withinLSL = measurement.lsl === null || measurement.actual_value >= measurement.lsl
-  const withinUSL = measurement.usl === null || measurement.actual_value <= measurement.usl
-  return withinLSL && withinUSL
+    if (measurement.actual_value === null) return false
+    const withinLSL = measurement.lsl === null || measurement.actual_value >= measurement.lsl
+    const withinUSL = measurement.usl === null || measurement.actual_value <= measurement.usl
+    return withinLSL && withinUSL
 }
 
-function handleSort(column: { key: string; order?: 'asc' | 'desc' }) {
-  if (!column.key || column.key === 'pass_rate' || column.key === 'actions') return
+function handleGridSort(event: unknown) {
+    const sortEvent = event as { sortField?: string; sortOrder?: -1 | 0 | 1 | null } | null
+    if (!sortEvent?.sortField || sortEvent.sortField === 'pass_rate' || sortEvent.sortField === 'actions') {
+        return
+    }
 
-  // Toggle sort order if clicking same column
-  if (filters.value.sort_by === column.key) {
-    filters.value.sort_desc = !filters.value.sort_desc
-  } else {
-    filters.value.sort_by = column.key
-    filters.value.sort_desc = true
-  }
+    filters.value.sort_by = sortEvent.sortField
+    filters.value.sort_desc = sortEvent.sortOrder !== 1
+    pagination.value.page = 1
+    fetchProducts()
+}
 
-  pagination.value.page = 1
-  fetchProducts()
+function handleGridRowClick(event: unknown) {
+    const rowEvent = event as { data?: TopProductItem } | null
+    if (!rowEvent?.data?.id) {
+        return
+    }
+
+    viewDetail(rowEvent.data.id)
 }
 
 // ===== Delete Handlers =====
 function confirmDelete(product: TopProductItem) {
-  productToDelete.value = product
-  deleteConfirmation.value = ''
-  deleteDialog.value = true
+    productToDelete.value = product
+    deleteConfirmation.value = ''
+    deleteDialog.value = true
 }
 
 function cancelDelete() {
-  deleteDialog.value = false
-  productToDelete.value = null
-  deleteConfirmation.value = ''
+    deleteDialog.value = false
+    productToDelete.value = null
+    deleteConfirmation.value = ''
 }
 
 async function handleDelete() {
-  if (deleteConfirmation.value !== 'DELETE' || !productToDelete.value || deleting.value) {
-    return
-  }
+    if (deleteConfirmation.value !== 'DELETE' || !productToDelete.value || deleting.value) {
+        return
+    }
 
-  deleting.value = true
-  try {
-    await deleteTopProduct(productToDelete.value.id)
+    deleting.value = true
+    try {
+        await deleteTopProduct(productToDelete.value.id)
 
-    // Show success message
-    console.log('Product deleted successfully')
+        // Show success message
+        console.log('Product deleted successfully')
 
-    // Close dialog
-    cancelDelete()
+        // Close dialog
+        cancelDelete()
 
-    // Refresh the data
-    await fetchProducts()
-    await fetchStats()
-  } catch (error: unknown) {
-    console.error('Failed to delete product:', error)
-    const errorMessage = getApiErrorDetail(error, 'Failed to delete product. Please try again.')
-    alert(errorMessage)
-  } finally {
-    deleting.value = false
-  }
+        // Refresh the data
+        await fetchProducts()
+        await fetchStats()
+    } catch (error: unknown) {
+        console.error('Failed to delete product:', error)
+        const errorMessage = getApiErrorDetail(error, 'Failed to delete product. Please try again.')
+        alert(errorMessage)
+    } finally {
+        deleting.value = false
+    }
 }
 
 // ===== Bulk Delete Handlers =====
 function confirmBulkDelete() {
-  if (selectedProducts.value.length === 0) return
-  bulkDeleteConfirmation.value = ''
-  bulkDeleteDialog.value = true
+    if (selectedProducts.value.length === 0) return
+    bulkDeleteConfirmation.value = ''
+    bulkDeleteDialog.value = true
 }
 
 function cancelBulkDelete() {
-  bulkDeleteDialog.value = false
-  bulkDeleteConfirmation.value = ''
+    bulkDeleteDialog.value = false
+    bulkDeleteConfirmation.value = ''
 }
 
 async function handleBulkDelete() {
-  if (
-    bulkDeleteConfirmation.value !== 'DELETE' ||
-    selectedProducts.value.length === 0 ||
-    bulkDeleting.value
-  ) {
-    return
-  }
+    if (
+        bulkDeleteConfirmation.value !== 'DELETE' ||
+        selectedProducts.value.length === 0 ||
+        bulkDeleting.value
+    ) {
+        return
+    }
 
-  bulkDeleting.value = true
-  try {
-    const ids = selectedProducts.value.map((p) => p.id)
-    console.log('🗑️ Bulk deleting products with ids:', ids, 'from selected:', selectedProducts.value.map((p) => ({ id: p.id, isn: p.dut_isn })))
-    const result = await bulkDeleteTopProducts(ids)
+    bulkDeleting.value = true
+    try {
+        const ids = selectedProducts.value.map((p) => p.id)
+        console.log('🗑️ Bulk deleting products with ids:', ids, 'from selected:', selectedProducts.value.map((p) => ({ id: p.id, isn: p.dut_isn })))
+        const result = await bulkDeleteTopProducts(ids)
 
-    console.log(`Bulk deleted ${result.deleted_count} products`)
+        console.log(`Bulk deleted ${result.deleted_count} products`)
 
-    // Clear selection and close dialog
-    selectedProducts.value = []
-    cancelBulkDelete()
+        // Clear selection and close dialog
+        selectedProducts.value = []
+        cancelBulkDelete()
 
-    // Refresh the data
-    await fetchProducts()
-    await fetchStats()
-  } catch (error: unknown) {
-    console.error('Failed to bulk delete products:', error)
-    const errorMessage = getApiErrorDetail(
-      error,
-      'Failed to delete selected products. Please try again.',
-    )
-    alert(errorMessage)
-  } finally {
-    bulkDeleting.value = false
-  }
+        // Refresh the data
+        await fetchProducts()
+        await fetchStats()
+    } catch (error: unknown) {
+        console.error('Failed to bulk delete products:', error)
+        const errorMessage = getApiErrorDetail(
+            error,
+            'Failed to delete selected products. Please try again.',
+        )
+        alert(errorMessage)
+    } finally {
+        bulkDeleting.value = false
+    }
 }
 
 // ===== Export Handlers =====
 function handleExport(product: TopProductItem) {
-  productToExport.value = product
-  exportDialog.value = true
+    productToExport.value = product
+    exportDialog.value = true
 }
 
 async function exportProduct(format: 'excel' | 'pdf' | 'clipboard') {
-  if (!productToExport.value || exporting.value) return
+    if (!productToExport.value || exporting.value) return
 
-  exporting.value = true
-  try {
-    // Fetch full product details including measurements
-    const details = await getTopProductDetail(productToExport.value.id)
+    exporting.value = true
+    try {
+        // Fetch full product details including measurements
+        const details = await getTopProductDetail(productToExport.value.id)
 
-    const exportData = {
-      dut_isn: details.dut_isn,
-      project_name: details.project_name,
-      station_name: details.station_name,
-      device_name: details.device_name,
-      score: details.score,
-      test_date: details.test_date,
-      pass_count: details.pass_count,
-      fail_count: details.fail_count,
-      retest_count: details.retest_count,
-      test_duration: details.test_duration,
-      measurements: details.measurements?.map((m) => ({
-        test_item: m.test_item,
-        usl: m.usl,
-        lsl: m.lsl,
-        actual_value: m.actual_value,
-        deviation: m.deviation,
-      })),
+        const exportData = {
+            dut_isn: details.dut_isn,
+            project_name: details.project_name,
+            station_name: details.station_name,
+            device_name: details.device_name,
+            score: details.score,
+            test_date: details.test_date,
+            pass_count: details.pass_count,
+            fail_count: details.fail_count,
+            retest_count: details.retest_count,
+            test_duration: details.test_duration,
+            measurements: details.measurements?.map((m) => ({
+                test_item: m.test_item,
+                usl: m.usl,
+                lsl: m.lsl,
+                actual_value: m.actual_value,
+                deviation: m.deviation,
+            })),
+        }
+
+        if (format === 'excel') {
+            await exportToExcel(exportData)
+        } else if (format === 'pdf') {
+            await exportToPDF(exportData)
+        } else if (format === 'clipboard') {
+            await copyToClipboard(exportData)
+        }
+
+        exportDialog.value = false
+        productToExport.value = null
+    } catch (error: unknown) {
+        console.error('Export failed:', error)
+        alert('Export failed. Please try again.')
+    } finally {
+        exporting.value = false
     }
-
-    if (format === 'excel') {
-      await exportToExcel(exportData)
-    } else if (format === 'pdf') {
-      await exportToPDF(exportData)
-    } else if (format === 'clipboard') {
-      await copyToClipboard(exportData)
-    }
-
-    exportDialog.value = false
-    productToExport.value = null
-  } catch (error: unknown) {
-    console.error('Export failed:', error)
-    alert('Export failed. Please try again.')
-  } finally {
-    exporting.value = false
-  }
 }
 
 // ===== Lifecycle =====
 onMounted(() => {
-  fetchStats()
-  fetchProducts()
-  loadFilterOptions()
+    fetchStats()
+    fetchProducts()
+    loadFilterOptions()
 })
 
 onBeforeUnmount(() => {
-  // Clear debounce timer
-  if (debounceTimer) {
-    clearTimeout(debounceTimer)
-  }
+    // Clear debounce timer
+    if (debounceTimer) {
+        clearTimeout(debounceTimer)
+    }
 })
 </script>
 
 <style scoped>
-.cursor-pointer :deep(tbody tr) {
+.top-product-db-shell {
+    display: grid;
+    gap: 1.5rem;
+}
+
+.top-product-db-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.top-product-db-header__copy {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.top-product-db-header__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3.25rem;
+    height: 3.25rem;
+    border-radius: 1rem;
+    background: linear-gradient(135deg, rgba(20, 88, 71, 0.18), rgba(161, 104, 57, 0.18));
+    color: #145847;
+    font-size: 1.5rem;
+}
+
+.top-product-db-header__eyebrow {
+    margin: 0 0 0.35rem;
+    color: var(--app-accent);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.top-product-db-header h1 {
+    margin: 0;
+    color: var(--app-ink);
+}
+
+.top-product-db-header p {
+    margin: 0.35rem 0 0;
+    color: var(--app-muted);
+    max-width: 52rem;
+    line-height: 1.6;
+}
+
+.top-product-db-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.55rem;
+    border-radius: 999px;
+    border: 1px solid transparent;
+    padding: 0.8rem 1.15rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.top-product-db-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+.top-product-db-button:not(:disabled):hover {
+    transform: translateY(-1px);
+}
+
+.top-product-db-button--primary {
+    background: linear-gradient(135deg, #145847, #1c7c62);
+    color: #fff;
+    box-shadow: 0 18px 32px rgba(20, 88, 71, 0.16);
+}
+
+.top-product-db-button--ghost {
+    border-color: rgba(20, 88, 71, 0.18);
+    background: rgba(255, 248, 240, 0.8);
+    color: var(--app-ink);
+}
+
+.top-product-db-button--danger {
+    background: rgba(180, 54, 45, 0.12);
+    border-color: rgba(180, 54, 45, 0.16);
+    color: #a61b1b;
+}
+
+.top-product-db-spin {
+    animation: top-product-db-spin 1s linear infinite;
+}
+
+.top-product-db-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.top-product-db-stat-card {
+    display: flex;
+    gap: 0.9rem;
+    align-items: center;
+    border: 1px solid var(--app-border);
+    border-radius: 1.4rem;
+    padding: 1rem 1.1rem;
+    background: rgba(255, 251, 247, 0.94);
+    box-shadow: var(--app-shadow-soft);
+}
+
+.top-product-db-stat-card--cool {
+    background: linear-gradient(180deg, rgba(36, 116, 184, 0.12), rgba(255, 251, 247, 0.96));
+}
+
+.top-product-db-stat-card--indigo {
+    background: linear-gradient(180deg, rgba(79, 70, 229, 0.12), rgba(255, 251, 247, 0.96));
+}
+
+.top-product-db-stat-card--success {
+    background: linear-gradient(180deg, rgba(20, 88, 71, 0.12), rgba(249, 255, 251, 0.97));
+}
+
+.top-product-db-stat-card__icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.95rem;
+    background: rgba(255, 255, 255, 0.72);
+    color: var(--app-ink);
+    font-size: 1.2rem;
+}
+
+.top-product-db-stat-card span {
+    display: block;
+    color: var(--app-muted);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.top-product-db-stat-card strong {
+    display: block;
+    margin-top: 0.2rem;
+    color: var(--app-ink);
+    font-size: 1.7rem;
+}
+
+.top-product-db-filter-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.top-product-db-field {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.top-product-db-field span {
+    color: var(--app-ink);
+    font-size: 0.82rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+.top-product-db-field input,
+.top-product-db-field select {
+    width: 100%;
+    border: 1px solid rgba(20, 88, 71, 0.18);
+    border-radius: 1rem;
+    padding: 0.78rem 0.95rem;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--app-ink);
+}
+
+.top-product-db-field select[multiple] {
+    min-height: 9.5rem;
+}
+
+.top-product-db-field input:focus,
+.top-product-db-field select:focus {
+    outline: none;
+    border-color: rgba(20, 88, 71, 0.42);
+    box-shadow: 0 0 0 3px rgba(20, 88, 71, 0.12);
+}
+
+.top-product-db-field small {
+    color: var(--app-muted);
+}
+
+.top-product-db-filter-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    color: var(--app-muted);
+    font-size: 0.9rem;
+}
+
+.top-product-db-filter-summary span {
+    border-radius: 999px;
+    border: 1px solid rgba(20, 88, 71, 0.14);
+    padding: 0.4rem 0.75rem;
+    background: rgba(255, 248, 240, 0.8);
+}
+
+.top-product-db-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    align-items: center;
+}
+
+.top-product-db-page-size {
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+    color: var(--app-muted);
+    font-size: 0.88rem;
+}
+
+.top-product-db-page-size select {
+    border: 1px solid rgba(20, 88, 71, 0.18);
+    border-radius: 999px;
+    padding: 0.5rem 0.8rem;
+    background: rgba(255, 255, 255, 0.92);
+    color: var(--app-ink);
+}
+
+.top-product-db-notice {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    border-radius: 1.1rem;
+    padding: 0.95rem 1rem;
+}
+
+.top-product-db-notice--warning {
+    border: 1px solid rgba(184, 122, 40, 0.18);
+    background: rgba(255, 247, 237, 0.96);
+}
+
+.top-product-db-notice strong {
+    display: block;
+    color: #9a5a12;
+}
+
+.top-product-db-notice p {
+    margin: 0.25rem 0 0;
+    color: #7c5a34;
+}
+
+.top-product-db-grid :deep(.p-datatable-tbody > tr) {
     cursor: pointer;
 }
 
-.cursor-pointer :deep(tbody tr:hover) {
-    background-color: rgba(var(--v-theme-primary), 0.04);
+.top-product-db-grid :deep(.p-datatable-tbody > tr:hover > td) {
+    background: rgba(20, 88, 71, 0.05);
 }
 
-.border-b {
-    border-bottom: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+.top-product-db-cell {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.45rem;
 }
 
-.gap-2 {
-    gap: 0.5rem;
+.top-product-db-cell--primary {
+    color: var(--app-ink);
+    font-weight: 700;
 }
 
-.dialog-sticky-header {
-    position: sticky;
-    top: 0;
-    z-index: 10;
+.top-product-db-muted {
+    color: var(--app-muted);
 }
 
-.sticky-table-header :deep(thead) {
-    position: sticky;
-    top: 0;
-    z-index: 5;
-    background-color: rgb(var(--v-theme-surface));
+.top-product-db-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.4rem;
+    border-radius: 999px;
+    padding: 0.28rem 0.65rem;
+    font-size: 0.82rem;
+    font-weight: 700;
 }
 
-.sticky-table-header :deep(thead th) {
-    background-color: rgb(var(--v-theme-surface)) !important;
-    border-bottom: 2px solid rgba(var(--v-border-color), var(--v-border-opacity));
+.top-product-db-pill--neutral {
+    background: rgba(148, 163, 184, 0.15);
+    color: #334155;
+}
+
+.top-product-db-pill--cool {
+    background: rgba(36, 116, 184, 0.12);
+    color: #1d4f91;
+}
+
+.top-product-db-pill--outline {
+    border: 1px solid rgba(20, 88, 71, 0.18);
+    color: var(--app-ink);
+}
+
+.top-product-db-pill--success {
+    background: rgba(20, 88, 71, 0.12);
+    color: #145847;
+}
+
+.top-product-db-pill--warning {
+    background: rgba(184, 122, 40, 0.14);
+    color: #9a5a12;
+}
+
+.top-product-db-pill--danger {
+    background: rgba(180, 54, 45, 0.14);
+    color: #a61b1b;
+}
+
+.top-product-db-progress {
+    display: inline-flex;
+    gap: 0.55rem;
+    align-items: center;
+    min-width: 9rem;
+}
+
+.top-product-db-progress__track {
+    position: relative;
+    width: 4.5rem;
+    height: 0.45rem;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.2);
+    overflow: hidden;
+}
+
+.top-product-db-progress__value {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+}
+
+.top-product-db-progress__value--success {
+    background: linear-gradient(90deg, #145847, #2f9b74);
+}
+
+.top-product-db-progress__value--warning {
+    background: linear-gradient(90deg, #c37a1f, #e0a146);
+}
+
+.top-product-db-progress__value--danger {
+    background: linear-gradient(90deg, #b4362d, #df6b5b);
+}
+
+.top-product-db-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.top-product-db-actions button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid rgba(20, 88, 71, 0.16);
+    border-radius: 999px;
+    padding: 0.38rem 0.7rem;
+    background: rgba(255, 248, 240, 0.82);
+    color: var(--app-ink);
+    cursor: pointer;
+}
+
+.top-product-db-actions__danger {
+    border-color: rgba(180, 54, 45, 0.16) !important;
+    color: #a61b1b !important;
+}
+
+.top-product-db-empty-state {
+    display: grid;
+    place-items: center;
+    gap: 0.65rem;
+    min-height: 14rem;
+    text-align: center;
+    color: var(--app-muted);
+}
+
+.top-product-db-empty-state svg {
+    font-size: 2.6rem;
+    color: rgba(20, 88, 71, 0.5);
+}
+
+.top-product-db-empty-state__spinner {
+    width: 2rem;
+    height: 2rem;
+    border-radius: 999px;
+    border: 3px solid rgba(20, 88, 71, 0.14);
+    border-top-color: #145847;
+    animation: top-product-db-spin 0.9s linear infinite;
+}
+
+.top-product-db-dialog-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    width: 100%;
+}
+
+.top-product-db-dialog-header__eyebrow,
+.top-product-db-detail-results__eyebrow {
+    margin: 0 0 0.35rem;
+    color: var(--app-accent);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.top-product-db-dialog-header h2,
+.top-product-db-detail-results h3 {
+    margin: 0;
+    color: var(--app-ink);
+}
+
+.top-product-db-dialog-header p,
+.top-product-db-dialog-copy {
+    margin: 0.35rem 0 0;
+    color: var(--app-muted);
+    line-height: 1.55;
+}
+
+.top-product-db-dialog-header__actions,
+.top-product-db-dialog-footer {
+    display: flex;
+    gap: 0.65rem;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.top-product-db-icon-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.8rem;
+    height: 2.8rem;
+    border: 1px solid rgba(20, 88, 71, 0.16);
+    border-radius: 999px;
+    background: rgba(255, 248, 240, 0.82);
+    color: var(--app-ink);
+    cursor: pointer;
+}
+
+.top-product-db-detail-stack,
+.top-product-db-confirm-stack {
+    display: grid;
+    gap: 1rem;
+}
+
+.top-product-db-detail-hero {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.top-product-db-detail-hero__card,
+.top-product-db-detail-meta-card,
+.top-product-db-detail-results,
+.top-product-db-confirm-card {
+    border: 1px solid var(--app-border);
+    border-radius: 1.25rem;
+    padding: 1rem 1.1rem;
+    background: rgba(255, 251, 247, 0.94);
+}
+
+.top-product-db-detail-hero__card--primary {
+    background: linear-gradient(180deg, rgba(20, 88, 71, 0.13), rgba(255, 251, 247, 0.97));
+}
+
+.top-product-db-detail-hero__card--cool {
+    background: linear-gradient(180deg, rgba(36, 116, 184, 0.13), rgba(255, 251, 247, 0.97));
+}
+
+.top-product-db-detail-hero__card span,
+.top-product-db-detail-meta-card span,
+.top-product-db-confirm-card strong {
+    display: block;
+    color: var(--app-muted);
+    font-size: 0.78rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.top-product-db-detail-hero__card strong,
+.top-product-db-detail-meta-card strong,
+.top-product-db-confirm-card span {
+    display: block;
+    margin-top: 0.35rem;
+    color: var(--app-ink);
+    font-size: 1.2rem;
+}
+
+.top-product-db-detail-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.top-product-db-detail-meta-card--score {
+    background: linear-gradient(180deg, rgba(20, 88, 71, 0.08), rgba(255, 251, 247, 0.97));
+}
+
+.top-product-db-detail-meta-card em {
+    margin-top: 0.7rem;
+    font-style: normal;
+}
+
+.top-product-db-detail-results {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: center;
+}
+
+.top-product-db-detail-results__chips,
+.top-product-db-measurements__tools,
+.top-product-db-export-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.65rem;
+    align-items: center;
+}
+
+.top-product-db-measurements {
+    display: grid;
+    gap: 1rem;
+}
+
+.top-product-db-measurements__header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-end;
+}
+
+.top-product-db-measurements__header h3 {
+    margin: 0;
+    color: var(--app-ink);
+}
+
+.top-product-db-search-field {
+    display: inline-flex;
+    gap: 0.45rem;
+    align-items: center;
+    min-width: 18rem;
+    border: 1px solid rgba(20, 88, 71, 0.16);
+    border-radius: 999px;
+    padding: 0.68rem 0.9rem;
+    background: rgba(255, 255, 255, 0.92);
+}
+
+.top-product-db-search-field input {
+    width: 100%;
+    border: 0;
+    outline: none;
+    background: transparent;
+    color: var(--app-ink);
+}
+
+.top-product-db-measurement-name {
+    color: var(--app-ink);
+    font-weight: 700;
+}
+
+.top-product-db-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.28rem 0.65rem;
+    font-size: 0.8rem;
+    font-weight: 700;
+}
+
+.top-product-db-status-pill--success,
+.top-product-db-value--success {
+    color: #145847;
+    background: rgba(20, 88, 71, 0.12);
+}
+
+.top-product-db-status-pill--danger,
+.top-product-db-value--danger {
+    color: #a61b1b;
+    background: rgba(180, 54, 45, 0.12);
+}
+
+.top-product-db-confirm-card {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.top-product-db-confirm-card--danger {
+    background: linear-gradient(180deg, rgba(180, 54, 45, 0.08), rgba(255, 251, 247, 0.96));
+}
+
+.top-product-db-confirm-card--list {
+    max-height: 16rem;
+    overflow: auto;
+}
+
+.top-product-db-selection-list {
+    display: grid;
+    gap: 0.65rem;
+    padding: 0;
+    margin: 0;
+    list-style: none;
+}
+
+.top-product-db-selection-list li {
+    display: flex;
+    justify-content: space-between;
+    gap: 0.75rem;
+    align-items: center;
+    border: 1px solid rgba(20, 88, 71, 0.08);
+    border-radius: 1rem;
+    padding: 0.75rem 0.85rem;
+    background: rgba(255, 255, 255, 0.7);
+}
+
+.top-product-db-selection-list li strong {
+    display: block;
+    color: var(--app-ink);
+}
+
+.top-product-db-selection-list li span {
+    color: var(--app-muted);
+}
+
+.top-product-db-export-actions {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.top-product-db-export-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.65rem;
+    border: 1px solid transparent;
+    border-radius: 1rem;
+    padding: 0.95rem 1rem;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.top-product-db-export-button:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.top-product-db-export-button--success {
+    background: rgba(20, 88, 71, 0.12);
+    color: #145847;
+}
+
+.top-product-db-export-button--danger {
+    background: rgba(180, 54, 45, 0.12);
+    color: #a61b1b;
+}
+
+.top-product-db-export-button--cool {
+    background: rgba(36, 116, 184, 0.12);
+    color: #1d4f91;
+}
+
+.top-product-db-detail-dialog--expanded :deep(.p-dialog) {
+    height: 92vh;
+}
+
+.top-product-db-detail-dialog--expanded :deep(.p-dialog-content) {
+    height: calc(92vh - 7rem);
+    overflow: auto;
+}
+
+@media (max-width: 960px) {
+
+    .top-product-db-header,
+    .top-product-db-header__copy {
+        flex-direction: column;
+    }
+
+    .top-product-db-stats,
+    .top-product-db-filter-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .top-product-db-detail-meta-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+}
+
+@media (max-width: 720px) {
+
+    .top-product-db-stats,
+    .top-product-db-filter-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .top-product-db-toolbar {
+        justify-content: flex-start;
+    }
+
+    .top-product-db-page-size {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .top-product-db-detail-hero,
+    .top-product-db-detail-meta-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .top-product-db-dialog-header,
+    .top-product-db-detail-results,
+    .top-product-db-measurements__header,
+    .top-product-db-dialog-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .top-product-db-search-field {
+        min-width: 0;
+        width: 100%;
+    }
+
+    .top-product-db-selection-list li {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+
+@keyframes top-product-db-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 </style>

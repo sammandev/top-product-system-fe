@@ -1,253 +1,336 @@
 <template>
-  <v-dialog v-model="dialogOpen" :fullscreen="isFullscreen" :max-width="isFullscreen ? undefined : 650" scrollable
-    persistent :transition="isFullscreen ? 'dialog-bottom-transition' : undefined">
-    <v-card :class="[isFullscreen ? 'd-flex flex-column' : '', 'app-dialog']"
-      :style="isFullscreen ? 'height: 100vh; overflow: hidden;' : ''">
-      <div class="app-dialog-header"><v-card-title class="d-flex align-center">
-        <v-icon start>mdi-cog-outline</v-icon>
-        Configure Scoring
-        <v-spacer />
-        <v-chip size="small" variant="outlined" class="ml-2">
-          {{ scoringConfigs.length }} items
-        </v-chip>
-        <v-btn :icon="isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
-          @click="isFullscreen = !isFullscreen" class="ml-1" />
-        <v-btn icon="mdi-close" variant="text" @click="handleCancel" />
-      </v-card-title></div>
+  <AppDialog
+    :model-value="dialogOpen"
+    width="min(96vw, 70rem)"
+    :breakpoints="{ '1100px': '94vw', '760px': '96vw' }"
+    persistent
+    maximizable
+    @update:modelValue="dialogOpen = $event"
+  >
+    <template #header>
+      <div class="upload-scoring-dialog__header">
+        <div class="upload-scoring-dialog__header-copy">
+          <h2>Configure Scoring</h2>
+          <p>Filter, select, and adjust upload-log scoring rules without leaving the comparison workflow.</p>
+        </div>
+        <div class="upload-scoring-dialog__header-meta">
+          <span class="upload-scoring-dialog__pill upload-scoring-dialog__pill--muted">
+            {{ scoringConfigCount }} items
+          </span>
+          <button type="button" class="upload-scoring-dialog__ghost-button" @click="handleCancel">
+            Close
+          </button>
+        </div>
+      </div>
+    </template>
 
-      <div class="app-dialog-body"><v-card-text class="pa-0" :class="isFullscreen ? 'flex-grow-1' : ''"
-        :style="isFullscreen ? 'overflow: hidden;' : 'height: 600px;'">
-        <div style="height: 100%; overflow: hidden; display: flex; flex-direction: column;">
-          <div class="pa-3 pb-2 d-flex gap-2">
-            <v-text-field v-model="searchQuery" label="Search test items" prepend-inner-icon="mdi-magnify"
-              variant="outlined" density="compact" clearable hide-details style="flex: 2;" />
-            <v-select v-if="stationOptions.length > 0" v-model="selectedStation" :items="stationOptions" label="Station"
-              variant="outlined" density="compact" clearable hide-details style="flex: 1; min-width: 150px;"
-              prepend-inner-icon="mdi-access-point" />
+    <div class="upload-scoring-dialog">
+      <div class="upload-scoring-dialog__toolbar">
+        <label class="upload-scoring-dialog__field upload-scoring-dialog__field--search">
+          <span>Search Test Items</span>
+          <input v-model="searchQuery" type="text" placeholder="Search by test item name" />
+        </label>
+
+        <label v-if="stationOptions.length > 0" class="upload-scoring-dialog__field">
+          <span>Station</span>
+          <select v-model="selectedStationValue">
+            <option value="">All stations</option>
+            <option v-for="station in stationOptions" :key="station" :value="station">
+              {{ station }}
+            </option>
+          </select>
+        </label>
+      </div>
+
+      <div class="upload-scoring-dialog__action-bands">
+        <div class="upload-scoring-dialog__action-band">
+          <span class="upload-scoring-dialog__band-label">Select</span>
+          <button
+            type="button"
+            class="upload-scoring-dialog__chip-button upload-scoring-dialog__chip-button--info"
+            :disabled="filteredConfigs.length === 0"
+            @click="selectDisplayedItems"
+          >
+            Displayed ({{ filteredConfigs.length }})
+          </button>
+          <button
+            type="button"
+            class="upload-scoring-dialog__chip-button upload-scoring-dialog__chip-button--success"
+            @click="selectCriteriaItems"
+          >
+            Criteria
+          </button>
+          <button
+            type="button"
+            class="upload-scoring-dialog__chip-button upload-scoring-dialog__chip-button--warning"
+            @click="selectNonCriteriaItems"
+          >
+            Non-Criteria
+          </button>
+          <button
+            type="button"
+            class="upload-scoring-dialog__chip-button upload-scoring-dialog__chip-button--danger"
+            @click="clearSelection"
+          >
+            Clear
+          </button>
+        </div>
+
+        <div class="upload-scoring-dialog__action-band upload-scoring-dialog__action-band--secondary">
+          <span class="upload-scoring-dialog__band-label">Bulk Actions</span>
+          <button
+            type="button"
+            class="upload-scoring-dialog__button upload-scoring-dialog__button--primary"
+            :disabled="filteredConfigs.length === 0"
+            @click="selectDisplayedAndConfigure"
+          >
+            Select Displayed & Configure ({{ filteredConfigs.length }})
+          </button>
+          <button
+            type="button"
+            class="upload-scoring-dialog__button upload-scoring-dialog__button--secondary"
+            :disabled="selectedCount === 0"
+            @click="openBulkScoringConfig"
+          >
+            Bulk Config ({{ selectedCount }})
+          </button>
+          <button
+            type="button"
+            class="upload-scoring-dialog__button upload-scoring-dialog__button--ghost"
+            @click="resetAll"
+          >
+            Reset All
+          </button>
+        </div>
+      </div>
+
+      <div v-if="selectedCount > 0" class="upload-scoring-dialog__selection-banner">
+        <strong>{{ selectedCount }}</strong> test item{{ selectedCount === 1 ? '' : 's' }} selected for bulk actions.
+      </div>
+
+      <div class="upload-scoring-dialog__list">
+        <div
+          v-for="config in filteredConfigs"
+          :key="config.test_item_name"
+          class="upload-scoring-dialog__item-row"
+          :class="{ 'is-selected': selectedItemNames.has(config.test_item_name) }"
+          role="button"
+          tabindex="0"
+          @click="toggleItemSelection(config.test_item_name)"
+          @keydown.enter.prevent="toggleItemSelection(config.test_item_name)"
+          @keydown.space.prevent="toggleItemSelection(config.test_item_name)"
+        >
+          <label class="upload-scoring-dialog__checkbox" @click.stop>
+            <input
+              :checked="selectedItemNames.has(config.test_item_name)"
+              type="checkbox"
+              @change="toggleItemSelection(config.test_item_name)"
+            />
+            <span></span>
+          </label>
+
+          <div class="upload-scoring-dialog__item-copy">
+            <strong :title="config.test_item_name">{{ config.test_item_name }}</strong>
+            <span>{{ getScoringTypeDescription(config.scoring_type) }}</span>
           </div>
 
-          <!-- Quick Select Buttons -->
-          <div class="px-3 pb-2 d-flex gap-1 flex-wrap">
-            <span class="text-caption text-medium-emphasis">Select:</span>
-            <v-btn size="x-small" variant="tonal" color="info" @click="selectDisplayedItems"
-              :disabled="filteredConfigs.length === 0">
-              Displayed ({{ filteredConfigs.length }})
-            </v-btn>
-            <v-btn size="x-small" variant="tonal" color="success" @click="selectCriteriaItems">
-              Criteria
-            </v-btn>
-            <v-btn size="x-small" variant="tonal" color="warning" @click="selectNonCriteriaItems">
-              Non-Criteria
-            </v-btn>
-            <v-btn size="x-small" variant="outlined" color="error" @click="clearSelection">
-              Clear
-            </v-btn>
-          </div>
-
-          <!-- Bulk Actions -->
-          <div class="px-3 pb-2 d-flex gap-1 flex-wrap align-center">
-            <v-divider class="mb-1" />
-            <v-btn size="x-small" variant="flat" color="primary" prepend-icon="mdi-playlist-check"
-              @click="selectDisplayedAndConfigure" :disabled="filteredConfigs.length === 0">
-              Select Displayed & Configure ({{ filteredConfigs.length }})
-            </v-btn>
-            <v-btn size="x-small" variant="flat" color="secondary" prepend-icon="mdi-tune-variant"
-              @click="openBulkScoringConfig" :disabled="selectedItemNames.size === 0">
-              Bulk Config ({{ selectedItemNames.size }})
-            </v-btn>
-            <v-btn size="x-small" variant="tonal" color="grey" prepend-icon="mdi-restore" @click="resetAll">
-              Reset All
-            </v-btn>
-          </div>
-
-          <v-divider />
-
-          <!-- Selected Count Info -->
-          <div v-if="selectedItemNames.size > 0" class="px-3 py-1 bg-primary-lighten-5">
-            <span class="text-caption font-weight-bold">
-              {{ selectedItemNames.size }} selected
+          <div class="upload-scoring-dialog__item-meta">
+            <button
+              type="button"
+              class="upload-scoring-dialog__pill-button"
+              :class="getScoringTypeClass(config.scoring_type)"
+              @click.stop="openSingleItemConfig(config.test_item_name)"
+            >
+              {{ getScoringTypeLabel(config.scoring_type) }}
+            </button>
+            <span class="upload-scoring-dialog__pill" :class="getItemTypeClass(config.test_item_name)">
+              {{ getItemTypeLabel(config.test_item_name) }}
             </span>
           </div>
+        </div>
 
-          <!-- Test Items List -->
-          <div class="flex-grow-1" style="overflow-y: auto;">
-            <v-list density="compact" class="py-0">
-              <v-list-item v-for="config in filteredConfigs" :key="config.test_item_name"
-                @click="toggleItemSelection(config.test_item_name)" class="py-1 test-item-row">
-                <template #prepend>
-                  <v-checkbox-btn :model-value="selectedItemNames.has(config.test_item_name)"
-                    @click.stop="toggleItemSelection(config.test_item_name)" density="compact" />
-                </template>
-                <template #default>
-                  <div class="d-flex align-center justify-space-between w-100">
-                    <span class="text-body-2 text-truncate flex-grow-1 mr-2" :title="config.test_item_name">
-                      {{ config.test_item_name }}
-                    </span>
-                    <div class="d-flex align-center gap-1 flex-shrink-0">
-                      <!-- Scoring Type Button (opens per-item config) -->
-                      <v-btn size="x-small" variant="tonal" :color="getScoringTypeColor(config.scoring_type)"
-                        @click.stop="openSingleItemConfig(config.test_item_name)" class="scoring-config-btn">
-                        {{ getScoringTypeLabel(config.scoring_type) }}
-                        <v-icon end size="x-small">mdi-chevron-down</v-icon>
-                      </v-btn>
-                      <!-- Criteria / Non-Criteria chip -->
-                      <v-chip :color="getItemTypeColor(config.test_item_name)" size="x-small" variant="tonal">
-                        {{ getItemTypeLabel(config.test_item_name) }}
-                      </v-chip>
-                    </div>
-                  </div>
-                </template>
-              </v-list-item>
-            </v-list>
+        <div v-if="filteredConfigs.length === 0" class="upload-scoring-dialog__empty-state">
+          No test items match the current search and station filters.
+        </div>
+      </div>
+    </div>
 
-            <div v-if="filteredConfigs.length === 0" class="pa-4 text-center text-medium-emphasis">
-              No test items found
-            </div>
+    <template #footer>
+      <div class="upload-scoring-dialog__footer">
+        <button type="button" class="upload-scoring-dialog__button upload-scoring-dialog__button--ghost" @click="resetAll">
+          Reset All
+        </button>
+        <div class="upload-scoring-dialog__footer-spacer"></div>
+        <button type="button" class="upload-scoring-dialog__button upload-scoring-dialog__button--ghost" @click="handleCancel">
+          Cancel
+        </button>
+        <button type="button" class="upload-scoring-dialog__button upload-scoring-dialog__button--primary" @click="handleApply">
+          Apply
+        </button>
+      </div>
+    </template>
+  </AppDialog>
+
+  <AppDialog
+    :model-value="bulkScoringDialog"
+    title="Bulk Configure Scoring"
+    description="Apply the same scoring policy across the selected upload-log items."
+    width="min(92vw, 34rem)"
+    persistent
+    @update:modelValue="bulkScoringDialog = $event"
+  >
+    <div class="upload-scoring-dialog__modal-stack">
+      <div class="upload-scoring-dialog__notice upload-scoring-dialog__notice--info">
+        This updates {{ selectedCount }} selected test item{{ selectedCount === 1 ? '' : 's' }} at once.
+      </div>
+
+      <label class="upload-scoring-dialog__field">
+        <span>Scoring Type</span>
+        <select v-model="bulkScoringType">
+          <option v-for="option in scoringTypeOptions" :key="option.value" :value="option.value">
+            {{ option.title }}
+          </option>
+        </select>
+      </label>
+
+      <div class="upload-scoring-dialog__notice" :class="getScoringNoticeClass(bulkScoringType)">
+        {{ getScoringTypeDescription(bulkScoringType) }}
+      </div>
+
+      <label v-if="bulkScoringType === 'asymmetrical'" class="upload-scoring-dialog__field">
+        <span>Policy</span>
+        <select v-model="bulkPolicy">
+          <option v-for="option in policyOptions" :key="option.value" :value="option.value">
+            {{ option.title }}
+          </option>
+        </select>
+      </label>
+
+      <label v-if="bulkScoringType === 'asymmetrical'" class="upload-scoring-dialog__field">
+        <span>Custom Target</span>
+        <input v-model.number="bulkTarget" type="number" placeholder="Leave empty for midpoint auto-detection" />
+        <small>Leave empty for auto-detection from the midpoint of UCL and LCL.</small>
+      </label>
+
+      <label class="upload-scoring-dialog__field">
+        <span>Weight</span>
+        <input v-model.number="bulkWeight" type="number" min="0" max="10" step="0.1" />
+        <small>Weight contribution for all selected items in the overall score.</small>
+      </label>
+    </div>
+
+    <template #footer>
+      <div class="upload-scoring-dialog__footer">
+        <div class="upload-scoring-dialog__footer-spacer"></div>
+        <button type="button" class="upload-scoring-dialog__button upload-scoring-dialog__button--ghost" @click="bulkScoringDialog = false">
+          Cancel
+        </button>
+        <button type="button" class="upload-scoring-dialog__button upload-scoring-dialog__button--primary" @click="applyBulkScoringConfig">
+          Apply to {{ selectedCount }} Item{{ selectedCount === 1 ? '' : 's' }}
+        </button>
+      </div>
+    </template>
+  </AppDialog>
+
+  <AppDialog
+    :model-value="singleItemScoringDialog"
+    :title="singleConfigItem ? 'Configure Scoring' : 'Configure Scoring'"
+    :description="singleConfigItem ?? ''"
+    width="min(92vw, 32rem)"
+    persistent
+    @update:modelValue="singleItemScoringDialog = $event"
+  >
+    <div v-if="singleConfigItem" class="upload-scoring-dialog__modal-stack">
+      <label class="upload-scoring-dialog__field">
+        <span>Scoring Type</span>
+        <select
+          :value="getSingleDialogConfig()?.scoring_type ?? 'symmetrical'"
+          @change="updateSingleDialogScoringType(($event.target as HTMLSelectElement).value as RescoreScoringConfig['scoring_type'])"
+        >
+          <option v-for="option in scoringTypeOptions" :key="option.value" :value="option.value">
+            {{ option.title }}
+          </option>
+        </select>
+      </label>
+
+      <div class="upload-scoring-dialog__notice" :class="getScoringNoticeClass(getSingleDialogConfig()?.scoring_type ?? 'symmetrical')">
+        {{ getScoringTypeDescription(getSingleDialogConfig()?.scoring_type ?? 'symmetrical') }}
+      </div>
+
+      <label
+        v-if="getSingleDialogConfig()?.scoring_type === 'asymmetrical'"
+        class="upload-scoring-dialog__field"
+      >
+        <span>Policy</span>
+        <select
+          :value="getSingleDialogConfig()?.policy ?? 'symmetrical'"
+          @change="updateSingleDialogPolicy(($event.target as HTMLSelectElement).value as RescoreScoringConfig['policy'])"
+        >
+          <option v-for="option in policyOptions" :key="option.value" :value="option.value">
+            {{ option.title }}
+          </option>
+        </select>
+      </label>
+
+      <label
+        v-if="getSingleDialogConfig()?.scoring_type === 'asymmetrical'"
+        class="upload-scoring-dialog__field"
+      >
+        <span>Custom Target</span>
+        <input
+          :value="getSingleDialogConfig()?.target ?? ''"
+          type="number"
+          placeholder="Leave empty for midpoint auto-detection"
+          @input="updateSingleDialogTarget(toOptionalNumber(($event.target as HTMLInputElement).value))"
+        />
+        <small>Leave empty for auto-detection from the midpoint of UCL and LCL.</small>
+      </label>
+
+      <label class="upload-scoring-dialog__field">
+        <span>Weight</span>
+        <input
+          :value="getSingleDialogConfig()?.weight ?? 1.0"
+          type="number"
+          min="0"
+          max="10"
+          step="0.1"
+          @input="updateSingleDialogWeight(toNumber(($event.target as HTMLInputElement).value, 1.0))"
+        />
+        <small>Weight contribution for this item in the overall score.</small>
+      </label>
+
+      <AppPanel v-if="singleDialogSpecs" title="Item Specifications" tone="warm" compact-header>
+        <div class="upload-scoring-dialog__spec-grid">
+          <div>
+            <span>UCL</span>
+            <strong>{{ singleDialogSpecs.usl ?? 'N/A' }}</strong>
+          </div>
+          <div>
+            <span>LCL</span>
+            <strong>{{ singleDialogSpecs.lsl ?? 'N/A' }}</strong>
+          </div>
+          <div>
+            <span>Sample Value</span>
+            <strong>{{ singleDialogSpecs.value ?? 'N/A' }}</strong>
           </div>
         </div>
-      </v-card-text></div>
+      </AppPanel>
+    </div>
 
-      <div class="app-dialog-footer"><v-card-actions class="flex-shrink-0">
-        <v-btn variant="text" color="warning" prepend-icon="mdi-restore" @click="resetAll">
-          Reset All
-        </v-btn>
-        <v-spacer />
-        <v-btn variant="text" @click="handleCancel">Cancel</v-btn>
-        <v-btn color="primary" variant="elevated" prepend-icon="mdi-check" @click="handleApply">
-          Apply
-        </v-btn>
-      </v-card-actions></div>
-    </v-card>
-  </v-dialog>
-
-  <!-- Bulk Scoring Configuration Dialog -->
-  <v-dialog v-model="bulkScoringDialog" max-width="550" persistent>
-    <v-card class="app-dialog">
-      <div class="app-dialog-header"><v-card-title class="d-flex align-center">
-        <v-icon class="mr-2">mdi-tune-variant</v-icon>
-        Bulk Configure Scoring
-      </v-card-title>
-      <v-card-subtitle class="py-3">
-        Apply to {{ selectedItemNames.size }} selected test item(s)
-      </v-card-subtitle></div>
-
-      <div class="app-dialog-body"><v-card-text class="pa-4">
-        <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-          This will apply the selected scoring algorithm, policy, and weight to all
-          {{ selectedItemNames.size }} selected test items.
-        </v-alert>
-
-        <!-- Scoring Type Selection -->
-        <v-select v-model="bulkScoringType" :items="scoringTypeOptions" label="Scoring Type" variant="outlined"
-          density="comfortable" class="mb-3" />
-
-        <!-- Scoring Type Description -->
-        <v-alert :type="getScoringAlertType(bulkScoringType)" variant="tonal" density="compact" class="mb-4">
-          {{ getScoringTypeDescription(bulkScoringType) }}
-        </v-alert>
-
-        <!-- Policy (for asymmetrical) -->
-        <v-select v-if="bulkScoringType === 'asymmetrical'" v-model="bulkPolicy" :items="policyOptions" label="Policy"
-          variant="outlined" density="comfortable" class="mb-3" />
-
-        <!-- Target (for asymmetrical) -->
-        <v-text-field v-if="bulkScoringType === 'asymmetrical'" v-model.number="bulkTarget"
-          label="Custom Target (optional)" type="number" variant="outlined" density="comfortable" class="mb-3"
-          hint="Leave empty for auto-detection (midpoint of UCL/LCL)" persistent-hint />
-
-        <!-- Weight -->
-        <v-text-field v-model.number="bulkWeight" label="Weight" type="number" variant="outlined" density="comfortable"
-          min="0" max="10" step="0.1" hint="Weight for these test items in overall score calculation (default: 1.0)"
-          persistent-hint />
-      </v-card-text></div>
-
-      <div class="app-dialog-footer"><v-card-actions class="pa-3">
-        <v-btn color="grey" variant="outlined" @click="bulkScoringDialog = false">
-          Cancel
-        </v-btn>
-        <v-spacer />
-        <v-btn color="primary" variant="flat" @click="applyBulkScoringConfig">
-          Apply to {{ selectedItemNames.size }} Items
-        </v-btn>
-      </v-card-actions></div>
-    </v-card>
-  </v-dialog>
-
-  <!-- Single Item Scoring Configuration Dialog -->
-  <v-dialog v-model="singleItemScoringDialog" max-width="500" persistent>
-    <v-card v-if="singleConfigItem" class="app-dialog">
-      <div class="app-dialog-header"><v-card-title class="d-flex align-center">
-        <v-icon class="mr-2">mdi-tune</v-icon>
-        Configure Scoring
-      </v-card-title>
-      <v-card-subtitle class="py-3 text-truncate">
-        {{ singleConfigItem }}
-      </v-card-subtitle></div>
-
-      <div class="app-dialog-body"><v-card-text class="pa-4">
-        <!-- Scoring Type Selection -->
-        <v-select :model-value="getSingleDialogConfig()?.scoring_type"
-          @update:model-value="updateSingleDialogScoringType($event)" :items="scoringTypeOptions" label="Scoring Type"
-          variant="outlined" density="comfortable" class="mb-3" />
-
-        <!-- Description -->
-        <v-alert :type="getScoringAlertType(getSingleDialogConfig()?.scoring_type ?? 'symmetrical')" variant="tonal"
-          density="compact" class="mb-4">
-          {{ getScoringTypeDescription(getSingleDialogConfig()?.scoring_type ?? 'symmetrical') }}
-        </v-alert>
-
-        <!-- Policy (for asymmetrical) -->
-        <v-select v-if="getSingleDialogConfig()?.scoring_type === 'asymmetrical'"
-          :model-value="getSingleDialogConfig()?.policy" @update:model-value="updateSingleDialogPolicy($event)"
-          :items="policyOptions" label="Policy" variant="outlined" density="comfortable" class="mb-3" />
-
-        <!-- Target (for asymmetrical) -->
-        <v-text-field v-if="getSingleDialogConfig()?.scoring_type === 'asymmetrical'"
-          :model-value="getSingleDialogConfig()?.target"
-          @update:model-value="updateSingleDialogTarget($event ? Number($event) : undefined)"
-          label="Custom Target (optional)" type="number" variant="outlined" density="comfortable" class="mb-3"
-          hint="Leave empty for auto-detection (midpoint of UCL/LCL)" persistent-hint />
-
-        <!-- Weight -->
-        <v-text-field :model-value="getSingleDialogConfig()?.weight ?? 1.0"
-          @update:model-value="updateSingleDialogWeight($event ? Number($event) : 1.0)" label="Weight" type="number"
-          variant="outlined" density="comfortable" min="0" max="10" step="0.1"
-          hint="Weight for this test item in overall score calculation" persistent-hint />
-
-        <!-- Item Specs Info -->
-        <v-card variant="tonal" class="mt-4" v-if="singleDialogSpecs">
-          <v-card-text class="py-2">
-            <div class="text-caption text-medium-emphasis mb-1">Item Specifications</div>
-            <v-row dense>
-              <v-col cols="4">
-                <div class="text-caption">UCL</div>
-                <div class="font-weight-medium">{{ singleDialogSpecs.usl ?? 'N/A' }}</div>
-              </v-col>
-              <v-col cols="4">
-                <div class="text-caption">LCL</div>
-                <div class="font-weight-medium">{{ singleDialogSpecs.lsl ?? 'N/A' }}</div>
-              </v-col>
-              <v-col cols="4">
-                <div class="text-caption">Sample Value</div>
-                <div class="font-weight-medium">{{ singleDialogSpecs.value ?? 'N/A' }}</div>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
-      </v-card-text></div>
-
-      <div class="app-dialog-footer"><v-card-actions class="pa-3">
-        <v-spacer />
-        <v-btn color="primary" variant="flat" @click="singleItemScoringDialog = false">
+    <template #footer>
+      <div class="upload-scoring-dialog__footer">
+        <div class="upload-scoring-dialog__footer-spacer"></div>
+        <button type="button" class="upload-scoring-dialog__button upload-scoring-dialog__button--primary" @click="singleItemScoringDialog = false">
           Done
-        </v-btn>
-      </v-card-actions></div>
-    </v-card>
-  </v-dialog>
+        </button>
+      </div>
+    </template>
+  </AppDialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { AppDialog, AppPanel } from '@/shared/ui'
 import type {
   ParsedTestItemEnhanced,
   RescoreScoringConfig,
@@ -281,11 +364,19 @@ const dialogOpen = computed({
 })
 
 // Local state
-const isFullscreen = ref(false)
 const searchQuery = ref('')
 const selectedStation = ref<string | null>(null)
 const selectedItemNames = ref<Set<string>>(new Set())
 const scoringConfigs = ref<RescoreScoringConfig[]>([])
+
+const selectedCount = computed(() => selectedItemNames.value.size)
+const scoringConfigCount = computed(() => scoringConfigs.value.length)
+const selectedStationValue = computed({
+  get: () => selectedStation.value ?? '',
+  set: (value: string) => {
+    selectedStation.value = value || null
+  },
+})
 
 // Station options computed from props
 const stationOptions = computed(() => props.stations || [])
@@ -388,8 +479,10 @@ function getItemTypeLabel(name: string): string {
   return isItemCriteria(name) ? 'Criteria' : 'Non-Criteria'
 }
 
-function getItemTypeColor(name: string): string {
-  return isItemCriteria(name) ? 'success' : 'warning'
+function getItemTypeClass(name: string): string {
+  return isItemCriteria(name)
+    ? 'upload-scoring-dialog__pill--success'
+    : 'upload-scoring-dialog__pill--warning'
 }
 
 // ============================================
@@ -546,23 +639,34 @@ function handleCancel() {
   dialogOpen.value = false
 }
 
+function toNumber(value: string, fallback = 0): number {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function toOptionalNumber(value: string): number | undefined {
+  if (value.trim().length === 0) return undefined
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
+}
+
 // Helpers
-function getScoringTypeColor(type: string): string {
+function getScoringTypeClass(type: string): string {
   switch (type) {
     case 'symmetrical':
-      return 'blue'
+      return 'upload-scoring-dialog__pill--info'
     case 'asymmetrical':
-      return 'purple'
+      return 'upload-scoring-dialog__pill--violet'
     case 'per_mask':
-      return 'orange'
+      return 'upload-scoring-dialog__pill--warning'
     case 'evm':
-      return 'teal'
+      return 'upload-scoring-dialog__pill--success'
     case 'throughput':
-      return 'green'
+      return 'upload-scoring-dialog__pill--success'
     case 'binary':
-      return 'grey'
+      return 'upload-scoring-dialog__pill--muted'
     default:
-      return 'blue'
+      return 'upload-scoring-dialog__pill--info'
   }
 }
 
@@ -585,15 +689,15 @@ function getScoringTypeLabel(type: string): string {
   }
 }
 
-function getScoringAlertType(type: string): 'info' | 'warning' | 'success' {
+function getScoringNoticeClass(type: string): string {
   switch (type) {
     case 'asymmetrical':
-      return 'warning'
+      return 'upload-scoring-dialog__notice--warning'
     case 'per_mask':
     case 'evm':
-      return 'success'
+      return 'upload-scoring-dialog__notice--success'
     default:
-      return 'info'
+      return 'upload-scoring-dialog__notice--info'
   }
 }
 
@@ -632,21 +736,383 @@ watch(
 </script>
 
 <style scoped>
-.gap-1 {
-  gap: 0.25rem;
+.upload-scoring-dialog {
+  display: grid;
+  gap: 1rem;
 }
 
-.test-item-row {
+.upload-scoring-dialog__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.upload-scoring-dialog__header-copy {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.upload-scoring-dialog__header-copy h2 {
+  margin: 0;
+  color: var(--app-ink);
+  font-family: var(--app-display);
+  font-size: 1.35rem;
+}
+
+.upload-scoring-dialog__header-copy p {
+  margin: 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.upload-scoring-dialog__header-meta {
+  display: flex;
+  gap: 0.65rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.upload-scoring-dialog__toolbar,
+.upload-scoring-dialog__action-band,
+.upload-scoring-dialog__footer,
+.upload-scoring-dialog__item-row,
+.upload-scoring-dialog__item-meta,
+.upload-scoring-dialog__spec-grid {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.upload-scoring-dialog__toolbar {
+  grid-template-columns: minmax(0, 2fr) minmax(14rem, 1fr);
+}
+
+.upload-scoring-dialog__action-bands {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.upload-scoring-dialog__action-band {
+  grid-template-columns: auto repeat(4, max-content);
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  border: 1px solid rgba(20, 88, 71, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 251, 247, 0.88);
+}
+
+.upload-scoring-dialog__action-band--secondary {
+  grid-template-columns: auto repeat(3, max-content);
+}
+
+.upload-scoring-dialog__band-label,
+.upload-scoring-dialog__field span,
+.upload-scoring-dialog__spec-grid span {
+  color: var(--app-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.upload-scoring-dialog__field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.upload-scoring-dialog__field input,
+.upload-scoring-dialog__field select {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  padding: 0.78rem 0.9rem;
+  font: inherit;
+}
+
+.upload-scoring-dialog__field small {
+  color: var(--app-muted);
+  line-height: 1.5;
+}
+
+.upload-scoring-dialog__selection-banner,
+.upload-scoring-dialog__notice {
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid transparent;
+  font-size: 0.9rem;
+  line-height: 1.55;
+}
+
+.upload-scoring-dialog__selection-banner {
+  background: rgba(20, 88, 71, 0.08);
+  border-color: rgba(20, 88, 71, 0.14);
+  color: #145847;
+}
+
+.upload-scoring-dialog__notice--info {
+  background: rgba(40, 96, 163, 0.08);
+  border-color: rgba(40, 96, 163, 0.16);
+  color: #1f4f89;
+}
+
+.upload-scoring-dialog__notice--warning {
+  background: rgba(169, 102, 34, 0.1);
+  border-color: rgba(169, 102, 34, 0.18);
+  color: #88551c;
+}
+
+.upload-scoring-dialog__notice--success {
+  background: rgba(20, 88, 71, 0.08);
+  border-color: rgba(20, 88, 71, 0.16);
+  color: #145847;
+}
+
+.upload-scoring-dialog__list {
+  display: grid;
+  gap: 0.7rem;
+  max-height: min(58vh, 42rem);
+  overflow-y: auto;
+  padding-right: 0.25rem;
+}
+
+.upload-scoring-dialog__item-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(20, 88, 71, 0.1);
+  background: rgba(255, 255, 255, 0.7);
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.test-item-row:hover {
-  background-color: rgba(0, 0, 0, 0.04);
+.upload-scoring-dialog__item-row:hover,
+.upload-scoring-dialog__item-row:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(20, 88, 71, 0.22);
+  box-shadow: 0 0.9rem 1.8rem rgba(20, 88, 71, 0.08);
+  outline: none;
 }
 
-.scoring-config-btn {
-  text-transform: none;
-  letter-spacing: 0;
+.upload-scoring-dialog__item-row.is-selected {
+  border-color: rgba(20, 88, 71, 0.28);
+  background: rgba(246, 255, 250, 0.9);
+}
+
+.upload-scoring-dialog__checkbox {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+.upload-scoring-dialog__checkbox input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.upload-scoring-dialog__checkbox span {
+  width: 1.2rem;
+  height: 1.2rem;
+  border-radius: 0.35rem;
+  border: 1px solid rgba(20, 88, 71, 0.25);
+  background: white;
+  box-shadow: inset 0 0 0 0 rgba(20, 88, 71, 0.95);
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
+}
+
+.upload-scoring-dialog__checkbox input:checked + span {
+  border-color: rgba(20, 88, 71, 0.9);
+  box-shadow: inset 0 0 0 0.45rem rgba(20, 88, 71, 0.95);
+}
+
+.upload-scoring-dialog__item-copy {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.upload-scoring-dialog__item-copy strong {
+  color: var(--app-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.upload-scoring-dialog__item-copy span {
+  color: var(--app-muted);
+  font-size: 0.84rem;
+  line-height: 1.5;
+}
+
+.upload-scoring-dialog__item-meta {
+  grid-auto-flow: column;
+  align-items: center;
+}
+
+.upload-scoring-dialog__pill,
+.upload-scoring-dialog__pill-button,
+.upload-scoring-dialog__chip-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.2rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.8rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.upload-scoring-dialog__pill-button,
+.upload-scoring-dialog__chip-button,
+.upload-scoring-dialog__button,
+.upload-scoring-dialog__ghost-button {
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease, border-color 0.15s ease;
+}
+
+.upload-scoring-dialog__pill-button:hover,
+.upload-scoring-dialog__chip-button:hover,
+.upload-scoring-dialog__button:hover,
+.upload-scoring-dialog__ghost-button:hover {
+  transform: translateY(-1px);
+}
+
+.upload-scoring-dialog__pill-button:disabled,
+.upload-scoring-dialog__chip-button:disabled,
+.upload-scoring-dialog__button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.upload-scoring-dialog__pill--info,
+.upload-scoring-dialog__chip-button--info {
+  background: rgba(40, 96, 163, 0.1);
+  border-color: rgba(40, 96, 163, 0.16);
+  color: #1f4f89;
+}
+
+.upload-scoring-dialog__pill--violet {
+  background: rgba(128, 83, 161, 0.1);
+  border-color: rgba(128, 83, 161, 0.16);
+  color: #6e3f91;
+}
+
+.upload-scoring-dialog__pill--success,
+.upload-scoring-dialog__chip-button--success {
+  background: rgba(20, 88, 71, 0.1);
+  border-color: rgba(20, 88, 71, 0.16);
+  color: #145847;
+}
+
+.upload-scoring-dialog__pill--warning,
+.upload-scoring-dialog__chip-button--warning {
+  background: rgba(169, 102, 34, 0.1);
+  border-color: rgba(169, 102, 34, 0.18);
+  color: #88551c;
+}
+
+.upload-scoring-dialog__pill--danger,
+.upload-scoring-dialog__chip-button--danger {
+  background: rgba(164, 52, 58, 0.1);
+  border-color: rgba(164, 52, 58, 0.18);
+  color: #8e3037;
+}
+
+.upload-scoring-dialog__pill--muted {
+  background: rgba(95, 103, 122, 0.1);
+  border-color: rgba(95, 103, 122, 0.16);
+  color: #4c566a;
+}
+
+.upload-scoring-dialog__button,
+.upload-scoring-dialog__ghost-button {
+  min-height: 2.75rem;
+  padding: 0.7rem 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid var(--app-border);
+  font-weight: 700;
+}
+
+.upload-scoring-dialog__button--primary {
+  background: linear-gradient(135deg, #145847, #1b6c58);
+  border-color: #145847;
+  color: white;
+}
+
+.upload-scoring-dialog__button--secondary {
+  background: rgba(40, 96, 163, 0.1);
+  border-color: rgba(40, 96, 163, 0.18);
+  color: #1f4f89;
+}
+
+.upload-scoring-dialog__button--ghost,
+.upload-scoring-dialog__ghost-button {
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+}
+
+.upload-scoring-dialog__footer {
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+}
+
+.upload-scoring-dialog__footer-spacer {
+  min-width: 1px;
+}
+
+.upload-scoring-dialog__modal-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.upload-scoring-dialog__spec-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.upload-scoring-dialog__spec-grid div {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.upload-scoring-dialog__spec-grid strong {
+  color: var(--app-ink);
+  font-size: 1rem;
+}
+
+.upload-scoring-dialog__empty-state {
+  padding: 1.4rem;
+  border: 1px dashed rgba(95, 103, 122, 0.22);
+  border-radius: 1rem;
+  color: var(--app-muted);
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .upload-scoring-dialog__toolbar,
+  .upload-scoring-dialog__action-band,
+  .upload-scoring-dialog__action-band--secondary,
+  .upload-scoring-dialog__item-row,
+  .upload-scoring-dialog__footer,
+  .upload-scoring-dialog__spec-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .upload-scoring-dialog__item-meta {
+    grid-auto-flow: row;
+    justify-items: start;
+  }
+
+  .upload-scoring-dialog__header {
+    flex-direction: column;
+  }
 }
 </style>

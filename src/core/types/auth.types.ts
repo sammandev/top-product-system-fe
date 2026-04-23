@@ -32,7 +32,7 @@ export interface RefreshTokenRequest {
  * User role in the access control hierarchy (highest to lowest privilege).
  * - developer: Hardcoded identity, auto-assigned. Cannot be modified via UI. Full access.
  * - superadmin: Granted by developer only. Full system access.
- * - admin: All pages except System Cleanup, App Configuration, Roles & Permissions, Menu Access.
+ * - admin: All pages except System Cleanup, App Configuration, and Menu Access.
  * - user: Standard pages + Tools. No admin/system pages.
  * - guest: Only Top Products Analysis + Data Explorer (+ pages granted by admin/superadmin/developer).
  */

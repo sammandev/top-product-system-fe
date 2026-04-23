@@ -1,686 +1,334 @@
 <template>
-  <v-card>
-    <v-card-title class="d-flex align-center">
-      <v-icon start>mdi-file-document-check</v-icon>
-      Parsing Results
-      <v-chip class="ml-2" color="primary" size="small">
-        {{ result.parsed_count }} items
-      </v-chip>
-    </v-card-title>
-
-    <v-card-text>
-      <!-- Metadata Card -->
-      <v-card variant="tonal" class="mb-4">
-        <v-card-title class="text-subtitle-1">
-          <v-icon start size="small">mdi-information</v-icon>
-          Log Metadata
-        </v-card-title>
-        <v-card-text>
-          <v-row dense>
-            <!-- Station/ISN/Filename Info -->
-            <v-col cols="12" md="4">
-              <div class="text-caption text-medium-emphasis">Station</div>
-              <div class="text-body-2 font-weight-medium">{{ result.station }}</div>
-            </v-col>
-            <v-col cols="12" md="4">
-              <div class="text-caption text-medium-emphasis">ISN</div>
-              <div class="text-body-2 font-weight-medium">{{ result.isn || 'N/A' }}</div>
-            </v-col>
-            <v-col cols="12" md="4">
-              <div class="text-caption text-medium-emphasis">Filename</div>
-              <div class="text-body-2 font-weight-medium">{{ result.filename }}</div>
-            </v-col>
-
-            <!-- 8 Metadata Fields -->
-            <v-col cols="12" md="3">
-              <div class="text-caption text-medium-emphasis">Test Date</div>
-              <div class="text-body-2">{{ result.metadata?.test_date || 'N/A' }}</div>
-            </v-col>
-            <v-col cols="12" md="3">
-              <div class="text-caption text-medium-emphasis">Device</div>
-              <div class="text-body-2">{{ result.metadata?.device || 'N/A' }}</div>
-            </v-col>
-            <v-col cols="12" md="3">
-              <div class="text-caption text-medium-emphasis">Script Version</div>
-              <div class="text-body-2">{{ result.metadata?.script_version || 'N/A' }}</div>
-            </v-col>
-            <v-col cols="12" md="3">
-              <div class="text-caption text-medium-emphasis">Duration</div>
-              <div class="text-body-2">{{ formatDuration(result.metadata?.duration_seconds) }}</div>
-            </v-col>
-            <v-col cols="12" md="3">
-              <div class="text-caption text-medium-emphasis">SFIS Status</div>
-              <div class="text-body-2">{{ result.metadata?.sfis_status || 'N/A' }}</div>
-            </v-col>
-            <v-col cols="12" md="3">
-              <div class="text-caption text-medium-emphasis">Result</div>
-              <v-chip :color="getResultColor(result.metadata?.result)" size="x-small">
-                {{ result.metadata?.result || 'N/A' }}
-              </v-chip>
-            </v-col>
-            <v-col cols="12" md="3">
-              <div class="text-caption text-medium-emphasis">Counter</div>
-              <div class="text-body-2">{{ result.metadata?.counter || 'N/A' }}</div>
-            </v-col>
-          </v-row>
-        </v-card-text>
-      </v-card>
-
-      <!-- Summary Statistics -->
-      <v-row dense class="mb-4">
-        <v-col cols="12" md="3">
-          <v-card variant="tonal" color="primary">
-            <v-card-text class="text-center py-3">
-              <div class="text-h5 font-weight-bold">{{ result.value_type_count }}</div>
-              <div class="text-caption">Value Items</div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        <v-col cols="12" md="3">
-          <v-card variant="tonal" color="secondary">
-            <v-card-text class="text-center py-3">
-              <div class="text-h5 font-weight-bold">{{ result.non_value_type_count }}</div>
-              <div class="text-caption">Non-Value Items</div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        <v-col cols="12" md="3">
-          <v-card variant="tonal" color="info">
-            <v-card-text class="text-center py-3">
-              <div class="text-h5 font-weight-bold">{{ result.hex_value_count }}</div>
-              <div class="text-caption">Hex Values</div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        <v-col cols="12" md="3">
-          <v-card variant="tonal" color="success">
-            <v-card-text class="text-center py-3">
-              <div class="text-h5 font-weight-bold">
-                {{ formatScore(result.avg_score) }}
-              </div>
-              <div class="text-caption">Avg Score (Median: {{ formatScore(result.median_score) }})</div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-
-      <!-- Value Items Table (Numeric Data) -->
-      <v-card variant="outlined" class="mb-4">
-        <v-card-title class="bg-info-lighten-5 d-flex align-center">
-          <v-icon start>mdi-table</v-icon>
-          Value Items (Numeric Data)
-          <v-chip class="ml-2" size="small">{{ filteredValueItems.length }}</v-chip>
-          <v-spacer />
-          <!-- <v-btn icon size="small" @click="fullscreenValue = true" class="ml-2">
-            <v-icon>mdi-fullscreen</v-icon>
-          </v-btn> -->
-          <v-icon color="primary" size="large" @click="fullscreenValue = true">mdi-fullscreen</v-icon>
-        </v-card-title>
-        <v-card-text class="pa-2">
-          <!-- Search Field -->
-          <v-text-field v-model="searchValue" prepend-inner-icon="mdi-magnify" label="Search value items..."
-            variant="outlined" density="compact" clearable class="mb-2" hide-details />
-        </v-card-text>
-        <v-card-text class="pa-0">
-          <v-data-table :headers="valueHeaders" :items="paginatedValueItems" :items-per-page="itemsPerPageValue"
-            density="compact" fixed-header height="500" hide-default-footer striped="even">
-            <!-- Test Item Column -->
-            <template #item.test_item="{ item }">
-              <div class="text-body-2 font-weight-medium"
-                :class="{ 'text-primary font-weight-bold': item.is_calculated }">
-                {{ item.test_item }}
-                <v-chip v-if="item.is_calculated" size="x-small" color="primary" variant="tonal" class="ml-1">
-                  Calculated
-                </v-chip>
-              </div>
-            </template>
-
-            <!-- USL Column -->
-            <template #item.usl="{ item }">
-              <span class="text-body-2">{{ formatNumber(item.usl) }}</span>
-            </template>
-
-            <!-- LSL Column -->
-            <template #item.lsl="{ item }">
-              <span class="text-body-2">{{ formatNumber(item.lsl) }}</span>
-            </template>
-
-            <!-- Value Column -->
-            <template #item.value="{ item }">
-              <div class="d-flex align-center gap-1">
-                <span class="text-body-2">{{ item.value }}</span>
-                <v-chip v-if="item.is_hex" size="x-small" color="info" variant="tonal">
-                  {{ item.hex_decimal }}
-                </v-chip>
-              </div>
-            </template>
-
-            <!-- Type Column -->
-            <template #item.type="{ item }">
-              <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
-                {{ getTypeLabel(item) }}
-              </v-chip>
-            </template>
-
-            <!-- Score Column (Clickable) -->
-            <template #item.score="{ item }">
-              <v-chip v-if="item.score !== null" :color="getScoreColor(item.score)" size="small" class="cursor-pointer"
-                @click="openScoreBreakdown(item)">
-                {{ item.score.toFixed(2) }}
-              </v-chip>
-              <span v-else class="text-caption text-medium-emphasis">N/A</span>
-            </template>
-
-            <!-- Criteria Match Column -->
-            <template #item.matched_criteria="{ item }">
-              <v-icon v-if="item.matched_criteria" color="success" size="small">
-                mdi-check-circle
-              </v-icon>
-              <v-icon v-else color="grey" size="small">
-                mdi-minus-circle
-              </v-icon>
-            </template>
-          </v-data-table>
-          <div class="d-flex align-center justify-space-between pa-2">
-            <div class="d-flex align-center gap-2">
-              <span class="text-caption text-medium-emphasis">Show</span>
-              <v-select v-model="itemsPerPageValue" :items="itemsPerPageOptions" variant="outlined" density="compact"
-                hide-details style="width: 100px;" />
-              <span class="text-caption text-medium-emphasis">items</span>
-            </div>
-            <v-pagination
-              v-if="itemsPerPageValue !== 0 && filteredValueItems.length > getEffectiveItemsPerPage(itemsPerPageValue)"
-              v-model="currentPageValue" :length="totalPagesValue" :total-visible="7" size="small" density="compact" />
-            <div style="width: 150px;"></div>
-          </div>
-        </v-card-text>
-      </v-card>
-
-      <!-- Non-Value Items Table (Status/Text Data) -->
-      <v-card variant="outlined">
-        <v-card-title class="bg-secondary-lighten-5 d-flex align-center">
-          <v-icon start>mdi-table</v-icon>
-          Non-Value Items (Status/Text Data)
-          <v-chip class="ml-2" size="small">{{ filteredNonValueItems.length }}</v-chip>
-          <v-spacer />
-          <!-- <v-btn icon size="small" @click="fullscreenNonValue = true" class="ml-2">
-            <v-icon>mdi-fullscreen</v-icon>
-          </v-btn> -->
-          <v-icon color="primary" size="large" @click="fullscreenNonValue = true">mdi-fullscreen</v-icon>
-        </v-card-title>
-        <v-card-text class="pa-2">
-          <!-- Search Field -->
-          <v-text-field v-model="searchNonValue" prepend-inner-icon="mdi-magnify" label="Search non-value items..."
-            variant="outlined" density="compact" clearable class="mb-2" hide-details />
-        </v-card-text>
-        <v-card-text class="pa-0">
-          <v-data-table :headers="nonValueHeaders" :items="paginatedNonValueItems"
-            :items-per-page="itemsPerPageNonValue" density="compact" fixed-header height="500" hide-default-footer
-            striped="even">
-            <!-- Test Item Column -->
-            <template #item.test_item="{ item }">
-              <div class="text-body-2 font-weight-medium"
-                :class="{ 'text-primary font-weight-bold': item.is_calculated }">
-                {{ item.test_item }}
-              </div>
-            </template>
-
-            <!-- Value Column -->
-            <template #item.value="{ item }">
-              <v-chip size="small" :color="item.is_calculated ? 'primary' : getStatusColor(item.value)"
-                :class="{ 'font-weight-bold': item.is_calculated }">
-                {{ item.value }}
-              </v-chip>
-            </template>
-
-            <!-- Decimal Value Column (for ADJUSTED_POW items) -->
-            <template #item.decimal_value="{ item }">
-              <span
-                v-if="item.test_item.includes('ADJUSTED_POW') && (item.hex_decimal !== null && item.hex_decimal !== undefined)"
-                class="text-body-2 font-weight-medium text-primary">
-                {{ item.hex_decimal }}
-              </span>
-              <span v-else class="text-caption text-medium-emphasis">—</span>
-            </template>
-
-            <!-- Type Column -->
-            <template #item.type="{ item }">
-              <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
-                {{ getTypeLabel(item) }}
-              </v-chip>
-            </template>
-
-            <!-- Criteria Match Column -->
-            <template #item.matched_criteria="{ item }">
-              <v-icon v-if="item.matched_criteria" color="success" size="small">
-                mdi-check-circle
-              </v-icon>
-              <v-icon v-else color="grey" size="small">
-                mdi-minus-circle
-              </v-icon>
-            </template>
-          </v-data-table>
-          <div class="d-flex align-center justify-space-between pa-2">
-            <div class="d-flex align-center gap-2">
-              <span class="text-caption text-medium-emphasis">Show</span>
-              <v-select v-model="itemsPerPageNonValue" :items="itemsPerPageOptions" variant="outlined" density="compact"
-                hide-details style="width: 100px;" />
-              <span class="text-caption text-medium-emphasis">items</span>
-            </div>
-            <v-pagination
-              v-if="itemsPerPageNonValue !== 0 && filteredNonValueItems.length > getEffectiveItemsPerPage(itemsPerPageNonValue)"
-              v-model="currentPageNonValue" :length="totalPagesNonValue" :total-visible="7" size="small"
-              density="compact" />
-            <div style="width: 150px;"></div>
-          </div>
-        </v-card-text>
-      </v-card>
-    </v-card-text>
-  </v-card>
-
-  <!-- Fullscreen Dialog for Value Items -->
-  <v-dialog v-model="fullscreenValue" fullscreen transition="dialog-bottom-transition">
-    <v-card class="d-flex flex-column" style="height: 100vh; overflow: hidden;">
-      <v-card-title class="d-flex justify-space-between align-center flex-shrink-0">
-        <div>
-          <v-icon class="mr-2">mdi-table</v-icon>
-          Value Items (Numeric Data)
-        </div>
-        <v-btn icon="mdi-close" variant="text" @click="fullscreenValue = false" />
-      </v-card-title>
-      <v-card-text class="pb-2 pt-3 flex-shrink-0">
-        <v-text-field v-model="searchValue" prepend-inner-icon="mdi-magnify" label="Search value items..."
-          variant="outlined" density="compact" clearable hide-details />
-      </v-card-text>
-      <v-card-text class="pa-0 flex-grow-1 d-flex flex-column" style="overflow: hidden;">
-        <div class="flex-grow-1" style="overflow: auto;">
-          <v-data-table :headers="valueHeaders" :items="paginatedValueItems" :items-per-page="itemsPerPageValue"
-            :height="'calc(100vh - 200px)'" fixed-header density="compact" hide-default-footer>
-            <template #item.test_item="{ item }">
-              <div class="text-body-2 font-weight-medium"
-                :class="{ 'text-primary font-weight-bold': item.is_calculated }">
-                {{ item.test_item }}
-                <v-chip v-if="item.is_calculated" size="x-small" color="primary" variant="tonal" class="ml-1">
-                  Calculated
-                </v-chip>
-              </div>
-            </template>
-            <template #item.usl="{ item }">
-              <span class="text-body-2">{{ formatNumber(item.usl) }}</span>
-            </template>
-            <template #item.lsl="{ item }">
-              <span class="text-body-2">{{ formatNumber(item.lsl) }}</span>
-            </template>
-            <template #item.value="{ item }">
-              <div class="d-flex align-center gap-1">
-                <span class="text-body-2">{{ item.value }}</span>
-                <v-chip v-if="item.is_hex" size="x-small" color="info" variant="tonal">
-                  {{ item.hex_decimal }}
-                </v-chip>
-              </div>
-            </template>
-            <template #item.type="{ item }">
-              <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
-                {{ getTypeLabel(item) }}
-              </v-chip>
-            </template>
-            <template #item.score="{ item }">
-              <v-chip v-if="item.score !== null" :color="getScoreColor(item.score)" size="small" class="cursor-pointer"
-                @click="openScoreBreakdown(item)">
-                {{ item.score.toFixed(2) }}
-              </v-chip>
-              <span v-else class="text-caption text-medium-emphasis">N/A</span>
-            </template>
-            <template #item.matched_criteria="{ item }">
-              <v-icon v-if="item.matched_criteria" color="success" size="small">
-                mdi-check-circle
-              </v-icon>
-              <v-icon v-else color="grey" size="small">
-                mdi-minus-circle
-              </v-icon>
-            </template>
-          </v-data-table>
-        </div>
-        <div class="flex-shrink-0 pa-2" style="border-top: 1px solid rgba(0,0,0,0.12);">
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center gap-2">
-              <span class="text-caption text-medium-emphasis">Show</span>
-              <v-select v-model="itemsPerPageValue" :items="itemsPerPageOptions" variant="outlined" density="compact"
-                hide-details style="width: 100px;" />
-              <span class="text-caption text-medium-emphasis">items</span>
-            </div>
-            <v-pagination
-              v-if="itemsPerPageValue !== 0 && filteredValueItems.length > getEffectiveItemsPerPage(itemsPerPageValue)"
-              v-model="currentPageValue" :length="totalPagesValue" :total-visible="5" size="small" density="compact" />
-            <div style="width: 150px;"></div>
+  <div class="parsing-result-view">
+    <AppPanel
+      eyebrow="Parsing Workspace"
+      title="Parsing Results"
+      :description="`${result.parsed_count} parsed item${result.parsed_count === 1 ? '' : 's'} extracted from the uploaded log.`"
+      tone="cool"
+    >
+      <section class="parsing-result-view__metadata-panel">
+        <div class="parsing-result-view__section-heading">
+          <div class="parsing-result-view__section-title">
+            <Icon icon="mdi:information" />
+            <span>Log Metadata</span>
           </div>
         </div>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
 
-  <!-- Fullscreen Dialog for Non-Value Items -->
-  <v-dialog v-model="fullscreenNonValue" fullscreen transition="dialog-bottom-transition">
-    <v-card class="d-flex flex-column" style="height: 100vh; overflow: hidden;">
-      <v-card-title class="d-flex justify-space-between align-center flex-shrink-0">
-        <div>
-          <v-icon class="mr-2">mdi-table</v-icon>
-          Non-Value Items (Status/Text Data)
+        <div class="parsing-result-view__metadata-grid">
+          <article class="parsing-result-view__metadata-item"><small>Station</small><strong>{{ result.station }}</strong></article>
+          <article class="parsing-result-view__metadata-item"><small>ISN</small><strong>{{ result.isn || 'N/A' }}</strong></article>
+          <article class="parsing-result-view__metadata-item"><small>Filename</small><strong>{{ result.filename }}</strong></article>
+          <article class="parsing-result-view__metadata-item"><small>Test Date</small><strong>{{ result.metadata?.test_date || 'N/A' }}</strong></article>
+          <article class="parsing-result-view__metadata-item"><small>Device</small><strong>{{ result.metadata?.device || 'N/A' }}</strong></article>
+          <article class="parsing-result-view__metadata-item"><small>Script Version</small><strong>{{ result.metadata?.script_version || 'N/A' }}</strong></article>
+          <article class="parsing-result-view__metadata-item"><small>Duration</small><strong>{{ formatDuration(result.metadata?.duration_seconds) }}</strong></article>
+          <article class="parsing-result-view__metadata-item"><small>SFIS Status</small><strong>{{ result.metadata?.sfis_status || 'N/A' }}</strong></article>
+          <article class="parsing-result-view__metadata-item"><small>Result</small><span class="parsing-result-view__pill" :class="resultPillClass(result.metadata?.result)">{{ result.metadata?.result || 'N/A' }}</span></article>
+          <article class="parsing-result-view__metadata-item"><small>Counter</small><strong>{{ result.metadata?.counter || 'N/A' }}</strong></article>
         </div>
-        <v-btn icon="mdi-close" variant="text" @click="fullscreenNonValue = false" />
-      </v-card-title>
-      <v-card-text class="pb-2 pt-3 flex-shrink-0">
-        <v-text-field v-model="searchNonValue" prepend-inner-icon="mdi-magnify" label="Search non-value items..."
-          variant="outlined" density="compact" clearable hide-details />
-      </v-card-text>
-      <v-card-text class="pa-0 flex-grow-1 d-flex flex-column" style="overflow: hidden;">
-        <div class="flex-grow-1" style="overflow: auto;">
-          <v-data-table :headers="nonValueHeaders" :items="paginatedNonValueItems"
-            :items-per-page="itemsPerPageNonValue" :height="'calc(100vh - 200px)'" fixed-header density="compact"
-            hide-default-footer>
-            <template #item.test_item="{ item }">
-              <div class="text-body-2 font-weight-medium"
-                :class="{ 'text-primary font-weight-bold': item.is_calculated }">
-                {{ item.test_item }}
-              </div>
-            </template>
-            <template #item.value="{ item }">
-              <v-chip size="small" :color="item.is_calculated ? 'primary' : getStatusColor(item.value)"
-                :class="{ 'font-weight-bold': item.is_calculated }">
-                {{ item.value }}
-              </v-chip>
-            </template>
-            <template #item.decimal_value="{ item }">
-              <span
-                v-if="item.test_item.includes('ADJUSTED_POW') && (item.hex_decimal !== null && item.hex_decimal !== undefined)"
-                class="text-body-2 font-weight-medium text-primary">
-                {{ item.hex_decimal }}
-              </span>
-              <span v-else class="text-caption text-medium-emphasis">—</span>
-            </template>
-            <template #item.type="{ item }">
-              <v-chip :color="getTypeColor(item)" size="small" variant="tonal">
-                {{ getTypeLabel(item) }}
-              </v-chip>
-            </template>
-            <template #item.matched_criteria="{ item }">
-              <v-icon v-if="item.matched_criteria" color="success" size="small">
-                mdi-check-circle
-              </v-icon>
-              <v-icon v-else color="grey" size="small">
-                mdi-minus-circle
-              </v-icon>
-            </template>
-          </v-data-table>
-        </div>
-        <div class="flex-shrink-0 pa-2" style="border-top: 1px solid rgba(0,0,0,0.12);">
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center gap-2">
-              <span class="text-caption text-medium-emphasis">Show</span>
-              <v-select v-model="itemsPerPageNonValue" :items="itemsPerPageOptions" variant="outlined" density="compact"
-                hide-details style="width: 100px;" />
-              <span class="text-caption text-medium-emphasis">items</span>
-            </div>
-            <v-pagination
-              v-if="itemsPerPageNonValue !== 0 && filteredNonValueItems.length > getEffectiveItemsPerPage(itemsPerPageNonValue)"
-              v-model="currentPageNonValue" :length="totalPagesNonValue" :total-visible="5" size="small"
-              density="compact" />
-            <div style="width: 150px;"></div>
+      </section>
+
+      <section class="parsing-result-view__stat-grid">
+        <article class="parsing-result-view__stat-card parsing-result-view__stat-card--primary"><small>Value Items</small><strong>{{ result.value_type_count }}</strong></article>
+        <article class="parsing-result-view__stat-card parsing-result-view__stat-card--secondary"><small>Non-Value Items</small><strong>{{ result.non_value_type_count }}</strong></article>
+        <article class="parsing-result-view__stat-card parsing-result-view__stat-card--info"><small>Hex Values</small><strong>{{ result.hex_value_count }}</strong></article>
+        <article class="parsing-result-view__stat-card parsing-result-view__stat-card--success"><small>Avg Score</small><strong>{{ formatScore(result.avg_score) }}</strong><span>Median: {{ formatScore(result.median_score) }}</span></article>
+      </section>
+
+      <section class="parsing-result-view__section">
+        <div class="parsing-result-view__section-heading parsing-result-view__section-heading--info">
+          <div>
+            <p class="parsing-result-view__section-eyebrow">Numeric Surface</p>
+            <h3>Value Items (Numeric Data)</h3>
+          </div>
+          <div class="parsing-result-view__section-actions">
+            <span class="parsing-result-view__count-pill">{{ filteredValueItems.length }}</span>
+            <button type="button" class="parsing-result-view__icon-button" @click="fullscreenValue = true">
+              <Icon icon="mdi:fullscreen" />
+            </button>
           </div>
         </div>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
 
-  <!-- Custom Items Per Page Dialog for Value Items -->
-  <v-dialog v-model="showCustomInputValue" max-width="400">
-    <v-card class="app-dialog">
-      <div class="app-dialog-header"><v-card-title>Custom Items Per Page (Value Items)</v-card-title></div>
-      <div class="app-dialog-body"><v-card-text>
-        <v-text-field v-model.number="customItemsPerPageValue" type="number" label="Enter number of items"
-          variant="outlined" density="comfortable" min="1" :max="MAX_TABLE_ITEMS_PER_PAGE" autofocus
-          @keyup.enter="applyCustomItemsPerPageValue" />
-      </v-card-text></div>
-      <div class="app-dialog-footer"><v-card-actions>
-        <v-spacer />
-        <v-btn text @click="cancelCustomInputValue">Cancel</v-btn>
-        <v-btn color="primary" variant="elevated" @click="applyCustomItemsPerPageValue">Apply</v-btn>
-      </v-card-actions></div>
-    </v-card>
-  </v-dialog>
+        <label class="result-surface-search">
+          <span>Search value items</span>
+          <input v-model="searchValue" placeholder="Filter by test item name" type="text">
+        </label>
 
-  <!-- Custom Items Per Page Dialog for Non-Value Items -->
-  <v-dialog v-model="showCustomInputNonValue" max-width="400">
-    <v-card class="app-dialog">
-      <div class="app-dialog-header"><v-card-title>Custom Items Per Page (Non-Value Items)</v-card-title></div>
-      <div class="app-dialog-body"><v-card-text>
-        <v-text-field v-model.number="customItemsPerPageNonValue" type="number" label="Enter number of items"
-          variant="outlined" density="comfortable" min="1" :max="MAX_TABLE_ITEMS_PER_PAGE" autofocus
-          @keyup.enter="applyCustomItemsPerPageNonValue" />
-      </v-card-text></div>
-      <div class="app-dialog-footer"><v-card-actions>
-        <v-spacer />
-        <v-btn text @click="cancelCustomInputNonValue">Cancel</v-btn>
-        <v-btn color="primary" variant="elevated" @click="applyCustomItemsPerPageNonValue">Apply</v-btn>
-      </v-card-actions></div>
-    </v-card>
-  </v-dialog>
+        <AppDataGrid
+          :columns="valueGridColumns"
+          :rows="valueGridRows"
+          paginator
+          :rowsPerPage="10"
+          :rowsPerPageOptions="gridRowsPerPageOptions"
+          scrollHeight="500px"
+        >
+          <template #cell-test_item="{ data }">
+            <div class="parsing-result-view__test-item" :class="{ 'parsing-result-view__test-item--accent': data.is_calculated }">
+              <span>{{ data.test_item }}</span>
+              <span v-if="data.is_calculated" class="parsing-result-view__pill parsing-result-view__pill--info">Calculated</span>
+            </div>
+          </template>
 
-  <!-- Score Breakdown Dialog -->
-  <ScoreBreakdownDialog v-model="scoreDialogOpen" :item="selectedItem" />
+          <template #cell-usl="{ data }"><span>{{ formatNumber(data.usl as number | null | undefined) }}</span></template>
+          <template #cell-lsl="{ data }"><span>{{ formatNumber(data.lsl as number | null | undefined) }}</span></template>
+
+          <template #cell-value="{ data }">
+            <div class="parsing-result-view__value-stack">
+              <span>{{ data.value }}</span>
+              <span v-if="data.is_hex" class="parsing-result-view__pill parsing-result-view__pill--info">{{ data.hex_decimal }}</span>
+            </div>
+          </template>
+
+          <template #cell-type="{ data }">
+            <span class="parsing-result-view__pill" :class="typePillClass(data as ParsedTestItemEnhanced)">{{ getTypeLabel(data as ParsedTestItemEnhanced) }}</span>
+          </template>
+
+          <template #cell-score="{ data }">
+            <button
+              v-if="data.score !== null"
+              type="button"
+              class="parsing-result-view__score-pill"
+              :class="scorePillClass(Number(data.score))"
+              @click="openScoreBreakdown(data as ParsedTestItemEnhanced)"
+            >
+              {{ Number(data.score).toFixed(2) }}
+            </button>
+            <span v-else class="parsing-result-view__muted">N/A</span>
+          </template>
+
+          <template #cell-matched_criteria="{ data }">
+            <Icon :icon="data.matched_criteria ? 'mdi:check-circle' : 'mdi:minus-circle'" :class="data.matched_criteria ? 'parsing-result-view__criteria-icon parsing-result-view__criteria-icon--success' : 'parsing-result-view__criteria-icon parsing-result-view__criteria-icon--neutral'" />
+          </template>
+        </AppDataGrid>
+      </section>
+
+      <section class="parsing-result-view__section">
+        <div class="parsing-result-view__section-heading parsing-result-view__section-heading--secondary">
+          <div>
+            <p class="parsing-result-view__section-eyebrow">Textual Surface</p>
+            <h3>Non-Value Items (Status/Text Data)</h3>
+          </div>
+          <div class="parsing-result-view__section-actions">
+            <span class="parsing-result-view__count-pill">{{ filteredNonValueItems.length }}</span>
+            <button type="button" class="parsing-result-view__icon-button" @click="fullscreenNonValue = true">
+              <Icon icon="mdi:fullscreen" />
+            </button>
+          </div>
+        </div>
+
+        <label class="result-surface-search">
+          <span>Search non-value items</span>
+          <input v-model="searchNonValue" placeholder="Filter by test item name" type="text">
+        </label>
+
+        <AppDataGrid
+          :columns="nonValueGridColumns"
+          :rows="nonValueGridRows"
+          paginator
+          :rowsPerPage="10"
+          :rowsPerPageOptions="gridRowsPerPageOptions"
+          scrollHeight="500px"
+        >
+          <template #cell-test_item="{ data }">
+            <div class="parsing-result-view__test-item" :class="{ 'parsing-result-view__test-item--accent': data.is_calculated }">
+              {{ data.test_item }}
+            </div>
+          </template>
+
+          <template #cell-value="{ data }">
+            <span class="parsing-result-view__pill" :class="valuePillClass(String(data.value), data.is_calculated)">{{ data.value }}</span>
+          </template>
+
+          <template #cell-decimal_value="{ data }">
+            <span
+              v-if="String(data.test_item).includes('ADJUSTED_POW') && data.hex_decimal !== null && data.hex_decimal !== undefined"
+              class="parsing-result-view__decimal-value"
+            >
+              {{ data.hex_decimal }}
+            </span>
+            <span v-else class="parsing-result-view__muted">—</span>
+          </template>
+
+          <template #cell-type="{ data }">
+            <span class="parsing-result-view__pill" :class="typePillClass(data as ParsedTestItemEnhanced)">{{ getTypeLabel(data as ParsedTestItemEnhanced) }}</span>
+          </template>
+
+          <template #cell-matched_criteria="{ data }">
+            <Icon :icon="data.matched_criteria ? 'mdi:check-circle' : 'mdi:minus-circle'" :class="data.matched_criteria ? 'parsing-result-view__criteria-icon parsing-result-view__criteria-icon--success' : 'parsing-result-view__criteria-icon parsing-result-view__criteria-icon--neutral'" />
+          </template>
+        </AppDataGrid>
+      </section>
+    </AppPanel>
+
+    <AppDialog v-model="fullscreenValue" title="Value Items (Numeric Data)" description="Expanded parsing result view for numeric measurements." width="min(98vw, 112rem)" :breakpoints="dialogBreakpoints" :closable="false" maximizable>
+      <template #header>
+        <div class="result-surface-dialog-header">
+          <div>
+            <h2 class="result-surface-dialog-title">Value Items (Numeric Data)</h2>
+            <p class="result-surface-dialog-description">Search, score, and inspect numeric parsing results in the wider workspace.</p>
+          </div>
+          <button type="button" class="parsing-result-view__icon-button" @click="fullscreenValue = false">
+            <Icon icon="mdi:close" />
+          </button>
+        </div>
+      </template>
+
+      <label class="result-surface-search">
+        <span>Search value items</span>
+        <input v-model="searchValue" placeholder="Filter by test item name" type="text">
+      </label>
+
+      <AppDataGrid
+        :columns="valueGridColumns"
+        :rows="valueGridRows"
+        paginator
+        :rowsPerPage="25"
+        :rowsPerPageOptions="gridRowsPerPageOptions"
+        scrollHeight="calc(100vh - 22rem)"
+      >
+        <template #cell-test_item="{ data }">
+          <div class="parsing-result-view__test-item" :class="{ 'parsing-result-view__test-item--accent': data.is_calculated }">
+            <span>{{ data.test_item }}</span>
+            <span v-if="data.is_calculated" class="parsing-result-view__pill parsing-result-view__pill--info">Calculated</span>
+          </div>
+        </template>
+        <template #cell-usl="{ data }"><span>{{ formatNumber(data.usl as number | null | undefined) }}</span></template>
+        <template #cell-lsl="{ data }"><span>{{ formatNumber(data.lsl as number | null | undefined) }}</span></template>
+        <template #cell-value="{ data }">
+          <div class="parsing-result-view__value-stack">
+            <span>{{ data.value }}</span>
+            <span v-if="data.is_hex" class="parsing-result-view__pill parsing-result-view__pill--info">{{ data.hex_decimal }}</span>
+          </div>
+        </template>
+        <template #cell-type="{ data }"><span class="parsing-result-view__pill" :class="typePillClass(data as ParsedTestItemEnhanced)">{{ getTypeLabel(data as ParsedTestItemEnhanced) }}</span></template>
+        <template #cell-score="{ data }">
+          <button v-if="data.score !== null" type="button" class="parsing-result-view__score-pill" :class="scorePillClass(Number(data.score))" @click="openScoreBreakdown(data as ParsedTestItemEnhanced)">
+            {{ Number(data.score).toFixed(2) }}
+          </button>
+          <span v-else class="parsing-result-view__muted">N/A</span>
+        </template>
+        <template #cell-matched_criteria="{ data }"><Icon :icon="data.matched_criteria ? 'mdi:check-circle' : 'mdi:minus-circle'" :class="data.matched_criteria ? 'parsing-result-view__criteria-icon parsing-result-view__criteria-icon--success' : 'parsing-result-view__criteria-icon parsing-result-view__criteria-icon--neutral'" /></template>
+      </AppDataGrid>
+    </AppDialog>
+
+    <AppDialog v-model="fullscreenNonValue" title="Non-Value Items (Status/Text Data)" description="Expanded parsing result view for status and text fields." width="min(98vw, 112rem)" :breakpoints="dialogBreakpoints" :closable="false" maximizable>
+      <template #header>
+        <div class="result-surface-dialog-header">
+          <div>
+            <h2 class="result-surface-dialog-title">Non-Value Items (Status/Text Data)</h2>
+            <p class="result-surface-dialog-description">Inspect textual results and adjusted power values without the legacy fullscreen dialog shell.</p>
+          </div>
+          <button type="button" class="parsing-result-view__icon-button" @click="fullscreenNonValue = false">
+            <Icon icon="mdi:close" />
+          </button>
+        </div>
+      </template>
+
+      <label class="result-surface-search">
+        <span>Search non-value items</span>
+        <input v-model="searchNonValue" placeholder="Filter by test item name" type="text">
+      </label>
+
+      <AppDataGrid
+        :columns="nonValueGridColumns"
+        :rows="nonValueGridRows"
+        paginator
+        :rowsPerPage="25"
+        :rowsPerPageOptions="gridRowsPerPageOptions"
+        scrollHeight="calc(100vh - 22rem)"
+      >
+        <template #cell-test_item="{ data }"><div class="parsing-result-view__test-item" :class="{ 'parsing-result-view__test-item--accent': data.is_calculated }">{{ data.test_item }}</div></template>
+        <template #cell-value="{ data }"><span class="parsing-result-view__pill" :class="valuePillClass(String(data.value), data.is_calculated)">{{ data.value }}</span></template>
+        <template #cell-decimal_value="{ data }"><span v-if="String(data.test_item).includes('ADJUSTED_POW') && data.hex_decimal !== null && data.hex_decimal !== undefined" class="parsing-result-view__decimal-value">{{ data.hex_decimal }}</span><span v-else class="parsing-result-view__muted">—</span></template>
+        <template #cell-type="{ data }"><span class="parsing-result-view__pill" :class="typePillClass(data as ParsedTestItemEnhanced)">{{ getTypeLabel(data as ParsedTestItemEnhanced) }}</span></template>
+        <template #cell-matched_criteria="{ data }"><Icon :icon="data.matched_criteria ? 'mdi:check-circle' : 'mdi:minus-circle'" :class="data.matched_criteria ? 'parsing-result-view__criteria-icon parsing-result-view__criteria-icon--success' : 'parsing-result-view__criteria-icon parsing-result-view__criteria-icon--neutral'" /></template>
+      </AppDataGrid>
+    </AppDialog>
+
+    <ScoreBreakdownDialog v-model="scoreDialogOpen" :item="selectedItem" />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { Icon } from '@iconify/vue'
+import { computed, ref } from 'vue'
+import { AppDataGrid, AppDialog, AppPanel } from '@/shared'
 import type {
   ParsedTestItemEnhanced,
   TestLogParseResponseEnhanced,
-} from '@/features/dut-logs/composables/useTestLogUpload'
+} from '../composables/useTestLogUpload'
+import ScoreBreakdownDialog from './ScoreBreakdownDialog.vue'
 
 const props = defineProps<{
   result: TestLogParseResponseEnhanced
 }>()
 
-// Search and fullscreen for Value Items
 const searchValue = ref('')
-const fullscreenValue = ref(false)
-
-// Search and fullscreen for Non-Value Items
 const searchNonValue = ref('')
+const fullscreenValue = ref(false)
 const fullscreenNonValue = ref(false)
+const scoreDialogOpen = ref(false)
+const selectedItem = ref<ParsedTestItemEnhanced | null>(null)
 
-// Pagination for Value Items
-const itemsPerPageValue = ref(10)
-const currentPageValue = ref(1)
+const gridRowsPerPageOptions = [10, 25, 50, 100, 200]
+const dialogBreakpoints = { '1400px': '96vw', '960px': '98vw' }
 
-// Pagination for Non-Value Items
-const itemsPerPageNonValue = ref(10)
-const currentPageNonValue = ref(1)
-
-const MAX_TABLE_ITEMS_PER_PAGE = 200
-const itemsPerPageOptions = [
-  { title: '5', value: 5 },
-  { title: '10', value: 10 },
-  { title: '25', value: 25 },
-  { title: '50', value: 50 },
-  { title: '100', value: 100 },
-  { title: 'Custom', value: 0 },
+const valueColumns = [
+  { key: 'test_item', field: 'test_item', header: 'Test Item', sortable: true, style: { width: '20rem' } },
+  { key: 'usl', field: 'usl', header: 'USL', sortable: true, style: { width: '7rem' } },
+  { key: 'lsl', field: 'lsl', header: 'LSL', sortable: true, style: { width: '7rem' } },
+  { key: 'value', field: 'value', header: 'Value', sortable: true },
+  { key: 'type', field: 'type', header: 'Type', sortable: true, style: { width: '8rem' } },
+  { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '8rem' } },
+  { key: 'matched_criteria', field: 'matched_criteria', header: 'Criteria', sortable: true, style: { width: '7rem' } },
 ]
-const showCustomInputValue = ref(false)
-const customItemsPerPageValue = ref(10)
-const showCustomInputNonValue = ref(false)
-const customItemsPerPageNonValue = ref(10)
 
-// Separate value and non-value items
-// Note: ADJUSTED_POW items are moved to non-value items
-const valueItems = computed(() => {
-  return props.result.parsed_items_enhanced.filter(
+const nonValueColumns = [
+  { key: 'test_item', field: 'test_item', header: 'Test Item', sortable: true, style: { width: '20rem' } },
+  { key: 'value', field: 'value', header: 'Value', sortable: true },
+  { key: 'decimal_value', field: 'decimal_value', header: 'Decimal Value', sortable: true, style: { width: '10rem' } },
+  { key: 'type', field: 'type', header: 'Type', sortable: true, style: { width: '8rem' } },
+  { key: 'matched_criteria', field: 'matched_criteria', header: 'Criteria', sortable: true, style: { width: '7rem' } },
+]
+
+const valueGridColumns = computed(() => valueColumns)
+const nonValueGridColumns = computed(() => nonValueColumns)
+
+const valueItems = computed(() =>
+  props.result.parsed_items_enhanced.filter(
     (item) => item.is_value_type && !item.test_item.includes('ADJUSTED_POW'),
-  )
-})
+  ),
+)
 
-const nonValueItems = computed(() => {
-  return props.result.parsed_items_enhanced.filter(
+const nonValueItems = computed(() =>
+  props.result.parsed_items_enhanced.filter(
     (item) => !item.is_value_type || item.test_item.includes('ADJUSTED_POW'),
-  )
-})
+  ),
+)
 
-// Filtered value items
 const filteredValueItems = computed(() => {
   if (!searchValue.value) return valueItems.value
   const searchLower = searchValue.value.toLowerCase()
   return valueItems.value.filter((item) => item.test_item.toLowerCase().includes(searchLower))
 })
 
-// Filtered non-value items
 const filteredNonValueItems = computed(() => {
   if (!searchNonValue.value) return nonValueItems.value
   const searchLower = searchNonValue.value.toLowerCase()
   return nonValueItems.value.filter((item) => item.test_item.toLowerCase().includes(searchLower))
 })
 
-// Pagination computed for Value Items
-const normalizeItemsPerPage = (value: number) => {
-  if (value <= 0) {
-    return MAX_TABLE_ITEMS_PER_PAGE
-  }
+const valueGridRows = computed(() => filteredValueItems.value as unknown as Array<Record<string, unknown>>)
+const nonValueGridRows = computed(() => filteredNonValueItems.value as unknown as Array<Record<string, unknown>>)
 
-  return Math.min(Math.trunc(value), MAX_TABLE_ITEMS_PER_PAGE)
-}
-
-const getEffectiveItemsPerPage = (itemsPerPage: { value: number }) => {
-  if (itemsPerPage.value === 0) {
-    return 10
-  }
-
-  return normalizeItemsPerPage(itemsPerPage.value)
-}
-
-const totalPagesValue = computed(() => {
-  const perPage = getEffectiveItemsPerPage(itemsPerPageValue)
-  return Math.ceil(filteredValueItems.value.length / perPage)
-})
-
-const paginatedValueItems = computed(() => {
-  const perPage = getEffectiveItemsPerPage(itemsPerPageValue)
-  const start = (currentPageValue.value - 1) * perPage
-  const end = start + perPage
-  return filteredValueItems.value.slice(start, end)
-})
-
-// Pagination computed for Non-Value Items
-const totalPagesNonValue = computed(() => {
-  const perPage = getEffectiveItemsPerPage(itemsPerPageNonValue)
-  return Math.ceil(filteredNonValueItems.value.length / perPage)
-})
-
-const paginatedNonValueItems = computed(() => {
-  const perPage = getEffectiveItemsPerPage(itemsPerPageNonValue)
-  const start = (currentPageNonValue.value - 1) * perPage
-  const end = start + perPage
-  return filteredNonValueItems.value.slice(start, end)
-})
-
-// Reset pagination when search changes
-watch(searchValue, () => {
-  currentPageValue.value = 1
-})
-
-watch(searchNonValue, () => {
-  currentPageNonValue.value = 1
-})
-
-// Watch for custom items per page selection
-watch(itemsPerPageValue, (newVal) => {
-  if (newVal === 0) {
-    showCustomInputValue.value = true
-  } else {
-    showCustomInputValue.value = false
-
-    const normalized = normalizeItemsPerPage(newVal)
-    if (normalized !== newVal) {
-      itemsPerPageValue.value = normalized
-      return
-    }
-
-    currentPageValue.value = 1
-  }
-})
-
-watch(itemsPerPageNonValue, (newVal) => {
-  if (newVal === 0) {
-    showCustomInputNonValue.value = true
-  } else {
-    showCustomInputNonValue.value = false
-
-    const normalized = normalizeItemsPerPage(newVal)
-    if (normalized !== newVal) {
-      itemsPerPageNonValue.value = normalized
-      return
-    }
-
-    currentPageNonValue.value = 1
-  }
-})
-
-// Apply custom value
-const applyCustomItemsPerPageValue = () => {
-  if (customItemsPerPageValue.value > 0) {
-    itemsPerPageValue.value = normalizeItemsPerPage(customItemsPerPageValue.value)
-  }
-  showCustomInputValue.value = false
-}
-
-const cancelCustomInputValue = () => {
-  itemsPerPageValue.value = 10
-  showCustomInputValue.value = false
-}
-
-const applyCustomItemsPerPageNonValue = () => {
-  if (customItemsPerPageNonValue.value > 0) {
-    itemsPerPageNonValue.value = normalizeItemsPerPage(customItemsPerPageNonValue.value)
-  }
-  showCustomInputNonValue.value = false
-}
-
-const cancelCustomInputNonValue = () => {
-  itemsPerPageNonValue.value = 10
-  showCustomInputNonValue.value = false
-}
-
-// Table headers for Value Items (with scoring)
-const valueHeaders = [
-  { title: 'Test Item', key: 'test_item', sortable: true, width: '300px' },
-  { title: 'USL', key: 'usl', sortable: true, align: 'center' as const },
-  { title: 'LSL', key: 'lsl', sortable: true, align: 'center' as const },
-  { title: 'Value', key: 'value', sortable: true },
-  { title: 'Type', key: 'type', sortable: true },
-  { title: 'Score', key: 'score', sortable: true, align: 'end' as const },
-  { title: 'Criteria', key: 'matched_criteria', sortable: true, align: 'center' as const },
-]
-
-// Table headers for Non-Value Items (no scoring)
-const nonValueHeaders = [
-  { title: 'Test Item', key: 'test_item', sortable: true, width: '300px' },
-  { title: 'Value', key: 'value', sortable: true },
-  { title: 'Decimal Value', key: 'decimal_value', sortable: true },
-  { title: 'Type', key: 'type', sortable: true },
-  { title: 'Criteria', key: 'matched_criteria', sortable: true, align: 'center' as const },
-]
-
-// Score breakdown dialog
-const scoreDialogOpen = ref(false)
-const selectedItem = ref<ParsedTestItemEnhanced | null>(null)
-
-// Helper functions
-const formatDuration = (seconds: number | null): string => {
+function formatDuration(seconds: number | null): string {
   if (!seconds) return 'N/A'
   const mins = Math.floor(seconds / 60)
   const secs = seconds % 60
   return `${mins}m ${secs}s`
 }
 
-const getResultColor = (result: string | null): string => {
+function getResultColor(result: string | null): string {
   if (!result) return 'grey'
   const upper = result.toUpperCase()
   if (upper === 'PASS') return 'success'
@@ -688,47 +336,326 @@ const getResultColor = (result: string | null): string => {
   return 'warning'
 }
 
-const formatScore = (score: number | null | undefined): string => {
+function formatScore(score: number | null | undefined): string {
   return score !== null && score !== undefined ? score.toFixed(2) : 'N/A'
 }
 
-const formatNumber = (value: number | null | undefined): string => {
+function formatNumber(value: number | null | undefined): string {
   return value !== null && value !== undefined ? value.toString() : 'N/A'
 }
 
-const getTypeLabel = (item: ParsedTestItemEnhanced): string => {
+function getTypeLabel(item: ParsedTestItemEnhanced): string {
   if (item.is_hex) return 'Hex'
   if (item.is_value_type) return 'Value'
   return 'Non-Value'
 }
 
-const getTypeColor = (item: ParsedTestItemEnhanced): string => {
+function getTypeColor(item: ParsedTestItemEnhanced): string {
   if (item.is_hex) return 'info'
   if (item.is_value_type) return 'primary'
   return 'secondary'
 }
 
-const getScoreColor = (score: number): string => {
+function getScoreColor(score: number): string {
   if (score >= 9) return 'success'
   if (score >= 7) return 'warning'
   return 'error'
 }
 
-const getStatusColor = (value: string): string => {
+function getStatusColor(value: string): string {
   const upper = value.toUpperCase()
   if (upper === 'PASS' || upper === 'OK') return 'success'
   if (upper === 'FAIL' || upper === 'ERROR') return 'error'
   return 'grey'
 }
 
-const openScoreBreakdown = (item: ParsedTestItemEnhanced) => {
+function openScoreBreakdown(item: ParsedTestItemEnhanced) {
   selectedItem.value = item
   scoreDialogOpen.value = true
+}
+
+function resultPillClass(result: string | null): string {
+  const tone = getResultColor(result)
+  if (tone === 'success') return 'parsing-result-view__pill--success'
+  if (tone === 'error') return 'parsing-result-view__pill--error'
+  if (tone === 'warning') return 'parsing-result-view__pill--warning'
+  return 'parsing-result-view__pill--neutral'
+}
+
+function typePillClass(item: ParsedTestItemEnhanced): string {
+  const tone = getTypeColor(item)
+  if (tone === 'info') return 'parsing-result-view__pill--info'
+  if (tone === 'primary') return 'parsing-result-view__pill--primary'
+  return 'parsing-result-view__pill--secondary'
+}
+
+function scorePillClass(score: number): string {
+  const tone = getScoreColor(score)
+  if (tone === 'success') return 'parsing-result-view__pill--success'
+  if (tone === 'warning') return 'parsing-result-view__pill--warning'
+  return 'parsing-result-view__pill--error'
+}
+
+function valuePillClass(value: string, isCalculated?: boolean): string {
+  if (isCalculated) return 'parsing-result-view__pill--primary'
+  const tone = getStatusColor(value)
+  if (tone === 'success') return 'parsing-result-view__pill--success'
+  if (tone === 'error') return 'parsing-result-view__pill--error'
+  return 'parsing-result-view__pill--neutral'
 }
 </script>
 
 <style scoped>
-.cursor-pointer {
+.parsing-result-view {
+  display: grid;
+  gap: 1rem;
+}
+
+.parsing-result-view__metadata-panel,
+.parsing-result-view__section,
+.parsing-result-view__stat-card {
+  border: 1px solid var(--app-border);
+  border-radius: 1.2rem;
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.parsing-result-view__metadata-panel,
+.parsing-result-view__section {
+  padding: 1rem;
+}
+
+.parsing-result-view__section-heading,
+.parsing-result-view__section-title,
+.parsing-result-view__section-actions,
+.parsing-result-view__test-item,
+.parsing-result-view__value-stack {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.parsing-result-view__section-heading {
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.parsing-result-view__section-title {
+  color: var(--app-ink);
+  font-weight: 700;
+}
+
+.parsing-result-view__metadata-grid,
+.parsing-result-view__stat-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.parsing-result-view__metadata-item,
+.parsing-result-view__stat-card {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.parsing-result-view__metadata-item small,
+.parsing-result-view__section-eyebrow,
+.parsing-result-view__muted,
+.parsing-result-view__stat-card small,
+.parsing-result-view__stat-card span {
+  color: var(--app-muted);
+}
+
+.parsing-result-view__metadata-item strong,
+.parsing-result-view__stat-card strong,
+.parsing-result-view__test-item,
+.parsing-result-view__decimal-value {
+  color: var(--app-ink);
+  font-weight: 700;
+}
+
+.parsing-result-view__stat-card {
+  padding: 1rem;
+}
+
+.parsing-result-view__stat-card--primary {
+  background: linear-gradient(145deg, rgba(40, 96, 163, 0.1), rgba(255, 251, 247, 0.96));
+}
+
+.parsing-result-view__stat-card--secondary {
+  background: linear-gradient(145deg, rgba(95, 64, 176, 0.1), rgba(255, 251, 247, 0.96));
+}
+
+.parsing-result-view__stat-card--info {
+  background: linear-gradient(145deg, rgba(20, 113, 153, 0.1), rgba(255, 251, 247, 0.96));
+}
+
+.parsing-result-view__stat-card--success {
+  background: linear-gradient(145deg, rgba(20, 88, 71, 0.1), rgba(255, 251, 247, 0.96));
+}
+
+.parsing-result-view__section-heading--info {
+  color: #1f4e86;
+}
+
+.parsing-result-view__section-heading--secondary {
+  color: #5f40b0;
+}
+
+.parsing-result-view__section-eyebrow {
+  margin: 0 0 0.2rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.parsing-result-view__section-heading h3 {
+  margin: 0;
+}
+
+.parsing-result-view__count-pill,
+.parsing-result-view__pill,
+.parsing-result-view__score-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.parsing-result-view__count-pill {
+  background: rgba(120, 129, 143, 0.12);
+  color: #4f5d6d;
+}
+
+.parsing-result-view__pill--success {
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.parsing-result-view__pill--warning {
+  background: rgba(184, 118, 38, 0.16);
+  color: #8f5314;
+}
+
+.parsing-result-view__pill--error {
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.parsing-result-view__pill--info {
+  background: rgba(20, 113, 153, 0.12);
+  color: #0f6c92;
+}
+
+.parsing-result-view__pill--primary {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.parsing-result-view__pill--secondary {
+  background: rgba(95, 64, 176, 0.14);
+  color: #5f40b0;
+}
+
+.parsing-result-view__pill--neutral {
+  background: rgba(120, 129, 143, 0.12);
+  color: #4f5d6d;
+}
+
+.parsing-result-view__score-pill,
+.parsing-result-view__icon-button {
+  border: 0;
   cursor: pointer;
+}
+
+.parsing-result-view__icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  border: 1px solid var(--app-border);
+}
+
+.parsing-result-view__criteria-icon {
+  font-size: 1rem;
+}
+
+.parsing-result-view__criteria-icon--success {
+  color: #145847;
+}
+
+.parsing-result-view__criteria-icon--neutral {
+  color: #8a94a6;
+}
+
+.parsing-result-view__test-item--accent,
+.parsing-result-view__decimal-value {
+  color: #1f4e86;
+}
+
+.result-surface-search {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.result-surface-search span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-muted);
+}
+
+.result-surface-search input {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  box-shadow: var(--app-shadow-soft);
+  padding: 0.85rem 0.95rem;
+}
+
+.result-surface-search input:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 4px var(--app-ring);
+}
+
+.result-surface-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.result-surface-dialog-title {
+  margin: 0;
+  font-family: var(--app-display);
+  font-size: 1.4rem;
+}
+
+.result-surface-dialog-description {
+  margin: 0.35rem 0 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+@media (max-width: 720px) {
+  .result-surface-dialog-header,
+  .parsing-result-view__section-heading,
+  .parsing-result-view__test-item,
+  .parsing-result-view__value-stack {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>

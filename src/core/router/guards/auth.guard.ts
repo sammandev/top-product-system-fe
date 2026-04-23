@@ -7,12 +7,12 @@
  *
  * guest: only /dut/top-products/analysis and /dut/data-explorer (default)
  * user:  standard pages + tools (no admin/system)
- * admin: all pages except System Cleanup, App Config, Roles & Permissions, Menu Access
+ * admin: all pages except System Cleanup, App Config, and Menu Access
  * superadmin/developer: all pages
  */
 
 import type { NavigationGuardNext, RouteLocationNormalized } from 'vue-router'
-import { useAuthStore } from '@/features/auth/stores'
+import { useAuthStore } from '@/features/auth/stores/auth.store'
 
 /** Paths a guest can always access (before menu_permissions grants). */
 const GUEST_ALLOWED_PATHS = new Set(['/dut/top-products/analysis', '/dut/data-explorer'])

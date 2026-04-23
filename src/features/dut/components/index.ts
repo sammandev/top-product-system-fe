@@ -15,6 +15,3 @@ export { default as SiteModelStationSelector } from './SiteModelStationSelector.
 export { default as SubgroupComparisonChart } from './SubgroupComparisonChart.vue'
 export { default as TopProductISNResults } from './TopProductISNResults.vue'
 export { default as TopProductsByISNTab } from './TopProductsByISNTab.vue'
-// Feature 3b: Top Products by ISN (Tab-based)
-export { default as TopProductsByStationTab } from './TopProductsByStationTab.vue'
-export { default as TopProductsTable } from './TopProductsTable.vue'

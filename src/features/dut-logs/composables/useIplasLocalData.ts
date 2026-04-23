@@ -2,12 +2,12 @@
  * useIplasLocalData Composable
  *
  * Provides reactive access to iPLAS data stored in IndexedDB.
- * Designed for use with v-data-table-server to enable "fake" server-side
+ * Designed for use with server-driven table state to enable "fake" server-side
  * pagination that queries locally stored data instead of network.
  *
  * Key Features:
  * - Reactive table state management
- * - Integration with v-data-table-server's loadItems handler
+ * - Integration with a table component's loadItems handler
  * - Filter management with URL sync (optional)
  * - Stream progress tracking
  * - Automatic refresh on store updates
@@ -54,9 +54,9 @@ export interface UseIplasLocalDataOptions {
 }
 
 /**
- * Table options compatible with Vuetify's v-data-table-server
+ * Table options for server-driven table pagination and sorting
  */
-export interface VuetifyTableOptions {
+export interface ServerTableOptions {
   page: number
   itemsPerPage: number
   sortBy: Array<{ key: string; order: 'asc' | 'desc' }>
@@ -76,7 +76,7 @@ export interface UseIplasLocalDataReturn {
   filter: RecordFilter
 
   // Table options (for v-model binding)
-  tableOptions: Ref<VuetifyTableOptions>
+  tableOptions: Ref<ServerTableOptions>
 
   // Stream status (reactive)
   streamStatus: StreamStatus
@@ -90,7 +90,7 @@ export interface UseIplasLocalDataReturn {
   streamProgress: Ref<number>
 
   // Methods
-  loadItems: (options: VuetifyTableOptions) => Promise<void>
+  loadItems: (options: ServerTableOptions) => Promise<void>
   loadAllItems: () => Promise<void>
   refreshData: () => Promise<void>
   updateFilter: (newFilter: Partial<RecordFilter>) => void
@@ -124,10 +124,10 @@ export interface UseIplasLocalDataReturn {
  * </script>
  *
  * <template>
- *   <v-data-table-server
+ *   <ServerDataGrid
  *     v-model:options="tableOptions"
  *     :items="items"
- *     :items-length="totalItems"
+ *     :total-items="totalItems"
  *     :loading="loading"
  *     @update:options="loadItems"
  *   />
@@ -158,8 +158,8 @@ export function useIplasLocalData(options: UseIplasLocalDataOptions = {}): UseIp
   // Filter state (reactive for deep watching)
   const filter = reactive<RecordFilter>({ ...initialFilter })
 
-  // Table options for v-data-table-server binding
-  const tableOptions = ref<VuetifyTableOptions>({
+  // Table options for server-driven table binding
+  const tableOptions = ref<ServerTableOptions>({
     page: 1,
     itemsPerPage: initialItemsPerPage,
     sortBy: [{ key: 'TestStartTime', order: 'desc' }],
@@ -192,14 +192,14 @@ export function useIplasLocalData(options: UseIplasLocalDataOptions = {}): UseIp
   /**
    * Load items from IndexedDB for the current page
    *
-   * This is the handler for v-data-table-server's @update:options event.
+   * This is the handler for a server-table-style @update:options event.
    */
-  async function loadItems(opts: VuetifyTableOptions): Promise<void> {
+  async function loadItems(opts: ServerTableOptions): Promise<void> {
     loading.value = true
     error.value = null
 
     try {
-      // Convert Vuetify options to our query format
+      // Convert table options to our query format
       const paginationOptions: TablePaginationOptions = {
         page: opts.page,
         itemsPerPage: opts.itemsPerPage,
@@ -228,7 +228,7 @@ export function useIplasLocalData(options: UseIplasLocalDataOptions = {}): UseIp
   /**
    * Load ALL items from IndexedDB for client-side pagination.
    *
-   * Use this for v-data-table (client-side) instead of v-data-table-server.
+    * Use this for client-side tables instead of server-driven pagination.
    * Loads all matching records from IndexedDB into the items array.
    *
    * UPDATED: Added for client-side table pagination support

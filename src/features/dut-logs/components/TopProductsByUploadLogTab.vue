@@ -1,406 +1,584 @@
 <template>
-  <!-- Section 1: Upload and Configure Section -->
-  <v-row>
-    <v-col cols="12">
-      <v-card>
-        <v-card-title class="d-flex align-center">
-          <v-icon start color="primary">mdi-upload</v-icon>
-          Upload and Configure
-        </v-card-title>
+  <section class="upload-log-shell">
+    <AppPanel
+      eyebrow="Upload Workspace"
+      title="Upload And Configure"
+      description="Stage raw DUT logs, apply optional JSON criteria, then run the existing upload-log analysis and ranking workflow."
+      tone="cool"
+    >
+      <div class="upload-log-shell__grid">
+        <AppPanel
+          eyebrow="Input Logs"
+          title="Upload Test Logs"
+          description="Accepts .txt, .zip, .rar, and .7z files. Archive inputs continue through the existing compare pipeline."
+        >
+          <AppFilePicker
+            v-model="logFiles"
+            label="Test log files"
+            accept=".txt,.zip,.rar,.7z"
+            multiple
+            :disabled="loading"
+            helperText="Drop one or more test logs here, or browse from disk."
+            placeholder="Drop test logs here or browse from disk."
+          />
 
-        <v-card-text>
-          <v-row class="align-stretch">
-            <!-- Upload Log Field -->
-            <v-col cols="12" md="6" class="d-flex">
-              <v-card variant="outlined" class="flex-grow-1">
-                <v-card-title class="text-subtitle-1 bg-grey-lighten-4">
-                  <v-icon start size="small">mdi-file-document-multiple</v-icon>
-                  Upload Test Logs
-                </v-card-title>
-                <v-card-text class="mt-4">
-                  <v-file-input v-model="logFiles" label="Test log files (.txt, .zip, .rar, .7z)"
-                    accept=".txt,.zip,.rar,.7z" multiple prepend-icon="mdi-file-document" show-size :clearable="true"
-                    :disabled="loading" variant="outlined">
-                    <template #selection="{ fileNames }">
-                      <template v-for="(fileName, index) in fileNames" :key="fileName">
-                        <v-chip v-if="index < 3" size="small" class="me-2">{{ fileName }}</v-chip>
-                      </template>
-                      <span v-if="fileNames.length > 3" class="text-caption text-medium-emphasis">
-                        +{{ fileNames.length - 3 }} more {{ fileNames.length - 3 === 1 ? 'file' : 'files' }}
-                      </span>
-                    </template>
-                  </v-file-input>
-                  <div v-if="logFiles && logFiles.length > 0" class="text-caption text-medium-emphasis mt-2">
-                    {{ logFiles.length }} {{ logFiles.length === 1 ? 'file' : 'files' }} selected
-                  </div>
-                </v-card-text>
-              </v-card>
-            </v-col>
+          <p v-if="logFiles && logFiles.length > 0" class="upload-log-shell__helper-text">
+            {{ logFiles.length }} {{ logFiles.length === 1 ? 'file' : 'files' }} selected
+          </p>
+        </AppPanel>
 
-            <!-- Custom Criteria (Optional) -->
-            <v-col cols="12" md="6" class="d-flex">
-              <v-card variant="outlined" class="flex-grow-1">
-                <v-card-title class="text-subtitle-1 bg-grey-lighten-4 d-flex align-center">
-                  <v-icon start size="small">mdi-filter-variant</v-icon>
-                  Custom Criteria (Optional)
-                  <v-spacer />
-                  <v-btn size="x-small" variant="text" color="primary" prepend-icon="mdi-download"
-                    @click="downloadCriteriaTemplate" title="Download JSON template">
-                    Template
-                  </v-btn>
-                </v-card-title>
-                <v-card-text class="mt-4">
-                  <v-file-input v-model="criteriaFile" label="Criteria file (.json)" accept=".json"
-                    prepend-icon="mdi-file-cog" show-size :clearable="true" :disabled="loading" variant="outlined"
-                    density="compact" />
-
-                  <v-checkbox v-model="showOnlyCriteria" label="Show only criteria items"
-                    :disabled="!criteriaFile || loading" density="compact" color="primary" hide-details
-                    class="mt-0 mb-2" />
-
-                  <v-btn block variant="outlined" color="primary" prepend-icon="mdi-cog-outline" size="small"
-                    :disabled="loading" @click="openCriteriaBuilder">
-                    Build Criteria
-                  </v-btn>
-                </v-card-text>
-              </v-card>
-            </v-col>
-          </v-row>
-
-          <!-- Action Buttons -->
-          <v-row class="mt-3">
-            <v-col cols="12">
-              <div class="d-flex gap-2 flex-wrap">
-                <!-- Configure Scoring Button -->
-                <v-btn color="secondary" size="large" variant="outlined" :loading="extractingItems"
-                  :disabled="!hasFiles || loading" prepend-icon="mdi-cog-outline" @click="handleConfigureScoring">
-                  Configure Scoring
-                  <v-chip v-if="appliedScoringConfigs.length > 0" size="x-small" color="success" class="ml-2">
-                    {{ appliedScoringConfigs.length }}
-                  </v-chip>
-                </v-btn>
-                <!-- Analyze Button -->
-                <v-btn color="primary" size="large" style="flex: 1" :loading="loading" :disabled="!canAnalyze"
-                  prepend-icon="mdi-play" @click="handleAnalyze">
-                  Analyze Logs
-                </v-btn>
-                <!-- Reset Button -->
-                <v-btn v-if="hasResults" variant="outlined" size="large" :disabled="loading" prepend-icon="mdi-refresh"
-                  @click="handleReset">
-                  Reset
-                </v-btn>
-              </div>
-
-              <!-- Scoring Config Status -->
-              <div v-if="appliedScoringConfigs.length > 0" class="mt-2">
-                <v-chip size="small" color="success" variant="tonal" prepend-icon="mdi-check-circle">
-                  Scoring configured: {{ appliedScoringConfigs.length }} items
-                </v-chip>
-                <v-btn size="x-small" variant="text" color="warning" class="ml-2" @click="clearScoringConfigs">
-                  Clear
-                </v-btn>
-              </div>
-            </v-col>
-          </v-row>
-        </v-card-text>
-      </v-card>
-    </v-col>
-  </v-row>
-
-  <!-- Section 2: Ranking Summary Section -->
-  <v-row v-if="hasResults" class="mt-4">
-    <v-col cols="12">
-      <TopProductRankingUploadLog :parse-result="parsingResult" :compare-result="compareResult"
-        :scoring-configs="appliedScoringConfigs" />
-    </v-col>
-  </v-row>
-
-  <!-- Section 3: Comparison Section (for 2+ logs) -->
-  <v-row v-if="hasResults && isMultipleFiles" class="mt-4">
-    <v-col cols="12">
-      <v-card>
-        <v-card-title class="d-flex align-center">
-          <v-icon start color="info">mdi-compare</v-icon>
-          Test Item Comparison
-          <v-chip class="ml-2" size="small" color="info">{{ totalFiles }} files</v-chip>
-          <v-spacer />
-          <v-btn variant="tonal" color="success" size="small" prepend-icon="mdi-microsoft-excel"
-            :loading="exportingComparison" @click="exportComparisonToExcel" class="mr-2">
-            Export
-          </v-btn>
-          <v-icon size="large" color="primary" @click="comparisonFullscreen = true" class="mr-2">mdi-fullscreen</v-icon>
-          <v-progress-circular v-if="iplasLoading" indeterminate size="20" width="2" color="primary" class="mr-2" />
-          <v-chip v-if="iplasDataByIsn.size > 0" size="small" color="success" variant="tonal">
-            iPLAS: {{ iplasDataByIsn.size }} ISN(s)
-          </v-chip>
-        </v-card-title>
-
-        <v-card-text>
-          <!-- UPDATED: Controls Row with Station filters, ISN filter, and Search -->
-          <v-row dense class="mb-4">
-            <v-col cols="6" md="2">
-              <v-select v-model="selectedUploadedStation" :items="uploadedStationOptions" label="Station (Uploaded)"
-                variant="outlined" density="compact" prepend-inner-icon="mdi-access-point" hide-details clearable />
-            </v-col>
-            <v-col cols="6" md="2">
-              <v-select v-model="selectedIplasStation" :items="iplasStationOptions" label="Station (iPLAS)"
-                variant="outlined" density="compact" prepend-inner-icon="mdi-router-wireless" hide-details clearable
-                :disabled="iplasDataByIsn.size === 0" />
-            </v-col>
-            <v-col cols="12" md="3">
-              <v-select v-model="selectedCompareIsns" :items="allCompareIsns" label="ISNs to Compare" variant="outlined"
-                density="compact" prepend-inner-icon="mdi-identifier" hide-details multiple chips closable-chips />
-            </v-col>
-            <v-col cols="6" md="2">
-              <v-select v-model="itemFilterType" :items="itemFilterOptions" label="Filter Items" variant="outlined"
-                density="compact" prepend-inner-icon="mdi-filter" hide-details />
-            </v-col>
-            <v-col cols="6" md="3">
-              <v-text-field v-model="searchQuery" label="Search Test Items" variant="outlined" density="compact"
-                prepend-inner-icon="mdi-magnify" hide-details clearable />
-            </v-col>
-          </v-row>
-
-          <!-- iPLAS Loading Indicator -->
-          <v-alert v-if="iplasLoading" type="info" variant="tonal" density="compact" class="mb-3">
-            <template #prepend>
-              <v-progress-circular indeterminate size="18" width="2" />
-            </template>
-            Fetching iPLAS data for {{ allCompareIsns.length }} ISN(s)...
-          </v-alert>
-          <v-alert v-else-if="iplasDataByIsn.size > 0" type="success" variant="tonal" density="compact" class="mb-3">
-            iPLAS data loaded for {{ iplasDataByIsn.size }} ISN(s)
-            <template v-if="selectedIplasStation"> — Station: {{ selectedIplasStation }}</template>
-          </v-alert>
-
-          <!-- UPDATED: Comparison Table with Parent-Children Headers per ISN -->
-          <v-data-table :headers="comparisonHeaders" :items="comparisonTableItems" :items-per-page="25"
-            density="comfortable" class="elevation-1" fixed-header height="840">
-            <!-- Custom row rendering for dynamic columns -->
-            <template #item="{ item, columns }">
-              <tr>
-                <td v-for="column in (columns as any[])" :key="column.key"
-                  :class="column.key === 'test_item' ? '' : 'text-center'">
-                  <!-- Test Item name -->
-                  <span v-if="column.key === 'test_item'" class="font-weight-medium">
-                    {{ item.test_item }}
-                  </span>
-                  <!-- UCL / LCL -->
-                  <span v-else-if="column.key === 'usl' || column.key === 'lsl'" class="text-medium-emphasis">
-                    {{ item[column.key] ?? '-' }}
-                  </span>
-                  <!-- Score columns (chips) -->
-                  <template v-else-if="isScoreColumn(column.key)">
-                    <v-chip v-if="item[column.key] != null" :color="getScoreColor(Number(item[column.key]))"
-                      size="x-small" class="font-weight-bold">
-                      {{ Number(item[column.key]).toFixed(2) }}
-                    </v-chip>
-                    <span v-else class="text-medium-emphasis">-</span>
-                  </template>
-                  <!-- Value columns -->
-                  <span v-else>{{ item[column.key] ?? '-' }}</span>
-                </td>
-              </tr>
-            </template>
-          </v-data-table>
-        </v-card-text>
-      </v-card>
-    </v-col>
-  </v-row>
-
-  <!-- Comparison Fullscreen Dialog -->
-  <v-dialog v-model="comparisonFullscreen" fullscreen transition="dialog-bottom-transition">
-    <v-card class="d-flex flex-column" style="height: 100vh; overflow: hidden;">
-      <v-card-title class="d-flex align-center flex-shrink-0">
-        <v-icon start color="info">mdi-compare</v-icon>
-        Test Item Comparison
-        <v-chip class="ml-2" size="small" color="info">{{ totalFiles }} files</v-chip>
-        <v-spacer />
-        <v-btn variant="tonal" color="success" size="small" prepend-icon="mdi-microsoft-excel"
-          :loading="exportingComparison" @click="exportComparisonToExcel" class="mr-2">
-          Export
-        </v-btn>
-        <v-progress-circular v-if="iplasLoading" indeterminate size="20" width="2" color="primary" class="mr-2" />
-        <v-chip v-if="iplasDataByIsn.size > 0" size="small" color="success" variant="tonal" class="mr-3">
-          iPLAS: {{ iplasDataByIsn.size }} ISN(s)
-        </v-chip>
-        <v-btn icon="mdi-close" variant="text" @click="comparisonFullscreen = false" />
-      </v-card-title>
-
-      <v-card-text class="pb-2 pt-3 flex-shrink-0">
-        <!-- Controls Row with Station filters, ISN filter, and Search -->
-        <v-row dense>
-          <v-col cols="6" md="2">
-            <v-select v-model="selectedUploadedStation" :items="uploadedStationOptions" label="Station (Uploaded)"
-              variant="outlined" density="compact" prepend-inner-icon="mdi-access-point" hide-details clearable />
-          </v-col>
-          <v-col cols="6" md="2">
-            <v-select v-model="selectedIplasStation" :items="iplasStationOptions" label="Station (iPLAS)"
-              variant="outlined" density="compact" prepend-inner-icon="mdi-router-wireless" hide-details clearable
-              :disabled="iplasDataByIsn.size === 0" />
-          </v-col>
-          <v-col cols="12" md="3">
-            <v-select v-model="selectedCompareIsns" :items="allCompareIsns" label="ISNs to Compare" variant="outlined"
-              density="compact" prepend-inner-icon="mdi-identifier" hide-details multiple chips closable-chips />
-          </v-col>
-          <v-col cols="6" md="2">
-            <v-select v-model="itemFilterType" :items="itemFilterOptions" label="Filter Items" variant="outlined"
-              density="compact" prepend-inner-icon="mdi-filter" hide-details />
-          </v-col>
-          <v-col cols="6" md="3">
-            <v-text-field v-model="searchQuery" label="Search Test Items" variant="outlined" density="compact"
-              prepend-inner-icon="mdi-magnify" hide-details clearable />
-          </v-col>
-        </v-row>
-      </v-card-text>
-
-      <v-card-text class="pa-0 flex-grow-1" style="overflow: hidden;">
-        <!-- Comparison Table Fullscreen -->
-        <v-data-table :headers="comparisonHeaders" :items="comparisonTableItems"
-          :items-per-page="comparisonItemsPerPage"
-          density="comfortable" class="elevation-1" fixed-header :height="'calc(100vh - 180px)'">
-          <!-- Custom row rendering -->
-          <template #item="{ item, columns }">
-            <tr>
-              <td v-for="column in (columns as any[])" :key="column.key"
-                :class="column.key === 'test_item' ? '' : 'text-center'">
-                <span v-if="column.key === 'test_item'" class="font-weight-medium">
-                  {{ item.test_item }}
-                </span>
-                <span v-else-if="column.key === 'usl' || column.key === 'lsl'" class="text-medium-emphasis">
-                  {{ item[column.key] ?? '-' }}
-                </span>
-                <template v-else-if="isScoreColumn(column.key)">
-                  <v-chip v-if="item[column.key] != null" :color="getScoreColor(Number(item[column.key]))"
-                    size="x-small" class="font-weight-bold">
-                    {{ Number(item[column.key]).toFixed(2) }}
-                  </v-chip>
-                  <span v-else class="text-medium-emphasis">-</span>
-                </template>
-                <span v-else>{{ item[column.key] ?? '-' }}</span>
-              </td>
-            </tr>
+        <AppPanel
+          eyebrow="Optional Criteria"
+          title="Custom Criteria"
+          description="Upload a JSON criteria file, or generate one with the builder before analysis."
+          tone="warm"
+          splitHeader
+        >
+          <template #header-aside>
+            <button type="button" class="upload-log-shell__link" @click="downloadCriteriaTemplate">
+              Download template
+            </button>
           </template>
-        </v-data-table>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
 
-  <!-- Score Breakdown Dialog (new universal scoring) -->
-  <v-dialog v-model="showBreakdownDialog" :fullscreen="breakdownFullscreen"
-    :max-width="breakdownFullscreen ? undefined : 650" scrollable
-    :transition="breakdownFullscreen ? 'dialog-bottom-transition' : undefined">
-    <v-card v-if="breakdownItem" class="app-dialog">
-      <div class="app-dialog-header"><v-card-title class="d-flex align-center">
-        <v-icon start>mdi-calculator-variant</v-icon>
-        Score Breakdown
-        <v-spacer />
-        <v-btn :icon="breakdownFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
-          @click="breakdownFullscreen = !breakdownFullscreen" />
-        <v-btn icon="mdi-close" variant="text" @click="showBreakdownDialog = false" />
-      </v-card-title></div>
+          <AppFilePicker
+            v-model="criteriaFile"
+            label="Criteria file"
+            accept=".json,application/json"
+            :disabled="loading"
+            helperText="Leave empty to use the default criteria rules."
+            placeholder="Drop a criteria file here or browse from disk."
+          />
 
-      <div class="app-dialog-body"><v-card-text class="pa-4">
-        <!-- Test Item Info -->
-        <v-card variant="tonal" class="mb-4">
-          <v-card-text>
-            <div class="text-h6 mb-2">{{ breakdownItem.test_item }}</div>
-            <v-row dense>
-              <v-col cols="4">
-                <div class="text-caption text-medium-emphasis">Actual Value</div>
-                <div class="text-h6 font-weight-bold">{{ breakdownItem.value }}</div>
-              </v-col>
-              <v-col cols="4">
-                <div class="text-caption text-medium-emphasis">Score</div>
-                <div class="text-h6 font-weight-bold">
-                  <v-chip :color="getScoreColor(breakdownItem.score ?? 0)" size="small">
-                    {{ breakdownItem.score?.toFixed(2) ?? 'N/A' }}
-                  </v-chip>
-                </div>
-              </v-col>
-              <v-col cols="4">
-                <div class="text-caption text-medium-emphasis">Scoring Type</div>
-                <v-chip :color="getScoringTypeColor(breakdownItem.score_breakdown?.scoring_type ?? '')" size="small">
-                  {{ breakdownItem.score_breakdown?.scoring_type ?? 'N/A' }}
-                </v-chip>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
+          <label class="upload-log-shell__checkbox">
+            <input v-model="showOnlyCriteria" type="checkbox" :disabled="!criteriaFile || loading">
+            <span>Show only criteria items</span>
+          </label>
 
-        <!-- Breakdown Details Table -->
-        <v-table density="compact">
+          <button
+            type="button"
+            class="upload-log-shell__ghost-button"
+            :disabled="loading"
+            @click="openCriteriaBuilder"
+          >
+            Build Criteria
+          </button>
+        </AppPanel>
+      </div>
+
+      <div class="upload-log-shell__actions">
+        <button
+          type="button"
+          class="upload-log-shell__ghost-button"
+          :disabled="!hasFiles || loading"
+          @click="handleConfigureScoring"
+        >
+          <span>{{ extractingItems ? 'Preparing...' : 'Configure Scoring' }}</span>
+          <span v-if="appliedScoringConfigs.length > 0" class="upload-log-shell__pill">
+            {{ appliedScoringConfigs.length }}
+          </span>
+        </button>
+
+        <button
+          type="button"
+          class="upload-log-shell__primary-button"
+          :disabled="!canAnalyze || loading"
+          @click="handleAnalyze"
+        >
+          {{ loading ? 'Analyzing...' : 'Analyze Logs' }}
+        </button>
+
+        <button
+          v-if="hasResults"
+          type="button"
+          class="upload-log-shell__ghost-button"
+          :disabled="loading"
+          @click="handleReset"
+        >
+          Reset
+        </button>
+      </div>
+
+      <div v-if="appliedScoringConfigs.length > 0" class="upload-log-shell__notice upload-log-shell__notice--success">
+        <div>
+          <strong>Scoring configured</strong>
+          <p>{{ appliedScoringConfigs.length }} item{{ appliedScoringConfigs.length === 1 ? '' : 's' }} currently use custom scoring rules.</p>
+        </div>
+
+        <button type="button" class="upload-log-shell__link" @click="clearScoringConfigs">
+          Clear
+        </button>
+      </div>
+    </AppPanel>
+
+    <section v-if="hasResults" class="upload-log-shell__summary">
+      <TopProductRankingUploadLog
+        :parse-result="parsingResult"
+        :compare-result="compareResult"
+        :scoring-configs="appliedScoringConfigs"
+      />
+    </section>
+  </section>
+
+  <section v-if="hasResults && isMultipleFiles" class="upload-log-comparison-section">
+    <AppPanel
+      eyebrow="Cross-Log Comparison"
+      title="Test Item Comparison"
+      description="Compare uploaded values and rescored iPLAS values across the current log batch."
+      splitHeader
+      tone="cool"
+    >
+      <template #header-aside>
+        <div class="upload-log-comparison__header-actions">
+          <span class="upload-log-comparison__pill upload-log-comparison__pill--info">{{ totalFiles }} files</span>
+          <span v-if="iplasDataByIsn.size > 0" class="upload-log-comparison__pill upload-log-comparison__pill--success">
+            iPLAS: {{ iplasDataByIsn.size }} ISN(s)
+          </span>
+          <button
+            type="button"
+            class="upload-log-comparison__ghost-button"
+            :disabled="exportingComparison"
+            @click="exportComparisonToExcel"
+          >
+            {{ exportingComparison ? 'Exporting...' : 'Export' }}
+          </button>
+          <button type="button" class="upload-log-comparison__ghost-button" @click="comparisonFullscreen = true">
+            Fullscreen
+          </button>
+        </div>
+      </template>
+
+      <div class="upload-log-comparison__filters">
+        <label class="upload-log-comparison__field">
+          <span>Station (Uploaded)</span>
+          <select v-model="selectedUploadedStation">
+            <option :value="null">All uploaded stations</option>
+            <option v-for="station in uploadedStationOptions" :key="station" :value="station">
+              {{ station }}
+            </option>
+          </select>
+        </label>
+
+        <label class="upload-log-comparison__field">
+          <span>Station (iPLAS)</span>
+          <select v-model="selectedIplasStation" :disabled="iplasDataByIsn.size === 0">
+            <option :value="null">Auto</option>
+            <option v-for="station in iplasStationOptions" :key="station" :value="station">
+              {{ station }}
+            </option>
+          </select>
+        </label>
+
+        <label class="upload-log-comparison__field upload-log-comparison__field--wide">
+          <span>ISNs To Compare</span>
+          <select v-model="selectedCompareIsns" multiple size="4">
+            <option v-for="isn in allCompareIsns" :key="isn" :value="isn">
+              {{ isn }}
+            </option>
+          </select>
+          <small>Leave empty to compare all detected ISNs.</small>
+        </label>
+
+        <label class="upload-log-comparison__field">
+          <span>Filter Items</span>
+          <select v-model="itemFilterType">
+            <option v-for="option in itemFilterOptions" :key="option.value" :value="option.value">
+              {{ option.title }}
+            </option>
+          </select>
+        </label>
+
+        <label class="upload-log-comparison__field upload-log-comparison__field--wide">
+          <span>Search Test Items</span>
+          <input v-model="searchQuery" type="text" placeholder="Search by test item name">
+        </label>
+      </div>
+
+      <div v-if="iplasLoading" class="upload-log-comparison__notice">
+        Fetching iPLAS data for {{ allCompareIsns.length }} ISN(s)...
+      </div>
+      <div v-else-if="iplasDataByIsn.size > 0" class="upload-log-comparison__notice upload-log-comparison__notice--success">
+        iPLAS data loaded for {{ iplasDataByIsn.size }} ISN(s)
+        <span v-if="selectedIplasStation"> - Station: {{ selectedIplasStation }}</span>
+      </div>
+
+      <DataTable
+        :value="comparisonTableItems"
+        paginator
+        :rows="25"
+        dataKey="test_item"
+        scrollable
+        scrollHeight="840px"
+        removableSort
+        showGridlines
+        stripedRows
+        class="upload-log-comparison__table"
+      >
+        <ColumnGroup type="header">
+          <Row>
+            <Column header="Test Item" :rowspan="2" />
+            <Column header="UCL" :rowspan="2" />
+            <Column header="LCL" :rowspan="2" />
+            <Column
+              v-for="isn in displayedIsns"
+              :key="`group-${isn}`"
+              :header="isn"
+              :colspan="2"
+            />
+            <Column v-if="displayedIsns.length > 0" header="Score" :colspan="displayedIsns.length * 2" />
+          </Row>
+          <Row>
+            <template v-for="(isn, idx) in displayedIsns" :key="`value-row-${isn}`">
+              <Column header="Uploaded" />
+              <Column header="iPLAS" />
+            </template>
+            <template v-for="(isn, idx) in displayedIsns" :key="`score-row-${isn}`">
+              <Column :header="`${shortIsnLabel(isn)} (Upl)`" />
+              <Column :header="`${shortIsnLabel(isn)} (iPLAS)`" />
+            </template>
+          </Row>
+        </ColumnGroup>
+
+        <Column field="test_item" sortable>
+          <template #body="slotProps">
+            <span class="upload-log-comparison__strong">{{ slotProps.data.test_item }}</span>
+          </template>
+        </Column>
+
+        <Column field="usl" sortable>
+          <template #body="slotProps">
+            <span class="upload-log-comparison__muted">{{ slotProps.data.usl ?? '-' }}</span>
+          </template>
+        </Column>
+
+        <Column field="lsl" sortable>
+          <template #body="slotProps">
+            <span class="upload-log-comparison__muted">{{ slotProps.data.lsl ?? '-' }}</span>
+          </template>
+        </Column>
+
+        <template v-for="(isn, idx) in displayedIsns" :key="`uploaded-${isn}`">
+          <Column :field="`uploaded_val_${idx}`" sortable>
+            <template #body="slotProps">
+              {{ slotProps.data[`uploaded_val_${idx}`] ?? '-' }}
+            </template>
+          </Column>
+          <Column :field="`iplas_val_${idx}`" sortable>
+            <template #body="slotProps">
+              {{ slotProps.data[`iplas_val_${idx}`] ?? '-' }}
+            </template>
+          </Column>
+        </template>
+
+        <template v-for="(isn, idx) in displayedIsns" :key="`score-${isn}`">
+          <Column :field="`uploaded_score_${idx}`" sortable>
+            <template #body="slotProps">
+              <span
+                v-if="slotProps.data[`uploaded_score_${idx}`] != null"
+                :class="scoreChipClass(Number(slotProps.data[`uploaded_score_${idx}`]))"
+              >
+                {{ Number(slotProps.data[`uploaded_score_${idx}`]).toFixed(2) }}
+              </span>
+              <span v-else class="upload-log-comparison__muted">-</span>
+            </template>
+          </Column>
+          <Column :field="`iplas_score_${idx}`" sortable>
+            <template #body="slotProps">
+              <span
+                v-if="slotProps.data[`iplas_score_${idx}`] != null"
+                :class="scoreChipClass(Number(slotProps.data[`iplas_score_${idx}`]))"
+              >
+                {{ Number(slotProps.data[`iplas_score_${idx}`]).toFixed(2) }}
+              </span>
+              <span v-else class="upload-log-comparison__muted">-</span>
+            </template>
+          </Column>
+        </template>
+      </DataTable>
+    </AppPanel>
+  </section>
+
+  <div v-if="comparisonFullscreen" class="upload-log-comparison-overlay" role="dialog" aria-modal="true">
+    <div class="upload-log-comparison-overlay__backdrop" @click="comparisonFullscreen = false" />
+    <section class="upload-log-comparison-overlay__panel">
+      <header class="upload-log-comparison-overlay__header">
+        <div>
+          <p class="upload-log-comparison-overlay__eyebrow">Fullscreen Comparison</p>
+          <h2>Test Item Comparison</h2>
+        </div>
+        <div class="upload-log-comparison__header-actions">
+          <span class="upload-log-comparison__pill upload-log-comparison__pill--info">{{ totalFiles }} files</span>
+          <button
+            type="button"
+            class="upload-log-comparison__ghost-button"
+            :disabled="exportingComparison"
+            @click="exportComparisonToExcel"
+          >
+            {{ exportingComparison ? 'Exporting...' : 'Export' }}
+          </button>
+          <button type="button" class="upload-log-comparison__ghost-button" @click="comparisonFullscreen = false">
+            Close
+          </button>
+        </div>
+      </header>
+
+      <div class="upload-log-comparison__filters upload-log-comparison__filters--fullscreen">
+        <label class="upload-log-comparison__field">
+          <span>Station (Uploaded)</span>
+          <select v-model="selectedUploadedStation">
+            <option :value="null">All uploaded stations</option>
+            <option v-for="station in uploadedStationOptions" :key="`fullscreen-uploaded-${station}`" :value="station">
+              {{ station }}
+            </option>
+          </select>
+        </label>
+
+        <label class="upload-log-comparison__field">
+          <span>Station (iPLAS)</span>
+          <select v-model="selectedIplasStation" :disabled="iplasDataByIsn.size === 0">
+            <option :value="null">Auto</option>
+            <option v-for="station in iplasStationOptions" :key="`fullscreen-iplas-${station}`" :value="station">
+              {{ station }}
+            </option>
+          </select>
+        </label>
+
+        <label class="upload-log-comparison__field upload-log-comparison__field--wide">
+          <span>ISNs To Compare</span>
+          <select v-model="selectedCompareIsns" multiple size="6">
+            <option v-for="isn in allCompareIsns" :key="`fullscreen-isn-${isn}`" :value="isn">
+              {{ isn }}
+            </option>
+          </select>
+        </label>
+
+        <label class="upload-log-comparison__field">
+          <span>Filter Items</span>
+          <select v-model="itemFilterType">
+            <option v-for="option in itemFilterOptions" :key="`fullscreen-${option.value}`" :value="option.value">
+              {{ option.title }}
+            </option>
+          </select>
+        </label>
+
+        <label class="upload-log-comparison__field upload-log-comparison__field--wide">
+          <span>Search Test Items</span>
+          <input v-model="searchQuery" type="text" placeholder="Search by test item name">
+        </label>
+      </div>
+
+      <div class="upload-log-comparison-overlay__table-wrap">
+        <DataTable
+          :value="comparisonTableItems"
+          paginator
+          :rows="comparisonItemsPerPage"
+          dataKey="test_item"
+          scrollable
+          scrollHeight="calc(100vh - 18rem)"
+          removableSort
+          showGridlines
+          stripedRows
+          class="upload-log-comparison__table"
+        >
+          <ColumnGroup type="header">
+            <Row>
+              <Column header="Test Item" :rowspan="2" />
+              <Column header="UCL" :rowspan="2" />
+              <Column header="LCL" :rowspan="2" />
+              <Column
+                v-for="isn in displayedIsns"
+                :key="`overlay-group-${isn}`"
+                :header="isn"
+                :colspan="2"
+              />
+              <Column v-if="displayedIsns.length > 0" header="Score" :colspan="displayedIsns.length * 2" />
+            </Row>
+            <Row>
+              <template v-for="(isn, idx) in displayedIsns" :key="`overlay-value-${isn}`">
+                <Column header="Uploaded" />
+                <Column header="iPLAS" />
+              </template>
+              <template v-for="(isn, idx) in displayedIsns" :key="`overlay-score-${isn}`">
+                <Column :header="`${shortIsnLabel(isn)} (Upl)`" />
+                <Column :header="`${shortIsnLabel(isn)} (iPLAS)`" />
+              </template>
+            </Row>
+          </ColumnGroup>
+
+          <Column field="test_item" sortable>
+            <template #body="slotProps">
+              <span class="upload-log-comparison__strong">{{ slotProps.data.test_item }}</span>
+            </template>
+          </Column>
+
+          <Column field="usl" sortable>
+            <template #body="slotProps">
+              <span class="upload-log-comparison__muted">{{ slotProps.data.usl ?? '-' }}</span>
+            </template>
+          </Column>
+
+          <Column field="lsl" sortable>
+            <template #body="slotProps">
+              <span class="upload-log-comparison__muted">{{ slotProps.data.lsl ?? '-' }}</span>
+            </template>
+          </Column>
+
+          <template v-for="(isn, idx) in displayedIsns" :key="`overlay-uploaded-${isn}`">
+            <Column :field="`uploaded_val_${idx}`" sortable>
+              <template #body="slotProps">
+                {{ slotProps.data[`uploaded_val_${idx}`] ?? '-' }}
+              </template>
+            </Column>
+            <Column :field="`iplas_val_${idx}`" sortable>
+              <template #body="slotProps">
+                {{ slotProps.data[`iplas_val_${idx}`] ?? '-' }}
+              </template>
+            </Column>
+          </template>
+
+          <template v-for="(isn, idx) in displayedIsns" :key="`overlay-score-col-${isn}`">
+            <Column :field="`uploaded_score_${idx}`" sortable>
+              <template #body="slotProps">
+                <span
+                  v-if="slotProps.data[`uploaded_score_${idx}`] != null"
+                  :class="scoreChipClass(Number(slotProps.data[`uploaded_score_${idx}`]))"
+                >
+                  {{ Number(slotProps.data[`uploaded_score_${idx}`]).toFixed(2) }}
+                </span>
+                <span v-else class="upload-log-comparison__muted">-</span>
+              </template>
+            </Column>
+            <Column :field="`iplas_score_${idx}`" sortable>
+              <template #body="slotProps">
+                <span
+                  v-if="slotProps.data[`iplas_score_${idx}`] != null"
+                  :class="scoreChipClass(Number(slotProps.data[`iplas_score_${idx}`]))"
+                >
+                  {{ Number(slotProps.data[`iplas_score_${idx}`]).toFixed(2) }}
+                </span>
+                <span v-else class="upload-log-comparison__muted">-</span>
+              </template>
+            </Column>
+          </template>
+        </DataTable>
+      </div>
+    </section>
+  </div>
+
+  <AppDialog
+    v-model="showBreakdownDialog"
+    :width="breakdownFullscreen ? '96vw' : 'min(92vw, 40rem)'"
+    :maximizable="false"
+    class="upload-log-breakdown-dialog"
+  >
+    <template #header>
+      <div class="upload-log-breakdown__header">
+        <div>
+          <p class="upload-log-breakdown__eyebrow">Universal Scoring</p>
+          <h2>Score Breakdown</h2>
+        </div>
+        <button
+          type="button"
+          class="upload-log-comparison__ghost-button"
+          @click="breakdownFullscreen = !breakdownFullscreen"
+        >
+          {{ breakdownFullscreen ? 'Windowed' : 'Expand' }}
+        </button>
+      </div>
+    </template>
+
+    <div v-if="breakdownItem" class="upload-log-breakdown">
+      <section class="upload-log-breakdown__summary-card">
+        <div>
+          <p class="upload-log-breakdown__eyebrow">Test Item</p>
+          <h3>{{ breakdownItem.test_item }}</h3>
+        </div>
+
+        <div class="upload-log-breakdown__summary-grid">
+          <article>
+            <span>Actual Value</span>
+            <strong>{{ breakdownItem.value }}</strong>
+          </article>
+          <article>
+            <span>Score</span>
+            <strong>
+              <span :class="scoreChipClass(breakdownItem.score ?? 0)">
+                {{ breakdownItem.score?.toFixed(2) ?? 'N/A' }}
+              </span>
+            </strong>
+          </article>
+          <article>
+            <span>Scoring Type</span>
+            <strong>
+              <span :class="scoringTypeChipClass(breakdownItem.score_breakdown?.scoring_type ?? '')">
+                {{ breakdownItem.score_breakdown?.scoring_type ?? 'N/A' }}
+              </span>
+            </strong>
+          </article>
+        </div>
+      </section>
+
+      <div class="upload-log-breakdown__table-wrap">
+        <table class="upload-log-breakdown__table">
           <tbody>
             <tr>
-              <td class="font-weight-medium">Scoring Type</td>
+              <td>Scoring Type</td>
               <td>
-                <v-chip size="small" :color="getScoringTypeColor(breakdownItem.score_breakdown?.scoring_type ?? '')">
-                  {{ breakdownItem.score_breakdown?.scoring_type }}
-                </v-chip>
+                <span :class="scoringTypeChipClass(breakdownItem.score_breakdown?.scoring_type ?? '')">
+                  {{ breakdownItem.score_breakdown?.scoring_type ?? 'N/A' }}
+                </span>
               </td>
             </tr>
             <tr v-if="breakdownItem.score_breakdown?.ucl !== null && breakdownItem.score_breakdown?.ucl !== undefined">
-              <td class="font-weight-medium">UCL (Upper Limit)</td>
+              <td>UCL (Upper Limit)</td>
               <td>{{ breakdownItem.score_breakdown.ucl }}</td>
             </tr>
             <tr v-if="breakdownItem.score_breakdown?.lcl !== null && breakdownItem.score_breakdown?.lcl !== undefined">
-              <td class="font-weight-medium">LCL (Lower Limit)</td>
+              <td>LCL (Lower Limit)</td>
               <td>{{ breakdownItem.score_breakdown.lcl }}</td>
             </tr>
-            <tr
-              v-if="breakdownItem.score_breakdown?.target !== null && breakdownItem.score_breakdown?.target !== undefined">
-              <td class="font-weight-medium">Target</td>
-              <td class="font-weight-bold text-primary">{{ breakdownItem.score_breakdown.target?.toFixed(2) }}
-              </td>
+            <tr v-if="breakdownItem.score_breakdown?.target !== null && breakdownItem.score_breakdown?.target !== undefined">
+              <td>Target</td>
+              <td class="upload-log-breakdown__emphasis">{{ breakdownItem.score_breakdown.target?.toFixed(2) }}</td>
             </tr>
-            <tr
-              v-if="breakdownItem.score_breakdown?.actual !== null && breakdownItem.score_breakdown?.actual !== undefined">
-              <td class="font-weight-medium">Actual Value</td>
-              <td class="font-weight-bold">{{ breakdownItem.score_breakdown.actual }}</td>
+            <tr v-if="breakdownItem.score_breakdown?.actual !== null && breakdownItem.score_breakdown?.actual !== undefined">
+              <td>Actual Value</td>
+              <td class="upload-log-breakdown__emphasis">{{ breakdownItem.score_breakdown.actual }}</td>
             </tr>
-            <tr
-              v-if="breakdownItem.score_breakdown?.deviation !== null && breakdownItem.score_breakdown?.deviation !== undefined">
-              <td class="font-weight-medium">Deviation</td>
-              <td :class="Math.abs(breakdownItem.score_breakdown.deviation!) > 1 ? 'text-error font-weight-bold' : ''">
+            <tr v-if="breakdownItem.score_breakdown?.deviation !== null && breakdownItem.score_breakdown?.deviation !== undefined">
+              <td>Deviation</td>
+              <td :class="{ 'upload-log-breakdown__deviation-warning': Math.abs(breakdownItem.score_breakdown.deviation ?? 0) > 1 }">
                 {{ breakdownItem.score_breakdown.deviation?.toFixed(2) }}
               </td>
             </tr>
             <tr v-if="breakdownItem.score_breakdown?.policy">
-              <td class="font-weight-medium">Policy</td>
+              <td>Policy</td>
               <td>
-                <v-chip size="x-small" variant="tonal">{{ breakdownItem.score_breakdown.policy }}</v-chip>
+                <span class="upload-log-comparison__pill">{{ breakdownItem.score_breakdown.policy }}</span>
               </td>
             </tr>
             <tr>
-              <td class="font-weight-medium">Weight</td>
+              <td>Weight</td>
               <td>{{ breakdownItem.score_breakdown?.weight ?? 1.0 }}</td>
             </tr>
-            <tr class="bg-surface-variant">
-              <td class="font-weight-bold">Score (0-10)</td>
-              <td class="font-weight-bold">
-                <v-chip :color="getScoreColor(breakdownItem.score_breakdown?.score ?? 0)" size="small">
+            <tr>
+              <td>Score (0-10)</td>
+              <td>
+                <span :class="scoreChipClass(breakdownItem.score_breakdown?.score ?? 0)">
                   {{ breakdownItem.score_breakdown?.score?.toFixed(2) ?? 'N/A' }}
-                </v-chip>
+                </span>
               </td>
             </tr>
           </tbody>
-        </v-table>
-      </v-card-text></div>
+        </table>
+      </div>
+    </div>
 
-      <div class="app-dialog-footer"><v-card-actions>
-        <v-spacer />
-        <v-btn color="primary" variant="text" @click="showBreakdownDialog = false">Close</v-btn>
-      </v-card-actions></div>
-    </v-card>
-  </v-dialog>
-
-  <!-- Error Display -->
-  <v-snackbar v-model="errorSnackbar" color="error" :timeout="5000" location="bottom">
-    {{ errorMessage }}
-    <template #actions>
-      <v-btn variant="text" @click="errorSnackbar = false">Close</v-btn>
+    <template #footer>
+      <button type="button" class="upload-log-comparison__ghost-button" @click="showBreakdownDialog = false">
+        Close
+      </button>
     </template>
-  </v-snackbar>
+  </AppDialog>
 
   <!-- Criteria Builder Dialog -->
   <CriteriaBuilderDialog v-model="criteriaBuilderOpen" @criteria-created="handleCriteriaCreated" />
@@ -413,8 +591,15 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import Column from 'primevue/column'
+import ColumnGroup from 'primevue/columngroup'
+import DataTable from 'primevue/datatable'
+import Row from 'primevue/row'
 import type { IplasIsnSearchRecord } from '@/features/dut-logs/api/iplasProxyApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
+import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
+import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
+import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import {
   type CompareItemEnhanced,
   type CompareResponseEnhanced,
@@ -426,6 +611,7 @@ import {
   type TestLogParseResponseEnhanced,
   useTestLogUpload,
 } from '@/features/dut-logs/composables/useTestLogUpload'
+import { useNotification } from '@/shared/composables/useNotification'
 import { getErrorMessage } from '@/shared/utils'
 import CriteriaBuilderDialog from './CriteriaBuilderDialog.vue'
 import TopProductRankingUploadLog from './TopProductRankingUploadLog.vue'
@@ -444,8 +630,6 @@ const compareResult = ref<CompareResponseEnhanced | null>(null)
 // UI state
 const loading = ref(false)
 const extractingItems = ref(false)
-const errorSnackbar = ref(false)
-const errorMessage = ref('')
 const criteriaBuilderOpen = ref(false)
 
 // Comparison section state
@@ -482,6 +666,7 @@ const comparisonFullscreen = ref(false)
 // Composables
 const { parseLog, compareLogs, rescoreItems } = useTestLogUpload()
 const { searchByIsnBatch } = useIplasApi()
+const { showError: showErrorNotification } = useNotification()
 
 // Filter options for comparison section
 const itemFilterOptions = [
@@ -561,57 +746,6 @@ const iplasStationOptions = computed(() => {
     })
   }
   return Array.from(stations)
-})
-
-// UPDATED: Dynamic parent-children headers for multi-ISN comparison
-const comparisonHeaders = computed(() => {
-  const isns = displayedIsns.value
-  const headers: Record<string, unknown>[] = [
-    { title: 'Test Item', key: 'test_item', sortable: true },
-    { title: 'UCL', key: 'usl', sortable: true, width: '80px', align: 'center' as const },
-    { title: 'LCL', key: 'lsl', sortable: true, width: '80px', align: 'center' as const },
-  ]
-
-  isns.forEach((isn, idx) => {
-    headers.push({
-      title: isn,
-      align: 'center' as const,
-      children: [
-        { title: 'Uploaded', key: `uploaded_val_${idx}`, sortable: true, width: '100px' },
-        { title: 'iPLAS', key: `iplas_val_${idx}`, sortable: true, width: '100px' },
-      ],
-    })
-  })
-
-  if (isns.length > 0) {
-    const scoreChildren: Record<string, unknown>[] = []
-    isns.forEach((isn, idx) => {
-      const label = isn.length > 10 ? `...${isn.slice(-8)}` : isn
-      scoreChildren.push(
-        {
-          title: `${label} (Upl)`,
-          key: `uploaded_score_${idx}`,
-          sortable: true,
-          width: '100px',
-          align: 'center' as const,
-        },
-        {
-          title: `${label} (iPLAS)`,
-          key: `iplas_score_${idx}`,
-          sortable: true,
-          width: '100px',
-          align: 'center' as const,
-        },
-      )
-    })
-    headers.push({
-      title: 'Score',
-      align: 'center' as const,
-      children: scoreChildren,
-    })
-  }
-
-  return headers
 })
 
 // UPDATED: Comparison table items with per-ISN uploaded + iPLAS data
@@ -924,9 +1058,20 @@ function isScoreColumn(key: string | undefined): boolean {
   return key.startsWith('uploaded_score_') || key.startsWith('iplas_score_')
 }
 
+function shortIsnLabel(isn: string): string {
+  return isn.length > 10 ? `...${isn.slice(-8)}` : isn
+}
+
+function scoreChipClass(score: number): string[] {
+  return ['upload-log-score-chip', `is-${getScoreColor(score)}`]
+}
+
+function scoringTypeChipClass(type: string): string[] {
+  return ['upload-log-score-chip', `is-${getScoringTypeColor(type)}`]
+}
+
 const handleAnalyze = async () => {
   loading.value = true
-  errorSnackbar.value = false
 
   try {
     const files = logFiles.value || []
@@ -969,8 +1114,7 @@ const handleAnalyze = async () => {
       parsingResult.value = null
     }
   } catch (error: unknown) {
-    errorMessage.value = getErrorMessage(error) || 'Analysis failed. Please try again.'
-    errorSnackbar.value = true
+    showErrorNotification(getErrorMessage(error) || 'Analysis failed. Please try again.')
   } finally {
     loading.value = false
   }
@@ -1071,8 +1215,7 @@ async function exportComparisonToExcel() {
     URL.revokeObjectURL(url)
   } catch (err: unknown) {
     console.error('Export failed:', err)
-    errorMessage.value = `Export failed: ${getErrorMessage(err) || 'Unknown error'}`
-    errorSnackbar.value = true
+    showErrorNotification(`Export failed: ${getErrorMessage(err) || 'Unknown error'}`)
   } finally {
     exportingComparison.value = false
   }
@@ -1149,7 +1292,456 @@ watch(selectedIplasStation, async () => {
 </script>
 
 <style scoped>
-.gap-2 {
+.upload-log-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.upload-log-shell__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.upload-log-shell__actions,
+.upload-log-shell__notice,
+.upload-log-shell__checkbox {
+  display: flex;
+  align-items: center;
+}
+
+.upload-log-shell__actions {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.upload-log-shell__helper-text {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 0.88rem;
+}
+
+.upload-log-shell__checkbox {
+  gap: 0.65rem;
+  color: var(--app-ink);
+  font-weight: 600;
+}
+
+.upload-log-shell__checkbox input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--app-accent);
+}
+
+.upload-log-shell__ghost-button,
+.upload-log-shell__primary-button,
+.upload-log-shell__link {
+  font: inherit;
+}
+
+.upload-log-shell__ghost-button,
+.upload-log-shell__primary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 0.5rem;
+  min-height: 2.85rem;
+  padding: 0.78rem 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.upload-log-shell__ghost-button:hover:not(:disabled),
+.upload-log-shell__primary-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.upload-log-shell__ghost-button:disabled,
+.upload-log-shell__primary-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.upload-log-shell__ghost-button {
+  border-color: var(--app-border);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--app-ink);
+}
+
+.upload-log-shell__primary-button {
+  flex: 1 1 15rem;
+  background: linear-gradient(135deg, #145847, #2860a3);
+  color: white;
+  box-shadow: 0 16px 30px rgba(20, 88, 71, 0.18);
+}
+
+.upload-log-shell__pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.65rem;
+  height: 1.65rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: rgba(20, 88, 71, 0.12);
+  color: var(--app-accent);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.upload-log-shell__notice,
+.upload-log-shell__summary {
+  border: 1px solid var(--app-border);
+  border-radius: 1.2rem;
+}
+
+.upload-log-shell__notice {
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 1rem;
+}
+
+.upload-log-shell__notice strong {
+  color: var(--app-ink);
+}
+
+.upload-log-shell__notice p {
+  margin: 0.25rem 0 0;
+  color: var(--app-muted);
+}
+
+.upload-log-shell__notice--success {
+  background: rgba(20, 88, 71, 0.08);
+}
+
+.upload-log-shell__summary {
+  padding: 1rem;
+  background: rgba(255, 251, 247, 0.72);
+}
+
+.upload-log-shell__link {
+  border: 0;
+  background: transparent;
+  color: var(--app-accent);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.upload-log-comparison-section {
+  margin-top: 1rem;
+}
+
+.upload-log-comparison__header-actions,
+.upload-log-comparison__filters,
+.upload-log-breakdown__summary-grid,
+.upload-log-comparison-overlay__header {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.upload-log-comparison__header-actions {
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.upload-log-comparison__pill,
+.upload-log-score-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.upload-log-comparison__pill {
+  border: 1px solid var(--app-border);
+  background: rgba(255, 255, 255, 0.85);
+  color: var(--app-ink);
+}
+
+.upload-log-comparison__pill--info {
+  background: rgba(40, 96, 163, 0.08);
+  color: #214d86;
+}
+
+.upload-log-comparison__pill--success {
+  background: rgba(20, 88, 71, 0.08);
+  color: var(--app-accent);
+}
+
+.upload-log-comparison__filters {
+  flex-wrap: wrap;
+}
+
+.upload-log-comparison__field {
+  display: grid;
+  gap: 0.4rem;
+  min-width: 12rem;
+  flex: 1 1 12rem;
+}
+
+.upload-log-comparison__field--wide {
+  flex-basis: 16rem;
+}
+
+.upload-log-comparison__field span,
+.upload-log-breakdown__summary-grid span,
+.upload-log-breakdown__table td:first-child,
+.upload-log-comparison-overlay__eyebrow,
+.upload-log-breakdown__eyebrow {
+  color: var(--app-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.upload-log-comparison__field select,
+.upload-log-comparison__field input {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  padding: 0.76rem 0.9rem;
+  font: inherit;
+  color: var(--app-ink);
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.upload-log-comparison__field select[multiple] {
+  min-height: 8rem;
+}
+
+.upload-log-comparison__field small,
+.upload-log-comparison__muted {
+  color: var(--app-muted);
+}
+
+.upload-log-comparison__notice {
+  padding: 0.85rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(40, 96, 163, 0.12);
+  background: rgba(40, 96, 163, 0.08);
+  color: #214d86;
+}
+
+.upload-log-comparison__notice--success {
+  border-color: rgba(20, 88, 71, 0.12);
+  background: rgba(20, 88, 71, 0.08);
+  color: var(--app-accent);
+}
+
+.upload-log-comparison__strong,
+.upload-log-breakdown__summary-card h3 {
+  font-weight: 700;
+  color: var(--app-ink);
+}
+
+.upload-log-comparison__table :deep(.p-datatable) {
+  border-radius: 1.25rem;
+  overflow: hidden;
+  border: 1px solid var(--app-border);
+  background: rgba(255, 251, 247, 0.92);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.upload-log-comparison__table :deep(.p-datatable-header),
+.upload-log-comparison__table :deep(.p-datatable-footer) {
+  border: 0;
+  background: rgba(20, 88, 71, 0.05);
+}
+
+.upload-log-comparison__table :deep(.p-datatable-thead > tr > th) {
+  border-color: var(--app-border);
+  background: rgba(255, 248, 240, 0.96);
+  color: var(--app-ink);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: center;
+}
+
+.upload-log-comparison__table :deep(.p-datatable-tbody > tr > td) {
+  border-color: var(--app-border);
+  text-align: center;
+}
+
+.upload-log-comparison__table :deep(.p-datatable-tbody > tr > td:first-child) {
+  text-align: left;
+}
+
+.upload-log-comparison-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+}
+
+.upload-log-comparison-overlay__backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.48);
+  backdrop-filter: blur(6px);
+}
+
+.upload-log-comparison-overlay__panel {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  gap: 1rem;
+  height: calc(100vh - 2rem);
+  margin: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1.5rem;
+  background: rgba(255, 251, 247, 0.98);
+  box-shadow: var(--app-shadow);
+}
+
+.upload-log-comparison-overlay__header {
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.upload-log-comparison-overlay__header h2,
+.upload-log-breakdown__header h2 {
+  margin: 0.2rem 0 0;
+  color: var(--app-ink);
+}
+
+.upload-log-comparison__filters--fullscreen {
+  padding: 0 0.1rem;
+}
+
+.upload-log-comparison-overlay__table-wrap {
+  min-height: 0;
+}
+
+.upload-log-breakdown__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.upload-log-breakdown {
+  display: grid;
+  gap: 1rem;
+}
+
+.upload-log-breakdown__summary-card,
+.upload-log-breakdown__table-wrap {
+  border: 1px solid var(--app-border);
+  border-radius: 1.2rem;
+  background: rgba(255, 251, 247, 0.9);
+}
+
+.upload-log-breakdown__summary-card {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+}
+
+.upload-log-breakdown__summary-grid {
+  flex-wrap: wrap;
+}
+
+.upload-log-breakdown__summary-grid article {
+  flex: 1 1 10rem;
+  padding: 0.85rem 0.9rem;
+  border-radius: 1rem;
+  background: rgba(20, 88, 71, 0.06);
+}
+
+.upload-log-breakdown__summary-grid strong,
+.upload-log-breakdown__emphasis {
+  color: var(--app-ink);
+  font-weight: 700;
+}
+
+.upload-log-breakdown__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.upload-log-breakdown__table td {
+  padding: 0.85rem 0.95rem;
+  border-bottom: 1px solid var(--app-border);
+  vertical-align: top;
+}
+
+.upload-log-breakdown__table td:last-child {
+  color: var(--app-ink);
+}
+
+.upload-log-breakdown__deviation-warning {
+  color: #991b1b;
+  font-weight: 700;
+}
+
+.upload-log-score-chip.is-success {
+  background: rgba(34, 197, 94, 0.12);
+  color: #166534;
+}
+
+.upload-log-score-chip.is-info,
+.upload-log-score-chip.is-blue,
+.upload-log-score-chip.is-teal {
+  background: rgba(40, 96, 163, 0.12);
+  color: #214d86;
+}
+
+.upload-log-score-chip.is-warning,
+.upload-log-score-chip.is-orange {
+  background: rgba(245, 158, 11, 0.12);
+  color: #92400e;
+}
+
+.upload-log-score-chip.is-error,
+.upload-log-score-chip.is-purple {
+  background: rgba(139, 92, 246, 0.12);
+  color: #6d28d9;
+}
+
+.upload-log-score-chip.is-green {
+  background: rgba(20, 88, 71, 0.12);
+  color: var(--app-accent);
+}
+
+.upload-log-score-chip.is-grey {
+  background: rgba(148, 163, 184, 0.16);
+  color: #475569;
+}
+
+@media (max-width: 900px) {
+  .upload-log-shell__grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .upload-log-shell__actions,
+  .upload-log-shell__notice,
+  .upload-log-comparison__header-actions,
+  .upload-log-comparison-overlay__header,
+  .upload-log-breakdown__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .upload-log-shell__ghost-button,
+  .upload-log-shell__primary-button,
+  .upload-log-comparison__ghost-button {
+    width: 100%;
+  }
+
+  .upload-log-comparison-overlay__panel {
+    height: calc(100vh - 1rem);
+    margin: 0.5rem;
+  }
 }
 </style>

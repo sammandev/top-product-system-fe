@@ -1,254 +1,207 @@
 <template>
-    <v-dialog :model-value="modelValue" @update:model-value="$emit('update:modelValue', $event)" max-width="900px"
-        scrollable>
-        <template v-if="$slots.activator" #activator="slotProps">
-            <slot name="activator" v-bind="slotProps" />
-        </template>
+  <AppDialog
+    :model-value="modelValue"
+    title="Custom Scoring Configuration"
+    description="Tune universal and category-specific scoring formulas without leaving the Top Products workflow."
+    width="min(96vw, 68rem)"
+    :breakpoints="{ '1100px': '92vw', '700px': '96vw' }"
+    @update:modelValue="$emit('update:modelValue', $event)"
+  >
+    <div class="custom-scoring-dialog">
+      <div v-if="enabledCount > 0" class="custom-scoring-dialog__summary-banner">
+        <div>
+          <strong>{{ enabledCount }}</strong> custom formula{{ enabledCount > 1 ? 's' : '' }} active
+        </div>
+        <span class="custom-scoring-dialog__tag custom-scoring-dialog__tag--primary">
+          {{ universalFormula.enabled ? 'Universal' : '' }}
+          {{ universalFormula.enabled && enabledCategoryCount > 0 ? ' + ' : '' }}
+          {{ enabledCategoryCount > 0 ? `${enabledCategoryCount} Categories` : '' }}
+        </span>
+      </div>
 
-        <v-card>
-            <v-card-title class="d-flex align-center justify-space-between bg-primary">
-                <span>Custom Scoring Configuration</span>
-                <v-btn icon="mdi-close" variant="text" @click="$emit('update:modelValue', false)" />
-            </v-card-title>
+      <details class="custom-scoring-dialog__section" open>
+        <summary class="custom-scoring-dialog__section-header">
+          <div class="custom-scoring-dialog__section-copy">
+            <strong>Universal Formula</strong>
+            <span>{{ universalFormula.formulaType }} scoring</span>
+          </div>
+          <span v-if="universalFormula.enabled" class="custom-scoring-dialog__tag custom-scoring-dialog__tag--success">
+            Enabled
+          </span>
+        </summary>
+        <div class="custom-scoring-dialog__section-body">
+          <FormulaEditor
+            :formula="universalFormula"
+            @update:enabled="updateUniversalEnabled"
+            @update:formula-type="updateUniversalType"
+            @update:parameters="updateUniversalParameters"
+            @update:custom-expression="updateUniversalExpression"
+          />
+        </div>
+      </details>
 
-            <v-card-text class="pa-4" style="max-height: 70vh">
-                <!-- Active Formulas Summary -->
-                <v-alert v-if="enabledCount > 0" type="info" variant="tonal" class="mb-4" density="compact">
-                    <div class="d-flex align-center justify-space-between">
-                        <span>
-                            <strong>{{ enabledCount }}</strong> custom formula{{ enabledCount > 1 ? 's' : '' }}
-                            active
-                        </span>
-                        <v-chip size="small" color="primary">
-                            {{ universalFormula.enabled ? 'Universal' : '' }}
-                            {{ universalFormula.enabled && enabledCategoryCount > 0 ? ' + ' : '' }}
-                            {{ enabledCategoryCount > 0 ? `${enabledCategoryCount} Categories` : '' }}
-                        </v-chip>
-                    </div>
-                </v-alert>
+      <details v-if="availableMeasurements.length > 0" class="custom-scoring-dialog__section" open>
+        <summary class="custom-scoring-dialog__section-header">
+          <div class="custom-scoring-dialog__section-copy">
+            <strong>Test Formula With Real Data</strong>
+            <span>Preview formula behavior against current analysis measurements.</span>
+          </div>
+          <span v-if="testMeasurement" class="custom-scoring-dialog__tag custom-scoring-dialog__tag--primary">
+            Testing {{ testMeasurement.test_item }}
+          </span>
+        </summary>
+        <div class="custom-scoring-dialog__section-body">
+          <div class="custom-scoring-dialog__notice">
+            Test your formulas with actual measurements from the current results to see how they perform.
+          </div>
 
-                <v-expansion-panels multiple>
-                    <!-- Universal Formula -->
-                    <v-expansion-panel>
-                        <v-expansion-panel-title>
-                            <div class="d-flex align-center justify-space-between w-100">
-                                <div class="d-flex align-center gap-2">
-                                    <v-icon>mdi-earth</v-icon>
-                                    <span class="font-weight-medium">Universal Formula</span>
-                                    <v-chip v-if="universalFormula.enabled" size="x-small" color="success">
-                                        Enabled
-                                    </v-chip>
-                                </div>
-                                <div class="text-caption text-medium-emphasis" @click.stop>
-                                    {{ universalFormula.formulaType }} scoring
-                                </div>
-                            </div>
-                        </v-expansion-panel-title>
-                        <v-expansion-panel-text>
-                            <FormulaEditor :formula="universalFormula" @update:enabled="updateUniversalEnabled"
-                                @update:formula-type="updateUniversalType"
-                                @update:parameters="updateUniversalParameters"
-                                @update:custom-expression="updateUniversalExpression" />
-                        </v-expansion-panel-text>
-                    </v-expansion-panel>
+          <label class="custom-scoring-dialog__field">
+            <span>Select Measurement to Test</span>
+            <select v-model="selectedMeasurementKey" class="custom-scoring-dialog__select">
+              <option value="">Choose a measurement</option>
+              <option v-for="measurement in availableMeasurements" :key="measurement.test_item" :value="measurement.test_item">
+                {{ measurement.test_item }}{{ measurement.category ? ` — ${measurement.category}` : '' }}
+              </option>
+            </select>
+          </label>
 
-                    <!-- Test with Real Data -->
-                    <v-expansion-panel v-if="availableMeasurements.length > 0">
-                        <v-expansion-panel-title>
-                            <div class="d-flex align-center justify-space-between w-100">
-                                <div class="d-flex align-center gap-2">
-                                    <v-icon>mdi-atom-variant</v-icon>
-                                    <span class="font-weight-medium">Test Formula with Real Data</span>
-                                    <v-chip v-if="testMeasurement" size="x-small" color="primary">
-                                        Testing {{ testMeasurement.test_item }}
-                                    </v-chip>
-                                </div>
-                            </div>
-                        </v-expansion-panel-title>
-                        <v-expansion-panel-text>
-                            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-                                Test your formulas with actual measurements from the current results to see how they perform.
-                            </v-alert>
+          <AppPanel v-if="testMeasurement" title="Test Results" compact-header>
+            <table class="custom-scoring-dialog__table">
+              <tbody>
+                <tr>
+                  <th>Test Item</th>
+                  <td>{{ testMeasurement.test_item }}</td>
+                </tr>
+                <tr>
+                  <th>Category</th>
+                  <td>
+                    <span class="custom-scoring-dialog__tag custom-scoring-dialog__tag--primary">
+                      {{ testMeasurement.category || 'General' }}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <th>Measured Value</th>
+                  <td>{{ testMeasurement.actual.toFixed(4) }}</td>
+                </tr>
+                <tr>
+                  <th>Target Value</th>
+                  <td>{{ testMeasurement.target !== null ? testMeasurement.target.toFixed(4) : 'N/A' }}</td>
+                </tr>
+                <tr>
+                  <th>USL / LSL</th>
+                  <td>
+                    {{ testMeasurement.usl !== null ? testMeasurement.usl.toFixed(4) : 'N/A' }} /
+                    {{ testMeasurement.lsl !== null ? testMeasurement.lsl.toFixed(4) : 'N/A' }}
+                  </td>
+                </tr>
+                <tr>
+                  <th>System Score</th>
+                  <td>
+                    <span class="custom-scoring-dialog__tag" :class="scoreClass(testMeasurement.systemScore)">
+                      {{ testMeasurement.systemScore.toFixed(2) }}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <th>Custom Score</th>
+                  <td class="custom-scoring-dialog__table-score-cell">
+                    <span class="custom-scoring-dialog__tag" :class="scoreClass(testResult.customScore)">
+                      {{ testResult.customScore.toFixed(2) }}
+                    </span>
+                    <span class="custom-scoring-dialog__tag custom-scoring-dialog__tag--muted">
+                      {{ testResult.formulaName }}
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <th>Difference</th>
+                  <td class="custom-scoring-dialog__table-score-cell">
+                    <span class="custom-scoring-dialog__tag" :class="differenceClass(testResult.difference)">
+                      {{ testResult.difference > 0 ? '+' : '' }}{{ testResult.difference.toFixed(2) }}
+                    </span>
+                    <span class="custom-scoring-dialog__difference-note">
+                      ({{ testResult.difference > 0 ? 'Higher' : testResult.difference < 0 ? 'Lower' : 'Same' }} than system)
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </AppPanel>
 
-                            <!-- Measurement Selector -->
-                            <v-select
-                                v-model="testMeasurement"
-                                :items="availableMeasurements"
-                                item-title="test_item"
-                                return-object
-                                label="Select Measurement to Test"
-                                variant="outlined"
-                                density="compact"
-                                class="mb-4"
-                            >
-                                <template #item="{ props: itemProps, item }">
-                                    <v-list-item v-bind="itemProps">
-                                        <template #prepend>
-                                            <v-chip size="x-small" color="primary" variant="tonal">
-                                                {{ item.raw.category || 'General' }}
-                                            </v-chip>
-                                        </template>
-                                    </v-list-item>
-                                </template>
-                            </v-select>
+          <div v-else class="custom-scoring-dialog__notice custom-scoring-dialog__notice--subtle">
+            Select a measurement above to test your custom formulas.
+          </div>
+        </div>
+      </details>
 
-                            <!-- Test Results -->
-                            <v-card v-if="testMeasurement" variant="outlined" class="mb-4">
-                                <v-card-title class="text-subtitle-1">Test Results</v-card-title>
-                                <v-card-text>
-                                    <v-table density="compact">
-                                        <tbody>
-                                            <tr>
-                                                <td class="font-weight-medium">Test Item</td>
-                                                <td>{{ testMeasurement.test_item }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="font-weight-medium">Category</td>
-                                                <td>
-                                                    <v-chip size="small" color="primary" variant="tonal">
-                                                        {{ testMeasurement.category || 'General' }}
-                                                    </v-chip>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td class="font-weight-medium">Measured Value</td>
-                                                <td>{{ testMeasurement.actual.toFixed(4) }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="font-weight-medium">Target Value</td>
-                                                <td>{{ testMeasurement.target !== null ? testMeasurement.target.toFixed(4) : 'N/A' }}</td>
-                                            </tr>
-                                            <tr>
-                                                <td class="font-weight-medium">USL / LSL</td>
-                                                <td>
-                                                    {{ testMeasurement.usl !== null ? testMeasurement.usl.toFixed(4) : 'N/A' }} / 
-                                                    {{ testMeasurement.lsl !== null ? testMeasurement.lsl.toFixed(4) : 'N/A' }}
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td class="font-weight-medium">System Score</td>
-                                                <td>
-                                                    <v-chip size="small" :color="getScoreColor(testMeasurement.systemScore)">
-                                                        {{ testMeasurement.systemScore.toFixed(2) }}
-                                                    </v-chip>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td class="font-weight-medium">Custom Score</td>
-                                                <td>
-                                                    <v-chip size="small" :color="getScoreColor(testResult.customScore)" variant="elevated">
-                                                        {{ testResult.customScore.toFixed(2) }}
-                                                    </v-chip>
-                                                    <v-chip size="small" class="ml-2" color="info" variant="outlined">
-                                                        {{ testResult.formulaName }}
-                                                    </v-chip>
-                                                </td>
-                                            </tr>
-                                            <tr>
-                                                <td class="font-weight-medium">Difference</td>
-                                                <td>
-                                                    <v-chip 
-                                                        size="small" 
-                                                        :color="testResult.difference > 0 ? 'success' : testResult.difference < 0 ? 'error' : 'default'"
-                                                    >
-                                                        {{ testResult.difference > 0 ? '+' : '' }}{{ testResult.difference.toFixed(2) }}
-                                                    </v-chip>
-                                                    <span class="ml-2 text-caption text-medium-emphasis">
-                                                        ({{ testResult.difference > 0 ? 'Higher' : testResult.difference < 0 ? 'Lower' : 'Same' }} than system)
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </v-table>
-                                </v-card-text>
-                            </v-card>
+      <details class="custom-scoring-dialog__section" open>
+        <summary class="custom-scoring-dialog__section-header">
+          <div class="custom-scoring-dialog__section-copy">
+            <strong>Category Formulas</strong>
+            <span>Override the universal formula for specific measurement categories.</span>
+          </div>
+          <span class="custom-scoring-dialog__tag" :class="enabledCategoryCount > 0 ? 'custom-scoring-dialog__tag--success' : 'custom-scoring-dialog__tag--muted'">
+            {{ enabledCategoryCount }} / {{ Object.keys(categoryFormulas).length }} Enabled
+          </span>
+        </summary>
+        <div class="custom-scoring-dialog__section-body">
+          <div class="custom-scoring-dialog__actions">
+            <button type="button" class="custom-scoring-dialog__button custom-scoring-dialog__button--secondary" @click="handleToggleAll(true)">
+              Enable All
+            </button>
+            <button type="button" class="custom-scoring-dialog__button custom-scoring-dialog__button--secondary" @click="handleToggleAll(false)">
+              Disable All
+            </button>
+          </div>
 
-                            <v-alert v-if="!testMeasurement" type="info" variant="tonal" density="compact">
-                                Select a measurement above to test your custom formulas
-                            </v-alert>
-                        </v-expansion-panel-text>
-                    </v-expansion-panel>
+          <div class="custom-scoring-dialog__category-list">
+            <details v-for="(formula, category) in categoryFormulas" :key="category" class="custom-scoring-dialog__category-card">
+              <summary class="custom-scoring-dialog__category-header">
+                <div class="custom-scoring-dialog__category-copy">
+                  <span class="custom-scoring-dialog__tag custom-scoring-dialog__tag--primary">{{ category }}</span>
+                  <span>{{ formula.name }}</span>
+                </div>
+                <div class="custom-scoring-dialog__category-meta">
+                  <span v-if="formula.enabled" class="custom-scoring-dialog__tag custom-scoring-dialog__tag--success">Enabled</span>
+                  <span class="custom-scoring-dialog__category-type">{{ formula.formulaType }}</span>
+                </div>
+              </summary>
+              <div class="custom-scoring-dialog__category-body">
+                <FormulaEditor
+                  :formula="formula"
+                  @update:enabled="updateCategoryEnabled(String(category), $event)"
+                  @update:formula-type="updateCategoryType(String(category), $event)"
+                  @update:parameters="updateCategoryParameters(String(category), $event)"
+                  @update:custom-expression="updateCategoryExpression(String(category), $event)"
+                />
+              </div>
+            </details>
+          </div>
+        </div>
+      </details>
+    </div>
 
-                    <!-- Category Formulas -->
-                    <v-expansion-panel>
-                        <v-expansion-panel-title>
-                            <div class="d-flex align-center justify-space-between w-100">
-                                <div class="d-flex align-center gap-2">
-                                    <v-icon>mdi-format-list-bulleted</v-icon>
-                                    <span class="font-weight-medium">Category Formulas</span>
-                                    <v-chip size="x-small" :color="enabledCategoryCount > 0 ? 'success' : 'default'">
-                                        {{ enabledCategoryCount }} / {{ Object.keys(categoryFormulas).length }} Enabled
-                                    </v-chip>
-                                </div>
-                            </div>
-                        </v-expansion-panel-title>
-                        <v-expansion-panel-text>
-                            <!-- Bulk Actions -->
-                            <div class="d-flex gap-2 mb-4">
-                                <v-btn variant="outlined" size="small" prepend-icon="mdi-check-all"
-                                    @click="handleToggleAll(true)">
-                                    Enable All
-                                </v-btn>
-                                <v-btn variant="outlined" size="small" prepend-icon="mdi-close-box-multiple"
-                                    @click="handleToggleAll(false)">
-                                    Disable All
-                                </v-btn>
-                            </div>
-
-                            <!-- Category Formula List -->
-                            <v-expansion-panels>
-                                <v-expansion-panel v-for="(formula, category) in categoryFormulas" :key="category"
-                                    class="mb-2">
-                                    <v-expansion-panel-title>
-                                        <div class="d-flex align-center justify-space-between w-100">
-                                            <div class="d-flex align-center gap-2">
-                                                <v-chip size="small" variant="tonal" color="primary">
-                                                    {{ category }}
-                                                </v-chip>
-                                                <span class="text-body-2">{{ formula.name }}</span>
-                                                <v-chip v-if="formula.enabled" size="x-small" color="success">
-                                                    Enabled
-                                                </v-chip>
-                                            </div>
-                                            <div class="text-caption text-medium-emphasis" @click.stop>
-                                                {{ formula.formulaType }}
-                                            </div>
-                                        </div>
-                                    </v-expansion-panel-title>
-                                    <v-expansion-panel-text>
-                                        <FormulaEditor :formula="formula"
-                                            @update:enabled="updateCategoryEnabled(String(category), $event)"
-                                            @update:formula-type="updateCategoryType(String(category), $event)"
-                                            @update:parameters="updateCategoryParameters(String(category), $event)"
-                                            @update:custom-expression="updateCategoryExpression(String(category), $event)" />
-                                    </v-expansion-panel-text>
-                                </v-expansion-panel>
-                            </v-expansion-panels>
-                        </v-expansion-panel-text>
-                    </v-expansion-panel>
-                </v-expansion-panels>
-            </v-card-text>
-
-            <v-divider />
-
-            <v-card-actions class="pa-4">
-                <v-btn variant="outlined" prepend-icon="mdi-restore" @click="handleReset">
-                    Reset to Defaults
-                </v-btn>
-                <v-spacer />
-                <v-btn variant="text" @click="$emit('update:modelValue', false)">
-                    Cancel
-                </v-btn>
-                <v-btn color="primary" variant="elevated" prepend-icon="mdi-check" @click="handleApply">
-                    Apply
-                </v-btn>
-            </v-card-actions>
-        </v-card>
-    </v-dialog>
+    <template #footer>
+      <div class="custom-scoring-dialog__footer">
+        <button type="button" class="custom-scoring-dialog__button custom-scoring-dialog__button--secondary" @click="handleReset">
+          Reset to Defaults
+        </button>
+        <div class="custom-scoring-dialog__footer-spacer"></div>
+        <button type="button" class="custom-scoring-dialog__button custom-scoring-dialog__button--ghost" @click="$emit('update:modelValue', false)">
+          Cancel
+        </button>
+        <button type="button" class="custom-scoring-dialog__button custom-scoring-dialog__button--primary" @click="handleApply">
+          Apply
+        </button>
+      </div>
+    </template>
+  </AppDialog>
 </template>
 
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
+import { AppDialog, AppPanel } from '@/shared/ui'
 import type {
   CategoryFormulasV2,
   CustomFormulaV2,
@@ -292,6 +245,13 @@ const injectedResults = inject<{ value: TopProductBatchResponse | null }>('topPr
 
 // State for testing
 const testMeasurement = ref<TestMeasurement | null>(null)
+
+const selectedMeasurementKey = computed({
+  get: () => testMeasurement.value?.test_item ?? '',
+  set: (value: string) => {
+    testMeasurement.value = availableMeasurements.value.find((measurement) => measurement.test_item === value) ?? null
+  },
+})
 
 // Extract measurements from current results for testing
 const availableMeasurements = computed<TestMeasurement[]>(() => {
@@ -418,6 +378,14 @@ const enabledCount = computed(() => {
   return count
 })
 
+const scoreClass = (score: number): string => `custom-scoring-dialog__tag--${getScoreColor(score)}`
+
+const differenceClass = (difference: number): string => {
+  if (difference > 0) return 'custom-scoring-dialog__tag--success'
+  if (difference < 0) return 'custom-scoring-dialog__tag--danger'
+  return 'custom-scoring-dialog__tag--muted'
+}
+
 // Universal formula updates
 const updateUniversalEnabled = (enabled: boolean) => {
   emit('update:universalFormula', {
@@ -514,7 +482,257 @@ const handleApply = () => {
 </script>
 
 <style scoped>
-.w-100 {
+.custom-scoring-dialog {
+  display: grid;
+  gap: 1rem;
+}
+
+.custom-scoring-dialog__summary-banner,
+.custom-scoring-dialog__notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.95rem 1rem;
+  border: 1px solid rgba(40, 96, 163, 0.15);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, rgba(40, 96, 163, 0.08), rgba(40, 96, 163, 0.03));
+  color: var(--app-ink);
+}
+
+.custom-scoring-dialog__notice {
+  justify-content: flex-start;
+}
+
+.custom-scoring-dialog__notice--subtle {
+  border-style: dashed;
+  background: rgba(255, 251, 247, 0.7);
+  color: var(--app-muted);
+}
+
+.custom-scoring-dialog__section,
+.custom-scoring-dialog__category-card {
+  border: 1px solid var(--app-border);
+  border-radius: 1.15rem;
+  background: rgba(255, 251, 247, 0.88);
+  overflow: hidden;
+}
+
+.custom-scoring-dialog__section[open],
+.custom-scoring-dialog__category-card[open] {
+  box-shadow: var(--app-shadow-soft);
+}
+
+.custom-scoring-dialog__section-header,
+.custom-scoring-dialog__category-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 1rem 1.15rem;
+  cursor: pointer;
+  list-style: none;
+}
+
+.custom-scoring-dialog__section-header::-webkit-details-marker,
+.custom-scoring-dialog__category-header::-webkit-details-marker {
+  display: none;
+}
+
+.custom-scoring-dialog__section-copy,
+.custom-scoring-dialog__category-copy,
+.custom-scoring-dialog__category-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.custom-scoring-dialog__section-copy {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+}
+
+.custom-scoring-dialog__section-copy strong {
+  font-size: 1rem;
+}
+
+.custom-scoring-dialog__section-copy span,
+.custom-scoring-dialog__category-type,
+.custom-scoring-dialog__difference-note {
+  color: var(--app-muted);
+  font-size: 0.84rem;
+}
+
+.custom-scoring-dialog__section-body,
+.custom-scoring-dialog__category-body {
+  display: grid;
+  gap: 1rem;
+  padding: 0 1.15rem 1.15rem;
+}
+
+.custom-scoring-dialog__field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.custom-scoring-dialog__field span {
+  color: var(--app-muted);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.custom-scoring-dialog__select {
+  min-height: 2.9rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  padding: 0.75rem 0.9rem;
+}
+
+.custom-scoring-dialog__table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.custom-scoring-dialog__table th,
+.custom-scoring-dialog__table td {
+  padding: 0.75rem 0.35rem;
+  border-bottom: 1px solid rgba(20, 88, 71, 0.1);
+  text-align: left;
+  vertical-align: top;
+}
+
+.custom-scoring-dialog__table th {
+  width: 11rem;
+  color: var(--app-muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.custom-scoring-dialog__table-score-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.custom-scoring-dialog__tag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 1.9rem;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.custom-scoring-dialog__tag--primary {
+  background: rgba(40, 96, 163, 0.14);
+  color: #1f4f89;
+}
+
+.custom-scoring-dialog__tag--success {
+  background: rgba(20, 88, 71, 0.14);
+  color: #145847;
+}
+
+.custom-scoring-dialog__tag--info {
+  background: rgba(40, 96, 163, 0.14);
+  color: #1f4f89;
+}
+
+.custom-scoring-dialog__tag--warning {
+  background: rgba(161, 104, 57, 0.16);
+  color: #8c592f;
+}
+
+.custom-scoring-dialog__tag--danger,
+.custom-scoring-dialog__tag--error {
+  background: rgba(164, 52, 58, 0.14);
+  color: #8e3037;
+}
+
+.custom-scoring-dialog__tag--muted,
+.custom-scoring-dialog__tag--default {
+  background: rgba(102, 112, 133, 0.14);
+  color: #596170;
+}
+
+.custom-scoring-dialog__actions,
+.custom-scoring-dialog__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.custom-scoring-dialog__footer-spacer {
+  flex: 1 1 auto;
+}
+
+.custom-scoring-dialog__button {
+  min-height: 2.75rem;
+  border-radius: 0.95rem;
+  padding: 0.6rem 1rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.custom-scoring-dialog__button:hover {
+  transform: translateY(-1px);
+}
+
+.custom-scoring-dialog__button--primary {
+  background: var(--app-accent);
+  color: white;
+}
+
+.custom-scoring-dialog__button--secondary {
+  background: rgba(255, 251, 247, 0.92);
+  border-color: var(--app-border);
+  color: var(--app-ink);
+}
+
+.custom-scoring-dialog__button--ghost {
+  background: transparent;
+  color: var(--app-muted);
+}
+
+.custom-scoring-dialog__category-list {
+  display: grid;
+  gap: 0.85rem;
+}
+
+@media (max-width: 700px) {
+  .custom-scoring-dialog__summary-banner,
+  .custom-scoring-dialog__section-header,
+  .custom-scoring-dialog__category-header,
+  .custom-scoring-dialog__footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .custom-scoring-dialog__table th {
+    width: 8rem;
+  }
+
+  .custom-scoring-dialog__footer-spacer {
+    display: none;
+  }
+
+  .custom-scoring-dialog__button {
     width: 100%;
+  }
 }
 </style>

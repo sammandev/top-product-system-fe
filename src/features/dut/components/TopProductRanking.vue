@@ -1,281 +1,202 @@
 <template>
-    <v-card class="mb-4">
-        <v-card-title class="d-flex justify-space-between align-center">
+  <AppPanel
+    eyebrow="Ranking"
+    title="Top Product Ranking by Test Station"
+    description="Rankings are based on overall scoring. DUTs with error items remain grouped at the bottom of each station view."
+    tone="warm"
+    split-header
+  >
+    <template #header-aside>
+      <div class="top-product-ranking__summary-pills">
+        <span class="top-product-ranking__pill top-product-ranking__pill--primary">
+          {{ stationNames.length }} Stations
+        </span>
+        <span class="top-product-ranking__pill top-product-ranking__pill--success">
+          {{ totalDUTs }} DUTs
+        </span>
+      </div>
+    </template>
+
+    <AppTabs v-model="selectedTab" :items="stationTabItems" scrollable>
+      <template v-for="item in stationTabItems" :key="String(item.value)" #[`panel-${item.value}`]>
+        <section v-if="selectedTab === String(item.value)" class="top-product-ranking__station-panel">
+          <div class="top-product-ranking__station-hero">
             <div>
-                <v-icon class="mr-2" color="warning">mdi-podium-gold</v-icon>
-                Top Product Ranking by Test Station
+              <p class="top-product-ranking__section-eyebrow">Station Workspace</p>
+              <h3>{{ String(item.value) }}</h3>
             </div>
-            <div class="d-flex align-center gap-2">
-                <v-chip size="small" color="primary" variant="tonal" prepend-icon="mdi-factory">
-                    {{ Object.keys(rankingByStation).length }} Stations
-                </v-chip>
-                <v-chip size="small" color="success" variant="tonal" prepend-icon="mdi-barcode">
-                    {{ totalDUTs }} DUTs
-                </v-chip>
+
+            <div class="top-product-ranking__station-pills">
+              <span class="top-product-ranking__pill top-product-ranking__pill--success">
+                {{ getPassedCount(String(item.value)) }} Passed
+              </span>
+              <span class="top-product-ranking__pill top-product-ranking__pill--danger">
+                {{ getFailedCount(String(item.value)) }} Failed
+              </span>
+              <span
+                v-if="getTopScore(String(item.value)) !== null"
+                class="top-product-ranking__pill top-product-ranking__pill--warning"
+              >
+                Top Score: {{ getTopScore(String(item.value))?.toFixed(2) }}
+              </span>
             </div>
-        </v-card-title>
+          </div>
 
-        <v-card-subtitle class="text-caption text-medium-emphasis pb-0">
-            Rankings are based on overall scoring. DUTs with error items are shown at the bottom.
-        </v-card-subtitle>
+          <section v-if="getStationRanking(String(item.value)).length > 0" class="top-product-ranking__workspace">
+            <div class="top-product-ranking__filter-grid">
+              <label class="top-product-ranking__field top-product-ranking__field--wide">
+                <span>Search</span>
+                <input v-model="searchQuery" type="text" placeholder="ISN, Device, Date, Site, Model...">
+              </label>
 
-        <v-card-text>
-            <!-- Station Tabs -->
-            <v-tabs v-model="selectedTab" color="primary" density="compact" show-arrows>
-                <v-tab v-for="(ranking, station) in rankingByStation" :key="station" :value="station">
-                    <v-icon size="small" class="mr-2">mdi-factory</v-icon>
-                    {{ station }}
-                    <v-chip size="x-small" color="primary" class="ml-2" variant="tonal">
-                        {{ ranking.length }}
-                    </v-chip>
-                </v-tab>
-            </v-tabs>
+              <label class="top-product-ranking__field">
+                <span>Score Filter</span>
+                <select :value="scoreFilterType ?? ''" @change="handleScoreFilterTypeInput">
+                  <option value="">No filter</option>
+                  <option v-for="option in scoreFilterTypes" :key="option.value" :value="option.value">
+                    {{ option.title }}
+                  </option>
+                </select>
+              </label>
 
-            <!-- Station Rankings -->
-            <v-window v-model="selectedTab" class="mt-4">
-                <v-window-item v-for="(ranking, station) in rankingByStation" :key="station" :value="station">
-                    <!-- Station Info Card -->
-                    <v-card variant="tonal" color="primary" class="mb-4">
-                        <v-card-text class="py-3">
-                            <v-row dense align="center">
-                                <v-col cols="12" md="4">
-                                    <div class="text-h6 font-weight-bold">
-                                        <v-icon class="mr-2">mdi-factory</v-icon>
-                                        {{ station }}
-                                    </div>
-                                </v-col>
-                                <v-col cols="12" md="8">
-                                    <div class="d-flex flex-wrap gap-2 justify-end">
-                                        <v-chip size="small" color="success" variant="flat">
-                                            <v-icon size="small" class="mr-1">mdi-check-circle</v-icon>
-                                            {{ranking?.filter(r => !r.hasError).length || 0}} Passed
-                                        </v-chip>
-                                        <v-chip size="small" color="error" variant="flat">
-                                            <v-icon size="small" class="mr-1">mdi-alert-circle</v-icon>
-                                            {{ranking?.filter(r => r.hasError).length || 0}} Failed
-                                        </v-chip>
-                                        <v-chip
-                                            v-if="ranking && ranking.length > 0 && ranking[0] && !ranking[0].hasError"
-                                            size="small" color="warning" variant="flat">
-                                            <v-icon size="small" class="mr-1">mdi-trophy</v-icon>
-                                            Top Score: {{ ranking[0].score.toFixed(2) }}
-                                        </v-chip>
-                                    </div>
-                                </v-col>
-                            </v-row>
-                        </v-card-text>
-                    </v-card>
+              <label class="top-product-ranking__field">
+                <span>Score Value</span>
+                <input
+                  :value="scoreFilterValue ?? ''"
+                  type="number"
+                  placeholder="e.g. 9"
+                  :disabled="!scoreFilterType"
+                  @input="handleScoreFilterValueInput"
+                >
+              </label>
 
-                    <!-- Ranking Table -->
-                    <v-row v-if="ranking && ranking.length > 0">
-                        <!-- Complete Ranking Table -->
-                        <v-col cols="12">
+              <label class="top-product-ranking__field">
+                <span>Status</span>
+                <select :value="statusFilter ?? ''" @change="handleStatusFilterInput">
+                  <option value="">All</option>
+                  <option v-for="option in statusFilterOptions" :key="option.value" :value="option.value">
+                    {{ option.title }}
+                  </option>
+                </select>
+              </label>
 
+              <label class="top-product-ranking__field">
+                <span>Site</span>
+                <select :value="siteFilter ?? ''" @change="handleSiteFilterInput">
+                  <option value="">All</option>
+                  <option v-for="site in availableSites" :key="site" :value="site">{{ site }}</option>
+                </select>
+              </label>
+            </div>
 
-                            <v-card variant="outlined">
-                                <v-card-title class="bg-grey-lighten-4">
-                                    <v-icon class="mr-2">mdi-trophy</v-icon>
-                                    Complete Ranking
-                                </v-card-title>
+            <div v-if="hasActiveFilters" class="top-product-ranking__active-filters">
+              <span class="top-product-ranking__pill top-product-ranking__pill--primary">
+                {{ activeFilterCount }} active filter(s)
+              </span>
+              <button v-if="searchQuery" type="button" class="top-product-ranking__token" @click="searchQuery = ''">
+                Search: "{{ searchQuery }}"
+              </button>
+              <button
+                v-if="scoreFilterType && scoreFilterValue !== null"
+                type="button"
+                class="top-product-ranking__token"
+                @click="clearScoreFilter"
+              >
+                Score {{ getScoreFilterLabel() }}: {{ scoreFilterValue }}
+              </button>
+              <button v-if="statusFilter" type="button" class="top-product-ranking__token" @click="statusFilter = null">
+                Status: {{ statusFilter === 'passed' ? 'Passed Only' : 'Failed Only' }}
+              </button>
+              <button v-if="siteFilter" type="button" class="top-product-ranking__token" @click="siteFilter = null">
+                Site: {{ siteFilter }}
+              </button>
+              <button type="button" class="top-product-ranking__button top-product-ranking__button--ghost" @click="clearAllFilters">
+                Clear All
+              </button>
+            </div>
 
-                                <!-- Search and Filters -->
-                                <v-card-text class="pt-2">
-                                    <v-row dense>
-                                        <!-- Search Field -->
-                                        <v-col cols="12" md="4">
-                                            <v-text-field v-model="searchQuery" label="Search"
-                                                placeholder="ISN, Device, Date, Site, Model..."
-                                                prepend-inner-icon="mdi-magnify" variant="outlined" density="compact"
-                                                clearable hide-details />
-                                        </v-col>
+            <div v-if="filteredRanking.length === 0" class="top-product-ranking__notice top-product-ranking__notice--info">
+              No results match the current filters.
+            </div>
+            <p v-else class="top-product-ranking__results-copy">
+              Showing {{ filteredRanking.length }} of {{ getStationRanking(String(item.value)).length }} DUT(s)
+            </p>
 
-                                        <!-- Score Filter Type -->
-                                        <v-col cols="12" md="2">
-                                            <v-select v-model="scoreFilterType" :items="scoreFilterTypes"
-                                                label="Score Filter" variant="outlined" density="compact" clearable
-                                                hide-details />
-                                        </v-col>
+            <AppDataGrid
+              :columns="rankingGridColumns"
+              :rows="filteredRankingRows"
+              dataKey="isn"
+              paginator
+              :rowsPerPage="10"
+              :rowsPerPageOptions="rowsPerPageOptions"
+              scrollHeight="40rem"
+              :rowClass="getRankingRowClass"
+              emptyMessage="No ranking rows available for this station."
+              @row-click="handleGridRowClick($event, String(item.value))"
+            >
+              <template #cell-rank="{ data }">
+                <span class="top-product-ranking__rank-pill" :class="rankPillClass(data as RankingItem)">
+                  {{ (data as RankingItem).hasError ? 'Error' : (data as RankingItem).rank }}
+                </span>
+              </template>
 
-                                        <!-- Score Value Input -->
-                                        <v-col cols="12" md="2">
-                                            <v-text-field v-model.number="scoreFilterValue" label="Score Value"
-                                                placeholder="e.g., 9" type="number" variant="outlined" density="compact"
-                                                clearable hide-details :disabled="!scoreFilterType" />
-                                        </v-col>
+              <template #cell-isn="{ data }">
+                <span class="top-product-ranking__strong">{{ (data as RankingItem).isn }}</span>
+              </template>
 
-                                        <!-- Status Filter -->
-                                        <v-col cols="12" md="2">
-                                            <v-select v-model="statusFilter" :items="statusFilterOptions" label="Status"
-                                                variant="outlined" density="compact" clearable hide-details />
-                                        </v-col>
+              <template #cell-device="{ data }">
+                <span class="top-product-ranking__pill top-product-ranking__pill--neutral">
+                  {{ (data as RankingItem).device || 'N/A' }}
+                </span>
+              </template>
 
-                                        <!-- Site Filter -->
-                                        <v-col cols="12" md="2">
-                                            <v-select v-model="siteFilter" :items="availableSites" label="Site"
-                                                variant="outlined" density="compact" clearable hide-details />
-                                        </v-col>
-                                    </v-row>
+              <template #cell-testDate="{ data }">
+                <span class="top-product-ranking__muted">{{ formatDate((data as RankingItem).testDate) }}</span>
+              </template>
 
-                                    <!-- Active Filters Summary & Clear Button -->
-                                    <v-row v-if="hasActiveFilters" dense class="mt-2">
-                                        <v-col cols="12">
-                                            <div class="d-flex align-center flex-wrap gap-2">
-                                                <v-chip size="small" variant="tonal" color="primary">
-                                                    <v-icon size="small" class="mr-1">mdi-filter</v-icon>
-                                                    {{ activeFilterCount }} active filter(s)
-                                                </v-chip>
-                                                <v-chip v-if="searchQuery" size="small" closable
-                                                    @click:close="searchQuery = ''">
-                                                    Search: "{{ searchQuery }}"
-                                                </v-chip>
-                                                <v-chip v-if="scoreFilterType && scoreFilterValue !== null" size="small"
-                                                    closable
-                                                    @click:close="scoreFilterType = null; scoreFilterValue = null">
-                                                    Score {{ getScoreFilterLabel() }}: {{ scoreFilterValue }}
-                                                </v-chip>
-                                                <v-chip v-if="statusFilter" size="small" closable
-                                                    @click:close="statusFilter = null">
-                                                    Status: {{ statusFilter === 'passed' ? 'Passed Only' : 'Failed Only'
-                                                    }}
-                                                </v-chip>
-                                                <v-chip v-if="siteFilter" size="small" closable
-                                                    @click:close="siteFilter = null">
-                                                    Site: {{ siteFilter }}
-                                                </v-chip>
-                                                <v-spacer />
-                                                <v-btn size="small" variant="text" color="error"
-                                                    @click="clearAllFilters">
-                                                    <v-icon size="small" class="mr-1">mdi-filter-remove</v-icon>
-                                                    Clear All
-                                                </v-btn>
-                                            </div>
-                                        </v-col>
-                                    </v-row>
+              <template #cell-score="{ data }">
+                <span
+                  v-if="!(data as RankingItem).hasError"
+                  class="top-product-ranking__score-pill"
+                  :class="scorePillClass((data as RankingItem).score)"
+                >
+                  {{ (data as RankingItem).score.toFixed(2) }}
+                </span>
+                <span v-else class="top-product-ranking__pill top-product-ranking__pill--danger">N/A</span>
+              </template>
 
-                                    <!-- Results Summary -->
-                                    <v-row dense class="mt-2">
-                                        <v-col cols="12">
-                                            <v-alert v-if="filteredRanking.length === 0" type="info" variant="tonal"
-                                                density="compact">
-                                                No results match the current filters
-                                            </v-alert>
-                                            <div v-else class="text-caption text-medium-emphasis">
-                                                Showing {{ filteredRanking.length }} of {{ ranking?.length || 0 }}
-                                                DUT(s)
-                                            </div>
-                                        </v-col>
-                                    </v-row>
-                                </v-card-text>
+              <template #cell-site="{ data }">
+                <span class="top-product-ranking__muted">{{ (data as RankingItem).site || 'N/A' }}</span>
+              </template>
 
-                                <v-data-table :headers="rankingHeaders" :items="filteredRanking" :items-per-page="10"
-                                    density="comfortable" class="ranking-table cursor-pointer"
-                                    :item-class="getRankingRowClass"
-                                    @click:row="(_event: unknown, data: any) => handleRowClick(data.item, station as string)">
-                                    <!-- Rank Column -->
-                                    <template #item.rank="{ item }">
-                                        <div class="d-flex align-center">
-                                            <v-chip v-if="item.rank === 1 && !item.hasError" size="small"
-                                                color="warning" variant="flat">
-                                                <v-icon size="small" class="mr-1">mdi-trophy</v-icon>
-                                                {{ item.rank }}
-                                            </v-chip>
-                                            <v-chip v-else-if="item.rank === 2 && !item.hasError" size="small"
-                                                color="grey-lighten-1" variant="flat">
-                                                <v-icon size="small" class="mr-1">mdi-medal</v-icon>
-                                                {{ item.rank }}
-                                            </v-chip>
-                                            <v-chip v-else-if="item.rank === 3 && !item.hasError" size="small"
-                                                color="orange-lighten-1" variant="flat">
-                                                <v-icon size="small" class="mr-1">mdi-medal-outline</v-icon>
-                                                {{ item.rank }}
-                                            </v-chip>
-                                            <v-chip v-else-if="item.hasError" size="small" color="error"
-                                                variant="tonal">
-                                                <v-icon size="small" class="mr-1">mdi-alert-circle</v-icon>
-                                                Error
-                                            </v-chip>
-                                            <v-chip v-else size="small" color="primary" variant="tonal">
-                                                {{ item.rank }}
-                                            </v-chip>
-                                        </div>
-                                    </template>
+              <template #cell-model="{ data }">
+                <span class="top-product-ranking__muted">{{ (data as RankingItem).model || 'N/A' }}</span>
+              </template>
 
-                                    <!-- ISN Column -->
-                                    <template #item.isn="{ item }">
-                                        <div class="d-flex align-center">
-                                            <v-icon size="small" class="mr-2" color="primary">mdi-barcode</v-icon>
-                                            <span class="font-weight-medium">{{ item.isn }}</span>
-                                        </div>
-                                    </template>
+              <template #cell-errorItem="{ data }">
+                <span
+                  class="top-product-ranking__pill"
+                  :class="(data as RankingItem).hasError ? 'top-product-ranking__pill--danger' : 'top-product-ranking__pill--success'"
+                  :title="(data as RankingItem).errorItem || undefined"
+                >
+                  {{ (data as RankingItem).hasError ? 'Error' : 'Pass' }}
+                </span>
+              </template>
+            </AppDataGrid>
+          </section>
 
-                                    <!-- Device Column -->
-                                    <template #item.device="{ item }">
-                                        <v-chip size="small" variant="tonal" color="info">
-                                            {{ item.device || 'N/A' }}
-                                        </v-chip>
-                                    </template>
-
-                                    <!-- Test Date Column -->
-                                    <template #item.testDate="{ item }">
-                                        <div class="text-caption">
-                                            {{ formatDate(item.testDate) }}
-                                        </div>
-                                    </template>
-
-                                    <!-- Score Column -->
-                                    <template #item.score="{ item }">
-                                        <v-chip v-if="!item.hasError" :color="getScoreColor(item.score)" size="small"
-                                            variant="flat" class="font-weight-bold">
-                                            {{ item.score.toFixed(2) }}
-                                        </v-chip>
-                                        <v-chip v-else color="error" size="small" variant="tonal">
-                                            N/A
-                                        </v-chip>
-                                    </template>
-
-                                    <!-- Site Column -->
-                                    <template #item.site="{ item }">
-                                        <span class="text-caption">{{ item.site || 'N/A' }}</span>
-                                    </template>
-
-                                    <!-- Model Column -->
-                                    <template #item.model="{ item }">
-                                        <span class="text-caption">{{ item.model || 'N/A' }}</span>
-                                    </template>
-
-                                    <!-- Error Item Column -->
-                                    <template #item.errorItem="{ item }">
-                                        <v-tooltip v-if="item.hasError && item.errorItem" location="top">
-                                            <template #activator="{ props: tooltipProps }">
-                                                <v-chip v-bind="tooltipProps" size="small" color="error" variant="tonal"
-                                                    prepend-icon="mdi-alert-circle">
-                                                    Error
-                                                </v-chip>
-                                            </template>
-                                            <div class="text-caption">{{ item.errorItem }}</div>
-                                        </v-tooltip>
-                                        <v-chip v-else size="small" color="success" variant="tonal"
-                                            prepend-icon="mdi-check-circle">
-                                            Pass
-                                        </v-chip>
-                                    </template>
-                                </v-data-table>
-                            </v-card>
-                        </v-col>
-                    </v-row>
-
-                    <!-- No Data -->
-                    <v-alert v-else type="info" variant="tonal">
-                        No ranking data available for this station
-                    </v-alert>
-                </v-window-item>
-            </v-window>
-        </v-card-text>
-    </v-card>
+          <div v-else class="top-product-ranking__notice top-product-ranking__notice--info">
+            No ranking data available for this station.
+          </div>
+        </section>
+      </template>
+    </AppTabs>
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { AppDataGrid, AppPanel, AppTabs } from '@/shared'
 import { formatDate } from '@/shared/utils/helpers'
 import type { TopProductResult } from '../types/dutTopProduct.types'
 
@@ -306,7 +227,8 @@ const scoreFilterValue = ref<number | null>(null)
 const statusFilter = ref<string | null>(null)
 const siteFilter = ref<string | null>(null)
 
-// Filter options
+const rowsPerPageOptions = [10, 25, 50, 100]
+
 const scoreFilterTypes = [
   { title: 'Greater than (>)', value: 'gt' },
   { title: 'Greater or equal (≥)', value: 'gte' },
@@ -320,7 +242,6 @@ const statusFilterOptions = [
   { title: 'Failed Only', value: 'failed' },
 ]
 
-// Compute rankings grouped by station
 const rankingByStation = computed(() => {
   const stationMap: Record<string, RankingItem[]> = {}
 
@@ -336,43 +257,37 @@ const rankingByStation = computed(() => {
       const hasError = typeof station.error_item === 'string' && station.error_item.trim() !== ''
 
       stationMap[stationName].push({
-        rank: 0, // Will be computed after sorting
+        rank: 0,
         isn: result.dut_isn,
         device: station.device,
         testDate: station.test_date,
         score: station.overall_data_score,
         site: result.site_name,
         model: result.model_name,
-        hasError: hasError,
+        hasError,
         errorItem: station.error_item,
       })
     })
   })
 
-  // Sort and assign ranks for each station
   Object.keys(stationMap).forEach((station) => {
     const items = stationMap[station]
 
     if (!items) return
 
-    // Separate passed and failed DUTs
     const passed = items.filter((item) => !item.hasError)
     const failed = items.filter((item) => item.hasError)
 
-    // Sort passed DUTs by score (descending)
     passed.sort((a, b) => b.score - a.score)
 
-    // Assign ranks to passed DUTs
     passed.forEach((item, index) => {
       item.rank = index + 1
     })
 
-    // Failed DUTs don't get a rank (will show "Error" in table)
     failed.forEach((item) => {
       item.rank = 999
     })
 
-    // Combine: passed first, then failed
     stationMap[station] = [...passed, ...failed]
   })
 
@@ -380,6 +295,15 @@ const rankingByStation = computed(() => {
 })
 
 const stationNames = computed(() => Object.keys(rankingByStation.value))
+
+const stationTabItems = computed(() =>
+  stationNames.value.map((station) => ({
+    value: station,
+    label: station,
+    icon: 'mdi:factory',
+    count: rankingByStation.value[station]?.length ?? 0,
+  })),
+)
 
 watch(
   stationNames,
@@ -404,7 +328,6 @@ const totalDUTs = computed(() => {
   return uniqueISNs.size
 })
 
-// Get available sites for filter
 const availableSites = computed(() => {
   const sites = new Set<string>()
   props.results.forEach((result) => {
@@ -415,7 +338,6 @@ const availableSites = computed(() => {
   return Array.from(sites)
 })
 
-// Filtered ranking based on search and filters
 const filteredRanking = computed(() => {
   const currentStation = selectedTab.value
   if (!currentStation || !rankingByStation.value[currentStation]) {
@@ -424,7 +346,6 @@ const filteredRanking = computed(() => {
 
   let items = rankingByStation.value[currentStation]
 
-  // Apply search query
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
     items = items.filter((item) => {
@@ -438,14 +359,12 @@ const filteredRanking = computed(() => {
     })
   }
 
-  // Apply score filter
   if (scoreFilterType.value && scoreFilterValue.value !== null) {
     items = items.filter((item) => {
-      if (item.hasError) return true // Keep error items regardless of score filter
+      if (item.hasError) return true
 
       const score = item.score
-      // biome-ignore lint/style/noNonNullAssertion: guarded by scoreFilterValue.value !== null check above
-      const filterValue = scoreFilterValue.value!
+      const filterValue = scoreFilterValue.value as number
 
       switch (scoreFilterType.value) {
         case 'gt':
@@ -464,7 +383,6 @@ const filteredRanking = computed(() => {
     })
   }
 
-  // Apply status filter
   if (statusFilter.value) {
     if (statusFilter.value === 'passed') {
       items = items.filter((item) => !item.hasError)
@@ -473,7 +391,6 @@ const filteredRanking = computed(() => {
     }
   }
 
-  // Apply site filter
   if (siteFilter.value) {
     items = items.filter((item) => item.site === siteFilter.value)
   }
@@ -481,12 +398,14 @@ const filteredRanking = computed(() => {
   return items
 })
 
-// Check if there are active filters
-const hasActiveFilters = computed(() => {
-  return !!(searchQuery.value || scoreFilterType.value || statusFilter.value || siteFilter.value)
-})
+const filteredRankingRows = computed(
+  () => filteredRanking.value as unknown as Array<Record<string, unknown>>,
+)
 
-// Count active filters
+const hasActiveFilters = computed(
+  () => !!(searchQuery.value || scoreFilterType.value || statusFilter.value || siteFilter.value),
+)
+
 const activeFilterCount = computed(() => {
   let count = 0
   if (searchQuery.value) count++
@@ -496,25 +415,59 @@ const activeFilterCount = computed(() => {
   return count
 })
 
-const rankingHeaders = [
-  { title: 'Rank', key: 'rank', sortable: false, width: '100px' },
-  { title: 'DUT ISN', key: 'isn', sortable: true },
-  { title: 'Device', key: 'device', sortable: true },
-  { title: 'Test Date', key: 'testDate', sortable: true, width: '250px' },
-  { title: 'Score', key: 'score', sortable: true },
-  { title: 'Site', key: 'site', sortable: true },
-  { title: 'Model', key: 'model', sortable: true },
-  { title: 'Status', key: 'errorItem', sortable: false },
+const rankingGridColumns = [
+  { key: 'rank', field: 'rank', header: 'Rank', sortable: true, style: { width: '7rem' } },
+  { key: 'isn', field: 'isn', header: 'DUT ISN', sortable: true, style: { width: '14rem' } },
+  { key: 'device', field: 'device', header: 'Device', sortable: true, style: { width: '12rem' } },
+  { key: 'testDate', field: 'testDate', header: 'Test Date', sortable: true, style: { width: '14rem' } },
+  { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '8rem' } },
+  { key: 'site', field: 'site', header: 'Site', sortable: true, style: { width: '10rem' } },
+  { key: 'model', field: 'model', header: 'Model', sortable: true, style: { width: '10rem' } },
+  { key: 'errorItem', field: 'errorItem', header: 'Status', sortable: false, style: { width: '8rem' } },
 ]
 
+function getStationRanking(stationName: string): RankingItem[] {
+  return rankingByStation.value[stationName] ?? []
+}
+
+function getPassedCount(stationName: string): number {
+  return getStationRanking(stationName).filter((item) => !item.hasError).length
+}
+
+function getFailedCount(stationName: string): number {
+  return getStationRanking(stationName).filter((item) => item.hasError).length
+}
+
+function getTopScore(stationName: string): number | null {
+  const topItem = getStationRanking(stationName).find((item) => !item.hasError)
+  return topItem ? topItem.score : null
+}
+
 function getScoreColor(score: number): string {
-  // Score color logic for 0-10 scale: lower scores should be red, higher scores should be green
-  if (score >= 9.5) return 'success' // Green for excellent (9.5-10)
-  if (score >= 8.5) return 'light-green' // Light green for very good (8.5-9.49)
-  if (score >= 7.5) return 'lime' // Lime for good (7.5-8.49)
-  if (score >= 6.5) return 'warning' // Yellow for acceptable (6.5-7.49)
-  if (score >= 5.0) return 'orange' // Orange for poor (5.0-6.49)
-  return 'error' // Red for very poor (<5.0)
+  if (score >= 9.5) return 'success'
+  if (score >= 8.5) return 'primary'
+  if (score >= 7.5) return 'lime'
+  if (score >= 6.5) return 'warning'
+  if (score >= 5.0) return 'orange'
+  return 'danger'
+}
+
+function scorePillClass(score: number): string {
+  const tone = getScoreColor(score)
+  if (tone === 'success') return 'top-product-ranking__score-pill--success'
+  if (tone === 'primary') return 'top-product-ranking__score-pill--primary'
+  if (tone === 'lime') return 'top-product-ranking__score-pill--lime'
+  if (tone === 'warning') return 'top-product-ranking__score-pill--warning'
+  if (tone === 'orange') return 'top-product-ranking__score-pill--orange'
+  return 'top-product-ranking__score-pill--danger'
+}
+
+function rankPillClass(item: RankingItem): string {
+  if (item.hasError) return 'top-product-ranking__rank-pill--danger'
+  if (item.rank === 1) return 'top-product-ranking__rank-pill--gold'
+  if (item.rank === 2) return 'top-product-ranking__rank-pill--silver'
+  if (item.rank === 3) return 'top-product-ranking__rank-pill--bronze'
+  return 'top-product-ranking__rank-pill--default'
 }
 
 function getScoreFilterLabel(): string {
@@ -534,10 +487,14 @@ function getScoreFilterLabel(): string {
   }
 }
 
-function clearAllFilters() {
-  searchQuery.value = ''
+function clearScoreFilter() {
   scoreFilterType.value = null
   scoreFilterValue.value = null
+}
+
+function clearAllFilters() {
+  searchQuery.value = ''
+  clearScoreFilter()
   statusFilter.value = null
   siteFilter.value = null
 }
@@ -553,28 +510,288 @@ function getRankingRowClass(item: RankingItem): string {
 function handleRowClick(item: RankingItem, stationName: string) {
   emit('row-click', { isn: item.isn, stationName })
 }
+
+function handleGridRowClick(event: unknown, stationName: string) {
+  const payload = event as { data?: RankingItem; value?: RankingItem }
+  const row = payload?.data || payload?.value
+  if (row) {
+    handleRowClick(row, stationName)
+  }
+}
+
+function getSelectValue(event: Event): string | null {
+  const value = (event.target as HTMLSelectElement).value
+  return value || null
+}
+
+function handleScoreFilterTypeInput(event: Event) {
+  scoreFilterType.value = getSelectValue(event)
+  if (!scoreFilterType.value) {
+    scoreFilterValue.value = null
+  }
+}
+
+function handleStatusFilterInput(event: Event) {
+  statusFilter.value = getSelectValue(event)
+}
+
+function handleSiteFilterInput(event: Event) {
+  siteFilter.value = getSelectValue(event)
+}
+
+function handleScoreFilterValueInput(event: Event) {
+  const value = (event.target as HTMLInputElement).value
+  scoreFilterValue.value = value === '' ? null : Number(value)
+}
 </script>
 
 <style scoped>
-/* Ranking Table Row Highlights */
+.top-product-ranking__summary-pills,
+.top-product-ranking__station-hero,
+.top-product-ranking__station-pills,
+.top-product-ranking__active-filters,
+.top-product-ranking__button {
+  display: flex;
+}
+
+.top-product-ranking__station-panel,
+.top-product-ranking__workspace,
+.top-product-ranking__filter-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.top-product-ranking__summary-pills,
+.top-product-ranking__station-pills,
+.top-product-ranking__active-filters {
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.top-product-ranking__station-hero {
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  border: 1px solid var(--app-border);
+  border-radius: 1.2rem;
+  background: linear-gradient(145deg, rgba(255, 244, 223, 0.9), rgba(255, 251, 247, 0.95));
+  padding: 1rem 1.1rem;
+}
+
+.top-product-ranking__section-eyebrow,
+.top-product-ranking__field span,
+.top-product-ranking__results-copy,
+.top-product-ranking__muted {
+  color: var(--app-muted);
+}
+
+.top-product-ranking__section-eyebrow,
+.top-product-ranking__field span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.top-product-ranking__station-hero h3 {
+  margin: 0.2rem 0 0;
+}
+
+.top-product-ranking__filter-grid {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.top-product-ranking__field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.top-product-ranking__field--wide {
+  grid-column: span 2;
+}
+
+.top-product-ranking__field input,
+.top-product-ranking__field select {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  padding: 0.82rem 0.95rem;
+}
+
+.top-product-ranking__field input:focus,
+.top-product-ranking__field select:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 4px var(--app-ring);
+}
+
+.top-product-ranking__field input:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.top-product-ranking__pill,
+.top-product-ranking__score-pill,
+.top-product-ranking__rank-pill,
+.top-product-ranking__token {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.top-product-ranking__pill--primary {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.top-product-ranking__pill--success,
+.top-product-ranking__score-pill--success {
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.top-product-ranking__pill--warning,
+.top-product-ranking__score-pill--warning {
+  background: rgba(184, 118, 38, 0.16);
+  color: #8f5314;
+}
+
+.top-product-ranking__pill--danger,
+.top-product-ranking__score-pill--danger,
+.top-product-ranking__rank-pill--danger {
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.top-product-ranking__pill--neutral {
+  background: rgba(120, 129, 143, 0.12);
+  color: #4f5d6d;
+}
+
+.top-product-ranking__score-pill,
+.top-product-ranking__rank-pill {
+  min-width: 4.5rem;
+}
+
+.top-product-ranking__score-pill--primary {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.top-product-ranking__score-pill--lime {
+  background: rgba(97, 140, 35, 0.14);
+  color: #557c18;
+}
+
+.top-product-ranking__score-pill--orange {
+  background: rgba(201, 126, 32, 0.16);
+  color: #9c5b12;
+}
+
+.top-product-ranking__rank-pill--gold {
+  background: rgba(201, 153, 0, 0.18);
+  color: #7a5a00;
+}
+
+.top-product-ranking__rank-pill--silver {
+  background: rgba(127, 137, 148, 0.18);
+  color: #55606c;
+}
+
+.top-product-ranking__rank-pill--bronze {
+  background: rgba(164, 96, 52, 0.18);
+  color: #7d451f;
+}
+
+.top-product-ranking__rank-pill--default {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.top-product-ranking__button,
+.top-product-ranking__token {
+  border: 1px solid var(--app-border);
+  background: rgba(255, 251, 247, 0.92);
+  color: #4f5d6d;
+  cursor: pointer;
+}
+
+.top-product-ranking__button {
+  padding: 0.72rem 0.95rem;
+}
+
+.top-product-ranking__button--ghost {
+  border-radius: 999px;
+}
+
+.top-product-ranking__token {
+  padding: 0.4rem 0.75rem;
+}
+
+.top-product-ranking__notice {
+  border-radius: 1rem;
+  padding: 0.95rem 1rem;
+}
+
+.top-product-ranking__notice--info {
+  background: rgba(40, 96, 163, 0.08);
+  color: #1f4e86;
+}
+
+.top-product-ranking__results-copy {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+.top-product-ranking__strong {
+  color: var(--app-ink);
+  font-weight: 700;
+}
+
 :deep(.rank-1-row) {
-    background-color: rgba(255, 215, 0, 0.1) !important;
+  background-color: rgba(255, 215, 0, 0.1) !important;
 }
 
 :deep(.rank-2-row) {
-    background-color: rgba(192, 192, 192, 0.1) !important;
+  background-color: rgba(192, 192, 192, 0.1) !important;
 }
 
 :deep(.rank-3-row) {
-    background-color: rgba(205, 127, 50, 0.1) !important;
+  background-color: rgba(205, 127, 50, 0.1) !important;
 }
 
 :deep(.error-row) {
-    background-color: rgba(244, 67, 54, 0.05) !important;
+  background-color: rgba(244, 67, 54, 0.05) !important;
 }
 
-.ranking-table {
-    border-radius: 8px;
-    overflow: hidden;
+@media (max-width: 1080px) {
+  .top-product-ranking__filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .top-product-ranking__field--wide {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 720px) {
+  .top-product-ranking__station-hero {
+    flex-direction: column;
+  }
+
+  .top-product-ranking__filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .top-product-ranking__field--wide {
+    grid-column: span 1;
+  }
 }
 </style>

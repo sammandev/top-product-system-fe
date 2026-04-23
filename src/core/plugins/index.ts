@@ -5,4 +5,3 @@
  */
 
 export { createPiniaInstance, default as pinia } from './pinia'
-export { default as vuetify } from './vuetify'

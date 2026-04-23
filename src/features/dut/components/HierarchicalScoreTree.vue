@@ -1,138 +1,116 @@
 <template>
-    <v-card>
-        <v-card-title class="d-flex justify-space-between align-center">
-            <span>
-                <v-icon class="mr-2">mdi-file-tree</v-icon>
-                Hierarchical Scores
+  <section class="hierarchical-score-tree">
+    <header class="hierarchical-score-tree__header">
+      <div class="hierarchical-score-tree__header-copy">
+        <span class="hierarchical-score-tree__header-icon">
+          <Icon icon="mdi:file-tree" />
+        </span>
+        <div>
+          <p class="hierarchical-score-tree__eyebrow">Hierarchical Path</p>
+          <h3>Hierarchical Scores</h3>
+        </div>
+      </div>
+
+      <div class="hierarchical-score-tree__header-actions">
+        <button type="button" class="hierarchical-score-tree__button hierarchical-score-tree__button--ghost"
+          @click="expandAll">
+          <Icon icon="mdi:arrow-expand-vertical" />
+          <span>Expand All</span>
+        </button>
+        <button type="button" class="hierarchical-score-tree__button hierarchical-score-tree__button--ghost"
+          @click="collapseAll">
+          <Icon icon="mdi:arrow-collapse-vertical" />
+          <span>Collapse All</span>
+        </button>
+      </div>
+    </header>
+
+    <section v-if="overallGroupScores" class="hierarchical-score-tree__summary-card">
+      <p class="hierarchical-score-tree__section-title">Overall Subgroup Averages</p>
+      <div class="hierarchical-score-tree__summary-row">
+        <span v-for="(score, subgroup) in overallGroupScores" :key="subgroup" class="hierarchical-score-tree__pill"
+          :class="scoreToneClass(score)">
+          {{ subgroup }}: {{ score.toFixed(2) }}
+        </span>
+      </div>
+    </section>
+
+    <div v-if="!groupScores || Object.keys(groupScores).length === 0" class="hierarchical-score-tree__empty-state">
+      No hierarchical scores available.
+    </div>
+
+    <div v-else class="hierarchical-score-tree__tree">
+      <div v-for="(groupData, groupKey) in groupScores" :key="groupKey" class="tree-node group-node">
+        <button type="button" class="tree-node__header" @click="toggleGroup(String(groupKey))">
+          <Icon :icon="expandedGroups.has(String(groupKey)) ? 'mdi:chevron-down' : 'mdi:chevron-right'" />
+          <span class="node-label">{{ groupKey }}</span>
+          <span class="tree-node__badges">
+            <span class="hierarchical-score-tree__pill" :class="scoreToneClass(getGroupScore(groupData))">
+              Bayesian: {{ getGroupScore(groupData).toFixed(2) }}
             </span>
+            <span v-if="getGroupAvgScore(groupData) > 0" class="hierarchical-score-tree__pill hierarchical-score-tree__pill--info">
+              Avg: {{ getGroupAvgScore(groupData).toFixed(2) }}
+            </span>
+          </span>
+        </button>
 
-            <div>
-                <v-btn size="small" variant="text" @click="expandAll">
-                    <v-icon start>mdi-arrow-expand-vertical</v-icon>
-                    Expand All
-                </v-btn>
-                <v-btn size="small" variant="text" @click="collapseAll">
-                    <v-icon start>mdi-arrow-collapse-vertical</v-icon>
-                    Collapse All
-                </v-btn>
-            </div>
-        </v-card-title>
+        <div v-if="expandedGroups.has(String(groupKey))" class="tree-children">
+          <div v-for="(subgroupData, subgroupKey) in getSubgroups(groupData)" :key="subgroupKey" class="tree-node subgroup-node">
+            <button type="button" class="tree-node__header" @click="toggleSubgroup(String(groupKey), String(subgroupKey))">
+              <Icon :icon="expandedSubgroups.has(`${groupKey}.${subgroupKey}`) ? 'mdi:chevron-down' : 'mdi:chevron-right'" />
+              <span class="node-label">{{ subgroupKey }}</span>
+              <span class="tree-node__badges">
+                <span class="hierarchical-score-tree__pill" :class="scoreToneClass(getSubgroupScore(subgroupData))">
+                  Bayes: {{ getSubgroupScore(subgroupData).toFixed(2) }}
+                </span>
+                <span v-if="getSubgroupAvgScore(subgroupData) > 0" class="hierarchical-score-tree__pill hierarchical-score-tree__pill--info">
+                  Avg: {{ getSubgroupAvgScore(subgroupData).toFixed(2) }}
+                </span>
+              </span>
+            </button>
 
-        <v-card-text>
-            <!-- Overall Group Scores Summary -->
-            <v-alert v-if="overallGroupScores" density="compact" variant="tonal" color="primary" class="mb-4">
-                <div class="text-subtitle-2 mb-2">Overall Subgroup Averages</div>
-                <v-chip-group>
-                    <v-chip v-for="(score, subgroup) in overallGroupScores" :key="subgroup"
-                        :color="getScoreColor(score)" size="small">
-                        {{ subgroup }}: {{ score.toFixed(2) }}
-                    </v-chip>
-                </v-chip-group>
-            </v-alert>
+            <div v-if="expandedSubgroups.has(`${groupKey}.${subgroupKey}`)" class="tree-children">
+              <div v-for="(antennaData, antennaKey) in getAntennas(subgroupData)" :key="antennaKey" class="tree-node antenna-node">
+                <button type="button" class="tree-node__header" @click="toggleAntenna(String(groupKey), String(subgroupKey), String(antennaKey))">
+                  <Icon :icon="expandedAntennas.has(`${groupKey}.${subgroupKey}.${antennaKey}`) ? 'mdi:chevron-down' : 'mdi:chevron-right'" />
+                  <span class="node-label">{{ antennaKey }}</span>
+                  <span class="tree-node__badges">
+                    <span class="hierarchical-score-tree__pill" :class="scoreToneClass(getAntennaScore(antennaData))">
+                      Bayes: {{ getAntennaScore(antennaData).toFixed(2) }}
+                    </span>
+                    <span v-if="getAntennaAvgScore(antennaData) > 0" class="hierarchical-score-tree__pill hierarchical-score-tree__pill--info">
+                      Avg: {{ getAntennaAvgScore(antennaData).toFixed(2) }}
+                    </span>
+                  </span>
+                </button>
 
-            <!-- Empty State -->
-            <v-alert v-if="!groupScores || Object.keys(groupScores).length === 0" type="info" variant="tonal">
-                No hierarchical scores available
-            </v-alert>
-
-            <!-- Tree View -->
-            <div v-else class="tree-container">
-                <!-- Group Level -->
-                <div v-for="(groupData, groupKey) in groupScores" :key="groupKey" class="tree-node group-node">
-                    <div class="node-header" @click="toggleGroup(String(groupKey))">
-                        <v-icon size="small" class="mr-2">
-                            {{ expandedGroups.has(String(groupKey)) ? 'mdi-chevron-down' : 'mdi-chevron-right' }}
-                        </v-icon>
-                        <span class="node-label">{{ groupKey }}</span>
-                        <v-spacer />
-                        <v-chip :color="getScoreColor(getGroupScore(groupData))" size="small" class="ml-2">
-                            Bayesian: {{ getGroupScore(groupData).toFixed(2) }}
-                        </v-chip>
-                        <v-chip v-if="getGroupAvgScore(groupData) > 0" color="info" size="small" variant="outlined" class="ml-1">
-                            Avg: {{ getGroupAvgScore(groupData).toFixed(2) }}
-                        </v-chip>
+                <div v-if="expandedAntennas.has(`${groupKey}.${subgroupKey}.${antennaKey}`)" class="tree-children">
+                  <div v-for="(scoreData, categoryKey) in getCategories(antennaData)" :key="categoryKey" class="tree-node category-node">
+                    <div class="tree-node__header tree-node__header--leaf">
+                      <Icon icon="mdi:circle-small" class="tree-node__leaf-icon" />
+                      <span class="node-label">{{ categoryKey }}</span>
+                      <span class="tree-node__badges">
+                        <span class="hierarchical-score-tree__pill" :class="scoreToneClass(getCategoryBayesScore(scoreData))">
+                          Bayes: {{ getCategoryBayesScore(scoreData).toFixed(2) }}
+                        </span>
+                        <span v-if="getCategoryAvgScore(scoreData) > 0" class="hierarchical-score-tree__pill hierarchical-score-tree__pill--info">
+                          Avg: {{ getCategoryAvgScore(scoreData).toFixed(2) }}
+                        </span>
+                      </span>
                     </div>
-
-                    <!-- Subgroup Level -->
-                    <v-expand-transition>
-                        <div v-if="expandedGroups.has(String(groupKey))" class="tree-children">
-                            <div v-for="(subgroupData, subgroupKey) in getSubgroups(groupData)" :key="subgroupKey"
-                                class="tree-node subgroup-node">
-                                <div class="node-header" @click="toggleSubgroup(String(groupKey), String(subgroupKey))">
-                                    <v-icon size="small" class="mr-2">
-                                        {{ expandedSubgroups.has(`${groupKey}.${subgroupKey}`) ? 'mdi-chevron-down' :
-                                            'mdi-chevron-right' }}
-                                    </v-icon>
-                                    <span class="node-label">{{ subgroupKey }}</span>
-                                    <v-spacer />
-                                    <v-chip :color="getScoreColor(getSubgroupScore(subgroupData))" size="x-small"
-                                        class="ml-2">
-                                        Bayes: {{ getSubgroupScore(subgroupData).toFixed(2) }}
-                                    </v-chip>
-                                    <v-chip v-if="getSubgroupAvgScore(subgroupData) > 0" color="info" size="x-small" variant="outlined" class="ml-1">
-                                        Avg: {{ getSubgroupAvgScore(subgroupData).toFixed(2) }}
-                                    </v-chip>
-                                </div>
-
-                                <!-- Antenna Level -->
-                                <v-expand-transition>
-                                    <div v-if="expandedSubgroups.has(`${groupKey}.${subgroupKey}`)"
-                                        class="tree-children">
-                                        <div v-for="(antennaData, antennaKey) in getAntennas(subgroupData)"
-                                            :key="antennaKey" class="tree-node antenna-node">
-                                            <div class="node-header"
-                                                @click="toggleAntenna(String(groupKey), String(subgroupKey), String(antennaKey))">
-                                                <v-icon size="small" class="mr-2">
-                                                    {{ expandedAntennas.has(`${groupKey}.${subgroupKey}.${antennaKey}`)
-                                                        ? 'mdi-chevron-down' : 'mdi-chevron-right' }}
-                                                </v-icon>
-                                                <span class="node-label">{{ antennaKey }}</span>
-                                                <v-spacer />
-                                                <v-chip :color="getScoreColor(getAntennaScore(antennaData))"
-                                                    size="x-small" variant="tonal" class="ml-2">
-                                                    Bayes: {{ getAntennaScore(antennaData).toFixed(2) }}
-                                                </v-chip>
-                                                <v-chip v-if="getAntennaAvgScore(antennaData) > 0" color="info" size="x-small" variant="outlined" class="ml-1">
-                                                    Avg: {{ getAntennaAvgScore(antennaData).toFixed(2) }}
-                                                </v-chip>
-                                            </div>
-
-                                            <!-- Category Level (Leaf Nodes) -->
-                                            <v-expand-transition>
-                                                <div v-if="expandedAntennas.has(`${groupKey}.${subgroupKey}.${antennaKey}`)"
-                                                    class="tree-children">
-                                                    <div v-for="(scoreData, categoryKey) in getCategories(antennaData)"
-                                                        :key="categoryKey" class="tree-node category-node">
-                                                        <div class="node-header leaf-node">
-                                                            <v-icon size="small" class="mr-2 text-medium-emphasis">
-                                                                mdi-circle-small
-                                                            </v-icon>
-                                                            <span class="node-label">{{ categoryKey }}</span>
-                                                            <v-spacer />
-                                                            <v-chip :color="getScoreColor(getCategoryBayesScore(scoreData))" size="x-small"
-                                                                variant="flat">
-                                                                Bayes: {{ getCategoryBayesScore(scoreData).toFixed(2) }}
-                                                            </v-chip>
-                                                            <v-chip v-if="getCategoryAvgScore(scoreData) > 0" color="info" size="x-small" variant="outlined" class="ml-1">
-                                                                Avg: {{ getCategoryAvgScore(scoreData).toFixed(2) }}
-                                                            </v-chip>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </v-expand-transition>
-                                        </div>
-                                    </div>
-                                </v-expand-transition>
-                            </div>
-                        </div>
-                    </v-expand-transition>
+                  </div>
                 </div>
+              </div>
             </div>
-        </v-card-text>
-    </v-card>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { type PropType, ref } from 'vue'
 import type { GroupScores, OverallGroupScores } from '@/core/types'
 
@@ -213,6 +191,14 @@ function getScoreColor(score: number): string {
   if (score >= 70) return 'info'
   if (score >= 50) return 'warning'
   return 'error'
+}
+
+function scoreToneClass(score: number): string {
+  const tone = getScoreColor(score)
+  if (tone === 'success') return 'hierarchical-score-tree__pill--success'
+  if (tone === 'info') return 'hierarchical-score-tree__pill--info'
+  if (tone === 'warning') return 'hierarchical-score-tree__pill--warning'
+  return 'hierarchical-score-tree__pill--error'
 }
 
 // biome-ignore lint/suspicious/noExplicitAny: dynamic hierarchical scoring data from backend
@@ -313,63 +299,218 @@ function getCategoryAvgScore(scoreData: any): number {
 </script>
 
 <style scoped>
-.tree-container {
-    font-family: monospace;
+.hierarchical-score-tree {
+  border: 1px solid var(--app-border);
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(circle at top left, rgba(40, 96, 163, 0.1), transparent 32%),
+    rgba(255, 251, 247, 0.86);
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.hierarchical-score-tree__header,
+.hierarchical-score-tree__header-copy,
+.hierarchical-score-tree__header-actions,
+.tree-node__header,
+.tree-node__badges,
+.hierarchical-score-tree__summary-row {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.hierarchical-score-tree__header {
+  justify-content: space-between;
+}
+
+.hierarchical-score-tree__header-copy {
+  gap: 0.85rem;
+}
+
+.hierarchical-score-tree__header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+  border-radius: 999px;
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.hierarchical-score-tree__eyebrow,
+.hierarchical-score-tree__section-title {
+  margin: 0;
+  color: var(--app-muted);
+}
+
+.hierarchical-score-tree__eyebrow {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hierarchical-score-tree__header h3 {
+  margin: 0.2rem 0 0;
+}
+
+.hierarchical-score-tree__button,
+.tree-node__header {
+  border: 1px solid var(--app-border);
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+}
+
+.hierarchical-score-tree__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  cursor: pointer;
+  padding: 0.7rem 0.95rem;
+  font-weight: 700;
+}
+
+.hierarchical-score-tree__button--ghost {
+  color: #4f5d6d;
+}
+
+.hierarchical-score-tree__summary-card,
+.hierarchical-score-tree__empty-state {
+  border-radius: 1rem;
+  padding: 0.95rem 1rem;
+}
+
+.hierarchical-score-tree__summary-card {
+  background: rgba(40, 96, 163, 0.08);
+}
+
+.hierarchical-score-tree__summary-row {
+  flex-wrap: wrap;
+  margin-top: 0.75rem;
+}
+
+.hierarchical-score-tree__empty-state {
+  background: rgba(40, 96, 163, 0.08);
+  color: #1f4e86;
+}
+
+.hierarchical-score-tree__tree {
+  display: grid;
+  gap: 0.55rem;
+  font-family: Consolas, 'Courier New', monospace;
 }
 
 .tree-node {
-    margin-bottom: 4px;
+  display: grid;
+  gap: 0.4rem;
 }
 
 .tree-children {
-    margin-left: 24px;
-    border-left: 2px solid rgba(var(--v-border-color), 0.2);
-    padding-left: 12px;
-    margin-top: 4px;
+  margin-left: 1.2rem;
+  border-left: 2px solid rgba(40, 96, 163, 0.14);
+  padding-left: 0.9rem;
+  display: grid;
+  gap: 0.4rem;
 }
 
-.node-header {
-    display: flex;
-    align-items: center;
-    padding: 8px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background-color 0.2s;
+.tree-node__header {
+  width: 100%;
+  padding: 0.75rem 0.9rem;
+  border-radius: 1rem;
+  text-align: left;
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
 }
 
-.node-header:hover {
-    background-color: rgba(var(--v-theme-primary), 0.05);
+.tree-node__header:hover {
+  transform: translateY(-1px);
+  border-color: rgba(40, 96, 163, 0.18);
 }
 
-.leaf-node {
-    cursor: default;
+.tree-node__header--leaf {
+  cursor: default;
 }
 
-.leaf-node:hover {
-    background-color: transparent;
+.tree-node__header--leaf:hover {
+  transform: none;
 }
 
 .node-label {
-    font-weight: 500;
-    font-size: 0.9rem;
+  color: var(--app-ink);
+  font-weight: 600;
 }
 
 .group-node .node-label {
-    font-size: 1rem;
-    font-weight: 600;
+  font-size: 1rem;
 }
 
 .subgroup-node .node-label {
-    font-size: 0.95rem;
-    font-weight: 600;
+  font-size: 0.95rem;
 }
 
 .antenna-node .node-label {
-    font-size: 0.9rem;
+  font-size: 0.9rem;
 }
 
 .category-node .node-label {
-    font-size: 0.85rem;
-    font-weight: 400;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.tree-node__badges {
+  margin-left: auto;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.tree-node__leaf-icon {
+  color: var(--app-muted);
+}
+
+.hierarchical-score-tree__pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.28rem 0.68rem;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.hierarchical-score-tree__pill--success {
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.hierarchical-score-tree__pill--info {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.hierarchical-score-tree__pill--warning {
+  background: rgba(184, 118, 38, 0.16);
+  color: #8f5314;
+}
+
+.hierarchical-score-tree__pill--error {
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+@media (max-width: 900px) {
+  .hierarchical-score-tree__header,
+  .tree-node__header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .tree-node__badges {
+    margin-left: 0;
+    justify-content: flex-start;
+  }
 }
 </style>

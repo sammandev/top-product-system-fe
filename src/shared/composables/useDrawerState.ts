@@ -10,7 +10,6 @@ import { onMounted, ref, watch } from 'vue'
 const STORAGE_KEYS = {
   DRAWER: 'app_drawer_open',
   RAIL: 'app_drawer_rail',
-  THEME: 'app_theme',
 } as const
 
 /**
@@ -112,40 +111,5 @@ export function useDrawerState(initialDrawer = true, initialRail = false) {
     reset,
     loadState,
     saveState,
-  }
-}
-
-/**
- * Theme persistence composable
- *
- * @example
- * ```ts
- * const { saveTheme, loadTheme } = useThemeState()
- *
- * saveTheme('dark')
- * const savedTheme = loadTheme() // Returns 'dark'
- * ```
- */
-export function useThemeState() {
-  function saveTheme(theme: string) {
-    try {
-      localStorage.setItem(STORAGE_KEYS.THEME, theme)
-    } catch (error) {
-      console.warn('Failed to save theme to localStorage:', error)
-    }
-  }
-
-  function loadTheme(): string | null {
-    try {
-      return localStorage.getItem(STORAGE_KEYS.THEME)
-    } catch (error) {
-      console.warn('Failed to load theme from localStorage:', error)
-      return null
-    }
-  }
-
-  return {
-    saveTheme,
-    loadTheme,
   }
 }

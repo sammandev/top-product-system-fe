@@ -1,388 +1,258 @@
 <template>
-  <v-card>
-    <v-card-title class="d-flex align-center">
-      <v-icon start>mdi-compare</v-icon>
-      Comparison Results
-      <v-chip class="ml-2" color="primary" size="small">
-        {{ result.total_files }} files
-      </v-chip>
-      <v-spacer />
-      <!-- Export Buttons -->
-      <v-btn variant="outlined" color="success" prepend-icon="mdi-microsoft-excel" size="default" class="mr-2"
-        @click="$emit('export-excel')">
-        Excel
-      </v-btn>
-      <v-btn variant="outlined" color="error" prepend-icon="mdi-file-pdf-box" size="default" class="mr-2"
-        @click="$emit('export-pdf')">
-        PDF
-      </v-btn>
-      <v-btn variant="outlined" prepend-icon="mdi-content-copy" size="default" @click="$emit('copy-clipboard')">
-        Copy
-      </v-btn>
-    </v-card-title>
-
-    <v-card-text>
-      <!-- Summary Statistics -->
-      <v-row dense class="mb-4">
-        <v-col cols="12" md="4">
-          <v-card variant="tonal" color="primary">
-            <v-card-text class="text-center py-3">
-              <div class="text-h5 font-weight-bold">{{ result.total_value_items }}</div>
-              <div class="text-caption">Value Items</div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-card variant="tonal" color="secondary">
-            <v-card-text class="text-center py-3">
-              <div class="text-h5 font-weight-bold">{{ result.total_non_value_items }}</div>
-              <div class="text-caption">Non-Value Items</div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        <v-col cols="12" md="4">
-          <v-card variant="tonal" color="info">
-            <v-card-text class="text-center py-3">
-              <div class="text-h5 font-weight-bold">{{ result.total_files }}</div>
-              <div class="text-caption">ISNs Compared</div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-
-      <!-- Value Items Table -->
-      <v-card variant="outlined" class="mb-4">
-        <v-card-title class="bg-primary-lighten-5 d-flex align-center">
-          <v-icon start>mdi-numeric</v-icon>
-          Value Items (Numeric Data)
-          <v-chip class="ml-2" size="small">{{ filteredValueItems.length }}</v-chip>
-          <v-spacer />
-          <v-icon color="primary" size="large" @click="valueFullscreen = true">mdi-fullscreen</v-icon>
-        </v-card-title>
-        <v-card-text class="pa-0">
-          <v-data-table :headers="valueHeaders" :items="paginatedValueItems" :items-per-page="valueItemsPerPage"
-            density="compact" fixed-header height="500" hide-default-footer striped="even">
-            <template #top>
-              <div class="pa-3">
-                <!-- Search and Filters Row -->
-                <v-row dense>
-                  <v-col cols="12" md="6">
-                    <v-text-field v-model="valueSearch" prepend-inner-icon="mdi-magnify" label="Search test items..."
-                      variant="outlined" density="compact" clearable hide-details />
-                  </v-col>
-                  <v-col cols="12" md="3">
-                    <v-select v-model="valueScoreFilter" :items="scoreFilterOptions" label="Score Filter"
-                      variant="outlined" density="compact" clearable hide-details />
-                  </v-col>
-                  <v-col cols="12" md="3">
-                    <v-select v-model="valueLimitFilter" :items="limitFilterOptions" label="Limit Status"
-                      variant="outlined" density="compact" clearable hide-details />
-                  </v-col>
-                </v-row>
-              </div>
-            </template>
-            <template #item.test_item="{ item }">
-              <div class="text-body-2 font-weight-medium text-no-wrap">{{ item.test_item }}</div>
-            </template>
-            <template #item.usl="{ item }">
-              <span class="text-caption">{{ formatRawNumber(item.usl) }}</span>
-            </template>
-            <template #item.lsl="{ item }">
-              <span class="text-caption">{{ formatRawNumber(item.lsl) }}</span>
-            </template>
-            <template #item.target="{ item }">
-              <v-chip size="small" color="info" variant="tonal">
-                {{ formatRawNumber(item.per_isn_data?.[0]?.score_breakdown?.target_used ?? item.baseline) }}
-              </v-chip>
-            </template>
-            <template v-for="(_, index) in Array(getIsnCount())" :key="`isn-${index}`"
-              #[`item.isn_${index}`]="{ item: rowItem }">
-              <div v-if="rowItem.per_isn_data && rowItem.per_isn_data[index]" class="d-flex flex-column gap-1 py-1">
-                <div class="text-caption">
-                  <strong>V:</strong> {{ rowItem.per_isn_data[index].value }}
-                </div>
-                <div class="text-caption"
-                  :class="getDeviationClass(rowItem.per_isn_data[index].score_breakdown?.deviation)">
-                  <strong>D:</strong> {{ formatDeviation(rowItem.per_isn_data[index].score_breakdown?.deviation) }}
-                </div>
-                <v-chip v-if="rowItem.per_isn_data[index].score !== null" size="x-small"
-                  :color="getScoreColor(rowItem.per_isn_data[index].score!)" class="cursor-pointer"
-                  @click="openScoreBreakdown(rowItem.test_item, index)">
-                  {{ rowItem.per_isn_data[index].score!.toFixed(2) }}
-                </v-chip>
-              </div>
-              <div v-else class="text-caption text-medium-emphasis">N/A</div>
-            </template>
-            <template #item.max_meas="{ item }">
-              <span class="text-caption">{{ getMaxMeasurement(item) }}</span>
-            </template>
-            <template #item.min_meas="{ item }">
-              <span class="text-caption">{{ getMinMeasurement(item) }}</span>
-            </template>
-            <template #item.avg_deviation="{ item }">
-              <span class="text-body-2" :class="getDeviationClass(item.avg_deviation)">
-                {{ formatDeviation(item.avg_deviation) }}
-              </span>
-            </template>
-            <template #item.avg_score="{ item }">
-              <v-chip v-if="item.avg_score !== null" size="small" :color="getScoreColor(item.avg_score)">
-                {{ item.avg_score.toFixed(2) }}
-              </v-chip>
-            </template>
-          </v-data-table>
-          <div class="d-flex align-center justify-space-between pa-2">
-            <div class="d-flex align-center gap-2">
-              <span class="text-caption text-medium-emphasis">Show</span>
-              <v-select v-model="valueItemsPerPage" :items="itemsPerPageOptions" variant="outlined" density="compact"
-                class="mx-2" size="small" hide-details />
-              <span class="text-caption text-medium-emphasis">items</span>
-            </div>
-            <v-pagination
-              v-if="valueItemsPerPage !== 0 && filteredValueItems.length > getEffectiveItemsPerPage(valueItemsPerPage)"
-              v-model="valueCurrentPage" :length="valueTotalPages" :total-visible="7" size="large" density="compact" />
-            <div style="width: 150px;"></div>
-          </div>
-        </v-card-text>
-      </v-card>
-
-      <!-- Non-Value Items Table -->
-      <v-card variant="outlined">
-        <v-card-title class="bg-secondary-lighten-5 d-flex align-center">
-          <v-icon start>mdi-text</v-icon>
-          Non-Value Items (Status/Text Data)
-          <v-chip class="ml-2" size="small">{{ filteredNonValueItems.length }}</v-chip>
-          <v-spacer />
-          <v-icon color="primary" size="large" @click="nonValueFullscreen = true">mdi-fullscreen</v-icon>
-        </v-card-title>
-        <v-card-text class="pa-0">
-          <v-data-table :headers="nonValueHeaders" :items="paginatedNonValueItems"
-            :items-per-page="nonValueItemsPerPage" density="compact" fixed-header height="400" hide-default-footer
-            striped="even">
-            <template #top>
-              <div class="pa-3">
-                <v-text-field v-model="nonValueSearch" prepend-inner-icon="mdi-magnify" label="Search test items..."
-                  variant="outlined" density="compact" clearable hide-details />
-              </div>
-            </template>
-            <template #item.test_item="{ item }">
-              <div class="text-body-2 font-weight-medium"
-                :class="{ 'text-primary font-weight-bold': item.per_isn_data?.[0]?.is_calculated }">
-                {{ item.test_item }}
-              </div>
-            </template>
-            <template v-for="(_, index) in Array(getNonValueIsnCount())" :key="`nv-isn-${index}`"
-              #[`item.isn_${index}`]="{ item: rowItem }">
-              <v-chip v-if="rowItem.per_isn_data && rowItem.per_isn_data[index]" size="small"
-                :color="rowItem.per_isn_data[index].is_calculated ? 'primary' : getStatusColor(rowItem.per_isn_data[index].value)"
-                :class="{ 'font-weight-bold': rowItem.per_isn_data[index].is_calculated }">
-                {{ rowItem.per_isn_data[index].value }}
-              </v-chip>
-              <span v-else class="text-caption text-medium-emphasis">N/A</span>
-            </template>
-          </v-data-table>
-          <div class="d-flex align-center justify-space-between pa-2">
-            <div class="d-flex align-center gap-2">
-              <span class="text-caption text-medium-emphasis">Show</span>
-              <v-select v-model="nonValueItemsPerPage" :items="itemsPerPageOptions" variant="outlined" density="compact"
-                class="mx-2" size="small" hide-details />
-              <span class="text-caption text-medium-emphasis">items</span>
-            </div>
-            <v-pagination
-              v-if="nonValueItemsPerPage !== 0 && filteredNonValueItems.length > getEffectiveItemsPerPage(nonValueItemsPerPage)"
-              v-model="nonValueCurrentPage" :length="nonValueTotalPages" :total-visible="7" size="large"
-              density="compact" />
-            <div style="width: 150px;"></div>
-          </div>
-        </v-card-text>
-      </v-card>
-    </v-card-text>
-  </v-card>
-
-  <!-- Value Items Fullscreen Dialog -->
-  <v-dialog v-model="valueFullscreen" fullscreen transition="dialog-bottom-transition">
-    <v-card class="d-flex flex-column" style="height: 100vh; overflow: hidden;">
-      <v-card-title class="d-flex justify-space-between align-center flex-shrink-0">
-        <div>
-          <v-icon class="mr-2">mdi-numeric</v-icon>
-          Value Items (Numeric Data)
+  <div class="compare-result-view">
+    <AppPanel
+      eyebrow="Comparison Workspace"
+      title="Comparison Results"
+      :description="`${result.total_files} file${result.total_files === 1 ? '' : 's'} aligned across value and non-value result sets.`"
+      splitHeader
+      tone="cool"
+    >
+      <template #header-aside>
+        <div class="compare-result-view__header-actions">
+          <button type="button" class="compare-result-view__action-button compare-result-view__action-button--success" @click="emit('export-excel')">
+            <Icon icon="mdi:microsoft-excel" />
+            <span>Excel</span>
+          </button>
+          <button type="button" class="compare-result-view__action-button compare-result-view__action-button--danger" @click="emit('export-pdf')">
+            <Icon icon="mdi:file-pdf-box" />
+            <span>PDF</span>
+          </button>
+          <button type="button" class="compare-result-view__action-button" @click="emit('copy-clipboard')">
+            <Icon icon="mdi:content-copy" />
+            <span>Copy</span>
+          </button>
         </div>
-        <v-btn icon="mdi-close" variant="text" @click="valueFullscreen = false" />
-      </v-card-title>
-      <v-card-text class="pa-0 flex-grow-1 d-flex flex-column" style="overflow: hidden;">
-        <div class="flex-grow-1" style="overflow: auto;">
-          <v-data-table :headers="valueHeaders" :items="paginatedValueItems" :items-per-page="valueItemsPerPage"
-            density="compact" fixed-header :height="'calc(100vh - 200px)'" hide-default-footer striped="even">
-            <template #top>
-              <div class="pa-3">
-                <v-row dense>
-                  <v-col cols="12" md="6">
-                    <v-text-field v-model="valueSearch" prepend-inner-icon="mdi-magnify" label="Search test items..."
-                      variant="outlined" density="compact" clearable hide-details />
-                  </v-col>
-                  <v-col cols="12" md="3">
-                    <v-select v-model="valueScoreFilter" :items="scoreFilterOptions" label="Score Filter"
-                      variant="outlined" density="compact" clearable hide-details />
-                  </v-col>
-                  <v-col cols="12" md="3">
-                    <v-select v-model="valueLimitFilter" :items="limitFilterOptions" label="Limit Status"
-                      variant="outlined" density="compact" clearable hide-details />
-                  </v-col>
-                </v-row>
-              </div>
-            </template>
-            <template #item.test_item="{ item }">
-              <div class="text-body-2 font-weight-medium text-no-wrap">{{ item.test_item }}</div>
-            </template>
-            <template #item.usl="{ item }">
-              <span class="text-caption">{{ formatRawNumber(item.usl) }}</span>
-            </template>
-            <template #item.lsl="{ item }">
-              <span class="text-caption">{{ formatRawNumber(item.lsl) }}</span>
-            </template>
-            <template #item.target="{ item }">
-              <v-chip size="small" color="info" variant="tonal">
-                {{ formatRawNumber(item.per_isn_data?.[0]?.score_breakdown?.target_used ?? item.baseline) }}
-              </v-chip>
-            </template>
-            <template v-for="(_, index) in Array(getIsnCount())" :key="`isn-fs-${index}`"
-              #[`item.isn_${index}`]="{ item: rowItem }">
-              <div v-if="rowItem.per_isn_data && rowItem.per_isn_data[index]" class="d-flex flex-column gap-1 py-1">
-                <div class="text-caption">
-                  <strong>V:</strong> {{ rowItem.per_isn_data[index].value }}
-                </div>
-                <div class="text-caption"
-                  :class="getDeviationClass(rowItem.per_isn_data[index].score_breakdown?.deviation)">
-                  <strong>D:</strong> {{ formatDeviation(rowItem.per_isn_data[index].score_breakdown?.deviation) }}
-                </div>
-                <v-chip v-if="rowItem.per_isn_data[index].score !== null" size="x-small"
-                  :color="getScoreColor(rowItem.per_isn_data[index].score!)" class="cursor-pointer"
-                  @click="openScoreBreakdown(rowItem.test_item, index)">
-                  {{ rowItem.per_isn_data[index].score!.toFixed(2) }}
-                </v-chip>
-              </div>
-              <div v-else class="text-caption text-medium-emphasis">N/A</div>
-            </template>
-            <template #item.max_meas="{ item }">
-              <span class="text-caption">{{ getMaxMeasurement(item) }}</span>
-            </template>
-            <template #item.min_meas="{ item }">
-              <span class="text-caption">{{ getMinMeasurement(item) }}</span>
-            </template>
-            <template #item.avg_deviation="{ item }">
-              <span class="text-body-2" :class="getDeviationClass(item.avg_deviation)">
-                {{ formatDeviation(item.avg_deviation) }}
-              </span>
-            </template>
-            <template #item.avg_score="{ item }">
-              <v-chip v-if="item.avg_score !== null" size="small" :color="getScoreColor(item.avg_score)">
-                {{ item.avg_score.toFixed(2) }}
-              </v-chip>
-            </template>
-          </v-data-table>
-        </div>
-        <div class="flex-shrink-0 pa-2" style="border-top: 1px solid rgba(0,0,0,0.12);">
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center gap-2">
-              <span class="text-caption text-medium-emphasis">Show</span>
-              <v-select v-model="valueItemsPerPage" :items="itemsPerPageOptions" variant="outlined" density="compact"
-                hide-details style="width: 100px;" />
-              <span class="text-caption text-medium-emphasis">items</span>
-            </div>
-            <v-pagination
-              v-if="valueItemsPerPage !== 0 && filteredValueItems.length > getEffectiveItemsPerPage(valueItemsPerPage)"
-              v-model="valueCurrentPage" :length="valueTotalPages" :total-visible="5" size="small" density="compact" />
-            <div style="width: 150px;"></div>
+      </template>
+
+      <section class="compare-result-view__stat-grid">
+        <article class="compare-result-view__stat-card compare-result-view__stat-card--primary">
+          <small>Value Items</small>
+          <strong>{{ result.total_value_items }}</strong>
+        </article>
+        <article class="compare-result-view__stat-card compare-result-view__stat-card--secondary">
+          <small>Non-Value Items</small>
+          <strong>{{ result.total_non_value_items }}</strong>
+        </article>
+        <article class="compare-result-view__stat-card compare-result-view__stat-card--info">
+          <small>ISNs Compared</small>
+          <strong>{{ result.total_files }}</strong>
+        </article>
+      </section>
+
+      <section class="compare-result-view__section">
+        <div class="compare-result-view__section-header compare-result-view__section-header--primary">
+          <div>
+            <p class="compare-result-view__section-eyebrow">Numeric Surface</p>
+            <h3>Value Items (Numeric Data)</h3>
+          </div>
+          <div class="compare-result-view__section-actions">
+            <span class="compare-result-view__count-pill">{{ filteredValueItems.length }}</span>
+            <button type="button" class="compare-result-view__icon-button" @click="valueFullscreen = true">
+              <Icon icon="mdi:fullscreen" />
+            </button>
           </div>
         </div>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
 
-  <!-- Non-Value Items Fullscreen Dialog -->
-  <v-dialog v-model="nonValueFullscreen" fullscreen transition="dialog-bottom-transition">
-    <v-card class="d-flex flex-column" style="height: 100vh; overflow: hidden;">
-      <v-card-title class="d-flex justify-space-between align-center flex-shrink-0">
-        <div>
-          <v-icon class="mr-2">mdi-text</v-icon>
-          Non-Value Items (Status/Text Data)
+        <div class="result-surface-filter-grid">
+          <label class="result-surface-search result-surface-search--wide">
+            <span>Search test items</span>
+            <input v-model="valueSearch" placeholder="Filter numeric items by name" type="text">
+          </label>
+          <label class="result-surface-search">
+            <span>Score Filter</span>
+            <select v-model="valueScoreFilter">
+              <option value="all">All Scores</option>
+              <option value="high">Score >= 9</option>
+              <option value="medium">Score 7-9</option>
+              <option value="low">Score < 7</option>
+            </select>
+          </label>
+          <label class="result-surface-search">
+            <span>Limit Status</span>
+            <select v-model="valueLimitFilter">
+              <option value="all">All</option>
+              <option value="within">Within Limits</option>
+              <option value="out">Out of Limits</option>
+            </select>
+          </label>
         </div>
-        <v-btn icon="mdi-close" variant="text" @click="nonValueFullscreen = false" />
-      </v-card-title>
-      <v-card-text class="pa-0 flex-grow-1 d-flex flex-column" style="overflow: hidden;">
-        <div class="flex-grow-1" style="overflow: auto;">
-          <v-data-table :headers="nonValueHeaders" :items="paginatedNonValueItems"
-            :items-per-page="nonValueItemsPerPage" density="compact" fixed-header :height="'calc(100vh - 200px)'"
-            hide-default-footer striped="even">
-            <template #top>
-              <div class="pa-3">
-                <v-text-field v-model="nonValueSearch" prepend-inner-icon="mdi-magnify" label="Search test items..."
-                  variant="outlined" density="compact" clearable hide-details />
-              </div>
-            </template>
-            <template #item.test_item="{ item }">
-              <div class="text-body-2 font-weight-medium"
-                :class="{ 'text-primary font-weight-bold': item.per_isn_data?.[0]?.is_calculated }">
-                {{ item.test_item }}
-              </div>
-            </template>
-            <template v-for="(_, index) in Array(getNonValueIsnCount())" :key="`nv-isn-fs-${index}`"
-              #[`item.isn_${index}`]="{ item: rowItem }">
-              <v-chip v-if="rowItem.per_isn_data && rowItem.per_isn_data[index]" size="small"
-                :color="rowItem.per_isn_data[index].is_calculated ? 'primary' : getStatusColor(rowItem.per_isn_data[index].value)"
-                :class="{ 'font-weight-bold': rowItem.per_isn_data[index].is_calculated }">
-                {{ rowItem.per_isn_data[index].value }}
-              </v-chip>
-              <span v-else class="text-caption text-medium-emphasis">N/A</span>
-            </template>
-          </v-data-table>
-        </div>
-        <div class="flex-shrink-0 pa-2" style="border-top: 1px solid rgba(0,0,0,0.12);">
-          <div class="d-flex align-center justify-space-between">
-            <div class="d-flex align-center gap-2">
-              <span class="text-caption text-medium-emphasis">Show</span>
-              <v-select v-model="nonValueItemsPerPage" :items="itemsPerPageOptions" variant="outlined" density="compact"
-                hide-details style="width: 100px;" />
-              <span class="text-caption text-medium-emphasis">items</span>
+
+        <AppDataGrid
+          :columns="valueGridColumns"
+          :rows="filteredValueItems"
+          paginator
+          :rowsPerPage="10"
+          :rowsPerPageOptions="gridRowsPerPageOptions"
+          scrollHeight="500px"
+        >
+          <template #cell-test_item="{ data }"><div class="compare-result-view__strong text-no-wrap">{{ data.test_item }}</div></template>
+          <template #cell-usl="{ data }"><span class="compare-result-view__muted">{{ formatRawNumber(data.usl as number | null) }}</span></template>
+          <template #cell-lsl="{ data }"><span class="compare-result-view__muted">{{ formatRawNumber(data.lsl as number | null) }}</span></template>
+          <template #cell-target="{ data }"><span class="compare-result-view__score-pill compare-result-view__score-pill--info">{{ formatRawNumber((data.per_isn_data?.[0]?.score_breakdown?.target_used ?? data.baseline) as number | null) }}</span></template>
+          <template v-for="(_, index) in Array(getIsnCount())" :key="`value-grid-isn-${index}`" #[`cell-isn_${index}`]="{ data }">
+            <div v-if="data.per_isn_data && data.per_isn_data[index]" class="compare-result-view__measurement-stack">
+              <div class="compare-result-view__detail-line"><strong>V:</strong> {{ data.per_isn_data[index].value }}</div>
+              <div class="compare-result-view__detail-line" :class="getDeviationClass(data.per_isn_data[index].score_breakdown?.deviation)"><strong>D:</strong> {{ formatDeviation(data.per_isn_data[index].score_breakdown?.deviation) }}</div>
+              <button v-if="data.per_isn_data[index].score !== null" type="button" class="compare-result-view__score-pill" :class="scorePillClass(data.per_isn_data[index].score)" @click="openScoreBreakdown(String(data.test_item), index)">{{ data.per_isn_data[index].score.toFixed(2) }}</button>
             </div>
-            <v-pagination
-              v-if="nonValueItemsPerPage !== 0 && filteredNonValueItems.length > getEffectiveItemsPerPage(nonValueItemsPerPage)"
-              v-model="nonValueCurrentPage" :length="nonValueTotalPages" :total-visible="5" size="large"
-              density="compact" />
-            <div style="width: 150px;"></div>
+            <div v-else class="compare-result-view__muted">N/A</div>
+          </template>
+          <template #cell-max_meas="{ data }"><span class="compare-result-view__muted">{{ getMaxMeasurement(data as CompareItemEnhanced) }}</span></template>
+          <template #cell-min_meas="{ data }"><span class="compare-result-view__muted">{{ getMinMeasurement(data as CompareItemEnhanced) }}</span></template>
+          <template #cell-avg_deviation="{ data }"><span :class="getDeviationClass(data.avg_deviation as number | null | undefined)">{{ formatDeviation(data.avg_deviation as number | null | undefined) }}</span></template>
+          <template #cell-avg_score="{ data }"><span v-if="data.avg_score !== null" class="compare-result-view__score-pill" :class="scorePillClass(Number(data.avg_score))">{{ Number(data.avg_score).toFixed(2) }}</span><span v-else class="compare-result-view__muted">N/A</span></template>
+        </AppDataGrid>
+      </section>
+
+      <section class="compare-result-view__section">
+        <div class="compare-result-view__section-header compare-result-view__section-header--secondary">
+          <div>
+            <p class="compare-result-view__section-eyebrow">Textual Surface</p>
+            <h3>Non-Value Items (Status/Text Data)</h3>
+          </div>
+          <div class="compare-result-view__section-actions">
+            <span class="compare-result-view__count-pill">{{ filteredNonValueItems.length }}</span>
+            <button type="button" class="compare-result-view__icon-button" @click="nonValueFullscreen = true">
+              <Icon icon="mdi:fullscreen" />
+            </button>
           </div>
         </div>
-      </v-card-text>
-    </v-card>
-  </v-dialog>
 
-  <!-- Custom Items Per Page Dialog -->
-  <v-dialog v-model="showCustomInput" max-width="400">
-    <v-card class="app-dialog">
-      <div class="app-dialog-header"><v-card-title>Custom Items Per Page</v-card-title></div>
-      <div class="app-dialog-body"><v-card-text>
-        <v-text-field v-model.number="customItemsPerPage" type="number" label="Enter number of items" variant="outlined"
-          density="comfortable" min="1" :max="MAX_TABLE_ITEMS_PER_PAGE" autofocus @keyup.enter="applyCustomItemsPerPage" />
-      </v-card-text></div>
-      <div class="app-dialog-footer"><v-card-actions>
-        <v-spacer />
-        <v-btn text @click="cancelCustomInput">Cancel</v-btn>
-        <v-btn color="primary" variant="elevated" @click="applyCustomItemsPerPage">Apply</v-btn>
-      </v-card-actions></div>
-    </v-card>
-  </v-dialog>
+        <label class="result-surface-search">
+          <span>Search test items</span>
+          <input v-model="nonValueSearch" placeholder="Filter non-value items by name" type="text">
+        </label>
 
-  <!-- Score Breakdown Dialog -->
-  <ScoreBreakdownDialog v-model="scoreDialogOpen" :item="selectedItemForScore" />
+        <AppDataGrid
+          :columns="nonValueGridColumns"
+          :rows="filteredNonValueItems"
+          paginator
+          :rowsPerPage="10"
+          :rowsPerPageOptions="gridRowsPerPageOptions"
+          scrollHeight="400px"
+        >
+          <template #cell-test_item="{ data }"><div class="compare-result-view__strong" :class="{ 'compare-result-view__strong--accent': data.per_isn_data?.[0]?.is_calculated }">{{ data.test_item }}</div></template>
+          <template v-for="(_, index) in Array(getNonValueIsnCount())" :key="`non-value-grid-isn-${index}`" #[`cell-isn_${index}`]="{ data }">
+            <span v-if="data.per_isn_data && data.per_isn_data[index]" class="compare-result-view__status-pill" :class="statusPillClass(data.per_isn_data[index].value, data.per_isn_data[index].is_calculated)">{{ data.per_isn_data[index].value }}</span>
+            <span v-else class="compare-result-view__muted">N/A</span>
+          </template>
+        </AppDataGrid>
+      </section>
+    </AppPanel>
+
+    <AppDialog v-model="valueFullscreen" title="Value Items (Numeric Data)" description="Expanded comparison workspace for numeric measurements across ISNs." width="min(98vw, 120rem)" :breakpoints="dialogBreakpoints" :closable="false" maximizable>
+      <template #header>
+        <div class="result-surface-dialog-header">
+          <div>
+            <h2 class="result-surface-dialog-title">Value Items (Numeric Data)</h2>
+            <p class="result-surface-dialog-description">Review per-ISN values, deviations, and scores without the legacy fullscreen table shell.</p>
+          </div>
+          <button type="button" class="compare-result-view__icon-button" @click="valueFullscreen = false">
+            <Icon icon="mdi:close" />
+          </button>
+        </div>
+      </template>
+
+      <div class="result-surface-filter-grid">
+        <label class="result-surface-search result-surface-search--wide">
+          <span>Search test items</span>
+          <input v-model="valueSearch" placeholder="Filter numeric items by name" type="text">
+        </label>
+        <label class="result-surface-search">
+          <span>Score Filter</span>
+          <select v-model="valueScoreFilter">
+            <option value="all">All Scores</option>
+            <option value="high">Score >= 9</option>
+            <option value="medium">Score 7-9</option>
+            <option value="low">Score < 7</option>
+          </select>
+        </label>
+        <label class="result-surface-search">
+          <span>Limit Status</span>
+          <select v-model="valueLimitFilter">
+            <option value="all">All</option>
+            <option value="within">Within Limits</option>
+            <option value="out">Out of Limits</option>
+          </select>
+        </label>
+      </div>
+
+      <AppDataGrid
+        :columns="valueGridColumns"
+        :rows="filteredValueItems"
+        paginator
+        :rowsPerPage="25"
+        :rowsPerPageOptions="gridRowsPerPageOptions"
+        scrollHeight="calc(100vh - 22rem)"
+      >
+        <template #cell-test_item="{ data }"><div class="compare-result-view__strong text-no-wrap">{{ data.test_item }}</div></template>
+        <template #cell-usl="{ data }"><span class="compare-result-view__muted">{{ formatRawNumber(data.usl as number | null) }}</span></template>
+        <template #cell-lsl="{ data }"><span class="compare-result-view__muted">{{ formatRawNumber(data.lsl as number | null) }}</span></template>
+        <template #cell-target="{ data }"><span class="compare-result-view__score-pill compare-result-view__score-pill--info">{{ formatRawNumber((data.per_isn_data?.[0]?.score_breakdown?.target_used ?? data.baseline) as number | null) }}</span></template>
+        <template v-for="(_, index) in Array(getIsnCount())" :key="`value-dialog-isn-${index}`" #[`cell-isn_${index}`]="{ data }">
+          <div v-if="data.per_isn_data && data.per_isn_data[index]" class="compare-result-view__measurement-stack">
+            <div class="compare-result-view__detail-line"><strong>V:</strong> {{ data.per_isn_data[index].value }}</div>
+            <div class="compare-result-view__detail-line" :class="getDeviationClass(data.per_isn_data[index].score_breakdown?.deviation)"><strong>D:</strong> {{ formatDeviation(data.per_isn_data[index].score_breakdown?.deviation) }}</div>
+            <button v-if="data.per_isn_data[index].score !== null" type="button" class="compare-result-view__score-pill" :class="scorePillClass(data.per_isn_data[index].score)" @click="openScoreBreakdown(String(data.test_item), index)">{{ data.per_isn_data[index].score.toFixed(2) }}</button>
+          </div>
+          <div v-else class="compare-result-view__muted">N/A</div>
+        </template>
+        <template #cell-max_meas="{ data }"><span class="compare-result-view__muted">{{ getMaxMeasurement(data as CompareItemEnhanced) }}</span></template>
+        <template #cell-min_meas="{ data }"><span class="compare-result-view__muted">{{ getMinMeasurement(data as CompareItemEnhanced) }}</span></template>
+        <template #cell-avg_deviation="{ data }"><span :class="getDeviationClass(data.avg_deviation as number | null | undefined)">{{ formatDeviation(data.avg_deviation as number | null | undefined) }}</span></template>
+        <template #cell-avg_score="{ data }"><span v-if="data.avg_score !== null" class="compare-result-view__score-pill" :class="scorePillClass(Number(data.avg_score))">{{ Number(data.avg_score).toFixed(2) }}</span><span v-else class="compare-result-view__muted">N/A</span></template>
+      </AppDataGrid>
+    </AppDialog>
+
+    <AppDialog v-model="nonValueFullscreen" title="Non-Value Items (Status/Text Data)" description="Expanded comparison workspace for textual and status outputs." width="min(98vw, 120rem)" :breakpoints="dialogBreakpoints" :closable="false" maximizable>
+      <template #header>
+        <div class="result-surface-dialog-header">
+          <div>
+            <h2 class="result-surface-dialog-title">Non-Value Items (Status/Text Data)</h2>
+            <p class="result-surface-dialog-description">Inspect per-ISN statuses in the shared dialog surface.</p>
+          </div>
+          <button type="button" class="compare-result-view__icon-button" @click="nonValueFullscreen = false">
+            <Icon icon="mdi:close" />
+          </button>
+        </div>
+      </template>
+
+      <label class="result-surface-search">
+        <span>Search test items</span>
+        <input v-model="nonValueSearch" placeholder="Filter non-value items by name" type="text">
+      </label>
+
+      <AppDataGrid
+        :columns="nonValueGridColumns"
+        :rows="filteredNonValueItems"
+        paginator
+        :rowsPerPage="25"
+        :rowsPerPageOptions="gridRowsPerPageOptions"
+        scrollHeight="calc(100vh - 22rem)"
+      >
+        <template #cell-test_item="{ data }"><div class="compare-result-view__strong" :class="{ 'compare-result-view__strong--accent': data.per_isn_data?.[0]?.is_calculated }">{{ data.test_item }}</div></template>
+        <template v-for="(_, index) in Array(getNonValueIsnCount())" :key="`non-value-dialog-isn-${index}`" #[`cell-isn_${index}`]="{ data }">
+          <span v-if="data.per_isn_data && data.per_isn_data[index]" class="compare-result-view__status-pill" :class="statusPillClass(data.per_isn_data[index].value, data.per_isn_data[index].is_calculated)">{{ data.per_isn_data[index].value }}</span>
+          <span v-else class="compare-result-view__muted">N/A</span>
+        </template>
+      </AppDataGrid>
+    </AppDialog>
+
+    <ScoreBreakdownDialog v-model="scoreDialogOpen" :item="selectedItemForScore" />
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { Icon } from '@iconify/vue'
+import { computed, ref } from 'vue'
+import { AppDataGrid, AppDialog, AppPanel } from '@/shared'
 import type {
   CompareItemEnhanced,
   CompareResponseEnhanced,
   ParsedTestItemEnhanced,
 } from '@/features/dut-logs/composables/useTestLogUpload'
 import { sortTestItems } from '@/features/dut-logs/utils/sorting'
+import ScoreBreakdownDialog from './ScoreBreakdownDialog.vue'
 
 const props = defineProps<{
   result: CompareResponseEnhanced
@@ -394,101 +264,52 @@ const emit = defineEmits<{
   'copy-clipboard': []
 }>()
 
-// Pagination - separate for value and non-value tables
-const MAX_TABLE_ITEMS_PER_PAGE = 200
-const valueItemsPerPage = ref(10)
-const nonValueItemsPerPage = ref(10)
-const itemsPerPageOptions = [
-  { title: '5', value: 5 },
-  { title: '10', value: 10 },
-  { title: '25', value: 25 },
-  { title: '50', value: 50 },
-  { title: '100', value: 100 },
-  { title: 'Custom', value: 0 },
-]
-const showCustomInput = ref(false)
-const customItemsPerPage = ref(10)
-const customInputTarget = ref<'value' | 'non-value'>('value')
-
-// Value Items State
-const valueCurrentPage = ref(1)
 const valueSearch = ref('')
-const valueScoreFilter = ref<string | null>(null)
-const valueLimitFilter = ref<string | null>(null)
+const valueScoreFilter = ref<'all' | 'high' | 'medium' | 'low'>('all')
+const valueLimitFilter = ref<'all' | 'within' | 'out'>('all')
 const valueFullscreen = ref(false)
-
-// Non-Value Items State
-const nonValueCurrentPage = ref(1)
 const nonValueSearch = ref('')
 const nonValueFullscreen = ref(false)
-
-// Score breakdown dialog
 const scoreDialogOpen = ref(false)
 const selectedItemForScore = ref<ParsedTestItemEnhanced | null>(null)
 
-// Filter Options
-const scoreFilterOptions = [
-  { title: 'All Scores', value: null },
-  { title: 'Score >= 9', value: 'high' },
-  { title: 'Score 7-9', value: 'medium' },
-  { title: 'Score < 7', value: 'low' },
-]
+const gridRowsPerPageOptions = [10, 25, 50, 100, 200]
+const dialogBreakpoints = { '1400px': '96vw', '960px': '98vw' }
 
-const limitFilterOptions = [
-  { title: 'All', value: null },
-  { title: 'Within Limits', value: 'within' },
-  { title: 'Out of Limits', value: 'out' },
-]
+const reclassifiedValueItems = computed(() =>
+  props.result.comparison_value_items.filter((item) => !item.test_item.includes('ADJUSTED_POW')),
+)
 
-// Headers
+const reclassifiedNonValueItems = computed(() => {
+  const adjustedPowItems = props.result.comparison_value_items.filter((item) =>
+    item.test_item.includes('ADJUSTED_POW'),
+  )
+  return [...props.result.comparison_non_value_items, ...adjustedPowItems]
+})
+
 const valueHeaders = computed(() => {
   const firstItem = reclassifiedValueItems.value[0]
   if (!firstItem) return []
 
   const baseHeaders = [
-    { title: 'Test Item', key: 'test_item', sortable: true, width: '250px', fixed: true },
-    { title: 'USL', key: 'usl', sortable: true, align: 'center' as const, width: '80px' },
-    { title: 'LSL', key: 'lsl', sortable: true, align: 'center' as const, width: '80px' },
-    { title: 'Target', key: 'target', sortable: true, align: 'center' as const, width: '100px' },
+    { title: 'Test Item', key: 'test_item', sortable: true, width: '250px' },
+    { title: 'USL', key: 'usl', sortable: true, width: '80px' },
+    { title: 'LSL', key: 'lsl', sortable: true, width: '80px' },
+    { title: 'Target', key: 'target', sortable: true, width: '100px' },
   ]
 
   const isnHeaders = firstItem.per_isn_data.map((isnData, index) => ({
     title: `Meas.\n${isnData.isn || 'N/A'}`,
     key: `isn_${index}`,
     sortable: false,
-    align: 'center' as const,
     width: '120px',
   }))
 
   const aggregateHeaders = [
-    {
-      title: 'Max. Meas.',
-      key: 'max_meas',
-      sortable: false,
-      align: 'center' as const,
-      width: '100px',
-    },
-    {
-      title: 'Min. Meas.',
-      key: 'min_meas',
-      sortable: false,
-      align: 'center' as const,
-      width: '100px',
-    },
-    {
-      title: 'Avg. Dev',
-      key: 'avg_deviation',
-      sortable: true,
-      align: 'center' as const,
-      width: '100px',
-    },
-    {
-      title: 'Avg. Score',
-      key: 'avg_score',
-      sortable: true,
-      align: 'center' as const,
-      width: '100px',
-    },
+    { title: 'Max. Meas.', key: 'max_meas', sortable: false, width: '100px' },
+    { title: 'Min. Meas.', key: 'min_meas', sortable: false, width: '100px' },
+    { title: 'Avg. Dev', key: 'avg_deviation', sortable: true, width: '100px' },
+    { title: 'Avg. Score', key: 'avg_score', sortable: true, width: '100px' },
   ]
 
   return [...baseHeaders, ...isnHeaders, ...aggregateHeaders]
@@ -499,56 +320,55 @@ const nonValueHeaders = computed(() => {
   if (!firstItem) return []
 
   const baseHeaders = [{ title: 'Test Item', key: 'test_item', sortable: true, width: '300px' }]
-
   const isnHeaders = firstItem.per_isn_data.map((isnData, index) => ({
     title: isnData.isn || 'N/A',
     key: `isn_${index}`,
     sortable: false,
-    align: 'center' as const,
     width: '150px',
   }))
 
   return [...baseHeaders, ...isnHeaders]
 })
 
-// Reclassify items: move ADJUSTED_POW from value to non-value
-const reclassifiedValueItems = computed(() => {
-  return props.result.comparison_value_items.filter(
-    (item) => !item.test_item.includes('ADJUSTED_POW'),
-  )
-})
+const valueGridColumns = computed(() =>
+  valueHeaders.value.map((header) => ({
+    key: String(header.key),
+    field: String(header.key),
+    header: String(header.title),
+    sortable: Boolean(header.sortable),
+    style: 'width' in header && header.width ? { width: String(header.width) } : undefined,
+  })),
+)
 
-const reclassifiedNonValueItems = computed(() => {
-  const adjustedPowItems = props.result.comparison_value_items.filter((item) =>
-    item.test_item.includes('ADJUSTED_POW'),
-  )
-  return [...props.result.comparison_non_value_items, ...adjustedPowItems]
-})
+const nonValueGridColumns = computed(() =>
+  nonValueHeaders.value.map((header) => ({
+    key: String(header.key),
+    field: String(header.key),
+    header: String(header.title),
+    sortable: Boolean(header.sortable),
+    style: 'width' in header && header.width ? { width: String(header.width) } : undefined,
+  })),
+)
 
-// Filter items
 const filteredValueItems = computed(() => {
   let items = sortTestItems(reclassifiedValueItems.value)
 
-  // Search filter
   if (valueSearch.value) {
     const searchLower = valueSearch.value.toLowerCase()
     items = items.filter((item) => item.test_item.toLowerCase().includes(searchLower))
   }
 
-  // Score filter
-  if (valueScoreFilter.value) {
+  if (valueScoreFilter.value !== 'all') {
     items = items.filter((item) => {
       const avgScore = item.avg_score
       if (avgScore === null) return false
       if (valueScoreFilter.value === 'high') return avgScore >= 9
       if (valueScoreFilter.value === 'medium') return avgScore >= 7 && avgScore < 9
-      if (valueScoreFilter.value === 'low') return avgScore < 7
-      return true
+      return avgScore < 7
     })
   }
 
-  // Limit filter
-  if (valueLimitFilter.value) {
+  if (valueLimitFilter.value !== 'all') {
     items = items.filter((item) => {
       const hasData = item.per_isn_data.some((isn) => isn.numeric_value !== null)
       if (!hasData) return false
@@ -556,7 +376,6 @@ const filteredValueItems = computed(() => {
       const measurements = item.per_isn_data.map((isn) => isn.numeric_value ?? 0)
       const maxVal = Math.max(...measurements)
       const minVal = Math.min(...measurements)
-
       const withinLimits =
         (item.usl === null || maxVal <= item.usl) && (item.lsl === null || minVal >= item.lsl)
 
@@ -574,135 +393,16 @@ const filteredNonValueItems = computed(() => {
   return sorted.filter((item) => item.test_item.toLowerCase().includes(searchLower))
 })
 
-// Pagination
-const normalizeItemsPerPage = (value: number) => {
-  if (value <= 0) {
-    return MAX_TABLE_ITEMS_PER_PAGE
-  }
-
-  return Math.min(Math.trunc(value), MAX_TABLE_ITEMS_PER_PAGE)
-}
-
-const getEffectiveItemsPerPage = (itemsPerPage: { value: number }) => {
-  if (itemsPerPage.value === 0) {
-    return 10
-  }
-
-  return normalizeItemsPerPage(itemsPerPage.value)
-}
-
-const valueTotalPages = computed(() => {
-  const perPage = getEffectiveItemsPerPage(valueItemsPerPage)
-  return Math.ceil(filteredValueItems.value.length / perPage)
-})
-
-const nonValueTotalPages = computed(() => {
-  const perPage = getEffectiveItemsPerPage(nonValueItemsPerPage)
-  return Math.ceil(filteredNonValueItems.value.length / perPage)
-})
-
-const paginatedValueItems = computed(() => {
-  const perPage = getEffectiveItemsPerPage(valueItemsPerPage)
-  const start = (valueCurrentPage.value - 1) * perPage
-  const end = start + perPage
-  return filteredValueItems.value.slice(start, end)
-})
-
-const paginatedNonValueItems = computed(() => {
-  const perPage = getEffectiveItemsPerPage(nonValueItemsPerPage)
-  const start = (nonValueCurrentPage.value - 1) * perPage
-  const end = start + perPage
-  return filteredNonValueItems.value.slice(start, end)
-})
-
-// Reset pagination when filters change
-watch([valueSearch, valueScoreFilter, valueLimitFilter], () => {
-  valueCurrentPage.value = 1
-})
-
-watch(nonValueSearch, () => {
-  nonValueCurrentPage.value = 1
-})
-
-// Reset filters when closing fullscreen
-watch(valueFullscreen, (isOpen) => {
-  if (!isOpen) {
-    valueSearch.value = ''
-    valueScoreFilter.value = null
-    valueLimitFilter.value = null
-  }
-})
-
-watch(nonValueFullscreen, (isOpen) => {
-  if (!isOpen) {
-    nonValueSearch.value = ''
-  }
-})
-
-// Watch for custom items per page selection - value table
-watch(valueItemsPerPage, (newVal) => {
-  if (newVal === 0) {
-    customInputTarget.value = 'value'
-    showCustomInput.value = true
-  } else {
-    const normalized = normalizeItemsPerPage(newVal)
-    if (normalized !== newVal) {
-      valueItemsPerPage.value = normalized
-      return
-    }
-
-    valueCurrentPage.value = 1
-  }
-})
-
-// Watch for custom items per page selection - non-value table
-watch(nonValueItemsPerPage, (newVal) => {
-  if (newVal === 0) {
-    customInputTarget.value = 'non-value'
-    showCustomInput.value = true
-  } else {
-    const normalized = normalizeItemsPerPage(newVal)
-    if (normalized !== newVal) {
-      nonValueItemsPerPage.value = normalized
-      return
-    }
-
-    nonValueCurrentPage.value = 1
-  }
-})
-
-// Apply custom value
-const applyCustomItemsPerPage = () => {
-  if (customItemsPerPage.value > 0) {
-    if (customInputTarget.value === 'value') {
-      valueItemsPerPage.value = normalizeItemsPerPage(customItemsPerPage.value)
-    } else {
-      nonValueItemsPerPage.value = normalizeItemsPerPage(customItemsPerPage.value)
-    }
-  }
-  showCustomInput.value = false
-}
-
-const cancelCustomInput = () => {
-  if (customInputTarget.value === 'value') {
-    valueItemsPerPage.value = 10
-  } else {
-    nonValueItemsPerPage.value = 10
-  }
-  showCustomInput.value = false
-}
-
-// Helper functions
-const formatRawNumber = (value: number | null): string => {
+function formatRawNumber(value: number | null): string {
   return value !== null ? value.toString() : 'N/A'
 }
 
-const formatDeviation = (deviation: number | null | undefined): string => {
+function formatDeviation(deviation: number | null | undefined): string {
   if (deviation === null || deviation === undefined) return 'N/A'
   return Math.abs(deviation).toFixed(2)
 }
 
-const getDeviationClass = (deviation: number | null | undefined): string => {
+function getDeviationClass(deviation: number | null | undefined): string {
   if (deviation === null || deviation === undefined) return ''
   const abs = Math.abs(deviation)
   if (abs < 0.5) return 'text-success'
@@ -710,45 +410,43 @@ const getDeviationClass = (deviation: number | null | undefined): string => {
   return 'text-error font-weight-bold'
 }
 
-const getScoreColor = (score: number): string => {
+function getScoreColor(score: number): string {
   if (score >= 9) return 'success'
   if (score >= 7) return 'warning'
   return 'error'
 }
 
-const getStatusColor = (value: string): string => {
+function getStatusColor(value: string): string {
   const upper = value.toUpperCase()
   if (upper === 'PASS' || upper === 'OK') return 'success'
   if (upper === 'FAIL' || upper === 'ERROR') return 'error'
   return 'grey'
 }
 
-const getIsnCount = (): number => {
-  const firstItem = props.result.comparison_value_items[0]
+function getIsnCount(): number {
+  const firstItem = reclassifiedValueItems.value[0]
   return firstItem?.per_isn_data?.length || 0
 }
 
-const getMaxMeasurement = (item: CompareItemEnhanced): string => {
+function getNonValueIsnCount(): number {
+  const firstItem = reclassifiedNonValueItems.value[0]
+  return firstItem?.per_isn_data?.length || 0
+}
+
+function getMaxMeasurement(item: CompareItemEnhanced): string {
   const measurements = item.per_isn_data.map((isn) => isn.numeric_value ?? 0)
   if (measurements.length === 0) return 'N/A'
   return Math.max(...measurements).toFixed(2)
 }
 
-const getMinMeasurement = (item: CompareItemEnhanced): string => {
+function getMinMeasurement(item: CompareItemEnhanced): string {
   const measurements = item.per_isn_data.map((isn) => isn.numeric_value ?? 0)
   if (measurements.length === 0) return 'N/A'
   return Math.min(...measurements).toFixed(2)
 }
 
-const getNonValueIsnCount = (): number => {
-  const firstItem = props.result.comparison_non_value_items[0]
-  return firstItem?.per_isn_data?.length || 0
-}
-
-const openScoreBreakdown = (testItem: string, isnIndex: number) => {
-  const compareItem = props.result.comparison_value_items.find(
-    (item) => item.test_item === testItem,
-  )
+function openScoreBreakdown(testItem: string, isnIndex: number) {
+  const compareItem = props.result.comparison_value_items.find((item) => item.test_item === testItem)
   if (!compareItem || !compareItem.per_isn_data[isnIndex]) return
 
   const isnData = compareItem.per_isn_data[isnIndex]
@@ -771,9 +469,208 @@ const openScoreBreakdown = (testItem: string, isnIndex: number) => {
 
   scoreDialogOpen.value = true
 }
+
+function scorePillClass(score: number): string {
+  const tone = getScoreColor(score)
+  if (tone === 'success') return 'compare-result-view__score-pill--success'
+  if (tone === 'warning') return 'compare-result-view__score-pill--warning'
+  return 'compare-result-view__score-pill--error'
+}
+
+function statusPillClass(value: string, isCalculated?: boolean): string {
+  if (isCalculated) return 'compare-result-view__status-pill--calculated'
+  const tone = getStatusColor(value)
+  if (tone === 'success') return 'compare-result-view__status-pill--success'
+  if (tone === 'error') return 'compare-result-view__status-pill--error'
+  return 'compare-result-view__status-pill--neutral'
+}
 </script>
 
 <style scoped>
+.compare-result-view {
+  display: grid;
+  gap: 1rem;
+}
+
+.compare-result-view__header-actions,
+.compare-result-view__section-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.compare-result-view__action-button,
+.compare-result-view__icon-button,
+.compare-result-view__score-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.compare-result-view__action-button,
+.compare-result-view__icon-button {
+  border: 1px solid var(--app-border);
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  padding: 0.65rem 0.95rem;
+  cursor: pointer;
+}
+
+.compare-result-view__action-button--success {
+  border-color: rgba(20, 88, 71, 0.18);
+  color: #145847;
+}
+
+.compare-result-view__action-button--danger {
+  border-color: rgba(189, 64, 64, 0.18);
+  color: #8f2020;
+}
+
+.compare-result-view__stat-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.compare-result-view__stat-card,
+.compare-result-view__section {
+  border: 1px solid var(--app-border);
+  border-radius: 1.2rem;
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.compare-result-view__stat-card {
+  display: grid;
+  gap: 0.3rem;
+  padding: 1rem;
+}
+
+.compare-result-view__stat-card small,
+.compare-result-view__muted,
+.compare-result-view__section-eyebrow {
+  color: var(--app-muted);
+}
+
+.compare-result-view__stat-card strong,
+.compare-result-view__strong {
+  color: var(--app-ink);
+  font-weight: 700;
+}
+
+.compare-result-view__strong--accent {
+  color: #1f4e86;
+}
+
+.compare-result-view__stat-card--primary {
+  background: linear-gradient(145deg, rgba(20, 88, 71, 0.1), rgba(255, 251, 247, 0.96));
+}
+
+.compare-result-view__stat-card--secondary {
+  background: linear-gradient(145deg, rgba(95, 64, 176, 0.1), rgba(255, 251, 247, 0.96));
+}
+
+.compare-result-view__stat-card--info {
+  background: linear-gradient(145deg, rgba(40, 96, 163, 0.1), rgba(255, 251, 247, 0.96));
+}
+
+.compare-result-view__section {
+  padding: 1rem;
+  display: grid;
+  gap: 1rem;
+}
+
+.compare-result-view__section-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.compare-result-view__section-header h3 {
+  margin: 0.15rem 0 0;
+}
+
+.compare-result-view__section-eyebrow {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.compare-result-view__section-header--primary {
+  color: #1f4e86;
+}
+
+.compare-result-view__section-header--secondary {
+  color: #5f40b0;
+}
+
+.compare-result-view__count-pill,
+.compare-result-view__status-pill,
+.compare-result-view__score-pill {
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.compare-result-view__count-pill {
+  background: rgba(120, 129, 143, 0.12);
+  color: #4f5d6d;
+}
+
+.compare-result-view__measurement-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.2rem 0;
+}
+
+.compare-result-view__detail-line {
+  font-size: 0.78rem;
+}
+
+.compare-result-view__score-pill {
+  border: 0;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.compare-result-view__score-pill--info {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.compare-result-view__score-pill--success,
+.compare-result-view__status-pill--success {
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.compare-result-view__score-pill--warning {
+  background: rgba(184, 118, 38, 0.16);
+  color: #8f5314;
+}
+
+.compare-result-view__score-pill--error,
+.compare-result-view__status-pill--error {
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.compare-result-view__status-pill--calculated {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.compare-result-view__status-pill--neutral {
+  background: rgba(120, 129, 143, 0.12);
+  color: #4f5d6d;
+}
+
 .cursor-pointer {
   cursor: pointer;
 }
@@ -782,19 +679,77 @@ const openScoreBreakdown = (testItem: string, isnIndex: number) => {
   white-space: nowrap;
 }
 
-:deep(.v-data-table__td) {
-  font-size: 0.75rem !important;
+.result-surface-filter-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(12rem, 1fr));
+  gap: 0.9rem;
 }
 
-:deep(.v-chip) {
-  text-align: center;
+.result-surface-search {
+  display: grid;
+  gap: 0.45rem;
 }
 
-:deep(.v-chip__content) {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  font-weight: 600;
+.result-surface-search span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-muted);
+}
+
+.result-surface-search input,
+.result-surface-search select {
   width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  box-shadow: var(--app-shadow-soft);
+  padding: 0.85rem 0.95rem;
+}
+
+.result-surface-search input:focus,
+.result-surface-search select:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 4px var(--app-ring);
+}
+
+.result-surface-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  width: 100%;
+  align-items: flex-start;
+}
+
+.result-surface-dialog-title {
+  margin: 0;
+  font-family: var(--app-display);
+  font-size: 1.4rem;
+}
+
+.result-surface-dialog-description {
+  margin: 0.35rem 0 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+@media (max-width: 960px) {
+  .result-surface-filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .compare-result-view__section-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 720px) {
+  .result-surface-dialog-header {
+    flex-direction: column;
+  }
 }
 </style>

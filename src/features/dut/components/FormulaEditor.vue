@@ -1,166 +1,191 @@
 <template>
-    <v-card>
-        <v-card-title class="d-flex align-center justify-space-between">
-            <span>{{ formula.name }}</span>
-            <v-switch :model-value="formula.enabled" @update:model-value="emitEnabled" color="primary" hide-details
-                density="compact" />
-        </v-card-title>
+  <AppPanel
+    :title="formula.name"
+    tone="cool"
+    compact-header
+    class="formula-editor"
+    :class="{ 'formula-editor--disabled': !formula.enabled }"
+  >
+    <template #header-aside>
+      <label class="formula-editor__toggle">
+        <input :checked="formula.enabled" type="checkbox" @change="handleEnabledChange" />
+        <span class="formula-editor__toggle-track">
+          <span class="formula-editor__toggle-thumb"></span>
+        </span>
+        <span class="formula-editor__toggle-label">{{ formula.enabled ? 'Enabled' : 'Disabled' }}</span>
+      </label>
+    </template>
 
-        <v-card-text>
-            <!-- Formula Type Selector -->
-            <v-select :model-value="formula.formulaType" @update:model-value="handleFormulaTypeChange"
-                :items="formulaTypes" label="Formula Type" variant="outlined" density="compact" class="mb-4"
-                :disabled="!formula.enabled">
-                <template #item="{ props, item }">
-                    <v-list-item v-bind="props">
-                        <template #subtitle>
-                            <span class="text-caption">{{ item.raw.description }}</span>
-                        </template>
-                    </v-list-item>
-                </template>
-            </v-select>
+    <label class="formula-editor__field">
+      <span>Formula Type</span>
+      <select
+        :value="formula.formulaType"
+        class="formula-editor__select"
+        :disabled="!formula.enabled"
+        @change="handleFormulaTypeSelect"
+      >
+        <option v-for="option in formulaTypes" :key="option.value" :value="option.value">
+          {{ option.title }}
+        </option>
+      </select>
+    </label>
 
-            <!-- Parameters based on formula type -->
-            <div v-if="formula.enabled">
-                <!-- Linear Parameters -->
-                <div v-if="formula.formulaType === 'linear'" class="parameter-section">
-                    <div class="text-subtitle-2 mb-2">Linear Parameters</div>
-                    <v-row>
-                        <v-col cols="12">
-                            <div class="d-flex align-center gap-4">
-                                <v-slider :model-value="formula.parameters.tolerance"
-                                    @update:model-value="updateParameter('tolerance', $event)" label="Tolerance"
-                                    min="0.1" max="5.0" step="0.1" thumb-label class="flex-grow-1" />
-                                <v-text-field :model-value="formula.parameters.tolerance"
-                                    @update:model-value="updateParameter('tolerance', Number($event))" type="number"
-                                    variant="outlined" density="compact" style="width: 100px" hide-details />
-                            </div>
-                        </v-col>
-                    </v-row>
-                </div>
+    <p class="formula-editor__field-hint">{{ currentFormulaDescription }}</p>
 
-                <!-- Exponential Parameters -->
-                <div v-if="formula.formulaType === 'exponential'" class="parameter-section">
-                    <div class="text-subtitle-2 mb-2">Exponential Parameters</div>
-                    <v-row>
-                        <v-col cols="12" md="6">
-                            <v-text-field :model-value="formula.parameters.decayRate"
-                                @update:model-value="updateParameter('decayRate', Number($event))" label="Decay Rate"
-                                type="number" variant="outlined" density="compact" hint="Higher = slower decay"
-                                persistent-hint />
-                        </v-col>
-                        <v-col cols="12" md="6">
-                            <v-text-field :model-value="formula.parameters.baseline"
-                                @update:model-value="updateParameter('baseline', Number($event))" label="Baseline Score"
-                                type="number" variant="outlined" density="compact" hint="Score at USL/LSL boundary"
-                                persistent-hint />
-                        </v-col>
-                        <v-col cols="12" md="6">
-                            <v-text-field :model-value="formula.parameters.bonusThreshold"
-                                @update:model-value="updateParameter('bonusThreshold', Number($event))"
-                                label="Bonus Threshold" type="number" variant="outlined" density="compact"
-                                hint="Margin for bonus points" persistent-hint />
-                        </v-col>
-                        <v-col cols="12" md="6">
-                            <v-text-field :model-value="formula.parameters.bonusRate"
-                                @update:model-value="updateParameter('bonusRate', Number($event))" label="Bonus Rate"
-                                type="number" variant="outlined" density="compact" hint="Bonus multiplier"
-                                persistent-hint />
-                        </v-col>
-                    </v-row>
-                </div>
+    <div v-if="formula.enabled" class="formula-editor__sections">
+      <section v-if="formula.formulaType === 'linear'" class="formula-editor__section">
+        <header class="formula-editor__section-header">
+          <h3>Linear Parameters</h3>
+          <p>Adjust the tolerance curve using both a slider and an exact number input.</p>
+        </header>
+        <div class="formula-editor__range-control">
+          <label class="formula-editor__field formula-editor__field--range">
+            <span>Tolerance</span>
+            <input
+              :value="formula.parameters.tolerance"
+              type="range"
+              min="0.1"
+              max="5"
+              step="0.1"
+              @input="updateParameter('tolerance', toNumber(($event.target as HTMLInputElement).value))"
+            />
+          </label>
+          <label class="formula-editor__field formula-editor__field--number formula-editor__field--inline">
+            <span>Value</span>
+            <input
+              :value="formula.parameters.tolerance"
+              type="number"
+              min="0.1"
+              max="5"
+              step="0.1"
+              @input="updateParameter('tolerance', toNumber(($event.target as HTMLInputElement).value))"
+            />
+          </label>
+        </div>
+      </section>
 
-                <!-- Logarithmic Parameters -->
-                <div v-if="formula.formulaType === 'logarithmic'" class="parameter-section">
-                    <div class="text-subtitle-2 mb-2">Logarithmic Parameters</div>
-                    <v-row>
-                        <v-col cols="12" md="6">
-                            <v-text-field :model-value="formula.parameters.scaleFactor"
-                                @update:model-value="updateParameter('scaleFactor', Number($event))"
-                                label="Scale Factor" type="number" variant="outlined" density="compact"
-                                hint="Multiplier for log scale" persistent-hint />
-                        </v-col>
-                    </v-row>
-                </div>
+      <section v-if="formula.formulaType === 'exponential'" class="formula-editor__section">
+        <header class="formula-editor__section-header">
+          <h3>Exponential Parameters</h3>
+          <p>Shape the decay, baseline, and bonus behavior for exponential scoring.</p>
+        </header>
+        <div class="formula-editor__field-grid">
+          <label class="formula-editor__field">
+            <span>Decay Rate</span>
+            <input :value="formula.parameters.decayRate" type="number" @input="updateParameter('decayRate', toNumber(($event.target as HTMLInputElement).value))" />
+            <small>Higher values slow the score decay.</small>
+          </label>
+          <label class="formula-editor__field">
+            <span>Baseline Score</span>
+            <input :value="formula.parameters.baseline" type="number" @input="updateParameter('baseline', toNumber(($event.target as HTMLInputElement).value))" />
+            <small>Score at the USL/LSL boundary.</small>
+          </label>
+          <label class="formula-editor__field">
+            <span>Bonus Threshold</span>
+            <input :value="formula.parameters.bonusThreshold" type="number" @input="updateParameter('bonusThreshold', toNumber(($event.target as HTMLInputElement).value))" />
+            <small>Margin before bonus points apply.</small>
+          </label>
+          <label class="formula-editor__field">
+            <span>Bonus Rate</span>
+            <input :value="formula.parameters.bonusRate" type="number" @input="updateParameter('bonusRate', toNumber(($event.target as HTMLInputElement).value))" />
+            <small>Bonus multiplier used once the threshold is met.</small>
+          </label>
+        </div>
+      </section>
 
-                <!-- Step Parameters -->
-                <div v-if="formula.formulaType === 'step'" class="parameter-section">
-                    <div class="text-subtitle-2 mb-2">Step Parameters</div>
-                    <div class="text-caption text-medium-emphasis mb-3">
-                        Define threshold breakpoints and corresponding scores
-                    </div>
-                    <v-row v-for="(threshold, index) in formula.parameters.thresholds" :key="index">
-                        <v-col cols="5">
-                            <v-text-field :model-value="threshold"
-                                @update:model-value="updateThreshold(index, Number($event))"
-                                :label="`Threshold ${index + 1}`" type="number" variant="outlined" density="compact"
-                                hide-details />
-                        </v-col>
-                        <v-col cols="5">
-                            <v-text-field :model-value="formula.parameters.scores?.[index]"
-                                @update:model-value="updateScore(index, Number($event))" :label="`Score ${index + 1}`"
-                                type="number" variant="outlined" density="compact" hide-details />
-                        </v-col>
-                        <v-col cols="2" class="d-flex align-center">
-                            <v-btn icon="mdi-delete" size="small" variant="text" color="error"
-                                @click="removeStep(index)"
-                                :disabled="(formula.parameters.thresholds?.length ?? 0) <= 1" />
-                        </v-col>
-                    </v-row>
-                    <v-row>
-                        <v-col cols="12">
-                            <v-btn prepend-icon="mdi-plus" variant="outlined" size="small" @click="addStep" block>
-                                Add Step
-                            </v-btn>
-                        </v-col>
-                    </v-row>
-                </div>
+      <section v-if="formula.formulaType === 'logarithmic'" class="formula-editor__section">
+        <header class="formula-editor__section-header">
+          <h3>Logarithmic Parameters</h3>
+          <p>Control the overall scaling applied to the logarithmic curve.</p>
+        </header>
+        <div class="formula-editor__field-grid formula-editor__field-grid--single">
+          <label class="formula-editor__field">
+            <span>Scale Factor</span>
+            <input :value="formula.parameters.scaleFactor" type="number" @input="updateParameter('scaleFactor', toNumber(($event.target as HTMLInputElement).value))" />
+            <small>Multiplier for the log scale.</small>
+          </label>
+        </div>
+      </section>
 
-                <!-- Custom Expression -->
-                <div v-if="formula.formulaType === 'custom'" class="parameter-section">
-                    <div class="text-subtitle-2 mb-2">Custom Expression</div>
-                    <v-textarea :model-value="formula.customExpression"
-                        @update:model-value="$emit('update:customExpression', $event)" label="JavaScript Expression"
-                        variant="outlined" rows="4"
-                        hint="Available: actual, usl, lsl, target, Math, min, max, abs, exp, log, pow, sqrt, clamp01"
-                        persistent-hint class="mb-2" />
-                    <v-alert type="info" variant="tonal" density="compact" class="mb-2">
-                        <div class="text-caption">
-                            <strong>Example:</strong><br>
-                            <code>10 * clamp01(1 - abs(actual - target) / ((usl - lsl) / 2))</code>
-                        </div>
-                    </v-alert>
-                    <v-btn prepend-icon="mdi-atom-variant" variant="outlined" size="small" @click="testExpression"
-                        block>
-                        Test Expression
-                    </v-btn>
-                    <div v-if="testResult !== null" class="mt-2">
-                        <v-alert :type="testResult.success ? 'success' : 'error'" variant="tonal" density="compact">
-                            {{ testResult.message }}
-                        </v-alert>
-                    </div>
-                </div>
+      <section v-if="formula.formulaType === 'step'" class="formula-editor__section">
+        <header class="formula-editor__section-header">
+          <h3>Step Parameters</h3>
+          <p>Define threshold breakpoints and the score awarded at each step.</p>
+        </header>
+        <div class="formula-editor__step-list">
+          <div v-for="(threshold, index) in stepThresholds" :key="index" class="formula-editor__step-row">
+            <label class="formula-editor__field">
+              <span>{{ `Threshold ${index + 1}` }}</span>
+              <input :value="threshold" type="number" @input="updateThreshold(index, toNumber(($event.target as HTMLInputElement).value))" />
+            </label>
+            <label class="formula-editor__field">
+              <span>{{ `Score ${index + 1}` }}</span>
+              <input :value="stepScores[index] ?? 0" type="number" @input="updateScore(index, toNumber(($event.target as HTMLInputElement).value))" />
+            </label>
+            <button
+              type="button"
+              class="formula-editor__icon-button formula-editor__icon-button--danger"
+              :disabled="stepThresholds.length <= 1"
+              @click="removeStep(index)"
+            >
+              Remove
+            </button>
+          </div>
+        </div>
+        <button type="button" class="formula-editor__button formula-editor__button--secondary" @click="addStep">
+          Add Step
+        </button>
+      </section>
 
-                <!-- Min/Max Score (common to all types) -->
-                <v-row class="mt-2">
-                    <v-col cols="12" md="6">
-                        <v-text-field :model-value="formula.parameters.minScore"
-                            @update:model-value="updateParameter('minScore', Number($event))" label="Min Score"
-                            type="number" variant="outlined" density="compact" hide-details />
-                    </v-col>
-                    <v-col cols="12" md="6">
-                        <v-text-field :model-value="formula.parameters.maxScore"
-                            @update:model-value="updateParameter('maxScore', Number($event))" label="Max Score"
-                            type="number" variant="outlined" density="compact" hide-details />
-                    </v-col>
-                </v-row>
-            </div>
-        </v-card-text>
-    </v-card>
+      <section v-if="formula.formulaType === 'custom'" class="formula-editor__section">
+        <header class="formula-editor__section-header">
+          <h3>Custom Expression</h3>
+          <p>Write a JavaScript expression using the measurement variables available to the scorer.</p>
+        </header>
+        <label class="formula-editor__field">
+          <span>JavaScript Expression</span>
+          <textarea
+            :value="formula.customExpression"
+            rows="4"
+            @input="updateCustomExpression"
+          ></textarea>
+          <small>Available: actual, usl, lsl, target, Math, min, max, abs, exp, log, pow, sqrt, clamp01</small>
+        </label>
+        <div class="formula-editor__notice formula-editor__notice--info">
+          <strong>Example:</strong>
+          <code>10 * clamp01(1 - abs(actual - target) / ((usl - lsl) / 2))</code>
+        </div>
+        <button type="button" class="formula-editor__button formula-editor__button--secondary" @click="testExpression">
+          Test Expression
+        </button>
+        <div v-if="testResult !== null" class="formula-editor__notice" :class="testResult.success ? 'formula-editor__notice--success' : 'formula-editor__notice--danger'">
+          {{ testResult.message }}
+        </div>
+      </section>
+
+      <section class="formula-editor__section">
+        <header class="formula-editor__section-header">
+          <h3>Score Bounds</h3>
+          <p>Clamp the calculated formula output into the score range used by the flow.</p>
+        </header>
+        <div class="formula-editor__field-grid">
+          <label class="formula-editor__field">
+            <span>Min Score</span>
+            <input :value="formula.parameters.minScore" type="number" @input="updateParameter('minScore', toNumber(($event.target as HTMLInputElement).value))" />
+          </label>
+          <label class="formula-editor__field">
+            <span>Max Score</span>
+            <input :value="formula.parameters.maxScore" type="number" @input="updateParameter('maxScore', toNumber(($event.target as HTMLInputElement).value))" />
+          </label>
+        </div>
+      </section>
+    </div>
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import { AppPanel } from '@/shared/ui'
 import type {
   CustomFormulaV2,
   FormulaParameters,
@@ -177,13 +202,6 @@ interface Emits {
   (e: 'update:formulaType', value: FormulaType): void
   (e: 'update:parameters', value: FormulaParameters): void
   (e: 'update:customExpression', value: string): void
-}
-
-// Workaround for Vue type inference with boolean emit
-const emitEnabled = (value: boolean | null) => {
-  if (value !== null) {
-    emit('update:enabled', value)
-  }
 }
 
 const props = defineProps<Props>()
@@ -207,10 +225,34 @@ const formulaTypes = [
   { value: 'custom', title: 'Custom', description: getFormulaTypeDescription('custom') },
 ]
 
+const currentFormulaDescription = computed(() => {
+  return formulaTypes.find((option) => option.value === props.formula.formulaType)?.description ?? ''
+})
+
+const stepThresholds = computed(() => props.formula.parameters.thresholds ?? [])
+const stepScores = computed(() => props.formula.parameters.scores ?? [])
+
+const handleEnabledChange = (event: Event) => {
+  emit('update:enabled', (event.target as HTMLInputElement).checked)
+}
+
+const handleFormulaTypeSelect = (event: Event) => {
+  handleFormulaTypeChange((event.target as HTMLSelectElement).value as FormulaType)
+}
+
+const updateCustomExpression = (event: Event) => {
+  emit('update:customExpression', (event.target as HTMLTextAreaElement).value)
+}
+
 const handleFormulaTypeChange = (newType: FormulaType) => {
   emit('update:formulaType', newType)
   // Reset parameters to defaults for new type
   emit('update:parameters', getDefaultParameters(newType))
+}
+
+const toNumber = (value: string): number => {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : 0
 }
 
 const updateParameter = (key: keyof FormulaParameters, value: number | number[] | undefined) => {
@@ -304,18 +346,229 @@ const testExpression = () => {
 </script>
 
 <style scoped>
-.parameter-section {
-    padding: 12px;
-    border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-    border-radius: 4px;
-    margin-bottom: 12px;
+.formula-editor {
+  position: relative;
+}
+
+.formula-editor--disabled {
+  opacity: 0.86;
+}
+
+.formula-editor__sections {
+  display: grid;
+  gap: 1rem;
+}
+
+.formula-editor__section {
+  display: grid;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid rgba(20, 88, 71, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.formula-editor__section-header {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.formula-editor__section-header h3 {
+  margin: 0;
+  color: var(--app-ink);
+  font-size: 0.98rem;
+}
+
+.formula-editor__section-header p,
+.formula-editor__field-hint,
+.formula-editor__field small {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 0.82rem;
+  line-height: 1.5;
+}
+
+.formula-editor__field,
+.formula-editor__field--inline {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.formula-editor__field span,
+.formula-editor__toggle-label {
+  color: var(--app-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.formula-editor__field input,
+.formula-editor__field select,
+.formula-editor__field textarea {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  padding: 0.75rem 0.9rem;
+  font: inherit;
+}
+
+.formula-editor__field textarea {
+  resize: vertical;
+  min-height: 7rem;
+}
+
+.formula-editor__field input[type='range'] {
+  padding: 0;
+  accent-color: var(--app-accent);
+}
+
+.formula-editor__range-control,
+.formula-editor__field-grid,
+.formula-editor__step-row {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.formula-editor__range-control,
+.formula-editor__step-row {
+  grid-template-columns: minmax(0, 1fr) 8rem;
+  align-items: end;
+}
+
+.formula-editor__step-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+}
+
+.formula-editor__field-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.formula-editor__field-grid--single {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.formula-editor__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  cursor: pointer;
+}
+
+.formula-editor__toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.formula-editor__toggle-track {
+  position: relative;
+  width: 2.9rem;
+  height: 1.7rem;
+  border-radius: 999px;
+  background: rgba(102, 112, 133, 0.28);
+  transition: background-color 0.2s ease;
+}
+
+.formula-editor__toggle-thumb {
+  position: absolute;
+  top: 0.18rem;
+  left: 0.2rem;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 50%;
+  background: white;
+  box-shadow: 0 0.15rem 0.5rem rgba(0, 0, 0, 0.15);
+  transition: transform 0.2s ease;
+}
+
+.formula-editor__toggle input:checked + .formula-editor__toggle-track {
+  background: rgba(20, 88, 71, 0.7);
+}
+
+.formula-editor__toggle input:checked + .formula-editor__toggle-track .formula-editor__toggle-thumb {
+  transform: translateX(1.18rem);
+}
+
+.formula-editor__button,
+.formula-editor__icon-button {
+  min-height: 2.75rem;
+  border-radius: 0.95rem;
+  border: 1px solid var(--app-border);
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+}
+
+.formula-editor__button:hover,
+.formula-editor__icon-button:hover {
+  transform: translateY(-1px);
+}
+
+.formula-editor__button {
+  padding: 0.6rem 1rem;
+}
+
+.formula-editor__icon-button {
+  padding: 0.6rem 0.85rem;
+  min-width: 5.5rem;
+}
+
+.formula-editor__icon-button--danger {
+  border-color: rgba(164, 52, 58, 0.2);
+  color: #8e3037;
+}
+
+.formula-editor__icon-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.formula-editor__notice {
+  display: grid;
+  gap: 0.4rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid transparent;
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.formula-editor__notice--info {
+  border-color: rgba(40, 96, 163, 0.16);
+  background: rgba(40, 96, 163, 0.08);
+  color: #1f4f89;
+}
+
+.formula-editor__notice--success {
+  border-color: rgba(20, 88, 71, 0.16);
+  background: rgba(20, 88, 71, 0.08);
+  color: #145847;
+}
+
+.formula-editor__notice--danger {
+  border-color: rgba(164, 52, 58, 0.16);
+  background: rgba(164, 52, 58, 0.08);
+  color: #8e3037;
 }
 
 code {
-    font-family: 'Courier New', monospace;
-    font-size: 0.85em;
-    background-color: rgba(0, 0, 0, 0.05);
-    padding: 2px 4px;
-    border-radius: 2px;
+  font-family: 'Courier New', monospace;
+  font-size: 0.85em;
+  background-color: rgba(255, 255, 255, 0.72);
+  padding: 0.15rem 0.35rem;
+  border-radius: 0.35rem;
+}
+
+@media (max-width: 760px) {
+  .formula-editor__range-control,
+  .formula-editor__field-grid,
+  .formula-editor__step-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 </style>

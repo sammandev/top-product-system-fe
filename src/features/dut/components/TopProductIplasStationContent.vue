@@ -1,110 +1,148 @@
 <template>
-  <div>
-    <!-- Data Selection Card -->
-    <v-card elevation="2" class="mb-4">
-      <v-card-title class="d-flex align-center justify-space-between bg-primary">
-        <div class="d-flex align-center">
-          <v-icon class="mr-2">mdi-database-search</v-icon>
-          Station Search - Custom Configuration
-        </div>
-        <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-cog" @click="emit('show-settings')">
+  <div class="top-product-iplas-station-shell">
+    <AppPanel
+      eyebrow="Selection Controls"
+      title="Station Search"
+      description="Choose the site, project, time range, and configured stations before sending the Top Products lookup into the existing scoring and ranking pipeline."
+      tone="cool"
+      split-header
+    >
+      <template #header-aside>
+        <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--ghost" @click="emit('show-settings')">
           iPLAS Settings
-        </v-btn>
-      </v-card-title>
-      <v-card-text class="pt-4">
-        <!-- Site Selection -->
-        <v-row dense>
-          <v-col cols="12" md="6">
-            <v-autocomplete v-model="selectedSite" :items="uniqueSites" label="Site" variant="outlined"
-              density="comfortable" prepend-inner-icon="mdi-map-marker" clearable hide-details
-              :disabled="loading || loadingStations" @update:model-value="handleSiteChange" />
-          </v-col>
-          <v-col cols="12" md="6">
-            <v-autocomplete v-model="selectedProject" :items="projectsForSelectedSite" label="Project"
-              variant="outlined" density="comfortable" prepend-inner-icon="mdi-folder" hide-details
-              :disabled="!selectedSite || loading || loadingStations" clearable
-              @update:model-value="handleProjectChange" />
-          </v-col>
-        </v-row>
+        </button>
+      </template>
 
-        <!-- UPDATED: Date Range Preset and Date Range fields in same row -->
-        <v-row dense class="mt-4">
-          <v-col cols="12" md="4">
-            <v-select v-model="dateRangePreset" :items="dateRangePresets" item-value="value" label="Date Range Preset"
-              variant="outlined" density="comfortable" prepend-inner-icon="mdi-calendar-clock"
-              @update:model-value="applyDateRangePreset" />
-          </v-col>
-          <v-col cols="12" md="4">
-            <v-text-field v-model="startTime" label="Start Time" type="datetime-local" variant="outlined"
-              density="comfortable" prepend-inner-icon="mdi-calendar-start" />
-          </v-col>
-          <v-col cols="12" md="4">
-            <v-text-field v-model="endTime" label="End Time" type="datetime-local" variant="outlined"
-              density="comfortable" prepend-inner-icon="mdi-calendar-end" />
-          </v-col>
-        </v-row>
-
-        <!-- Station Configuration Button -->
-        <v-row dense>
-          <v-col cols="12">
-            <v-btn color="secondary" block size="large" prepend-icon="mdi-format-list-checkbox"
-              :disabled="!selectedSite || !selectedProject || loadingStations" :loading="loadingStations"
-              @click="openStationSelectionDialog">
-              Configure Stations
-              <v-chip v-if="configuredStationsCount > 0" size="small" color="success" variant="flat" class="ml-2">
-                {{ configuredStationsCount }} Selected
-              </v-chip>
-            </v-btn>
-          </v-col>
-        </v-row>
-
-        <!-- Configured Stations Summary -->
-        <v-card v-if="configuredStationsCount > 0" variant="outlined" class="mt-4">
-          <v-card-title class="text-subtitle-1 bg-grey-lighten-5">
-            Configured Stations Summary
-          </v-card-title>
-          <v-card-text class="pa-2">
-            <v-chip v-for="(config, displayName) in stationConfigs" :key="displayName" class="ma-1" color="primary"
-              variant="tonal" closable @click="editStationConfig(displayName)"
-              @click:close="removeStationConfig(displayName)">
-              {{ displayName }}
-              <v-badge :content="config.deviceIds.length || config.totalDeviceCount || 'All'" color="success" inline
-                class="ml-1" />
-              <v-chip size="x-small" class="ml-1"
-                :color="(config.minimumItemScoreEnabled ?? true) ? 'warning' : 'grey'" variant="outlined">
-                {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` : 'Min Off' }}
-              </v-chip>
-            </v-chip>
-          </v-card-text>
-        </v-card>
-
-        <!-- Action Buttons -->
-        <v-divider class="my-4" />
-        <div class="d-flex justify-end gap-2">
-          <v-btn color="error" variant="outlined" prepend-icon="mdi-refresh" :disabled="loading"
-            @click="handleClearAll">
-            Clear All
-          </v-btn>
-          <v-btn color="primary" variant="flat" prepend-icon="mdi-magnify" :loading="loadingTestItems"
-            :disabled="!canFetchData" @click="fetchTestItems">
-            Search
-          </v-btn>
+      <div class="top-product-iplas-station-stack">
+        <div class="top-product-iplas-station-summary-row">
+          <span class="top-product-iplas-station-pill top-product-iplas-station-pill--primary">
+            {{ configuredStationsCount }} configured station{{ configuredStationsCount === 1 ? '' : 's' }}
+          </span>
+          <span class="top-product-iplas-station-pill top-product-iplas-station-pill--info">
+            {{ selectedSite || 'No site selected' }}
+          </span>
+          <span class="top-product-iplas-station-pill top-product-iplas-station-pill--muted">
+            {{ selectedProject || 'No project selected' }}
+          </span>
         </div>
-      </v-card-text>
-    </v-card>
 
-    <!-- Error Alert -->
-    <v-alert v-if="error" type="error" class="mb-4" closable @click:close="error = null">
+        <div class="top-product-iplas-station-grid top-product-iplas-station-grid--two">
+          <label class="top-product-iplas-station-field">
+            <span>Site</span>
+            <select v-model="selectedSite" :disabled="loading || loadingStations" @change="handleSiteChange">
+              <option :value="null">Select a site</option>
+              <option v-for="site in uniqueSites" :key="site" :value="site">{{ site }}</option>
+            </select>
+          </label>
+
+          <label class="top-product-iplas-station-field">
+            <span>Project</span>
+            <select v-model="selectedProject" :disabled="!selectedSite || loading || loadingStations" @change="handleProjectChange">
+              <option :value="null">Select a project</option>
+              <option v-for="project in projectsForSelectedSite" :key="project" :value="project">{{ project }}</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="top-product-iplas-station-grid top-product-iplas-station-grid--three">
+          <label class="top-product-iplas-station-field">
+            <span>Date Range Preset</span>
+            <select v-model="dateRangePreset" @change="applyDateRangePreset()">
+              <option v-for="preset in dateRangePresets" :key="preset.value" :value="preset.value">{{ preset.title }}</option>
+            </select>
+          </label>
+
+          <label class="top-product-iplas-station-field">
+            <span>Start Time</span>
+            <input v-model="startTime" type="datetime-local">
+          </label>
+
+          <label class="top-product-iplas-station-field">
+            <span>End Time</span>
+            <input v-model="endTime" type="datetime-local">
+          </label>
+        </div>
+
+        <div class="top-product-iplas-station-action-card">
+          <div>
+            <strong>Configure Stations</strong>
+            <p>Use the migrated station dialogs to define device scope, selection rules, and scoring behavior per station.</p>
+          </div>
+          <button
+            type="button"
+            class="top-product-iplas-station-button top-product-iplas-station-button--secondary"
+            :disabled="!selectedSite || !selectedProject || loadingStations"
+            @click="openStationSelectionDialog"
+          >
+            {{ loadingStations ? 'Loading...' : 'Configure Stations' }}
+            <strong v-if="configuredStationsCount > 0">{{ configuredStationsCount }}</strong>
+          </button>
+        </div>
+
+        <section v-if="configuredStationsCount > 0" class="top-product-iplas-station-summary-panel">
+          <div class="top-product-iplas-station-summary-panel__header">
+            <div>
+              <p class="top-product-iplas-station-summary-panel__eyebrow">Configured Stations</p>
+              <h3>Selection Summary</h3>
+            </div>
+          </div>
+
+          <div class="top-product-iplas-station-token-grid">
+            <button
+              v-for="(config, displayName) in stationConfigs"
+              :key="displayName"
+              type="button"
+              class="top-product-iplas-station-token-card"
+              @click="editStationConfig(displayName)"
+            >
+              <div>
+                <strong>{{ displayName }}</strong>
+                <p>{{ config.deviceIds.length || config.totalDeviceCount || 'All' }} device(s)</p>
+              </div>
+              <div class="top-product-iplas-station-token-card__meta">
+                <span class="top-product-iplas-station-pill top-product-iplas-station-pill--info">
+                  {{ config.deviceIds.length || config.totalDeviceCount || 'All' }} Device(s)
+                </span>
+                <span class="top-product-iplas-station-pill" :class="(config.minimumItemScoreEnabled ?? true) ? 'top-product-iplas-station-pill--warning' : 'top-product-iplas-station-pill--muted'">
+                  {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` : 'Min Off' }}
+                </span>
+                <span
+                  role="button"
+                  tabindex="0"
+                  class="top-product-iplas-station-remove"
+                  @click.stop="removeStationConfig(displayName)"
+                  @keydown.enter.stop.prevent="removeStationConfig(displayName)"
+                  @keydown.space.stop.prevent="removeStationConfig(displayName)"
+                >
+                  Remove
+                </span>
+              </div>
+            </button>
+          </div>
+        </section>
+
+        <div class="top-product-iplas-station-footer-actions">
+          <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--ghost" :disabled="loading" @click="handleClearAll">
+            Clear All
+          </button>
+          <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--primary" :disabled="!canFetchData" @click="fetchTestItems">
+            {{ loadingTestItems ? 'Searching...' : 'Search' }}
+          </button>
+        </div>
+      </div>
+    </AppPanel>
+
+    <div v-if="error" class="top-product-iplas-station-notice top-product-iplas-station-notice--error">
       {{ error }}
-    </v-alert>
+    </div>
 
-    <!-- Loading Indicator -->
-    <v-card v-if="loadingTestItems" class="mb-4">
-      <v-card-text class="text-center py-8">
-        <v-progress-circular indeterminate color="primary" size="48" />
-        <p class="text-medium-emphasis mt-4">Fetching test data from iPLAS...</p>
-      </v-card-text>
-    </v-card>
+    <div v-if="loadingTestItems" class="top-product-iplas-station-loading-card">
+      <div class="top-product-iplas-station-spinner"></div>
+      <div>
+        <strong>Fetching test data from iPLAS...</strong>
+        <p>The existing ranking pipeline will refresh as soon as the current station set finishes loading.</p>
+      </div>
+    </div>
 
     <!-- Results Section with Ranking Table -->
     <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
@@ -153,6 +191,7 @@ import {
   type TopProductMeasurementCreate,
 } from '@/features/top-products/api/topProducts.api'
 import { useNotification } from '@/shared/composables/useNotification'
+import { AppPanel } from '@/shared/ui'
 import { getErrorMessage } from '@/shared/utils'
 import { getApiErrorDetail } from '@/shared/utils/error'
 import { isStatusPass } from '@/shared/utils/helpers'
@@ -1309,11 +1348,239 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.gap-2 {
-  gap: 0.5rem;
+.top-product-iplas-station-shell,
+.top-product-iplas-station-stack,
+.top-product-iplas-station-field,
+.top-product-iplas-station-action-card,
+.top-product-iplas-station-summary-panel,
+.top-product-iplas-station-summary-panel__header,
+.top-product-iplas-station-footer-actions,
+.top-product-iplas-station-token-card {
+  display: grid;
+  gap: 0.9rem;
 }
 
-.gap-3 {
+.top-product-iplas-station-shell {
+  gap: 1rem;
+}
+
+.top-product-iplas-station-summary-row,
+.top-product-iplas-station-token-card__meta {
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
+  align-items: center;
+}
+
+.top-product-iplas-station-grid {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.top-product-iplas-station-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.top-product-iplas-station-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.top-product-iplas-station-field span,
+.top-product-iplas-station-action-card strong,
+.top-product-iplas-station-summary-panel h3,
+.top-product-iplas-station-token-card strong,
+.top-product-iplas-station-loading-card strong {
+  color: var(--app-ink);
+}
+
+.top-product-iplas-station-field span,
+.top-product-iplas-station-summary-panel__eyebrow {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.top-product-iplas-station-summary-panel__eyebrow {
+  margin: 0;
+  color: var(--app-accent);
+}
+
+.top-product-iplas-station-action-card p,
+.top-product-iplas-station-token-card p,
+.top-product-iplas-station-loading-card p,
+.top-product-iplas-station-notice {
+  margin: 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.top-product-iplas-station-field select,
+.top-product-iplas-station-field input {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  padding: 0.8rem 0.9rem;
+  font: inherit;
+}
+
+.top-product-iplas-station-button,
+.top-product-iplas-station-token-card,
+.top-product-iplas-station-remove {
+  min-height: 2.75rem;
+  border-radius: 0.95rem;
+  border: 1px solid var(--app-border);
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.top-product-iplas-station-button {
+  padding: 0.7rem 1rem;
+}
+
+.top-product-iplas-station-button:hover,
+.top-product-iplas-station-token-card:hover,
+.top-product-iplas-station-remove:hover {
+  transform: translateY(-1px);
+}
+
+.top-product-iplas-station-button--primary {
+  background: linear-gradient(135deg, #145847, #1b6c58);
+  border-color: #145847;
+  color: white;
+}
+
+.top-product-iplas-station-button--secondary {
+  background: linear-gradient(135deg, #165d92, #1d7fb7);
+  border-color: #165d92;
+  color: white;
+}
+
+.top-product-iplas-station-button--ghost {
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.top-product-iplas-station-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.1rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 700;
+}
+
+.top-product-iplas-station-pill--primary {
+  background: rgba(20, 88, 71, 0.1);
+  border-color: rgba(20, 88, 71, 0.16);
+  color: #145847;
+}
+
+.top-product-iplas-station-pill--info {
+  background: rgba(40, 96, 163, 0.08);
+  border-color: rgba(40, 96, 163, 0.16);
+  color: #1f4f89;
+}
+
+.top-product-iplas-station-pill--warning {
+  background: rgba(169, 102, 34, 0.1);
+  border-color: rgba(169, 102, 34, 0.18);
+  color: #88551c;
+}
+
+.top-product-iplas-station-pill--muted {
+  background: rgba(95, 103, 122, 0.1);
+  border-color: rgba(95, 103, 122, 0.16);
+  color: #4c566a;
+}
+
+.top-product-iplas-station-action-card,
+.top-product-iplas-station-summary-panel,
+.top-product-iplas-station-loading-card,
+.top-product-iplas-station-notice {
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(20, 88, 71, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.top-product-iplas-station-action-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.top-product-iplas-station-summary-panel h3 {
+  margin: 0;
+}
+
+.top-product-iplas-station-token-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.top-product-iplas-station-token-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  width: 100%;
+  padding: 0.95rem 1rem;
+  text-align: left;
+}
+
+.top-product-iplas-station-remove {
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+}
+
+.top-product-iplas-station-footer-actions {
+  grid-auto-flow: column;
+  justify-content: end;
+}
+
+.top-product-iplas-station-notice--error {
+  border-color: rgba(164, 52, 58, 0.16);
+  background: rgba(164, 52, 58, 0.08);
+  color: #8e3037;
+}
+
+.top-product-iplas-station-loading-card {
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+}
+
+.top-product-iplas-station-spinner {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 3px solid rgba(20, 88, 71, 0.16);
+  border-top-color: #145847;
+  animation: top-product-iplas-station-spin 0.9s linear infinite;
+}
+
+@keyframes top-product-iplas-station-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 840px) {
+  .top-product-iplas-station-grid--two,
+  .top-product-iplas-station-grid--three,
+  .top-product-iplas-station-action-card,
+  .top-product-iplas-station-token-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .top-product-iplas-station-footer-actions {
+    grid-auto-flow: row;
+    justify-content: stretch;
+  }
 }
 </style>

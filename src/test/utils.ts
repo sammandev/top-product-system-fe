@@ -1,10 +1,10 @@
 import type { ComponentMountingOptions } from '@vue/test-utils'
 import { mount, type VueWrapper } from '@vue/test-utils'
+import { VueQueryPlugin } from '@tanstack/vue-query'
 import { createPinia, setActivePinia } from 'pinia'
+import PrimeVue from 'primevue/config'
 import { createMemoryHistory, createRouter, type RouteRecordRaw } from 'vue-router'
-import { createVuetify } from 'vuetify'
-import * as components from 'vuetify/components'
-import * as directives from 'vuetify/directives'
+import { createAppQueryClient, primeVueOptions } from '@/app/providers'
 
 /**
  * Test Utilities
@@ -45,20 +45,21 @@ export function createTestRouter(routes: RouteRecordRaw[] = []) {
 }
 
 /**
- * Create Vuetify instance for testing
+ * Create PrimeVue plugin tuple for scaffold tests
  */
-export function createTestVuetify() {
-  return createVuetify({
-    components,
-    directives,
-    theme: {
-      defaultTheme: 'light',
-    },
-  })
+export function createTestPrimeVue() {
+  return [PrimeVue, primeVueOptions] as [typeof PrimeVue, typeof primeVueOptions]
 }
 
 /**
- * Mount a component with common test setup (Pinia, Router, Vuetify)
+ * Create TanStack Query client for scaffold tests
+ */
+export function createTestQueryClient() {
+  return createAppQueryClient()
+}
+
+/**
+ * Mount a component with the common scaffold plugin stack
  *
  * @param component - The component to mount
  * @param options - Additional mounting options
@@ -68,16 +69,33 @@ export function mountWithPlugins(
   component: Parameters<typeof mount>[0],
   options: ComponentMountingOptions<unknown> = {},
 ): VueWrapper<unknown> {
+  return mountWithScaffoldPlugins(component, options)
+}
+
+/**
+ * Mount a component with the new scaffold plugins (Pinia, Router, Query, PrimeVue)
+ */
+export function mountWithScaffoldPlugins(
+  component: Parameters<typeof mount>[0],
+  options: ComponentMountingOptions<unknown> = {},
+): VueWrapper<unknown> {
   const pinia = createTestPinia()
   const router = createTestRouter()
-  const vuetify = createTestVuetify()
+  const queryClient = createTestQueryClient()
+  const existingPlugins = options.global?.plugins ?? []
 
   return mount(component, {
-    global: {
-      plugins: [pinia, router, vuetify],
-      ...options.global,
-    },
     ...options,
+    global: {
+      ...options.global,
+      plugins: [
+        pinia,
+        router,
+        createTestPrimeVue(),
+        [VueQueryPlugin, { queryClient }],
+        ...existingPlugins,
+      ],
+    },
   })
 }
 

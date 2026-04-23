@@ -17,6 +17,7 @@ export const commonRoutes: RouteRecordRaw[] = [
     component: () => import('@/shared/components/error/NotFoundView.vue'),
     meta: {
       requiresAuth: false,
+      bootstrapShell: true,
       title: 'Page Not Found',
     },
   },

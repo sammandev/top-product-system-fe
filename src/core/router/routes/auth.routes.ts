@@ -14,6 +14,7 @@ export const authRoutes: RouteRecordRaw[] = [
     meta: {
       requiresAuth: false,
       title: 'Login',
+      bootstrapShell: true,
       layout: 'auth',
     },
   },

@@ -1,195 +1,139 @@
 <template>
-    <div>
-        <!-- UPDATED: Support both server-side and client-side pagination modes -->
-        <!-- Server-side Data Table with Selection Support -->
-        <v-data-table-server v-if="serverSide" v-model:items-per-page="itemsPerPage" v-model:page="page"
-            v-model:sort-by="sortBy" :model-value="selectedKeys" :headers="computedHeaders" :items="itemsWithKeys"
-            :items-length="totalItems" :loading="loading" item-value="recordKey" :show-select="selectable" hover
-            class="elevation-1 clickable-rows" @update:options="onOptionsUpdate" @update:model-value="onSelectionChange"
-            @click:row="handleRowClick">
-            <!-- ISN Column with Copy Button on Left -->
-            <template #item.ISN="{ item }">
-                <div class="d-flex align-center gap-1">
-                    <v-btn icon size="x-small" variant="text" color="primary" @click.stop="copyToClipboard(item.ISN)">
-                        <v-icon size="small">mdi-content-copy</v-icon>
-                        <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
-                    </v-btn>
-                    <span class="font-weight-medium font-mono">{{ item.ISN || '-' }}</span>
-                </div>
-            </template>
+  <div class="iplas-record-table-shell">
+    <AppDataGrid
+      class="iplas-record-table-grid clickable-rows"
+      :columns="computedHeaders"
+      :rows="itemsWithKeys"
+      data-key="recordKey"
+      :loading="loading"
+      paginator
+      :rows-per-page="itemsPerPage"
+      :total-records="serverSide ? totalItems : itemsWithKeys.length"
+      :lazy="serverSide"
+      :selection="selectedRows"
+      :selection-mode="selectionMode"
+      :show-selection-column="selectable"
+      :sort-field="sortField"
+      :sort-order="sortOrder"
+      scroll-height="640px"
+      :table-style="{ minWidth: '74rem' }"
+      :row-class="getRowClass"
+      @update:selection="onSelectionChange"
+      @row-click="handleRowClick"
+      @page="handlePage"
+      @sort="handleSort"
+    >
+      <template #cell-ISN="{ data }">
+        <div class="iplas-record-table-inline-cell">
+          <button type="button" class="iplas-record-table-icon-button" title="Copy ISN" aria-label="Copy ISN" @click.stop="copyToClipboard(data.ISN)">
+            <Icon icon="mdi:content-copy" />
+          </button>
+          <button type="button" class="iplas-record-table-copy-value font-mono" :title="String(data.ISN || 'No ISN')" @click.stop="copyToClipboard(String(data.ISN || ''))">
+            {{ data.ISN || '-' }}
+          </button>
+        </div>
+      </template>
 
-            <!-- Device ID Column -->
-            <template #item.DeviceId="{ item }">
-                <span class="font-mono text-medium-emphasis">{{ item.DeviceId || '-' }}</span>
-            </template>
+      <template #cell-DeviceId="{ data }">
+        <button type="button" class="iplas-record-table-copy-pill font-mono" :title="String(data.DeviceId || 'No Device ID')" @click.stop="copyToClipboard(String(data.DeviceId || ''))">
+          {{ data.DeviceId || '-' }}
+        </button>
+      </template>
 
-            <!-- Error Code Column - Red when error -->
-            <template #item.ErrorCode="{ item }">
-                <v-chip :color="isStatusPass(item.ErrorCode) ? 'success' : 'error'" size="x-small"
-                    :variant="isStatusPass(item.ErrorCode) ? 'tonal' : 'flat'">
-                    {{ item.ErrorCode || '-' }}
-                </v-chip>
-            </template>
+      <template #cell-ErrorCode="{ data }">
+        <span class="iplas-record-table-badge" :class="isStatusPass(String(data.ErrorCode || '')) ? 'iplas-record-table-badge--success' : 'iplas-record-table-badge--error'">
+          {{ data.ErrorCode || '-' }}
+        </span>
+      </template>
 
-            <!-- Error Name Column - Red text when error -->
-            <template #item.ErrorName="{ item }">
-                <template v-if="item.ErrorName && item.ErrorName !== 'N/A' && !isStatusPass(item.ErrorCode)">
-                    <span class="text-error font-weight-medium">{{ item.ErrorName }}</span>
-                </template>
-                <span v-else class="text-medium-emphasis">-</span>
-            </template>
+      <template #cell-ErrorName="{ data }">
+        <template v-if="data.ErrorName && data.ErrorName !== 'N/A' && !isStatusPass(String(data.ErrorCode || ''))">
+          <span class="iplas-record-table-error-name">{{ data.ErrorName }}</span>
+        </template>
+        <span v-else class="iplas-record-table-muted">-</span>
+      </template>
 
-            <!-- Test Start Time Column -->
-            <template #item.TestStartTime="{ item }">
-                <span class="text-caption">{{ formatDateTime(item['Test Start Time']) }}</span>
-            </template>
+      <template #cell-TestStartTime="{ value }">
+        <span class="iplas-record-table-caption">{{ formatDateTime(asOptionalString(value)) }}</span>
+      </template>
 
-            <!-- Test End Time Column -->
-            <template #item.TestEndTime="{ item }">
-                <span class="text-caption">{{ formatDateTime(item['Test end Time']) }}</span>
-            </template>
+      <template #cell-TestEndTime="{ value }">
+        <span class="iplas-record-table-caption">{{ formatDateTime(asOptionalString(value)) }}</span>
+      </template>
 
-            <!-- Duration Column - No chip -->
-            <template #item.Duration="{ item }">
-                <span class="text-caption text-medium-emphasis">{{ calculateDuration(item['Test Start Time'], item['Test end Time']) }}</span>
-            </template>
+      <template #cell-Duration="{ value }">
+        <span class="iplas-record-table-caption iplas-record-table-muted">{{ value }}</span>
+      </template>
 
-            <!-- Test Item Count Column - No chip -->
-            <template #item.TestItemCount="{ item }">
-                <span class="text-caption">{{ getTestItemCount(item) }}</span>
-            </template>
+      <template #cell-TestItemCount="{ value }">
+        <span class="iplas-record-table-caption">{{ value }}</span>
+      </template>
 
-            <!-- Actions Column - Download buttons -->
-            <template #item.actions="{ item }">
-                <div class="d-flex gap-1">
-                    <v-btn icon size="x-small" variant="outlined" color="primary"
-                        :loading="downloadingRecord === item.recordKey" @click.stop="$emit('download', item)">
-                        <v-icon size="small">mdi-download</v-icon>
-                        <v-tooltip activator="parent" location="top">Download TXT Log</v-tooltip>
-                    </v-btn>
-                    <v-btn icon size="x-small" variant="outlined" color="success"
-                        :loading="downloadingCsvRecord === item.recordKey" @click.stop="$emit('download-csv', item)">
-                        <v-icon size="small">mdi-file-delimited</v-icon>
-                        <v-tooltip activator="parent" location="top">Download CSV Log</v-tooltip>
-                    </v-btn>
-                </div>
-            </template>
+      <template #cell-actions="{ data }">
+        <div class="iplas-record-table-action-cell">
+          <button
+            type="button"
+            class="iplas-record-table-action-button iplas-record-table-action-button--primary"
+            :disabled="downloadingRecord === data.recordKey"
+            title="Download TXT Log"
+            @click.stop="emit('download', data.sourceRecord)"
+          >
+            <Icon :icon="downloadingRecord === data.recordKey ? 'mdi:loading' : 'mdi:download'" :class="{ 'iplas-record-table-spin': downloadingRecord === data.recordKey }" />
+            <span>TXT</span>
+          </button>
+          <button
+            type="button"
+            class="iplas-record-table-action-button iplas-record-table-action-button--success"
+            :disabled="downloadingCsvRecord === data.recordKey"
+            title="Download CSV Log"
+            @click.stop="emit('download-csv', data.sourceRecord)"
+          >
+            <Icon :icon="downloadingCsvRecord === data.recordKey ? 'mdi:loading' : 'mdi:file-delimited'" :class="{ 'iplas-record-table-spin': downloadingCsvRecord === data.recordKey }" />
+            <span>CSV</span>
+          </button>
+        </div>
+      </template>
 
-            <!-- Loading Overlay -->
-            <template #loading>
-                <v-skeleton-loader type="table-row@5" />
-            </template>
+      <template #loading>
+        <div class="iplas-record-table-loading-state">
+          <Icon icon="mdi:loading" class="iplas-record-table-spin" />
+          <span>Loading iPLAS records...</span>
+        </div>
+      </template>
 
-            <!-- No Data -->
-            <template #no-data>
-                <div class="text-center py-4">
-                    <v-icon size="48" color="grey">mdi-database-off-outline</v-icon>
-                    <div class="text-h6 mt-2 text-grey">No records found</div>
-                    <div class="text-body-2 text-grey">Try adjusting your search criteria</div>
-                </div>
-            </template>
-        </v-data-table-server>
-
-        <!-- Client-side Data Table (for local data) -->
-        <v-data-table v-else v-model:items-per-page="itemsPerPage" v-model:page="page" v-model:sort-by="sortBy"
-            :model-value="selectedKeys" :headers="computedHeaders" :items="itemsWithKeys" :loading="loading"
-            item-value="recordKey" :show-select="selectable" hover class="elevation-1 clickable-rows"
-            @update:model-value="onSelectionChange" @click:row="handleRowClick">
-            <!-- ISN Column with Copy Button on Left -->
-            <template #item.ISN="{ item }">
-                <div class="d-flex align-center gap-1">
-                    <v-btn icon size="x-small" variant="text" color="primary" @click.stop="copyToClipboard(item.ISN)">
-                        <v-icon size="small">mdi-content-copy</v-icon>
-                        <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
-                    </v-btn>
-                    <span class="font-weight-medium font-mono">{{ item.ISN || '-' }}</span>
-                </div>
-            </template>
-
-            <!-- Device ID Column -->
-            <template #item.DeviceId="{ item }">
-                <span class="font-mono text-medium-emphasis">{{ item.DeviceId || '-' }}</span>
-            </template>
-
-            <!-- Error Code Column - Red when error -->
-            <template #item.ErrorCode="{ item }">
-                <v-chip :color="isStatusPass(item.ErrorCode) ? 'success' : 'error'" size="x-small"
-                    :variant="isStatusPass(item.ErrorCode) ? 'tonal' : 'flat'">
-                    {{ item.ErrorCode || '-' }}
-                </v-chip>
-            </template>
-
-            <!-- Error Name Column - Red text when error -->
-            <template #item.ErrorName="{ item }">
-                <template v-if="item.ErrorName && item.ErrorName !== 'N/A' && !isStatusPass(item.ErrorCode)">
-                    <span class="text-error font-weight-medium">{{ item.ErrorName }}</span>
-                </template>
-                <span v-else class="text-medium-emphasis">-</span>
-            </template>
-
-            <!-- Test Start Time Column -->
-            <template #item.TestStartTime="{ item }">
-                <span class="text-caption">{{ formatDateTime(item['Test Start Time']) }}</span>
-            </template>
-
-            <!-- Test End Time Column -->
-            <template #item.TestEndTime="{ item }">
-                <span class="text-caption">{{ formatDateTime(item['Test end Time']) }}</span>
-            </template>
-
-            <!-- Duration Column - No chip -->
-            <template #item.Duration="{ item }">
-                <span class="text-caption text-medium-emphasis">{{ calculateDuration(item['Test Start Time'], item['Test end Time']) }}</span>
-            </template>
-
-            <!-- Test Item Count Column - No chip -->
-            <template #item.TestItemCount="{ item }">
-                <span class="text-caption">{{ getTestItemCount(item) }}</span>
-            </template>
-
-            <!-- Actions Column - Download buttons -->
-            <template #item.actions="{ item }">
-                <div class="d-flex gap-1">
-                    <v-btn icon size="x-small" variant="outlined" color="primary"
-                        :loading="downloadingRecord === item.recordKey" @click.stop="$emit('download', item)">
-                        <v-icon size="small">mdi-download</v-icon>
-                        <v-tooltip activator="parent" location="top">Download TXT Log</v-tooltip>
-                    </v-btn>
-                    <v-btn icon size="x-small" variant="outlined" color="success"
-                        :loading="downloadingCsvRecord === item.recordKey" @click.stop="$emit('download-csv', item)">
-                        <v-icon size="small">mdi-file-delimited</v-icon>
-                        <v-tooltip activator="parent" location="top">Download CSV Log</v-tooltip>
-                    </v-btn>
-                </div>
-            </template>
-
-            <!-- Loading Overlay -->
-            <template #loading>
-                <v-skeleton-loader type="table-row@5" />
-            </template>
-
-            <!-- No Data -->
-            <template #no-data>
-                <div class="text-center py-4">
-                    <v-icon size="48" color="grey">mdi-database-off-outline</v-icon>
-                    <div class="text-h6 mt-2 text-grey">No records found</div>
-                    <div class="text-body-2 text-grey">Try adjusting your search criteria</div>
-                </div>
-            </template>
-        </v-data-table>
-
-        <!-- Copy Success Snackbar -->
-        <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
-            <v-icon start>mdi-check</v-icon>
-            Copied to clipboard!
-        </v-snackbar>
-    </div>
+      <template #empty>
+        <div class="iplas-record-table-empty-state">
+          <Icon icon="mdi:database-off-outline" class="iplas-record-table-empty-state__icon" />
+          <strong>No records found</strong>
+          <p>Try adjusting your search criteria.</p>
+        </div>
+      </template>
+    </AppDataGrid>
+  </div>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
 import type { CompactCsvTestItemData, CsvTestItemData } from '@/features/dut-logs/api/iplasProxyApi'
+import { useNotification } from '@/shared/composables/useNotification'
+import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import { adjustIplasDisplayTime, isStatusPass } from '@/shared/utils/helpers'
+
+type SortDirection = 'asc' | 'desc'
+
+interface IplasRecordTableRow extends Record<string, unknown> {
+  recordKey: string
+  ISN: string
+  DeviceId: string
+  ErrorCode: string
+  ErrorName: string
+  TestStartTime: string
+  TestEndTime: string
+  Duration: string
+  TestItemCount: number
+  sourceRecord: CsvTestItemData | CompactCsvTestItemData
+}
 
 // Props
 const props = withDefaults(
@@ -233,30 +177,58 @@ const sortBy = ref<{ key: string; order: 'asc' | 'desc' }[]>([
   { key: 'TestStartTime', order: 'desc' },
 ])
 
-// Copy success state
-const showCopySuccess = ref(false)
+const { showInfo: showInfoNotification } = useNotification()
 
-// Computed items with recordKey added for v-data-table item-value
 const itemsWithKeys = computed(() =>
   props.items.map((item) => ({
     ...item,
+    ISN: item.ISN || '',
+    DeviceId: item.DeviceId || '',
+    ErrorCode: item.ErrorCode || '',
+    ErrorName: item.ErrorName || '',
+    TestStartTime: item['Test Start Time'] || '',
+    TestEndTime: item['Test end Time'] || '',
+    Duration: calculateDuration(item['Test Start Time'], item['Test end Time']),
+    TestItemCount: getTestItemCount(item),
     recordKey: `${item.ISN}_${item['Test Start Time']}`,
-  })),
+    sourceRecord: item,
+  })) as IplasRecordTableRow[],
 )
 
-// Computed headers - include selection column when selectable
 const computedHeaders = computed(() => {
   return [
-    { title: 'ISN', key: 'ISN', sortable: true, width: '180px' },
-    { title: 'Device ID', key: 'DeviceId', sortable: true, width: '120px' },
-    { title: 'Error Code', key: 'ErrorCode', sortable: true, width: '100px' },
-    { title: 'Error Name', key: 'ErrorName', sortable: false, width: '150px' },
-    { title: 'Test Start', key: 'TestStartTime', sortable: true, width: '150px' },
-    { title: 'Test End', key: 'TestEndTime', sortable: true, width: '150px' },
-    { title: 'Duration', key: 'Duration', sortable: false, width: '100px' },
-    { title: 'Test Items', key: 'TestItemCount', sortable: false, width: '100px' },
-    { title: 'Actions', key: 'actions', sortable: false, width: '120px' },
+    { header: 'ISN', key: 'ISN', field: 'ISN', sortable: true, style: { width: '180px' } },
+    { header: 'Device ID', key: 'DeviceId', field: 'DeviceId', sortable: true, style: { width: '120px' } },
+    { header: 'Error Code', key: 'ErrorCode', field: 'ErrorCode', sortable: true, style: { width: '100px' } },
+    { header: 'Error Name', key: 'ErrorName', field: 'ErrorName', sortable: false, style: { width: '150px' } },
+    { header: 'Test Start', key: 'TestStartTime', field: 'TestStartTime', sortable: true, style: { width: '160px' } },
+    { header: 'Test End', key: 'TestEndTime', field: 'TestEndTime', sortable: true, style: { width: '160px' } },
+    { header: 'Duration', key: 'Duration', field: 'Duration', sortable: false, style: { width: '110px' } },
+    { header: 'Test Items', key: 'TestItemCount', field: 'TestItemCount', sortable: false, style: { width: '110px' } },
+    { header: 'Actions', key: 'actions', sortable: false, style: { width: '140px' } },
   ]
+})
+
+const selectionMode = computed(() => (props.selectable ? 'multiple' : undefined))
+
+const selectedRows = computed(() => {
+  if (!props.selectable || props.selectedKeys.length === 0) {
+    return [] as IplasRecordTableRow[]
+  }
+
+  const selectedKeySet = new Set(props.selectedKeys)
+  return itemsWithKeys.value.filter((item) => selectedKeySet.has(item.recordKey))
+})
+
+const sortField = computed(() => sortBy.value[0]?.key)
+
+const sortOrder = computed(() => {
+  const current = sortBy.value[0]
+  if (!current) {
+    return null
+  }
+
+  return current.order === 'desc' ? -1 : 1
 })
 
 // Helper functions
@@ -287,11 +259,15 @@ function getTestItemCount(record: CsvTestItemData | CompactCsvTestItemData): num
   return record.TestItem?.length || 0
 }
 
+function asOptionalString(value: unknown): string | undefined {
+  return typeof value === 'string' ? value : undefined
+}
+
 async function copyToClipboard(text: string | undefined) {
   if (!text) return
   try {
     await navigator.clipboard.writeText(text)
-    showCopySuccess.value = true
+    showInfoNotification('Copied to clipboard!')
   } catch (_err) {
     // Fallback for browsers that don't support clipboard API or non-secure contexts
     const textArea = document.createElement('textarea')
@@ -303,7 +279,7 @@ async function copyToClipboard(text: string | undefined) {
     textArea.select()
     try {
       document.execCommand('copy')
-      showCopySuccess.value = true
+      showInfoNotification('Copied to clipboard!')
     } catch (e) {
       console.error('Failed to copy:', e)
     }
@@ -311,33 +287,216 @@ async function copyToClipboard(text: string | undefined) {
   }
 }
 
-function handleRowClick(_event: Event, data: { item: CsvTestItemData | CompactCsvTestItemData }) {
-  emit('row-click', data.item)
+function getRowClass(): string {
+  return 'iplas-record-table-row'
 }
 
-function onOptionsUpdate(options: {
-  page: number
-  itemsPerPage: number
-  sortBy: { key: string; order: 'asc' | 'desc' }[]
-}) {
-  emit('update:options', options)
+function updateOptions(nextPage = page.value, nextItemsPerPage = itemsPerPage.value, nextSortBy = sortBy.value) {
+  emit('update:options', {
+    page: nextPage,
+    itemsPerPage: nextItemsPerPage,
+    sortBy: nextSortBy,
+  })
 }
 
-function onSelectionChange(keys: string[]) {
-  emit('update:selected-keys', keys)
+function handleRowClick(event: unknown) {
+  const row = (event as { data?: IplasRecordTableRow }).data
+  if (!row) {
+    return
+  }
+
+  emit('row-click', row.sourceRecord)
+}
+
+function handlePage(event: unknown) {
+  const pageEvent = event as { page?: number; rows?: number }
+  page.value = typeof pageEvent.page === 'number' ? pageEvent.page + 1 : page.value
+  itemsPerPage.value = typeof pageEvent.rows === 'number' ? pageEvent.rows : itemsPerPage.value
+  updateOptions()
+}
+
+function handleSort(event: unknown) {
+  const sortEvent = event as { sortField?: string; sortOrder?: number }
+  if (!sortEvent.sortField || !sortEvent.sortOrder) {
+    sortBy.value = []
+    updateOptions()
+    return
+  }
+
+  sortBy.value = [
+    {
+      key: sortEvent.sortField,
+      order: sortEvent.sortOrder === -1 ? 'desc' : 'asc',
+    },
+  ]
+  updateOptions()
+}
+
+function onSelectionChange(selection: unknown) {
+  const selected = Array.isArray(selection) ? (selection as IplasRecordTableRow[]) : []
+  emit(
+    'update:selected-keys',
+    selected.map((row) => row.recordKey),
+  )
 }
 </script>
 
 <style scoped>
-.clickable-rows :deep(tbody tr) {
-    cursor: pointer;
+.iplas-record-table-shell {
+  display: grid;
 }
 
-.clickable-rows :deep(tbody tr:hover) {
-    background-color: rgba(var(--v-theme-primary), 0.08);
+.clickable-rows :deep(.p-datatable-tbody > tr.iplas-record-table-row) {
+  cursor: pointer;
+}
+
+.clickable-rows :deep(.p-datatable-tbody > tr.iplas-record-table-row:hover) {
+  background-color: rgba(20, 88, 71, 0.08);
 }
 
 .font-mono {
-    font-family: 'Roboto Mono', monospace;
+  font-family: 'Roboto Mono', monospace;
+}
+
+.iplas-record-table-inline-cell,
+.iplas-record-table-action-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.iplas-record-table-icon-button,
+.iplas-record-table-copy-value,
+.iplas-record-table-copy-pill,
+.iplas-record-table-action-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+}
+
+.iplas-record-table-icon-button {
+  width: 1.9rem;
+  height: 1.9rem;
+  color: #1f6aa5;
+}
+
+.iplas-record-table-copy-value {
+  justify-content: flex-start;
+  max-width: 100%;
+  padding: 0.22rem 0.55rem;
+  color: var(--app-ink);
+}
+
+.iplas-record-table-copy-pill {
+  padding: 0.28rem 0.65rem;
+  background: rgba(20, 88, 71, 0.08);
+  border-color: rgba(20, 88, 71, 0.12);
+  color: var(--app-ink);
+}
+
+.iplas-record-table-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+}
+
+.iplas-record-table-badge--success {
+  background: rgba(28, 126, 84, 0.12);
+  color: #1c7e54;
+}
+
+.iplas-record-table-badge--error {
+  background: rgba(180, 54, 45, 0.12);
+  color: #a61b1b;
+}
+
+.iplas-record-table-caption {
+  font-size: 0.76rem;
+}
+
+.iplas-record-table-muted {
+  color: var(--app-muted);
+}
+
+.iplas-record-table-error-name {
+  color: #a61b1b;
+  font-weight: 600;
+}
+
+.iplas-record-table-action-button {
+  padding: 0.3rem 0.65rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.iplas-record-table-action-button--primary {
+  background: rgba(31, 106, 165, 0.1);
+  border-color: rgba(31, 106, 165, 0.16);
+  color: #1f6aa5;
+}
+
+.iplas-record-table-action-button--success {
+  background: rgba(28, 126, 84, 0.1);
+  border-color: rgba(28, 126, 84, 0.16);
+  color: #1c7e54;
+}
+
+.iplas-record-table-icon-button:disabled,
+.iplas-record-table-copy-value:disabled,
+.iplas-record-table-copy-pill:disabled,
+.iplas-record-table-action-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.iplas-record-table-empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 0.45rem;
+  padding: 1.4rem 1rem;
+  color: var(--app-muted);
+  text-align: center;
+}
+
+.iplas-record-table-empty-state strong {
+  color: var(--app-ink);
+}
+
+.iplas-record-table-empty-state__icon {
+  font-size: 2rem;
+  color: rgba(77, 89, 108, 0.72);
+}
+
+.iplas-record-table-loading-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 1rem;
+  color: var(--app-muted);
+}
+
+.iplas-record-table-spin {
+  animation: iplas-record-table-spin 0.9s linear infinite;
+}
+
+@keyframes iplas-record-table-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

@@ -1,1056 +1,880 @@
 <template>
-    <div>
-        <!-- Measurement Details Dialog -->
-        <v-dialog v-model="measurementDialog" :max-width="isFullscreen ? undefined : '1200px'"
-            :fullscreen="isFullscreen" :transition="isFullscreen ? 'dialog-bottom-transition' : 'dialog-transition'">
-            <v-card class="d-flex flex-column" :style="{ height: isFullscreen ? '100vh' : '90vh', overflow: 'hidden' }">
-                <!-- Sticky Header Container: Title + DUT Info -->
-                <div class="dialog-sticky-header flex-shrink-0"
-                    style="z-index: 10; background-color: rgb(var(--v-theme-surface));">
-                    <v-card-title class="d-flex justify-space-between align-center flex-shrink-0">
-                        <div>
-                            <v-icon class="mr-2">mdi-table-eye</v-icon>
-                            Measurement Details
-                        </div>
-                        <div class="d-flex align-center">
-                            <v-btn :icon="isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
-                                @click="isFullscreen = !isFullscreen"
-                                :title="isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'" />
-                            <v-btn icon="mdi-close" variant="text" @click="measurementDialog = false" />
-                        </div>
-                    </v-card-title>
+  <div class="top-product-isn-results">
+    <AppDialog
+      v-model="measurementDialog"
+      :width="measurementDialogWidth"
+      :breakpoints="dialogBreakpoints"
+      :closable="false"
+      class="top-product-isn-results__dialog"
+    >
+      <template #header>
+        <div class="top-product-isn-results__dialog-header">
+          <div>
+            <p class="top-product-isn-results__eyebrow">Measurement Review</p>
+            <h2>Measurement Details</h2>
+            <p v-if="selectedMeasurement">
+              Review the station result, compare scores, and inspect test items without leaving the Top Product workflow.
+            </p>
+          </div>
 
-                    <!-- DUT Information Section -->
-                    <div class="flex-shrink-0">
-                        <v-card-subtitle v-if="selectedMeasurement" class="pa-4 py-2">
-                            <!-- Primary Information Card -->
-                            <v-card variant="tonal" color="primary" class="mb-3">
-                                <v-card-text class="py-3">
-                                    <v-row dense>
-                                        <v-col cols="12" md="6">
-                                            <div class="d-flex align-center">
-                                                <v-icon size="large" class="mr-3" color="primary">mdi-barcode</v-icon>
-                                                <div>
-                                                    <div class="text-caption text-medium-emphasis">DUT ISN</div>
-                                                    <div class="text-h6 font-weight-bold">
-                                                        {{ selectedMeasurement.dutISN }}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </v-col>
-                                        <v-col cols="12" md="6">
-                                            <div class="d-flex align-center">
-                                                <v-icon size="large" class="mr-3" color="primary">mdi-factory</v-icon>
-                                                <div>
-                                                    <div class="text-caption text-medium-emphasis">Station</div>
-                                                    <div class="text-h6 font-weight-bold">
-                                                        {{ selectedMeasurement.station.station_name }}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </v-col>
-                                    </v-row>
-                                </v-card-text>
-                            </v-card>
+          <div class="top-product-isn-results__dialog-actions">
+            <button
+              type="button"
+              class="top-product-isn-results__ghost-button"
+              @click="isFullscreen = !isFullscreen"
+            >
+              <Icon :icon="isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" />
+              <span>{{ isFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }}</span>
+            </button>
+            <button
+              type="button"
+              class="top-product-isn-results__ghost-button"
+              @click="measurementDialog = false"
+            >
+              <Icon icon="mdi:close" />
+              <span>Close</span>
+            </button>
+          </div>
+        </div>
+      </template>
 
-                            <!-- Device & Identifiers -->
-                            <v-card variant="outlined" class="mb-3">
-                                <v-card-text class="py-2">
-                                    <v-row dense>
-                                        <v-col cols="12" md="6">
-                                            <div class="d-flex align-center">
-                                                <v-icon size="small" class="mr-2">mdi-identifier</v-icon>
-                                                <span class="text-body-2">
-                                                    <strong>SN Reference:</strong>
-                                                    <v-chip v-if="loadingIdentifiers" size="x-small" class="ml-2"
-                                                        disabled>
-                                                        <v-progress-circular indeterminate size="12" width="2"
-                                                            class="mr-1" />
-                                                        Loading...
-                                                    </v-chip>
-                                                    <v-menu v-else-if="otherLinkedISNs.length > 0" open-on-hover>
-                                                        <template #activator="{ props: menuProps }">
-                                                            <v-chip v-bind="menuProps" size="small" color="primary"
-                                                                variant="outlined" class="ml-2"
-                                                                prepend-icon="mdi-link-variant">
-                                                                {{ allLinkedISNs.length }} Linked ISNs
-                                                                <v-icon size="small" class="ml-1">mdi-menu-down</v-icon>
-                                                            </v-chip>
-                                                        </template>
-                                                        <v-list density="compact">
-                                                            <v-list-subheader>Other Linked Serial
-                                                                Numbers</v-list-subheader>
-                                                            <v-list-item v-for="(identifier, idx) in otherLinkedISNs"
-                                                                :key="idx" :title="identifier"
-                                                                prepend-icon="mdi-barcode">
-                                                                <template #append>
-                                                                    <v-btn icon="mdi-content-copy" size="x-small"
-                                                                        variant="text"
-                                                                        @click="copyToClipboard(identifier)" />
-                                                                </template>
-                                                            </v-list-item>
-                                                        </v-list>
-                                                    </v-menu>
-                                                    <span v-else class="ml-2 font-mono">
-                                                        {{ selectedMeasurement.dutISN }}
-                                                    </span>
-                                                </span>
-                                            </div>
-                                        </v-col>
-                                        <v-col cols="12" md="6">
-                                            <div class="d-flex align-center">
-                                                <v-icon size="small" class="mr-2">mdi-devices</v-icon>
-                                                <span class="text-body-2">
-                                                    <strong>Device:</strong>
-                                                    <span class="ml-2">{{ selectedMeasurement.station.device || 'N/A'
-                                                        }}</span>
-                                                </span>
-                                            </div>
-                                        </v-col>
-                                    </v-row>
-                                </v-card-text>
-                            </v-card>
+      <div
+        v-if="selectedMeasurement"
+        class="top-product-isn-results__dialog-body"
+        :class="{ 'top-product-isn-results__dialog-body--fullscreen': isFullscreen }"
+      >
+        <section class="top-product-isn-results__summary-grid">
+          <article class="top-product-isn-results__summary-card top-product-isn-results__summary-card--highlight">
+            <span class="top-product-isn-results__summary-icon">
+              <Icon icon="mdi:barcode" />
+            </span>
+            <div>
+              <small>DUT ISN</small>
+              <strong>{{ selectedMeasurement.dutISN }}</strong>
+            </div>
+          </article>
 
-                            <!-- Score & Timing Row -->
-                            <v-row dense class="mb-2">
-                                <v-col cols="12" sm="6" md="3">
-                                    <v-card variant="outlined" class="h-100">
-                                        <v-card-text class="py-2">
-                                            <div class="d-flex align-center">
-                                                <v-icon size="small" class="mr-2">mdi-calendar-clock</v-icon>
-                                                <div class="text-body-2">
-                                                    <div><strong>Test Date</strong></div>
-                                                    <div class="text-caption">
-                                                        {{ formatDate(selectedMeasurement.station.test_date) }}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </v-card-text>
-                                    </v-card>
-                                </v-col>
-                                <v-col cols="12" sm="6" md="3">
-                                    <v-card variant="outlined" class="h-100">
-                                        <v-card-text class="py-2">
-                                            <div class="d-flex align-center">
-                                                <v-icon size="small" class="mr-2">mdi-timer</v-icon>
-                                                <div class="text-body-2">
-                                                    <div><strong>Test Duration</strong></div>
-                                                    <div class="text-body-2 font-weight-medium">
-                                                        {{ selectedMeasurement.station.test_duration
-                                                            ? `${selectedMeasurement.station.test_duration.toFixed(2)}s`
-                                                            : 'N/A' }}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </v-card-text>
-                                    </v-card>
-                                </v-col>
-                                <v-col cols="12" sm="6" md="3">
-                                    <v-card variant="outlined" class="h-100">
-                                        <v-card-text class="py-2">
-                                            <div class="d-flex align-center justify-space-between">
-                                                <div class="d-flex align-center">
-                                                    <v-icon size="small" class="mr-2 pt-5">mdi-check-circle</v-icon>
-                                                    <strong>Test Results:</strong>
-                                                    <v-chip size="x-small" color="primary"
-                                                        class="font-weight-bold mx-1">
-                                                        Total: {{ selectedMeasurement.station.test_count || 0 }}
-                                                    </v-chip>
-                                                </div>
-                                            </div>
-                                            <div class="text-body-2">
-                                                <div class="d-flex align-center">
-                                                    <v-icon size="x-small" class="mr-2">mdi-blank</v-icon>
-                                                    <v-chip size="x-small" color="success"
-                                                        class="font-weight-bold mx-1">
-                                                        Pass: {{ selectedMeasurement.station.pass_count || 0 }}
-                                                    </v-chip>
-                                                    <v-chip size="x-small" color="error" class="font-weight-bold mx-1">
-                                                        Fail: {{ selectedMeasurement.station.fail_count || 0 }}
-                                                    </v-chip>
-                                                </div>
-                                            </div>
-                                        </v-card-text>
-                                    </v-card>
-                                </v-col>
-                                <v-col cols="12" sm="6" md="3">
-                                    <v-card variant="outlined" class="h-100">
-                                        <v-card-text class="auto">
-                                            <div class="d-flex align-center justify-space-between">
-                                                <div>
-                                                    <v-icon size="small" class="mr-2">mdi-list-box</v-icon>
-                                                    <strong>Test Items:</strong>
-                                                </div>
-                                                <v-chip size="small" color="info">
-                                                    {{ selectedMeasurement.station.measurement_count || 0 }}
-                                                </v-chip>
-                                            </div>
-                                        </v-card-text>
-                                    </v-card>
-                                </v-col>
-                            </v-row>
+          <article class="top-product-isn-results__summary-card">
+            <span class="top-product-isn-results__summary-icon">
+              <Icon icon="mdi:factory" />
+            </span>
+            <div>
+              <small>Station</small>
+              <strong>{{ selectedMeasurement.station.station_name }}</strong>
+            </div>
+          </article>
 
-                            <!-- Error Status -->
-                            <v-row dense class="mb-1">
-                                <v-col cols="12" sm="6" md="6">
-                                    <v-card :variant="selectedMeasurement.station.error_item ? 'tonal' : 'outlined'"
-                                        :color="selectedMeasurement.station.error_item ? 'error' : 'success'"
-                                        class="h-100">
-                                        <v-card-text class="py-2">
-                                            <div class="d-flex align-start pt-1">
-                                                <v-icon size="small" class="mr-2 mt-1"
-                                                    :color="selectedMeasurement.station.error_item ? 'error' : 'success'">
-                                                    {{ selectedMeasurement.station.error_item ? 'mdi-alert-circle' :
-                                                    'mdi-check-circle' }}
-                                                </v-icon>
-                                                <div class="flex-grow-1" style="min-width: 0;">
-                                                    <div>
-                                                        <strong>Latest Test Status:</strong>
-                                                    </div>
-                                                    <div v-if="selectedMeasurement.station.error_item"
-                                                        class="text-caption mt-1 font-weight-medium"
-                                                        style="word-break: break-word; overflow-wrap: break-word;">
-                                                        {{ selectedMeasurement.station.error_item }}
-                                                    </div>
-                                                    <div v-else class="text-body-2 mt-1">
-                                                        No Errors
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </v-card-text>
-                                    </v-card>
-                                </v-col>
-                                <v-col cols="12" sm="6" md="6">
-                                    <v-card variant="outlined"
-                                        :color="selectedMeasurement.station.error_item && selectedMeasurement.station.error_item.trim() !== '' ? 'default' : getScoreColor(selectedMeasurement.station.overall_data_score)"
-                                        class="h-100">
-                                        <v-card-text class="py-2">
-                                            <div class="d-flex align-start">
-                                                <v-icon size="small" class="mr-2 mt-1">mdi-star</v-icon>
-                                                <div class="flex-grow-1" style="min-width: 0;">
-                                                    <div><strong>Overall Score</strong></div>
-                                                    <div v-if="selectedMeasurement.station.error_item && selectedMeasurement.station.error_item.trim() !== ''"
-                                                        class="mt-1 d-flex align-center">
-                                                        <span class="text-body-2">N/A</span>
-                                                        <v-tooltip location="top">
-                                                            <template #activator="{ props: tooltipProps }">
-                                                                <v-icon v-bind="tooltipProps" size="small" class="ml-1"
-                                                                    color="info">
-                                                                    mdi-information-slab-circle-outline
-                                                                </v-icon>
-                                                            </template>
-                                                            <span>Can't be calculated because DUT failed</span>
-                                                        </v-tooltip>
-                                                    </div>
-                                                    <div v-else class="mt-1">
-                                                        <v-chip
-                                                            :color="getScoreColor(selectedMeasurement.station.overall_data_score)"
-                                                            size="small">
-                                                            {{ selectedMeasurement.station.overall_data_score.toFixed(2)
-                                                            }}
-                                                        </v-chip>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </v-card-text>
-                                    </v-card>
-                                </v-col>
-                            </v-row>
-                        </v-card-subtitle>
-                    </div>
+          <article class="top-product-isn-results__summary-card">
+            <span class="top-product-isn-results__summary-icon">
+              <Icon icon="mdi:chip" />
+            </span>
+            <div>
+              <small>Device</small>
+              <strong>{{ selectedMeasurement.station.device || 'N/A' }}</strong>
+            </div>
+          </article>
 
-                    <v-divider class="flex-shrink-0" />
+          <article class="top-product-isn-results__summary-card">
+            <span class="top-product-isn-results__summary-icon">
+              <Icon icon="mdi:calendar-clock" />
+            </span>
+            <div>
+              <small>Test Date</small>
+              <strong>{{ formatDate(selectedMeasurement.station.test_date) }}</strong>
+            </div>
+          </article>
+        </section>
+
+        <section class="top-product-isn-results__meta-grid">
+          <article class="top-product-isn-results__meta-card top-product-isn-results__meta-card--wide">
+            <div class="top-product-isn-results__meta-headline">
+              <Icon icon="mdi:identifier" />
+              <strong>SN Reference</strong>
+            </div>
+
+            <div v-if="loadingIdentifiers" class="top-product-isn-results__inline-note">
+              Loading linked identifiers...
+            </div>
+            <div v-else class="top-product-isn-results__token-row">
+              <button
+                type="button"
+                class="top-product-isn-results__token top-product-isn-results__token--cool"
+                @click="copyToClipboard(selectedMeasurement.dutISN)"
+              >
+                {{ selectedMeasurement.dutISN }}
+              </button>
+
+              <details v-if="otherLinkedISNs.length > 0" class="top-product-isn-results__linked-details">
+                <summary>
+                  {{ allLinkedISNs.length }} linked ISN{{ allLinkedISNs.length === 1 ? '' : 's' }}
+                </summary>
+                <div class="top-product-isn-results__linked-list">
+                  <button
+                    v-for="identifier in otherLinkedISNs"
+                    :key="identifier"
+                    type="button"
+                    class="top-product-isn-results__token"
+                    @click="copyToClipboard(identifier)"
+                  >
+                    {{ identifier }}
+                  </button>
                 </div>
-                <!-- End Sticky Header Container -->
+              </details>
+            </div>
+          </article>
 
-                <!-- Search and Filter Controls (Fixed, non-scrollable) -->
-                <v-card-text class="pb-2 pt-3 flex-shrink-0">
-                    <v-row dense>
-                        <v-col cols="12" md="4">
-                            <v-text-field v-model="measurementSearch" prepend-inner-icon="mdi-magnify"
-                                label="Search measurements..." variant="outlined" density="compact" clearable
-                                hide-details />
-                        </v-col>
-                        <v-col cols="12" md="2">
-                            <v-select v-model="scoreFilter" :items="scoreFilterOptions" label="Score Filter"
-                                variant="outlined" density="compact" clearable hide-details
-                                :menu-props="{ zIndex: 2500 }" />
-                        </v-col>
-                        <v-col cols="12" md="2">
-                            <v-select v-model="limitFilter" :items="limitFilterOptions" label="Limit Status"
-                                variant="outlined" density="compact" clearable hide-details
-                                :menu-props="{ zIndex: 2500 }" />
-                        </v-col>
-                        <v-col cols="12" md="4">
-                            <v-select v-model="measurementLockedColumns" :items="measurementColumnOptions"
-                                item-title="title" item-value="value" label="Lock columns" variant="outlined"
-                                density="compact" multiple chips closable-chips clearable hide-details
-                                prepend-inner-icon="mdi-pin" :menu-props="{ zIndex: 2500 }" />
-                        </v-col>
-                    </v-row>
-                </v-card-text>
+          <article class="top-product-isn-results__meta-card">
+            <div class="top-product-isn-results__meta-headline">
+              <Icon icon="mdi:timer" />
+              <strong>Duration</strong>
+            </div>
+            <p>
+              {{ selectedMeasurement.station.test_duration
+                ? `${selectedMeasurement.station.test_duration.toFixed(2)}s`
+                : 'N/A' }}
+            </p>
+          </article>
 
-                <!-- Data Table Container - Conditional styling based on fullscreen mode -->
-                <div v-if="isFullscreen" class="flex-grow-1 measurement-details-table"
-                    style="min-height: 0; overflow: hidden;">
-                    <v-data-table v-if="selectedMeasurement" :headers="measurementHeadersWithWidths"
-                        :items="filteredMeasurements" :search="measurementSearch" :items-per-page="25"
-                        density="comfortable" striped="even" fixed-header fixed-footer style="height: 100%;"
-                        class="sticky-data-table" ref="measurementTableRef">
-                        <!-- Test Item -->
-                        <template #item.test_item="{ item }">
-                            <span class="font-mono text-body-2"
-                                :class="{ 'text-error font-weight-bold': isErrorItem(item.test_item) }">
-                                {{ item.test_item }}
-                            </span>
-                        </template>
+          <article class="top-product-isn-results__meta-card">
+            <div class="top-product-isn-results__meta-headline">
+              <Icon icon="mdi:list-box" />
+              <strong>Test Items</strong>
+            </div>
+            <p>{{ selectedMeasurement.station.measurement_count || 0 }}</p>
+          </article>
 
-                        <!-- USL -->
-                        <template #item.usl="{ item }">
-                            <div class="text-start text-body-2">
-                                {{ item.usl !== null ? item.usl : '-' }}
-                            </div>
-                        </template>
+          <article class="top-product-isn-results__meta-card">
+            <div class="top-product-isn-results__meta-headline">
+              <Icon icon="mdi:flag-checkered" />
+              <strong>Result Counts</strong>
+            </div>
+            <div class="top-product-isn-results__badge-row">
+              <span class="top-product-isn-results__badge top-product-isn-results__badge--neutral">
+                Total {{ selectedMeasurement.station.test_count || 0 }}
+              </span>
+              <span class="top-product-isn-results__badge top-product-isn-results__badge--success">
+                Pass {{ selectedMeasurement.station.pass_count || 0 }}
+              </span>
+              <span class="top-product-isn-results__badge top-product-isn-results__badge--error">
+                Fail {{ selectedMeasurement.station.fail_count || 0 }}
+              </span>
+            </div>
+          </article>
+        </section>
 
-                        <!-- LSL -->
-                        <template #item.lsl="{ item }">
-                            <div class="text-start text-body-2">
-                                {{ item.lsl !== null ? item.lsl : '-' }}
-                            </div>
-                        </template>
+        <section class="top-product-isn-results__status-grid">
+          <article
+            class="top-product-isn-results__status-card"
+            :class="selectedMeasurement.station.error_item ? 'top-product-isn-results__status-card--error' : 'top-product-isn-results__status-card--success'"
+          >
+            <div class="top-product-isn-results__meta-headline">
+              <Icon :icon="selectedMeasurement.station.error_item ? 'mdi:alert-circle' : 'mdi:check-circle'" />
+              <strong>Latest Test Status</strong>
+            </div>
+            <p>
+              {{ selectedMeasurement.station.error_item || 'No Errors' }}
+            </p>
+          </article>
 
-                        <!-- Target -->
-                        <template #item.target="{ item }">
-                            <div class="text-center text-body-2">
-                                {{ item.target || '-' }}
-                            </div>
-                        </template>
+          <article class="top-product-isn-results__status-card">
+            <div class="top-product-isn-results__meta-headline">
+              <Icon icon="mdi:star" />
+              <strong>Overall Score</strong>
+            </div>
+            <div v-if="selectedMeasurement.station.error_item" class="top-product-isn-results__score-na">
+              <span>N/A</span>
+              <small>Can't be calculated because the DUT failed.</small>
+            </div>
+            <span
+              v-else
+              class="top-product-isn-results__badge"
+              :class="badgeToneClass(getScoreColor(selectedMeasurement.station.overall_data_score))"
+            >
+              {{ selectedMeasurement.station.overall_data_score.toFixed(2) }}
+            </span>
+          </article>
+        </section>
 
-                        <!-- Meas. -->
-                        <template #item.actual="{ item }">
-                            <div class="text-center">
-                                <v-chip size="small" :color="getActualValueColor(item)" variant="tonal">
-                                    {{ item.actual !== '' ? item.actual : '0' }}
-                                </v-chip>
-                            </div>
-                        </template>
+        <section class="top-product-isn-results__filter-grid">
+          <label class="top-product-isn-results__field top-product-isn-results__field--wide">
+            <span>Search Measurements</span>
+            <input
+              v-model="measurementSearch"
+              type="text"
+              placeholder="Search by test item"
+            >
+          </label>
 
-                        <!-- Delta Act.Tar -->
-                        <template #item.delta_actual_target="{ item }">
-                            <div class="text-center">
-                                <v-chip
-                                    v-if="item.actual !== null && item.actual !== '' && item.target !== null && item.target !== ''"
-                                    size="small" variant="tonal"
-                                    :color="getDeltaColor(parseFloat(item.actual) - parseFloat(item.target))">
-                                    {{ (parseFloat(item.actual) - parseFloat(item.target)).toFixed(2) }}
-                                </v-chip>
-                                <span v-else class="text-medium-emphasis">—</span>
-                            </div>
-                        </template>
+          <label class="top-product-isn-results__field">
+            <span>Score Filter</span>
+            <select v-model="scoreFilter">
+              <option :value="null">All Scores</option>
+              <option value="high">Score >= 9</option>
+              <option value="medium">Score 7-9</option>
+              <option value="low">Score < 7</option>
+            </select>
+          </label>
 
-                        <!-- Score -->
-                        <template #item.score="{ item }">
-                            <div class="text-center">
-                                <!-- Show comparison chips when custom scoring is active and different from system -->
-                                <div v-if="item.custom_scoring && item.custom_scoring.method === 'custom'"
-                                    class="d-flex gap-1 justify-center flex-wrap">
-                                    <v-chip :color="getScoreColor(item.custom_scoring.systemScore)" size="x-small"
-                                        variant="tonal">
-                                        <v-tooltip location="top">
-                                            <template #activator="{ props: tooltipProps }">
-                                                <span v-bind="tooltipProps">S: {{
-                                                    item.custom_scoring.systemScore.toFixed(2) }}</span>
-                                            </template>
-                                            System Score
-                                        </v-tooltip>
-                                    </v-chip>
-                                    <v-chip :color="getScoreColor(item.custom_scoring.customScore)" size="x-small"
-                                        variant="elevated">
-                                        <v-tooltip location="top">
-                                            <template #activator="{ props: tooltipProps }">
-                                                <span v-bind="tooltipProps">C: {{
-                                                    item.custom_scoring.customScore.toFixed(2) }}</span>
-                                            </template>
-                                            Custom Score ({{ item.custom_scoring.formula }})
-                                        </v-tooltip>
-                                    </v-chip>
-                                    <v-chip
-                                        :color="item.custom_scoring.difference > 0 ? 'success' : item.custom_scoring.difference < 0 ? 'error' : 'default'"
-                                        size="x-small" variant="outlined">
-                                        <v-tooltip location="top">
-                                            <template #activator="{ props: tooltipProps }">
-                                                <span v-bind="tooltipProps">
-                                                    {{ item.custom_scoring.difference > 0 ? '+' : '' }}{{
-                                                    item.custom_scoring.difference.toFixed(2) }}
-                                                </span>
-                                            </template>
-                                            Difference (Custom - System)
-                                        </v-tooltip>
-                                    </v-chip>
-                                </div>
-                                <!-- Default single score display -->
-                                <v-chip v-else :color="getScoreColor(item.score)" size="small"
-                                    class="d-inline-flex align-center" :style="item.breakdown ? 'cursor: pointer;' : ''"
-                                    @click="item.breakdown ? handleScoreClick(item) : undefined">
-                                    {{ item.score.toFixed(2) }}
-                                    <v-tooltip v-if="item.scoreSource" location="top">
-                                        <template #activator="{ props: tooltipProps }">
-                                            <v-icon v-bind="tooltipProps" size="x-small" class="ml-1">
-                                                {{ getScoreSourceIcon(item.scoreSource) }}
-                                            </v-icon>
-                                        </template>
-                                        <div class="text-caption">
-                                            {{ getScoreSourceLabel(item.scoreSource) }}
-                                            <div v-if="item.systemScore !== undefined && item.score !== item.systemScore"
-                                                class="mt-1">
-                                                System: {{ item.systemScore.toFixed(2) }}
-                                            </div>
-                                        </div>
-                                    </v-tooltip>
-                                    <v-icon v-if="item.breakdown" size="x-small" class="ml-1">mdi-information</v-icon>
-                                </v-chip>
-                            </div>
-                        </template>
-                    </v-data-table>
+          <label class="top-product-isn-results__field">
+            <span>Limit Status</span>
+            <select v-model="limitFilter">
+              <option :value="null">All Results</option>
+              <option value="within">Within Limits</option>
+              <option value="out">Out Of Limits</option>
+            </select>
+          </label>
+
+          <label class="top-product-isn-results__field top-product-isn-results__field--wide">
+            <span>Pin Columns</span>
+            <select v-model="measurementLockedColumns" multiple size="4">
+              <option
+                v-for="option in measurementColumnOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.title }}
+              </option>
+            </select>
+          </label>
+        </section>
+
+        <div class="top-product-isn-results__table-shell">
+          <DataTable
+            v-if="selectedMeasurement"
+            :value="filteredMeasurements"
+            paginator
+            :rows="25"
+            dataKey="test_item"
+            scrollable
+            :scrollHeight="measurementScrollHeight"
+            removableSort
+            showGridlines
+            stripedRows
+            class="top-product-isn-results__data-table"
+          >
+            <Column
+              v-for="column in measurementHeaders"
+              :key="column.key"
+              :field="column.key"
+              :header="column.title"
+              :sortable="column.sortable"
+              :frozen="measurementLockedColumns.includes(column.key)"
+              alignFrozen="left"
+              :style="getMeasurementColumnStyle(column.key)"
+            >
+              <template v-if="column.key === 'test_item'" #body="slotProps">
+                <span
+                  class="top-product-isn-results__mono"
+                  :class="{ 'top-product-isn-results__mono--error': isErrorItem(slotProps.data.test_item) }"
+                >
+                  {{ slotProps.data.test_item }}
+                </span>
+              </template>
+
+              <template v-else-if="column.key === 'usl'" #body="slotProps">
+                <span class="top-product-isn-results__muted">{{ slotProps.data.usl ?? '-' }}</span>
+              </template>
+
+              <template v-else-if="column.key === 'lsl'" #body="slotProps">
+                <span class="top-product-isn-results__muted">{{ slotProps.data.lsl ?? '-' }}</span>
+              </template>
+
+              <template v-else-if="column.key === 'target'" #body="slotProps">
+                <span class="top-product-isn-results__muted">{{ slotProps.data.target || '-' }}</span>
+              </template>
+
+              <template v-else-if="column.key === 'actual'" #body="slotProps">
+                <span
+                  class="top-product-isn-results__badge"
+                  :class="badgeToneClass(getActualValueColor(slotProps.data))"
+                >
+                  {{ slotProps.data.actual !== '' ? slotProps.data.actual : '0' }}
+                </span>
+              </template>
+
+              <template v-else-if="column.key === 'delta_actual_target'" #body="slotProps">
+                <span
+                  v-if="slotProps.data.actual !== null && slotProps.data.actual !== '' && slotProps.data.target !== null && slotProps.data.target !== ''"
+                  class="top-product-isn-results__badge"
+                  :class="badgeToneClass(getDeltaColor(parseFloat(slotProps.data.actual) - parseFloat(slotProps.data.target)))"
+                >
+                  {{ (parseFloat(slotProps.data.actual) - parseFloat(slotProps.data.target)).toFixed(2) }}
+                </span>
+                <span v-else class="top-product-isn-results__muted">-</span>
+              </template>
+
+              <template v-else-if="column.key === 'score'" #body="slotProps">
+                <div class="top-product-isn-results__score-cell">
+                  <template v-if="slotProps.data.custom_scoring && slotProps.data.custom_scoring.method === 'custom'">
+                    <span
+                      class="top-product-isn-results__badge"
+                      :class="badgeToneClass(getScoreColor(slotProps.data.custom_scoring.systemScore))"
+                      title="System Score"
+                    >
+                      S: {{ slotProps.data.custom_scoring.systemScore.toFixed(2) }}
+                    </span>
+                    <span
+                      class="top-product-isn-results__badge"
+                      :class="badgeToneClass(getScoreColor(slotProps.data.custom_scoring.customScore))"
+                      :title="`Custom Score (${slotProps.data.custom_scoring.formula})`"
+                    >
+                      C: {{ slotProps.data.custom_scoring.customScore.toFixed(2) }}
+                    </span>
+                    <span
+                      class="top-product-isn-results__badge"
+                      :class="differenceBadgeClass(slotProps.data.custom_scoring.difference)"
+                      title="Difference (Custom - System)"
+                    >
+                      {{ slotProps.data.custom_scoring.difference > 0 ? '+' : '' }}{{ slotProps.data.custom_scoring.difference.toFixed(2) }}
+                    </span>
+                  </template>
+
+                  <button
+                    v-else
+                    type="button"
+                    class="top-product-isn-results__badge top-product-isn-results__score-button"
+                    :class="badgeToneClass(getScoreColor(slotProps.data.score))"
+                    :disabled="!slotProps.data.breakdown"
+                    :title="slotProps.data.scoreSource ? getScoreSourceLabel(slotProps.data.scoreSource) : ''"
+                    @click="slotProps.data.breakdown ? handleScoreClick(slotProps.data) : undefined"
+                  >
+                    <span>{{ slotProps.data.score.toFixed(2) }}</span>
+                    <Icon v-if="slotProps.data.breakdown" icon="mdi:information-outline" />
+                  </button>
                 </div>
+              </template>
+            </Column>
 
-                <!-- Data Table Container - Default mode -->
-                <div v-else class="flex-grow-1 d-flex flex-column measurement-details-table"
-                    style="min-height: 0; overflow: auto;">
-                    <v-data-table v-if="selectedMeasurement" :headers="measurementHeadersWithWidths"
-                        :items="filteredMeasurements" :search="measurementSearch" :items-per-page="25"
-                        density="comfortable" striped="even" fixed-header fixed-footer
-                        class="flex-grow-1 sticky-data-table" ref="measurementTableRef">
-                        <!-- Test Item -->
-                        <template #item.test_item="{ item }">
-                            <span class="font-mono text-body-2"
-                                :class="{ 'text-error font-weight-bold': isErrorItem(item.test_item) }">
-                                {{ item.test_item }}
-                            </span>
-                        </template>
+            <template #empty>
+              <div class="top-product-isn-results__empty-inline">No measurements match the current filters.</div>
+            </template>
+          </DataTable>
+        </div>
+      </div>
+    </AppDialog>
 
-                        <!-- USL -->
-                        <template #item.usl="{ item }">
-                            <div class="text-start text-body-2">
-                                {{ item.usl !== null ? item.usl : '-' }}
-                            </div>
-                        </template>
+    <AppDialog
+      v-model="comparisonFullscreen"
+      width="96vw"
+      :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
+      :closable="false"
+      class="top-product-isn-results__dialog"
+    >
+      <template #header>
+        <div class="top-product-isn-results__dialog-header">
+          <div>
+            <p class="top-product-isn-results__eyebrow">Cross-DUT Review</p>
+            <h2>Comparison: {{ selectedCompareStation ? comparisonStationTitle : 'Select a Station' }}</h2>
+            <p>Compare measured values, deltas, and scores across every DUT in this run.</p>
+          </div>
 
-                        <!-- LSL -->
-                        <template #item.lsl="{ item }">
-                            <div class="text-start text-body-2">
-                                {{ item.lsl !== null ? item.lsl : '-' }}
-                            </div>
-                        </template>
+          <div class="top-product-isn-results__dialog-actions">
+            <button
+              type="button"
+              class="top-product-isn-results__ghost-button"
+              @click="comparisonFullscreen = false"
+            >
+              <Icon icon="mdi:close" />
+              <span>Close</span>
+            </button>
+          </div>
+        </div>
+      </template>
 
-                        <!-- Target -->
-                        <template #item.target="{ item }">
-                            <div class="text-center text-body-2">
-                                {{ item.target || '-' }}
-                            </div>
-                        </template>
+      <div class="top-product-isn-results__comparison-shell top-product-isn-results__comparison-shell--fullscreen">
+        <section class="top-product-isn-results__filter-grid">
+          <label class="top-product-isn-results__field">
+            <span>Station</span>
+            <select v-model="selectedCompareStation">
+              <option :value="null">Select a station</option>
+              <option
+                v-for="station in comparisonStations"
+                :key="station.value"
+                :value="station.value"
+              >
+                {{ station.title }}
+              </option>
+            </select>
+          </label>
 
-                        <!-- Actual -->
-                        <template #item.actual="{ item }">
-                            <div class="text-center">
-                                <v-chip size="small" :color="getActualValueColor(item)" variant="tonal">
-                                    {{ item.actual !== '' ? item.actual : '0' }}
-                                </v-chip>
-                            </div>
-                        </template>
+          <label class="top-product-isn-results__field top-product-isn-results__field--wide">
+            <span>Search Test Items</span>
+            <input v-model="comparisonSearch" type="text" placeholder="Search comparison rows">
+          </label>
 
-                        <!-- Delta Act.Tar -->
-                        <template #item.delta_actual_target="{ item }">
-                            <div class="text-center">
-                                <v-chip
-                                    v-if="item.actual !== null && item.actual !== '' && item.target !== null && item.target !== ''"
-                                    size="small" variant="tonal"
-                                    :color="getDeltaColor(parseFloat(item.actual) - parseFloat(item.target))">
-                                    {{ (parseFloat(item.actual) - parseFloat(item.target)).toFixed(2) }}
-                                </v-chip>
-                                <span v-else class="text-medium-emphasis">—</span>
-                            </div>
-                        </template>
+          <label class="top-product-isn-results__field">
+            <span>Score Filter</span>
+            <select v-model="comparisonScoreFilter">
+              <option :value="null">All Scores</option>
+              <option value="high">Score >= 9</option>
+              <option value="medium">Score 7-9</option>
+              <option value="low">Score < 7</option>
+            </select>
+          </label>
 
-                        <!-- Score -->
-                        <template #item.score="{ item }">
-                            <div class="text-center">
-                                <!-- Show comparison chips when custom scoring is active and different from system -->
-                                <div v-if="item.custom_scoring && item.custom_scoring.method === 'custom'"
-                                    class="d-flex gap-1 justify-center flex-wrap">
-                                    <v-chip :color="getScoreColor(item.custom_scoring.systemScore)" size="x-small"
-                                        variant="tonal">
-                                        <v-tooltip location="top">
-                                            <template #activator="{ props: tooltipProps }">
-                                                <span v-bind="tooltipProps">S: {{
-                                                    item.custom_scoring.systemScore.toFixed(2) }}</span>
-                                            </template>
-                                            System Score
-                                        </v-tooltip>
-                                    </v-chip>
-                                    <v-chip :color="getScoreColor(item.custom_scoring.customScore)" size="x-small"
-                                        variant="elevated">
-                                        <v-tooltip location="top">
-                                            <template #activator="{ props: tooltipProps }">
-                                                <span v-bind="tooltipProps">C: {{
-                                                    item.custom_scoring.customScore.toFixed(2) }}</span>
-                                            </template>
-                                            Custom Score ({{ item.custom_scoring.formula }})
-                                        </v-tooltip>
-                                    </v-chip>
-                                    <v-chip
-                                        :color="item.custom_scoring.difference > 0 ? 'success' : item.custom_scoring.difference < 0 ? 'error' : 'default'"
-                                        size="x-small" variant="outlined">
-                                        <v-tooltip location="top">
-                                            <template #activator="{ props: tooltipProps }">
-                                                <span v-bind="tooltipProps">
-                                                    {{ item.custom_scoring.difference > 0 ? '+' : '' }}{{
-                                                    item.custom_scoring.difference.toFixed(2) }}
-                                                </span>
-                                            </template>
-                                            Difference (Custom - System)
-                                        </v-tooltip>
-                                    </v-chip>
-                                </div>
-                                <!-- Default single score display -->
-                                <v-chip v-else :color="getScoreColor(item.score)" size="small"
-                                    :style="item.breakdown ? 'cursor: pointer;' : ''"
-                                    @click="item.breakdown ? handleScoreClick(item) : undefined">
-                                    {{ item.score.toFixed(2) }}
-                                    <v-icon v-if="item.breakdown" size="x-small" class="ml-1">mdi-information</v-icon>
-                                </v-chip>
-                            </div>
-                        </template>
-                    </v-data-table>
-                </div>
-                <!-- End Table Container -->
-            </v-card>
-        </v-dialog>
+          <label class="top-product-isn-results__field">
+            <span>Limit Status</span>
+            <select v-model="comparisonLimitFilter">
+              <option :value="null">All Results</option>
+              <option value="within">Within Limits</option>
+              <option value="out">Out Of Limits</option>
+            </select>
+          </label>
 
-        <!-- Score Breakdown Dialog -->
-        <!-- Component kept mounted to prevent Vue lifecycle corruption -->
-        <ScoreBreakdownDialog v-model="scoreBreakdownDialog" :item="selectedScoreBreakdown"
-            :custom-scoring-enabled="props.customScoringEnabled" :universal-formula="props.universalFormula"
-            :category-formulas="props.categoryFormulas" />
+          <label class="top-product-isn-results__field top-product-isn-results__field--wide">
+            <span>Pin Columns</span>
+            <select v-model="comparisonLockedColumns" multiple size="6">
+              <option
+                v-for="option in comparisonColumnOptions"
+                :key="option.value"
+                :value="option.value"
+              >
+                {{ option.title }}
+              </option>
+            </select>
+          </label>
+        </section>
 
-        <!-- Results Summary -->
-        <v-card class="mb-4">
-            <v-card-title class="d-flex justify-space-between align-center">
-                <div>
-                    <v-icon class="mr-2">mdi-chart-box</v-icon>
-                    Analysis Results
-                </div>
-                <v-btn color="success" prepend-icon="mdi-download" @click="$emit('export')">
-                    Export
-                </v-btn>
-            </v-card-title>
+        <div v-if="selectedCompareStation && filteredComparisonData.length > 0" class="top-product-isn-results__table-shell">
+          <DataTable
+            :value="filteredComparisonData"
+            paginator
+            :rows="50"
+            dataKey="test_item"
+            scrollable
+            scrollHeight="calc(100vh - 22rem)"
+            removableSort
+            showGridlines
+            stripedRows
+            class="top-product-isn-results__data-table"
+          >
+            <Column
+              v-for="column in comparisonHeaders"
+              :key="column.key"
+              :field="column.key"
+              :header="column.title"
+              :sortable="column.sortable"
+              :frozen="comparisonLockedColumns.includes(column.key)"
+              alignFrozen="left"
+              :style="getComparisonColumnStyle(column.key)"
+            >
+              <template v-if="column.key === 'test_item'" #body="slotProps">
+                <span class="top-product-isn-results__strong">{{ slotProps.data.test_item }}</span>
+              </template>
 
-            <v-card-text>
-                <v-row>
-                    <v-col cols="12" md="4">
-                        <v-card variant="tonal" color="primary">
-                            <v-card-text class="text-center">
-                                <div class="text-h4 font-weight-bold">{{ enhancedResults.length }}</div>
-                                <div class="text-caption">DUTs Analyzed</div>
-                            </v-card-text>
-                        </v-card>
-                    </v-col>
+              <template v-else-if="column.key === 'usl' || column.key === 'lsl' || column.key === 'target'" #body="slotProps">
+                <span class="top-product-isn-results__muted">{{ slotProps.data[column.key] ?? '-' }}</span>
+              </template>
 
-                    <v-col cols="12" md="4">
-                        <v-card variant="tonal" color="success">
-                            <v-card-text class="text-center">
-                                <div class="text-h4 font-weight-bold">{{ totalStations }}</div>
-                                <div class="text-caption">Total Station Results</div>
-                            </v-card-text>
-                        </v-card>
-                    </v-col>
+              <template v-else-if="column.key === 'measured_max_diff'" #body="slotProps">
+                <span
+                  v-if="slotProps.data.measured_max_diff !== null"
+                  class="top-product-isn-results__badge"
+                  :class="badgeToneClass(getDeltaColor(slotProps.data.measured_max_diff))"
+                >
+                  {{ slotProps.data.measured_max_diff.toFixed(2) }}
+                </span>
+                <span v-else class="top-product-isn-results__muted">N/A</span>
+              </template>
 
-                    <v-col cols="12" md="4">
-                        <v-card variant="tonal" color="error">
-                            <v-card-text class="text-center">
-                                <div class="text-h4 font-weight-bold">{{ failedDUTsCount }}</div>
-                                <div class="text-caption">Fails (DUTs with error items)</div>
-                            </v-card-text>
-                        </v-card>
-                    </v-col>
-                </v-row>
-            </v-card-text>
-        </v-card>
+              <template v-else-if="column.key.startsWith('measured_')" #body="slotProps">
+                <span
+                  v-if="slotProps.data[column.key] !== null && slotProps.data[column.key] !== undefined && slotProps.data[column.key] !== 'N/A'"
+                  class="top-product-isn-results__badge"
+                  :class="badgeToneClass(getMeasuredValueColor(slotProps.data[column.key], slotProps.data.usl, slotProps.data.lsl))"
+                >
+                  {{ slotProps.data[column.key] }}
+                </span>
+                <span v-else class="top-product-isn-results__muted">N/A</span>
+              </template>
 
-        <!-- Top Product Ranking -->
-        <TopProductRanking v-if="enhancedResults.length > 0" :results="results" @row-click="handleRankingRowClick" />
+              <template v-else-if="column.key.startsWith('delta_mt_')" #body="slotProps">
+                <span
+                  v-if="slotProps.data[column.key] !== undefined && slotProps.data[column.key] !== null"
+                  class="top-product-isn-results__badge"
+                  :class="badgeToneClass(getDeltaColor(slotProps.data[column.key]))"
+                >
+                  {{ slotProps.data[column.key].toFixed(2) }}
+                </span>
+                <span v-else class="top-product-isn-results__muted">N/A</span>
+              </template>
 
-        <!-- Error Display -->
-        <v-alert v-if="errors.length > 0" type="error" variant="tonal" class="mb-4">
-            <div class="font-weight-medium">Analysis Errors ({{ errors.length }})</div>
-            <v-list density="compact" class="mt-2">
-                <v-list-item v-for="(error, index) in errors" :key="index" :title="error.dut_isn"
-                    :subtitle="error.detail">
-                    <template #prepend>
-                        <v-icon color="error">mdi-alert-circle</v-icon>
-                    </template>
-                </v-list-item>
-            </v-list>
-        </v-alert>
+              <template v-else-if="column.key.startsWith('score_')" #body="slotProps">
+                <button
+                  type="button"
+                  class="top-product-isn-results__badge top-product-isn-results__score-button"
+                  :class="badgeToneClass(getScoreColor(slotProps.data[column.key]))"
+                  :disabled="!slotProps.data[`breakdown_${column.key.replace('score_', '')}`]"
+                  @click="slotProps.data[`breakdown_${column.key.replace('score_', '')}`] && handleComparisonScoreClick(slotProps.data, column.key.replace('score_', ''))"
+                >
+                  <span>
+                    {{ slotProps.data[column.key] !== undefined ? slotProps.data[column.key].toFixed(2) : 'N/A' }}
+                  </span>
+                  <Icon v-if="slotProps.data[`breakdown_${column.key.replace('score_', '')}`]" icon="mdi:information-outline" />
+                </button>
+              </template>
+            </Column>
 
-        <!-- Comparison View (only show when multiple DUTs) -->
-        <v-card v-if="enhancedResults.length > 1" class="mb-4">
-            <v-card-title class="d-flex justify-space-between align-center cursor-pointer"
-                @click="showComparison = !showComparison">
-                <div>
-                    <v-icon class="mr-2">mdi-compare</v-icon>
-                    Compare Test Results
-                </div>
-                <div class="d-flex align-center">
-                    <v-btn v-if="selectedCompareStation && comparisonData.length > 0"
-                        :icon="comparisonFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
-                        @click.stop="comparisonFullscreen = !comparisonFullscreen"
-                        :title="comparisonFullscreen ? 'Exit Fullscreen' : 'Fullscreen'" class="mr-2" />
-                    <v-icon>{{ showComparison ? 'mdi-chevron-up' : 'mdi-chevron-down' }}</v-icon>
-                </div>
-            </v-card-title>
+            <template #empty>
+              <div class="top-product-isn-results__empty-inline">No comparison rows match the current filters.</div>
+            </template>
+          </DataTable>
+        </div>
+        <div v-else class="top-product-isn-results__empty-state">
+          <Icon icon="mdi:table-search" />
+          <strong>{{ selectedCompareStation ? 'No comparison rows available' : 'Select a station to compare DUTs' }}</strong>
+          <p>
+            {{ selectedCompareStation
+              ? 'The current search and filter set returned no shared test items.'
+              : `Choose a station that exists across all ${enhancedResults.length} DUT results.` }}
+          </p>
+        </div>
+      </div>
+    </AppDialog>
 
-            <v-expand-transition>
-                <v-card-text v-show="showComparison">
-                    <v-row dense>
-                        <!-- Station Selector for Comparison -->
-                        <v-col cols="12" md="6">
-                            <v-select v-model="selectedCompareStation" :items="comparisonStations" item-value="value"
-                                item-title="title" label="Select Station" prepend-inner-icon="mdi-factory"
-                                variant="outlined" density="comfortable"
-                                hint="Choose a test station to compare results across all DUTs" persistent-hint>
-                                <template #item="{ props: itemProps, item }">
-                                    <v-list-item v-bind="itemProps">
-                                        <template #title>
-                                            <div class="d-flex align-center">
-                                                <v-icon size="small" class="mr-2">mdi-factory</v-icon>
-                                                <span class="font-weight-medium">{{ item.raw.raw.station }}</span>
-                                            </div>
-                                        </template>
-                                        <template #subtitle>
-                                            <span class="text-caption">{{ item.raw.raw.site }} / {{ item.raw.raw.model
-                                                }}</span>
-                                        </template>
-                                    </v-list-item>
-                                </template>
-                            </v-select>
-                        </v-col>
+    <ScoreBreakdownDialog
+      v-model="scoreBreakdownDialog"
+      :item="selectedScoreBreakdown"
+      :custom-scoring-enabled="props.customScoringEnabled"
+      :universal-formula="props.universalFormula"
+      :category-formulas="props.categoryFormulas"
+    />
 
-                        <!-- Search Field -->
-                        <v-col cols="12" md="6">
-                            <v-text-field v-model="comparisonSearch" label="Search Test Items"
-                                prepend-inner-icon="mdi-magnify" variant="outlined" density="comfortable" clearable
-                                hint="Filter test items by name" persistent-hint />
-                        </v-col>
-                    </v-row>
+    <AppPanel
+      eyebrow="Analysis Snapshot"
+      title="Analysis Results"
+      :description="`${enhancedResults.length} DUT ${enhancedResults.length === 1 ? 'result' : 'results'} are ready for ranking, drilldown, and export.`"
+      tone="cool"
+      splitHeader
+    >
+      <template #header-aside>
+        <button type="button" class="top-product-isn-results__primary-button" @click="$emit('export')">
+          <Icon icon="mdi:download" />
+          <span>Export</span>
+        </button>
+      </template>
 
-                    <!-- Comparison Table -->
-                    <v-dialog v-model="comparisonFullscreen" fullscreen transition="dialog-bottom-transition">
-                        <v-card class="d-flex flex-column" style="height: 100vh; overflow: hidden;">
-                            <v-card-title class="d-flex justify-space-between align-center flex-shrink-0">
-                                <div>
-                                    <v-icon class="mr-2">mdi-compare</v-icon>
-                                    Comparison: {{selectedCompareStation ? comparisonStations.find((s: any) => s.value
-                                        ===
-                                    selectedCompareStation)?.title : '' }}
-                                </div>
-                                <div class="d-flex align-center">
-                                    <v-btn icon="mdi-close" variant="text" @click="comparisonFullscreen = false" />
-                                </div>
-                            </v-card-title>
+      <div class="top-product-isn-results__stat-grid">
+        <article class="top-product-isn-results__stat-card">
+          <small>DUTs Analyzed</small>
+          <strong>{{ enhancedResults.length }}</strong>
+        </article>
+        <article class="top-product-isn-results__stat-card top-product-isn-results__stat-card--success">
+          <small>Total Station Results</small>
+          <strong>{{ totalStations }}</strong>
+        </article>
+        <article class="top-product-isn-results__stat-card top-product-isn-results__stat-card--warning">
+          <small>Failed DUTs</small>
+          <strong>{{ failedDUTsCount }}</strong>
+        </article>
+      </div>
+    </AppPanel>
 
-                            <!-- Filter Controls (Fixed, non-scrollable) -->
-                            <v-card-text class="pb-2 pt-3 flex-shrink-0">
-                                <v-row dense>
-                                    <v-col cols="12" md="4">
-                                        <v-text-field v-model="comparisonSearch" prepend-inner-icon="mdi-magnify"
-                                            label="Search test items..." variant="outlined" density="compact" clearable
-                                            hide-details />
-                                    </v-col>
-                                    <v-col cols="12" md="2">
-                                        <v-select v-model="comparisonScoreFilter" :items="scoreFilterOptions"
-                                            label="Score Filter" variant="outlined" density="compact" clearable
-                                            hide-details :menu-props="{ zIndex: 2500 }" />
-                                    </v-col>
-                                    <v-col cols="12" md="2">
-                                        <v-select v-model="comparisonLimitFilter" :items="limitFilterOptions"
-                                            label="Limit Status" variant="outlined" density="compact" clearable
-                                            hide-details :menu-props="{ zIndex: 2500 }" />
-                                    </v-col>
-                                    <v-col cols="12" md="4">
-                                        <v-select v-model="comparisonLockedColumns" :items="comparisonColumnOptions"
-                                            item-title="title" item-value="value" label="Lock columns"
-                                            variant="outlined" density="compact" multiple chips closable-chips clearable
-                                            hide-details prepend-inner-icon="mdi-pin" :menu-props="{ zIndex: 2500 }" />
-                                    </v-col>
-                                </v-row>
-                            </v-card-text>
+    <TopProductRanking
+      v-if="enhancedResults.length > 0"
+      :results="results"
+      @row-click="handleRankingRowClick"
+    />
 
-                            <v-card-text class="pa-0 flex-grow-1 overflow-hidden comparison-table">
-                                <v-data-table v-if="filteredComparisonData.length > 0"
-                                    :headers="comparisonHeadersWithWidths" :items="filteredComparisonData"
-                                    :items-per-page="50" class="h-100 sticky-data-table" density="comfortable"
-                                    striped="even" fixed-header fixed-footer :height="'calc(100vh - 140px)'"
-                                    ref="comparisonFullscreenTableRef">
-                                    <template #no-data>
-                                        <v-alert type="info" variant="tonal" class="ma-4">
-                                            No data available
-                                        </v-alert>
-                                    </template>
+    <section v-if="errors.length > 0" class="top-product-isn-results__notice top-product-isn-results__notice--error">
+      <div>
+        <strong>Analysis Errors ({{ errors.length }})</strong>
+        <ul class="top-product-isn-results__error-list">
+          <li v-for="(error, index) in errors" :key="`${error.dut_isn}-${index}`">
+            <span>{{ error.dut_isn }}</span>
+            <small>{{ error.detail }}</small>
+          </li>
+        </ul>
+      </div>
+    </section>
 
-                                    <!-- Test Item Column -->
-                                    <template #item.test_item="{ item }">
-                                        <div class="font-weight-medium text-caption">{{ item.test_item }}</div>
-                                    </template>
+    <AppPanel
+      v-if="enhancedResults.length > 1"
+      eyebrow="Cross-DUT Comparison"
+      title="Compare Test Results"
+      description="Choose a station shared by all DUTs, then compare measured values, deltas, and scores across the entire run."
+      splitHeader
+      tone="warm"
+    >
+      <template #header-aside>
+        <div class="top-product-isn-results__panel-actions">
+          <button
+            v-if="selectedCompareStation && comparisonData.length > 0"
+            type="button"
+            class="top-product-isn-results__ghost-button"
+            @click="comparisonFullscreen = true"
+          >
+            <Icon icon="mdi:fullscreen" />
+            <span>Expanded View</span>
+          </button>
+          <button
+            type="button"
+            class="top-product-isn-results__ghost-button"
+            @click="showComparison = !showComparison"
+          >
+            <Icon :icon="showComparison ? 'mdi:chevron-up' : 'mdi:chevron-down'" />
+            <span>{{ showComparison ? 'Collapse' : 'Expand' }}</span>
+          </button>
+        </div>
+      </template>
 
-                                    <!-- Limits Columns (no color) -->
-                                    <template #item.usl="{ item }">
-                                        <span class="text-body-2">{{ item.usl !== null ? item.usl : 'N/A' }}</span>
-                                    </template>
+      <div v-if="showComparison" class="top-product-isn-results__comparison-shell">
+        <section class="top-product-isn-results__filter-grid">
+          <label class="top-product-isn-results__field">
+            <span>Station</span>
+            <select v-model="selectedCompareStation">
+              <option :value="null">Select a station</option>
+              <option
+                v-for="station in comparisonStations"
+                :key="station.value"
+                :value="station.value"
+              >
+                {{ station.title }}
+              </option>
+            </select>
+          </label>
 
-                                    <template #item.lsl="{ item }">
-                                        <span class="text-body-2">{{ item.lsl !== null ? item.lsl : 'N/A' }}</span>
-                                    </template>
+          <label class="top-product-isn-results__field top-product-isn-results__field--wide">
+            <span>Search Test Items</span>
+            <input v-model="comparisonSearch" type="text" placeholder="Filter the shared comparison set">
+          </label>
 
-                                    <!-- Dynamic DUT Measured Columns -->
-                                    <template v-for="result in enhancedResults" :key="`measured-fs-${result.dut_isn}`"
-                                        #[`item.measured_${result.dut_isn}`]="{ item }">
-                                        <v-chip
-                                            v-if="item[`measured_${result.dut_isn}`] !== null && item[`measured_${result.dut_isn}`] !== undefined && item[`measured_${result.dut_isn}`] !== 'N/A'"
-                                            size="small"
-                                            :color="getMeasuredValueColor(item[`measured_${result.dut_isn}`], item.usl, item.lsl)"
-                                            variant="tonal">
-                                            {{ item[`measured_${result.dut_isn}`] }}
-                                        </v-chip>
-                                        <span v-else class="text-caption text-medium-emphasis">N/A</span>
-                                    </template>
+          <label class="top-product-isn-results__field">
+            <span>Score Filter</span>
+            <select v-model="comparisonScoreFilter">
+              <option :value="null">All Scores</option>
+              <option value="high">Score >= 9</option>
+              <option value="medium">Score 7-9</option>
+              <option value="low">Score < 7</option>
+            </select>
+          </label>
 
-                                    <!-- Target Column -->
-                                    <template #item.target="{ item }">
-                                        <span class="text-body-2">{{ item.target || '-' }}</span>
-                                    </template>
+          <label class="top-product-isn-results__field">
+            <span>Limit Status</span>
+            <select v-model="comparisonLimitFilter">
+              <option :value="null">All Results</option>
+              <option value="within">Within Limits</option>
+              <option value="out">Out Of Limits</option>
+            </select>
+          </label>
+        </section>
 
-                                    <!-- Dynamic Delta M.T Columns -->
-                                    <template v-for="result in enhancedResults" :key="`delta-fs-${result.dut_isn}`"
-                                        #[`item.delta_mt_${result.dut_isn}`]="{ item }">
-                                        <v-chip
-                                            v-if="item[`delta_mt_${result.dut_isn}`] !== undefined && item[`delta_mt_${result.dut_isn}`] !== null"
-                                            size="small" variant="tonal"
-                                            :color="getDeltaColor(item[`delta_mt_${result.dut_isn}`])">
-                                            {{ item[`delta_mt_${result.dut_isn}`].toFixed(2) }}
-                                        </v-chip>
-                                        <span v-else class="text-caption text-medium-emphasis">N/A</span>
-                                    </template>
+        <div v-if="selectedCompareStation && filteredComparisonData.length > 0" class="top-product-isn-results__table-shell">
+          <DataTable
+            :value="filteredComparisonData"
+            paginator
+            :rows="15"
+            dataKey="test_item"
+            scrollable
+            scrollHeight="32rem"
+            removableSort
+            showGridlines
+            stripedRows
+            class="top-product-isn-results__data-table"
+          >
+            <Column
+              v-for="column in comparisonHeaders"
+              :key="column.key"
+              :field="column.key"
+              :header="column.title"
+              :sortable="column.sortable"
+              :frozen="comparisonLockedColumns.includes(column.key)"
+              alignFrozen="left"
+              :style="getComparisonColumnStyle(column.key)"
+            >
+              <template v-if="column.key === 'test_item'" #body="slotProps">
+                <span class="top-product-isn-results__strong">{{ slotProps.data.test_item }}</span>
+              </template>
 
-                                    <!-- M.Max Diff Column -->
-                                    <template #item.measured_max_diff="{ item }">
-                                        <v-chip v-if="item.measured_max_diff !== null" size="small" variant="tonal"
-                                            :color="getDeltaColor(item.measured_max_diff)">
-                                            {{ item.measured_max_diff.toFixed(2) }}
-                                        </v-chip>
-                                        <span v-else class="text-caption text-medium-emphasis">N/A</span>
-                                    </template>
+              <template v-else-if="column.key === 'usl' || column.key === 'lsl' || column.key === 'target'" #body="slotProps">
+                <span class="top-product-isn-results__muted">{{ slotProps.data[column.key] ?? '-' }}</span>
+              </template>
 
-                                    <!-- Dynamic DUT Score Columns -->
-                                    <template v-for="result in enhancedResults" :key="`score-fs-${result.dut_isn}`"
-                                        #[`item.score_${result.dut_isn}`]="{ item }">
-                                        <v-chip :color="getScoreColor(item[`score_${result.dut_isn}`])" size="small"
-                                            variant="flat"
-                                            :class="item[`breakdown_${result.dut_isn}`] ? 'cursor-pointer' : ''"
-                                            @click="item[`breakdown_${result.dut_isn}`] && handleComparisonScoreClick(item, result.dut_isn)">
-                                            {{ item[`score_${result.dut_isn}`] !== undefined ?
-                                                item[`score_${result.dut_isn}`].toFixed(2) : 'N/A' }}
-                                        </v-chip>
-                                    </template>
-                                </v-data-table>
-                            </v-card-text>
-                        </v-card>
-                    </v-dialog>
+              <template v-else-if="column.key === 'measured_max_diff'" #body="slotProps">
+                <span
+                  v-if="slotProps.data.measured_max_diff !== null"
+                  class="top-product-isn-results__badge"
+                  :class="badgeToneClass(getDeltaColor(slotProps.data.measured_max_diff))"
+                >
+                  {{ slotProps.data.measured_max_diff.toFixed(2) }}
+                </span>
+                <span v-else class="top-product-isn-results__muted">N/A</span>
+              </template>
 
-                    <!-- Default Mode Filters (shown after station selection) -->
-                    <v-row v-if="!comparisonFullscreen && selectedCompareStation" dense class="mt-4">
-                        <v-col cols="12" md="3">
-                            <v-select v-model="comparisonScoreFilter" :items="scoreFilterOptions" label="Score Filter"
-                                variant="outlined" density="compact" clearable hide-details
-                                :menu-props="{ zIndex: 2500 }" />
-                        </v-col>
-                        <v-col cols="12" md="3">
-                            <v-select v-model="comparisonLimitFilter" :items="limitFilterOptions" label="Limit Status"
-                                variant="outlined" density="compact" clearable hide-details
-                                :menu-props="{ zIndex: 2500 }" />
-                        </v-col>
-                        <v-col cols="12" md="6">
-                            <v-select v-model="comparisonLockedColumns" :items="comparisonColumnOptions"
-                                item-title="title" item-value="value" label="Lock columns" variant="outlined"
-                                density="compact" multiple chips closable-chips clearable hide-details
-                                prepend-inner-icon="mdi-pin" :menu-props="{ zIndex: 2500 }" />
-                        </v-col>
-                    </v-row>
+              <template v-else-if="column.key.startsWith('measured_')" #body="slotProps">
+                <span
+                  v-if="slotProps.data[column.key] !== null && slotProps.data[column.key] !== undefined && slotProps.data[column.key] !== 'N/A'"
+                  class="top-product-isn-results__badge"
+                  :class="badgeToneClass(getMeasuredValueColor(slotProps.data[column.key], slotProps.data.usl, slotProps.data.lsl))"
+                >
+                  {{ slotProps.data[column.key] }}
+                </span>
+                <span v-else class="top-product-isn-results__muted">N/A</span>
+              </template>
 
-                    <!-- Inline Table (when not fullscreen) -->
-                    <div v-if="!comparisonFullscreen && selectedCompareStation && filteredComparisonData.length > 0"
-                        class="comparison-table">
-                        <v-data-table :headers="comparisonHeadersWithWidths" :items="filteredComparisonData"
-                            :items-per-page="15" class="elevation-1 mt-4 sticky-data-table" density="comfortable"
-                            striped="even" fixed-header height="520" ref="comparisonTableRef">
-                            <template #no-data>
-                                <v-alert type="info" variant="tonal" class="ma-4">
-                                    No data available
-                                </v-alert>
-                            </template>
+              <template v-else-if="column.key.startsWith('delta_mt_')" #body="slotProps">
+                <span
+                  v-if="slotProps.data[column.key] !== undefined && slotProps.data[column.key] !== null"
+                  class="top-product-isn-results__badge"
+                  :class="badgeToneClass(getDeltaColor(slotProps.data[column.key]))"
+                >
+                  {{ slotProps.data[column.key].toFixed(2) }}
+                </span>
+                <span v-else class="top-product-isn-results__muted">N/A</span>
+              </template>
 
-                            <!-- Test Item Column -->
-                            <template #item.test_item="{ item }">
-                                <div class="font-weight-medium text-caption">{{ item.test_item }}</div>
-                            </template>
+              <template v-else-if="column.key.startsWith('score_')" #body="slotProps">
+                <button
+                  type="button"
+                  class="top-product-isn-results__badge top-product-isn-results__score-button"
+                  :class="badgeToneClass(getScoreColor(slotProps.data[column.key]))"
+                  :disabled="!slotProps.data[`breakdown_${column.key.replace('score_', '')}`]"
+                  @click="slotProps.data[`breakdown_${column.key.replace('score_', '')}`] && handleComparisonScoreClick(slotProps.data, column.key.replace('score_', ''))"
+                >
+                  <span>
+                    {{ slotProps.data[column.key] !== undefined ? slotProps.data[column.key].toFixed(2) : 'N/A' }}
+                  </span>
+                  <Icon v-if="slotProps.data[`breakdown_${column.key.replace('score_', '')}`]" icon="mdi:information-outline" />
+                </button>
+              </template>
+            </Column>
 
-                            <!-- Limits Columns (no color) -->
-                            <template #item.usl="{ item }">
-                                <span class="text-body-2">{{ item.usl !== null ? item.usl : 'N/A' }}</span>
-                            </template>
+            <template #empty>
+              <div class="top-product-isn-results__empty-inline">No comparison rows match the current filters.</div>
+            </template>
+          </DataTable>
+        </div>
 
-                            <template #item.lsl="{ item }">
-                                <span class="text-body-2">{{ item.lsl !== null ? item.lsl : 'N/A' }}</span>
-                            </template>
+        <div v-else class="top-product-isn-results__empty-state top-product-isn-results__empty-state--compact">
+          <Icon icon="mdi:compare-horizontal" />
+          <strong>{{ selectedCompareStation ? 'No shared comparison data available' : 'Select a station to compare all DUTs' }}</strong>
+          <p>
+            {{ selectedCompareStation
+              ? 'No test items matched the current score, limit, or search filters.'
+              : 'Choose a station above to populate the shared comparison table.' }}
+          </p>
+        </div>
+      </div>
+    </AppPanel>
 
-                            <!-- Dynamic DUT Measured Columns -->
-                            <template v-for="result in enhancedResults" :key="`measured-${result.dut_isn}`"
-                                #[`item.measured_${result.dut_isn}`]="{ item }">
-                                <v-chip
-                                    v-if="item[`measured_${result.dut_isn}`] !== null && item[`measured_${result.dut_isn}`] !== undefined && item[`measured_${result.dut_isn}`] !== 'N/A'"
-                                    size="small"
-                                    :color="getMeasuredValueColor(item[`measured_${result.dut_isn}`], item.usl, item.lsl)"
-                                    variant="tonal">
-                                    {{ item[`measured_${result.dut_isn}`] }}
-                                </v-chip>
-                                <span v-else class="text-caption text-medium-emphasis">N/A</span>
-                            </template>
+    <section v-if="enhancedResults.length > 0" class="top-product-isn-results__dut-stack">
+      <details
+        v-for="(result, index) in enhancedResults"
+        :key="result.dut_isn"
+        class="top-product-isn-results__dut-disclosure"
+        :open="openDutPanels.includes(result.dut_isn)"
+        @toggle="handleDutDisclosureToggle(result.dut_isn, $event)"
+      >
+        <summary>
+          <div class="top-product-isn-results__dut-summary">
+            <div>
+              <p class="top-product-isn-results__dut-title">{{ result.dut_isn }}</p>
+              <span>{{ result.site_name }} / {{ result.model_name }} • {{ result.test_result.length }} station(s)</span>
+            </div>
+            <div class="top-product-isn-results__badge-row">
+              <span class="top-product-isn-results__badge top-product-isn-results__badge--neutral">
+                {{ result.test_result.length }} station{{ result.test_result.length === 1 ? '' : 's' }}
+              </span>
+              <span
+                class="top-product-isn-results__badge"
+                :class="hasErrorInResult(result) ? 'top-product-isn-results__badge--error' : 'top-product-isn-results__badge--success'"
+              >
+                {{ hasErrorInResult(result) ? 'Has Errors' : 'Clean Pass' }}
+              </span>
+            </div>
+          </div>
+        </summary>
 
-                            <!-- Target Column -->
-                            <template #item.target="{ item }">
-                                <span class="text-body-2">{{ item.target || '-' }}</span>
-                            </template>
+        <AppPanel
+          :eyebrow="index === 0 ? 'Primary DUT' : 'DUT Detail'"
+          title="Station Results"
+          :description="`Inspect the station outcomes for ${result.dut_isn} and open the full measurement dialog when you need test-item detail.`"
+          tone="default"
+        >
+          <AppDataGrid
+            :columns="stationColumns"
+            :rows="result.test_result"
+            dataKey="station_name"
+            :paginator="true"
+            :rowsPerPage="10"
+            :rowClass="stationRowClass"
+            scrollHeight="28rem"
+          >
+            <template #cell-station_name="{ data }">
+              <div class="top-product-isn-results__station-cell">
+                <strong :class="{ 'top-product-isn-results__station-cell--error': data.error_item && data.error_item.trim() !== '' }">
+                  {{ data.station_name }}
+                </strong>
+                <small>{{ data.device || 'No device name' }}</small>
+              </div>
+            </template>
 
-                            <!-- Dynamic Delta M.T Columns -->
-                            <template v-for="result in enhancedResults" :key="`delta-${result.dut_isn}`"
-                                #[`item.delta_mt_${result.dut_isn}`]="{ item }">
-                                <v-chip
-                                    v-if="item[`delta_mt_${result.dut_isn}`] !== undefined && item[`delta_mt_${result.dut_isn}`] !== null"
-                                    size="small" variant="tonal"
-                                    :color="getDeltaColor(item[`delta_mt_${result.dut_isn}`])">
-                                    {{ item[`delta_mt_${result.dut_isn}`].toFixed(2) }}
-                                </v-chip>
-                                <span v-else class="text-caption text-medium-emphasis">N/A</span>
-                            </template>
+            <template #cell-test_date="{ data }">
+              <span>{{ formatDate(data.test_date) }}</span>
+            </template>
 
-                            <!-- M.Max Diff Column -->
-                            <template #item.measured_max_diff="{ item }">
-                                <v-chip v-if="item.measured_max_diff !== null" size="small" variant="tonal"
-                                    :color="getDeltaColor(item.measured_max_diff)">
-                                    {{ item.measured_max_diff.toFixed(2) }}
-                                </v-chip>
-                                <span v-else class="text-caption text-medium-emphasis">N/A</span>
-                            </template>
+            <template #cell-measurement_count="{ data }">
+              <span class="top-product-isn-results__badge top-product-isn-results__badge--neutral">
+                {{ data.measurement_count || 0 }}
+              </span>
+            </template>
 
-                            <!-- Dynamic DUT Score Columns -->
-                            <template v-for="result in enhancedResults" :key="`score-${result.dut_isn}`"
-                                #[`item.score_${result.dut_isn}`]="{ item }">
-                                <v-chip :color="getScoreColor(item[`score_${result.dut_isn}`])" size="small"
-                                    variant="flat" :class="item[`breakdown_${result.dut_isn}`] ? 'cursor-pointer' : ''"
-                                    @click="item[`breakdown_${result.dut_isn}`] && handleComparisonScoreClick(item, result.dut_isn)">
-                                    {{ item[`score_${result.dut_isn}`] !== undefined ?
-                                        item[`score_${result.dut_isn}`].toFixed(2) : 'N/A' }}
-                                </v-chip>
-                            </template>
-                        </v-data-table>
-                    </div>
+            <template #cell-overall_data_score="{ data }">
+              <div v-if="data.error_item && data.error_item.trim() !== ''" class="top-product-isn-results__score-na">
+                <span>N/A</span>
+                <small>Failed DUT</small>
+              </div>
+              <span
+                v-else
+                class="top-product-isn-results__badge"
+                :class="badgeToneClass(getScoreColor(data.overall_data_score))"
+              >
+                {{ data.overall_data_score.toFixed(2) }}
+              </span>
+            </template>
 
-                    <!-- No Data for Selected Station -->
-                    <v-alert
-                        v-if="!comparisonFullscreen && selectedCompareStation && filteredComparisonData.length === 0 && comparisonData.length > 0"
-                        type="info" variant="tonal" density="compact" class="mt-4">
-                        No test items match your search criteria.
-                    </v-alert>
+            <template #cell-actions="{ data }">
+              <button
+                type="button"
+                class="top-product-isn-results__ghost-button top-product-isn-results__ghost-button--compact"
+                @click="showMeasurements(result.dut_isn, data)"
+              >
+                <Icon icon="mdi:table-eye" />
+                <span>Open</span>
+              </button>
+            </template>
 
-                    <v-alert
-                        v-else-if="!comparisonFullscreen && selectedCompareStation && filteredComparisonData.length === 0"
-                        type="info" variant="tonal" density="compact" class="mt-4">
-                        No test data available for the selected station across all DUTs.
-                    </v-alert>
+            <template #empty>
+              <div class="top-product-isn-results__empty-inline">No station results are available for this DUT.</div>
+            </template>
+          </AppDataGrid>
+        </AppPanel>
+      </details>
+    </section>
 
-                    <!-- Initial State -->
-                    <v-alert v-else-if="!comparisonFullscreen && !selectedCompareStation" type="info" variant="tonal"
-                        density="compact" class="mt-4">
-                        Select a station above to compare test results across all {{ enhancedResults.length }} DUTs.
-                    </v-alert>
-                </v-card-text>
-            </v-expand-transition>
-        </v-card>
-
-        <!-- Results by DUT -->
-        <v-expansion-panels v-if="enhancedResults.length > 0" multiple>
-            <v-expansion-panel v-for="(result, index) in enhancedResults" :key="result.dut_isn"
-                :value="index === 0 ? 'open' : undefined">
-                <v-expansion-panel-title>
-                    <div class="d-flex align-center justify-space-between" style="width: 100%;">
-                        <div class="d-flex align-center">
-                            <v-icon class="mr-3">mdi-barcode-scan</v-icon>
-                            <div>
-                                <div class="font-weight-bold">{{ result.dut_isn }}</div>
-                                <div class="text-caption text-medium-emphasis">
-                                    {{ result.site_name }} / {{ result.model_name }} •
-                                    {{ result.test_result.length }} station(s)
-                                </div>
-                            </div>
-                        </div>
-                        <v-chip v-if="hasErrorInResult(result)" color="error" size="small" class="mr-2">
-                            <v-icon start size="small">mdi-alert-circle</v-icon>
-                            Has Errors
-                        </v-chip>
-                    </div>
-                </v-expansion-panel-title>
-
-                <v-expansion-panel-text>
-                    <!-- Station Results Table -->
-                    <v-data-table :headers="stationHeaders" :items="result.test_result" :items-per-page="10"
-                        class="elevation-1 cursor-pointer" striped="even"
-                        @click:row="(_event: unknown, data: any) => showMeasurements(result.dut_isn, data.item)">
-                        <!-- Station Name -->
-                        <template #item.station_name="{ item }">
-                            <div class="font-weight-medium"
-                                :class="{ 'text-error': item.error_item && item.error_item.trim() !== '' }">
-                                {{ item.station_name }}
-                            </div>
-                        </template>
-
-                        <!-- Device -->
-                        <template #item.device="{ item }">
-                            <div class="text-body-2">
-                                {{ item.device || 'N/A' }}
-                            </div>
-                        </template>
-
-                        <!-- Test Date -->
-                        <template #item.test_date="{ item }">
-                            {{ formatDate(item.test_date) }}
-                        </template>
-
-                        <!-- Test Item Count -->
-                        <template #item.measurement_count="{ item }">
-                            <v-chip size="small" color="primary">
-                                {{ item.measurement_count || 0 }}
-                            </v-chip>
-                        </template>
-
-                        <!-- Overall Score -->
-                        <template #item.overall_data_score="{ item }">
-                            <div v-if="item.error_item && item.error_item.trim() !== ''" class="d-flex align-center">
-                                <span class="text-body-2">N/A</span>
-                                <v-tooltip location="top">
-                                    <template #activator="{ props: tooltipProps }">
-                                        <v-icon v-bind="tooltipProps" size="small" class="ml-1" color="info">
-                                            mdi-information-slab-circle-outline
-                                        </v-icon>
-                                    </template>
-                                    <span>Can't be calculated because DUT failed</span>
-                                </v-tooltip>
-                            </div>
-                            <v-chip v-else :color="getScoreColor(item.overall_data_score)" size="small">
-                                {{ item.overall_data_score.toFixed(2) }}
-                            </v-chip>
-                        </template>
-
-                        <!-- Actions -->
-                        <template #item.actions="{ item }">
-                            <v-btn size="small" variant="text" icon="mdi-table-eye"
-                                @click="showMeasurements(result.dut_isn, item)" />
-                        </template>
-
-                        <!-- Expanded Row: Measurements -->
-                        <template #expanded-row="{ item }">
-                            <tr>
-                                <td :colspan="stationHeaders.length">
-                                    <v-card flat class="my-2">
-                                        <v-card-title class="text-subtitle-2">Measurements</v-card-title>
-                                        <v-card-text>
-                                            <v-data-table :headers="measurementHeaders" :items="item.measurement || []"
-                                                density="compact" :items-per-page="5" striped="even">
-                                                <!-- Test Item -->
-                                                <template #item.test_item="{ item: measurement }">
-                                                    <span class="text-caption font-mono">
-                                                        {{ measurement.test_item }}
-                                                    </span>
-                                                </template>
-
-                                                <!-- USL -->
-                                                <template #item.usl="{ item: measurement }">
-                                                    <div class="text-start text-caption">
-                                                        {{ measurement.usl !== null ? measurement.usl : '-' }}
-                                                    </div>
-                                                </template>
-
-                                                <!-- LSL -->
-                                                <template #item.lsl="{ item: measurement }">
-                                                    <div class="text-start text-caption">
-                                                        {{ measurement.lsl !== null ? measurement.lsl : '-' }}
-                                                    </div>
-                                                </template>
-
-                                                <!-- Target -->
-                                                <template #item.target="{ item: measurement }">
-                                                    <div class="text-center text-caption">
-                                                        {{ measurement.target || '-' }}
-                                                    </div>
-                                                </template>
-
-                                                <!-- Meas. (Measured) -->
-                                                <template #item.actual="{ item: measurement }">
-                                                    <div class="text-center">
-                                                        <span class="font-weight-bold">
-                                                            {{ measurement.actual !== '' ? measurement.actual : '0' }}
-                                                        </span>
-                                                    </div>
-                                                </template>
-
-                                                <!-- Score -->
-                                                <template #item.score="{ item: measurement }">
-                                                    <div class="text-center">
-                                                        <v-chip :color="getScoreColor(measurement.score)" size="x-small"
-                                                            :style="measurement.breakdown ? 'cursor: pointer;' : ''"
-                                                            @click="measurement.breakdown ? handleScoreClick(measurement) : undefined">
-                                                            {{ measurement.score.toFixed(1) }}
-                                                            <v-icon v-if="measurement.breakdown" size="x-small"
-                                                                class="ml-1">mdi-information</v-icon>
-                                                        </v-chip>
-                                                    </div>
-                                                </template>
-                                            </v-data-table>
-                                        </v-card-text>
-                                    </v-card>
-                                </td>
-                            </tr>
-                        </template>
-                    </v-data-table>
-                </v-expansion-panel-text>
-            </v-expansion-panel>
-        </v-expansion-panels>
-
-        <!-- Empty State -->
-        <v-card v-else>
-            <v-card-text class="text-center py-8">
-                <v-icon size="64" color="grey-lighten-1">mdi-information-slab-circle-outline</v-icon>
-                <div class="text-h6 mt-4">No Results</div>
-                <div class="text-caption text-medium-emphasis">
-                    No successful analyses to display
-                </div>
-            </v-card-text>
-        </v-card>
-    </div>
+    <AppPanel
+      v-else
+      eyebrow="No Results"
+      title="No successful analyses to display"
+      description="Run or retry a Top Product analysis to populate the DUT result surface."
+      tone="default"
+    >
+      <div class="top-product-isn-results__empty-state">
+        <Icon icon="mdi:information-outline" />
+        <strong>No Results</strong>
+        <p>No successful analyses are available yet.</p>
+      </div>
+    </AppPanel>
+  </div>
 </template>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref, watch } from 'vue'
-import { useStickyColumns } from '@/shared/composables'
+import { Icon } from '@iconify/vue'
+import { computed, ref, watch } from 'vue'
+import Column from 'primevue/column'
+import DataTable from 'primevue/datatable'
+import { AppDialog, AppPanel } from '@/shared/ui'
+import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import { formatDate } from '@/shared/utils/helpers'
 import ScoreBreakdownDialog from '@/features/dut-logs/components/ScoreBreakdownDialog.vue'
 import { dutApi } from '../api/dut.api'
@@ -1068,46 +892,38 @@ interface Props {
   errors: TopProductError[]
   customScoringEnabled?: boolean
   // biome-ignore lint/suspicious/noExplicitAny: FormulaSelection type from useFormulaSelector composable
-  universalFormula?: any // FormulaSelection from useFormulaSelector
+  universalFormula?: any
   // biome-ignore lint/suspicious/noExplicitAny: CategoryFormulaSelections type from useFormulaSelector composable
-  categoryFormulas?: any // CategoryFormulaSelections from useFormulaSelector
+  categoryFormulas?: any
 }
 
 const props = defineProps<Props>()
 
 defineEmits<(e: 'export') => void>()
 
-// State for measurement dialog
 const measurementDialog = ref(false)
 const isFullscreen = ref(false)
 const selectedMeasurement = ref<{ dutISN: string; station: TopProductStationResult } | null>(null)
 
-// State for score breakdown dialog
 const scoreBreakdownDialog = ref(false)
 // biome-ignore lint/suspicious/noExplicitAny: wrapper matches ParsedTestItemEnhanced interface loosely
-const selectedScoreBreakdown = ref<any | null>(null) // Type as 'any' to match ParsedTestItemEnhanced wrapper
+const selectedScoreBreakdown = ref<any | null>(null)
 
-// Reset selectedScoreBreakdown when dialog closes
-// Delay cleanup to ensure v-dialog transition fully completes (300ms is Vuetify's default transition duration)
 watch(scoreBreakdownDialog, (isOpen) => {
   if (!isOpen) {
-    // Wait for dialog transition to complete before clearing data
     setTimeout(() => {
       selectedScoreBreakdown.value = null
-    }, 350) // 50ms buffer beyond typical 300ms transition
+    }, 350)
   }
 })
 
-// State for search and filters
 const measurementSearch = ref('')
 const scoreFilter = ref<string | null>(null)
 const limitFilter = ref<string | null>(null)
 
-// State for linked identifiers
 const loadingIdentifiers = ref(false)
 const linkedIdentifiers = ref<string[]>([])
 
-// State for comparison view
 const showComparison = ref(false)
 const selectedCompareStation = ref<string | null>(null)
 const comparisonSearch = ref('')
@@ -1115,66 +931,58 @@ const comparisonFullscreen = ref(false)
 const comparisonScoreFilter = ref<string | null>(null)
 const comparisonLimitFilter = ref<string | null>(null)
 
-// Computed: All linked ISNs (for total count, excluding the first index which is usually the search ISN)
+const openDutPanels = ref<string[]>([])
+
+const measurementLockedColumns = ref<string[]>(['test_item', 'usl', 'lsl'])
+const comparisonLockedColumns = ref<string[]>(['test_item', 'usl', 'lsl', 'target'])
+
+const measurementDialogWidth = computed(() =>
+  isFullscreen.value ? '96vw' : 'min(96vw, 78rem)',
+)
+
+const measurementScrollHeight = computed(() => (isFullscreen.value ? 'calc(100vh - 25rem)' : '34rem'))
+
+const dialogBreakpoints = {
+  '1200px': '94vw',
+  '960px': '98vw',
+  '640px': '100vw',
+}
+
 const allLinkedISNs = computed(() => {
   if (linkedIdentifiers.value.length === 0) {
     return []
   }
-  // Exclude first index (typically the same as dut_isn used for search)
   return linkedIdentifiers.value.slice(1)
 })
 
-// Computed: Other linked ISNs (exclude search ISN for dropdown display)
 const otherLinkedISNs = computed(() => {
   if (linkedIdentifiers.value.length === 0) {
     return []
   }
-  // Filter out the search ISN from the list
   return linkedIdentifiers.value.filter((isn) => isn !== selectedMeasurement.value?.dutISN)
 })
 
-// Filter options
-const scoreFilterOptions = [
-  { title: 'All Scores', value: null },
-  { title: 'Score >= 9', value: 'high' },
-  { title: 'Score 7-9', value: 'medium' },
-  { title: 'Score < 7', value: 'low' },
-]
-
-const limitFilterOptions = [
-  { title: 'All', value: null },
-  { title: 'Within Limits', value: 'within' },
-  { title: 'Out of Limits', value: 'out' },
-]
-
-// Watch for measurement dialog changes to fetch linked identifiers
 watch(measurementDialog, async (isOpen) => {
   if (isOpen && selectedMeasurement.value?.dutISN) {
     await fetchLinkedIdentifiers(selectedMeasurement.value.dutISN)
   } else if (!isOpen) {
-    // Clear linked identifiers when dialog closes
     linkedIdentifiers.value = []
-    // Reset search and filters
     measurementSearch.value = ''
     scoreFilter.value = null
     limitFilter.value = null
-    // Reset fullscreen mode
     isFullscreen.value = false
   }
 })
 
-// Parse measurement data from the 'data' field
-// biome-ignore lint/suspicious/noExplicitAny: dynamic measurement data from backend API (object or array format)
 function parseMeasurements(data: Array<any>): TopProductMeasurement[] {
   if (!data || data.length === 0) return []
 
   const measurements: TopProductMeasurement[] = []
 
-  for (let i = 0; i < data.length; i++) {
-    const item = data[i]
+  for (let index = 0; index < data.length; index += 1) {
+    const item = data[index]
     if (!item) continue
 
-    // Detect format: object has 'test_item' property, array doesn't
     const isObjectFormat = typeof item === 'object' && !Array.isArray(item) && 'test_item' in item
 
     let testItem: string
@@ -1186,36 +994,20 @@ function parseMeasurements(data: Array<any>): TopProductMeasurement[] {
     let breakdown: ScoreBreakdown | null
 
     if (isObjectFormat) {
-      // NEW OBJECT FORMAT: {test_item, usl, lsl, actual, score_breakdown}
       testItem = String(item.test_item || '')
       usl = item.usl !== null && item.usl !== undefined ? Number(item.usl) : null
       lsl = item.lsl !== null && item.lsl !== undefined ? Number(item.lsl) : null
       actual = item.actual !== null && item.actual !== undefined ? Number(item.actual) : 0
 
-      // Extract score from breakdown
       breakdown =
         item.score_breakdown && typeof item.score_breakdown === 'object'
           ? (item.score_breakdown as ScoreBreakdown)
           : null
 
-      // Extract score: prefer final_score, fallback to score for backward compatibility
       // biome-ignore lint/suspicious/noExplicitAny: backward-compat fallback for legacy 'score' field
       systemScore = breakdown?.final_score ?? (breakdown as any)?.score ?? 0
       target = breakdown?.target_used ?? null
-
-      // Debug: Log breakdown data for first item
-      if (breakdown && i === 0) {
-        console.log('Score Breakdown Sample (Object Format):', {
-          test_item: testItem,
-          breakdown,
-          has_formula: !!breakdown.formula_latex,
-          has_final_score: !!breakdown.final_score,
-          // biome-ignore lint/suspicious/noExplicitAny: backward-compat check for legacy 'score' field
-          has_score: !!(breakdown as any).score,
-        })
-      }
     } else {
-      // OLD ARRAY FORMAT: [test_item, usl, lsl, actual, target, score, breakdown]
       const row = item as Array<string | number | null | ScoreBreakdown>
       if (row.length < 6) continue
 
@@ -1226,20 +1018,7 @@ function parseMeasurements(data: Array<any>): TopProductMeasurement[] {
       target = row[4] !== null ? Number(row[4]) : null
       systemScore = Number(row[5] || 0)
       breakdown = row[6] && typeof row[6] === 'object' ? (row[6] as ScoreBreakdown) : null
-
-      // Debug: Log breakdown data for first item
-      if (breakdown && i === 0) {
-        console.log('Score Breakdown Sample (Array Format):', {
-          test_item: testItem,
-          breakdown,
-          has_formula: !!breakdown.formula_latex,
-        })
-      }
     }
-
-    // Use system score (custom scoring now handled via formula selection in parent)
-    const finalScore = systemScore
-    const scoreSource = 'system'
 
     measurements.push({
       test_item: testItem,
@@ -1248,119 +1027,31 @@ function parseMeasurements(data: Array<any>): TopProductMeasurement[] {
       actual: String(actual),
       target: target !== null ? String(target) : null,
       expected: target !== null ? String(target) : null,
-      score: finalScore,
-      breakdown, // Include score breakdown with LaTeX formula
-      systemScore, // Keep original system score for reference
-      scoreSource, // Track which formula was used
+      score: systemScore,
+      breakdown,
+      systemScore,
+      scoreSource: 'system',
     })
   }
 
   return measurements
 }
 
-// Enhance results with parsed measurements
 const enhancedResults = computed(() => {
   return props.results.map((result) => ({
     ...result,
     test_result: result.test_result.map((station) => ({
       ...station,
       measurement: parseMeasurements(station.data),
-      // Get measurement_count from metadata first, fallback to data length
       measurement_count: Number(station.metadata?.measurement_count || station.data?.length || 0),
-      device_name: station.device, // Add alias for backward compatibility
+      device_name: station.device,
     })),
   }))
 })
 
-// Table Headers
-const stationHeaders = [
-  { title: 'Station', key: 'station_name', sortable: true },
-  { title: 'Device', key: 'device', sortable: true },
-  { title: 'Test Date', key: 'test_date', sortable: true },
-  { title: 'Test Item Count', key: 'measurement_count', sortable: true, align: 'start' as const },
-  { title: 'Overall Score', key: 'overall_data_score', sortable: true, align: 'start' as const },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'center' as const },
-]
-
-// Make measurementHeaders reactive to work with useStickyColumns
-const measurementHeaders = computed(() => [
-  { title: 'Test Item', key: 'test_item', sortable: true },
-  { title: 'USL', key: 'usl', sortable: true, align: 'start' as const },
-  { title: 'LSL', key: 'lsl', sortable: true, align: 'start' as const },
-  { title: 'Target', key: 'target', sortable: false, align: 'center' as const },
-  { title: 'Meas.', key: 'actual', sortable: false, align: 'center' as const },
-  {
-    title: 'Δ Meas. & Target',
-    key: 'delta_actual_target',
-    sortable: false,
-    align: 'center' as const,
-  },
-  { title: 'Score', key: 'score', sortable: true, align: 'center' as const },
-])
-
-const {
-  lockedColumns: measurementLockedColumns,
-  columnOptions: measurementColumnOptions,
-  stickyHeaders: measurementStickyHeaders,
-  setColumnWidths: setMeasurementColumnWidths,
-} = useStickyColumns(measurementHeaders, { initialLocked: ['test_item', 'usl', 'lsl'] })
-
-// Computed properties
-const totalStations = computed(() => {
-  return enhancedResults.value.reduce((sum, result) => sum + result.test_result.length, 0)
-})
-
-// Count DUTs that have at least one station with error_item
-const failedDUTsCount = computed(() => {
-  return enhancedResults.value.filter((result) => {
-    // Check if any station has an error_item
-    return result.test_result.some(
-      (station) => station.error_item && station.error_item.trim() !== '',
-    )
-  }).length
-})
-
-// Filtered measurements based on search and filters
-const filteredMeasurements = computed(() => {
-  if (!selectedMeasurement.value?.station.measurement) return []
-
-  let filtered = selectedMeasurement.value.station.measurement
-
-  // Apply score filter
-  if (scoreFilter.value) {
-    filtered = filtered.filter((m) => {
-      if (scoreFilter.value === 'high') return m.score >= 9
-      if (scoreFilter.value === 'medium') return m.score >= 7 && m.score < 9
-      if (scoreFilter.value === 'low') return m.score < 7
-      return true
-    })
-  }
-
-  // Apply limit filter
-  if (limitFilter.value) {
-    filtered = filtered.filter((m) => {
-      const actual = parseFloat(m.actual)
-      if (Number.isNaN(actual)) return false
-
-      const withinLimits =
-        (m.lsl === null || actual >= m.lsl) && (m.usl === null || actual <= m.usl)
-
-      if (limitFilter.value === 'within') return withinLimits
-      if (limitFilter.value === 'out') return !withinLimits
-      return true
-    })
-  }
-
-  return filtered
-})
-
-// Comparison feature computed properties
-// Get all unique station names across all DUTs with site and model information
-// Only show stations that exist in ALL DUTs with matching Site/Model
 const comparisonStations = computed(() => {
   if (enhancedResults.value.length === 0) return []
 
-  // Group DUTs by Site/Model combination
   const siteModelGroups = new Map<string, typeof enhancedResults.value>()
 
   enhancedResults.value.forEach((result) => {
@@ -1371,7 +1062,6 @@ const comparisonStations = computed(() => {
     siteModelGroups.get(key)?.push(result)
   })
 
-  // For each Site/Model group, find stations that exist in ALL DUTs
   const stationOptions: Array<{
     value: string
     title: string
@@ -1381,7 +1071,6 @@ const comparisonStations = computed(() => {
   siteModelGroups.forEach((dutGroup) => {
     if (dutGroup.length === 0) return
 
-    // Get stations from first DUT in this group
     const firstDUT = dutGroup[0]
     if (!firstDUT) return
 
@@ -1395,16 +1084,15 @@ const comparisonStations = computed(() => {
       })
     })
 
-    // Filter to only stations present in ALL DUTs of this Site/Model group
     potentialStations.forEach((stationInfo, stationName) => {
       const existsInAllDUTs = dutGroup.every((dut) =>
-        dut.test_result.some((s) => s.station_name === stationName),
+        dut.test_result.some((station) => station.station_name === stationName),
       )
 
       if (existsInAllDUTs) {
         stationOptions.push({
           value: stationName,
-          title: stationName, // Display only station name in selector
+          title: stationName,
           raw: stationInfo,
         })
       }
@@ -1414,59 +1102,150 @@ const comparisonStations = computed(() => {
   return stationOptions.sort((a, b) => a.title.localeCompare(b.title))
 })
 
-// Build comparison headers dynamically based on DUTs
+watch(
+  enhancedResults,
+  (value) => {
+    if (value.length === 0) {
+      openDutPanels.value = []
+      return
+    }
+
+    if (openDutPanels.value.length === 0) {
+      const firstResult = value[0]
+      if (firstResult) {
+        openDutPanels.value = [firstResult.dut_isn]
+      }
+    }
+
+    if (!selectedCompareStation.value) {
+      const firstStation = comparisonStations.value[0]
+      if (firstStation) {
+        selectedCompareStation.value = firstStation.value
+      }
+    }
+  },
+  { immediate: true },
+)
+
+const stationColumns = [
+  { key: 'station_name', header: 'Station', field: 'station_name', sortable: true },
+  { key: 'test_date', header: 'Test Date', field: 'test_date', sortable: true },
+  { key: 'measurement_count', header: 'Items', field: 'measurement_count', sortable: true },
+  {
+    key: 'overall_data_score',
+    header: 'Overall Score',
+    field: 'overall_data_score',
+    sortable: true,
+  },
+  { key: 'actions', header: 'Actions', field: 'actions', sortable: false },
+]
+
+const measurementHeaders = [
+  { title: 'Test Item', key: 'test_item', sortable: true },
+  { title: 'USL', key: 'usl', sortable: true },
+  { title: 'LSL', key: 'lsl', sortable: true },
+  { title: 'Target', key: 'target', sortable: false },
+  { title: 'Meas.', key: 'actual', sortable: false },
+  { title: 'Δ Meas. & Target', key: 'delta_actual_target', sortable: false },
+  { title: 'Score', key: 'score', sortable: true },
+]
+
+const measurementColumnOptions = computed(() =>
+  measurementHeaders.map((header) => ({
+    title: header.title,
+    value: header.key,
+  })),
+)
+
+const totalStations = computed(() => {
+  return enhancedResults.value.reduce((sum, result) => sum + result.test_result.length, 0)
+})
+
+const failedDUTsCount = computed(() => {
+  return enhancedResults.value.filter((result) => {
+    return result.test_result.some(
+      (station) => station.error_item && station.error_item.trim() !== '',
+    )
+  }).length
+})
+
+const filteredMeasurements = computed(() => {
+  if (!selectedMeasurement.value?.station.measurement) return []
+
+  let filtered = selectedMeasurement.value.station.measurement
+
+  if (measurementSearch.value) {
+    const searchLower = measurementSearch.value.toLowerCase()
+    filtered = filtered.filter((measurement) =>
+      measurement.test_item.toLowerCase().includes(searchLower),
+    )
+  }
+
+  if (scoreFilter.value) {
+    filtered = filtered.filter((measurement) => {
+      if (scoreFilter.value === 'high') return measurement.score >= 9
+      if (scoreFilter.value === 'medium') return measurement.score >= 7 && measurement.score < 9
+      if (scoreFilter.value === 'low') return measurement.score < 7
+      return true
+    })
+  }
+
+  if (limitFilter.value) {
+    filtered = filtered.filter((measurement) => {
+      const actual = parseFloat(measurement.actual)
+      if (Number.isNaN(actual)) return false
+
+      const withinLimits =
+        (measurement.lsl === null || actual >= measurement.lsl) &&
+        (measurement.usl === null || actual <= measurement.usl)
+
+      if (limitFilter.value === 'within') return withinLimits
+      if (limitFilter.value === 'out') return !withinLimits
+      return true
+    })
+  }
+
+  return filtered
+})
+
+const comparisonStationTitle = computed(() => {
+  return comparisonStations.value.find((station) => station.value === selectedCompareStation.value)?.title || ''
+})
+
 const comparisonHeaders = computed(() => {
   const baseHeaders = [
     { title: 'Test Item', key: 'test_item', sortable: true },
-    { title: 'USL', key: 'usl', sortable: true, align: 'start' as const },
-    { title: 'LSL', key: 'lsl', sortable: true, align: 'start' as const },
+    { title: 'USL', key: 'usl', sortable: true },
+    { title: 'LSL', key: 'lsl', sortable: true },
+    { title: 'Target', key: 'target', sortable: false },
   ]
 
-  // Add Target column (before Actual columns)
-  const targetHeader = {
-    title: 'Target',
-    key: 'target',
-    sortable: false,
-    align: 'center' as const,
-    width: '120px',
-  }
-
-  // Add Actual columns for each DUT
   const measuredHeaders = enhancedResults.value.map((result) => ({
-    title: `Meas.\n${result.dut_isn}`,
+    title: `Meas. ${result.dut_isn}`,
     key: `measured_${result.dut_isn}`,
     sortable: false,
-    align: 'center' as const,
   }))
 
-  // Add Meas.Max Diff column (Maximum difference between actual values)
   const actMaxDiffHeader = {
     title: 'Meas.Max Diff',
     key: 'measured_max_diff',
     sortable: true,
-    align: 'center' as const,
   }
 
-  // Add Delta Act.Tar columns for each DUT
   const deltaHeaders = enhancedResults.value.map((result) => ({
-    title: `Δ Meas. & Target\n${result.dut_isn}`,
+    title: `Δ Meas. & Target ${result.dut_isn}`,
     key: `delta_mt_${result.dut_isn}`,
     sortable: false,
-    align: 'center' as const,
   }))
 
-  // Add Score columns for each DUT
   const scoreHeaders = enhancedResults.value.map((result) => ({
-    title: `Score\n${result.dut_isn}`,
+    title: `Score ${result.dut_isn}`,
     key: `score_${result.dut_isn}`,
     sortable: true,
-    align: 'center' as const,
   }))
 
-  // Order: Test Item | USL | LSL | Target | Meas.(\n)ISN1 | Meas.(\n) ISN2 | Meas.Max Diff | Δ Meas. & Target(\n)ISN1 | Δ Meas. & Target(\n)ISN2 | Score(\n)ISN1 | Score(\n)ISN2
   return [
     ...baseHeaders,
-    targetHeader,
     ...measuredHeaders,
     actMaxDiffHeader,
     ...deltaHeaders,
@@ -1474,220 +1253,60 @@ const comparisonHeaders = computed(() => {
   ]
 })
 
-const {
-  lockedColumns: comparisonLockedColumns,
-  columnOptions: comparisonColumnOptions,
-  stickyHeaders: comparisonStickyHeaders,
-  setColumnWidths: setComparisonColumnWidths,
-} = useStickyColumns(comparisonHeaders, { initialLocked: ['test_item', 'usl', 'lsl', 'target'] })
+const comparisonColumnOptions = computed(() =>
+  comparisonHeaders.value.map((header) => ({
+    title: header.title,
+    value: header.key,
+  })),
+)
 
-// Column width measurement (keeps natural widths for sticky columns)
-const measurementColumnWidths = ref<Record<string, number>>({})
-const comparisonColumnWidths = ref<Record<string, number>>({})
-
-const measurementHeadersWithWidths = computed(() => {
-  let cumulativeLeft = 0
-  return measurementStickyHeaders.value.map((header) => {
-    const key = String(header.key ?? '')
-    const isLocked = measurementLockedColumns.value.includes(key)
-
-    if (isLocked) {
-      const width = measurementColumnWidths.value[key] || 0
-      const leftPosition = cumulativeLeft
-      const result = {
-        ...header,
-        width: width || undefined,
-        cellProps: () => ({
-          class: 'locked-column',
-          style: `position: sticky !important; left: ${leftPosition}px !important; z-index: 2 !important; background-color: rgb(var(--v-theme-surface)) !important;`,
-        }),
-        // Add headerProps to style the header cells with both horizontal and vertical sticky
-        headerProps: {
-          class: 'locked-column locked-header',
-          style: `position: sticky !important; left: ${leftPosition}px !important; top: 0px !important; z-index: 10 !important; background-color: rgb(var(--v-theme-surface)) !important;`,
-        },
-      }
-      if (width > 0) {
-        cumulativeLeft += width
-      }
-      return result
-    }
-    return header
-  })
-})
-
-const comparisonHeadersWithWidths = computed(() => {
-  let cumulativeLeft = 0
-  return comparisonStickyHeaders.value.map((header) => {
-    const key = String(header.key ?? '')
-    const isLocked = comparisonLockedColumns.value.includes(key)
-
-    if (isLocked) {
-      const width = comparisonColumnWidths.value[key] || 0
-      const leftPosition = cumulativeLeft
-      const result = {
-        ...header,
-        width: width || undefined,
-        cellProps: () => ({
-          class: 'locked-column',
-          style: `position: sticky !important; left: ${leftPosition}px !important; z-index: 2 !important; background-color: rgb(var(--v-theme-surface)) !important;`,
-        }),
-        // Add headerProps to style the header cells with both horizontal and vertical sticky
-        headerProps: {
-          class: 'locked-column locked-header',
-          style: `position: sticky !important; left: ${leftPosition}px !important; top: 0px !important; z-index: 10 !important; background-color: rgb(var(--v-theme-surface)) !important;`,
-        },
-      }
-      if (width > 0) {
-        cumulativeLeft += width
-      }
-      return result
-    }
-    return header
-  })
-})
-
-const measurementTableRef = ref<HTMLElement | null>(null)
-const comparisonTableRef = ref<HTMLElement | null>(null)
-const comparisonFullscreenTableRef = ref<HTMLElement | null>(null)
-
-function measureLockedColumns(
-  tableEl: HTMLElement | null,
-  lockedKeys: string[],
-  setter: (map: Record<string, number>) => void,
-) {
-  if (!tableEl) return
-
-  // Access the actual DOM element from Vue component instance
-  // Vue component refs have $el property that contains the root DOM element
-  let actualTableEl: HTMLElement | null = null
-
-  // biome-ignore lint/suspicious/noExplicitAny: Vue component ref may be a component instance with $el
-  if ((tableEl as any)?.$el) {
-    // It's a Vue component instance
-    // biome-ignore lint/suspicious/noExplicitAny: Vue component ref $el accessor
-    actualTableEl = (tableEl as any).$el.querySelector('table')
-  } else if (tableEl instanceof HTMLElement) {
-    // It's already a DOM element
-    actualTableEl = tableEl.querySelector('table')
-  }
-
-  if (!actualTableEl) {
-    console.warn('Could not find table element for width measurement')
-    return
-  }
-
-  const newMap: Record<string, number> = {}
-  const headers = actualTableEl.querySelectorAll('thead th')
-
-  if (headers.length === 0) {
-    console.warn('No table headers found for width measurement')
-    return
-  }
-
-  // biome-ignore lint/suspicious/noExplicitAny: DOM element iterated from querySelectorAll
-  headers.forEach((th: any) => {
-    // Try to get the key from data attribute or text content
-    const key = th.getAttribute('data-key') || th.textContent?.trim()?.replace(/\n/g, '')
-
-    // Find matching header to get the actual key
-    const allHeaders = [...measurementHeaders.value, ...comparisonHeaders.value]
-    const matchingHeader = allHeaders.find((h) => {
-      const headerTitle = h.title?.replace(/\n/g, '')
-      return h.key === key || headerTitle === key
-    })
-
-    const actualKey = matchingHeader ? matchingHeader.key : key
-
-    if (actualKey && lockedKeys.includes(actualKey)) {
-      const rectWidth = Math.ceil(th.getBoundingClientRect().width)
-      const computedWidth = rectWidth > 0 ? rectWidth : Math.ceil(th.offsetWidth || 0)
-      newMap[actualKey] = computedWidth || 160
-    }
-  })
-
-  setter(newMap)
-}
-
-function measureMeasurementWidths() {
-  nextTick(() => {
-    // Add a small delay to ensure the table is fully rendered
-    setTimeout(() => {
-      measureLockedColumns(measurementTableRef.value, measurementLockedColumns.value, (map) => {
-        measurementColumnWidths.value = map
-        setMeasurementColumnWidths(map)
-      })
-    }, 100)
-  })
-}
-
-function measureComparisonWidths() {
-  nextTick(() => {
-    // Add a small delay to ensure the table is fully rendered
-    setTimeout(() => {
-      const tableEl = comparisonFullscreenTableRef.value || comparisonTableRef.value
-      measureLockedColumns(tableEl, comparisonLockedColumns.value, (map) => {
-        comparisonColumnWidths.value = map
-        setComparisonColumnWidths(map)
-      })
-    }, 100)
-  })
-}
-
-// Build comparison data for selected station
 const comparisonData = computed(() => {
   if (!selectedCompareStation.value) return []
 
-  // First, collect all test item names and create a global ordering
-  // Use the first DUT's order as the canonical order
   let canonicalOrder: string[] = []
   const firstResult = enhancedResults.value[0]
   if (firstResult) {
     const firstStation = firstResult.test_result.find(
-      (s) => s.station_name === selectedCompareStation.value,
+      (station) => station.station_name === selectedCompareStation.value,
     )
     if (firstStation) {
       const measurements = parseMeasurements(firstStation.data)
-      canonicalOrder = measurements.map((m) => m.test_item)
+      canonicalOrder = measurements.map((measurement) => measurement.test_item)
     }
   }
 
-  // Collect all test items from all DUTs for the selected station
   // biome-ignore lint/suspicious/noExplicitAny: dynamic comparison data with computed DUT-specific keys
   const testItemMap = new Map<string, any>()
 
   enhancedResults.value.forEach((result) => {
-    const station = result.test_result.find((s) => s.station_name === selectedCompareStation.value)
+    const station = result.test_result.find(
+      (entry) => entry.station_name === selectedCompareStation.value,
+    )
     if (!station) return
 
     const measurements = parseMeasurements(station.data)
-    measurements.forEach((m) => {
-      if (!testItemMap.has(m.test_item)) {
-        // Get global index from canonical order
-        const globalIndex = canonicalOrder.indexOf(m.test_item)
+    measurements.forEach((measurement) => {
+      if (!testItemMap.has(measurement.test_item)) {
+        const globalIndex = canonicalOrder.indexOf(measurement.test_item)
 
-        testItemMap.set(m.test_item, {
-          test_item: m.test_item,
-          usl: m.usl,
-          lsl: m.lsl,
-          target: m.target,
-          _global_index: globalIndex >= 0 ? globalIndex : 9999, // Items not in canonical order go to end
+        testItemMap.set(measurement.test_item, {
+          test_item: measurement.test_item,
+          usl: measurement.usl,
+          lsl: measurement.lsl,
+          target: measurement.target,
+          _global_index: globalIndex >= 0 ? globalIndex : 9999,
         })
       }
 
-      // Add this DUT's score and measured value
-      const entry = testItemMap.get(m.test_item)
+      const entry = testItemMap.get(measurement.test_item)
       if (entry) {
-        entry[`score_${result.dut_isn}`] = m.score
-        entry[`measured_${result.dut_isn}`] = m.actual
+        entry[`score_${result.dut_isn}`] = measurement.score
+        entry[`measured_${result.dut_isn}`] = measurement.actual
+        entry[`breakdown_${result.dut_isn}`] = measurement.breakdown
 
-        // Store breakdown data for score dialog
-        entry[`breakdown_${result.dut_isn}`] = m.breakdown
-
-        // Calculate Delta M.T (Measured - Target)
-        if (m.actual !== null && m.actual !== '' && m.target !== null) {
-          const measuredNum = parseFloat(m.actual)
-          const targetNum = parseFloat(m.target)
+        if (measurement.actual !== null && measurement.actual !== '' && measurement.target !== null) {
+          const measuredNum = parseFloat(measurement.actual)
+          const targetNum = parseFloat(measurement.target)
           if (!Number.isNaN(measuredNum) && !Number.isNaN(targetNum)) {
             entry[`delta_mt_${result.dut_isn}`] = measuredNum - targetNum
           }
@@ -1696,19 +1315,11 @@ const comparisonData = computed(() => {
     })
   })
 
-  // Calculate max differences for each test item
   const comparisonItems = Array.from(testItemMap.values()).map((item) => {
-    const scores: number[] = []
     const measuredValues: number[] = []
 
     enhancedResults.value.forEach((result) => {
-      const score = item[`score_${result.dut_isn}`]
       const measured = item[`measured_${result.dut_isn}`]
-
-      if (score !== undefined) {
-        scores.push(score)
-      }
-
       if (measured !== undefined && measured !== '') {
         const measuredNum = parseFloat(measured)
         if (!Number.isNaN(measuredNum)) {
@@ -1717,39 +1328,26 @@ const comparisonData = computed(() => {
       }
     })
 
-    const scoreDiff = scores.length > 1 ? Math.max(...scores) - Math.min(...scores) : null
-
-    // Calculate Meas.Max Diff (maximum difference between measured values)
-    const measuredMaxDiff =
-      measuredValues.length > 1 ? Math.max(...measuredValues) - Math.min(...measuredValues) : null
-
     return {
       ...item,
-      score_diff: scoreDiff,
-      measured_max_diff: measuredMaxDiff,
+      measured_max_diff:
+        measuredValues.length > 1 ? Math.max(...measuredValues) - Math.min(...measuredValues) : null,
     }
   })
 
-  // Sort by global index to maintain consistent canonical order across all DUTs
-  return comparisonItems.sort((a, b) => {
-    return (a._global_index ?? 9999) - (b._global_index ?? 9999)
-  })
+  return comparisonItems.sort((a, b) => (a._global_index ?? 9999) - (b._global_index ?? 9999))
 })
 
-// Filtered comparison data based on search
 const filteredComparisonData = computed(() => {
   let filtered = comparisonData.value
 
-  // Apply search filter
   if (comparisonSearch.value) {
     const searchLower = comparisonSearch.value.toLowerCase()
     filtered = filtered.filter((item) => item.test_item.toLowerCase().includes(searchLower))
   }
 
-  // Apply score filter (check all DUT scores)
   if (comparisonScoreFilter.value) {
     filtered = filtered.filter((item) => {
-      // Check if any DUT score matches the filter criteria
       return enhancedResults.value.some((result) => {
         const score = item[`score_${result.dut_isn}`]
         if (score === undefined) return false
@@ -1762,10 +1360,8 @@ const filteredComparisonData = computed(() => {
     })
   }
 
-  // Apply limit status filter (check all DUT measured values)
   if (comparisonLimitFilter.value) {
     filtered = filtered.filter((item) => {
-      // Check if any DUT measured value matches the filter criteria
       return enhancedResults.value.some((result) => {
         const measured = item[`measured_${result.dut_isn}`]
         if (!measured || measured === 'N/A') return false
@@ -1787,44 +1383,7 @@ const filteredComparisonData = computed(() => {
   return filtered
 })
 
-watch([measurementLockedColumns, filteredMeasurements], measureMeasurementWidths, {
-  immediate: true,
-})
-watch([comparisonLockedColumns, filteredComparisonData], measureComparisonWidths, {
-  immediate: true,
-})
-
-// Watch for locked columns changes specifically to ensure proper width measurement
-watch(
-  measurementLockedColumns,
-  () => {
-    // Clear existing widths first
-    measurementColumnWidths.value = {}
-    // Then measure new widths
-    measureMeasurementWidths()
-  },
-  { deep: true },
-)
-
-watch(
-  comparisonLockedColumns,
-  () => {
-    // Clear existing widths first
-    comparisonColumnWidths.value = {}
-    // Then measure new widths
-    measureComparisonWidths()
-  },
-  { deep: true },
-)
-
-onMounted(() => {
-  measureMeasurementWidths()
-  measureComparisonWidths()
-})
-
-// Methods
 async function fetchLinkedIdentifiers(isn: string) {
-  // Validate ISN format before making API call
   if (!isn || isn.length < 10) {
     linkedIdentifiers.value = []
     return
@@ -1832,13 +1391,9 @@ async function fetchLinkedIdentifiers(isn: string) {
 
   loadingIdentifiers.value = true
   try {
-    // Use getDUTISNVariants to get all ISN variants linked to this DUT
-    // The endpoint returns all ISNs including the search ISN in the response
     const response = await dutApi.getDUTISNVariants(isn)
-    // Store all linked ISNs including the search ISN
     linkedIdentifiers.value = response
   } catch (_error) {
-    // Silently handle error - linked identifiers are optional
     linkedIdentifiers.value = []
   } finally {
     loadingIdentifiers.value = false
@@ -1849,34 +1404,18 @@ async function copyToClipboard(text: string) {
   try {
     await navigator.clipboard.writeText(text)
   } catch (_error) {
-    // Silently handle clipboard errors
+    // Clipboard access is optional.
   }
 }
 
 function getScoreColor(score: number): string {
-  // Score color mapping based on 0-10 scale:
-  // Score ≥9: Excellent (green)
-  // Score ≥7: Good (blue/primary)
-  // Score <7: Warning/Error (yellow/red)
-  if (score >= 9) return 'success' // Excellent (green)
-  if (score >= 7) return 'primary' // Good (blue)
-  if (score >= 4) return 'warning' // Acceptable (yellow/orange)
-  return 'error' // Poor (red)
+  if (score >= 9) return 'success'
+  if (score >= 7) return 'primary'
+  if (score >= 4) return 'warning'
+  return 'error'
 }
 
-// Score source type for backward compatibility
 type ScoreSource = 'category' | 'universal' | 'system'
-
-function getScoreSourceIcon(source: ScoreSource): string {
-  switch (source) {
-    case 'category':
-      return 'mdi-target'
-    case 'universal':
-      return 'mdi-earth'
-    default:
-      return 'mdi-cog'
-  }
-}
 
 function getScoreSourceLabel(source: ScoreSource): string {
   switch (source) {
@@ -1891,17 +1430,9 @@ function getScoreSourceLabel(source: ScoreSource): string {
 
 function getDeltaColor(delta: number): string {
   const absDelta = Math.abs(delta)
-
-  // Green (success): delta = 0 - 0.5 (very close match)
   if (absDelta <= 0.5) return 'success'
-
-  // Blue (primary): |delta| <= 1 (close, above 0.5 until 1)
   if (absDelta <= 1) return 'primary'
-
-  // Orange (warning): |delta| < 3 (acceptable)
   if (absDelta < 3) return 'warning'
-
-  // Red (error): |delta| >= 3 (significant deviation)
   return 'error'
 }
 
@@ -1918,12 +1449,8 @@ function hasErrorInResult(result: TopProductResult): boolean {
   )
 }
 
-// Handle score breakdown click
 function handleScoreClick(item: TopProductMeasurement) {
-  console.log('Score clicked:', { item, has_breakdown: !!item.breakdown })
   if (item.breakdown) {
-    console.log('Opening breakdown dialog with:', item.breakdown)
-    // Create a wrapper object that matches ParsedTestItemEnhanced interface
     selectedScoreBreakdown.value = {
       test_item: item.test_item,
       value: item.actual,
@@ -1932,40 +1459,26 @@ function handleScoreClick(item: TopProductMeasurement) {
       // biome-ignore lint/suspicious/noExplicitAny: type assertion needed for ParsedTestItemEnhanced interface mismatch
     } as any
 
-    // Open dialog immediately - component is always mounted
     scoreBreakdownDialog.value = true
-  } else {
-    console.warn('No breakdown data available for:', item.test_item)
   }
 }
 
-// Handle score breakdown click from comparison table
 // biome-ignore lint/suspicious/noExplicitAny: dynamic comparison item with DUT-specific computed keys
 function handleComparisonScoreClick(comparisonItem: any, dutIsn: string) {
   const breakdown = comparisonItem[`breakdown_${dutIsn}`]
   const score = comparisonItem[`score_${dutIsn}`]
   const measuredValue = comparisonItem[`measured_${dutIsn}`]
 
-  console.log('Comparison score clicked:', {
-    test_item: comparisonItem.test_item,
-    dut_isn: dutIsn,
-    has_breakdown: !!breakdown,
-  })
-
   if (breakdown) {
-    console.log('Opening breakdown dialog with:', breakdown)
     selectedScoreBreakdown.value = {
       test_item: comparisonItem.test_item,
       value: measuredValue,
-      score: score,
+      score,
       score_breakdown: breakdown,
       // biome-ignore lint/suspicious/noExplicitAny: type assertion needed for ParsedTestItemEnhanced interface mismatch
     } as any
 
-    // Open dialog immediately - component is always mounted
     scoreBreakdownDialog.value = true
-  } else {
-    console.warn('No breakdown data available for:', comparisonItem.test_item, 'DUT:', dutIsn)
   }
 }
 
@@ -1979,7 +1492,6 @@ function getActualValueColor(measurement: TopProductMeasurement): string {
 
   if (!withinLimits) return 'error'
 
-  // Check if value is close to limits (within 10%)
   if (measurement.lsl !== null && measurement.usl !== null) {
     const range = measurement.usl - measurement.lsl
     const lowerWarning = measurement.lsl + range * 0.1
@@ -1993,7 +1505,6 @@ function getActualValueColor(measurement: TopProductMeasurement): string {
   return 'success'
 }
 
-// Get color for measured values in comparison view
 // biome-ignore lint/suspicious/noExplicitAny: accepts string or number from dynamic comparison data
 function getMeasuredValueColor(measuredValue: any, usl: number | null, lsl: number | null): string {
   const actual = parseFloat(measuredValue)
@@ -2003,7 +1514,6 @@ function getMeasuredValueColor(measuredValue: any, usl: number | null, lsl: numb
 
   if (!withinLimits) return 'error'
 
-  // Check if value is close to limits (within 10%)
   if (lsl !== null && usl !== null) {
     const range = usl - lsl
     const lowerWarning = lsl + range * 0.1
@@ -2018,13 +1528,11 @@ function getMeasuredValueColor(measuredValue: any, usl: number | null, lsl: numb
 }
 
 function handleRankingRowClick(payload: { isn: string; stationName: string }) {
-  // Find the DUT result for this ISN
-  const dutResult = enhancedResults.value.find((r) => r.dut_isn === payload.isn)
+  const dutResult = enhancedResults.value.find((result) => result.dut_isn === payload.isn)
   if (!dutResult) return
 
-  // Find the station result matching the station name
   const stationResult = dutResult.test_result.find(
-    (r: TopProductStationResult) => r.station_name === payload.stationName,
+    (result) => result.station_name === payload.stationName,
   )
   if (!stationResult) return
 
@@ -2035,146 +1543,481 @@ function showMeasurements(dutISN: string, station: TopProductStationResult) {
   selectedMeasurement.value = { dutISN, station }
   measurementDialog.value = true
 }
+
+function handleDutDisclosureToggle(dutIsn: string, event: Event) {
+  const target = event.target as HTMLDetailsElement
+  if (target.open) {
+    if (!openDutPanels.value.includes(dutIsn)) {
+      openDutPanels.value = [...openDutPanels.value, dutIsn]
+    }
+    return
+  }
+
+  openDutPanels.value = openDutPanels.value.filter((value) => value !== dutIsn)
+}
+
+function badgeToneClass(color: string): string {
+  switch (color) {
+    case 'success':
+      return 'top-product-isn-results__badge--success'
+    case 'primary':
+      return 'top-product-isn-results__badge--primary'
+    case 'warning':
+      return 'top-product-isn-results__badge--warning'
+    case 'error':
+      return 'top-product-isn-results__badge--error'
+    default:
+      return 'top-product-isn-results__badge--neutral'
+  }
+}
+
+function differenceBadgeClass(delta: number): string {
+  if (delta > 0) return 'top-product-isn-results__badge--success'
+  if (delta < 0) return 'top-product-isn-results__badge--error'
+  return 'top-product-isn-results__badge--neutral'
+}
+
+function getMeasurementColumnStyle(key: string) {
+  const widths: Record<string, string> = {
+    test_item: 'min-width: 16rem; width: 16rem;',
+    usl: 'min-width: 7rem; width: 7rem;',
+    lsl: 'min-width: 7rem; width: 7rem;',
+    target: 'min-width: 8rem; width: 8rem;',
+    actual: 'min-width: 8rem; width: 8rem;',
+    delta_actual_target: 'min-width: 11rem; width: 11rem;',
+    score: 'min-width: 13rem; width: 13rem;',
+  }
+
+  return widths[key] || 'min-width: 10rem;'
+}
+
+function getComparisonColumnStyle(key: string) {
+  if (key === 'test_item') return 'min-width: 16rem; width: 16rem;'
+  if (key === 'usl' || key === 'lsl') return 'min-width: 7rem; width: 7rem;'
+  if (key === 'target') return 'min-width: 8rem; width: 8rem;'
+  if (key === 'measured_max_diff') return 'min-width: 11rem; width: 11rem;'
+  if (key.startsWith('measured_')) return 'min-width: 10rem; width: 10rem;'
+  if (key.startsWith('delta_mt_')) return 'min-width: 12rem; width: 12rem;'
+  if (key.startsWith('score_')) return 'min-width: 10rem; width: 10rem;'
+  return 'min-width: 10rem;'
+}
+
+function stationRowClass(row: Record<string, unknown>) {
+  const errorItem = String(row.error_item || '')
+  return errorItem.trim() !== '' ? 'top-product-isn-results__station-row--error' : undefined
+}
 </script>
 
 <style scoped>
-.font-mono {
-    font-family: 'Courier New', Courier, monospace;
+.top-product-isn-results {
+  display: grid;
+  gap: 1rem;
 }
 
-.cursor-pointer {
-    cursor: pointer;
+.top-product-isn-results__dialog-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
 }
 
-:deep(.v-data-table-footer) {
-    padding: 4px 8px !important;
-    min-height: 40px !important;
+.top-product-isn-results__eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--app-accent);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-:deep(.v-data-table-footer .v-data-table-footer__items-per-page) {
-    margin: 0 8px !important;
+.top-product-isn-results__dialog-header h2 {
+  margin: 0;
+  font-size: 1.35rem;
 }
 
-:deep(.v-data-table-footer .v-data-table-footer__pagination) {
-    margin: 0 8px !important;
+.top-product-isn-results__dialog-header p:last-child {
+  margin: 0.35rem 0 0;
+  color: var(--app-muted);
+  line-height: 1.55;
 }
 
-.table-toolbar {
-    gap: 12px;
+.top-product-isn-results__dialog-actions,
+.top-product-isn-results__panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  justify-content: flex-end;
 }
 
-/* Shared sticky table styling */
-:deep(.sticky-data-table .v-table__wrapper) {
-    position: relative;
-    overflow: auto;
-    max-height: 100%;
+.top-product-isn-results__dialog-body,
+.top-product-isn-results__comparison-shell {
+  display: grid;
+  gap: 1rem;
 }
 
-:deep(.sticky-data-table table) {
-    min-width: max-content;
-    table-layout: auto;
-    position: relative;
+.top-product-isn-results__dialog-body--fullscreen {
+  min-height: calc(100vh - 12rem);
 }
 
-:deep(.sticky-data-table thead th),
-:deep(.sticky-data-table tbody td) {
-    white-space: nowrap;
-    box-sizing: border-box;
+.top-product-isn-results__summary-grid,
+.top-product-isn-results__meta-grid,
+.top-product-isn-results__status-grid,
+.top-product-isn-results__stat-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
 }
 
-:deep(.sticky-data-table thead th) {
-    position: sticky;
-    top: 0;
-    z-index: 4;
-    background-color: rgb(var(--v-theme-surface));
+.top-product-isn-results__summary-card,
+.top-product-isn-results__meta-card,
+.top-product-isn-results__status-card,
+.top-product-isn-results__stat-card {
+  display: grid;
+  gap: 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1.1rem;
+  padding: 1rem;
+  background: rgba(255, 251, 247, 0.92);
 }
 
-/* Fixed/Sticky columns */
-:deep(.sticky-data-table .v-data-table-column--fixed),
-:deep(.sticky-data-table .v-data-table-column--sticky) {
-    position: sticky !important;
-    z-index: 3;
-    background-color: rgb(var(--v-theme-surface)) !important;
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+.top-product-isn-results__summary-card--highlight {
+  background: linear-gradient(145deg, rgba(20, 88, 71, 0.14), rgba(255, 251, 247, 0.96));
 }
 
-/* Header cells that are fixed */
-:deep(.sticky-data-table thead th.v-data-table-column--fixed),
-:deep(.sticky-data-table thead th.v-data-table-column--sticky),
-:deep(.sticky-data-table thead th.locked-column) {
-    position: sticky !important;
-    z-index: 5 !important;
-    top: 0 !important;
-    background-color: rgb(var(--v-theme-surface)) !important;
+.top-product-isn-results__summary-icon {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(20, 88, 71, 0.12);
+  color: var(--app-accent);
 }
 
-/* Locked header cells - highest z-index for both horizontal and vertical sticky */
-:deep(.sticky-data-table thead th.locked-header) {
-    position: sticky !important;
-    z-index: 10 !important;
-    top: 0 !important;
-    background-color: rgb(var(--v-theme-surface)) !important;
-    box-shadow: 2px 2px 4px rgba(0, 0, 0, 0.15) !important;
+.top-product-isn-results__summary-card small,
+.top-product-isn-results__meta-card small,
+.top-product-isn-results__stat-card small {
+  color: var(--app-muted);
 }
 
-/* Ensure locked headers maintain position over body cells */
-:deep(.sticky-data-table thead th.locked-header)::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background-color: rgb(var(--v-theme-surface));
-    z-index: -1;
+.top-product-isn-results__summary-card strong,
+.top-product-isn-results__meta-card strong,
+.top-product-isn-results__status-card strong,
+.top-product-isn-results__stat-card strong {
+  color: var(--app-ink);
+  font-size: 1rem;
 }
 
-/* Body cells that are locked/sticky */
-:deep(.sticky-data-table tbody td[style*="position: sticky"]),
-:deep(.sticky-data-table tbody td.locked-column) {
-    background-color: rgb(var(--v-theme-surface)) !important;
-    z-index: 2 !important;
-    box-shadow: 2px 0 4px rgba(0, 0, 0, 0.1);
+.top-product-isn-results__meta-card--wide {
+  grid-column: span 2;
 }
 
-/* Ensure even/odd row colors work with sticky columns - use solid colors */
-:deep(.sticky-data-table tbody tr:nth-child(even) td[style*="position: sticky"]),
-:deep(.sticky-data-table tbody tr:nth-child(even) td.locked-column) {
-    background-color: rgb(var(--v-theme-surface-variant)) !important;
+.top-product-isn-results__meta-headline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: var(--app-ink);
 }
 
-/* Hover effect for sticky columns - use solid background with slight tint */
-:deep(.sticky-data-table tbody tr:hover td[style*="position: sticky"]),
-:deep(.sticky-data-table tbody tr:hover td.locked-column) {
-    background-color: rgb(var(--v-theme-surface-light)) !important;
-    filter: brightness(0.95);
+.top-product-isn-results__token-row,
+.top-product-isn-results__linked-list,
+.top-product-isn-results__badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
 }
 
-/* Ensure hover on even rows uses the correct base color */
-:deep(.sticky-data-table tbody tr:nth-child(even):hover td[style*="position: sticky"]),
-:deep(.sticky-data-table tbody tr:nth-child(even):hover td.locked-column) {
-    background-color: rgb(var(--v-theme-surface-variant)) !important;
-    filter: brightness(0.95);
+.top-product-isn-results__token {
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 248, 240, 0.92);
+  color: var(--app-ink);
+  padding: 0.45rem 0.85rem;
+  cursor: pointer;
 }
 
-/* Explicit widths for locked columns to avoid overlap */
-/* Do not force widths; measured widths are applied inline when columns are locked */
-
-:deep(.sticky-data-table .v-data-table__wrapper)::-webkit-scrollbar {
-    width: 8px;
-    height: 8px;
+.top-product-isn-results__token--cool {
+  background: rgba(40, 96, 163, 0.1);
 }
 
-:deep(.sticky-data-table .v-data-table__wrapper)::-webkit-scrollbar-track {
-    background: rgba(var(--v-theme-on-surface), 0.05);
+.top-product-isn-results__linked-details {
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  padding: 0.55rem 0.8rem;
+  background: rgba(255, 251, 247, 0.85);
 }
 
-:deep(.sticky-data-table .v-data-table__wrapper)::-webkit-scrollbar-thumb {
-    background: rgba(var(--v-theme-on-surface), 0.2);
-    border-radius: 4px;
+.top-product-isn-results__linked-details summary {
+  cursor: pointer;
+  font-weight: 600;
 }
 
-:deep(.sticky-data-table .v-data-table__wrapper)::-webkit-scrollbar-thumb:hover {
-    background: rgba(var(--v-theme-on-surface), 0.3);
+.top-product-isn-results__linked-list {
+  margin-top: 0.75rem;
+}
+
+.top-product-isn-results__inline-note,
+.top-product-isn-results__muted,
+.top-product-isn-results__score-na small,
+.top-product-isn-results__station-cell small,
+.top-product-isn-results__dut-summary span,
+.top-product-isn-results__empty-state p,
+.top-product-isn-results__empty-inline,
+.top-product-isn-results__error-list small {
+  color: var(--app-muted);
+}
+
+.top-product-isn-results__status-card--error {
+  background: rgba(189, 64, 64, 0.08);
+}
+
+.top-product-isn-results__status-card--success {
+  background: rgba(20, 88, 71, 0.08);
+}
+
+.top-product-isn-results__filter-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.top-product-isn-results__field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.top-product-isn-results__field--wide {
+  grid-column: span 2;
+}
+
+.top-product-isn-results__field span {
+  color: var(--app-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.top-product-isn-results__field input,
+.top-product-isn-results__field select {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  padding: 0.75rem 0.9rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+}
+
+.top-product-isn-results__field select[multiple] {
+  min-height: 8.5rem;
+}
+
+.top-product-isn-results__table-shell {
+  border: 1px solid var(--app-border);
+  border-radius: 1.25rem;
+  overflow: hidden;
+  background: rgba(255, 251, 247, 0.94);
+}
+
+.top-product-isn-results__data-table :deep(.p-datatable-table) {
+  min-width: max-content;
+}
+
+.top-product-isn-results__data-table :deep(.p-datatable-thead > tr > th) {
+  white-space: normal;
+  line-height: 1.3;
+}
+
+.top-product-isn-results__data-table :deep(.p-datatable-tbody > tr > td) {
+  vertical-align: top;
+}
+
+.top-product-isn-results__score-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.top-product-isn-results__badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  border: 1px solid transparent;
+}
+
+.top-product-isn-results__badge--primary {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.top-product-isn-results__badge--success {
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.top-product-isn-results__badge--warning {
+  background: rgba(184, 118, 38, 0.16);
+  color: #8f5314;
+}
+
+.top-product-isn-results__badge--error {
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.top-product-isn-results__badge--neutral {
+  background: rgba(120, 129, 143, 0.12);
+  color: #4f5d6d;
+}
+
+.top-product-isn-results__score-button {
+  border: 0;
+  cursor: pointer;
+}
+
+.top-product-isn-results__score-button:disabled {
+  opacity: 0.9;
+  cursor: default;
+}
+
+.top-product-isn-results__mono {
+  font-family: 'Courier New', Courier, monospace;
+}
+
+.top-product-isn-results__mono--error,
+.top-product-isn-results__station-cell--error {
+  color: #8f2020;
+}
+
+.top-product-isn-results__primary-button,
+.top-product-isn-results__ghost-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.top-product-isn-results__primary-button {
+  border: 1px solid rgba(20, 88, 71, 0.12);
+  background: linear-gradient(135deg, rgba(20, 88, 71, 0.95), rgba(40, 96, 163, 0.92));
+  color: #fff;
+}
+
+.top-product-isn-results__ghost-button {
+  border: 1px solid var(--app-border);
+  background: rgba(255, 251, 247, 0.9);
+  color: var(--app-ink);
+}
+
+.top-product-isn-results__ghost-button--compact {
+  padding: 0.45rem 0.8rem;
+}
+
+.top-product-isn-results__notice {
+  border: 1px solid var(--app-border);
+  border-radius: 1.25rem;
+  padding: 1rem 1.1rem;
+}
+
+.top-product-isn-results__notice--error {
+  background: rgba(189, 64, 64, 0.08);
+}
+
+.top-product-isn-results__error-list {
+  margin: 0.8rem 0 0;
+  padding-left: 1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.top-product-isn-results__error-list li {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.top-product-isn-results__dut-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.top-product-isn-results__dut-disclosure {
+  border: 1px solid var(--app-border);
+  border-radius: 1.4rem;
+  background: rgba(255, 251, 247, 0.92);
+  overflow: hidden;
+}
+
+.top-product-isn-results__dut-disclosure summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 1rem 1.1rem;
+}
+
+.top-product-isn-results__dut-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.top-product-isn-results__dut-summary {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.top-product-isn-results__dut-title {
+  margin: 0 0 0.2rem;
+  color: var(--app-ink);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.top-product-isn-results__station-cell {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.top-product-isn-results__station-row--error :deep(td) {
+  background: rgba(189, 64, 64, 0.04);
+}
+
+.top-product-isn-results__empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 0.55rem;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.top-product-isn-results__empty-state--compact {
+  padding: 1rem 0.5rem;
+}
+
+.top-product-isn-results__empty-state strong,
+.top-product-isn-results__empty-inline,
+.top-product-isn-results__strong {
+  color: var(--app-ink);
+  font-weight: 700;
+}
+
+@media (max-width: 960px) {
+  .top-product-isn-results__dialog-header,
+  .top-product-isn-results__dut-summary {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .top-product-isn-results__meta-card--wide,
+  .top-product-isn-results__field--wide {
+    grid-column: span 1;
+  }
 }
 </style>

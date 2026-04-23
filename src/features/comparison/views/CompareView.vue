@@ -1,156 +1,140 @@
 <template>
   <DefaultLayout>
     <!-- Header -->
-    <div class="d-flex justify-space-between align-center mb-6">
+    <div class="compare-view-header mb-6">
       <div>
-        <h1 class="text-h4 mb-2">Compare Files</h1>
-        <p class="text-medium-emphasis">
+        <h1 class="compare-view-title">Compare Files</h1>
+        <p class="compare-view-subtitle">
           Upload two files and compare their contents side by side
         </p>
       </div>
-      <div class="d-flex gap-2">
-        <v-btn v-if="hasComparisonResult" color="success" prepend-icon="mdi-download" @click="handleDownload">
-          Download Results
-        </v-btn>
-        <v-btn v-if="hasComparisonResult" color="secondary" prepend-icon="mdi-refresh" variant="outlined"
-          @click="handleReset">
-          New Comparison
-        </v-btn>
+      <div class="compare-view-header__actions">
+        <button v-if="hasComparisonResult" type="button" class="compare-view-button compare-view-button--success" @click="handleDownload">
+          <Icon icon="mdi:download" />
+          <span>Download Results</span>
+        </button>
+        <button v-if="hasComparisonResult" type="button" class="compare-view-button compare-view-button--ghost" @click="handleReset">
+          <Icon icon="mdi:refresh" />
+          <span>New Comparison</span>
+        </button>
       </div>
     </div>
 
-    <!-- Error Alert -->
-    <v-alert v-if="error" type="error" variant="tonal" closable class="mb-4" @click:close="clearError">
-      {{ error }}
-    </v-alert>
+    <div v-if="error" class="compare-view-notice compare-view-notice--error mb-4">
+      <div>
+        <strong>Comparison error</strong>
+        <p>{{ error }}</p>
+      </div>
+      <button type="button" @click="clearError">Dismiss</button>
+    </div>
 
-    <!-- File Upload Section -->
-    <v-row class="mb-4">
-      <!-- File A Upload -->
+    <div class="compare-view-upload-grid mb-4">
+      <AppPanel eyebrow="File A" title="Left Source" description="Upload the baseline file used for the comparison.">
+        <template #header-aside>
+          <Icon icon="mdi:file-document-outline" class="compare-view-panel__icon" />
+        </template>
 
+        <AppFilePicker
+          v-model="selectedFileA"
+          label="Select File A"
+          accept=".csv,.xlsx"
+          helper-text="Upload the left-hand comparison source as CSV or XLSX."
+          :disabled="loadingA"
+          :invalid="Boolean(fileATypeError)"
+          :invalidMessage="fileATypeError"
+        />
 
-      <v-col cols="12" md="6">
-        <v-card>
-          <v-card-title class="d-flex align-center">
-            <v-icon class="mr-2">mdi-file-document-outline</v-icon>
-            File A
-          </v-card-title>
-          <v-card-text>
-            <v-file-input v-model="selectedFileA" label="Select File A" accept=".csv,.xlsx" variant="outlined"
-              prepend-icon="mdi-paperclip" :disabled="loadingA" :rules="[fileRules.required, fileRules.fileType]"
-              @change="handleFileAChange">
-              <template #append>
-                <v-btn color="primary" :loading="loadingA" :disabled="!selectedFileA || loadingA"
-                  @click="handleUploadFileA">
-                  Upload
-                </v-btn>
-              </template>
-            </v-file-input>
+        <div class="compare-view-panel__actions mt-3">
+          <button type="button" class="compare-view-button compare-view-button--primary" :disabled="!selectedFileA || loadingA || Boolean(fileATypeError)" @click="handleUploadFileA">
+            <Icon :icon="loadingA ? 'mdi:loading' : 'mdi:upload'" :class="{ 'compare-view-spin': loadingA }" />
+            <span>{{ loadingA ? 'Uploading...' : 'Upload' }}</span>
+          </button>
+        </div>
 
-            <!-- Upload Progress A -->
-            <v-progress-linear v-if="loadingA" :model-value="uploadProgressA" color="primary" class="mt-2" />
+        <AppProgress v-if="loadingA" :value="uploadProgressA" class="mt-3" aria-live="polite" />
 
-            <!-- Preview Info A -->
-            <v-alert v-if="hasPreviewA" type="success" class="mt-4">
-              <div class="d-flex align-center">
-                <v-icon class="mr-2">mdi-check-circle</v-icon>
-                <div>
-                  <div><strong>{{ fileA?.name }}</strong></div>
-                  <div class="text-caption">
-                    {{ columnsA.length }} columns × {{ previewRowsA.length }} rows (preview)
-                  </div>
-                </div>
-              </div>
-            </v-alert>
-          </v-card-text>
-        </v-card>
-      </v-col>
+        <div v-if="hasPreviewA" class="compare-view-preview mt-4">
+          <div>
+            <strong>{{ fileA?.name }}</strong>
+            <p>{{ columnsA.length }} columns × {{ previewRowsA.length }} rows (preview)</p>
+          </div>
+          <Icon icon="mdi:check-circle" class="compare-view-preview__icon compare-view-preview__icon--success" />
+        </div>
+      </AppPanel>
 
-      <!-- File B Upload -->
-      <v-col cols="12" md="6">
-        <v-card>
-          <v-card-title class="d-flex align-center">
-            <v-icon class="mr-2">mdi-file-document-outline</v-icon>
-            File B
-          </v-card-title>
-          <v-card-text>
-            <v-file-input v-model="selectedFileB" label="Select File B" accept=".csv,.xlsx" variant="outlined"
-              prepend-icon="mdi-paperclip" :disabled="loadingB" :rules="[fileRules.required, fileRules.fileType]"
-              @change="handleFileBChange">
-              <template #append>
-                <v-btn color="primary" :loading="loadingB" :disabled="!selectedFileB || loadingB"
-                  @click="handleUploadFileB">
-                  Upload
-                </v-btn>
-              </template>
-            </v-file-input>
+      <AppPanel eyebrow="File B" title="Right Source" description="Upload the incoming file that should be checked against File A." tone="warm">
+        <template #header-aside>
+          <Icon icon="mdi:file-document-outline" class="compare-view-panel__icon" />
+        </template>
 
-            <!-- Upload Progress B -->
-            <v-progress-linear v-if="loadingB" :model-value="uploadProgressB" color="primary" class="mt-2" />
+        <AppFilePicker
+          v-model="selectedFileB"
+          label="Select File B"
+          accept=".csv,.xlsx"
+          helper-text="Upload the right-hand comparison source as CSV or XLSX."
+          :disabled="loadingB"
+          :invalid="Boolean(fileBTypeError)"
+          :invalidMessage="fileBTypeError"
+        />
 
-            <!-- Preview Info B -->
-            <v-alert v-if="hasPreviewB" type="success" class="mt-4">
-              <div class="d-flex align-center">
-                <v-icon class="mr-2">mdi-check-circle</v-icon>
-                <div>
-                  <div><strong>{{ fileB?.name }}</strong></div>
-                  <div class="text-caption">
-                    {{ columnsB.length }} columns × {{ previewRowsB.length }} rows (preview)
-                  </div>
-                </div>
-              </div>
-            </v-alert>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+        <div class="compare-view-panel__actions mt-3">
+          <button type="button" class="compare-view-button compare-view-button--primary" :disabled="!selectedFileB || loadingB || Boolean(fileBTypeError)" @click="handleUploadFileB">
+            <Icon :icon="loadingB ? 'mdi:loading' : 'mdi:upload'" :class="{ 'compare-view-spin': loadingB }" />
+            <span>{{ loadingB ? 'Uploading...' : 'Upload' }}</span>
+          </button>
+        </div>
+
+        <AppProgress v-if="loadingB" :value="uploadProgressB" class="mt-3" aria-live="polite" />
+
+        <div v-if="hasPreviewB" class="compare-view-preview mt-4">
+          <div>
+            <strong>{{ fileB?.name }}</strong>
+            <p>{{ columnsB.length }} columns × {{ previewRowsB.length }} rows (preview)</p>
+          </div>
+          <Icon icon="mdi:check-circle" class="compare-view-preview__icon compare-view-preview__icon--success" />
+        </div>
+      </AppPanel>
+    </div>
 
     <!-- Comparison Configuration -->
-    <v-row v-if="hasBothPreviews && !hasComparisonResult" class="mb-4">
-      <v-col cols="12">
-        <!-- Column Mapper -->
-        <ColumnMapper v-model="columnMappings" :columns-a="columnsA" :columns-b="columnsB" class="mb-4" />
-      </v-col>
+    <div v-if="hasBothPreviews && !hasComparisonResult" class="compare-view-config mb-4">
+      <ColumnMapper v-model="columnMappings" :columns-a="columnsA" :columns-b="columnsB" class="mb-4" />
 
-      <v-col cols="12">
-        <!-- Comparison Mode Selector -->
-        <ComparisonModeSelector v-model="comparisonConfig" :columns-a="columnsA" :columns-b="columnsB" class="mb-4" />
-      </v-col>
+      <ComparisonModeSelector v-model="comparisonConfig" :columns-a="columnsA" :columns-b="columnsB" class="mb-4" />
 
-      <v-col cols="12">
-        <!-- Action Buttons -->
-        <v-card>
-          <v-card-text>
-            <div class="d-flex gap-2">
-              <v-btn color="primary" size="large" :loading="loading" :disabled="!canCompare || loading"
-                prepend-icon="mdi-compare" @click="handleCompare">
-                Compare Files
-              </v-btn>
-              <v-btn color="secondary" size="large" variant="outlined" prepend-icon="mdi-refresh" @click="handleReset">
-                Reset
-              </v-btn>
-            </div>
+      <AppPanel eyebrow="Run Comparison" title="Execute With Current Mapping" compactHeader>
 
-            <!-- Validation Messages -->
-            <v-alert v-if="validationMessage" type="warning" variant="tonal" density="compact" class="mt-4">
-              {{ validationMessage }}
-            </v-alert>
-          </v-card-text>
-        </v-card>
-      </v-col>
-    </v-row>
+        <div class="compare-view-action-row">
+          <button type="button" class="compare-view-button compare-view-button--primary compare-view-button--large" :disabled="!canCompare || loading" @click="handleCompare">
+            <Icon :icon="loading ? 'mdi:loading' : 'mdi:compare'" :class="{ 'compare-view-spin': loading }" />
+            <span>{{ loading ? 'Comparing...' : 'Compare Files' }}</span>
+          </button>
+          <button type="button" class="compare-view-button compare-view-button--ghost compare-view-button--large" @click="handleReset">
+            <Icon icon="mdi:refresh" />
+            <span>Reset</span>
+          </button>
+        </div>
+
+        <div v-if="validationMessage" class="compare-view-notice compare-view-notice--warning mt-4">
+          <div>
+            <strong>Configuration incomplete</strong>
+            <p>{{ validationMessage }}</p>
+          </div>
+        </div>
+      </AppPanel>
+    </div>
 
     <!-- Comparison Results -->
-    <v-row v-if="hasComparisonResult">
-      <v-col cols="12">
-        <ComparisonResults :results="comparisonResult" :mode="comparisonConfig.mode" />
-      </v-col>
-    </v-row>
+    <section v-if="hasComparisonResult" class="compare-view-results">
+      <ComparisonResults :results="comparisonResult" :mode="comparisonConfig.mode" />
+    </section>
   </DefaultLayout>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
+import { AppFilePicker, AppPanel, AppProgress } from '@/shared'
 import type { ColumnMapping } from '../components/ColumnMapper.vue'
 import type { ComparisonConfig } from '../components/ComparisonModeSelector.vue'
 import { useComparison } from '../composables'
@@ -194,36 +178,8 @@ const comparisonConfig = ref<ComparisonConfig>({
   numericTolerance: 0.0001,
 })
 
-// Validation rules
-const fileRules = {
-  required: (v: File | File[] | null | undefined) => {
-    if (!v) return 'File is required'
-    if (Array.isArray(v) && v.length === 0) return 'File is required'
-    return true
-  },
-  fileType: (v: File | File[] | null | undefined) => {
-    if (!v) return true
-    if (Array.isArray(v)) {
-      if (v.length === 0) return true
-      const file = v[0]
-      if (!file || !file.name) return 'Invalid file'
-      const validExtensions = ['.csv', '.xlsx']
-      const hasValidExtension = validExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))
-      if (!hasValidExtension) {
-        return 'File must be CSV or XLSX format'
-      }
-      return true
-    }
-    // Single file
-    if (!v.name) return 'Invalid file'
-    const validExtensions = ['.csv', '.xlsx']
-    const hasValidExtension = validExtensions.some((ext) => v.name.toLowerCase().endsWith(ext))
-    if (!hasValidExtension) {
-      return 'File must be CSV or XLSX format'
-    }
-    return true
-  },
-}
+const fileATypeError = computed(() => getFileTypeError(selectedFileA.value))
+const fileBTypeError = computed(() => getFileTypeError(selectedFileB.value))
 
 // Computed
 const canCompare = computed(() => {
@@ -256,18 +212,15 @@ const validationMessage = computed(() => {
 })
 
 // Methods
-function handleFileAChange(event: Event) {
-  const target = event.target as HTMLInputElement
-  if (target.files && target.files.length > 0) {
-    selectedFileA.value = target.files[0] || null
-  }
-}
+function getFileTypeError(value: File | File[] | null | undefined) {
+  if (!value) return ''
 
-function handleFileBChange(event: Event) {
-  const target = event.target as HTMLInputElement
-  if (target.files && target.files.length > 0) {
-    selectedFileB.value = target.files[0] || null
-  }
+  const file = Array.isArray(value) ? value[0] : value
+  if (!file?.name) return 'Invalid file'
+
+  return ['.csv', '.xlsx'].some((ext) => file.name.toLowerCase().endsWith(ext))
+    ? ''
+    : 'File must be CSV or XLSX format'
 }
 
 async function handleUploadFileA() {
@@ -353,7 +306,168 @@ function handleReset() {
 </script>
 
 <style scoped>
-.gap-2 {
-  gap: 0.5rem;
+.compare-view-header,
+.compare-view-header__actions,
+.compare-view-button,
+.compare-view-preview__icon {
+  display: flex;
+}
+
+.compare-view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.compare-view-title {
+  margin: 0 0 0.5rem;
+  font-size: clamp(2rem, 3vw, 2.6rem);
+  line-height: 1.1;
+}
+
+.compare-view-subtitle {
+  margin: 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.compare-view-header__actions {
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.compare-view-upload-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.compare-view-config {
+  display: grid;
+  gap: 1rem;
+}
+
+.compare-view-panel__actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.compare-view-panel__icon {
+  font-size: 1.75rem;
+  color: var(--app-ink);
+}
+
+.compare-view-action-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.compare-view-button {
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--app-border);
+  padding: 0.78rem 1rem;
+  cursor: pointer;
+  font-weight: 700;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+}
+
+.compare-view-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
+}
+
+.compare-view-button--primary {
+  background: #1f4e86;
+  border-color: #1f4e86;
+  color: #f8f3ec;
+}
+
+.compare-view-button--success {
+  background: #145847;
+  border-color: #145847;
+  color: #f8f3ec;
+}
+
+.compare-view-button--ghost {
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+}
+
+.compare-view-button--large {
+  padding-inline: 1.15rem;
+}
+
+.compare-view-spin {
+  animation: compare-view-spin 0.9s linear infinite;
+}
+
+.compare-view-notice,
+.compare-view-preview {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  padding: 0.95rem 1rem;
+  box-shadow: var(--app-shadow-soft);
+}
+
+.compare-view-notice p,
+.compare-view-preview p {
+  margin: 0.25rem 0 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.compare-view-notice--error {
+  background: rgba(163, 61, 45, 0.08);
+  border-color: rgba(163, 61, 45, 0.24);
+}
+
+.compare-view-notice--warning,
+.compare-view-preview {
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.compare-view-preview__icon {
+  font-size: 1.45rem;
+}
+
+.compare-view-preview__icon--success {
+  color: #145847;
+}
+
+.compare-view-notice button {
+  border: 0;
+  background: transparent;
+  color: var(--app-accent);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+@media (max-width: 900px) {
+  .compare-view-header {
+    flex-direction: column;
+  }
+
+  .compare-view-upload-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes compare-view-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

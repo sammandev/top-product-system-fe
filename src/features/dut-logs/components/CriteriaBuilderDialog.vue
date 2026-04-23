@@ -1,133 +1,119 @@
 <template>
-  <v-dialog :model-value="modelValue" max-width="1200" persistent scrollable
-    @update:model-value="emit('update:modelValue', $event)">
-    <v-card class="app-dialog">
-      <div class="app-dialog-header"><v-card-title class="d-flex align-center">
-        <v-icon start>mdi-cog-outline</v-icon>
-        Criteria Builder
-        <v-spacer />
-        <v-btn icon="mdi-close" variant="text" @click="handleClose" />
-      </v-card-title></div>
+  <AppDialog :model-value="modelValue" width="min(94vw, 76rem)" :breakpoints="{ '1100px': '96vw', '760px': '98vw' }"
+    persistent :closable="false" @update:modelValue="emit('update:modelValue', $event)">
+    <template #header>
+      <div class="criteria-builder-dialog__header">
+        <div class="criteria-builder-dialog__header-copy">
+          <span class="criteria-builder-dialog__header-icon">
+            <Icon icon="mdi:cog-outline" />
+          </span>
+          <div>
+            <p class="criteria-builder-dialog__eyebrow">Criteria Authoring</p>
+            <h2>Criteria Builder</h2>
+            <span>Build upload-log criteria rules, preview the JSON output, and immediately reuse the generated file.</span>
+          </div>
+        </div>
+        <button type="button" class="criteria-builder-dialog__icon-button" @click="handleClose">
+          <Icon icon="mdi:close" />
+        </button>
+      </div>
+    </template>
 
-      <div class="app-dialog-body"><v-card-text class="pa-4">
-        <v-row>
-          <!-- Left Panel: Rule Editor -->
-          <v-col cols="12" md="6">
-            <v-card variant="outlined">
-              <v-card-title class="text-subtitle-1 bg-grey-lighten-4">
-                <v-icon start size="small">mdi-plus-circle</v-icon>
-                Add/Edit Rule
-              </v-card-title>
-              <v-card-text>
-                <!-- Test Item Input -->
-                <v-text-field v-model="currentRule.testItem" label="Test Item Pattern"
-                  hint="Enter test item name or regex pattern (e.g., WiFi_PA1_.*)" persistent-hint clearable
-                  variant="outlined" density="comfortable" class="mt-4 mb-3" prepend-inner-icon="mdi-text-search" />
+    <div class="criteria-builder-dialog__grid">
+      <div class="criteria-builder-dialog__stack">
+        <AppPanel eyebrow="Rule Editor" title="Add Or Edit Rule" tone="cool" compact-header>
+          <div class="criteria-builder-dialog__form-grid">
+            <label class="criteria-builder-dialog__field criteria-builder-dialog__field--wide">
+              <span>Test Item Pattern</span>
+              <input v-model="currentRule.testItem" type="text" placeholder="e.g., WiFi_PA1_.*" />
+              <small>Enter a test item name or regex pattern.</small>
+            </label>
 
-                <!-- UCL Input -->
-                <v-text-field v-model="currentRule.ucl" label="UCL (Upper Criteria Limit)"
-                  hint="Leave empty if no upper limit" persistent-hint clearable variant="outlined"
-                  density="comfortable" class="mb-3" prepend-inner-icon="mdi-arrow-up-bold" />
+            <label class="criteria-builder-dialog__field">
+              <span>UCL</span>
+              <input v-model="currentRule.ucl" type="text" placeholder="Upper criteria limit" />
+              <small>Leave empty if no upper limit applies.</small>
+            </label>
 
-                <!-- LCL Input -->
-                <v-text-field v-model="currentRule.lcl" label="LCL (Lower Criteria Limit)"
-                  hint="Leave empty if no lower limit" persistent-hint clearable variant="outlined"
-                  density="comfortable" class="mb-3" prepend-inner-icon="mdi-arrow-down-bold" />
+            <label class="criteria-builder-dialog__field">
+              <span>LCL</span>
+              <input v-model="currentRule.lcl" type="text" placeholder="Lower criteria limit" />
+              <small>Leave empty if no lower limit applies.</small>
+            </label>
 
-                <!-- Target Input -->
-                <v-text-field v-model="currentRule.target" label="Target Value"
-                  hint="Leave empty to use median or (UCL+LCL)/2" persistent-hint clearable variant="outlined"
-                  density="comfortable" class="mb-4" prepend-inner-icon="mdi-target" />
+            <label class="criteria-builder-dialog__field criteria-builder-dialog__field--wide">
+              <span>Target</span>
+              <input v-model="currentRule.target" type="text" placeholder="Optional explicit target value" />
+              <small>Leave empty to use the median or midpoint.</small>
+            </label>
+          </div>
 
-                <!-- Action Buttons -->
-                <v-row dense>
-                  <v-col cols="6">
-                    <v-btn block color="primary" prepend-icon="mdi-plus" :disabled="!canAddRule" @click="addRule">
-                      {{ editingIndex !== null ? 'Update' : 'Add' }} Rule
-                    </v-btn>
-                  </v-col>
-                  <v-col cols="6">
-                    <v-btn block variant="outlined" prepend-icon="mdi-cancel" @click="resetCurrentRule">
-                      Clear
-                    </v-btn>
-                  </v-col>
-                </v-row>
-              </v-card-text>
-            </v-card>
+          <div class="criteria-builder-dialog__actions">
+            <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--primary"
+              :disabled="!canAddRule" @click="addRule">
+              {{ editingIndex !== null ? 'Update' : 'Add' }} Rule
+            </button>
+            <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--ghost"
+              @click="resetCurrentRule">
+              Clear
+            </button>
+          </div>
+        </AppPanel>
 
-            <!-- Rules List -->
-            <v-card variant="outlined" class="mt-4">
-              <v-card-title class="text-subtitle-1 bg-grey-lighten-4">
-                <v-icon start size="small">mdi-format-list-bulleted</v-icon>
-                Rules ({{ rules.length }})
-              </v-card-title>
-              <v-card-text class="pa-0">
-                <v-list v-if="rules.length > 0" density="compact" class="py-0">
-                  <v-list-item v-for="(rule, index) in rules" :key="index"
-                    :class="editingIndex === index ? 'bg-blue-lighten-5' : ''">
-                    <template #prepend>
-                      <v-icon size="small">mdi-file-document-outline</v-icon>
-                    </template>
+        <AppPanel eyebrow="Rule Set" :title="`Rules (${rules.length})`" tone="warm" compact-header>
+          <div v-if="rules.length > 0" class="criteria-builder-dialog__rule-list">
+            <article v-for="(rule, index) in rules" :key="index" class="criteria-builder-dialog__rule-card"
+              :class="{ 'is-editing': editingIndex === index }">
+              <div class="criteria-builder-dialog__rule-copy">
+                <strong>{{ rule.testItem }}</strong>
+                <span>UCL: {{ formatValue(rule.ucl) }} | LCL: {{ formatValue(rule.lcl) }} | Target: {{ formatValue(rule.target) }}</span>
+              </div>
+              <div class="criteria-builder-dialog__rule-actions">
+                <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--ghost"
+                  @click="editRule(index)">
+                  Edit
+                </button>
+                <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--danger"
+                  @click="removeRule(index)">
+                  Remove
+                </button>
+              </div>
+            </article>
+          </div>
+          <div v-else class="criteria-builder-dialog__empty-state">
+            No rules added yet. Add your first rule above.
+          </div>
+        </AppPanel>
+      </div>
 
-                    <v-list-item-title class="text-body-2 font-weight-medium">
-                      {{ rule.testItem }}
-                    </v-list-item-title>
-                    <v-list-item-subtitle class="text-caption">
-                      UCL: {{ formatValue(rule.ucl) }} | LCL: {{ formatValue(rule.lcl) }} | Target: {{
-                        formatValue(rule.target) }}
-                    </v-list-item-subtitle>
+      <AppPanel eyebrow="Generated Payload" title="JSON Preview" tone="success" compact-header>
+        <textarea class="criteria-builder-dialog__preview" :value="jsonPreview" readonly rows="25"></textarea>
+      </AppPanel>
+    </div>
 
-                    <template #append>
-                      <v-btn icon="mdi-pencil" size="x-small" variant="text" @click="editRule(index)" />
-                      <v-btn icon="mdi-delete" size="x-small" variant="text" color="error" @click="removeRule(index)" />
-                    </template>
-                  </v-list-item>
-                </v-list>
-
-                <v-card-text v-else class="text-center text-caption text-medium-emphasis py-4">
-                  No rules added yet. Add your first rule above.
-                </v-card-text>
-              </v-card-text>
-            </v-card>
-          </v-col>
-
-          <!-- Right Panel: Preview -->
-          <v-col cols="12" md="6">
-            <v-card variant="outlined">
-              <v-card-title class="text-subtitle-1 bg-grey-lighten-4 d-flex align-center">
-                <v-icon start size="small">mdi-eye</v-icon>
-                JSON Preview
-              </v-card-title>
-              <v-card-text>
-                <v-textarea :model-value="jsonPreview" readonly variant="outlined" rows="25" class="monospace-font mt-2"
-                  no-resize density="compact" />
-              </v-card-text>
-            </v-card>
-          </v-col>
-        </v-row>
-      </v-card-text></div>
-
-      <div class="app-dialog-footer"><v-card-actions class="pa-4">
-        <v-btn color="success" prepend-icon="mdi-download" :disabled="rules.length === 0" @click="downloadFile">
+    <template #footer>
+      <div class="criteria-builder-dialog__footer">
+        <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--success"
+          :disabled="rules.length === 0" @click="downloadFile">
           Download JSON File
-        </v-btn>
-
-        <v-btn color="primary" prepend-icon="mdi-check" :disabled="rules.length === 0" @click="saveAndUse">
+        </button>
+        <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--primary"
+          :disabled="rules.length === 0" @click="saveAndUse">
           Save & Use
-        </v-btn>
-
-        <v-spacer />
-
-        <v-btn variant="outlined" @click="handleClose">
+        </button>
+        <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--ghost"
+          @click="handleClose">
           Cancel
-        </v-btn>
-      </v-card-actions></div>
-    </v-card>
-  </v-dialog>
+        </button>
+      </div>
+    </template>
+  </AppDialog>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
+import { AppDialog, AppPanel } from '@/shared'
 import {
   buildUploadLogCriteriaJson,
   type UploadLogCriteriaRule,
@@ -267,8 +253,223 @@ const handleClose = () => {
 </script>
 
 <style scoped>
-.monospace-font :deep(textarea) {
+.criteria-builder-dialog__header,
+.criteria-builder-dialog__header-copy,
+.criteria-builder-dialog__grid,
+.criteria-builder-dialog__stack,
+.criteria-builder-dialog__form-grid,
+.criteria-builder-dialog__actions,
+.criteria-builder-dialog__rule-card,
+.criteria-builder-dialog__rule-actions,
+.criteria-builder-dialog__footer {
+  display: flex;
+}
+
+.criteria-builder-dialog__header,
+.criteria-builder-dialog__rule-card,
+.criteria-builder-dialog__footer {
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.criteria-builder-dialog__header-copy,
+.criteria-builder-dialog__actions,
+.criteria-builder-dialog__rule-actions,
+.criteria-builder-dialog__footer {
+  align-items: center;
+}
+
+.criteria-builder-dialog__header-copy {
+  gap: 0.85rem;
+}
+
+.criteria-builder-dialog__header-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 999px;
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.criteria-builder-dialog__eyebrow {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.criteria-builder-dialog__header h2 {
+  margin: 0.2rem 0 0;
+}
+
+.criteria-builder-dialog__header span:last-child {
+  color: var(--app-muted);
+}
+
+.criteria-builder-dialog__icon-button,
+.criteria-builder-dialog__button {
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.criteria-builder-dialog__icon-button:hover,
+.criteria-builder-dialog__button:hover {
+  transform: translateY(-1px);
+}
+
+.criteria-builder-dialog__icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.6rem;
+  height: 2.6rem;
+}
+
+.criteria-builder-dialog__grid {
+  gap: 1rem;
+  align-items: stretch;
+}
+
+.criteria-builder-dialog__stack {
+  flex: 1;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.criteria-builder-dialog__grid > :last-child {
+  flex: 1;
+}
+
+.criteria-builder-dialog__form-grid {
+  gap: 0.9rem;
+  flex-wrap: wrap;
+}
+
+.criteria-builder-dialog__field {
+  display: grid;
+  gap: 0.45rem;
+  flex: 1 1 calc(50% - 0.5rem);
+}
+
+.criteria-builder-dialog__field--wide {
+  flex-basis: 100%;
+}
+
+.criteria-builder-dialog__field span {
+  color: var(--app-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.criteria-builder-dialog__field input,
+.criteria-builder-dialog__preview {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  padding: 0.82rem 0.95rem;
+}
+
+.criteria-builder-dialog__field small {
+  color: var(--app-muted);
+}
+
+.criteria-builder-dialog__actions,
+.criteria-builder-dialog__footer {
+  gap: 0.7rem;
+  flex-wrap: wrap;
+}
+
+.criteria-builder-dialog__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.75rem 1rem;
+  font-weight: 700;
+}
+
+.criteria-builder-dialog__button--primary {
+  border-color: rgba(40, 96, 163, 0.22);
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.criteria-builder-dialog__button--success {
+  border-color: rgba(20, 88, 71, 0.22);
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.criteria-builder-dialog__button--danger {
+  border-color: rgba(189, 64, 64, 0.22);
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.criteria-builder-dialog__button--ghost {
+  color: #4f5d6d;
+}
+
+.criteria-builder-dialog__rule-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.criteria-builder-dialog__rule-card {
+  align-items: flex-start;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 251, 247, 0.88);
+  padding: 0.85rem 1rem;
+}
+
+.criteria-builder-dialog__rule-card.is-editing {
+  border-color: rgba(40, 96, 163, 0.28);
+  background: rgba(40, 96, 163, 0.08);
+}
+
+.criteria-builder-dialog__rule-copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.criteria-builder-dialog__rule-copy strong {
+  color: var(--app-ink);
+}
+
+.criteria-builder-dialog__rule-copy span,
+.criteria-builder-dialog__empty-state {
+  color: var(--app-muted);
+}
+
+.criteria-builder-dialog__preview {
+  min-height: 32rem;
+  resize: vertical;
   font-family: 'Courier New', monospace;
   font-size: 0.875rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 960px) {
+  .criteria-builder-dialog__grid,
+  .criteria-builder-dialog__header,
+  .criteria-builder-dialog__rule-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .criteria-builder-dialog__field {
+    flex-basis: 100%;
+  }
 }
 </style>

@@ -1,218 +1,301 @@
 <template>
-  <v-dialog :model-value="modelValue" :fullscreen="isFullscreen" :max-width="isFullscreen ? undefined : 1400" scrollable
-    @update:model-value="emit('update:modelValue', $event)"
-    :transition="isFullscreen ? 'dialog-bottom-transition' : undefined">
-    <v-card v-if="isn" class="d-flex flex-column"
-      :style="isFullscreen ? 'height: 100vh; overflow: hidden;' : 'max-height: 90vh; overflow: hidden;'">
-      <v-card-title class="d-flex align-center bg-primary flex-shrink-0">
-        <v-icon start color="white">mdi-compare-horizontal</v-icon>
-        <span class="text-white">Compare with iPLAS - {{ isn }}</span>
-        <v-spacer />
-        <v-btn :icon="isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text" color="white"
-          @click="isFullscreen = !isFullscreen" />
-        <v-btn icon="mdi-close" variant="text" color="white" @click="emit('update:modelValue', false)" />
-      </v-card-title>
-
-      <v-card-text class="pa-4 flex-grow-1 d-flex flex-column" style="overflow: hidden;">
-        <!-- Loading State -->
-        <div v-if="loading" class="d-flex flex-column align-center justify-center py-8">
-          <v-progress-circular indeterminate color="primary" size="64" />
-          <div class="mt-4 text-medium-emphasis">Fetching iPLAS data for {{ isn }}...</div>
+  <AppDialog
+    v-model="dialogOpen"
+    :width="isFullscreen ? '98vw' : 'min(96vw, 88rem)'"
+    :breakpoints="dialogBreakpoints"
+    maximizable
+    :closable="false"
+    class="iplas-compare-dialog"
+  >
+    <template #header>
+      <div class="iplas-compare-dialog__header">
+        <div class="iplas-compare-dialog__header-copy">
+          <span class="iplas-compare-dialog__header-icon">
+            <Icon icon="mdi:compare-horizontal" />
+          </span>
+          <div>
+            <p class="iplas-compare-dialog__eyebrow">Upload Log Cross-Check</p>
+            <h2>Compare With iPLAS{{ isn ? ` - ${isn}` : '' }}</h2>
+            <p>Review uploaded measurements against iPLAS values, re-score both sides with the same rules, and export the aligned result set.</p>
+          </div>
         </div>
 
-        <!-- Error State -->
-        <v-alert v-else-if="errorMessage" type="error" variant="tonal" class="mb-4">
-          {{ errorMessage }}
-        </v-alert>
+        <div class="iplas-compare-dialog__header-actions">
+          <button
+            type="button"
+            class="iplas-compare-dialog__button iplas-compare-dialog__button--ghost"
+            @click="isFullscreen = !isFullscreen"
+          >
+            <Icon :icon="isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" />
+            <span>{{ isFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }}</span>
+          </button>
+          <button
+            type="button"
+            class="iplas-compare-dialog__button iplas-compare-dialog__button--ghost"
+            @click="dialogOpen = false"
+          >
+            <Icon icon="mdi:close" />
+            <span>Close</span>
+          </button>
+        </div>
+      </div>
+    </template>
 
-        <!-- No iPLAS Data -->
-        <v-alert v-else-if="!iplasTestItems.length" type="warning" variant="tonal" class="mb-4">
-          No iPLAS data found for ISN: {{ isn }}
-        </v-alert>
+    <div class="iplas-compare-dialog__body" :class="{ 'iplas-compare-dialog__body--fullscreen': isFullscreen }">
+      <div v-if="loading" class="iplas-compare-dialog__empty-state">
+        <Icon icon="mdi:loading" class="iplas-compare-dialog__spin" />
+        <strong>Fetching iPLAS data{{ isn ? ` for ${isn}` : '' }}...</strong>
+        <p>The comparison view will populate once the proxy search returns.</p>
+      </div>
 
-        <!-- Comparison Table -->
-        <template v-else>
-          <!-- Controls Row: Search, Filter, Score Filter -->
-          <v-row dense class="mb-3 flex-shrink-0">
-            <v-col cols="12" md="3">
-              <v-text-field v-model="searchQuery" label="Search (Regex)" placeholder="e.g. ^RF.*|Power"
-                prepend-inner-icon="mdi-regex" variant="outlined" density="compact" hide-details clearable />
-            </v-col>
-            <v-col cols="6" md="2">
-              <v-select v-model="typeFilter" :items="typeFilterOptions" label="Filter" variant="outlined"
-                density="compact" hide-details />
-            </v-col>
-            <v-col cols="6" md="2">
-              <v-select v-model="scoreFilter" :items="scoreFilterOptions" label="Score Filter" variant="outlined"
-                density="compact" hide-details />
-            </v-col>
-            <v-col cols="6" md="3" class="d-flex align-center gap-2">
-              <v-btn color="info" variant="tonal" prepend-icon="mdi-tune-variant" @click="showScoringConfig = true">
-                Scoring
-                <v-badge v-if="customScoringCount > 0" :content="customScoringCount" color="warning" inline
-                  class="ml-1" />
-              </v-btn>
-            </v-col>
-            <v-col cols="6" md="2" class="d-flex align-center">
-              <v-btn color="success" variant="tonal" prepend-icon="mdi-microsoft-excel" block @click="exportToExcel"
-                :loading="exporting">
-                Export
-              </v-btn>
-            </v-col>
-          </v-row>
+      <section v-else-if="errorMessage" class="iplas-compare-dialog__notice iplas-compare-dialog__notice--error">
+        <strong>Comparison Error</strong>
+        <p>{{ errorMessage }}</p>
+      </section>
 
-          <!-- Filter Chips -->
-          <v-chip-group v-model="comparisonFilter" mandatory class="mb-4 flex-shrink-0">
-            <v-chip value="match" color="success" variant="flat">Match Items ({{ matchCount }})</v-chip>
-            <v-chip value="mismatch" color="error" variant="flat">Mismatch Items ({{ mismatchCount }})</v-chip>
-            <v-chip value="upload-only" color="warning" variant="flat">Uploaded Items ({{ uploadOnlyCount }})</v-chip>
-            <v-chip value="iplas-only" color="info" variant="flat">iPLAS Items ({{ iplasOnlyCount }})</v-chip>
-            <v-chip value="all" color="primary" variant="outlined">All ({{ comparisonItems.length }})</v-chip>
-          </v-chip-group>
+      <section v-else-if="!iplasTestItems.length" class="iplas-compare-dialog__notice iplas-compare-dialog__notice--warning">
+        <strong>No iPLAS Data</strong>
+        <p>No iPLAS records were found for {{ isn || 'the selected ISN' }}.</p>
+      </section>
 
-          <v-row dense class="mb-4 flex-shrink-0">
-            <v-col cols="12" md="6">
-              <v-card variant="tonal" color="primary">
-                <v-card-text class="text-center">
-                  <div class="text-caption text-medium-emphasis">Uploaded Overall Score</div>
-                  <div class="text-h5 font-weight-bold">
-                    {{ formatOverallScore(uploadOverallScore) }}
-                  </div>
-                </v-card-text>
-              </v-card>
-            </v-col>
-            <v-col cols="12" md="6">
-              <v-card variant="tonal" color="info">
-                <v-card-text class="text-center">
-                  <div class="text-caption text-medium-emphasis">iPLAS Overall Score</div>
-                  <div class="text-h5 font-weight-bold">
-                    {{ formatOverallScore(iplasOverallScore) }}
-                  </div>
-                </v-card-text>
-              </v-card>
-            </v-col>
-          </v-row>
+      <template v-else>
+        <section class="iplas-compare-dialog__controls">
+          <label class="iplas-compare-dialog__field iplas-compare-dialog__field--wide">
+            <span>Search Test Items (Regex)</span>
+            <input
+              v-model="searchQuery"
+              type="text"
+              placeholder="Example: ^RF.*|Power"
+            >
+          </label>
 
-          <div class="flex-grow-1" style="overflow: auto;">
-            <v-data-table :headers="comparisonHeaders" :items="filteredComparisonItems" :items-per-page="50"
-              density="comfortable" class="elevation-1">
-              <template #item.test_item="{ item }">
-                <span class="font-weight-medium">{{ item.test_item }}</span>
-              </template>
-              <template #item.usl="{ item }">
-                <span v-if="item.usl !== null">{{ item.usl }}</span>
-                <span v-else class="text-medium-emphasis">-</span>
-              </template>
-              <template #item.lsl="{ item }">
-                <span v-if="item.lsl !== null">{{ item.lsl }}</span>
-                <span v-else class="text-medium-emphasis">-</span>
-              </template>
-              <template #item.upload_value="{ item }">
-                <span v-if="item.upload_value !== null">{{ item.upload_value }}</span>
-                <span v-else class="text-medium-emphasis">-</span>
-              </template>
-              <template #item.iplas_value="{ item }">
-                <span v-if="item.iplas_value !== null">{{ item.iplas_value }}</span>
-                <span v-else class="text-medium-emphasis">-</span>
-              </template>
-              <template #item.upload_score="{ item }">
-                <v-chip v-if="item.upload_score !== null" :color="getScoreColor(item.upload_score)" size="small"
-                  class="cursor-pointer" @click="showScoreBreakdown(item, 'upload')">
-                  {{ item.upload_score?.toFixed(2) }}
-                </v-chip>
-                <span v-else class="text-medium-emphasis">-</span>
-              </template>
-              <template #item.iplas_score="{ item }">
-                <v-chip v-if="item.iplas_score !== null" :color="getScoreColor(item.iplas_score)" size="small"
-                  class="cursor-pointer" @click="showScoreBreakdown(item, 'iplas')">
-                  {{ item.iplas_score?.toFixed(2) }}
-                </v-chip>
-                <span v-else class="text-medium-emphasis">-</span>
-              </template>
-            </v-data-table>
+          <label class="iplas-compare-dialog__field">
+            <span>Data Type</span>
+            <select v-model="typeFilter">
+              <option v-for="option in typeFilterOptions" :key="option.value" :value="option.value">
+                {{ option.title }}
+              </option>
+            </select>
+          </label>
+
+          <label class="iplas-compare-dialog__field">
+            <span>Score Filter</span>
+            <select v-model="scoreFilter">
+              <option v-for="option in scoreFilterOptions" :key="option.value" :value="option.value">
+                {{ option.title }}
+              </option>
+            </select>
+          </label>
+
+          <div class="iplas-compare-dialog__field iplas-compare-dialog__field--actions">
+            <span>Actions</span>
+            <div class="iplas-compare-dialog__action-row">
+              <button
+                type="button"
+                class="iplas-compare-dialog__button iplas-compare-dialog__button--ghost"
+                @click="showScoringConfig = true"
+              >
+                <Icon icon="mdi:tune-variant" />
+                <span>Scoring{{ customScoringCount > 0 ? ` (${customScoringCount})` : '' }}</span>
+              </button>
+              <button
+                type="button"
+                class="iplas-compare-dialog__button iplas-compare-dialog__button--primary"
+                :disabled="exporting"
+                @click="exportToExcel"
+              >
+                <Icon :icon="exporting ? 'mdi:loading' : 'mdi:microsoft-excel'" :class="{ 'iplas-compare-dialog__spin': exporting }" />
+                <span>{{ exporting ? 'Exporting...' : 'Export' }}</span>
+              </button>
+            </div>
           </div>
-        </template>
-      </v-card-text>
+        </section>
 
+        <section class="iplas-compare-dialog__chip-row">
+          <button
+            v-for="option in comparisonFilterOptions"
+            :key="option.value"
+            type="button"
+            class="iplas-compare-dialog__chip"
+            :class="{ 'iplas-compare-dialog__chip--active': comparisonFilter === option.value }"
+            @click="comparisonFilter = option.value"
+          >
+            <span>{{ option.title }}</span>
+            <strong>{{ option.count }}</strong>
+          </button>
+        </section>
 
-    </v-card>
-  </v-dialog>
+        <section class="iplas-compare-dialog__summary-grid">
+          <article class="iplas-compare-dialog__summary-card iplas-compare-dialog__summary-card--primary">
+            <small>Uploaded Overall Score</small>
+            <strong>{{ formatOverallScore(uploadOverallScore) }}</strong>
+          </article>
+          <article class="iplas-compare-dialog__summary-card iplas-compare-dialog__summary-card--secondary">
+            <small>iPLAS Overall Score</small>
+            <strong>{{ formatOverallScore(iplasOverallScore) }}</strong>
+          </article>
+        </section>
 
-  <!-- Score Breakdown Dialog -->
-  <v-dialog v-model="showBreakdownDialog" :fullscreen="breakdownFullscreen"
-    :max-width="breakdownFullscreen ? undefined : 600"
-    :transition="breakdownFullscreen ? 'dialog-bottom-transition' : undefined">
-    <v-card v-if="breakdownItem" class="app-dialog">
-      <div class="app-dialog-header"><v-card-title class="d-flex align-center">
-        <v-icon start>mdi-calculator-variant</v-icon>
-        Score Breakdown - {{ breakdownSource === 'upload' ? 'Uploaded' : 'iPLAS' }}
-        <v-spacer />
-        <v-btn :icon="breakdownFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text"
-          @click="breakdownFullscreen = !breakdownFullscreen" />
-        <v-btn icon="mdi-close" variant="text" @click="showBreakdownDialog = false" />
-      </v-card-title></div>
-      <div class="app-dialog-body"><v-card-text class="pa-4">
-        <v-table density="compact">
-          <tbody>
-            <tr>
-              <td class="font-weight-medium">Test Item</td>
-              <td>{{ breakdownItem.test_item }}</td>
-            </tr>
-            <tr>
-              <td class="font-weight-medium">Value</td>
-              <td>{{ breakdownSource === 'upload' ? breakdownItem.upload_value : breakdownItem.iplas_value }}</td>
-            </tr>
-            <tr>
-              <td class="font-weight-medium">Score</td>
-              <td>
-                <v-chip
-                  :color="getScoreColor(breakdownSource === 'upload' ? breakdownItem.upload_score! : breakdownItem.iplas_score!)"
-                  size="small">
-                  {{ (breakdownSource === 'upload' ? breakdownItem.upload_score : breakdownItem.iplas_score)?.toFixed(2)
-                  }}
-                </v-chip>
-              </td>
-            </tr>
-            <tr v-if="breakdownItem.usl !== null">
-              <td class="font-weight-medium">UCL</td>
-              <td>{{ breakdownItem.usl }}</td>
-            </tr>
-            <tr v-if="breakdownItem.lsl !== null">
-              <td class="font-weight-medium">LCL</td>
-              <td>{{ breakdownItem.lsl }}</td>
-            </tr>
-            <tr>
-              <td class="font-weight-medium">Scoring Type</td>
-              <td>
-                <v-chip size="small" color="primary" variant="tonal">
-                  {{ breakdownScoringType }}
-                </v-chip>
-              </td>
-            </tr>
-            <tr v-if="breakdownTarget !== null">
-              <td class="font-weight-medium">Target</td>
-              <td>{{ breakdownTarget?.toFixed(4) }}</td>
-            </tr>
-            <tr v-if="breakdownDeviation !== null">
-              <td class="font-weight-medium">Deviation</td>
-              <td>{{ breakdownDeviation?.toFixed(4) }}</td>
-            </tr>
-          </tbody>
-        </v-table>
-      </v-card-text></div>
-      <div class="app-dialog-footer"><v-card-actions>
-        <v-spacer />
-        <v-btn color="primary" variant="text" @click="showBreakdownDialog = false">Close</v-btn>
-      </v-card-actions></div>
-    </v-card>
-  </v-dialog>
+        <AppDataGrid
+          :columns="comparisonGridColumns"
+          :rows="filteredComparisonItems"
+          dataKey="test_item"
+          paginator
+          :rowsPerPage="25"
+          :rowsPerPageOptions="[10, 25, 50, 100]"
+          :scrollHeight="isFullscreen ? 'calc(100vh - 24rem)' : '34rem'"
+          :rowClass="comparisonRowClass"
+          emptyMessage="No comparison rows match the current filters."
+        >
+          <template #cell-test_item="{ data }">
+            <div class="iplas-compare-dialog__item-cell">
+              <strong>{{ data.test_item }}</strong>
+              <small>{{ data.status }}</small>
+            </div>
+          </template>
 
-  <!-- UPDATED: Use shared UploadScoringConfigDialog instead of inline scoring config -->
-  <UploadScoringConfigDialog v-model="showScoringConfig" :test-items="scoringDialogTestItems"
-    :existing-configs="localScoringConfigs" @apply="handleScoringConfigApply" />
+          <template #cell-usl="{ data }">
+            <span class="iplas-compare-dialog__muted">{{ data.usl ?? '-' }}</span>
+          </template>
+
+          <template #cell-lsl="{ data }">
+            <span class="iplas-compare-dialog__muted">{{ data.lsl ?? '-' }}</span>
+          </template>
+
+          <template #cell-upload_value="{ data }">
+            <span :class="data.upload_value === null ? 'iplas-compare-dialog__muted' : ''">
+              {{ data.upload_value ?? '-' }}
+            </span>
+          </template>
+
+          <template #cell-iplas_value="{ data }">
+            <span :class="data.iplas_value === null ? 'iplas-compare-dialog__muted' : ''">
+              {{ data.iplas_value ?? '-' }}
+            </span>
+          </template>
+
+          <template #cell-upload_score="{ data }">
+            <button
+              v-if="data.upload_score !== null"
+              type="button"
+              class="iplas-compare-dialog__score-pill"
+              :class="scorePillClass(getScoreColor(data.upload_score))"
+              @click="showScoreBreakdown(data, 'upload')"
+            >
+              {{ data.upload_score.toFixed(2) }}
+            </button>
+            <span v-else class="iplas-compare-dialog__muted">-</span>
+          </template>
+
+          <template #cell-iplas_score="{ data }">
+            <button
+              v-if="data.iplas_score !== null"
+              type="button"
+              class="iplas-compare-dialog__score-pill"
+              :class="scorePillClass(getScoreColor(data.iplas_score))"
+              @click="showScoreBreakdown(data, 'iplas')"
+            >
+              {{ data.iplas_score.toFixed(2) }}
+            </button>
+            <span v-else class="iplas-compare-dialog__muted">-</span>
+          </template>
+        </AppDataGrid>
+      </template>
+    </div>
+  </AppDialog>
+
+  <AppDialog
+    v-model="showBreakdownDialog"
+    :width="breakdownFullscreen ? '96vw' : 'min(94vw, 42rem)'"
+    :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
+    :closable="false"
+    class="iplas-compare-dialog__breakdown-dialog"
+  >
+    <template #header>
+      <div class="iplas-compare-dialog__header">
+        <div class="iplas-compare-dialog__header-copy">
+          <span class="iplas-compare-dialog__header-icon">
+            <Icon icon="mdi:calculator-variant" />
+          </span>
+          <div>
+            <p class="iplas-compare-dialog__eyebrow">Score Breakdown</p>
+            <h2>{{ breakdownSource === 'upload' ? 'Uploaded' : 'iPLAS' }} Score</h2>
+            <p v-if="breakdownItem">{{ breakdownItem.test_item }}</p>
+          </div>
+        </div>
+
+        <div class="iplas-compare-dialog__header-actions">
+          <button
+            type="button"
+            class="iplas-compare-dialog__button iplas-compare-dialog__button--ghost"
+            @click="breakdownFullscreen = !breakdownFullscreen"
+          >
+            <Icon :icon="breakdownFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" />
+            <span>{{ breakdownFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }}</span>
+          </button>
+          <button
+            type="button"
+            class="iplas-compare-dialog__button iplas-compare-dialog__button--ghost"
+            @click="showBreakdownDialog = false"
+          >
+            <Icon icon="mdi:close" />
+            <span>Close</span>
+          </button>
+        </div>
+      </div>
+    </template>
+
+    <div v-if="breakdownItem" class="iplas-compare-dialog__breakdown-grid">
+      <article class="iplas-compare-dialog__summary-card">
+        <small>Measured Value</small>
+        <strong>{{ breakdownSource === 'upload' ? breakdownItem.upload_value : breakdownItem.iplas_value }}</strong>
+      </article>
+      <article class="iplas-compare-dialog__summary-card">
+        <small>Score</small>
+        <strong>
+          {{ (breakdownSource === 'upload' ? breakdownItem.upload_score : breakdownItem.iplas_score)?.toFixed(2) }}
+        </strong>
+      </article>
+      <article class="iplas-compare-dialog__summary-card">
+        <small>Scoring Type</small>
+        <strong>{{ breakdownScoringType }}</strong>
+      </article>
+
+      <div class="iplas-compare-dialog__detail-table">
+        <div class="iplas-compare-dialog__detail-row">
+          <span>Test Item</span>
+          <strong>{{ breakdownItem.test_item }}</strong>
+        </div>
+        <div class="iplas-compare-dialog__detail-row">
+          <span>UCL</span>
+          <strong>{{ breakdownItem.usl ?? '-' }}</strong>
+        </div>
+        <div class="iplas-compare-dialog__detail-row">
+          <span>LCL</span>
+          <strong>{{ breakdownItem.lsl ?? '-' }}</strong>
+        </div>
+        <div class="iplas-compare-dialog__detail-row">
+          <span>Target</span>
+          <strong>{{ breakdownTarget !== null ? breakdownTarget.toFixed(4) : '-' }}</strong>
+        </div>
+        <div class="iplas-compare-dialog__detail-row">
+          <span>Deviation</span>
+          <strong>{{ breakdownDeviation !== null ? breakdownDeviation.toFixed(4) : '-' }}</strong>
+        </div>
+      </div>
+    </div>
+  </AppDialog>
+
+  <UploadScoringConfigDialog
+    v-model="showScoringConfig"
+    :test-items="scoringDialogTestItems"
+    :existing-configs="localScoringConfigs"
+    @apply="handleScoringConfigApply"
+  />
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 import type { IplasIsnTestItem } from '@/features/dut-logs/api/iplasProxyApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
@@ -222,12 +305,13 @@ import type {
   RescoreScoringConfig,
 } from '@/features/dut-logs/composables/useTestLogUpload'
 import { useTestLogUpload } from '@/features/dut-logs/composables/useTestLogUpload'
+import { AppDataGrid, AppDialog } from '@/shared'
+import UploadScoringConfigDialog from './UploadScoringConfigDialog.vue'
 
 const props = defineProps<{
   modelValue: boolean
   isn: string | null
   uploadTestItems: ParsedTestItemEnhanced[]
-  // UPDATED: Accept existing scoring configs from parent for unified scoring
   scoringConfigs?: RescoreScoringConfig[]
 }>()
 
@@ -249,51 +333,54 @@ interface ComparisonItem {
   iplas_target?: number | null
   upload_deviation?: number | null
   iplas_deviation?: number | null
-  // UPDATED: 'mismatch' no longer a status - mismatch filter combines upload-only + iplas-only
   status: 'match' | 'upload-only' | 'iplas-only'
 }
 
 const { searchByIsn } = useIplasApi()
 const { rescoreItems } = useTestLogUpload()
 
+const dialogOpen = computed({
+  get: () => props.modelValue,
+  set: (value: boolean) => emit('update:modelValue', value),
+})
+
+const dialogBreakpoints = {
+  '1400px': '96vw',
+  '960px': '98vw',
+  '640px': '100vw',
+}
+
 const loading = ref(false)
 const exporting = ref(false)
 const isFullscreen = ref(false)
 const errorMessage = ref<string | null>(null)
 const iplasTestItems = ref<IplasIsnTestItem[]>([])
-const comparisonFilter = ref('match')
+const comparisonFilter = ref<'match' | 'mismatch' | 'upload-only' | 'iplas-only' | 'all'>('match')
 const searchQuery = ref('')
 const typeFilter = ref('all')
 const scoreFilter = ref('all')
 
-// Score breakdown dialog state
 const showBreakdownDialog = ref(false)
 const breakdownFullscreen = ref(false)
 const breakdownItem = ref<ComparisonItem | null>(null)
 const breakdownSource = ref<'upload' | 'iplas'>('upload')
 
-// Rescored data
 const uploadScoredMap = ref<Map<string, RescoreItemResult>>(new Map())
 const iplasScoredMap = ref<Map<string, RescoreItemResult>>(new Map())
 const uploadOverallScore = ref<number | null>(null)
 const iplasOverallScore = ref<number | null>(null)
 
-// Scoring configuration dialog state
 const showScoringConfig = ref(false)
 const localScoringConfigs = ref<RescoreScoringConfig[]>([])
 
-// Count of custom scoring configs (extracted from template to avoid Biome parser crash)
 const customScoringCount = computed(
-  () =>
-    localScoringConfigs.value.filter((c) => c.enabled && c.scoring_type !== 'symmetrical').length,
+  () => localScoringConfigs.value.filter((config) => config.enabled && config.scoring_type !== 'symmetrical').length,
 )
 
-// UPDATED: Build test items for the shared UploadScoringConfigDialog - preserving original order
 const scoringDialogTestItems = computed<ParsedTestItemEnhanced[]>(() => {
   const items: ParsedTestItemEnhanced[] = []
   const seenKeys = new Set<string>()
 
-  // Add upload test items first (preserve original order from uploaded data)
   props.uploadTestItems.forEach((item) => {
     const key = item.test_item.toLowerCase()
     if (!seenKeys.has(key)) {
@@ -302,7 +389,6 @@ const scoringDialogTestItems = computed<ParsedTestItemEnhanced[]>(() => {
     }
   })
 
-  // Add iPLAS test items (only if not already from upload)
   iplasTestItems.value.forEach((iplasItem) => {
     const key = iplasItem.NAME.toLowerCase()
     if (!seenKeys.has(key)) {
@@ -327,22 +413,19 @@ const scoringDialogTestItems = computed<ParsedTestItemEnhanced[]>(() => {
   return items
 })
 
-// UPDATED: Handle scoring config apply from shared dialog
 function handleScoringConfigApply(configs: RescoreScoringConfig[]) {
   localScoringConfigs.value = configs
   rescoreAllItems()
 }
 
 function initializeScoringConfigs() {
-  // Build scoring configs from all test items
   const allTestItems = new Set<string>()
   props.uploadTestItems.forEach((item) => allTestItems.add(item.test_item))
   iplasTestItems.value.forEach((item) => allTestItems.add(item.NAME))
 
-  // UPDATED: Use provided configs as base (unified with parent tab scoring)
   const existingMap = new Map<string, RescoreScoringConfig>()
   if (props.scoringConfigs && props.scoringConfigs.length > 0) {
-    props.scoringConfigs.forEach((cfg) => existingMap.set(cfg.test_item_name, cfg))
+    props.scoringConfigs.forEach((config) => existingMap.set(config.test_item_name, config))
   }
 
   localScoringConfigs.value = Array.from(allTestItems).map((name) => {
@@ -350,6 +433,7 @@ function initializeScoringConfigs() {
     if (existing) {
       return { ...existing }
     }
+
     return {
       test_item_name: name,
       scoring_type: 'symmetrical' as const,
@@ -368,36 +452,23 @@ const typeFilterOptions = [
 
 const scoreFilterOptions = [
   { title: 'All Scores', value: 'all' },
-  { title: 'Score ≥ 9', value: 'gte9' },
+  { title: 'Score >= 9', value: 'gte9' },
   { title: 'Score 7-9', value: '7to9' },
   { title: 'Score < 7', value: 'lt7' },
   { title: 'Has Score', value: 'hasScore' },
   { title: 'No Score', value: 'noScore' },
 ]
 
-const comparisonHeaders = [
-  { title: 'Test Item', key: 'test_item', sortable: true },
-  { title: 'UCL', key: 'usl', sortable: true, width: '100px', align: 'center' as const },
-  { title: 'LCL', key: 'lsl', sortable: true, width: '100px', align: 'center' as const },
-  { title: 'Uploaded Value', key: 'upload_value', sortable: true, width: '130px' },
-  { title: 'iPLAS Value', key: 'iplas_value', sortable: true, width: '130px' },
-  {
-    title: 'Uploaded Score',
-    key: 'upload_score',
-    sortable: true,
-    width: '120px',
-    align: 'center' as const,
-  },
-  {
-    title: 'iPLAS Score',
-    key: 'iplas_score',
-    sortable: true,
-    width: '120px',
-    align: 'center' as const,
-  },
+const comparisonGridColumns = [
+  { key: 'test_item', field: 'test_item', header: 'Test Item', sortable: true, style: { width: '18rem' } },
+  { key: 'usl', field: 'usl', header: 'UCL', sortable: true, style: { width: '7rem' } },
+  { key: 'lsl', field: 'lsl', header: 'LCL', sortable: true, style: { width: '7rem' } },
+  { key: 'upload_value', field: 'upload_value', header: 'Uploaded Value', sortable: true, style: { width: '10rem' } },
+  { key: 'iplas_value', field: 'iplas_value', header: 'iPLAS Value', sortable: true, style: { width: '10rem' } },
+  { key: 'upload_score', field: 'upload_score', header: 'Uploaded Score', sortable: true, style: { width: '9rem' } },
+  { key: 'iplas_score', field: 'iplas_score', header: 'iPLAS Score', sortable: true, style: { width: '9rem' } },
 ]
 
-// Computed for breakdown dialog
 const breakdownScoringType = computed(() => {
   if (!breakdownItem.value) return 'N/A'
   return breakdownSource.value === 'upload'
@@ -407,38 +478,28 @@ const breakdownScoringType = computed(() => {
 
 const breakdownTarget = computed(() => {
   if (!breakdownItem.value) return null
-  return breakdownSource.value === 'upload'
-    ? breakdownItem.value.upload_target
-    : breakdownItem.value.iplas_target
+  return breakdownSource.value === 'upload' ? breakdownItem.value.upload_target : breakdownItem.value.iplas_target
 })
 
 const breakdownDeviation = computed(() => {
   if (!breakdownItem.value) return null
-  return breakdownSource.value === 'upload'
-    ? breakdownItem.value.upload_deviation
-    : breakdownItem.value.iplas_deviation
+  return breakdownSource.value === 'upload' ? breakdownItem.value.upload_deviation : breakdownItem.value.iplas_deviation
 })
 
-// Scoring config helper functions are now in UploadScoringConfigDialog
-
-// Build comparison items - preserving original order from uploaded data
 const comparisonItems = computed<ComparisonItem[]>(() => {
   const items: ComparisonItem[] = []
   const uploadItemMap = new Map<string, ParsedTestItemEnhanced>()
   const iplasItemMap = new Map<string, IplasIsnTestItem>()
   const processedKeys = new Set<string>()
 
-  // Build upload map
   props.uploadTestItems.forEach((item) => {
     uploadItemMap.set(item.test_item.toLowerCase(), item)
   })
 
-  // Build iPLAS map
   iplasTestItems.value.forEach((item) => {
     iplasItemMap.set(item.NAME.toLowerCase(), item)
   })
 
-  // Helper function to build a comparison item
   const buildComparisonItem = (testItemKey: string): ComparisonItem => {
     const uploadItem = uploadItemMap.get(testItemKey)
     const iplasItem = iplasItemMap.get(testItemKey)
@@ -473,7 +534,6 @@ const comparisonItems = computed<ComparisonItem[]>(() => {
     }
   }
 
-  // First, add items in the order they appear in uploaded data
   props.uploadTestItems.forEach((item) => {
     const key = item.test_item.toLowerCase()
     if (!processedKeys.has(key)) {
@@ -482,7 +542,6 @@ const comparisonItems = computed<ComparisonItem[]>(() => {
     }
   })
 
-  // Then, add iPLAS-only items that weren't in uploaded data
   iplasTestItems.value.forEach((item) => {
     const key = item.NAME.toLowerCase()
     if (!processedKeys.has(key)) {
@@ -497,36 +556,26 @@ const comparisonItems = computed<ComparisonItem[]>(() => {
 const filteredComparisonItems = computed(() => {
   let items = comparisonItems.value
 
-  // UPDATED: Filter by comparison status (chips)
   if (comparisonFilter.value === 'match') {
-    // Match Items: test items that exist in BOTH upload and iPLAS (same name)
     items = items.filter((item) => item.status === 'match')
   } else if (comparisonFilter.value === 'mismatch') {
-    // Mismatch Items: test items that do NOT exist in both (only in one source)
     items = items.filter((item) => item.status === 'upload-only' || item.status === 'iplas-only')
   } else if (comparisonFilter.value === 'upload-only') {
-    // Uploaded Items: ALL test items from the uploaded test logs
     items = items.filter((item) => item.status === 'match' || item.status === 'upload-only')
   } else if (comparisonFilter.value === 'iplas-only') {
-    // iPLAS Items: ALL test items from iPLAS data
     items = items.filter((item) => item.status === 'match' || item.status === 'iplas-only')
   }
-  // 'all' shows everything
 
-  // Filter by type (Criteria / Non-Criteria)
   if (typeFilter.value === 'criteria') {
     items = items.filter((item) => item.usl !== null || item.lsl !== null)
   } else if (typeFilter.value === 'non-criteria') {
     items = items.filter((item) => item.usl === null && item.lsl === null)
   }
 
-  // Filter by score
   if (scoreFilter.value === 'gte9') {
     items = items.filter((item) => item.upload_score !== null && item.upload_score >= 9)
   } else if (scoreFilter.value === '7to9') {
-    items = items.filter(
-      (item) => item.upload_score !== null && item.upload_score >= 7 && item.upload_score < 9,
-    )
+    items = items.filter((item) => item.upload_score !== null && item.upload_score >= 7 && item.upload_score < 9)
   } else if (scoreFilter.value === 'lt7') {
     items = items.filter((item) => item.upload_score !== null && item.upload_score < 7)
   } else if (scoreFilter.value === 'hasScore') {
@@ -535,13 +584,11 @@ const filteredComparisonItems = computed(() => {
     items = items.filter((item) => item.upload_score === null)
   }
 
-  // Filter by search (regex)
   if (searchQuery.value) {
     try {
       const regex = new RegExp(searchQuery.value, 'i')
       items = items.filter((item) => regex.test(item.test_item))
     } catch {
-      // Invalid regex, fall back to simple includes
       const query = searchQuery.value.toLowerCase()
       items = items.filter((item) => item.test_item.toLowerCase().includes(query))
     }
@@ -550,23 +597,19 @@ const filteredComparisonItems = computed(() => {
   return items
 })
 
-// UPDATED: Counts reflect new filter semantics
-const matchCount = computed(() => comparisonItems.value.filter((i) => i.status === 'match').length)
-const mismatchCount = computed(
-  () =>
-    comparisonItems.value.filter((i) => i.status === 'upload-only' || i.status === 'iplas-only')
-      .length,
-)
-const uploadOnlyCount = computed(
-  () =>
-    comparisonItems.value.filter((i) => i.status === 'match' || i.status === 'upload-only').length,
-)
-const iplasOnlyCount = computed(
-  () =>
-    comparisonItems.value.filter((i) => i.status === 'match' || i.status === 'iplas-only').length,
-)
+const matchCount = computed(() => comparisonItems.value.filter((item) => item.status === 'match').length)
+const mismatchCount = computed(() => comparisonItems.value.filter((item) => item.status === 'upload-only' || item.status === 'iplas-only').length)
+const uploadOnlyCount = computed(() => comparisonItems.value.filter((item) => item.status === 'match' || item.status === 'upload-only').length)
+const iplasOnlyCount = computed(() => comparisonItems.value.filter((item) => item.status === 'match' || item.status === 'iplas-only').length)
 
-// Show score breakdown dialog
+const comparisonFilterOptions = computed(() => [
+  { title: 'Match Items', value: 'match' as const, count: matchCount.value },
+  { title: 'Mismatch Items', value: 'mismatch' as const, count: mismatchCount.value },
+  { title: 'Uploaded Items', value: 'upload-only' as const, count: uploadOnlyCount.value },
+  { title: 'iPLAS Items', value: 'iplas-only' as const, count: iplasOnlyCount.value },
+  { title: 'All Items', value: 'all' as const, count: comparisonItems.value.length },
+])
+
 function showScoreBreakdown(item: ComparisonItem, source: 'upload' | 'iplas') {
   breakdownItem.value = item
   breakdownSource.value = source
@@ -577,15 +620,12 @@ function formatOverallScore(score: number | null): string {
   return score === null ? 'N/A' : score.toFixed(2)
 }
 
-// Rescore items using the backend API
 async function rescoreAllItems() {
   if (localScoringConfigs.value.length === 0) return
 
-  // UPDATED: Build a set of explicitly configured item names for criteria-only default
-  const explicitlyConfigured = new Set(localScoringConfigs.value.map((c) => c.test_item_name))
+  const explicitlyConfigured = new Set(localScoringConfigs.value.map((config) => config.test_item_name))
 
   try {
-    // Rescore uploaded items - only criteria items by default
     const uploadItems = props.uploadTestItems
       .filter((item) => {
         const hasCriteria = item.usl !== null || item.lsl !== null
@@ -611,7 +651,6 @@ async function rescoreAllItems() {
       uploadOverallScore.value = null
     }
 
-    // Rescore iPLAS items with the same config - only criteria items by default
     const iplasItems = iplasTestItems.value
       .filter((item) => {
         const hasCriteria = (item.UCL && item.UCL !== '') || (item.LCL && item.LCL !== '')
@@ -636,14 +675,21 @@ async function rescoreAllItems() {
       iplasScoredMap.value.clear()
       iplasOverallScore.value = null
     }
-  } catch (err) {
-    console.error('Failed to rescore items:', err)
+  } catch (error) {
+    console.error('Failed to rescore items:', error)
     uploadOverallScore.value = null
     iplasOverallScore.value = null
   }
 }
 
-// Fetch iPLAS data when dialog opens
+watch(dialogOpen, (isOpen) => {
+  if (!isOpen) {
+    isFullscreen.value = false
+    breakdownFullscreen.value = false
+    showBreakdownDialog.value = false
+  }
+})
+
 watch(
   () => props.modelValue,
   async (isOpen) => {
@@ -655,7 +701,6 @@ watch(
       iplasScoredMap.value.clear()
       uploadOverallScore.value = null
       iplasOverallScore.value = null
-      // Reset filters
       searchQuery.value = ''
       typeFilter.value = 'all'
       scoreFilter.value = 'all'
@@ -663,7 +708,6 @@ watch(
 
       try {
         const results = await searchByIsn(props.isn)
-        // Combine all test items from all stations
         if (results && results.length > 0) {
           const allItems: IplasIsnTestItem[] = []
           results.forEach((record) => {
@@ -674,12 +718,10 @@ watch(
           iplasTestItems.value = allItems
         }
 
-        // Initialize scoring configs
         initializeScoringConfigs()
-        // Initial rescore with default symmetrical scoring
         await rescoreAllItems()
-      } catch (err: unknown) {
-        errorMessage.value = err instanceof Error ? err.message : 'Failed to fetch iPLAS data'
+      } catch (error: unknown) {
+        errorMessage.value = error instanceof Error ? error.message : 'Failed to fetch iPLAS data'
       } finally {
         loading.value = false
       }
@@ -687,19 +729,16 @@ watch(
   },
 )
 
-// No longer need to watch props.scoringConfigs since we use local state
-
 function getScoreColor(score: number): string {
-  if (score >= 9) return 'success' // 9-10: green
-  if (score >= 7) return 'info' // 7-8.99: blue
-  if (score >= 6) return 'warning' // 6-6.99: yellow/orange
-  return 'error' // <6: red
+  if (score >= 9) return 'success'
+  if (score >= 7) return 'info'
+  if (score >= 6) return 'warning'
+  return 'error'
 }
 
 async function exportToExcel() {
   exporting.value = true
   try {
-    // Prepare data for export
     const exportData = filteredComparisonItems.value.map((item) => ({
       'Test Item': item.test_item,
       UCL: item.usl ?? '',
@@ -724,7 +763,6 @@ async function exportToExcel() {
       })
     }
 
-    // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
     const filename = `iPLAS_Compare_${props.isn}_${timestamp}.xlsx`
 
@@ -740,17 +778,315 @@ async function exportToExcel() {
     link.click()
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
-  } catch (err: unknown) {
-    console.error('Export failed:', err)
-    errorMessage.value = `Export failed: ${err instanceof Error ? err.message : 'Unknown error'}`
+  } catch (error: unknown) {
+    console.error('Export failed:', error)
+    errorMessage.value = `Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`
   } finally {
     exporting.value = false
   }
 }
+
+function scorePillClass(color: string) {
+  switch (color) {
+    case 'success':
+      return 'iplas-compare-dialog__score-pill--success'
+    case 'info':
+      return 'iplas-compare-dialog__score-pill--info'
+    case 'warning':
+      return 'iplas-compare-dialog__score-pill--warning'
+    default:
+      return 'iplas-compare-dialog__score-pill--error'
+  }
+}
+
+function comparisonRowClass(row: Record<string, unknown>) {
+  const status = String(row.status || '')
+  if (status === 'upload-only' || status === 'iplas-only') {
+    return 'iplas-compare-dialog__row--mismatch'
+  }
+  return undefined
+}
 </script>
 
 <style scoped>
-.cursor-pointer {
+.iplas-compare-dialog__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.iplas-compare-dialog__header-copy {
+  display: flex;
+  gap: 0.85rem;
+}
+
+.iplas-compare-dialog__header-icon {
+  display: inline-flex;
+  width: 2.5rem;
+  height: 2.5rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.iplas-compare-dialog__eyebrow {
+  margin: 0 0 0.3rem;
+  color: var(--app-accent);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.iplas-compare-dialog__header h2 {
+  margin: 0;
+  font-size: 1.35rem;
+}
+
+.iplas-compare-dialog__header p:last-child {
+  margin: 0.35rem 0 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.iplas-compare-dialog__header-actions,
+.iplas-compare-dialog__action-row,
+.iplas-compare-dialog__chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.iplas-compare-dialog__body {
+  display: grid;
+  gap: 1rem;
+}
+
+.iplas-compare-dialog__body--fullscreen {
+  min-height: calc(100vh - 12rem);
+}
+
+.iplas-compare-dialog__controls,
+.iplas-compare-dialog__summary-grid,
+.iplas-compare-dialog__breakdown-grid {
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.iplas-compare-dialog__field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.iplas-compare-dialog__field--wide {
+  grid-column: span 2;
+}
+
+.iplas-compare-dialog__field--actions {
+  justify-content: end;
+}
+
+.iplas-compare-dialog__field span {
+  color: var(--app-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.iplas-compare-dialog__field input,
+.iplas-compare-dialog__field select {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  padding: 0.75rem 0.9rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+}
+
+.iplas-compare-dialog__button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border-radius: 999px;
+  padding: 0.7rem 1rem;
+  font-weight: 700;
   cursor: pointer;
+}
+
+.iplas-compare-dialog__button--ghost {
+  border: 1px solid var(--app-border);
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+}
+
+.iplas-compare-dialog__button--primary {
+  border: 1px solid rgba(20, 88, 71, 0.1);
+  background: linear-gradient(135deg, rgba(20, 88, 71, 0.95), rgba(40, 96, 163, 0.92));
+  color: #fff;
+}
+
+.iplas-compare-dialog__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  padding: 0.55rem 0.9rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  cursor: pointer;
+}
+
+.iplas-compare-dialog__chip--active {
+  border-color: rgba(20, 88, 71, 0.35);
+  background: rgba(20, 88, 71, 0.1);
+}
+
+.iplas-compare-dialog__summary-card {
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1.1rem;
+  padding: 1rem;
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.iplas-compare-dialog__summary-card--primary {
+  background: linear-gradient(145deg, rgba(40, 96, 163, 0.14), rgba(255, 251, 247, 0.96));
+}
+
+.iplas-compare-dialog__summary-card--secondary {
+  background: linear-gradient(145deg, rgba(20, 88, 71, 0.12), rgba(255, 251, 247, 0.96));
+}
+
+.iplas-compare-dialog__summary-card small,
+.iplas-compare-dialog__muted,
+.iplas-compare-dialog__item-cell small,
+.iplas-compare-dialog__empty-state p,
+.iplas-compare-dialog__notice p {
+  color: var(--app-muted);
+}
+
+.iplas-compare-dialog__summary-card strong,
+.iplas-compare-dialog__detail-row strong,
+.iplas-compare-dialog__item-cell strong {
+  color: var(--app-ink);
+}
+
+.iplas-compare-dialog__item-cell {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.iplas-compare-dialog__score-pill {
+  border: 0;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.iplas-compare-dialog__score-pill--success {
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.iplas-compare-dialog__score-pill--info {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.iplas-compare-dialog__score-pill--warning {
+  background: rgba(184, 118, 38, 0.16);
+  color: #8f5314;
+}
+
+.iplas-compare-dialog__score-pill--error {
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.iplas-compare-dialog__empty-state,
+.iplas-compare-dialog__notice {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 2rem 1rem;
+  text-align: center;
+  border: 1px solid var(--app-border);
+  border-radius: 1.25rem;
+}
+
+.iplas-compare-dialog__notice--error {
+  background: rgba(189, 64, 64, 0.08);
+}
+
+.iplas-compare-dialog__notice--warning {
+  background: rgba(184, 118, 38, 0.1);
+}
+
+.iplas-compare-dialog__detail-table {
+  display: grid;
+  grid-column: 1 / -1;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  overflow: hidden;
+}
+
+.iplas-compare-dialog__detail-row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 14rem) 1fr;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-top: 1px solid var(--app-border);
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.iplas-compare-dialog__detail-row:first-child {
+  border-top: 0;
+}
+
+.iplas-compare-dialog__detail-row span {
+  color: var(--app-muted);
+  font-weight: 600;
+}
+
+.iplas-compare-dialog__row--mismatch :deep(td) {
+  background: rgba(184, 118, 38, 0.06);
+}
+
+.iplas-compare-dialog__spin {
+  animation: iplas-compare-dialog-spin 1s linear infinite;
+}
+
+@keyframes iplas-compare-dialog-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 960px) {
+  .iplas-compare-dialog__header,
+  .iplas-compare-dialog__header-copy {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .iplas-compare-dialog__field--wide {
+    grid-column: span 1;
+  }
+
+  .iplas-compare-dialog__detail-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

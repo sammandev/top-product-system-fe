@@ -295,7 +295,7 @@ test.describe('Authentication Flows', () => {
 
       // Tab to first focusable element (username input)
       await page.keyboard.press('Tab')
-      // Check if username input is focused (use actual input element, not Vuetify wrapper)
+      // Check if the actual username input is focused
       const usernameInput = page.locator('input[type="text"]').first()
       await expect(usernameInput).toBeFocused()
 

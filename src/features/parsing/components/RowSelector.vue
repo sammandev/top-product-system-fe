@@ -1,114 +1,83 @@
 <template>
-    <v-card>
-        <v-card-title>
-            <v-icon start>mdi-table-row</v-icon>
-            Row Selection
-        </v-card-title>
+  <AppPanel eyebrow="Rows" title="Row Selection" :description="panelDescription">
+    <div v-if="totalRows > 0" class="row-selector-subtitle">
+      Total rows available: {{ totalRows }}
+    </div>
 
-        <v-card-subtitle v-if="totalRows > 0">
-            Total rows available: {{ totalRows }}
-        </v-card-subtitle>
+    <div>
+      <div class="row-selector-mode-grid mb-4">
+        <label v-for="option in modeOptions" :key="option.value" class="row-selector-mode-card" :class="{ 'row-selector-mode-card--active': selectionMode === option.value }">
+          <input v-model="selectionMode" :value="option.value" type="radio">
+          <span>{{ option.label }}</span>
+          <small>{{ option.description }}</small>
+        </label>
+      </div>
 
-        <v-card-text>
-            <!-- Selection Mode -->
-            <v-radio-group v-model="selectionMode" inline hide-details class="mb-4">
-                <v-radio label="All Rows" value="all" color="primary" />
-                <v-radio label="Row Range" value="range" color="primary" />
-            </v-radio-group>
+      <div v-if="selectionMode === 'all'" class="row-selector-notice row-selector-notice--info mt-4">
+        All {{ totalRows }} rows will be included in the output.
+      </div>
 
-            <!-- All Rows Mode -->
-            <v-alert v-if="selectionMode === 'all'" type="info" variant="tonal" density="compact" class="mt-4">
-                All {{ totalRows }} rows will be included in the output
-            </v-alert>
+      <div v-if="selectionMode === 'range'" class="mt-4 row-selector-range-grid">
+        <label class="row-selector-field">
+          <span>Start Row</span>
+          <input v-model.number="rangeStart" :max="totalRows" min="1" type="number">
+          <small>Row number (1-based).</small>
+        </label>
 
-            <!-- Range Mode -->
-            <div v-if="selectionMode === 'range'" class="mt-4">
-                <v-row>
-                    <v-col cols="12" md="6">
-                        <v-text-field v-model.number="rangeStart" label="Start Row" type="number" variant="outlined"
-                            density="compact" :min="1" :max="totalRows" :rules="[validateRangeStart]"
-                            hint="Row number (1-based)" persistent-hint>
-                            <template #prepend-inner>
-                                <v-icon>mdi-arrow-right-top</v-icon>
-                            </template>
-                        </v-text-field>
-                    </v-col>
-                    <v-col cols="12" md="6">
-                        <v-text-field v-model.number="rangeEnd" label="End Row" type="number" variant="outlined"
-                            density="compact" :min="rangeStart" :max="totalRows" :rules="[validateRangeEnd]"
-                            hint="Row number (1-based, inclusive)" persistent-hint>
-                            <template #prepend-inner>
-                                <v-icon>mdi-arrow-right-bottom</v-icon>
-                            </template>
-                        </v-text-field>
-                    </v-col>
-                </v-row>
+        <label class="row-selector-field">
+          <span>End Row</span>
+          <input v-model.number="rangeEnd" :max="totalRows" :min="rangeStart || 1" type="number">
+          <small>Row number (1-based, inclusive).</small>
+        </label>
 
-                <!-- Excluded Rows (inside Range mode) -->
-                <v-text-field v-model="excludeInput" label="Excluded Rows (optional)" variant="outlined"
-                    density="compact" class="mt-4"
-                    hint="Enter row numbers or ranges: e.g., '5,10,15' or '5-10,20-25' (1-based)" persistent-hint
-                    clearable @keydown.enter.prevent="applyExcludedRows">
-                    <template #prepend-inner>
-                        <v-icon>mdi-minus-circle</v-icon>
-                    </template>
-                    <template #append-inner>
-                        <v-btn size="small" variant="text" color="primary" @click="applyExcludedRows">
-                            Apply
-                        </v-btn>
-                    </template>
-                </v-text-field>
+        <label class="row-selector-field row-selector-field--wide">
+          <span>Excluded Rows</span>
+          <div class="row-selector-field__action">
+            <input v-model="excludeInput" placeholder="5,10,15 or 5-10,20-25" type="text" @keydown.enter.prevent="applyExcludedRows">
+            <button type="button" @click="applyExcludedRows">Apply</button>
+          </div>
+          <small>Optional exclusions applied within the selected range.</small>
+        </label>
 
-                <!-- Excluded Rows Chips Display -->
-                <div v-if="excludeIndices.length > 0" class="mt-2">
-                    <v-chip v-for="(idx, i) in excludeIndices" :key="i" size="small" closable class="mr-1 mb-1"
-                        @click:close="removeExcludedRow(i)">
-                        Row {{ idx + 1 }}
-                    </v-chip>
-                </div>
+        <div v-if="excludeIndices.length > 0" class="row-selector-chip-list">
+          <button v-for="(idx, i) in excludeIndices" :key="i" type="button" class="row-selector-chip" @click="removeExcludedRow(i)">
+            <span>Row {{ idx + 1 }}</span>
+            <Icon icon="mdi:close-circle" />
+          </button>
+        </div>
 
-                <!-- Range Preview -->
-                <v-alert v-if="isRangeValid" type="success" variant="tonal" density="compact" class="mt-4">
-                    <template #prepend>
-                        <v-icon>mdi-check-circle</v-icon>
-                    </template>
-                    <div>
-                        Will include {{ selectedRowCount }} rows ({{ selectedRowPercentage }}%)
-                        <span v-if="excludeIndices.length > 0"> - Excluding {{ excludeIndices.length }} rows</span>
-                    </div>
-                </v-alert>
+        <div v-if="isRangeValid" class="row-selector-notice row-selector-notice--success">
+          Will include {{ effectiveRowCount }} rows ({{ selectedRowPercentage }}%)
+          <span v-if="excludeIndices.length > 0"> after excluding {{ excludeIndices.length }} row(s)</span>.
+        </div>
 
-                <!-- Range Error -->
-                <v-alert v-else-if="rangeStart !== null && rangeEnd !== null" type="error" variant="tonal"
-                    density="compact" class="mt-4">
-                    <template #prepend>
-                        <v-icon>mdi-alert-circle</v-icon>
-                    </template>
-                    {{ rangeErrorMessage }}
-                </v-alert>
-            </div>
+        <div v-else-if="rangeStart !== null && rangeEnd !== null" class="row-selector-notice row-selector-notice--error">
+          {{ rangeErrorMessage }}
+        </div>
+      </div>
 
-            <!-- Summary -->
-            <v-divider class="my-4" />
-            <div class="text-caption text-medium-emphasis">
-                <div><strong>Selection Summary:</strong></div>
-                <div v-if="selectionMode === 'all'">
-                    Mode: All rows ({{ totalRows }} rows)
-                </div>
-                <div v-else-if="selectionMode === 'range' && isRangeValid">
-                    Mode: Range [{{ rangeStart }} - {{ rangeEnd }}] ({{ selectedRowCount }} rows)
-                    <span v-if="excludeIndices.length > 0"> - Excluding {{ excludeIndices.length }} rows</span>
-                </div>
-                <div v-else class="text-warning">
-                    Please configure row selection
-                </div>
-            </div>
-        </v-card-text>
-    </v-card>
+      <div class="row-selector-divider" />
+      <div class="row-selector-summary">
+        <div><strong>Selection Summary:</strong></div>
+        <div v-if="selectionMode === 'all'">
+          Mode: All rows ({{ totalRows }} rows)
+        </div>
+        <div v-else-if="selectionMode === 'range' && isRangeValid">
+          Mode: Range [{{ rangeStart }} - {{ rangeEnd }}] ({{ effectiveRowCount }} rows)
+          <span v-if="excludeIndices.length > 0"> - Excluding {{ excludeIndices.length }} rows</span>
+        </div>
+        <div v-else class="text-warning">
+          Please configure row selection
+        </div>
+      </div>
+    </div>
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
+import { AppPanel } from '@/shared'
 import type { RowSelection, RowSelectionMode } from '../types'
 
 // Props
@@ -130,8 +99,12 @@ const emit = defineEmits<{
 const selectionMode = ref<RowSelectionMode>(props.modelValue?.mode || 'all')
 const rangeStart = ref<number | null>(1) // 1-based for UI
 const rangeEnd = ref<number | null>(props.totalRows) // 1-based for UI
-const excludeIndices = ref<number[]>(props.modelValue?.exclude || [])
+const excludeIndices = ref<number[]>(props.modelValue?.excluded || [])
 const excludeInput = ref<string>('')
+const modeOptions: Array<{ value: RowSelectionMode; label: string; description: string }> = [
+  { value: 'all', label: 'All Rows', description: 'Use every row in the preview.' },
+  { value: 'range', label: 'Row Range', description: 'Choose a start and end row, then optionally exclude rows inside the range.' },
+]
 
 // Computed
 const isRangeValid = computed(() => {
@@ -146,9 +119,20 @@ const selectedRowCount = computed(() => {
   return rangeEnd.value - rangeStart.value + 1
 })
 
+const effectiveRowCount = computed(() => {
+  if (!isRangeValid.value) return 0
+  return Math.max(selectedRowCount.value - excludeIndices.value.length, 0)
+})
+
 const selectedRowPercentage = computed(() => {
   if (props.totalRows === 0) return 0
-  return Math.round((selectedRowCount.value / props.totalRows) * 100)
+  return Math.round((effectiveRowCount.value / props.totalRows) * 100)
+})
+
+const panelDescription = computed(() => {
+  return selectionMode.value === 'all'
+    ? 'Keep every previewed row or switch to a targeted range.'
+    : 'Choose a row window and optionally exclude specific rows inside it.'
 })
 
 const rangeErrorMessage = computed(() => {
@@ -166,24 +150,6 @@ const rangeErrorMessage = computed(() => {
   }
   return ''
 })
-
-// Validation
-function validateRangeStart(value: number | null): boolean | string {
-  if (value === null) return 'Start row is required'
-  if (value < 1) return 'Row number must be 1 or greater'
-  if (value > props.totalRows) return `Row number must not exceed ${props.totalRows}`
-  return true
-}
-
-function validateRangeEnd(value: number | null): boolean | string {
-  if (value === null) return 'End row is required'
-  if (value < 1) return 'Row number must be 1 or greater'
-  if (value > props.totalRows) return `Row number must not exceed ${props.totalRows}`
-  if (rangeStart.value !== null && value < rangeStart.value) {
-    return 'End row must be greater than or equal to start row'
-  }
-  return true
-}
 
 // Excluded Rows Functions (handles 1-based input, converts to 0-based for backend)
 function parseExcludeInput(input: string): number[] {
@@ -260,10 +226,9 @@ watch(
         // biome-ignore lint/style/noNonNullAssertion: isRangeValid guarantees rangeEnd is not null
         end: rangeEnd.value! - 1, // Convert 1-based to 0-based
       }
-    }
-
-    if (selectionMode.value === 'exclude') {
-      selection.exclude = excludeIndices.value // Already 0-based internally
+      if (excludeIndices.value.length > 0) {
+        selection.excluded = excludeIndices.value
+      }
     }
 
     emit('update:modelValue', selection)
@@ -281,8 +246,8 @@ watch(
         rangeStart.value = newValue.range.start + 1 // Convert 0-based to 1-based
         rangeEnd.value = newValue.range.end + 1 // Convert 0-based to 1-based
       }
-      if (newValue.exclude) {
-        excludeIndices.value = newValue.exclude // Already 0-based
+        if (newValue.excluded) {
+        excludeIndices.value = newValue.excluded // Already 0-based
       }
     }
   },
@@ -291,7 +256,187 @@ watch(
 </script>
 
 <style scoped>
-.text-warning {
-    color: rgb(var(--v-theme-warning));
+.row-selector-subtitle,
+.row-selector-summary {
+  color: var(--app-muted);
+  line-height: 1.55;
 }
+
+.row-selector-subtitle {
+  margin-bottom: 1rem;
+}
+
+    .row-selector-mode-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+      gap: 0.9rem;
+    }
+
+    .row-selector-mode-card {
+      display: grid;
+      gap: 0.3rem;
+      border: 1px solid var(--app-border);
+      border-radius: 1.15rem;
+      background: rgba(255, 251, 247, 0.88);
+      padding: 1rem;
+      cursor: pointer;
+      box-shadow: var(--app-shadow-soft);
+    }
+
+    .row-selector-mode-card input {
+      position: absolute;
+      opacity: 0;
+    }
+
+    .row-selector-mode-card span {
+      color: var(--app-ink);
+      font-weight: 700;
+    }
+
+    .row-selector-mode-card small {
+      color: var(--app-muted);
+      line-height: 1.55;
+    }
+
+    .row-selector-mode-card--active {
+      border-color: var(--app-accent);
+      background: linear-gradient(180deg, rgba(20, 88, 71, 0.1), rgba(255, 251, 247, 0.98));
+      box-shadow: 0 0 0 4px var(--app-ring);
+    }
+
+    .row-selector-range-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 0.9rem;
+    }
+
+    .row-selector-field {
+      display: grid;
+      gap: 0.45rem;
+    }
+
+    .row-selector-field--wide,
+    .row-selector-chip-list,
+    .row-selector-notice {
+      grid-column: 1 / -1;
+    }
+
+    .row-selector-field > span {
+      font-size: 0.76rem;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--app-muted);
+    }
+
+    .row-selector-field input,
+    .row-selector-field__action {
+      width: 100%;
+      border: 1px solid var(--app-border);
+      border-radius: 1rem;
+      background: rgba(255, 251, 247, 0.92);
+      color: var(--app-ink);
+      box-shadow: var(--app-shadow-soft);
+    }
+
+    .row-selector-field input {
+      padding: 0.85rem 0.95rem;
+    }
+
+    .row-selector-field input:focus,
+    .row-selector-field__action:focus-within {
+      outline: none;
+      border-color: var(--app-accent);
+      box-shadow: 0 0 0 4px var(--app-ring);
+    }
+
+    .row-selector-field__action {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.2rem 0.2rem 0.2rem 0.85rem;
+    }
+
+    .row-selector-field__action input {
+      border: 0;
+      box-shadow: none;
+      background: transparent;
+      padding: 0.65rem 0;
+    }
+
+    .row-selector-field__action button {
+      border: 0;
+      border-radius: 0.85rem;
+      background: rgba(20, 88, 71, 0.1);
+      color: var(--app-accent);
+      cursor: pointer;
+      font-weight: 700;
+      padding: 0.7rem 0.9rem;
+    }
+
+    .row-selector-field small {
+      color: var(--app-muted);
+      line-height: 1.5;
+    }
+
+    .row-selector-chip-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .row-selector-chip {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      border: 1px solid rgba(20, 88, 71, 0.24);
+      border-radius: 999px;
+      background: rgba(20, 88, 71, 0.08);
+      color: var(--app-accent);
+      cursor: pointer;
+      font-weight: 700;
+      padding: 0.45rem 0.7rem;
+    }
+
+    .row-selector-notice {
+      border: 1px solid var(--app-border);
+      border-radius: 1rem;
+      padding: 0.9rem 1rem;
+      box-shadow: var(--app-shadow-soft);
+    }
+
+    .row-selector-notice--info {
+      background: rgba(255, 251, 247, 0.92);
+    }
+
+    .row-selector-notice--success {
+      background: rgba(20, 88, 71, 0.08);
+    }
+
+    .row-selector-notice--error {
+      background: rgba(163, 61, 45, 0.08);
+      border-color: rgba(163, 61, 45, 0.24);
+    }
+
+.text-warning {
+    color: var(--app-danger);
+}
+
+    .row-selector-divider {
+      height: 1px;
+      margin: 1rem 0;
+      background: rgba(20, 88, 71, 0.1);
+    }
+
+    .row-selector-summary strong {
+      color: var(--app-ink);
+    }
+
+    @media (max-width: 720px) {
+      .row-selector-range-grid,
+      .row-selector-mode-grid {
+        grid-template-columns: 1fr;
+      }
+    }
 </style>

@@ -1,80 +1,68 @@
 <template>
-  <v-card>
-    <v-card-title class="d-flex align-center">
-      <v-icon start>mdi-chart-bar</v-icon>
-      Score Visualization
-    </v-card-title>
+  <AppPanel
+    eyebrow="Analysis Charts"
+    title="Score Visualization"
+    description="Distribution, trend, and top-product comparison all rendered through the shared ECharts path."
+    tone="cool"
+    split-header
+  >
+    <template #header-aside>
+      <span v-if="hasData" class="score-visualization__badge">
+        {{ items.length }} product{{ items.length === 1 ? '' : 's' }}
+      </span>
+    </template>
 
-    <v-card-text>
-      <!-- Chart Type Selector -->
-      <v-tabs v-model="selectedChart" class="mb-4">
-        <v-tab value="distribution">
-          <v-icon start>mdi-chart-bar</v-icon>
-          Distribution
-        </v-tab>
-        <v-tab value="trend">
-          <v-icon start>mdi-chart-line</v-icon>
-          Trend
-        </v-tab>
-        <v-tab value="comparison">
-          <v-icon start>mdi-chart-scatter-plot</v-icon>
-          Comparison
-        </v-tab>
-      </v-tabs>
+    <div v-if="!hasData" class="score-visualization__empty">
+      <strong>No data available for visualization.</strong>
+      <p>Run an analysis to see the score charts.</p>
+    </div>
 
-      <!-- Chart Container -->
-      <v-window v-model="selectedChart">
-        <!-- Score Distribution Chart -->
-        <v-window-item value="distribution">
-          <div ref="distributionChartRef" class="chart-container" />
-        </v-window-item>
+    <AppTabs v-else v-model="selectedChart" :items="chartItems">
+      <template #panel-distribution>
+        <VChart :option="distributionOption" class="score-visualization__chart" autoresize />
+      </template>
 
-        <!-- Score Trend Chart -->
-        <v-window-item value="trend">
-          <div ref="trendChartRef" class="chart-container" />
-        </v-window-item>
+      <template #panel-trend>
+        <VChart :option="trendOption" class="score-visualization__chart" autoresize />
+      </template>
 
-        <!-- Score Comparison Chart -->
-        <v-window-item value="comparison">
-          <div ref="comparisonChartRef" class="chart-container" />
-        </v-window-item>
-      </v-window>
-
-      <!-- No Data Alert -->
-      <v-alert v-if="!hasData" type="info" variant="tonal" density="compact" class="mt-4">
-        <div class="text-caption">
-          No data available for visualization. Run an analysis to see charts.
-        </div>
-      </v-alert>
-    </v-card-text>
-  </v-card>
+      <template #panel-comparison>
+        <VChart :option="comparisonOption" class="score-visualization__chart" autoresize />
+      </template>
+    </AppTabs>
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
 import type { EChartsOption } from 'echarts'
-import * as echarts from 'echarts'
-import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, ref } from 'vue'
 import type { TopProduct } from '@/core/types'
+import { AppPanel, AppTabs, VChart } from '@/shared/ui'
 
-// Props
+interface ChartTabItem {
+  value: ChartKey
+  label: string
+  icon: string
+}
+
 interface Props {
   items: TopProduct[]
 }
 
 const props = defineProps<Props>()
+const items = computed(() => props.items)
 
-// State
-const selectedChart = ref<'distribution' | 'trend' | 'comparison'>('distribution')
-const distributionChartRef = ref<HTMLElement | null>(null)
-const trendChartRef = ref<HTMLElement | null>(null)
-const comparisonChartRef = ref<HTMLElement | null>(null)
+type ChartKey = 'distribution' | 'trend' | 'comparison'
 
-let distributionChart: echarts.ECharts | null = null
-let trendChart: echarts.ECharts | null = null
-let comparisonChart: echarts.ECharts | null = null
+const selectedChart = ref<ChartKey>('distribution')
+const chartItems: ChartTabItem[] = [
+  { value: 'distribution', label: 'Distribution', icon: 'mdi-chart-bar' },
+  { value: 'trend', label: 'Trend', icon: 'mdi-chart-line' },
+  { value: 'comparison', label: 'Comparison', icon: 'mdi-chart-scatter-plot' },
+]
+const distributionColors = ['#4CAF50', '#8BC34A', '#CDDC39', '#FFC107', '#FF9800', '#F44336']
 
-// Computed
-const hasData = computed(() => props.items.length > 0)
+const hasData = computed(() => items.value.length > 0)
 
 const scoreRanges = computed(() => {
   const ranges = {
@@ -86,7 +74,7 @@ const scoreRanges = computed(() => {
     '<50': 0,
   }
 
-  props.items.forEach((item) => {
+  items.value.forEach((item) => {
     const score = item.overall_data_score
     if (score >= 90) ranges['90-100']++
     else if (score >= 80) ranges['80-90']++
@@ -100,18 +88,13 @@ const scoreRanges = computed(() => {
 })
 
 const sortedByDate = computed(() => {
-  return [...props.items].sort((a, b) => {
+  return [...items.value].sort((a, b) => {
     return new Date(a.test_date).getTime() - new Date(b.test_date).getTime()
   })
 })
 
-// Methods
-function initDistributionChart() {
-  if (!distributionChartRef.value) return
-
-  distributionChart = echarts.init(distributionChartRef.value)
-
-  const option: EChartsOption = {
+const distributionOption = computed<EChartsOption>(() => {
+  return {
     title: {
       text: 'Score Distribution',
       left: 'center',
@@ -157,8 +140,7 @@ function initDistributionChart() {
         itemStyle: {
           // biome-ignore lint/suspicious/noExplicitAny: ECharts itemStyle color callback params require dynamic property access
           color: (params: any) => {
-            const colors = ['#4CAF50', '#8BC34A', '#CDDC39', '#FFC107', '#FF9800', '#F44336']
-            return colors[params.dataIndex] || '#2196F3'
+            return distributionColors[params.dataIndex] || '#2196F3'
           },
         },
         label: {
@@ -169,15 +151,9 @@ function initDistributionChart() {
       },
     ],
   }
+})
 
-  distributionChart.setOption(option)
-}
-
-function initTrendChart() {
-  if (!trendChartRef.value) return
-
-  trendChart = echarts.init(trendChartRef.value)
-
+const trendOption = computed<EChartsOption>(() => {
   const dates = sortedByDate.value.map((item) =>
     new Date(item.test_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
   )
@@ -191,7 +167,7 @@ function initTrendChart() {
     return subset.reduce((a, b) => a + b, 0) / subset.length
   })
 
-  const option: EChartsOption = {
+  return {
     title: {
       text: 'Score Trend Over Time',
       left: 'center',
@@ -266,21 +242,14 @@ function initTrendChart() {
       },
     ],
   }
+})
 
-  trendChart.setOption(option)
-}
-
-function initComparisonChart() {
-  if (!comparisonChartRef.value) return
-
-  comparisonChart = echarts.init(comparisonChartRef.value)
-
-  // Get top 10 products for comparison
-  const topProducts = [...props.items]
+const comparisonOption = computed<EChartsOption>(() => {
+  const topProducts = [...items.value]
     .sort((a, b) => b.overall_data_score - a.overall_data_score)
     .slice(0, 10)
 
-  const option: EChartsOption = {
+  return {
     title: {
       text: 'Top 10 Products Comparison',
       left: 'center',
@@ -342,72 +311,45 @@ function initComparisonChart() {
       },
     ],
   }
-
-  comparisonChart.setOption(option)
-}
-
-function initAllCharts() {
-  if (!hasData.value) return
-
-  nextTick(() => {
-    initDistributionChart()
-    initTrendChart()
-    initComparisonChart()
-  })
-}
-
-function resizeCharts() {
-  distributionChart?.resize()
-  trendChart?.resize()
-  comparisonChart?.resize()
-}
-
-function disposeCharts() {
-  distributionChart?.dispose()
-  trendChart?.dispose()
-  comparisonChart?.dispose()
-  distributionChart = null
-  trendChart = null
-  comparisonChart = null
-}
-
-// Watch for data changes
-watch(
-  () => props.items,
-  () => {
-    disposeCharts()
-    initAllCharts()
-  },
-  { deep: true },
-)
-
-// Watch for chart changes
-watch(selectedChart, () => {
-  nextTick(() => {
-    resizeCharts()
-  })
-})
-
-// Lifecycle
-onMounted(() => {
-  initAllCharts()
-  window.addEventListener('resize', resizeCharts)
-})
-
-onUnmounted(() => {
-  window.removeEventListener('resize', resizeCharts)
-  disposeCharts()
 })
 </script>
 
 <style scoped>
-.chart-container {
+.score-visualization__chart {
   width: 100%;
-  height: 400px;
-  min-height: 400px;
+  height: 26rem;
+  min-height: 26rem;
 }
 
-:deep(.v-window__container) {
-  min-height: 400px;
+.score-visualization__badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 6rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 999px;
+  background: rgba(40, 96, 163, 0.12);
+  color: var(--app-accent);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.score-visualization__empty {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 250, 246, 0.72);
+  text-align: center;
+}
+
+.score-visualization__empty strong {
+  color: var(--app-ink);
+}
+
+.score-visualization__empty p {
+  margin: 0;
+  color: var(--app-muted);
 }
 </style>

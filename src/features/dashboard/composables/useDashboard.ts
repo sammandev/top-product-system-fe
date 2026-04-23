@@ -1,5 +1,5 @@
 import { computed, onMounted, ref } from 'vue'
-import { useAuthStore } from '@/features/auth/stores'
+import { useAuthStore } from '@/features/auth/stores/auth.store'
 import { getErrorMessage } from '@/shared/utils'
 import type { DashboardResponse } from '../api/dashboard.api'
 import { dashboardApi } from '../api/dashboard.api'

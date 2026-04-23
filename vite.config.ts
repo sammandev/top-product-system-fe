@@ -1,7 +1,6 @@
 import { fileURLToPath, URL } from 'node:url'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
-import vuetify from 'vite-plugin-vuetify'
 
 const optimizeDepEntries = [
   'index.html',
@@ -13,13 +12,10 @@ const optimizeDepEntries = [
   '!src/test/**',
 ]
 
-// Vite configuration for Vue 3 + TypeScript + Vuetify
+// Vite configuration for the Vue 3 + TypeScript frontend
 // See: https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-    vuetify({ autoImport: true }), // Auto-import Vuetify components
-  ],
+  plugins: [vue()],
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)), // Path alias: @/ → src/
@@ -28,7 +24,6 @@ export default defineConfig({
   // Scan all source modules up front so lazy routes don't discover new deep imports mid-session.
   optimizeDeps: {
     entries: optimizeDepEntries,
-    include: ['vuetify', 'vuetify/components', 'vuetify/directives'],
   },
   server: {
     port: 3000,

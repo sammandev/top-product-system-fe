@@ -44,11 +44,21 @@ export const adminRoutes: RouteRecordRaw[] = [
   // Access Control route redirects to User Management (Roles tab)
   {
     path: '/admin/access-control',
-    redirect: '/admin/users',
+    redirect: {
+      path: '/admin/users',
+      query: {
+        tab: 'roles',
+      },
+    },
   },
-  // Legacy RBAC route redirects to User Management (Roles tab)
   {
     path: '/admin/rbac',
-    redirect: '/admin/users',
+    name: 'RBACManagement',
+    component: () => import('../views/RBACManagementView.vue'),
+    meta: {
+      requiresAuth: true,
+      requiresAdmin: true,
+      title: 'Roles & Permissions',
+    },
   },
 ]

@@ -1,204 +1,256 @@
 <template>
-  <!-- Test Item Selection Dialog -->
-  <v-dialog v-model="testItemDialog" max-width="1000px">
-    <v-card>
-      <v-card-title class="d-flex justify-space-between align-center bg-primary-lighten-5">
+  <AppDialog v-model="testItemDialog" width="min(92vw, 64rem)" :breakpoints="{ '960px': '96vw', '640px': '98vw' }"
+    :closable="false">
+    <template #header>
+      <div class="station-filter-config__dialog-header">
         <div>
-          <v-icon class="mr-2" :color="dialogFilterType === 'include' ? 'success' : 'error'">
-            {{ dialogFilterType === 'include' ? 'mdi-filter-plus' : 'mdi-filter-minus' }}
-          </v-icon>
-          {{ dialogFilterType === 'include' ? 'Include' : 'Exclude' }} Test Items
+          <p class="station-filter-config__eyebrow">Advanced Selection</p>
+          <h2>{{ dialogFilterType === 'include' ? 'Include' : 'Exclude' }} Test Items</h2>
+          <span>Search, bulk-select, and review grouped test-item patterns before applying them to this station.</span>
         </div>
-        <v-btn icon="mdi-close" variant="text" @click="testItemDialog = false" />
-      </v-card-title>
+        <button type="button" class="station-filter-config__icon-button" @click="testItemDialog = false">
+          <Icon icon="mdi:close" />
+        </button>
+      </div>
+    </template>
 
-      <v-card-text class="pa-4">
-        <!-- Search Bar -->
-        <v-text-field v-model="dialogSearch" prepend-inner-icon="mdi-magnify" label="Search Test Items"
-          placeholder="Type to search..." clearable density="comfortable" variant="outlined" class="mb-4" />
+    <div class="station-filter-config__dialog-body">
+      <label class="station-filter-config__field">
+        <span>Search Test Items</span>
+        <input v-model="dialogSearch" type="text" placeholder="Type to search..." />
+      </label>
 
-        <!-- Action Buttons -->
-        <div class="d-flex mb-4" style="gap: 8px;">
-          <v-btn size="small" variant="tonal" color="primary" prepend-icon="mdi-select-all"
-            @click="selectAllDialogItems">
-            Select All
-          </v-btn>
-          <v-btn size="small" variant="tonal" color="info" prepend-icon="mdi-select-inverse"
-            @click="invertDialogSelection">
-            Select Inverse
-          </v-btn>
-          <v-btn size="small" variant="tonal" color="warning" prepend-icon="mdi-select-off"
-            @click="deselectAllDialogItems">
-            Deselect All
-          </v-btn>
-          <v-spacer />
-          <v-chip size="small" color="primary" variant="tonal">
-            {{ dialogSelectedCount }} selected
-          </v-chip>
+      <div class="station-filter-config__toolbar-row">
+        <button type="button" class="station-filter-config__button station-filter-config__button--ghost"
+          @click="selectAllDialogItems">
+          Select All
+        </button>
+        <button type="button" class="station-filter-config__button station-filter-config__button--ghost"
+          @click="invertDialogSelection">
+          Select Inverse
+        </button>
+        <button type="button" class="station-filter-config__button station-filter-config__button--ghost"
+          @click="deselectAllDialogItems">
+          Deselect All
+        </button>
+        <span class="station-filter-config__pill station-filter-config__pill--primary">{{ dialogSelectedCount }} selected</span>
+      </div>
+
+      <div class="station-filter-config__dialog-list">
+        <button v-for="item in dialogFilteredItems" :key="item" type="button" class="station-filter-config__dialog-item"
+          :class="{ 'is-selected': isDialogItemSelected(item) }" @click="toggleDialogItem(item)">
+          <span class="station-filter-config__checkbox" :class="{ 'is-selected': isDialogItemSelected(item) }">
+            <Icon v-if="isDialogItemSelected(item)" icon="mdi:check" />
+          </span>
+          <span class="station-filter-config__dialog-item-copy">{{ formatPatternLabel(item) }}</span>
+          <span v-if="getGroupedItemCount(item)" class="station-filter-config__pill station-filter-config__pill--info">
+            {{ getGroupedItemCount(item) }} items
+          </span>
+        </button>
+        <div v-if="dialogFilteredItems.length === 0" class="station-filter-config__empty-state">
+          No matching test items found.
+        </div>
+      </div>
+    </div>
+
+    <template #footer>
+      <div class="station-filter-config__dialog-footer">
+        <button type="button" class="station-filter-config__button station-filter-config__button--ghost"
+          @click="testItemDialog = false">
+          Cancel
+        </button>
+        <button type="button" class="station-filter-config__button station-filter-config__button--primary"
+          @click="applyDialogSelection">
+          Apply
+        </button>
+      </div>
+    </template>
+  </AppDialog>
+
+  <AppPanel eyebrow="Station Override" :title="stationName" :description="'Override the shared device and test-item filters for this station only.'"
+    tone="cool" splitHeader class="station-filter-config">
+    <template #header-aside>
+      <div class="station-filter-config__header-meta">
+        <span v-if="stationIdentifier !== stationName" class="station-filter-config__pill station-filter-config__pill--muted">
+          ID: {{ stationIdentifier }}
+        </span>
+        <button v-if="hasFilters" type="button" class="station-filter-config__button station-filter-config__button--ghost"
+          @click="clearFilters">
+          Clear Filters
+        </button>
+      </div>
+    </template>
+
+    <div class="station-filter-config__layout">
+      <section class="station-filter-config__section">
+        <div class="station-filter-config__section-heading">
+          <div>
+            <p class="station-filter-config__section-eyebrow">Device Scope</p>
+            <h3>Device Identifiers</h3>
+          </div>
+          <span class="station-filter-config__pill station-filter-config__pill--muted">{{ localDeviceIdentifiers.length }} selected</span>
         </div>
 
-        <!-- Test Item List with Virtual Scrolling for Performance -->
-        <v-card variant="outlined">
-          <v-virtual-scroll :items="dialogFilteredItems" height="500" item-height="48">
-            <template v-slot:default="{ item }">
-              <v-list-item :key="item" @click="toggleDialogItem(item)" class="test-item-row">
-                <template #prepend>
-                  <v-checkbox-btn :model-value="isDialogItemSelected(item)" @click.stop="toggleDialogItem(item)" />
-                </template>
-                <v-list-item-title class="text-wrap" style="white-space: normal; word-break: break-word;">
-                  {{ item.replace(/\.\*/, '').replace(/\s+\(Grouped - \d+ items\)$/i, '') }}
-                </v-list-item-title>
-                <template #append v-if="/\(Grouped - \d+ items\)$/i.test(item)">
-                  <v-chip size="x-small" color="info" variant="outlined">
-                    {{ item.match(/\(Grouped - (\d+) items\)$/i)?.[1] }} items
-                  </v-chip>
-                </template>
-              </v-list-item>
-            </template>
-          </v-virtual-scroll>
-        </v-card>
-      </v-card-text>
-
-      <v-card-actions class="pa-4">
-        <v-spacer />
-        <v-btn variant="text" @click="testItemDialog = false">Cancel</v-btn>
-        <v-btn variant="elevated" color="primary" @click="applyDialogSelection">Apply</v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
-
-  <v-card variant="outlined" class="station-filter-card">
-    <v-card-title class="d-flex align-center bg-primary-lighten-5">
-      <v-icon class="mr-2" color="primary">mdi-access-point</v-icon>
-      <span class="text-h6">{{ stationName }}</span>
-      <v-chip v-if="stationIdentifier !== stationName" size="small" class="ml-2" variant="tonal">
-        ID: {{ stationIdentifier }}
-      </v-chip>
-      <v-spacer />
-      <v-btn v-if="hasFilters" icon="mdi-close" size="small" variant="text" @click="clearFilters"
-        title="Clear all filters for this station">
-      </v-btn>
-    </v-card-title>
-
-    <v-card-text>
-      <v-row>
-        <!-- Device Selection -->
-        <v-col cols="12">
-          <v-combobox v-model="localDeviceIdentifiers" :items="availableDevices" :loading="loading"
-            label="Device Identifiers (Optional)" placeholder="Select specific devices for this station" multiple chips
-            closable-chips clearable hint="Override universal device filters for this station" persistent-hint>
-            <template #prepend-inner>
-              <v-icon size="small">mdi-chip</v-icon>
-            </template>
-            <template #chip="{ props: chipProps, item }">
-              <v-chip v-bind="chipProps" :text="String(item.value || item)" closable size="small" />
-            </template>
-          </v-combobox>
-        </v-col>
-
-        <!-- Test Item Include Filters -->
-        <v-col cols="12">
-          <div class="d-flex align-center" style="gap: 8px;">
-            <v-combobox v-model="localTestItemFilters" :items="testItemSuggestions" :loading="loading"
-              label="Include Test Items (Regex)" placeholder="e.g., WiFi_TX_POW.*, Bluetooth_.*" multiple chips
-              closable-chips clearable style="flex: 1;"
-              hint="Regex patterns to include specific test items for this station" persistent-hint
-              @click:clear="localTestItemFilters = []" :custom-filter="customFilterFunction"
-              @update:search-input="handleSearchInput">
-              <template #prepend-inner>
-                <v-icon size="small" color="success">mdi-filter-plus</v-icon>
-              </template>
-              <template #item="{ item }">
-                <v-list-item :title="String(item.value || item).replace(/\.\*/, '')"
-                  @click="handleItemClick(String(item.value || item), 'include', $event)">
-                  <template #prepend>
-                    <v-checkbox-btn :model-value="isItemSelected(String(item.value || item), 'include')"
-                      @click.stop="handleCheckboxClick(String(item.value || item), 'include', $event)" />
-                  </template>
-                </v-list-item>
-              </template>
-              <template #chip="{ props: chipProps, item }">
-                <v-chip v-bind="chipProps" :text="String(item.value || item).replace(/\.\*/, '')" closable size="small"
-                  color="success" variant="tonal" />
-              </template>
-            </v-combobox>
-            <v-btn density="default" variant="tonal" color="success" :rounded="1" @click="openTestItemDialog('include')"
-              title="Advanced Test Item Selection"
-              style="height: 56px; min-width: 56px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center;">
-              <v-icon size="large">mdi-filter-settings</v-icon>
-            </v-btn>
+        <label class="station-filter-config__field">
+          <span>Add or search device IDs</span>
+          <div class="station-filter-config__input-row">
+            <input v-model="deviceSearchInput" type="text" placeholder="Search available devices or add a custom ID"
+              @keydown.enter.prevent="commitDeviceDraft" />
+            <button type="button" class="station-filter-config__button station-filter-config__button--ghost"
+              @click="commitDeviceDraft">
+              Add
+            </button>
           </div>
-        </v-col>
+        </label>
 
-        <!-- Test Item Exclude Filters -->
-        <v-col cols="12">
-          <div class="d-flex align-center" style="gap: 8px;">
-            <v-combobox v-model="localExcludeTestItemFilters" :items="testItemSuggestions" :loading="loading"
-              label="Exclude Test Items (Regex)" placeholder="e.g., .*_OLD.*, .*_BACKUP.*" multiple chips closable-chips
-              clearable hint="Regex patterns to exclude test items for this station" persistent-hint
-              @click:clear="localExcludeTestItemFilters = []" style="flex: 1;" :custom-filter="customFilterFunction"
-              @update:search-input="handleSearchInput">
-              <template #prepend-inner>
-                <v-icon size="small" color="error">mdi-filter-minus</v-icon>
-              </template>
-              <template #item="{ item }">
-                <v-list-item :title="String(item.value || item).replace(/\.\*/, '')"
-                  @click="handleItemClick(String(item.value || item), 'exclude', $event)">
-                  <template #prepend>
-                    <v-checkbox-btn :model-value="isItemSelected(String(item.value || item), 'exclude')"
-                      @click.stop="handleCheckboxClick(String(item.value || item), 'exclude', $event)" />
-                  </template>
-                </v-list-item>
-              </template>
-              <template #chip="{ props: chipProps, item }">
-                <v-chip v-bind="chipProps" :text="String(item.value || item).replace(/\.\*/, '')" closable size="small"
-                  color="error" variant="tonal" />
-              </template>
-            </v-combobox>
-            <v-btn variant="tonal" color="error" :rounded="1" @click="openTestItemDialog('exclude')"
-              title="Advanced Test Item Selection"
-              style="height: 56px; min-width: 56px; margin-bottom: 18px; display: flex; align-items: center; justify-content: center;">
-              <v-icon size="large">mdi-filter-settings</v-icon>
-            </v-btn>
+        <p class="station-filter-config__helper-copy">Override the universal device filters for this station. Click an item to toggle it.</p>
+
+        <div v-if="loading" class="station-filter-config__notice station-filter-config__notice--info">
+          Loading device identifiers...
+        </div>
+        <div v-else-if="filteredDeviceOptions.length === 0 && !deviceSearchInput.trim()"
+          class="station-filter-config__notice station-filter-config__notice--info">
+          No device suggestions available yet.
+        </div>
+        <div v-else class="station-filter-config__choice-grid">
+          <button v-for="device in filteredDeviceOptions" :key="device" type="button" class="station-filter-config__choice-chip"
+            :class="{ 'is-active': localDeviceIdentifiers.includes(device) }" @click="toggleDeviceIdentifier(device)">
+            {{ device }}
+          </button>
+          <button v-if="deviceSearchInput.trim() && !localDeviceIdentifiers.includes(deviceSearchInput.trim()) && !filteredDeviceOptions.includes(deviceSearchInput.trim())"
+            type="button" class="station-filter-config__choice-chip station-filter-config__choice-chip--draft"
+            @click="commitDeviceDraft">
+            Add "{{ deviceSearchInput.trim() }}"
+          </button>
+        </div>
+
+        <div v-if="localDeviceIdentifiers.length > 0" class="station-filter-config__token-row">
+          <button v-for="device in localDeviceIdentifiers" :key="device" type="button" class="station-filter-config__token"
+            @click="toggleDeviceIdentifier(device)">
+            <span>{{ device }}</span>
+            <Icon icon="mdi:close" />
+          </button>
+        </div>
+      </section>
+
+      <section class="station-filter-config__section station-filter-config__section--success">
+        <div class="station-filter-config__section-heading">
+          <div>
+            <p class="station-filter-config__section-eyebrow">Include Rules</p>
+            <h3>Include Test Items</h3>
           </div>
-        </v-col>
+          <div class="station-filter-config__header-meta">
+            <span class="station-filter-config__pill station-filter-config__pill--success">{{ localTestItemFilters.length }} pattern(s)</span>
+            <button type="button" class="station-filter-config__icon-button" @click="openTestItemDialog('include')">
+              <Icon icon="mdi:filter-settings" />
+            </button>
+          </div>
+        </div>
 
-        <!-- Info Alert -->
-        <v-col v-if="!hasFilters" cols="12">
-          <v-alert type="info" variant="tonal" density="compact">
-            No station-specific filters configured. Universal filters will apply.
-          </v-alert>
-        </v-col>
+        <label class="station-filter-config__field">
+          <span>Add regex or search test items</span>
+          <div class="station-filter-config__input-row">
+            <input v-model="includePatternInput" type="text" placeholder="e.g., WiFi_TX_POW.*, Bluetooth_.*"
+              @keydown.enter.prevent="commitPatternDraft('include')" @keydown.",".prevent="commitPatternDraft('include')"
+              @blur="commitPatternDraft('include')" />
+            <button type="button" class="station-filter-config__button station-filter-config__button--success"
+              @click="commitPatternDraft('include')">
+              Add
+            </button>
+          </div>
+        </label>
 
-        <!-- Active Filters Summary -->
-        <v-col v-else cols="12">
-          <v-alert type="success" variant="tonal" density="compact">
-            <template #prepend>
-              <v-icon size="small">mdi-check-circle</v-icon>
-            </template>
-            <div class="text-caption">
-              <span v-if="localDeviceIdentifiers.length > 0">
-                <strong>{{ localDeviceIdentifiers.length }}</strong> device(s)
+        <p class="station-filter-config__helper-copy">Regex patterns here narrow this station to matching test items.</p>
+
+        <div v-if="filteredIncludeSuggestions.length > 0" class="station-filter-config__suggestion-list">
+          <button v-for="item in filteredIncludeSuggestions" :key="`include-${item}`" type="button"
+            class="station-filter-config__suggestion-row" :class="{ 'is-active': isItemSelected(item, 'include') }"
+            @click="toggleItemSelection(item, 'include')">
+            <span>{{ formatPatternLabel(item) }}</span>
+            <span class="station-filter-config__suggestion-meta">
+              <span v-if="getGroupedItemCount(item)" class="station-filter-config__pill station-filter-config__pill--info">{{ getGroupedItemCount(item) }}</span>
+              <span class="station-filter-config__pill" :class="isItemSelected(item, 'include') ? 'station-filter-config__pill--success' : 'station-filter-config__pill--muted'">
+                {{ isItemSelected(item, 'include') ? 'Selected' : 'Add' }}
               </span>
-              <span v-if="localTestItemFilters.length > 0">
-                <span v-if="localDeviceIdentifiers.length > 0"> • </span>
-                <strong>{{ localTestItemFilters.length }}</strong> include pattern(s)
+            </span>
+          </button>
+        </div>
+
+        <div v-if="localTestItemFilters.length > 0" class="station-filter-config__token-row">
+          <button v-for="pattern in localTestItemFilters" :key="pattern" type="button" class="station-filter-config__token station-filter-config__token--success"
+            @click="removePatternSelection(pattern, 'include')">
+            <span>{{ formatPatternLabel(pattern) }}</span>
+            <Icon icon="mdi:close" />
+          </button>
+        </div>
+      </section>
+
+      <section class="station-filter-config__section station-filter-config__section--danger">
+        <div class="station-filter-config__section-heading">
+          <div>
+            <p class="station-filter-config__section-eyebrow">Exclude Rules</p>
+            <h3>Exclude Test Items</h3>
+          </div>
+          <div class="station-filter-config__header-meta">
+            <span class="station-filter-config__pill station-filter-config__pill--danger">{{ localExcludeTestItemFilters.length }} pattern(s)</span>
+            <button type="button" class="station-filter-config__icon-button" @click="openTestItemDialog('exclude')">
+              <Icon icon="mdi:filter-settings" />
+            </button>
+          </div>
+        </div>
+
+        <label class="station-filter-config__field">
+          <span>Add regex or search test items</span>
+          <div class="station-filter-config__input-row">
+            <input v-model="excludePatternInput" type="text" placeholder="e.g., .*_OLD.*, .*_BACKUP.*"
+              @keydown.enter.prevent="commitPatternDraft('exclude')" @keydown.",".prevent="commitPatternDraft('exclude')"
+              @blur="commitPatternDraft('exclude')" />
+            <button type="button" class="station-filter-config__button station-filter-config__button--danger"
+              @click="commitPatternDraft('exclude')">
+              Add
+            </button>
+          </div>
+        </label>
+
+        <p class="station-filter-config__helper-copy">Regex patterns here remove matching test items from this station analysis.</p>
+
+        <div v-if="filteredExcludeSuggestions.length > 0" class="station-filter-config__suggestion-list">
+          <button v-for="item in filteredExcludeSuggestions" :key="`exclude-${item}`" type="button"
+            class="station-filter-config__suggestion-row" :class="{ 'is-active': isItemSelected(item, 'exclude') }"
+            @click="toggleItemSelection(item, 'exclude')">
+            <span>{{ formatPatternLabel(item) }}</span>
+            <span class="station-filter-config__suggestion-meta">
+              <span v-if="getGroupedItemCount(item)" class="station-filter-config__pill station-filter-config__pill--info">{{ getGroupedItemCount(item) }}</span>
+              <span class="station-filter-config__pill" :class="isItemSelected(item, 'exclude') ? 'station-filter-config__pill--danger' : 'station-filter-config__pill--muted'">
+                {{ isItemSelected(item, 'exclude') ? 'Selected' : 'Add' }}
               </span>
-              <span v-if="localExcludeTestItemFilters.length > 0">
-                <span v-if="localDeviceIdentifiers.length > 0 || localTestItemFilters.length > 0"> •
-                </span>
-                <strong>{{ localExcludeTestItemFilters.length }}</strong> exclude pattern(s)
-              </span>
-            </div>
-          </v-alert>
-        </v-col>
-      </v-row>
-    </v-card-text>
-  </v-card>
+            </span>
+          </button>
+        </div>
+
+        <div v-if="localExcludeTestItemFilters.length > 0" class="station-filter-config__token-row">
+          <button v-for="pattern in localExcludeTestItemFilters" :key="pattern" type="button" class="station-filter-config__token station-filter-config__token--danger"
+            @click="removePatternSelection(pattern, 'exclude')">
+            <span>{{ formatPatternLabel(pattern) }}</span>
+            <Icon icon="mdi:close" />
+          </button>
+        </div>
+      </section>
+
+      <div v-if="!hasFilters" class="station-filter-config__notice station-filter-config__notice--info">
+        No station-specific filters configured. Universal filters will apply.
+      </div>
+      <div v-else class="station-filter-config__notice station-filter-config__notice--success">
+        <strong>{{ localDeviceIdentifiers.length }}</strong> device(s), <strong>{{ localTestItemFilters.length }}</strong> include pattern(s), and <strong>{{ localExcludeTestItemFilters.length }}</strong> exclude pattern(s) are active for this station.
+      </div>
+    </div>
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, nextTick, ref, watch } from 'vue'
+import { AppDialog, AppPanel } from '@/shared'
 import type { StationFilterConfig, TestItem } from '../types/dutTopProduct.types'
 
 // Props
@@ -226,12 +278,18 @@ const emit = defineEmits<(e: 'update:modelValue', value: StationFilterConfig | u
 const localDeviceIdentifiers = ref<string[]>(props.modelValue?.device_identifiers || [])
 const localTestItemFilters = ref<string[]>(props.modelValue?.test_item_filters || [])
 const localExcludeTestItemFilters = ref<string[]>(props.modelValue?.exclude_test_item_filters || [])
-
-// Search input state for showing grouped items
-const searchInput = ref<string>('')
+const deviceSearchInput = ref('')
+const includePatternInput = ref('')
+const excludePatternInput = ref('')
 
 // Flag to prevent recursive updates
 const isUpdatingFromProps = ref(false)
+
+const suggestionQuery = computed(() => {
+  const includeQuery = includePatternInput.value.trim()
+  const excludeQuery = excludePatternInput.value.trim()
+  return includeQuery || excludeQuery
+})
 
 // Computed
 const testItemSuggestions = computed(() => {
@@ -250,7 +308,7 @@ const testItemSuggestions = computed(() => {
     })
 
   // When user is not searching (empty search), show only individual items
-  const isSearching = searchInput.value && searchInput.value.trim().length > 0
+  const isSearching = suggestionQuery.value.length > 0
 
   // Group items by pattern (e.g., TX1, TX2, TX3 -> TX)
   const groups = new Map<string, string[]>()
@@ -433,21 +491,36 @@ function toggleItemSelection(item: string, filterType: 'include' | 'exclude') {
   }
 }
 
-// Custom filter function for combobox search - searches on display value (without .*)
-function customFilterFunction(itemValue: string, queryText: string): boolean {
-  if (!queryText) return true
+const filteredDeviceOptions = computed(() => {
+  const query = deviceSearchInput.value.trim().toLowerCase()
+  if (!query) {
+    return props.availableDevices
+  }
 
-  // Remove .* from the item value for search matching
-  const displayValue = itemValue.replace(/\.\*/g, '').toLowerCase()
-  const query = queryText.toLowerCase()
+  return props.availableDevices.filter((device) => device.toLowerCase().includes(query))
+})
 
-  return displayValue.includes(query)
-}
+const filteredIncludeSuggestions = computed(() => {
+  const query = includePatternInput.value.trim().toLowerCase()
+  if (!query) {
+    return []
+  }
 
-// Handle search input updates to control grouped item visibility
-function handleSearchInput(value: string | undefined) {
-  searchInput.value = value || ''
-}
+  return testItemSuggestions.value
+    .filter((item) => formatPatternLabel(item).toLowerCase().includes(query) || item.toLowerCase().includes(query))
+    .slice(0, 16)
+})
+
+const filteredExcludeSuggestions = computed(() => {
+  const query = excludePatternInput.value.trim().toLowerCase()
+  if (!query) {
+    return []
+  }
+
+  return testItemSuggestions.value
+    .filter((item) => formatPatternLabel(item).toLowerCase().includes(query) || item.toLowerCase().includes(query))
+    .slice(0, 16)
+})
 
 // Test Item Dialog State
 const testItemDialog = ref(false)
@@ -563,6 +636,64 @@ function openTestItemDialog(filterType: 'include' | 'exclude') {
 
   dialogSelectedItems.value = new Set(currentItems)
   testItemDialog.value = true
+}
+
+function formatPatternLabel(pattern: string): string {
+  return pattern.replace(/\s+\(Grouped - \d+ items\)$/i, '').replace(/\.\*/g, '')
+}
+
+function getGroupedItemCount(pattern: string): string | null {
+  return pattern.match(/\(Grouped - (\d+) items\)$/i)?.[1] ?? null
+}
+
+function normalizeDraftValue(value: string): string {
+  return value.trim().replace(/,+$/, '')
+}
+
+function commitDeviceDraft() {
+  const draft = normalizeDraftValue(deviceSearchInput.value)
+  if (!draft) {
+    return
+  }
+
+  if (!localDeviceIdentifiers.value.includes(draft)) {
+    localDeviceIdentifiers.value = [...localDeviceIdentifiers.value, draft]
+  }
+
+  deviceSearchInput.value = ''
+}
+
+function toggleDeviceIdentifier(device: string) {
+  if (localDeviceIdentifiers.value.includes(device)) {
+    localDeviceIdentifiers.value = localDeviceIdentifiers.value.filter((entry) => entry !== device)
+    return
+  }
+
+  localDeviceIdentifiers.value = [...localDeviceIdentifiers.value, device]
+}
+
+function commitPatternDraft(filterType: 'include' | 'exclude') {
+  const source = filterType === 'include' ? includePatternInput : excludePatternInput
+  const draft = normalizeDraftValue(source.value)
+  if (!draft) {
+    source.value = ''
+    return
+  }
+
+  if (!isItemSelected(draft, filterType)) {
+    toggleItemSelection(draft, filterType)
+  }
+
+  source.value = ''
+}
+
+function removePatternSelection(pattern: string, filterType: 'include' | 'exclude') {
+  if (filterType === 'include') {
+    localTestItemFilters.value = localTestItemFilters.value.filter((entry) => entry !== pattern)
+    return
+  }
+
+  localExcludeTestItemFilters.value = localExcludeTestItemFilters.value.filter((entry) => entry !== pattern)
 }
 
 function isDialogItemSelected(item: string): boolean {
@@ -710,7 +841,311 @@ function clearFilters() {
 </script>
 
 <style scoped>
-.station-filter-card {
-  border-left: 4px solid rgb(var(--v-theme-primary));
+.station-filter-config {
+  border-left: 4px solid rgba(40, 96, 163, 0.65);
+}
+
+.station-filter-config__layout,
+.station-filter-config__dialog-body,
+.station-filter-config__dialog-footer,
+.station-filter-config__section,
+.station-filter-config__header-meta,
+.station-filter-config__toolbar-row,
+.station-filter-config__token-row,
+.station-filter-config__input-row,
+.station-filter-config__dialog-item,
+.station-filter-config__suggestion-row,
+.station-filter-config__dialog-header {
+  display: flex;
+}
+
+.station-filter-config__layout,
+.station-filter-config__dialog-body,
+.station-filter-config__section {
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.station-filter-config__dialog-header,
+.station-filter-config__toolbar-row,
+.station-filter-config__section-heading {
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.station-filter-config__dialog-header h2,
+.station-filter-config__section-heading h3 {
+  margin: 0.2rem 0 0;
+}
+
+.station-filter-config__eyebrow,
+.station-filter-config__section-eyebrow,
+.station-filter-config__helper-copy {
+  margin: 0;
+  color: var(--app-muted);
+}
+
+.station-filter-config__eyebrow,
+.station-filter-config__section-eyebrow {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.station-filter-config__field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.station-filter-config__field span:first-child {
+  color: var(--app-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.station-filter-config__input-row {
+  gap: 0.65rem;
+}
+
+.station-filter-config__field input {
+  flex: 1;
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  padding: 0.8rem 0.95rem;
+}
+
+.station-filter-config__button,
+.station-filter-config__icon-button,
+.station-filter-config__choice-chip,
+.station-filter-config__token,
+.station-filter-config__dialog-item,
+.station-filter-config__suggestion-row {
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  cursor: pointer;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.station-filter-config__button:hover,
+.station-filter-config__icon-button:hover,
+.station-filter-config__choice-chip:hover,
+.station-filter-config__token:hover,
+.station-filter-config__dialog-item:hover,
+.station-filter-config__suggestion-row:hover {
+  transform: translateY(-1px);
+}
+
+.station-filter-config__button {
+  padding: 0.7rem 0.95rem;
+  font-weight: 700;
+}
+
+.station-filter-config__button--primary {
+  background: rgba(40, 96, 163, 0.12);
+  border-color: rgba(40, 96, 163, 0.2);
+  color: #1f4e86;
+}
+
+.station-filter-config__button--success {
+  background: rgba(20, 88, 71, 0.12);
+  border-color: rgba(20, 88, 71, 0.22);
+  color: #145847;
+}
+
+.station-filter-config__button--danger {
+  background: rgba(189, 64, 64, 0.14);
+  border-color: rgba(189, 64, 64, 0.22);
+  color: #8f2020;
+}
+
+.station-filter-config__button--ghost,
+.station-filter-config__icon-button {
+  color: #4f5d6d;
+}
+
+.station-filter-config__icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.65rem;
+  height: 2.65rem;
+}
+
+.station-filter-config__section {
+  border: 1px solid var(--app-border);
+  border-radius: 1.15rem;
+  background: rgba(255, 251, 247, 0.92);
+  padding: 1rem;
+}
+
+.station-filter-config__section--success {
+  background: linear-gradient(145deg, rgba(20, 88, 71, 0.06), rgba(255, 251, 247, 0.96));
+}
+
+.station-filter-config__section--danger {
+  background: linear-gradient(145deg, rgba(189, 64, 64, 0.06), rgba(255, 251, 247, 0.96));
+}
+
+.station-filter-config__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.77rem;
+  font-weight: 700;
+}
+
+.station-filter-config__pill--primary {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.station-filter-config__pill--info {
+  background: rgba(20, 113, 153, 0.12);
+  color: #0f6c92;
+}
+
+.station-filter-config__pill--muted {
+  background: rgba(120, 129, 143, 0.12);
+  color: #4f5d6d;
+}
+
+.station-filter-config__pill--success {
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.station-filter-config__pill--danger {
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.station-filter-config__choice-grid,
+.station-filter-config__token-row,
+.station-filter-config__suggestion-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.station-filter-config__choice-chip,
+.station-filter-config__token,
+.station-filter-config__suggestion-row {
+  padding: 0.6rem 0.9rem;
+}
+
+.station-filter-config__choice-chip.is-active,
+.station-filter-config__choice-chip--draft {
+  border-color: rgba(40, 96, 163, 0.26);
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.station-filter-config__token,
+.station-filter-config__suggestion-row,
+.station-filter-config__dialog-item {
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.station-filter-config__token--success {
+  border-color: rgba(20, 88, 71, 0.22);
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.station-filter-config__token--danger {
+  border-color: rgba(189, 64, 64, 0.22);
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.station-filter-config__suggestion-list {
+  flex-direction: column;
+}
+
+.station-filter-config__suggestion-row,
+.station-filter-config__dialog-item {
+  justify-content: space-between;
+  width: 100%;
+  border-radius: 1rem;
+}
+
+.station-filter-config__suggestion-row.is-active,
+.station-filter-config__dialog-item.is-selected {
+  border-color: rgba(40, 96, 163, 0.22);
+  background: rgba(40, 96, 163, 0.1);
+}
+
+.station-filter-config__suggestion-meta,
+.station-filter-config__dialog-footer {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.station-filter-config__notice,
+.station-filter-config__empty-state {
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
+  font-size: 0.9rem;
+}
+
+.station-filter-config__notice--info,
+.station-filter-config__empty-state {
+  background: rgba(40, 96, 163, 0.08);
+  color: #1f4e86;
+}
+
+.station-filter-config__notice--success {
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.station-filter-config__dialog-list {
+  display: grid;
+  gap: 0.65rem;
+  max-height: 32rem;
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.station-filter-config__checkbox {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.25rem;
+  height: 1.25rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  color: transparent;
+}
+
+.station-filter-config__checkbox.is-selected {
+  background: rgba(40, 96, 163, 0.14);
+  color: #1f4e86;
+}
+
+.station-filter-config__dialog-item-copy {
+  flex: 1;
+  text-align: left;
+}
+
+@media (max-width: 900px) {
+  .station-filter-config__dialog-header,
+  .station-filter-config__toolbar-row,
+  .station-filter-config__section-heading,
+  .station-filter-config__input-row,
+  .station-filter-config__dialog-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
 }
 </style>

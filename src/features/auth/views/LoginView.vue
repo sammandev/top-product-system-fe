@@ -1,216 +1,209 @@
 <template>
-    <div class="login-layout">
-        <v-main class="login-main d-flex flex-column">
-            <v-container fluid class="flex-grow-1 d-flex align-center justify-center py-8">
-                <v-row align="center" justify="center">
-                    <v-col cols="12" sm="8" md="5" lg="4">
-                        <v-card elevation="12" rounded="lg">
-                            <v-card-title class="text-h4 text-center pa-6">
-                                <v-icon size="large" color="primary" class="mr-2">mdi-atom-variant</v-icon>
-                                {{ appName }} Login
-                            </v-card-title>
+    <PublicScaffold
+        :app-name="appName"
+        eyebrow="Batch 1"
+        title="Operational sign in"
+        description="This route runs on the scaffold-first shell while preserving the existing authentication flow and backend contracts."
+        panel-eyebrow="Access"
+        panel-description="Use your external account for full access, or continue as guest for a limited read-only session."
+    >
+        <template #hero>
+            <ul role="list" class="grid gap-3 sm:grid-cols-2">
+                <li class="rounded-[1.5rem] border border-[var(--app-border)] bg-white/70 p-4 shadow-[var(--app-shadow-soft)]">
+                    <div class="flex items-center gap-3">
+                        <div class="rounded-2xl bg-[var(--app-accent-soft)] p-3 text-2xl text-[var(--app-accent)]">
+                            <Icon icon="solar:shield-user-bold-duotone" />
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]">Mode</p>
+                            <p class="mt-1 text-sm text-[var(--app-ink)]">External or guest access</p>
+                        </div>
+                    </div>
+                </li>
+                <li class="rounded-[1.5rem] border border-[var(--app-border)] bg-white/70 p-4 shadow-[var(--app-shadow-soft)]">
+                    <div class="flex items-center gap-3">
+                        <div class="rounded-2xl bg-[rgba(165,101,71,0.14)] p-3 text-2xl text-[rgb(141,87,62)]">
+                            <Icon icon="solar:server-path-bold-duotone" />
+                        </div>
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]">Boundary</p>
+                            <p class="mt-1 text-sm text-[var(--app-ink)]">Backend contracts stay unchanged</p>
+                        </div>
+                    </div>
+                </li>
+            </ul>
+        </template>
 
-                            <v-card-text>
-                                <!-- Login Type Badge - COMMENTED OUT: Only external login for now
-                                <div class="d-flex flex-column align-center mb-4">
-                                    <div class="text-caption text-medium-emphasis mb-2">Select Login Mode</div>
-                                    <v-chip-group v-model="loginMode" mandatory>
-                                        <v-chip value="local" color="primary" variant="tonal">
-                                            <v-icon start>mdi-account</v-icon>
-                                            Local Login
-                                        </v-chip>
-                                        <v-chip value="external" color="secondary" variant="tonal">
-                                            <v-icon start>mdi-cloud-sync</v-icon>
-                                            External Login
-                                        </v-chip>
-                                    </v-chip-group>
-                                </div>
-                                -->
+        <form class="space-y-5" @submit.prevent="handleLogin">
+            <div class="space-y-2">
+                <label class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]" for="username">
+                    Username
+                </label>
+                <input
+                    id="username"
+                    v-model="username"
+                    autocomplete="username"
+                    class="w-full rounded-[1.2rem] border border-[var(--app-border)] bg-white px-4 py-3 text-base text-[var(--app-ink)] shadow-[var(--app-shadow-soft)] outline-none transition focus:border-[var(--app-accent)] focus:ring-4 focus:ring-[var(--app-ring)]"
+                    :aria-invalid="Boolean(usernameError)"
+                    name="username"
+                    placeholder="Enter your username"
+                    type="text"
+                    @input="clearError"
+                />
+                <p v-if="usernameError" class="text-sm text-[var(--app-danger)]">{{ usernameError }}</p>
+            </div>
 
-                                <v-form ref="loginFormRef" v-model="loginValid" @submit.prevent="handleLogin">
-                                    <!-- <v-alert type="info" density="compact" class="mb-3">
-                                        <small>
-                                            <small v-if="loginMode === 'local'">
-                                                Local login for simple features.
-                                            </small>
-                                            <small v-else>
-                                                <strong>External login</strong> provides full access features.
-                                            </small>
-                                        </small>
-                                    </v-alert> -->
+            <div class="space-y-2">
+                <div class="flex items-center justify-between gap-4">
+                    <label class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]" for="password">
+                        Password
+                    </label>
+                    <button
+                        class="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--app-accent)]"
+                        type="button"
+                        @click="showPassword = !showPassword"
+                    >
+                        {{ showPassword ? 'Hide' : 'Show' }}
+                    </button>
+                </div>
+                <input
+                    id="password"
+                    v-model="password"
+                    autocomplete="current-password"
+                    class="w-full rounded-[1.2rem] border border-[var(--app-border)] bg-white px-4 py-3 text-base text-[var(--app-ink)] shadow-[var(--app-shadow-soft)] outline-none transition focus:border-[var(--app-accent)] focus:ring-4 focus:ring-[var(--app-ring)]"
+                    :aria-invalid="Boolean(passwordError)"
+                    name="password"
+                    placeholder="Enter your password"
+                    :type="showPassword ? 'text' : 'password'"
+                    @input="clearError"
+                />
+                <p v-if="passwordError" class="text-sm text-[var(--app-danger)]">{{ passwordError }}</p>
+            </div>
 
-                                    <v-text-field v-model="username" :rules="[rules.required]" label="Username"
-                                        prepend-inner-icon="mdi-account" variant="outlined" class="mb-2" />
+            <label class="flex items-center gap-3 rounded-[1.2rem] border border-[var(--app-border)] bg-white/70 px-4 py-3 text-sm text-[var(--app-muted)] shadow-[var(--app-shadow-soft)]">
+                <input
+                    v-model="rememberMe"
+                    class="h-4 w-4 rounded border-[var(--app-border)] text-[var(--app-accent)] focus:ring-[var(--app-ring)]"
+                    type="checkbox"
+                />
+                <span>Remember this username on this device</span>
+            </label>
 
-                                    <v-text-field v-model="password" :rules="[rules.required]"
-                                        :type="showPassword ? 'text' : 'password'" label="Password"
-                                        prepend-inner-icon="mdi-lock"
-                                        :append-inner-icon="showPassword ? 'mdi-eye' : 'mdi-eye-off'" variant="outlined"
-                                        class="mb-1" @click:append-inner="showPassword = !showPassword" />
+            <div v-if="error" class="rounded-[1.2rem] border border-[rgba(163,61,45,0.24)] bg-[var(--app-danger-soft)] px-4 py-3 text-sm text-[var(--app-danger)]">
+                {{ error }}
+            </div>
 
-                                    <div class="d-flex align-center justify-space-between mb-2">
-                                        <v-checkbox v-model="rememberMe" label="Remember Me" density="compact"
-                                            hide-details />
-                                    </div>
+            <Button
+                class="!w-full !rounded-full !border-0 !bg-[var(--app-accent)] !px-5 !py-3 !text-sm !font-semibold !uppercase !tracking-[0.22em]"
+                :disabled="!canSubmit"
+                :loading="loading"
+                type="submit"
+            >
+                Login
+            </Button>
 
-                                    <v-alert v-if="error" type="error" class="mb-2" closable
-                                        @click:close="authStore.error = null">
-                                        {{ error }}
-                                    </v-alert>
+            <div class="relative py-2 text-center">
+                <div class="absolute inset-x-0 top-1/2 border-t border-[var(--app-border)]" />
+                <span class="relative inline-block bg-[color:var(--app-panel-strong)] px-3 text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]">
+                    or continue in limited mode
+                </span>
+            </div>
 
-                                    <v-btn :loading="loading" :disabled="!loginValid" block color="primary" size="large"
-                                        type="submit">
-                                        <v-icon start>mdi-cloud-sync</v-icon>
-                                        Login
-                                        <!-- COMMENTED OUT: Dynamic button based on login mode
-                                        <v-icon start>{{ loginMode === 'local' ? 'mdi-login' : 'mdi-cloud-sync' }}</v-icon>
-                                        {{ loginMode === 'local' ? 'Login' : 'Login with External Access' }}
-                                        -->
-                                    </v-btn>
+            <Button
+                class="!w-full !rounded-full !border !border-[var(--app-border)] !bg-transparent !px-5 !py-3 !text-sm !font-semibold !uppercase !tracking-[0.22em] !text-[var(--app-ink)]"
+                :loading="guestLoading"
+                severity="secondary"
+                type="button"
+                @click="handleGuestLogin"
+            >
+                Continue as Guest
+            </Button>
 
-                                    <!-- Guest Login Section -->
-                                    <div class="text-center mt-4">
-                                        <v-divider class="mb-4">
-                                            <span class="text-caption text-medium-emphasis px-2">or</span>
-                                        </v-divider>
-
-                                        <v-btn variant="outlined" color="secondary" block :loading="guestLoading"
-                                            @click="handleGuestLogin">
-                                            <v-icon start>mdi-account-question</v-icon>
-                                            Continue as Guest
-                                        </v-btn>
-
-                                        <p class="text-caption text-medium-emphasis mt-2">
-                                            Guest access provides read-only access with limited features
-                                        </p>
-                                    </div>
-                                </v-form>
-                            </v-card-text>
-                        </v-card>
-                    </v-col>
-                </v-row>
-            </v-container>
-        </v-main>
-    </div>
+            <p class="text-center text-sm leading-6 text-[var(--app-muted)]">
+                Guest access keeps the app explorable while blocking write-sensitive workflows.
+            </p>
+        </form>
+    </PublicScaffold>
 </template>
 
 <script setup lang="ts">
-// import { watch } from 'vue' // COMMENTED OUT: No longer needed without login mode switching
+import { Icon } from '@iconify/vue'
+import Button from 'primevue/button'
 import { storeToRefs } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
+import PublicScaffold from '@/shared/ui/public-shell/PublicScaffold.vue'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useAuth } from '../composables'
 import { useAuthStore } from '../stores'
 
-// Use auth composable with router integration
-// COMMENTED OUT: login not used since we only use external login now
-const { /* login, */ externalLogin, guestLogin, loading, error } = useAuth()
+const { externalLogin, guestLogin, loading, error } = useAuth()
 const authStore = useAuthStore()
 const appConfigStore = useAppConfigStore()
 const { appName } = storeToRefs(appConfigStore)
 
-// Form refs
-const loginFormRef = ref()
-
-// Form validity
-const loginValid = ref(false)
-
-// Guest login loading state
 const guestLoading = ref(false)
-
-// Tab state - COMMENTED OUT: Now always using external login
-// const loginMode = ref<'local' | 'external'>(
-//     (localStorage.getItem('login_mode') as 'local' | 'external') || 'local'
-// )
-// const _loginMode = ref<'local' | 'external'>('external') // Always external login
-
-// Shared credentials
+const submitAttempted = ref(false)
 const username = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const rememberMe = ref(localStorage.getItem('remember_me') === 'true')
 
-const rules = {
-  required: (value: string) => !!value || 'Required field',
-}
-
-// Clear error when switching tabs - COMMENTED OUT: No mode switching now
-// watch(loginMode, () => {
-//     authStore.error = null
-//     localStorage.setItem('login_mode', loginMode.value)
-// })
+const canSubmit = computed(() => username.value.trim().length > 0 && password.value.length > 0)
+const usernameError = computed(() =>
+    submitAttempted.value && username.value.trim().length === 0 ? 'Username is required.' : '',
+)
+const passwordError = computed(() =>
+    submitAttempted.value && password.value.length === 0 ? 'Password is required.' : '',
+)
 
 if (rememberMe.value) {
-  const rememberedUsername = localStorage.getItem('remember_username')
-  if (rememberedUsername) {
-    username.value = rememberedUsername
-  }
+    const rememberedUsername = localStorage.getItem('remember_username')
+    if (rememberedUsername) {
+        username.value = rememberedUsername
+    }
+}
+
+function clearError() {
+    authStore.error = null
 }
 
 async function handleLogin() {
-  if (!loginValid.value) return
+    submitAttempted.value = true
 
-  try {
-    // COMMENTED OUT: Local login option - now always using external login
-    // if (loginMode.value === 'local') {
-    //     await login({
-    //         username: username.value,
-    //         password: password.value
-    //     })
-    // } else {
-    await externalLogin({
-      username: username.value,
-      password: password.value,
-    })
-    // }
-
-    if (rememberMe.value) {
-      localStorage.setItem('remember_me', 'true')
-      localStorage.setItem('remember_username', username.value)
-    } else {
-      localStorage.removeItem('remember_me')
-      localStorage.removeItem('remember_username')
+    if (!canSubmit.value) {
+        return
     }
-    // COMMENTED OUT: No need to save login mode anymore
-    // localStorage.setItem('login_mode', loginMode.value)
-  } catch (err) {
-    console.error('Login failed:', err)
-  }
+
+    clearError()
+
+    try {
+        await externalLogin({
+            username: username.value,
+            password: password.value,
+        })
+
+        if (rememberMe.value) {
+            localStorage.setItem('remember_me', 'true')
+            localStorage.setItem('remember_username', username.value)
+        } else {
+            localStorage.removeItem('remember_me')
+            localStorage.removeItem('remember_username')
+        }
+    } catch (loginError) {
+        console.error('Login failed:', loginError)
+    }
 }
 
 async function handleGuestLogin() {
-  guestLoading.value = true
-  try {
-    await guestLogin()
-  } catch (err) {
-    console.error('Guest login failed:', err)
-  } finally {
-    guestLoading.value = false
-  }
+    clearError()
+    guestLoading.value = true
+
+    try {
+        await guestLogin()
+    } catch (guestError) {
+        console.error('Guest login failed:', guestError)
+    } finally {
+        guestLoading.value = false
+    }
 }
 </script>
-
-<style scoped>
-.login-layout {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-}
-
-.login-main {
-    flex: 1 1 auto;
-    padding: 48px 16px;
-    overflow-y: auto;
-    background-color: rgb(var(--v-theme-background));
-}
-
-.login-footer {
-    flex: 0 0 auto;
-    justify-content: center;
-    gap: 8px;
-    font-size: 0.875rem;
-    text-align: center;
-    padding-inline: 24px;
-    border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity, 0.12));
-}
-</style>

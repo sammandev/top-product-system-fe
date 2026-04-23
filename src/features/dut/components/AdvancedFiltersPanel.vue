@@ -1,118 +1,207 @@
 <template>
-    <v-expansion-panels v-model="panel">
-        <v-expansion-panel>
-            <v-expansion-panel-title>
-                <template #default="{ expanded }">
-                    <v-row no-gutters>
-                        <v-col cols="4" class="d-flex justify-start align-center">
-                            <v-icon :class="expanded ? 'rotate-180' : ''" class="mr-2">
-                                mdi-filter-variant
-                            </v-icon>
-                            <span>Advanced Filters</span>
-                        </v-col>
-                        <v-col cols="8" class="text-caption text-medium-emphasis text-right">
-                            {{ filterSummary }}
-                        </v-col>
-                    </v-row>
-                </template>
-            </v-expansion-panel-title>
+  <section class="advanced-filters-panel">
+    <button type="button" class="advanced-filters-panel__toggle" :aria-expanded="isExpanded"
+      @click="isExpanded = !isExpanded">
+      <div class="advanced-filters-panel__toggle-copy">
+        <span class="advanced-filters-panel__icon" :class="{ 'is-open': isExpanded }">
+          <Icon icon="mdi:filter-variant" />
+        </span>
+        <div>
+          <p class="advanced-filters-panel__eyebrow">Precision Filters</p>
+          <h3>Advanced Filters</h3>
+        </div>
+      </div>
+      <span class="advanced-filters-panel__summary">{{ filterSummary }}</span>
+    </button>
 
-            <v-expansion-panel-text>
-                <v-row>
-                    <!-- Station Filter -->
-                    <v-col cols="12" md="6">
-                        <v-combobox v-model="filters.stations" label="Stations (Optional)"
-                            placeholder="Enter station IDs or names" prepend-inner-icon="mdi-router-wireless" chips
-                            multiple closable-chips clearable hint="Filter by specific stations" persistent-hint>
-                            <template #chip="{ props, item }">
-                                <v-chip v-bind="props" :text="item.value" size="small" closable />
-                            </template>
-                        </v-combobox>
-                    </v-col>
+    <div v-if="isExpanded" class="advanced-filters-panel__body">
+      <div class="advanced-filters-panel__grid">
+        <section class="advanced-filters-panel__section">
+          <div class="advanced-filters-panel__section-heading">
+            <div>
+              <p class="advanced-filters-panel__section-eyebrow">Routing Scope</p>
+              <h4>Stations</h4>
+            </div>
+            <span class="advanced-filters-panel__pill advanced-filters-panel__pill--muted">{{ filters.stations?.length || 0 }} selected</span>
+          </div>
+          <label class="advanced-filters-panel__field">
+            <span>Add station IDs or names</span>
+            <div class="advanced-filters-panel__input-row">
+              <input v-model="stationDraft" type="text" placeholder="Enter station IDs or names"
+                @keydown.enter.prevent="commitArrayDraft('stations')" />
+              <button type="button" class="advanced-filters-panel__button advanced-filters-panel__button--ghost"
+                @click="commitArrayDraft('stations')">
+                Add
+              </button>
+            </div>
+          </label>
+          <p class="advanced-filters-panel__helper-copy">Filter by specific stations without changing the broader DUT selection.</p>
+          <div v-if="filters.stations?.length" class="advanced-filters-panel__token-row">
+            <button v-for="station in filters.stations" :key="station" type="button" class="advanced-filters-panel__token"
+              @click="removeArrayValue('stations', station)">
+              <span>{{ station }}</span>
+              <Icon icon="mdi:close" />
+            </button>
+          </div>
+        </section>
 
-                    <!-- Device Filter -->
-                    <v-col cols="12" md="6">
-                        <v-combobox v-model="filters.device_identifiers" label="Devices (Optional)"
-                            placeholder="Enter device IDs or names" prepend-inner-icon="mdi-chip" chips multiple
-                            closable-chips clearable hint="Filter by specific devices" persistent-hint>
-                            <template #chip="{ props, item }">
-                                <v-chip v-bind="props" :text="item.value" size="small" closable />
-                            </template>
-                        </v-combobox>
-                    </v-col>
+        <section class="advanced-filters-panel__section">
+          <div class="advanced-filters-panel__section-heading">
+            <div>
+              <p class="advanced-filters-panel__section-eyebrow">Device Scope</p>
+              <h4>Devices</h4>
+            </div>
+            <span class="advanced-filters-panel__pill advanced-filters-panel__pill--muted">{{ filters.device_identifiers?.length || 0 }} selected</span>
+          </div>
+          <label class="advanced-filters-panel__field">
+            <span>Add device IDs or names</span>
+            <div class="advanced-filters-panel__input-row">
+              <input v-model="deviceDraft" type="text" placeholder="Enter device IDs or names"
+                @keydown.enter.prevent="commitArrayDraft('device_identifiers')" />
+              <button type="button" class="advanced-filters-panel__button advanced-filters-panel__button--ghost"
+                @click="commitArrayDraft('device_identifiers')">
+                Add
+              </button>
+            </div>
+          </label>
+          <p class="advanced-filters-panel__helper-copy">Limit the request to a focused device subset when a DUT spans multiple hardware contexts.</p>
+          <div v-if="filters.device_identifiers?.length" class="advanced-filters-panel__token-row">
+            <button v-for="device in filters.device_identifiers" :key="device" type="button" class="advanced-filters-panel__token"
+              @click="removeArrayValue('device_identifiers', device)">
+              <span>{{ device }}</span>
+              <Icon icon="mdi:close" />
+            </button>
+          </div>
+        </section>
 
-                    <!-- Site Filter -->
-                    <v-col cols="12" md="6">
-                        <v-text-field v-model="filters.site_identifier" label="Site (Optional)"
-                            placeholder="e.g., 2 or PTB" prepend-inner-icon="mdi-office-building" clearable
-                            hint="Site ID or name" persistent-hint />
-                    </v-col>
+        <section class="advanced-filters-panel__section advanced-filters-panel__section--compact">
+          <div class="advanced-filters-panel__section-heading">
+            <div>
+              <p class="advanced-filters-panel__section-eyebrow">Location</p>
+              <h4>Site</h4>
+            </div>
+          </div>
+          <label class="advanced-filters-panel__field">
+            <span>Site ID or name</span>
+            <input v-model="filters.site_identifier" type="text" placeholder="e.g., 2 or PTB" />
+          </label>
+        </section>
 
-                    <!-- Model Filter -->
-                    <v-col cols="12" md="6">
-                        <v-text-field v-model="filters.model_identifier" label="Model (Optional)"
-                            placeholder="e.g., 44 or HH5K" prepend-inner-icon="mdi-package-variant" clearable
-                            hint="Model ID or name" persistent-hint />
-                    </v-col>
+        <section class="advanced-filters-panel__section advanced-filters-panel__section--compact">
+          <div class="advanced-filters-panel__section-heading">
+            <div>
+              <p class="advanced-filters-panel__section-eyebrow">Product</p>
+              <h4>Model</h4>
+            </div>
+          </div>
+          <label class="advanced-filters-panel__field">
+            <span>Model ID or name</span>
+            <input v-model="filters.model_identifier" type="text" placeholder="e.g., 44 or HH5K" />
+          </label>
+        </section>
 
-                    <!-- Test Item Include Patterns -->
-                    <v-col cols="12">
-                        <v-combobox v-model="filters.test_item_filters" label="Include Test Patterns (Optional)"
-                            placeholder="e.g., WiFi_TX_POW_6185_11AX_MCS11_B160" prepend-inner-icon="mdi-filter-plus"
-                            chips multiple closable-chips clearable
-                            hint="Regex patterns to include specific measurements" persistent-hint>
-                            <template #chip="{ props, item }">
-                                <v-chip v-bind="props" :text="item.value" size="small" color="success" variant="tonal"
-                                    closable />
-                            </template>
-                        </v-combobox>
-                    </v-col>
+        <section class="advanced-filters-panel__section advanced-filters-panel__section--wide advanced-filters-panel__section--success">
+          <div class="advanced-filters-panel__section-heading">
+            <div>
+              <p class="advanced-filters-panel__section-eyebrow">Inclusion Rules</p>
+              <h4>Include Test Patterns</h4>
+            </div>
+            <span class="advanced-filters-panel__pill advanced-filters-panel__pill--success">{{ filters.test_item_filters?.length || 0 }} active</span>
+          </div>
+          <label class="advanced-filters-panel__field">
+            <span>Add regex include patterns</span>
+            <div class="advanced-filters-panel__input-row">
+              <input v-model="includeDraft" type="text" placeholder="e.g., WiFi_TX_POW_6185_11AX_MCS11_B160"
+                @keydown.enter.prevent="commitArrayDraft('test_item_filters')" />
+              <button type="button" class="advanced-filters-panel__button advanced-filters-panel__button--success"
+                @click="commitArrayDraft('test_item_filters')">
+                Add
+              </button>
+            </div>
+          </label>
+          <p class="advanced-filters-panel__helper-copy">Regex patterns here narrow the measurements included in hierarchical analysis.</p>
+          <div v-if="filters.test_item_filters?.length" class="advanced-filters-panel__token-row">
+            <button v-for="pattern in filters.test_item_filters" :key="pattern" type="button"
+              class="advanced-filters-panel__token advanced-filters-panel__token--success"
+              @click="removeArrayValue('test_item_filters', pattern)">
+              <span>{{ pattern }}</span>
+              <Icon icon="mdi:close" />
+            </button>
+          </div>
+        </section>
 
-                    <!-- Test Item Exclude Patterns -->
-                    <v-col cols="12">
-                        <v-combobox v-model="filters.exclude_test_item_filters" label="Exclude Test Patterns (Optional)"
-                            placeholder="e.g., WiFi_PA_POW_OLD_6985_11AX_MCS9_B160"
-                            prepend-inner-icon="mdi-filter-minus" chips multiple closable-chips clearable
-                            hint="Regex patterns to exclude specific measurements" persistent-hint>
-                            <template #chip="{ props, item }">
-                                <v-chip v-bind="props" :text="item.value" size="small" color="error" variant="tonal"
-                                    closable />
-                            </template>
-                        </v-combobox>
-                    </v-col>
+        <section class="advanced-filters-panel__section advanced-filters-panel__section--wide advanced-filters-panel__section--danger">
+          <div class="advanced-filters-panel__section-heading">
+            <div>
+              <p class="advanced-filters-panel__section-eyebrow">Exclusion Rules</p>
+              <h4>Exclude Test Patterns</h4>
+            </div>
+            <span class="advanced-filters-panel__pill advanced-filters-panel__pill--danger">{{ filters.exclude_test_item_filters?.length || 0 }} active</span>
+          </div>
+          <label class="advanced-filters-panel__field">
+            <span>Add regex exclude patterns</span>
+            <div class="advanced-filters-panel__input-row">
+              <input v-model="excludeDraft" type="text" placeholder="e.g., WiFi_PA_POW_OLD_6985_11AX_MCS9_B160"
+                @keydown.enter.prevent="commitArrayDraft('exclude_test_item_filters')" />
+              <button type="button" class="advanced-filters-panel__button advanced-filters-panel__button--danger"
+                @click="commitArrayDraft('exclude_test_item_filters')">
+                Add
+              </button>
+            </div>
+          </label>
+          <p class="advanced-filters-panel__helper-copy">Use this when older, fallback, or noisy measurements should stay out of the score path.</p>
+          <div v-if="filters.exclude_test_item_filters?.length" class="advanced-filters-panel__token-row">
+            <button v-for="pattern in filters.exclude_test_item_filters" :key="pattern" type="button"
+              class="advanced-filters-panel__token advanced-filters-panel__token--danger"
+              @click="removeArrayValue('exclude_test_item_filters', pattern)">
+              <span>{{ pattern }}</span>
+              <Icon icon="mdi:close" />
+            </button>
+          </div>
+        </section>
 
-                    <!-- Criteria File Upload -->
-                    <v-col cols="12">
-                        <v-file-input v-model="criteriaFileArray" label="Criteria JSON File (Optional)"
-                            placeholder="Upload criteria JSON configuration" prepend-inner-icon="mdi-file-upload"
-                            accept=".json,application/json" clearable show-size
-                            hint="Upload .json criteria file" persistent-hint
-                            @update:model-value="handleFileChange">
-                            <template v-if="filters.criteria_file" #append>
-                                <v-chip size="small" color="primary">
-                                    {{ formatFileSize(filters.criteria_file.size) }}
-                                </v-chip>
-                            </template>
-                        </v-file-input>
-                    </v-col>
+        <section class="advanced-filters-panel__section advanced-filters-panel__section--wide">
+          <div class="advanced-filters-panel__section-heading">
+            <div>
+              <p class="advanced-filters-panel__section-eyebrow">Criteria Payload</p>
+              <h4>Criteria JSON File</h4>
+            </div>
+            <span v-if="filters.criteria_file" class="advanced-filters-panel__pill advanced-filters-panel__pill--primary">{{ formatFileSize(filters.criteria_file.size) }}</span>
+          </div>
+          <label class="advanced-filters-panel__field">
+            <span>Upload a criteria JSON configuration</span>
+            <input type="file" accept=".json,application/json" @change="handleFileChange" />
+          </label>
+          <p class="advanced-filters-panel__helper-copy">Attach an explicit criteria map when the default scoring criteria should be overridden.</p>
+          <div v-if="filters.criteria_file" class="advanced-filters-panel__file-strip">
+            <div>
+              <strong>{{ filters.criteria_file.name }}</strong>
+              <span>{{ formatFileSize(filters.criteria_file.size) }}</span>
+            </div>
+            <button type="button" class="advanced-filters-panel__button advanced-filters-panel__button--ghost"
+              @click="clearCriteriaFile">
+              Remove
+            </button>
+          </div>
+        </section>
+      </div>
 
-                    <!-- Action Buttons -->
-                    <v-col cols="12" class="d-flex justify-space-between">
-                        <v-btn variant="text" prepend-icon="mdi-refresh" @click="clearFilters">
-                            Clear Filters
-                        </v-btn>
-
-                        <v-btn color="primary" variant="outlined" prepend-icon="mdi-check" @click="applyFilters">
-                            Apply Filters
-                        </v-btn>
-                    </v-col>
-                </v-row>
-            </v-expansion-panel-text>
-        </v-expansion-panel>
-    </v-expansion-panels>
+      <div class="advanced-filters-panel__actions">
+        <button type="button" class="advanced-filters-panel__button advanced-filters-panel__button--ghost"
+          @click="clearFilters">
+          Clear Filters
+        </button>
+        <button type="button" class="advanced-filters-panel__button advanced-filters-panel__button--primary"
+          @click="applyFilters">
+          Apply Filters
+        </button>
+      </div>
+    </div>
+  </section>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 
 // Props
@@ -137,9 +226,12 @@ const emit = defineEmits<{
 }>()
 
 // State
-const panel = ref<number | undefined>(undefined) // undefined = collapsed
+const isExpanded = ref(false)
 const filters = ref<Props['modelValue']>({ ...props.modelValue })
-const criteriaFileArray = ref<File[]>([])
+const stationDraft = ref('')
+const deviceDraft = ref('')
+const includeDraft = ref('')
+const excludeDraft = ref('')
 
 // Computed
 const filterSummary = computed(() => {
@@ -180,17 +272,60 @@ const filterSummary = computed(() => {
 })
 
 // Methods
-function handleFileChange(files: File | File[] | null) {
-  if (files) {
-    const fileArray = Array.isArray(files) ? files : [files]
-    if (fileArray.length > 0) {
-      filters.value.criteria_file = fileArray[0]
-    } else {
-      filters.value.criteria_file = null
-    }
-  } else {
-    filters.value.criteria_file = null
+function normalizeDraft(value: string): string {
+  return value.trim().replace(/,+$/, '')
+}
+
+function commitArrayDraft(
+  key:
+    | 'stations'
+    | 'device_identifiers'
+    | 'test_item_filters'
+    | 'exclude_test_item_filters',
+) {
+  const source =
+    key === 'stations'
+      ? stationDraft
+      : key === 'device_identifiers'
+        ? deviceDraft
+        : key === 'test_item_filters'
+          ? includeDraft
+          : excludeDraft
+
+  const value = normalizeDraft(source.value)
+  if (!value) {
+    source.value = ''
+    return
   }
+
+  const currentValues = filters.value[key] || []
+  if (!currentValues.includes(value)) {
+    filters.value[key] = [...currentValues, value]
+  }
+
+  source.value = ''
+}
+
+function removeArrayValue(
+  key:
+    | 'stations'
+    | 'device_identifiers'
+    | 'test_item_filters'
+    | 'exclude_test_item_filters',
+  value: string,
+) {
+  filters.value[key] = (filters.value[key] || []).filter((entry) => entry !== value)
+}
+
+function handleFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  const file = input.files?.[0] || null
+  filters.value.criteria_file = file
+  emitChange()
+}
+
+function clearCriteriaFile() {
+  filters.value.criteria_file = null
   emitChange()
 }
 
@@ -212,7 +347,10 @@ function clearFilters() {
     exclude_test_item_filters: [],
     criteria_file: null,
   }
-  criteriaFileArray.value = []
+  stationDraft.value = ''
+  deviceDraft.value = ''
+  includeDraft.value = ''
+  excludeDraft.value = ''
   emitChange()
 }
 
@@ -238,19 +376,292 @@ watch(
   () => props.modelValue,
   (newValue) => {
     filters.value = { ...newValue }
-    if (newValue.criteria_file) {
-      criteriaFileArray.value = [newValue.criteria_file]
-    } else {
-      criteriaFileArray.value = []
-    }
   },
   { immediate: true },
 )
 </script>
 
 <style scoped>
-.rotate-180 {
-    transform: rotate(180deg);
-    transition: transform 0.3s ease;
+.advanced-filters-panel {
+  border: 1px solid var(--app-border);
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(circle at top right, rgba(20, 113, 153, 0.1), transparent 34%),
+    rgba(255, 251, 247, 0.82);
+  overflow: hidden;
+}
+
+.advanced-filters-panel__toggle,
+.advanced-filters-panel__input-row,
+.advanced-filters-panel__section-heading,
+.advanced-filters-panel__actions,
+.advanced-filters-panel__file-strip,
+.advanced-filters-panel__toggle-copy,
+.advanced-filters-panel__token,
+.advanced-filters-panel__button {
+  display: flex;
+  align-items: center;
+}
+
+.advanced-filters-panel__toggle,
+.advanced-filters-panel__section-heading,
+.advanced-filters-panel__actions,
+.advanced-filters-panel__file-strip {
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.advanced-filters-panel__toggle {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--app-ink);
+  cursor: pointer;
+  padding: 1rem 1.15rem;
+  text-align: left;
+}
+
+.advanced-filters-panel__toggle-copy {
+  gap: 0.85rem;
+}
+
+.advanced-filters-panel__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+  transition: transform 180ms ease;
+}
+
+.advanced-filters-panel__icon.is-open {
+  transform: rotate(180deg);
+}
+
+.advanced-filters-panel__eyebrow,
+.advanced-filters-panel__section-eyebrow,
+.advanced-filters-panel__helper-copy {
+  margin: 0;
+  color: var(--app-muted);
+}
+
+.advanced-filters-panel__eyebrow,
+.advanced-filters-panel__section-eyebrow {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.advanced-filters-panel__toggle h3,
+.advanced-filters-panel__section-heading h4 {
+  margin: 0.2rem 0 0;
+}
+
+.advanced-filters-panel__summary {
+  color: var(--app-muted);
+  font-size: 0.9rem;
+  max-width: 36rem;
+}
+
+.advanced-filters-panel__body {
+  border-top: 1px solid var(--app-border);
+  padding: 1rem 1.15rem 1.15rem;
+}
+
+.advanced-filters-panel__grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.advanced-filters-panel__section {
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 251, 247, 0.9);
+  padding: 1rem;
+  display: grid;
+  gap: 0.9rem;
+}
+
+.advanced-filters-panel__section--compact {
+  align-content: start;
+}
+
+.advanced-filters-panel__section--wide {
+  grid-column: 1 / -1;
+}
+
+.advanced-filters-panel__section--success {
+  background: linear-gradient(145deg, rgba(20, 88, 71, 0.06), rgba(255, 251, 247, 0.96));
+}
+
+.advanced-filters-panel__section--danger {
+  background: linear-gradient(145deg, rgba(189, 64, 64, 0.06), rgba(255, 251, 247, 0.96));
+}
+
+.advanced-filters-panel__field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.advanced-filters-panel__field span:first-child {
+  color: var(--app-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.advanced-filters-panel__field input {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  padding: 0.82rem 0.95rem;
+}
+
+.advanced-filters-panel__input-row {
+  gap: 0.65rem;
+}
+
+.advanced-filters-panel__input-row input {
+  flex: 1;
+}
+
+.advanced-filters-panel__token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+}
+
+.advanced-filters-panel__button,
+.advanced-filters-panel__token {
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  cursor: pointer;
+  gap: 0.45rem;
+  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+}
+
+.advanced-filters-panel__button:hover,
+.advanced-filters-panel__token:hover {
+  transform: translateY(-1px);
+}
+
+.advanced-filters-panel__button {
+  justify-content: center;
+  padding: 0.75rem 0.95rem;
+  font-weight: 700;
+}
+
+.advanced-filters-panel__button--ghost {
+  color: #4f5d6d;
+}
+
+.advanced-filters-panel__button--primary {
+  border-color: rgba(40, 96, 163, 0.22);
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.advanced-filters-panel__button--success {
+  border-color: rgba(20, 88, 71, 0.22);
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.advanced-filters-panel__button--danger {
+  border-color: rgba(189, 64, 64, 0.22);
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.advanced-filters-panel__token {
+  padding: 0.55rem 0.8rem;
+}
+
+.advanced-filters-panel__token--success {
+  border-color: rgba(20, 88, 71, 0.22);
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.advanced-filters-panel__token--danger {
+  border-color: rgba(189, 64, 64, 0.22);
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.advanced-filters-panel__pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.advanced-filters-panel__pill--muted {
+  background: rgba(120, 129, 143, 0.12);
+  color: #4f5d6d;
+}
+
+.advanced-filters-panel__pill--primary {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.advanced-filters-panel__pill--success {
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.advanced-filters-panel__pill--danger {
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.advanced-filters-panel__file-strip {
+  border: 1px dashed rgba(40, 96, 163, 0.24);
+  border-radius: 1rem;
+  background: rgba(40, 96, 163, 0.06);
+  padding: 0.85rem 1rem;
+}
+
+.advanced-filters-panel__file-strip strong,
+.advanced-filters-panel__file-strip span {
+  display: block;
+}
+
+.advanced-filters-panel__file-strip span {
+  color: var(--app-muted);
+}
+
+.advanced-filters-panel__actions {
+  margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .advanced-filters-panel__toggle,
+  .advanced-filters-panel__section-heading,
+  .advanced-filters-panel__actions,
+  .advanced-filters-panel__file-strip,
+  .advanced-filters-panel__input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .advanced-filters-panel__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .advanced-filters-panel__summary {
+    max-width: none;
+  }
 }
 </style>

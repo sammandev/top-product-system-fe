@@ -2,7 +2,7 @@
  * iPLAS IndexedDB Query Helpers
  *
  * Advanced query utilities for efficient pagination, filtering, and sorting
- * of test records stored in IndexedDB. Designed for use with v-data-table-server
+ * of test records stored in IndexedDB. Designed for use with server-driven tables
  * to provide "fake" server-side pagination that actually queries locally.
  *
  * Key Features:
@@ -62,7 +62,7 @@ export interface SortOptions {
 }
 
 /**
- * Pagination options (compatible with v-data-table-server)
+ * Pagination options for server-driven tables
  */
 export interface TablePaginationOptions {
   page: number
@@ -71,7 +71,7 @@ export interface TablePaginationOptions {
 }
 
 /**
- * Result from paginated query (compatible with v-data-table-server)
+ * Result from a paginated table query
  */
 export interface TableQueryResult {
   items: IplasDbRecord[]
@@ -168,10 +168,10 @@ async function queryRecordsByDateCursor(
 /**
  * Query records with filtering, sorting, and pagination
  *
- * This is the main query function designed for v-data-table-server's loadItems handler.
+ * This is the main query function designed for a table component's loadItems handler.
  * It queries IndexedDB locally, providing instant response without network latency.
  *
- * @param options - Pagination options from v-data-table-server
+ * @param options - Pagination options from the table layer
  * @param filter - Filter options
  * @returns Items for current page and total count
  */

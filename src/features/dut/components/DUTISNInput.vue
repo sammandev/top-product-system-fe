@@ -1,106 +1,136 @@
 <template>
-    <v-card>
-        <v-card-title>
-            <v-icon class="mr-2">mdi-barcode</v-icon>
-            DUT ISN Search
-        </v-card-title>
+  <AppPanel title="DUT ISN Search" eyebrow="Input" description="Add DUT serials one by one or paste a batch, then refine the optional site and model hints emitted to the parent flow." tone="cool">
+    <div class="dut-isn-input__stack">
+      <div class="dut-isn-input__toggle-row">
+        <button
+          type="button"
+          class="dut-isn-input__toggle-chip"
+          :class="{ 'is-active': inputMode === 'multiple' }"
+          @click="inputMode = 'multiple'"
+        >
+          ISN Search
+        </button>
+        <button
+          type="button"
+          class="dut-isn-input__toggle-chip"
+          :class="{ 'is-active': inputMode === 'bulk' }"
+          @click="inputMode = 'bulk'"
+        >
+          Bulk Paste
+        </button>
+      </div>
 
-        <v-card-text class="pa-4">
-            <!-- Input Mode Toggle -->
-            <v-btn-toggle v-model="inputMode" mandatory color="primary" class="mb-4">
-                <v-btn value="multiple" size="small">
-                    <v-icon start>mdi-format-list-bulleted</v-icon>
-                    ISN Search
-                </v-btn>
-                <v-btn value="bulk" size="small">
-                    <v-icon start>mdi-text-box-multiple</v-icon>
-                    Bulk Paste
-                </v-btn>
-            </v-btn-toggle>
+      <label v-if="inputMode === 'multiple'" class="dut-isn-input__field">
+        <span>DUT ISNs</span>
+        <div class="dut-isn-input__entry-row">
+          <input
+            v-model="isnEntry"
+            type="text"
+            placeholder="Type ISN and press Enter"
+            @keydown.enter.prevent="commitISNEntry"
+            @blur="commitISNEntry"
+          />
+          <button type="button" class="dut-isn-input__button dut-isn-input__button--primary" @click="commitISNEntry">
+            Add
+          </button>
+        </div>
+        <small>Type an ISN and press Enter to add multiple serials to the analysis queue.</small>
+      </label>
 
-            <v-row>
-                <!-- Multiple ISNs Combobox -->
-                <v-col v-if="inputMode === 'multiple'" cols="12">
-                    <v-combobox v-model="selectedISNs" label="DUT ISNs" placeholder="Type ISN and press Enter"
-                        prepend-inner-icon="mdi-barcode-scan" variant="outlined" chips multiple closable-chips clearable
-                        :rules="[rules.minOneISN]" hint="Type ISN and press Enter to add multiple" persistent-hint>
-                        <template #chip="{ props, item }">
-                            <v-chip v-bind="props" :text="item.value" closable />
-                        </template>
-                    </v-combobox>
-                </v-col>
+      <label v-else class="dut-isn-input__field">
+        <span>Bulk ISN Input</span>
+        <textarea
+          v-model="bulkText"
+          rows="5"
+          placeholder="Paste multiple ISNs, one per line, comma-separated, or space-separated"
+        />
+        <div class="dut-isn-input__entry-row dut-isn-input__entry-row--end">
+          <small>Paste ISNs separated by newlines, commas, or spaces.</small>
+          <button type="button" class="dut-isn-input__button dut-isn-input__button--primary" :disabled="!bulkText" @click="parseBulkISNs">
+            Parse
+          </button>
+        </div>
+      </label>
 
-                <!-- Bulk Paste Textarea -->
-                <v-col v-if="inputMode === 'bulk'" cols="12">
-                    <v-textarea v-model="bulkText" label="Bulk ISN Input"
-                        placeholder="Paste multiple ISNs (one per line, comma-separated, or space-separated)&#10;Example:&#10;260884980003907&#10;DM2527470036123&#10;260884980003908"
-                        prepend-inner-icon="mdi-text-box-multiple" variant="outlined" rows="5" clearable
-                        hint="Paste ISNs separated by newlines, commas, or spaces" persistent-hint>
-                        <template #append>
-                            <v-btn color="primary" variant="flat" size="small" :disabled="!bulkText"
-                                @click="parseBulkISNs">
-                                Parse
-                            </v-btn>
-                        </template>
-                    </v-textarea>
-                </v-col>
+      <section v-if="selectedISNs.length > 0" class="dut-isn-input__section">
+        <div class="dut-isn-input__section-header">
+          <strong>Selected ISNs ({{ selectedISNs.length }})</strong>
+          <button type="button" class="dut-isn-input__link" @click="clearAll">Clear All</button>
+        </div>
+        <div class="dut-isn-input__token-row">
+          <button v-for="(isn, index) in selectedISNs" :key="`${isn}-${index}`" type="button" class="dut-isn-input__token" @click="removeISN(index)">
+            <span>{{ isn }}</span>
+            <span aria-hidden="true">x</span>
+          </button>
+        </div>
+      </section>
 
-                <!-- Selected ISNs Display -->
-                <v-col v-if="selectedISNs.length > 0" cols="12">
-                    <div class="d-flex justify-space-between align-center mb-2">
-                        <span class="text-subtitle-2">
-                            Selected ISNs ({{ selectedISNs.length }})
-                        </span>
-                        <v-btn variant="text" size="small" color="error" @click="clearAll">
-                            Clear All
-                        </v-btn>
-                    </div>
+      <div class="dut-isn-input__grid">
+        <label class="dut-isn-input__field">
+          <span>Site Identifier (Optional)</span>
+          <div class="dut-isn-input__entry-row">
+            <input
+              v-model="siteEntry"
+              type="text"
+              list="dut-isn-input-sites"
+              placeholder="Auto-populated from DUT ISNs"
+              @keydown.enter.prevent="commitSiteEntry"
+              @blur="commitSiteEntry"
+            />
+            <button type="button" class="dut-isn-input__button dut-isn-input__button--ghost" @click="commitSiteEntry">
+              Add
+            </button>
+          </div>
+          <datalist id="dut-isn-input-sites">
+            <option v-for="site in availableSites" :key="site" :value="site" />
+          </datalist>
+          <small>Sites detected from selected ISNs. Add or remove tokens to refine the scope.</small>
+          <div v-if="selectedSites.length > 0" class="dut-isn-input__token-row">
+            <button v-for="site in selectedSites" :key="site" type="button" class="dut-isn-input__token dut-isn-input__token--info" @click="removeSite(site)">
+              <span>{{ site }}</span>
+              <span aria-hidden="true">x</span>
+            </button>
+          </div>
+        </label>
 
-                    <v-chip-group column>
-                        <v-chip v-for="(isn, index) in selectedISNs" :key="index" closable color="primary"
-                            variant="tonal" @click:close="removeISN(index)">
-                            {{ isn }}
-                        </v-chip>
-                    </v-chip-group>
-                </v-col>
+        <label class="dut-isn-input__field">
+          <span>Model Identifier (Optional)</span>
+          <div class="dut-isn-input__entry-row">
+            <input
+              v-model="modelEntry"
+              type="text"
+              list="dut-isn-input-models"
+              placeholder="Auto-populated from DUT ISNs"
+              @keydown.enter.prevent="commitModelEntry"
+              @blur="commitModelEntry"
+            />
+            <button type="button" class="dut-isn-input__button dut-isn-input__button--ghost" @click="commitModelEntry">
+              Add
+            </button>
+          </div>
+          <datalist id="dut-isn-input-models">
+            <option v-for="model in availableModels" :key="model" :value="model" />
+          </datalist>
+          <small>Models detected from selected ISNs. Leave empty to keep the parent flow unconstrained.</small>
+          <div v-if="selectedModels.length > 0" class="dut-isn-input__token-row">
+            <button v-for="model in selectedModels" :key="model" type="button" class="dut-isn-input__token dut-isn-input__token--info" @click="removeModel(model)">
+              <span>{{ model }}</span>
+              <span aria-hidden="true">x</span>
+            </button>
+          </div>
+        </label>
+      </div>
 
-                <!-- Site Identifier (Auto-populated) -->
-                <v-col cols="12" md="6">
-                    <v-combobox v-model="selectedSites" :items="availableSites" label="Site Identifier (Optional)"
-                        placeholder="Auto-populated from DUT ISNs" prepend-inner-icon="mdi-office-building" multiple
-                        chips closable-chips clearable hint="Sites detected from selected ISNs" persistent-hint>
-                        <template #chip="{ props, item }">
-                            <v-chip v-bind="props" :text="String(item.value || item)" closable size="small" color="info"
-                                variant="tonal" />
-                        </template>
-                    </v-combobox>
-                </v-col>
-
-                <!-- Model Identifier (Auto-populated) -->
-                <v-col cols="12" md="6">
-                    <v-combobox v-model="selectedModels" :items="availableModels" label="Model Identifier (Optional)"
-                        placeholder="Auto-populated from DUT ISNs" prepend-inner-icon="mdi-cube-outline" multiple chips
-                        closable-chips clearable hint="Models detected from selected ISNs" persistent-hint>
-                        <template #chip="{ props, item }">
-                            <v-chip v-bind="props" :text="String(item.value || item)" closable size="small" color="info"
-                                variant="tonal" />
-                        </template>
-                    </v-combobox>
-                </v-col>
-
-                <!-- Validation Message -->
-                <v-col v-if="validationMessage" cols="12">
-                    <v-alert :type="validationType" density="compact">
-                        {{ validationMessage }}
-                    </v-alert>
-                </v-col>
-            </v-row>
-        </v-card-text>
-    </v-card>
+      <div v-if="validationMessage" class="dut-isn-input__notice" :class="`dut-isn-input__notice--${validationType}`">
+        {{ validationMessage }}
+      </div>
+    </div>
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { AppPanel } from '@/shared/ui'
 
 // Props
 interface Props {
@@ -128,6 +158,7 @@ const emit = defineEmits<{
 const inputMode = ref<'multiple' | 'bulk'>('multiple')
 const selectedISNs = ref<string[]>(props.modelValue)
 const bulkText = ref('')
+const isnEntry = ref('')
 const validationMessage = ref<string | null>(null)
 const validationType = ref<'success' | 'warning' | 'error'>('success')
 
@@ -136,20 +167,8 @@ const selectedSites = ref<string[]>(props.siteIdentifiers)
 const selectedModels = ref<string[]>(props.modelIdentifiers)
 const availableSites = ref<string[]>([])
 const availableModels = ref<string[]>([])
-
-// Validation Rules
-const rules = {
-  required: (value: string) => !!value || 'ISN is required',
-  isnFormat: (value: string) => {
-    // Accept any non-empty alphanumeric string
-    if (!value) return true
-    const isn = value.trim()
-    return /^[A-Za-z0-9]+$/.test(isn) || 'ISN should contain only letters and numbers'
-  },
-  minOneISN: (value: string[]) => {
-    return value.length > 0 || 'At least one ISN is required'
-  },
-}
+const siteEntry = ref('')
+const modelEntry = ref('')
 
 // Computed
 const isValid = computed(() => {
@@ -157,6 +176,40 @@ const isValid = computed(() => {
 })
 
 // Methods
+function sanitizeToken(value: string): string {
+  return value.replace(/[^A-Za-z0-9]/g, '').trim()
+}
+
+function normalizeFreeformToken(value: string): string {
+  return value.trim()
+}
+
+function addUniqueValue(items: string[], value: string): string[] {
+  if (!value || items.includes(value)) {
+    return items
+  }
+
+  return [...items, value]
+}
+
+function commitISNEntry() {
+  const nextValue = sanitizeToken(isnEntry.value)
+  isnEntry.value = ''
+
+  if (!nextValue) {
+    return
+  }
+
+  const nextISNs = addUniqueValue(selectedISNs.value, nextValue)
+  if (nextISNs.length > props.maxISNs) {
+    validationMessage.value = `ISN limit is ${props.maxISNs}.`
+    validationType.value = 'warning'
+    return
+  }
+
+  selectedISNs.value = nextISNs
+}
+
 function parseBulkISNs() {
   if (!bulkText.value) return
 
@@ -189,13 +242,42 @@ function parseBulkISNs() {
   }, 3000)
 }
 
+function commitSiteEntry() {
+  const nextValue = normalizeFreeformToken(siteEntry.value)
+  siteEntry.value = ''
+  if (!nextValue) {
+    return
+  }
+
+  selectedSites.value = addUniqueValue(selectedSites.value, nextValue)
+}
+
+function commitModelEntry() {
+  const nextValue = normalizeFreeformToken(modelEntry.value)
+  modelEntry.value = ''
+  if (!nextValue) {
+    return
+  }
+
+  selectedModels.value = addUniqueValue(selectedModels.value, nextValue)
+}
+
 function removeISN(index: number) {
   selectedISNs.value.splice(index, 1)
+}
+
+function removeSite(site: string) {
+  selectedSites.value = selectedSites.value.filter((item) => item !== site)
+}
+
+function removeModel(model: string) {
+  selectedModels.value = selectedModels.value.filter((item) => item !== model)
 }
 
 function clearAll() {
   selectedISNs.value = []
   bulkText.value = ''
+  isnEntry.value = ''
   validationMessage.value = null
 }
 
@@ -307,7 +389,160 @@ defineExpose({
 </script>
 
 <style scoped>
-.v-btn-toggle {
-    width: 100%;
+.dut-isn-input__stack,
+.dut-isn-input__field,
+.dut-isn-input__section,
+.dut-isn-input__grid,
+.dut-isn-input__section-header {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.dut-isn-input__toggle-row,
+.dut-isn-input__token-row,
+.dut-isn-input__entry-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.dut-isn-input__entry-row--end {
+  justify-content: space-between;
+}
+
+.dut-isn-input__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dut-isn-input__field span,
+.dut-isn-input__section-header strong {
+  color: var(--app-ink);
+}
+
+.dut-isn-input__field span {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.dut-isn-input__field small,
+.dut-isn-input__notice {
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.dut-isn-input__field input,
+.dut-isn-input__field textarea {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  padding: 0.8rem 0.9rem;
+  font: inherit;
+}
+
+.dut-isn-input__field textarea {
+  resize: vertical;
+}
+
+.dut-isn-input__button,
+.dut-isn-input__toggle-chip,
+.dut-isn-input__token,
+.dut-isn-input__link {
+  min-height: 2.7rem;
+  border-radius: 0.95rem;
+  border: 1px solid var(--app-border);
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.dut-isn-input__button,
+.dut-isn-input__toggle-chip,
+.dut-isn-input__token {
+  padding: 0.6rem 0.9rem;
+}
+
+.dut-isn-input__link {
+  padding: 0.55rem 0.9rem;
+}
+
+.dut-isn-input__button:hover,
+.dut-isn-input__toggle-chip:hover,
+.dut-isn-input__token:hover,
+.dut-isn-input__link:hover {
+  transform: translateY(-1px);
+}
+
+.dut-isn-input__button--primary,
+.dut-isn-input__toggle-chip.is-active {
+  background: linear-gradient(135deg, #145847, #1b6c58);
+  border-color: #145847;
+  color: white;
+}
+
+.dut-isn-input__button--ghost,
+.dut-isn-input__link,
+.dut-isn-input__token {
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.dut-isn-input__section {
+  padding: 1rem;
+  border: 1px solid rgba(20, 88, 71, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.dut-isn-input__token {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.dut-isn-input__token--info {
+  border-color: rgba(40, 96, 163, 0.16);
+  background: rgba(40, 96, 163, 0.08);
+  color: #1f4f89;
+}
+
+.dut-isn-input__notice {
+  padding: 0.9rem 1rem;
+  border-radius: 0.95rem;
+  border: 1px solid rgba(40, 96, 163, 0.14);
+  background: rgba(40, 96, 163, 0.08);
+}
+
+.dut-isn-input__notice--success {
+  border-color: rgba(20, 88, 71, 0.16);
+  background: rgba(20, 88, 71, 0.08);
+  color: #145847;
+}
+
+.dut-isn-input__notice--warning {
+  border-color: rgba(169, 102, 34, 0.18);
+  background: rgba(169, 102, 34, 0.1);
+  color: #88551c;
+}
+
+.dut-isn-input__notice--error {
+  border-color: rgba(164, 52, 58, 0.16);
+  background: rgba(164, 52, 58, 0.08);
+  color: #8e3037;
+}
+
+@media (max-width: 760px) {
+  .dut-isn-input__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .dut-isn-input__entry-row--end {
+    justify-content: start;
+  }
 }
 </style>

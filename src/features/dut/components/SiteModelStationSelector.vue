@@ -1,92 +1,65 @@
 <template>
-  <v-card>
-    <v-card-title class="d-flex align-center">
-      <v-icon start>mdi-map-marker-path</v-icon>
-      Site / Model / Station Selection
-    </v-card-title>
+  <AppPanel
+    eyebrow="Routing Context"
+    title="Site / Model / Station Selection"
+    description="Choose the site, device model, and station in order. Downstream options load only after the upstream selection is set."
+    tone="cool"
+  >
+    <div class="site-model-station-selector__grid">
+      <label class="site-model-station-selector__field">
+        <span>Test Site</span>
+        <select :value="selectedSiteId ?? ''" :disabled="loadingSites" @change="handleSiteSelectInput">
+          <option value="">Select a site</option>
+          <option v-for="site in siteItems" :key="site.value" :value="site.value">{{ site.title }}</option>
+        </select>
+        <small>{{ loadingSites ? 'Loading sites...' : siteItems.length ? 'Available test sites from DUT master data.' : 'No sites available.' }}</small>
+        <small v-if="siteError" class="site-model-station-selector__error">{{ siteError }}</small>
+      </label>
 
-    <v-card-text>
-      <v-row>
-        <!-- Site Selector -->
-        <v-col cols="12" md="4">
-          <v-select v-model="selectedSiteId" :items="siteItems" label="Test Site" variant="outlined"
-            density="comfortable" prepend-inner-icon="mdi-office-building" :loading="loadingSites"
-            :disabled="loadingSites" :error-messages="siteError" clearable @update:model-value="handleSiteChange">
-            <template #no-data>
-              <v-list-item>
-                <v-list-item-title class="text-caption text-medium-emphasis">
-                  No sites available
-                </v-list-item-title>
-              </v-list-item>
-            </template>
-          </v-select>
-        </v-col>
+      <label class="site-model-station-selector__field">
+        <span>Device Model</span>
+        <select :value="selectedModelId ?? ''" :disabled="!selectedSiteId || loadingModels" @change="handleModelSelectInput">
+          <option value="">{{ selectedSiteId ? 'Select a model' : 'Select a site first' }}</option>
+          <option v-for="model in modelItems" :key="model.value" :value="model.value">{{ model.title }}</option>
+        </select>
+        <small>{{ loadingModels ? 'Loading models...' : selectedSiteId ? (modelItems.length ? 'Models available for the selected site.' : 'No models available for this site.') : 'Choose a site to load models.' }}</small>
+        <small v-if="modelError" class="site-model-station-selector__error">{{ modelError }}</small>
+      </label>
 
-        <!-- Model Selector -->
-        <v-col cols="12" md="4">
-          <v-select v-model="selectedModelId" :items="modelItems" label="Device Model" variant="outlined"
-            density="comfortable" prepend-inner-icon="mdi-cellphone" :loading="loadingModels"
-            :disabled="!selectedSiteId || loadingModels" :error-messages="modelError" clearable
-            @update:model-value="handleModelChange">
-            <template #no-data>
-              <v-list-item>
-                <v-list-item-title class="text-caption text-medium-emphasis">
-                  {{ selectedSiteId ? 'No models available for this site' : 'Select a site first' }}
-                </v-list-item-title>
-              </v-list-item>
-            </template>
-          </v-select>
-        </v-col>
+      <label class="site-model-station-selector__field">
+        <span>Test Station</span>
+        <select :value="selectedStationId ?? ''" :disabled="!selectedModelId || loadingStations" @change="handleStationSelectInput">
+          <option value="">{{ selectedModelId ? 'Select a station' : 'Select a model first' }}</option>
+          <option v-for="station in stationItems" :key="station.value" :value="station.value">{{ station.title }}</option>
+        </select>
+        <small>{{ loadingStations ? 'Loading stations...' : selectedModelId ? (stationItems.length ? 'Stations available for the selected model.' : 'No stations available for this model.') : 'Choose a model to load stations.' }}</small>
+        <small v-if="stationError" class="site-model-station-selector__error">{{ stationError }}</small>
+      </label>
+    </div>
 
-        <!-- Station Selector -->
-        <v-col cols="12" md="4">
-          <v-select v-model="selectedStationId" :items="stationItems" label="Test Station" variant="outlined"
-            density="comfortable" prepend-inner-icon="mdi-atom-variant" :loading="loadingStations"
-            :disabled="!selectedModelId || loadingStations" :error-messages="stationError" clearable
-            @update:model-value="handleStationChange">
-            <template #no-data>
-              <v-list-item>
-                <v-list-item-title class="text-caption text-medium-emphasis">
-                  {{ selectedModelId ? 'No stations available for this model' : 'Select a model first' }}
-                </v-list-item-title>
-              </v-list-item>
-            </template>
-          </v-select>
-        </v-col>
-      </v-row>
+    <section v-if="isComplete" class="site-model-station-selector__notice site-model-station-selector__notice--success">
+      <strong>Selected</strong>
+      <span>{{ selectedSiteName }} → {{ selectedModelName }} → {{ selectedStationName }}</span>
+    </section>
 
-      <!-- Selection Summary -->
-      <v-alert v-if="isComplete" type="success" variant="tonal" density="compact" class="mt-2">
-        <template #prepend>
-          <v-icon>mdi-check-circle</v-icon>
-        </template>
-        <div class="text-caption">
-          <strong>Selected:</strong> {{ selectedSiteName }} → {{ selectedModelName }} → {{ selectedStationName }}
-        </div>
-      </v-alert>
+    <section v-else-if="showValidation" class="site-model-station-selector__notice site-model-station-selector__notice--warning">
+      Please select Site, Model, and Station to continue.
+    </section>
 
-      <!-- Validation Alert -->
-      <v-alert v-else-if="showValidation" type="warning" variant="tonal" density="compact" class="mt-2">
-        <template #prepend>
-          <v-icon>mdi-alert</v-icon>
-        </template>
-        <div class="text-caption">
-          Please select Site, Model, and Station to continue
-        </div>
-      </v-alert>
-
-      <!-- Error Alert -->
-      <v-alert v-if="error" type="error" variant="tonal" density="compact" class="mt-2" closable
-        @click:close="clearError">
-        {{ error }}
-      </v-alert>
-    </v-card-text>
-  </v-card>
+    <section v-if="error" class="site-model-station-selector__notice site-model-station-selector__notice--danger">
+      <div>
+        <strong>Load failed</strong>
+        <span>{{ error }}</span>
+      </div>
+      <button type="button" class="site-model-station-selector__button" @click="clearError">Dismiss</button>
+    </section>
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import type { DUTModel, DUTSite, DUTStation } from '@/core/types'
+import { AppPanel } from '@/shared'
 import { getErrorMessage } from '@/shared/utils'
 import { useDUTStore } from '../stores'
 
@@ -276,6 +249,23 @@ function handleStationChange(stationId: number | null) {
   emitChange()
 }
 
+function getSelectedIdFromEvent(event: Event): number | null {
+  const value = (event.target as HTMLSelectElement).value
+  return value ? Number(value) : null
+}
+
+function handleSiteSelectInput(event: Event) {
+  handleSiteChange(getSelectedIdFromEvent(event))
+}
+
+function handleModelSelectInput(event: Event) {
+  handleModelChange(getSelectedIdFromEvent(event))
+}
+
+function handleStationSelectInput(event: Event) {
+  handleStationChange(getSelectedIdFromEvent(event))
+}
+
 function emitChange() {
   // Emit v-model update
   emit('update:modelValue', {
@@ -324,4 +314,108 @@ onMounted(() => {
 })
 </script>
 
-<style scoped></style>
+<style scoped>
+.site-model-station-selector__grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.site-model-station-selector__field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.site-model-station-selector__field span {
+  color: var(--app-ink);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.site-model-station-selector__field select {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  padding: 0.82rem 0.95rem;
+}
+
+.site-model-station-selector__field select:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 4px var(--app-ring);
+}
+
+.site-model-station-selector__field select:disabled {
+  cursor: not-allowed;
+  opacity: 0.68;
+}
+
+.site-model-station-selector__field small {
+  color: var(--app-muted);
+}
+
+.site-model-station-selector__error {
+  color: #8f2020;
+}
+
+.site-model-station-selector__notice,
+.site-model-station-selector__button {
+  display: flex;
+}
+
+.site-model-station-selector__notice {
+  margin-top: 1rem;
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.site-model-station-selector__notice strong,
+.site-model-station-selector__notice span {
+  display: block;
+}
+
+.site-model-station-selector__notice--success {
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.site-model-station-selector__notice--warning {
+  background: rgba(184, 118, 38, 0.16);
+  color: #8f5314;
+}
+
+.site-model-station-selector__notice--danger {
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.site-model-station-selector__button {
+  align-items: center;
+  justify-content: center;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  padding: 0.6rem 0.9rem;
+  font-weight: 700;
+}
+
+@media (max-width: 920px) {
+  .site-model-station-selector__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .site-model-station-selector__notice {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+</style>

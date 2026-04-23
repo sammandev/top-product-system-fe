@@ -1,153 +1,173 @@
 <template>
-  <div>
-    <!-- UPDATED: Step 1: ISN Input & Station Lookup Card (like Station Search) -->
-    <v-card elevation="2" class="mb-4">
-      <v-card-title class="d-flex align-center justify-space-between bg-primary">
-        <div class="d-flex align-center">
-          <v-icon class="mr-2">mdi-barcode-scan</v-icon>
-          ISN Search - Custom Configuration
-        </div>
-        <v-btn v-if="isnProjectInfo" color="white" variant="text" prepend-icon="mdi-refresh" size="small"
-          :disabled="loadingTestItems" @click="handleClearAll">
+  <div class="top-product-iplas-isn-shell">
+    <AppPanel
+      eyebrow="Selection Controls"
+      title="ISN Search"
+      description="Build an ISN batch, optionally expand the identifier search, then hand the resulting station set into the same migrated station-configuration workflow used by the station search pane."
+      tone="cool"
+      split-header
+    >
+      <template #header-aside>
+        <button
+          v-if="isnProjectInfo"
+          type="button"
+          class="top-product-iplas-isn-button top-product-iplas-isn-button--ghost"
+          :disabled="loadingTestItems"
+          @click="handleClearAll"
+        >
           Clear All
-        </v-btn>
-      </v-card-title>
-      <v-card-text class="pt-4">
-        <!-- Input Mode Toggle -->
-        <div class="d-flex align-center mb-4">
-          <v-btn-toggle v-model="inputMode" mandatory color="primary">
-            <v-btn value="multiple" size="small">
-              <v-icon start>mdi-format-list-bulleted</v-icon>
-              Multiple ISNs
-            </v-btn>
-            <v-btn value="bulk" size="small">
-              <v-icon start>mdi-text-box-multiple</v-icon>
-              Bulk Paste
-            </v-btn>
-          </v-btn-toggle>
+        </button>
+      </template>
 
-          <v-switch v-model="enableUnifiedSearch" label="Unified Search" color="primary" hide-details density="compact"
-            class="ml-4">
-            <template #label>
-              <span class="text-body-2">Unified Search</span>
-              <v-tooltip activator="parent" location="top" max-width="400">
-                <span>When enabled, searches for all related identifiers (ISN, SSN, MAC) using SFISTSP
-                  lookup (Slower).
-                  This finds all test data from all stations that tested the same DUT, even if
-                  different identifiers were used.</span>
-              </v-tooltip>
-            </template>
-          </v-switch>
+      <div class="top-product-iplas-isn-stack">
+        <div class="top-product-iplas-isn-toolbar">
+          <div class="top-product-iplas-isn-toggle-row">
+            <button
+              type="button"
+              class="top-product-iplas-isn-toggle-chip"
+              :class="{ 'is-active': inputMode === 'multiple' }"
+              @click="inputMode = 'multiple'"
+            >
+              Multiple ISNs
+            </button>
+            <button
+              type="button"
+              class="top-product-iplas-isn-toggle-chip"
+              :class="{ 'is-active': inputMode === 'bulk' }"
+              @click="inputMode = 'bulk'"
+            >
+              Bulk Paste
+            </button>
+          </div>
+
+          <label class="top-product-iplas-isn-toggle-card">
+            <input v-model="enableUnifiedSearch" type="checkbox">
+            <div>
+              <strong>Unified Search</strong>
+              <p>Search related identifiers through SFISTSP to pull DUT history even when different ISN, SSN, or MAC variants were used.</p>
+            </div>
+          </label>
         </div>
 
-        <!-- Multiple ISNs Combobox -->
-        <v-row v-if="inputMode === 'multiple'">
-          <v-col cols="12">
-            <v-combobox v-model="selectedISNs" label="DUT ISNs" placeholder="Type ISN and press Enter"
-              v-model:search="multipleIsnSearchText" prepend-inner-icon="mdi-barcode-scan" variant="outlined"
-              chips multiple closable-chips clearable hint="Press Enter once to add, then press Enter again to search"
-              persistent-hint @keydown.enter="handleMultipleIsnsEnter">
-              <template #chip="{ props, item }">
-                <v-chip v-bind="props" :text="String(item.value || item)" closable />
-              </template>
-              <template #append>
-                <v-btn color="secondary" variant="flat" size="small" :loading="loadingStationLookup"
-                  :disabled="multipleModeIdentifiers.length === 0" prepend-icon="mdi-magnify"
-                  @click="handleLookupStations">
-                  Search
-                </v-btn>
-              </template>
-            </v-combobox>
-          </v-col>
-        </v-row>
+        <label v-if="inputMode === 'multiple'" class="top-product-iplas-isn-field">
+          <span>DUT ISNs</span>
+          <div class="top-product-iplas-isn-entry-row">
+            <input
+              v-model="multipleIsnSearchText"
+              type="text"
+              placeholder="Type ISN and press Enter"
+              @keydown.enter.prevent="commitMultipleIdentifier"
+            >
+            <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--secondary" :disabled="!multipleIsnSearchText.trim()" @click="commitMultipleIdentifier">
+              Add
+            </button>
+            <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--primary" :disabled="multipleModeIdentifiers.length === 0" @click="handleLookupStations">
+              {{ loadingStationLookup ? 'Searching...' : 'Search' }}
+            </button>
+          </div>
+          <small>Press Enter or use Add to queue identifiers, then Search to resolve site, project, and station coverage.</small>
+          <div v-if="selectedISNs.length > 0" class="top-product-iplas-isn-token-row">
+            <button
+              v-for="(isn, index) in selectedISNs"
+              :key="`${isn}-${index}`"
+              type="button"
+              class="top-product-iplas-isn-token"
+              @click="removeSelectedISN(index)"
+            >
+              <span>{{ isn }}</span>
+              <span aria-hidden="true">x</span>
+            </button>
+          </div>
+        </label>
 
-        <!-- Bulk Paste Textarea -->
-        <v-row v-if="inputMode === 'bulk'">
-          <v-col cols="12">
-            <v-textarea v-model="searchIsn" label="Bulk ISN Input"
-              placeholder="Paste multiple ISNs (one per line, comma-separated, or space-separated)&#10;Example:&#10;DM2520270073965&#10;DM2527470036123"
-              prepend-inner-icon="mdi-text-box-multiple" variant="outlined" rows="4" clearable
-              hint="Paste ISNs separated by newlines, commas, or spaces" persistent-hint>
-              <template #append>
-                <v-btn color="secondary" variant="flat" size="small" :loading="loadingStationLookup"
-                  :disabled="!searchIsn?.trim()" prepend-icon="mdi-magnify" @click="handleLookupStations">
-                  Search
-                </v-btn>
-              </template>
-            </v-textarea>
-          </v-col>
-        </v-row>
+        <label v-else class="top-product-iplas-isn-field">
+          <span>Bulk ISN Input</span>
+          <textarea
+            v-model="searchIsn"
+            rows="4"
+            placeholder="Paste multiple ISNs, one per line, comma-separated, or space-separated"
+          />
+          <div class="top-product-iplas-isn-entry-row top-product-iplas-isn-entry-row--end">
+            <small>Paste ISNs separated by newlines, commas, or spaces.</small>
+            <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--primary" :disabled="!searchIsn.trim()" @click="handleLookupStations">
+              {{ loadingStationLookup ? 'Searching...' : 'Search' }}
+            </button>
+          </div>
+        </label>
 
-        <!-- UPDATED: ISN Lookup Results - Site/Project Info -->
-        <v-card v-if="isnProjectInfo" variant="outlined" class="mt-4">
-          <v-card-text class="py-3">
-            <v-row align="center">
-              <v-col cols="auto">
-                <v-icon color="success" size="large">mdi-check-circle</v-icon>
-              </v-col>
-              <v-col>
-                <div class="d-flex flex-wrap align-center gap-3">
-                  <v-chip color="primary" label>
-                    <v-icon start>mdi-barcode-scan</v-icon>
-                    {{ parsedIsns.length }} ISN(s)
-                  </v-chip>
-                  <v-chip color="info" label>
-                    <v-icon start>mdi-map-marker</v-icon>
-                    Site: {{ isnProjectInfo.site }}
-                  </v-chip>
-                  <v-chip color="info" label>
-                    <v-icon start>mdi-folder</v-icon>
-                    Project: {{ isnProjectInfo.project }}
-                  </v-chip>
-                  <v-chip color="success" label>
-                    <v-icon start>mdi-router-wireless</v-icon>
-                    {{ availableStations.length }} Stations
-                  </v-chip>
-                </div>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
+        <section v-if="isnProjectInfo" class="top-product-iplas-isn-lookup-card">
+          <div class="top-product-iplas-isn-chip-row">
+            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--primary">{{ parsedIsns.length }} ISN(s)</span>
+            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">Site: {{ isnProjectInfo.site }}</span>
+            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">Project: {{ isnProjectInfo.project }}</span>
+            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--success">{{ availableStations.length }} Stations</span>
+          </div>
+          <p>The lookup has resolved a project scope. Configure stations next to refine device selection and scoring rules before ranking the returned records.</p>
+        </section>
 
-        <!-- UPDATED: Configure Stations Button (like Station Search) -->
-        <v-row v-if="isnProjectInfo" dense class="mt-2">
-          <v-col cols="12">
-            <v-btn color="secondary" block size="large" prepend-icon="mdi-format-list-checkbox"
-              :disabled="availableStations.length === 0" :loading="loadingStations" @click="openStationSelectionDialog">
-              Configure Stations
-              <v-chip v-if="configuredStationsCount > 0" size="small" color="success" variant="flat" class="ml-2">
-                {{ configuredStationsCount }} Selected
-              </v-chip>
-            </v-btn>
-          </v-col>
-        </v-row>
+        <div v-if="isnProjectInfo" class="top-product-iplas-isn-action-card">
+          <div>
+            <strong>Configure Stations</strong>
+            <p>Use the shared station-selection and station-configuration dialogs to scope the resolved ISN history.</p>
+          </div>
+          <button
+            type="button"
+            class="top-product-iplas-isn-button top-product-iplas-isn-button--secondary"
+            :disabled="availableStations.length === 0"
+            @click="openStationSelectionDialog"
+          >
+            {{ loadingStations ? 'Loading...' : 'Configure Stations' }}
+            <strong v-if="configuredStationsCount > 0">{{ configuredStationsCount }}</strong>
+          </button>
+        </div>
 
-        <!-- UPDATED: Configured Stations Summary (like Station Search) -->
-        <v-card v-if="configuredStationsCount > 0" variant="outlined" class="mt-4">
-          <v-card-title class="text-subtitle-1">
-            Configured Stations Summary
-          </v-card-title>
-          <v-card-text class="pa-2">
-            <v-chip v-for="(config, displayName) in stationConfigs" :key="displayName" class="ma-1" color="primary"
-              variant="tonal" closable @click="editStationConfig(displayName)"
-              @click:close="removeStationConfig(displayName)">
-              {{ displayName }}
-              <v-badge :content="config.deviceIds.length || config.totalDeviceCount || 'All'" color="success" inline
-                class="ml-1" />
-              <v-chip size="x-small" class="ml-1"
-                :color="(config.minimumItemScoreEnabled ?? true) ? 'warning' : 'grey'" variant="outlined">
-                {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` : 'Min Off' }}
-              </v-chip>
-            </v-chip>
-          </v-card-text>
-        </v-card>
-      </v-card-text>
-    </v-card>
+        <section v-if="configuredStationsCount > 0" class="top-product-iplas-isn-summary-panel">
+          <div class="top-product-iplas-isn-summary-panel__header">
+            <div>
+              <p class="top-product-iplas-isn-summary-panel__eyebrow">Configured Stations</p>
+              <h3>Selection Summary</h3>
+            </div>
+          </div>
 
-    <!-- Error Alert -->
-    <v-alert v-if="error" type="error" class="mb-4" closable @click:close="error = null">
+          <div class="top-product-iplas-isn-token-grid">
+            <button
+              v-for="(config, displayName) in stationConfigs"
+              :key="displayName"
+              type="button"
+              class="top-product-iplas-isn-token-card"
+              @click="editStationConfig(displayName)"
+            >
+              <div>
+                <strong>{{ displayName }}</strong>
+                <p>{{ config.deviceIds.length || config.totalDeviceCount || 'All' }} device(s)</p>
+              </div>
+              <div class="top-product-iplas-isn-token-card__meta">
+                <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">
+                  {{ config.deviceIds.length || config.totalDeviceCount || 'All' }} Device(s)
+                </span>
+                <span class="top-product-iplas-isn-pill" :class="(config.minimumItemScoreEnabled ?? true) ? 'top-product-iplas-isn-pill--warning' : 'top-product-iplas-isn-pill--muted'">
+                  {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` : 'Min Off' }}
+                </span>
+                <span
+                  role="button"
+                  tabindex="0"
+                  class="top-product-iplas-isn-remove"
+                  @click.stop="removeStationConfig(displayName)"
+                  @keydown.enter.stop.prevent="removeStationConfig(displayName)"
+                  @keydown.space.stop.prevent="removeStationConfig(displayName)"
+                >
+                  Remove
+                </span>
+              </div>
+            </button>
+          </div>
+        </section>
+      </div>
+    </AppPanel>
+
+    <div v-if="error" class="top-product-iplas-isn-notice top-product-iplas-isn-notice--error">
       {{ error }}
-    </v-alert>
+    </div>
 
     <!-- UPDATED: Results Section with TopProductIplasRanking (like Station Search) -->
     <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
@@ -208,6 +228,7 @@ import {
   type TopProductMeasurementCreate,
 } from '@/features/top-products/api/topProducts.api'
 import { useNotification } from '@/shared/composables/useNotification'
+import { AppPanel } from '@/shared/ui'
 import { getErrorMessage } from '@/shared/utils'
 import { getApiErrorDetail } from '@/shared/utils/error'
 import { isStatusPass } from '@/shared/utils/helpers'
@@ -325,6 +346,21 @@ const currentStationConfig = computed(() => {
   if (!selectedStationForConfig.value) return undefined
   return stationConfigs.value[selectedStationForConfig.value.display_station_name]
 })
+
+function commitMultipleIdentifier(): void {
+  const value = multipleIsnSearchText.value.trim()
+  if (!value) {
+    return
+  }
+
+  const nextIdentifiers = normalizeIdentifierList([...selectedISNs.value, value])
+  selectedISNs.value = nextIdentifiers
+  multipleIsnSearchText.value = ''
+}
+
+function removeSelectedISN(index: number): void {
+  selectedISNs.value.splice(index, 1)
+}
 
 // ============================================================================
 // Utility Functions
@@ -1575,11 +1611,243 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.gap-2 {
-  gap: 0.5rem;
+.top-product-iplas-isn-shell,
+.top-product-iplas-isn-stack,
+.top-product-iplas-isn-field,
+.top-product-iplas-isn-lookup-card,
+.top-product-iplas-isn-action-card,
+.top-product-iplas-isn-summary-panel,
+.top-product-iplas-isn-summary-panel__header,
+.top-product-iplas-isn-token-card {
+  display: grid;
+  gap: 0.9rem;
 }
 
-.gap-3 {
+.top-product-iplas-isn-shell {
+  gap: 1rem;
+}
+
+.top-product-iplas-isn-toolbar,
+.top-product-iplas-isn-toggle-row,
+.top-product-iplas-isn-chip-row,
+.top-product-iplas-isn-token-row,
+.top-product-iplas-isn-entry-row,
+.top-product-iplas-isn-token-card__meta {
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
+  align-items: center;
+}
+
+.top-product-iplas-isn-entry-row--end {
+  justify-content: space-between;
+}
+
+.top-product-iplas-isn-field span,
+.top-product-iplas-isn-toggle-card strong,
+.top-product-iplas-isn-summary-panel h3,
+.top-product-iplas-isn-token-card strong {
+  color: var(--app-ink);
+}
+
+.top-product-iplas-isn-field span,
+.top-product-iplas-isn-summary-panel__eyebrow {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.top-product-iplas-isn-summary-panel__eyebrow {
+  margin: 0;
+  color: var(--app-accent);
+}
+
+.top-product-iplas-isn-toggle-card p,
+.top-product-iplas-isn-lookup-card p,
+.top-product-iplas-isn-action-card p,
+.top-product-iplas-isn-token-card p,
+.top-product-iplas-isn-notice,
+.top-product-iplas-isn-field small {
+  margin: 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.top-product-iplas-isn-field input,
+.top-product-iplas-isn-field textarea {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  padding: 0.8rem 0.9rem;
+  font: inherit;
+}
+
+.top-product-iplas-isn-field textarea {
+  resize: vertical;
+}
+
+.top-product-iplas-isn-button,
+.top-product-iplas-isn-toggle-chip,
+.top-product-iplas-isn-token,
+.top-product-iplas-isn-token-card,
+.top-product-iplas-isn-remove {
+  min-height: 2.75rem;
+  border-radius: 0.95rem;
+  border: 1px solid var(--app-border);
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.top-product-iplas-isn-button,
+.top-product-iplas-isn-toggle-chip,
+.top-product-iplas-isn-token {
+  padding: 0.65rem 0.95rem;
+}
+
+.top-product-iplas-isn-button:hover,
+.top-product-iplas-isn-toggle-chip:hover,
+.top-product-iplas-isn-token:hover,
+.top-product-iplas-isn-token-card:hover,
+.top-product-iplas-isn-remove:hover {
+  transform: translateY(-1px);
+}
+
+.top-product-iplas-isn-button--primary,
+.top-product-iplas-isn-toggle-chip.is-active {
+  background: linear-gradient(135deg, #145847, #1b6c58);
+  border-color: #145847;
+  color: white;
+}
+
+.top-product-iplas-isn-button--secondary {
+  background: linear-gradient(135deg, #165d92, #1d7fb7);
+  border-color: #165d92;
+  color: white;
+}
+
+.top-product-iplas-isn-button--ghost {
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.top-product-iplas-isn-toggle-card,
+.top-product-iplas-isn-lookup-card,
+.top-product-iplas-isn-action-card,
+.top-product-iplas-isn-summary-panel,
+.top-product-iplas-isn-notice {
+  padding: 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(20, 88, 71, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.top-product-iplas-isn-toggle-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.85rem;
+  align-items: start;
+}
+
+.top-product-iplas-isn-toggle-card input {
+  margin-top: 0.2rem;
+}
+
+.top-product-iplas-isn-action-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.top-product-iplas-isn-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.top-product-iplas-isn-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.1rem;
+  padding: 0.45rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 700;
+}
+
+.top-product-iplas-isn-pill--primary {
+  background: rgba(20, 88, 71, 0.1);
+  border-color: rgba(20, 88, 71, 0.16);
+  color: #145847;
+}
+
+.top-product-iplas-isn-pill--info {
+  background: rgba(40, 96, 163, 0.08);
+  border-color: rgba(40, 96, 163, 0.16);
+  color: #1f4f89;
+}
+
+.top-product-iplas-isn-pill--success {
+  background: rgba(20, 88, 71, 0.08);
+  border-color: rgba(20, 88, 71, 0.14);
+  color: #145847;
+}
+
+.top-product-iplas-isn-pill--warning {
+  background: rgba(169, 102, 34, 0.1);
+  border-color: rgba(169, 102, 34, 0.18);
+  color: #88551c;
+}
+
+.top-product-iplas-isn-pill--muted {
+  background: rgba(95, 103, 122, 0.1);
+  border-color: rgba(95, 103, 122, 0.16);
+  color: #4c566a;
+}
+
+.top-product-iplas-isn-token-grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.top-product-iplas-isn-token-card {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  width: 100%;
+  padding: 0.95rem 1rem;
+  text-align: left;
+}
+
+.top-product-iplas-isn-remove {
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+}
+
+.top-product-iplas-isn-notice--error {
+  border-color: rgba(164, 52, 58, 0.16);
+  background: rgba(164, 52, 58, 0.08);
+  color: #8e3037;
+}
+
+@media (max-width: 840px) {
+  .top-product-iplas-isn-action-card,
+  .top-product-iplas-isn-token-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 620px) {
+  .top-product-iplas-isn-toolbar,
+  .top-product-iplas-isn-toggle-row,
+  .top-product-iplas-isn-entry-row,
+  .top-product-iplas-isn-chip-row,
+  .top-product-iplas-isn-token-row,
+  .top-product-iplas-isn-token-card__meta {
+    align-items: stretch;
+  }
 }
 </style>

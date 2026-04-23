@@ -1,152 +1,98 @@
 <template>
-  <v-card>
-    <v-card-title>
-      <v-icon start>mdi-compare</v-icon>
-      Comparison Mode
-    </v-card-title>
+  <AppPanel
+    eyebrow="Comparison Strategy"
+    title="Comparison Mode"
+    description="Choose whether the workflow compares structure, row data, or both, then configure join keys and tolerance rules as needed."
+    tone="cool"
+  >
+    <div class="compare-mode-grid">
+      <label v-for="option in modeOptions" :key="option.value" class="compare-mode-card" :class="{ 'compare-mode-card--active': modelValue.mode === option.value }">
+        <input :checked="modelValue.mode === option.value" :value="option.value" type="radio" @change="updateMode(option.value)">
+        <span>{{ option.label }}</span>
+        <small>{{ option.description }}</small>
+      </label>
+    </div>
 
-    <v-card-text>
-      <!-- Mode Selection -->
-      <v-radio-group :model-value="modelValue.mode" @update:model-value="(value) => updateMode(value as ComparisonMode)"
-        hide-details>
-        <v-radio value="columns">
-          <template #label>
-            <div>
-              <div class="font-weight-medium">Compare Columns</div>
-              <div class="text-caption text-medium-emphasis">
-                Compare which columns exist in each file (structure comparison)
-              </div>
-            </div>
-          </template>
-        </v-radio>
+    <div v-if="needsJoinKeys" class="compare-mode-section mt-6">
+      <div class="compare-mode-divider"></div>
 
-        <v-radio value="rows" class="mt-3">
-          <template #label>
-            <div>
-              <div class="font-weight-medium">Compare Rows</div>
-              <div class="text-caption text-medium-emphasis">
-                Compare data rows using join keys (data comparison)
-              </div>
-            </div>
-          </template>
-        </v-radio>
-
-        <v-radio value="both" class="mt-3">
-          <template #label>
-            <div>
-              <div class="font-weight-medium">Compare Both</div>
-              <div class="text-caption text-medium-emphasis">
-                Full comparison with structure + data differences
-              </div>
-            </div>
-          </template>
-        </v-radio>
-      </v-radio-group>
-
-      <!-- Join Key Configuration (for rows/both mode) -->
-      <v-expand-transition>
-        <div v-if="needsJoinKeys" class="mt-6">
-          <v-divider class="mb-4" />
-
-          <div class="text-subtitle-2 mb-3">
-            <v-icon start size="small">mdi-key</v-icon>
-            Join Keys Configuration
-          </div>
-
-          <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-            <div class="text-caption">
-              Select the columns to use as join keys for matching rows between the two files.
-              These should be unique identifiers (e.g., ID, ISN, Serial Number).
-            </div>
-          </v-alert>
-
-          <v-row>
-            <!-- File A Join Key -->
-            <v-col cols="12" md="6">
-              <v-select :model-value="modelValue.joinKeyA" :items="columnsA" label="File A Join Key" variant="outlined"
-                density="comfortable" prepend-inner-icon="mdi-key-variant" :error-messages="joinKeyAError"
-                @update:model-value="(value) => updateJoinKeyA(value)">
-                <template #prepend>
-                  <v-chip size="small" color="blue" variant="tonal">
-                    A
-                  </v-chip>
-                </template>
-              </v-select>
-            </v-col>
-
-            <!-- File B Join Key -->
-            <v-col cols="12" md="6">
-              <v-select :model-value="modelValue.joinKeyB" :items="columnsB" label="File B Join Key" variant="outlined"
-                density="comfortable" prepend-inner-icon="mdi-key-variant" :error-messages="joinKeyBError"
-                @update:model-value="(value) => updateJoinKeyB(value)">
-                <template #prepend>
-                  <v-chip size="small" color="orange" variant="tonal">
-                    B
-                  </v-chip>
-                </template>
-              </v-select>
-            </v-col>
-          </v-row>
-
-          <!-- Join Keys Match Indicator -->
-          <v-alert v-if="joinKeysMatched" type="success" variant="tonal" density="compact" class="mt-2">
-            <template #prepend>
-              <v-icon>mdi-check-circle</v-icon>
-            </template>
-            <div class="text-caption">
-              Join keys configured: <strong>{{ modelValue.joinKeyA }}</strong> ↔ <strong>{{ modelValue.joinKeyB
-                }}</strong>
-            </div>
-          </v-alert>
-
-          <!-- Validation Warning -->
-          <v-alert v-else-if="modelValue.joinKeyA || modelValue.joinKeyB" type="warning" variant="tonal"
-            density="compact" class="mt-2">
-            <template #prepend>
-              <v-icon>mdi-alert</v-icon>
-            </template>
-            <div class="text-caption">
-              Both join keys must be selected to compare rows
-            </div>
-          </v-alert>
-        </div>
-      </v-expand-transition>
-
-      <!-- Advanced Options (Optional) -->
-      <v-expand-transition>
-        <div v-if="showAdvancedOptions" class="mt-6">
-          <v-divider class="mb-4" />
-
-          <div class="text-subtitle-2 mb-3">
-            <v-icon start size="small">mdi-cog</v-icon>
-            Advanced Options
-          </div>
-
-          <v-checkbox v-model="caseSensitive" label="Case-sensitive comparison" density="compact" hide-details
-            @update:model-value="(value) => updateCaseSensitive(value ?? false)" />
-
-          <v-text-field v-if="needsJoinKeys" v-model.number="numericTolerance" label="Numeric Tolerance" type="number"
-            variant="outlined" density="compact" hint="Tolerance for comparing numeric values (default: 0.0001)"
-            persistent-hint step="0.0001" min="0" class="mt-3"
-            @update:model-value="(value) => updateNumericTolerance(Number(value))" />
-        </div>
-      </v-expand-transition>
-
-      <!-- Toggle Advanced Options -->
-      <div class="mt-4">
-        <v-btn size="small" variant="text" @click="showAdvancedOptions = !showAdvancedOptions">
-          {{ showAdvancedOptions ? 'Hide' : 'Show' }} Advanced Options
-          <v-icon end>
-            {{ showAdvancedOptions ? 'mdi-chevron-up' : 'mdi-chevron-down' }}
-          </v-icon>
-        </v-btn>
+      <div class="compare-mode-section__title">
+        <Icon icon="mdi:key" />
+        <span>Join Keys Configuration</span>
       </div>
-    </v-card-text>
-  </v-card>
+
+      <div class="compare-mode-notice compare-mode-notice--info mb-4">
+        Select the columns to use as join keys for matching rows between the two files. Use stable identifiers such as ID, ISN, or Serial Number.
+      </div>
+
+      <div class="compare-mode-join-grid">
+        <label class="compare-mode-field">
+          <span>File A Join Key</span>
+          <div class="compare-mode-field__input">
+            <span class="compare-mode-pill compare-mode-pill--a">A</span>
+            <select :value="modelValue.joinKeyA" @change="updateJoinKeyA(($event.target as HTMLSelectElement).value)">
+              <option value="">Select join key</option>
+              <option v-for="column in columnsA" :key="`a-${column}`" :value="column">{{ column }}</option>
+            </select>
+          </div>
+          <small v-if="joinKeyAError" class="compare-mode-field__error">{{ joinKeyAError }}</small>
+        </label>
+
+        <label class="compare-mode-field">
+          <span>File B Join Key</span>
+          <div class="compare-mode-field__input">
+            <span class="compare-mode-pill compare-mode-pill--b">B</span>
+            <select :value="modelValue.joinKeyB" @change="updateJoinKeyB(($event.target as HTMLSelectElement).value)">
+              <option value="">Select join key</option>
+              <option v-for="column in columnsB" :key="`b-${column}`" :value="column">{{ column }}</option>
+            </select>
+          </div>
+          <small v-if="joinKeyBError" class="compare-mode-field__error">{{ joinKeyBError }}</small>
+        </label>
+      </div>
+
+      <div v-if="joinKeysMatched" class="compare-mode-notice compare-mode-notice--success mt-2">
+        Join keys configured: <strong>{{ modelValue.joinKeyA }}</strong> ↔ <strong>{{ modelValue.joinKeyB }}</strong>
+      </div>
+
+      <div v-else-if="modelValue.joinKeyA || modelValue.joinKeyB" class="compare-mode-notice compare-mode-notice--warning mt-2">
+        Both join keys must be selected to compare rows.
+      </div>
+    </div>
+
+    <div v-if="showAdvancedOptions" class="compare-mode-section mt-6">
+      <div class="compare-mode-divider"></div>
+
+      <div class="compare-mode-section__title">
+        <Icon icon="mdi:cog" />
+        <span>Advanced Options</span>
+      </div>
+
+      <label class="compare-mode-toggle">
+        <input v-model="caseSensitive" type="checkbox" @change="updateCaseSensitive(caseSensitive)">
+        <span>Case-sensitive comparison</span>
+      </label>
+
+      <label v-if="needsJoinKeys" class="compare-mode-field mt-3">
+        <span>Numeric Tolerance</span>
+        <input v-model.number="numericTolerance" min="0" step="0.0001" type="number" @input="updateNumericTolerance(Number(numericTolerance))">
+        <small class="compare-mode-field__hint">Tolerance for comparing numeric values. Default is 0.0001.</small>
+      </label>
+    </div>
+
+    <div class="mt-4">
+      <button type="button" class="compare-mode-button" @click="showAdvancedOptions = !showAdvancedOptions">
+        <span>{{ showAdvancedOptions ? 'Hide' : 'Show' }} Advanced Options</span>
+        <Icon :icon="showAdvancedOptions ? 'mdi:chevron-up' : 'mdi:chevron-down'" />
+      </button>
+    </div>
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
+import { AppPanel } from '@/shared'
 
 // Types
 export type ComparisonMode = 'columns' | 'rows' | 'both'
@@ -177,6 +123,23 @@ const emit = defineEmits<{
 const showAdvancedOptions = ref(false)
 const caseSensitive = ref(props.modelValue.caseSensitive ?? false)
 const numericTolerance = ref(props.modelValue.numericTolerance ?? 0.0001)
+const modeOptions: Array<{ value: ComparisonMode; label: string; description: string }> = [
+  {
+    value: 'columns',
+    label: 'Compare Columns',
+    description: 'Check structure differences between the two files.',
+  },
+  {
+    value: 'rows',
+    label: 'Compare Rows',
+    description: 'Match data rows using join keys and compare values.',
+  },
+  {
+    value: 'both',
+    label: 'Compare Both',
+    description: 'Run the structure and data comparison in one pass.',
+  },
+]
 
 // Computed
 const needsJoinKeys = computed(() => {
@@ -239,7 +202,199 @@ function updateNumericTolerance(value: number) {
 </script>
 
 <style scoped>
-:deep(.v-radio .v-label) {
-  opacity: 1;
+.compare-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 0.9rem;
+}
+
+.compare-mode-card {
+  display: grid;
+  gap: 0.3rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1.15rem;
+  background: rgba(255, 251, 247, 0.88);
+  padding: 1rem;
+  cursor: pointer;
+  box-shadow: var(--app-shadow-soft);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.compare-mode-card input {
+  position: absolute;
+  opacity: 0;
+}
+
+.compare-mode-card span {
+  color: var(--app-ink);
+  font-weight: 700;
+}
+
+.compare-mode-card small {
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.compare-mode-card--active {
+  border-color: var(--app-accent);
+  background: linear-gradient(180deg, rgba(20, 88, 71, 0.1), rgba(255, 251, 247, 0.98));
+  box-shadow: 0 0 0 4px var(--app-ring);
+  transform: translateY(-1px);
+}
+
+.compare-mode-section__title,
+.compare-mode-field__input,
+.compare-mode-toggle,
+.compare-mode-button,
+.compare-mode-pill {
+  display: flex;
+}
+
+.compare-mode-section__title {
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
+  color: var(--app-ink);
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.compare-mode-divider {
+  height: 1px;
+  background: var(--app-border);
+  margin-bottom: 1rem;
+}
+
+.compare-mode-join-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+  gap: 1rem;
+}
+
+.compare-mode-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.compare-mode-field > span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-muted);
+}
+
+.compare-mode-field__input,
+.compare-mode-field input {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.compare-mode-field__input {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.85rem;
+}
+
+.compare-mode-field__input select,
+.compare-mode-field input {
+  border: 0;
+  background: transparent;
+  padding: 0.1rem;
+  width: 100%;
+  color: var(--app-ink);
+}
+
+.compare-mode-field__input select:focus,
+.compare-mode-field input:focus {
+  outline: none;
+}
+
+.compare-mode-field__error {
+  color: var(--app-danger);
+  font-size: 0.8rem;
+}
+
+.compare-mode-field__hint {
+  color: var(--app-muted);
+  font-size: 0.82rem;
+}
+
+.compare-mode-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--app-ink);
+  font-weight: 600;
+}
+
+.compare-mode-toggle input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--app-accent);
+}
+
+.compare-mode-pill {
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.3rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.compare-mode-pill--a {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.compare-mode-pill--b {
+  background: rgba(198, 110, 39, 0.14);
+  color: #8d4b12;
+}
+
+.compare-mode-notice {
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  box-shadow: var(--app-shadow-soft);
+  line-height: 1.55;
+}
+
+.compare-mode-notice--info {
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.compare-mode-notice--success {
+  background: rgba(20, 88, 71, 0.08);
+}
+
+.compare-mode-notice--warning {
+  background: rgba(245, 168, 71, 0.1);
+}
+
+.compare-mode-button {
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  cursor: pointer;
+  padding: 0.72rem 0.95rem;
+  font-weight: 700;
+}
+
+@media (max-width: 720px) {
+  .compare-mode-grid,
+  .compare-mode-join-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

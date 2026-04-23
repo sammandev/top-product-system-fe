@@ -1,83 +1,71 @@
 <template>
-  <v-card>
-    <v-card-title class="d-flex align-center">
-      <v-icon start>mdi-cog</v-icon>
-      Criteria Configuration
-    </v-card-title>
+  <AppPanel
+    eyebrow="Scoring Gate"
+    title="Criteria Configuration"
+    description="Set the minimum acceptable criteria score, cap the result list, and optionally attach a custom criteria JSON file."
+    tone="warm"
+  >
+    <div class="criteria-config__grid">
+      <label class="criteria-config__field">
+        <span>Criteria Score</span>
+        <div class="criteria-config__input-row">
+          <input v-model.number="criteriaScore" type="number" min="0" max="10" step="0.1" @input="handleScoreChange">
+          <span class="criteria-config__pill" :class="scorePillClass(criteriaScore)">{{ criteriaScore.toFixed(1) }}</span>
+        </div>
+        <small>Minimum score threshold (0-10).</small>
+        <small v-if="scoreError" class="criteria-config__error">{{ scoreError }}</small>
+      </label>
 
-    <v-card-text>
-      <v-row>
-        <v-col cols="12" md="6">
-          <v-text-field v-model.number="criteriaScore" label="Criteria Score" type="number" variant="outlined"
-            density="comfortable" prepend-inner-icon="mdi-star" min="0" max="10" step="0.1" :error-messages="scoreError"
-            hint="Minimum score threshold (0-10)" persistent-hint @update:model-value="handleScoreChange">
-            <template #append>
-              <v-chip size="small" :color="getScoreColor(criteriaScore)">
-                {{ criteriaScore.toFixed(1) }}
-              </v-chip>
-            </template>
-          </v-text-field>
-        </v-col>
+      <label class="criteria-config__field">
+        <span>Results Limit</span>
+        <input v-model.number="resultLimit" type="number" min="1" max="100" @input="handleLimitChange">
+        <small>Maximum number of results (1-100).</small>
+        <small v-if="limitError" class="criteria-config__error">{{ limitError }}</small>
+      </label>
+    </div>
 
-        <v-col cols="12" md="6">
-          <v-text-field v-model.number="resultLimit" label="Results Limit" type="number" variant="outlined"
-            density="comfortable" prepend-inner-icon="mdi-format-list-numbered" min="1" max="100"
-            :error-messages="limitError" hint="Maximum number of results (1-100)" persistent-hint
-            @update:model-value="handleLimitChange" />
-        </v-col>
-      </v-row>
-
-      <v-divider class="my-4" />
-
-      <div class="text-subtitle-2 mb-3 d-flex align-center">
-        <v-icon start size="small">mdi-file-upload</v-icon>
-        Custom Criteria File (Optional)
-        <v-spacer />
-        <v-btn size="small" variant="outlined" color="primary" prepend-icon="mdi-download"
-          title="Download criteria JSON template" @click="downloadTemplate">
+    <section class="criteria-config__upload-card">
+      <div class="criteria-config__upload-header">
+        <div>
+          <p class="criteria-config__section-eyebrow">Custom File</p>
+          <h3>Criteria JSON File</h3>
+        </div>
+        <button type="button" class="criteria-config__button criteria-config__button--ghost" @click="downloadTemplate">
           Download Template
-        </v-btn>
+        </button>
       </div>
 
-      <v-file-input v-model="criteriaFile" label="Upload criteria JSON file" accept=".json,application/json"
-        variant="outlined" density="comfortable" prepend-icon="mdi-paperclip" :clearable="true" :show-size="true"
-        hint="Upload custom criteria configuration JSON file (.json)" persistent-hint
-        @update:model-value="handleFileChange">
-        <template #selection="{ fileNames }">
-          <v-chip v-for="fileName in fileNames" :key="fileName" size="small" color="primary" class="me-2">
-            {{ fileName }}
-          </v-chip>
-        </template>
-      </v-file-input>
+      <label class="criteria-config__field">
+        <span>Upload custom criteria JSON</span>
+        <input type="file" accept=".json,application/json" @change="handleNativeFileChange">
+        <small>Upload a custom criteria configuration JSON file.</small>
+      </label>
 
-      <v-alert v-if="isValid" type="success" variant="tonal" density="compact" class="mt-4">
-        <template #prepend>
-          <v-icon>mdi-check-circle</v-icon>
-        </template>
-        <div class="text-caption">
-          <strong>Criteria configured:</strong> Score >= {{ criteriaScore.toFixed(1) }},
-          Limit: {{ resultLimit }} results
-          <span v-if="criteriaFileActual">
-            | Custom criteria file: {{ criteriaFileActual.name }}
-            ({{ formatFileSize(criteriaFileActual.size) }})
-          </span>
+      <div v-if="criteriaFileActual" class="criteria-config__file-strip">
+        <div>
+          <strong>{{ criteriaFileActual.name }}</strong>
+          <span>{{ formatFileSize(criteriaFileActual.size) }}</span>
         </div>
-      </v-alert>
+        <button type="button" class="criteria-config__button criteria-config__button--ghost" @click="clearCriteriaFile">
+          Remove
+        </button>
+      </div>
+    </section>
 
-      <v-alert v-else-if="showValidation" type="warning" variant="tonal" density="compact" class="mt-4">
-        <template #prepend>
-          <v-icon>mdi-alert</v-icon>
-        </template>
-        <div class="text-caption">
-          Please enter a valid criteria score (0-10) and results limit (1-100)
-        </div>
-      </v-alert>
-    </v-card-text>
-  </v-card>
+    <section v-if="isValid" class="criteria-config__notice criteria-config__notice--success">
+      <strong>Criteria configured</strong>
+      <span>Score >= {{ criteriaScore.toFixed(1) }}, limit {{ resultLimit }} results<span v-if="criteriaFileActual">, file {{ criteriaFileActual.name }} ({{ formatFileSize(criteriaFileActual.size) }})</span>.</span>
+    </section>
+
+    <section v-else-if="showValidation" class="criteria-config__notice criteria-config__notice--warning">
+      Please enter a valid criteria score (0-10) and results limit (1-100).
+    </section>
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { AppPanel } from '@/shared'
 import { downloadCriteriaJsonTemplate } from '../utils/criteriaTemplate'
 
 interface Props {
@@ -168,6 +156,17 @@ function handleFileChange() {
   emitChange()
 }
 
+function handleNativeFileChange(event: Event) {
+  const input = event.target as HTMLInputElement
+  criteriaFile.value = input.files?.[0] ?? null
+  handleFileChange()
+}
+
+function clearCriteriaFile() {
+  criteriaFile.value = null
+  handleFileChange()
+}
+
 function emitChange() {
   const file = criteriaFileActual.value || null
 
@@ -190,6 +189,14 @@ function getScoreColor(score: number): string {
   if (score >= 7) return 'primary'
   if (score >= 5) return 'warning'
   return 'error'
+}
+
+function scorePillClass(score: number): string {
+  const tone = getScoreColor(score)
+  if (tone === 'success') return 'criteria-config__pill--success'
+  if (tone === 'primary') return 'criteria-config__pill--primary'
+  if (tone === 'warning') return 'criteria-config__pill--warning'
+  return 'criteria-config__pill--danger'
 }
 
 function formatFileSize(bytes: number): string {
@@ -217,4 +224,173 @@ watch(
 )
 </script>
 
-<style scoped></style>
+<style scoped>
+.criteria-config__grid,
+.criteria-config__input-row,
+.criteria-config__upload-header,
+.criteria-config__file-strip,
+.criteria-config__button {
+  display: flex;
+}
+
+.criteria-config__grid,
+.criteria-config__upload-card {
+  display: grid;
+  gap: 1rem;
+}
+
+.criteria-config__grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.criteria-config__field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.criteria-config__field span,
+.criteria-config__section-eyebrow {
+  color: var(--app-ink);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.criteria-config__field input {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  padding: 0.82rem 0.95rem;
+}
+
+.criteria-config__field input:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 4px var(--app-ring);
+}
+
+.criteria-config__field small,
+.criteria-config__file-strip span {
+  color: var(--app-muted);
+}
+
+.criteria-config__input-row {
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.criteria-config__input-row input {
+  flex: 1;
+}
+
+.criteria-config__pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.criteria-config__pill--success {
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.criteria-config__pill--primary {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.criteria-config__pill--warning {
+  background: rgba(184, 118, 38, 0.16);
+  color: #8f5314;
+}
+
+.criteria-config__pill--danger {
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.criteria-config__upload-card {
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 251, 247, 0.9);
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.criteria-config__upload-header,
+.criteria-config__file-strip {
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.criteria-config__upload-header h3 {
+  margin: 0.2rem 0 0;
+}
+
+.criteria-config__button {
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 251, 247, 0.92);
+  color: #4f5d6d;
+  cursor: pointer;
+  padding: 0.72rem 0.95rem;
+  font-weight: 700;
+}
+
+.criteria-config__file-strip {
+  border: 1px dashed rgba(40, 96, 163, 0.24);
+  border-radius: 1rem;
+  background: rgba(40, 96, 163, 0.06);
+  padding: 0.85rem 1rem;
+}
+
+.criteria-config__file-strip strong,
+.criteria-config__file-strip span {
+  display: block;
+}
+
+.criteria-config__notice {
+  margin-top: 1rem;
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.criteria-config__notice--success {
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.criteria-config__notice--warning {
+  background: rgba(184, 118, 38, 0.16);
+  color: #8f5314;
+}
+
+.criteria-config__error {
+  color: #8f2020;
+}
+
+@media (max-width: 720px) {
+  .criteria-config__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .criteria-config__upload-header,
+  .criteria-config__file-strip,
+  .criteria-config__input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+</style>

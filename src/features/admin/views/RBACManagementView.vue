@@ -1,592 +1,600 @@
 <template>
   <DefaultLayout>
-    <v-container fluid>
-      <v-row>
-        <v-col cols="12">
-          <div class="d-flex justify-space-between align-center mb-4">
-            <div>
-              <h1 class="text-h4 font-weight-bold mb-2">Roles & Permissions Management</h1>
-              <p class="text-body-2 text-medium-emphasis">
-                Manage roles, permissions, and access control policies
+    <section class="rbac-management-page">
+      <div class="rbac-management-header">
+      <div class="rbac-management-header__copy">
+        <div class="rbac-management-header__icon">
+          <Icon icon="mdi:shield-account-outline" />
+        </div>
+        <div>
+          <p class="rbac-management-header__eyebrow">Admin Control Center</p>
+          <h1>Roles And Permissions</h1>
+          <p>
+            Manage the role catalog, reusable permissions, and detailed assignment visibility from
+            one admin workspace.
+          </p>
+        </div>
+      </div>
+
+      <div class="rbac-management-header__actions">
+        <button
+          v-if="activeTab === 'roles'"
+          type="button"
+          class="rbac-management-button rbac-management-button--primary"
+          @click="openCreateRoleDialog"
+        >
+          <Icon icon="mdi:shield-plus-outline" />
+          <span>Add Role</span>
+        </button>
+        <button
+          v-else
+          type="button"
+          class="rbac-management-button rbac-management-button--secondary"
+          @click="openCreatePermissionDialog"
+        >
+          <Icon icon="mdi:lock-plus-outline" />
+          <span>Add Permission</span>
+        </button>
+        <button
+          type="button"
+          class="rbac-management-button rbac-management-button--ghost"
+          :disabled="loading"
+          @click="loadData"
+        >
+          <Icon icon="mdi:refresh" />
+          <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
+        </button>
+      </div>
+    </div>
+
+    <div v-if="error" class="rbac-management-notice rbac-management-notice--error">
+      <div>
+        <strong>Admin action failed</strong>
+        <p>{{ error }}</p>
+      </div>
+      <button type="button" @click="error = ''">Dismiss</button>
+    </div>
+
+    <div v-if="success" class="rbac-management-notice rbac-management-notice--success">
+      <div>
+        <strong>Update complete</strong>
+        <p>{{ success }}</p>
+      </div>
+      <button type="button" @click="success = ''">Dismiss</button>
+    </div>
+
+    <div class="rbac-management-stats-grid">
+      <article class="rbac-management-stat-card">
+        <span>Total Roles</span>
+        <strong>{{ stats.total_roles }}</strong>
+        <small>Reusable role records available across the platform.</small>
+      </article>
+      <article class="rbac-management-stat-card rbac-management-stat-card--success">
+        <span>Total Permissions</span>
+        <strong>{{ stats.total_permissions }}</strong>
+        <small>Permission capabilities currently defined in the system.</small>
+      </article>
+      <article class="rbac-management-stat-card rbac-management-stat-card--cool">
+        <span>Users With Roles</span>
+        <strong>{{ stats.users_with_roles }}</strong>
+        <small>Accounts already assigned to at least one active role.</small>
+      </article>
+      <article class="rbac-management-stat-card rbac-management-stat-card--warm">
+        <span>Active Sessions</span>
+        <strong>{{ stats.active_sessions }}</strong>
+        <small>Current session activity tracked against authenticated users.</small>
+      </article>
+    </div>
+
+    <section class="rbac-management-shell">
+      <AppTabs v-model="activeTab" :items="tabItems" scrollable>
+        <template #panel-roles>
+          <section class="rbac-management-pane">
+            <section class="rbac-management-panel">
+              <div class="rbac-management-panel__header rbac-management-panel__header--compact">
+                <div>
+                  <p class="rbac-management-panel__eyebrow">Role Directory</p>
+                  <h2>Roles</h2>
+                </div>
+
+                <label class="rbac-management-search">
+                  <Icon icon="mdi:magnify" />
+                  <input
+                    v-model="roleSearch"
+                    type="search"
+                    placeholder="Search by role, description, or permission"
+                  >
+                </label>
+              </div>
+
+              <AppDataGrid
+                :columns="roleColumns"
+                :rows="displayedRoles"
+                :loading="loading"
+                paginator
+                :rowsPerPage="10"
+                dataKey="id"
+              >
+                <template #cell-name="slotProps">
+                  <button
+                    type="button"
+                    class="rbac-management-link-button"
+                    @click="showRoleDetails(slotProps.data.id as number)"
+                  >
+                    {{ slotProps.data.name }}
+                  </button>
+                </template>
+
+                <template #cell-description="slotProps">
+                  {{ slotProps.data.description || 'No description' }}
+                </template>
+
+                <template #cell-permissions="slotProps">
+                  <div class="rbac-management-chip-list">
+                    <span
+                      v-for="permissionName in getRolePermissionsPreview(slotProps.data.permissions as string[])"
+                      :key="permissionName"
+                      class="rbac-management-chip"
+                    >
+                      {{ permissionName }}
+                    </span>
+                    <span
+                      v-if="getAdditionalRolePermissionCount(slotProps.data.permissions as string[]) > 0"
+                      class="rbac-management-chip rbac-management-chip--muted"
+                    >
+                      +{{ getAdditionalRolePermissionCount(slotProps.data.permissions as string[]) }} more
+                    </span>
+                    <span
+                      v-if="!(slotProps.data.permissions as string[] | undefined)?.length"
+                      class="rbac-management-chip rbac-management-chip--muted"
+                    >
+                      None
+                    </span>
+                  </div>
+                </template>
+
+                <template #cell-users_count="slotProps">
+                  <span class="rbac-management-badge rbac-management-badge--info">
+                    {{ slotProps.data.users_count || 0 }} users
+                  </span>
+                </template>
+
+                <template #cell-actions="slotProps">
+                  <div class="rbac-management-actions">
+                    <button
+                      type="button"
+                      title="View role details"
+                      @click="showRoleDetails(slotProps.data.id as number)"
+                    >
+                      <Icon icon="mdi:card-account-details-outline" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Edit role"
+                      @click="handleEditRole(slotProps.data.id as number)"
+                    >
+                      <Icon icon="mdi:pencil-outline" />
+                    </button>
+                    <button
+                      type="button"
+                      class="is-danger"
+                      title="Delete role"
+                      :disabled="slotProps.data.name === 'admin'"
+                      @click="confirmDeleteRole(slotProps.data as Role)"
+                    >
+                      <Icon icon="mdi:delete-outline" />
+                    </button>
+                  </div>
+                </template>
+
+                <template #empty>
+                  <div class="rbac-management-empty-state">
+                    <strong>No roles found.</strong>
+                    <p>Adjust the search or create the first role.</p>
+                  </div>
+                </template>
+              </AppDataGrid>
+
+              <p v-if="shouldShowRoleResultLimit" class="rbac-management-footnote">
+                Showing the first 50 matching roles. Refine the search for a narrower result set.
               </p>
-            </div>
-            <div class="d-flex gap-2">
-              <v-btn color="primary" prepend-icon="mdi-shield-plus" @click="openCreateRoleDialog">
-                Add Role
-              </v-btn>
-              <v-btn color="secondary" prepend-icon="mdi-lock-plus" @click="openCreatePermissionDialog">
-                Add Permission
-              </v-btn>
-            </div>
-          </div>
-        </v-col>
-      </v-row>
+            </section>
+          </section>
+        </template>
 
-      <!-- Statistics Cards -->
-      <v-row class="mb-4">
-        <v-col cols="12" sm="6" md="3">
-          <v-card>
-            <v-card-text>
-              <div class="d-flex align-center">
-                <v-avatar color="primary" size="48" class="mr-3">
-                  <v-icon>mdi-shield-account</v-icon>
-                </v-avatar>
+        <template #panel-permissions>
+          <section class="rbac-management-pane">
+            <section class="rbac-management-panel">
+              <div class="rbac-management-panel__header rbac-management-panel__header--compact">
                 <div>
-                  <div class="text-overline">Total Roles</div>
-                  <div class="text-h5">{{ stats.total_roles }}</div>
+                  <p class="rbac-management-panel__eyebrow">Permission Catalog</p>
+                  <h2>Permissions</h2>
                 </div>
-              </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        <v-col cols="12" sm="6" md="3">
-          <v-card>
-            <v-card-text>
-              <div class="d-flex align-center">
-                <v-avatar color="success" size="48" class="mr-3">
-                  <v-icon>mdi-lock</v-icon>
-                </v-avatar>
-                <div>
-                  <div class="text-overline">Permissions</div>
-                  <div class="text-h5">{{ stats.total_permissions }}</div>
-                </div>
-              </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        <v-col cols="12" sm="6" md="3">
-          <v-card>
-            <v-card-text>
-              <div class="d-flex align-center">
-                <v-avatar color="info" size="48" class="mr-3">
-                  <v-icon>mdi-account-group</v-icon>
-                </v-avatar>
-                <div>
-                  <div class="text-overline">Users with Roles</div>
-                  <div class="text-h5">{{ stats.users_with_roles }}</div>
-                </div>
-              </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        <v-col cols="12" sm="6" md="3">
-          <v-card>
-            <v-card-text>
-              <div class="d-flex align-center">
-                <v-avatar color="warning" size="48" class="mr-3">
-                  <v-icon>mdi-connection</v-icon>
-                </v-avatar>
-                <div>
-                  <div class="text-overline">Active Sessions</div>
-                  <div class="text-h5">{{ stats.active_sessions }}</div>
-                </div>
-              </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
 
-      <!-- Error/Success Alerts -->
-      <v-alert v-if="error" type="error" variant="tonal" closable class="mb-4" @click:close="error = ''">
-        {{ error }}
-      </v-alert>
-      <v-alert v-if="success" type="success" variant="tonal" closable class="mb-4" @click:close="success = ''">
-        {{ success }}
-      </v-alert>
+                <label class="rbac-management-search">
+                  <Icon icon="mdi:magnify" />
+                  <input
+                    v-model="permissionSearch"
+                    type="search"
+                    placeholder="Search by permission or description"
+                  >
+                </label>
+              </div>
 
-      <!-- Tabs -->
-      <v-row>
-        <v-col cols="12">
-          <v-card>
-            <v-tabs v-model="tab" bg-color="default" color="primary">
-              <v-tab value="roles">Roles</v-tab>
-              <v-tab value="permissions">Permissions</v-tab>
-            </v-tabs>
+              <AppDataGrid
+                :columns="permissionColumns"
+                :rows="displayedPermissions"
+                :loading="loading"
+                paginator
+                :rowsPerPage="10"
+                dataKey="id"
+              >
+                <template #cell-name="slotProps">
+                  <button
+                    type="button"
+                    class="rbac-management-link-button"
+                    @click="showPermissionDetails(slotProps.data.id as number)"
+                  >
+                    {{ slotProps.data.name }}
+                  </button>
+                </template>
 
-            <v-window v-model="tab">
-              <!-- Roles Tab -->
-              <v-window-item value="roles">
-                <v-card-title>
-                  <v-row align="center">
-                    <v-col cols="12" md="6">
-                      <span class="text-h6">Roles</span>
-                    </v-col>
-                    <v-col cols="12" md="6">
-                      <v-text-field v-model="roleSearch" density="compact" variant="outlined"
-                        prepend-inner-icon="mdi-magnify" placeholder="Search roles by name, description, or permissions"
-                        hide-details clearable />
-                    </v-col>
-                  </v-row>
-                </v-card-title>
-                <v-card-text>
-                  <v-data-table :headers="roleHeaders" :items="displayedRoles" :loading="loading" :items-per-page="10"
-                    :items-per-page-options="[10, 25, 50, 100]">
-                    <template #item.name="{ item }">
-                      <span class="clickable-name" @click="showRoleDetails((item as any).id)"
-                        v-html="highlightText(item.name, roleSearchDebounced)"></span>
-                    </template>
-                    <template #item.description="{ item }">
-                      <span v-html="highlightText(item.description || '', roleSearchDebounced)"></span>
-                    </template>
-                    <template #item.permissions="{ item }">
-                      <v-chip-group>
-                        <v-chip v-for="p in (item as any).permissions?.slice(0, 3)" :key="p" size="small"
-                          variant="outlined" :color="getPermissionChipColor(p)">
-                          {{ p }}
-                        </v-chip>
-                        <v-chip v-if="((item as any).permissions?.length || 0) > 3" size="small" color="info">
-                          +{{ ((item as any).permissions?.length || 0) - 3 }} more
-                        </v-chip>
-                      </v-chip-group>
-                    </template>
-                    <template #item.users_count="{ item }">
-                      <v-chip size="small" :color="(item as any).users_count > 0 ? 'success' : 'default'">
-                        {{ (item as any).users_count || 0 }} users
-                      </v-chip>
-                    </template>
-                    <template #item.actions="{ item }">
-                      <div class="d-flex gap-1">
-                        <v-btn icon="mdi-pencil" size="small" variant="text" color="primary"
-                          @click="handleEditRole((item as any).id)" title="Edit Role" />
-                        <v-btn icon="mdi-delete" size="small" variant="text" color="error"
-                          @click="confirmDeleteRole(item as any)" :disabled="(item as any).name === 'admin'"
-                          title="Delete Role" />
-                      </div>
-                    </template>
-                    <template #no-data>
-                      <div class="text-center pa-4">
-                        <v-icon size="64" color="grey">mdi-shield-off</v-icon>
-                        <p class="text-h6 mt-2">No roles found</p>
-                        <v-btn color="primary" @click="openCreateRoleDialog">Create First Role</v-btn>
-                      </div>
-                    </template>
-                  </v-data-table>
-                  <div v-if="shouldShowResultLimit" class="text-caption text-medium-emphasis mt-2">
-                    Showing first 50 of {{ filteredRoles.length }} results. Refine your search for more specific
-                    results.
+                <template #cell-description="slotProps">
+                  {{ slotProps.data.description || 'No description' }}
+                </template>
+
+                <template #cell-actions="slotProps">
+                  <div class="rbac-management-actions">
+                    <button
+                      type="button"
+                      title="View permission details"
+                      @click="showPermissionDetails(slotProps.data.id as number)"
+                    >
+                      <Icon icon="mdi:card-account-details-outline" />
+                    </button>
+                    <button
+                      type="button"
+                      title="Edit permission"
+                      @click="handleEditPermission(slotProps.data.id as number)"
+                    >
+                      <Icon icon="mdi:pencil-outline" />
+                    </button>
+                    <button
+                      type="button"
+                      class="is-danger"
+                      title="Delete permission"
+                      @click="confirmDeletePermission(slotProps.data as Permission)"
+                    >
+                      <Icon icon="mdi:delete-outline" />
+                    </button>
                   </div>
-                </v-card-text>
-              </v-window-item>
+                </template>
 
-              <!-- Permissions Tab -->
-              <v-window-item value="permissions">
-                <v-card-title>
-                  <v-row align="center">
-                    <v-col cols="12" md="6">
-                      <span class="text-h6">Permissions</span>
-                    </v-col>
-                    <v-col cols="12" md="6">
-                      <v-text-field v-model="permSearch" density="compact" variant="outlined"
-                        prepend-inner-icon="mdi-magnify" placeholder="Search permissions by name or description"
-                        hide-details clearable />
-                    </v-col>
-                  </v-row>
-                </v-card-title>
-                <v-card-text>
-                  <v-data-table :headers="permHeaders" :items="displayedPermissions" :loading="loading"
-                    :items-per-page="10" :items-per-page-options="[10, 25, 50, 100]">
-                    <template #item.name="{ item }">
-                      <span class="clickable-name" @click="showPermissionDetails((item as any).id)"
-                        v-html="highlightText(item.name, permSearchDebounced)"></span>
-                    </template>
-                    <template #item.description="{ item }">
-                      <span v-html="highlightText(item.description || 'No description', permSearchDebounced)"></span>
-                    </template>
-                    <template #item.actions="{ item }">
-                      <div class="d-flex gap-1">
-                        <v-btn icon="mdi-pencil" size="small" variant="text" color="primary"
-                          @click="handleEditPermission((item as any).id)" title="Edit Permission" />
-                        <v-btn icon="mdi-delete" size="small" variant="text" color="error"
-                          @click="confirmDeletePermission(item as any)" title="Delete Permission" />
-                      </div>
-                    </template>
-                    <template #no-data>
-                      <div class="text-center pa-4">
-                        <v-icon size="64" color="grey">mdi-lock-off</v-icon>
-                        <p class="text-h6 mt-2">No permissions found</p>
-                        <v-btn color="secondary" @click="openCreatePermissionDialog">Create First Permission</v-btn>
-                      </div>
-                    </template>
-                  </v-data-table>
-                  <div v-if="shouldShowPermResultLimit" class="text-caption text-medium-emphasis mt-2">
-                    Showing first 50 of {{ filteredPermissions.length }} results. Refine your search for more specific
-                    results.
+                <template #empty>
+                  <div class="rbac-management-empty-state">
+                    <strong>No permissions found.</strong>
+                    <p>Adjust the search or create the first permission.</p>
                   </div>
-                </v-card-text>
-              </v-window-item>
-            </v-window>
-          </v-card>
-        </v-col>
-      </v-row>
-    </v-container>
+                </template>
+              </AppDataGrid>
 
-    <!-- Create Role Dialog -->
-    <v-dialog v-model="roleDialog" max-width="600px">
-      <v-card class="app-dialog">
-        <div class="app-dialog-header"><v-card-title class="text-h5">Create New Role</v-card-title></div>
-        <div class="app-dialog-body"><v-card-text>
-          <v-text-field v-model="newRole.name" label="Role Name" variant="outlined" class="mb-3"
-            hint="e.g., data_analyst, viewer, editor" persistent-hint />
-          <v-textarea v-model="newRole.description" label="Description" variant="outlined" rows="3"
-            hint="Describe what this role can do" persistent-hint />
-        </v-card-text></div>
-        <div class="app-dialog-footer"><v-card-actions>
-          <v-spacer />
-          <v-btn @click="roleDialog = false">Cancel</v-btn>
-          <v-btn color="primary" :loading="loading" @click="handleCreateRole">Create Role</v-btn>
-        </v-card-actions></div>
-      </v-card>
-    </v-dialog>
+              <p v-if="shouldShowPermissionResultLimit" class="rbac-management-footnote">
+                Showing the first 50 matching permissions. Refine the search for a narrower result set.
+              </p>
+            </section>
+          </section>
+        </template>
+      </AppTabs>
+    </section>
 
-    <!-- Create Permission Dialog -->
-    <v-dialog v-model="permDialog" max-width="600px">
-      <v-card class="app-dialog">
-        <div class="app-dialog-header"><v-card-title class="text-h5">Create New Permission</v-card-title></div>
-        <div class="app-dialog-body"><v-card-text>
-          <v-text-field v-model="newPermission.name" label="Permission Name" variant="outlined" class="mb-3"
-            hint="e.g., read_reports, write_data, manage_users" persistent-hint />
-          <v-textarea v-model="newPermission.description" label="Description" variant="outlined" rows="3"
-            hint="Describe what this permission allows" persistent-hint />
-        </v-card-text></div>
-        <div class="app-dialog-footer"><v-card-actions>
-          <v-spacer />
-          <v-btn @click="permDialog = false">Cancel</v-btn>
-          <v-btn color="secondary" :loading="loading" @click="handleCreatePermission">Create Permission</v-btn>
-        </v-card-actions></div>
-      </v-card>
-    </v-dialog>
+    <AppDialog v-model:visible="roleDialogOpen" :title="roleDialogTitle" width="42rem">
+      <form class="rbac-management-dialog-form" @submit.prevent="saveRole">
+        <label class="rbac-management-field">
+          <span>Role Name</span>
+          <input v-model="roleForm.name" type="text" autocomplete="off" placeholder="data_analyst">
+        </label>
 
-    <!-- Edit Role Dialog -->
-    <v-dialog v-model="editRoleDialog" max-width="700px">
-      <v-card class="app-dialog">
-        <div class="app-dialog-header"><v-card-title class="text-h5">Edit Role</v-card-title></div>
-        <div class="app-dialog-body"><v-card-text>
-          <v-text-field v-model="editRoleForm.name" label="Role Name" variant="outlined" class="mb-3"
-            hint="e.g., data_analyst, viewer, editor" persistent-hint />
-          <v-textarea v-model="editRoleForm.description" label="Description" variant="outlined" rows="3"
-            hint="Describe what this role can do" persistent-hint class="mb-3" />
-          <v-card variant="outlined">
-            <v-card-title class="text-subtitle-1">Permissions</v-card-title>
-            <v-card-text>
-              <v-chip-group v-model="editRoleForm.permissions" column multiple>
-                <v-chip v-for="perm in permissions" :key="perm.id" :value="perm.name" filter variant="outlined">
-                  {{ perm.name }}
-                </v-chip>
-              </v-chip-group>
-            </v-card-text>
-          </v-card>
-        </v-card-text></div>
-        <div class="app-dialog-footer"><v-card-actions>
-          <v-spacer />
-          <v-btn @click="editRoleDialog = false">Cancel</v-btn>
-          <v-btn color="primary" :loading="loading" @click="saveRoleEdit">Save Changes</v-btn>
-        </v-card-actions></div>
-      </v-card>
-    </v-dialog>
+        <label class="rbac-management-field">
+          <span>Description</span>
+          <textarea
+            v-model="roleForm.description"
+            rows="3"
+            placeholder="Describe what this role can do"
+          />
+        </label>
 
-    <!-- Edit Permission Dialog -->
-    <v-dialog v-model="editPermDialog" max-width="600px">
-      <v-card class="app-dialog">
-        <div class="app-dialog-header"><v-card-title class="text-h5">Edit Permission</v-card-title></div>
-        <div class="app-dialog-body"><v-card-text>
-          <v-text-field v-model="editPermForm.name" label="Permission Name" variant="outlined" class="mb-3"
-            hint="e.g., read_reports, write_data, manage_users" persistent-hint />
-          <v-textarea v-model="editPermForm.description" label="Description" variant="outlined" rows="3"
-            hint="Describe what this permission allows" persistent-hint />
-        </v-card-text></div>
-        <div class="app-dialog-footer"><v-card-actions>
-          <v-spacer />
-          <v-btn @click="editPermDialog = false">Cancel</v-btn>
-          <v-btn color="secondary" :loading="loading" @click="savePermissionEdit">Save Changes</v-btn>
-        </v-card-actions></div>
-      </v-card>
-    </v-dialog>
-
-    <!-- Role Details Dialog -->
-    <v-dialog v-model="roleDetailsDialog" max-width="800px">
-      <v-card v-if="selectedRoleDetails" class="app-dialog">
-        <div class="app-dialog-header"><v-card-title class="d-flex justify-space-between align-center">
-          <span class="text-h5">Role Details: {{ selectedRoleDetails.name }}</span>
-          <v-btn icon="mdi-close" variant="text" @click="roleDetailsDialog = false" />
-        </v-card-title></div>
-        <div class="app-dialog-body"><v-card-text class="pa-6">
-          <v-row>
-            <!-- Basic Information -->
-            <v-col cols="12">
-              <v-card variant="outlined">
-                <v-card-title class="text-subtitle-1 d-flex align-center">
-                  <v-icon class="mr-2">mdi-information</v-icon>
-                  Basic Information
-                </v-card-title>
-                <v-divider />
-                <v-card-text>
-                  <v-row dense>
-                    <v-col cols="4" class="text-medium-emphasis">Role Name:</v-col>
-                    <v-col cols="8" class="font-weight-medium">{{ selectedRoleDetails.name }}</v-col>
-                    <v-col cols="4" class="text-medium-emphasis">Description:</v-col>
-                    <v-col cols="8">{{ selectedRoleDetails.description || 'No description' }}</v-col>
-                    <v-col cols="4" class="text-medium-emphasis">Total Users:</v-col>
-                    <v-col cols="8">
-                      <v-chip size="small" :color="selectedRoleDetails.users_count > 0 ? 'success' : 'default'">
-                        {{ selectedRoleDetails.users_count }} users
-                      </v-chip>
-                    </v-col>
-                  </v-row>
-                </v-card-text>
-              </v-card>
-            </v-col>
-
-            <!-- Permissions -->
-            <v-col cols="12">
-              <v-card variant="outlined">
-                <v-card-title class="text-subtitle-1 d-flex align-center">
-                  <v-icon class="mr-2">mdi-lock</v-icon>
-                  Assigned Permissions ({{ selectedRoleDetails.permissions?.length || 0 }})
-                </v-card-title>
-                <v-divider />
-                <v-card-text>
-                  <v-chip-group v-if="selectedRoleDetails.permissions && selectedRoleDetails.permissions.length > 0"
-                    column>
-                    <v-chip v-for="perm in selectedRoleDetails.permissions" :key="perm" variant="outlined"
-                      color="primary">
-                      {{ perm }}
-                    </v-chip>
-                  </v-chip-group>
-                  <p v-else class="text-medium-emphasis">No permissions assigned</p>
-                </v-card-text>
-              </v-card>
-            </v-col>
-
-            <!-- Users with this Role -->
-            <v-col cols="12">
-              <v-card variant="outlined">
-                <v-card-title class="text-subtitle-1 d-flex align-center">
-                  <v-icon class="mr-2">mdi-account-group</v-icon>
-                  Users with this Role ({{ selectedRoleDetails.users?.length || 0 }})
-                </v-card-title>
-                <v-divider />
-                <v-card-text>
-                  <v-list v-if="selectedRoleDetails.users && selectedRoleDetails.users.length > 0" density="compact">
-                    <v-list-item v-for="user in selectedRoleDetails.users" :key="user.id">
-                      <template #prepend>
-                        <v-avatar :color="user.is_active ? 'success' : 'error'" size="32">
-                          <v-icon>mdi-account</v-icon>
-                        </v-avatar>
-                      </template>
-                      <v-list-item-title>{{ user.username }}</v-list-item-title>
-                      <v-list-item-subtitle>{{ user.email }}</v-list-item-subtitle>
-                      <template #append>
-                        <v-chip v-if="!user.is_active" size="small" color="error">Inactive</v-chip>
-                      </template>
-                    </v-list-item>
-                  </v-list>
-                  <p v-else class="text-medium-emphasis">No users assigned to this role</p>
-                </v-card-text>
-              </v-card>
-            </v-col>
-
-            <!-- Metadata -->
-            <v-col cols="12" v-if="selectedRoleDetails.created_at || selectedRoleDetails.updated_at">
-              <v-card variant="outlined">
-                <v-card-title class="text-subtitle-1 d-flex align-center">
-                  <v-icon class="mr-2">mdi-clock-outline</v-icon>
-                  Metadata
-                </v-card-title>
-                <v-divider />
-                <v-card-text>
-                  <v-row dense>
-                    <v-col v-if="selectedRoleDetails.created_at" cols="4" class="text-medium-emphasis">Created
-                      At:</v-col>
-                    <v-col v-if="selectedRoleDetails.created_at" cols="8">{{ formatDate(selectedRoleDetails.created_at)
-                    }}</v-col>
-                    <v-col v-if="selectedRoleDetails.updated_at" cols="4" class="text-medium-emphasis">Updated
-                      At:</v-col>
-                    <v-col v-if="selectedRoleDetails.updated_at" cols="8">{{ formatDate(selectedRoleDetails.updated_at)
-                    }}</v-col>
-                  </v-row>
-                </v-card-text>
-              </v-card>
-            </v-col>
-          </v-row>
-        </v-card-text></div>
-        <div class="app-dialog-footer"><v-card-actions>
-          <v-spacer />
-          <v-btn @click="roleDetailsDialog = false">Close</v-btn>
-          <v-btn color="primary" prepend-icon="mdi-pencil"
-            @click="editRoleFromDetails(selectedRoleDetails.id)">Edit</v-btn>
-        </v-card-actions></div>
-      </v-card>
-    </v-dialog>
-
-    <!-- Permission Details Dialog -->
-    <v-dialog v-model="permDetailsDialog" max-width="800px">
-      <v-card v-if="selectedPermDetails" class="app-dialog">
-        <div class="app-dialog-header"><v-card-title class="d-flex justify-space-between align-center">
-          <span class="text-h5">Permission Details: {{ selectedPermDetails.name }}</span>
-          <v-btn icon="mdi-close" variant="text" @click="permDetailsDialog = false" />
-        </v-card-title></div>
-        <div class="app-dialog-body"><v-card-text class="pa-6">
-          <v-row>
-            <!-- Basic Information -->
-            <v-col cols="12">
-              <v-card variant="outlined">
-                <v-card-title class="text-subtitle-1 d-flex align-center">
-                  <v-icon class="mr-2">mdi-information</v-icon>
-                  Basic Information
-                </v-card-title>
-                <v-divider />
-                <v-card-text>
-                  <v-row dense>
-                    <v-col cols="4" class="text-medium-emphasis">Permission Name:</v-col>
-                    <v-col cols="8" class="font-weight-medium">{{ selectedPermDetails.name }}</v-col>
-                    <v-col cols="4" class="text-medium-emphasis">Description:</v-col>
-                    <v-col cols="8">{{ selectedPermDetails.description || 'No description' }}</v-col>
-                    <v-col cols="4" class="text-medium-emphasis">Usage Count:</v-col>
-                    <v-col cols="8">
-                      <v-chip size="small" :color="selectedPermDetails.usage_count > 0 ? 'success' : 'default'">
-                        Used by {{ selectedPermDetails.usage_count }} role(s)
-                      </v-chip>
-                    </v-col>
-                  </v-row>
-                </v-card-text>
-              </v-card>
-            </v-col>
-
-            <!-- Roles with this Permission -->
-            <v-col cols="12">
-              <v-card variant="outlined">
-                <v-card-title class="text-subtitle-1 d-flex align-center">
-                  <v-icon class="mr-2">mdi-shield-account</v-icon>
-                  Roles with this Permission ({{ selectedPermDetails.roles?.length || 0 }})
-                </v-card-title>
-                <v-divider />
-                <v-card-text>
-                  <v-chip-group v-if="selectedPermDetails.roles && selectedPermDetails.roles.length > 0" column>
-                    <v-chip v-for="role in selectedPermDetails.roles" :key="role" variant="outlined" color="primary">
-                      {{ role }}
-                    </v-chip>
-                  </v-chip-group>
-                  <p v-else class="text-medium-emphasis">No roles have this permission</p>
-                </v-card-text>
-              </v-card>
-            </v-col>
-          </v-row>
-        </v-card-text></div>
-        <div class="app-dialog-footer"><v-card-actions>
-          <v-spacer />
-          <v-btn @click="permDetailsDialog = false">Close</v-btn>
-          <v-btn color="secondary" prepend-icon="mdi-pencil"
-            @click="editPermissionFromDetails(selectedPermDetails.id)">Edit</v-btn>
-        </v-card-actions></div>
-      </v-card>
-    </v-dialog>
-
-    <!-- Delete Role Confirmation Dialog -->
-    <v-dialog v-model="deleteRoleDialog" max-width="500px" persistent>
-      <v-card class="app-dialog">
-        <div class="app-dialog-header"><v-card-title class="text-h5">
-          <v-icon start>mdi-alert</v-icon>
-          Confirm Delete Role
-        </v-card-title></div>
-        <div class="app-dialog-body"><v-card-text class="pt-4">
-          <div class="mb-4">
-            <p class="text-body-1 mb-2">
-              You are about to delete this role:
-            </p>
-            <v-card variant="outlined" class="mb-4">
-              <v-card-text>
-                <div><strong>Role Name:</strong> {{ roleToDelete?.name || 'N/A' }}</div>
-                <div><strong>Description:</strong> {{ roleToDelete?.description || 'N/A' }}</div>
-                <div><strong>Users Count:</strong> {{ roleToDelete?.users_count || 0 }}</div>
-              </v-card-text>
-            </v-card>
-            <v-alert type="warning" variant="tonal" color="orange-darken-1" class="mb-4">
-              This action cannot be undone. All users assigned to this role will lose these permissions.
-            </v-alert>
+        <div class="rbac-management-field">
+          <span>Assigned Permissions</span>
+          <div class="rbac-management-permission-picker">
+            <label
+              v-for="permissionItem in permissions"
+              :key="permissionItem.id"
+              class="rbac-management-permission-option"
+              :class="isRolePermissionSelected(permissionItem.name) ? 'is-selected' : ''"
+            >
+              <input
+                :checked="isRolePermissionSelected(permissionItem.name)"
+                type="checkbox"
+                @change="toggleRolePermission(permissionItem.name)"
+              >
+              <span>{{ permissionItem.name }}</span>
+            </label>
           </div>
-          <div>
-            <p class="text-body-2 mb-2">
-              Type <strong>DELETE</strong> to confirm:
-            </p>
-            <v-text-field v-model="deleteRoleConfirmation" placeholder="DELETE" variant="outlined" density="comfortable"
-              hide-details autofocus @keyup.enter="handleConfirmDeleteRole" />
-          </div>
-        </v-card-text></div>
-        <div class="app-dialog-footer"><v-card-actions>
-          <v-spacer />
-          <v-btn color="default" variant="tonal" @click="cancelDeleteRole" :disabled="deletingRole">
+        </div>
+
+        <div v-if="dialogError" class="rbac-management-dialog-error">
+          {{ dialogError }}
+        </div>
+
+        <div class="rbac-management-dialog-footer">
+          <button
+            type="button"
+            class="rbac-management-button rbac-management-button--ghost"
+            @click="closeRoleDialog"
+          >
             Cancel
-          </v-btn>
-          <v-btn color="error" variant="flat" @click="handleConfirmDeleteRole"
-            :disabled="deleteRoleConfirmation !== 'DELETE' || deletingRole" :loading="deletingRole">
-            Delete Role
-          </v-btn>
-        </v-card-actions></div>
-      </v-card>
-    </v-dialog>
+          </button>
+          <button
+            type="submit"
+            class="rbac-management-button rbac-management-button--primary"
+            :disabled="dialogLoading"
+          >
+            {{ dialogLoading ? 'Saving...' : roleDialogSubmitLabel }}
+          </button>
+        </div>
+      </form>
+    </AppDialog>
 
-    <!-- Delete Permission Confirmation Dialog -->
-    <v-dialog v-model="deletePermDialog" max-width="500px" persistent>
-      <v-card class="app-dialog">
-        <div class="app-dialog-header"><v-card-title class="text-h5">
-          <v-icon start>mdi-alert</v-icon>
-          Confirm Delete Permission
-        </v-card-title></div>
-        <div class="app-dialog-body"><v-card-text class="pt-4">
-          <div class="mb-4">
-            <p class="text-body-1 mb-2">
-              You are about to delete this permission:
-            </p>
-            <v-card variant="outlined" class="mb-4">
-              <v-card-text>
-                <div><strong>Permission Name:</strong> {{ permToDelete?.name || 'N/A' }}</div>
-                <div><strong>Description:</strong> {{ permToDelete?.description || 'N/A' }}</div>
-              </v-card-text>
-            </v-card>
-            <v-alert type="warning" variant="tonal" color="orange-darken-1" class="mb-4">
-              This action cannot be undone. All roles using this permission will be updated.
-            </v-alert>
-          </div>
-          <div>
-            <p class="text-body-2 mb-2">
-              Type <strong>DELETE</strong> to confirm:
-            </p>
-            <v-text-field v-model="deletePermConfirmation" placeholder="DELETE" variant="outlined" density="comfortable"
-              hide-details autofocus @keyup.enter="handleConfirmDeletePerm" />
-          </div>
-        </v-card-text></div>
-        <div class="app-dialog-footer"><v-card-actions>
-          <v-spacer />
-          <v-btn color="default" variant="tonal" @click="cancelDeletePerm" :disabled="deletingPerm">
+    <AppDialog v-model:visible="permissionDialogOpen" :title="permissionDialogTitle" width="34rem">
+      <form class="rbac-management-dialog-form" @submit.prevent="savePermission">
+        <label class="rbac-management-field">
+          <span>Permission Name</span>
+          <input v-model="permissionForm.name" type="text" autocomplete="off" placeholder="read_reports">
+        </label>
+
+        <label class="rbac-management-field">
+          <span>Description</span>
+          <textarea
+            v-model="permissionForm.description"
+            rows="3"
+            placeholder="Describe what this permission allows"
+          />
+        </label>
+
+        <div v-if="dialogError" class="rbac-management-dialog-error">
+          {{ dialogError }}
+        </div>
+
+        <div class="rbac-management-dialog-footer">
+          <button
+            type="button"
+            class="rbac-management-button rbac-management-button--ghost"
+            @click="closePermissionDialog"
+          >
             Cancel
-          </v-btn>
-          <v-btn color="error" variant="flat" @click="handleConfirmDeletePerm"
-            :disabled="deletePermConfirmation !== 'DELETE' || deletingPerm" :loading="deletingPerm">
-            Delete Permission
-          </v-btn>
-        </v-card-actions></div>
-      </v-card>
-    </v-dialog>
+          </button>
+          <button
+            type="submit"
+            class="rbac-management-button rbac-management-button--primary"
+            :disabled="dialogLoading"
+          >
+            {{ dialogLoading ? 'Saving...' : permissionDialogSubmitLabel }}
+          </button>
+        </div>
+      </form>
+    </AppDialog>
+
+    <AppDialog v-model:visible="roleDetailsDialogOpen" title="Role Details" width="48rem">
+      <div v-if="selectedRoleDetails" class="rbac-management-detail-stack">
+        <section class="rbac-management-detail-panel">
+          <div class="rbac-management-detail-panel__header">
+            <h3>{{ selectedRoleDetails.name }}</h3>
+            <span class="rbac-management-badge rbac-management-badge--info">
+              {{ selectedRoleDetails.users_count }} users
+            </span>
+          </div>
+          <p>{{ selectedRoleDetails.description || 'No description provided.' }}</p>
+        </section>
+
+        <section class="rbac-management-detail-panel">
+          <h3>Assigned Permissions</h3>
+          <div class="rbac-management-chip-list">
+            <span
+              v-for="permissionName in selectedRoleDetails.permissions"
+              :key="permissionName"
+              class="rbac-management-chip"
+            >
+              {{ permissionName }}
+            </span>
+            <span
+              v-if="selectedRoleDetails.permissions.length === 0"
+              class="rbac-management-chip rbac-management-chip--muted"
+            >
+              No permissions assigned
+            </span>
+          </div>
+        </section>
+
+        <section class="rbac-management-detail-panel">
+          <h3>Users With This Role</h3>
+          <div class="rbac-management-user-list">
+            <article
+              v-for="user in selectedRoleDetails.users"
+              :key="user.id"
+              class="rbac-management-user-card"
+            >
+              <div>
+                <strong>{{ user.username }}</strong>
+                <small>{{ user.email || 'No email' }}</small>
+              </div>
+              <span
+                class="rbac-management-badge"
+                :class="user.is_active ? 'rbac-management-badge--success' : 'rbac-management-badge--danger'"
+              >
+                {{ user.is_active ? 'Active' : 'Inactive' }}
+              </span>
+            </article>
+            <p v-if="selectedRoleDetails.users.length === 0" class="rbac-management-empty-copy">
+              No users are assigned to this role.
+            </p>
+          </div>
+        </section>
+
+        <section v-if="selectedRoleDetails.created_at || selectedRoleDetails.updated_at" class="rbac-management-detail-panel">
+          <h3>Metadata</h3>
+          <dl class="rbac-management-meta-list">
+            <div v-if="selectedRoleDetails.created_at">
+              <dt>Created</dt>
+              <dd>{{ formatDate(selectedRoleDetails.created_at) }}</dd>
+            </div>
+            <div v-if="selectedRoleDetails.updated_at">
+              <dt>Updated</dt>
+              <dd>{{ formatDate(selectedRoleDetails.updated_at) }}</dd>
+            </div>
+          </dl>
+        </section>
+
+        <div class="rbac-management-dialog-footer">
+          <button
+            type="button"
+            class="rbac-management-button rbac-management-button--ghost"
+            @click="roleDetailsDialogOpen = false"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            class="rbac-management-button rbac-management-button--primary"
+            @click="editRoleFromDetails(selectedRoleDetails.id)"
+          >
+            Edit Role
+          </button>
+        </div>
+      </div>
+    </AppDialog>
+
+    <AppDialog v-model:visible="permissionDetailsDialogOpen" title="Permission Details" width="42rem">
+      <div v-if="selectedPermissionDetails" class="rbac-management-detail-stack">
+        <section class="rbac-management-detail-panel">
+          <div class="rbac-management-detail-panel__header">
+            <h3>{{ selectedPermissionDetails.name }}</h3>
+            <span class="rbac-management-badge rbac-management-badge--info">
+              {{ selectedPermissionDetails.usage_count }} roles
+            </span>
+          </div>
+          <p>{{ selectedPermissionDetails.description || 'No description provided.' }}</p>
+        </section>
+
+        <section class="rbac-management-detail-panel">
+          <h3>Roles Using This Permission</h3>
+          <div class="rbac-management-chip-list">
+            <span
+              v-for="roleName in selectedPermissionDetails.roles"
+              :key="roleName"
+              class="rbac-management-chip"
+            >
+              {{ roleName }}
+            </span>
+            <span
+              v-if="selectedPermissionDetails.roles.length === 0"
+              class="rbac-management-chip rbac-management-chip--muted"
+            >
+              Not assigned to any role
+            </span>
+          </div>
+        </section>
+
+        <div class="rbac-management-dialog-footer">
+          <button
+            type="button"
+            class="rbac-management-button rbac-management-button--ghost"
+            @click="permissionDetailsDialogOpen = false"
+          >
+            Close
+          </button>
+          <button
+            type="button"
+            class="rbac-management-button rbac-management-button--primary"
+            @click="editPermissionFromDetails(selectedPermissionDetails.id)"
+          >
+            Edit Permission
+          </button>
+        </div>
+      </div>
+    </AppDialog>
+
+    <AppDialog v-model:visible="deleteDialogOpen" :title="deleteDialogTitle" width="32rem">
+      <div class="rbac-management-delete-stack">
+        <div class="rbac-management-notice rbac-management-notice--warning rbac-management-notice--inline">
+          <div>
+            <strong>Destructive action</strong>
+            <p>{{ deleteDialogMessage }}</p>
+          </div>
+        </div>
+
+        <label class="rbac-management-field">
+          <span>Type DELETE to confirm</span>
+          <input
+            v-model="deleteConfirmation"
+            type="text"
+            autocomplete="off"
+            placeholder="DELETE"
+            @keyup.enter="handleConfirmDelete"
+          >
+        </label>
+
+        <div class="rbac-management-dialog-footer">
+          <button
+            type="button"
+            class="rbac-management-button rbac-management-button--ghost"
+            :disabled="deleting"
+            @click="closeDeleteDialog"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="rbac-management-button rbac-management-button--danger"
+            :disabled="deleteConfirmation !== 'DELETE' || deleting"
+            @click="handleConfirmDelete"
+          >
+            {{ deleting ? 'Deleting...' : deleteDialogActionLabel }}
+          </button>
+        </div>
+      </div>
+    </AppDialog>
+    </section>
   </DefaultLayout>
 </template>
 
 <script setup lang="ts">
-import { useMemoize, watchDebounced } from '@vueuse/core'
-import { computed, onMounted, ref } from 'vue'
+import { Icon } from '@iconify/vue'
+import { computed, onMounted, reactive, ref } from 'vue'
+import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
+import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
+import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
 import type { Permission, PermissionDetail, RBACStats, Role, RoleDetail } from '../api/admin.api'
 import { adminApi } from '../api/admin.api'
 
-// State - tab persisted in URL
-const tab = useTabPersistence('tab', 'roles')
+type DialogMode = 'create' | 'edit'
+type DeleteTarget = 'role' | 'permission' | null
+
+const activeTab = useTabPersistence('tab', 'roles')
+const tabItems = [
+  { label: 'Roles', value: 'roles' },
+  { label: 'Permissions', value: 'permissions' },
+]
+
 const loading = ref(false)
 const error = ref('')
 const success = ref('')
+
 const roleSearch = ref('')
-const permSearch = ref('')
-const roleSearchDebounced = ref('')
-const permSearchDebounced = ref('')
+const permissionSearch = ref('')
+
 const roles = ref<Role[]>([])
 const permissions = ref<Permission[]>([])
 const stats = ref<RBACStats>({
@@ -596,380 +604,313 @@ const stats = ref<RBACStats>({
   active_sessions: 0,
 })
 
-const roleDialog = ref(false)
-const permDialog = ref(false)
-const newRole = ref({ name: '', description: '' })
-const newPermission = ref({ name: '', description: '' })
+const roleDialogOpen = ref(false)
+const permissionDialogOpen = ref(false)
+const roleDialogMode = ref<DialogMode>('create')
+const permissionDialogMode = ref<DialogMode>('create')
+const dialogLoading = ref(false)
+const dialogError = ref('')
 
-// Edit dialogs
-const editRoleDialog = ref(false)
-const editPermDialog = ref(false)
-const editRoleForm = ref({ id: 0, name: '', description: '', permissions: [] as string[] })
-const editPermForm = ref({ id: 0, name: '', description: '' })
-
-// Details dialogs
-const roleDetailsDialog = ref(false)
-const permDetailsDialog = ref(false)
-const selectedRoleDetails = ref<RoleDetail | null>(null)
-const selectedPermDetails = ref<PermissionDetail | null>(null)
-
-// Delete dialogs
-const deleteRoleDialog = ref(false)
-const roleToDelete = ref<Role | null>(null)
-const deleteRoleConfirmation = ref('')
-const deletingRole = ref(false)
-
-const deletePermDialog = ref(false)
-const permToDelete = ref<Permission | null>(null)
-const deletePermConfirmation = ref('')
-const deletingPerm = ref(false)
-
-// Debounced search (150ms) for better performance
-watchDebounced(
-  roleSearch,
-  (val) => {
-    roleSearchDebounced.value = val
-  },
-  { debounce: 150 },
-)
-
-watchDebounced(
-  permSearch,
-  (val) => {
-    permSearchDebounced.value = val
-  },
-  { debounce: 150 },
-)
-
-// Table headers
-const roleHeaders = [
-  { title: 'Role Name', key: 'name', sortable: true },
-  { title: 'Description', key: 'description', sortable: true },
-  { title: 'Permissions', key: 'permissions', sortable: false },
-  { title: 'Users', key: 'users_count', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false },
-]
-
-const permHeaders = [
-  { title: 'Permission Name', key: 'name', sortable: true },
-  { title: 'Description', key: 'description', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false },
-]
-
-// Utility: Escape HTML to prevent XSS
-function escapeHtml(text: string): string {
-  const div = document.createElement('div')
-  div.textContent = text
-  return div.innerHTML
-}
-
-// Utility: Highlight matching text with XSS protection and error handling
-function highlightText(text: string, query: string): string {
-  try {
-    if (!query || query.length < 2) return escapeHtml(text)
-
-    const escapedText = escapeHtml(text)
-    const escapedQuery = escapeHtml(query)
-
-    const regex = new RegExp(`(${escapedQuery.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi')
-    return escapedText.replace(
-      regex,
-      '<mark style="background-color: #FFF59D; padding: 2px 4px; border-radius: 2px;">$1</mark>',
-    )
-  } catch (e) {
-    console.error('Error highlighting text:', e)
-    return escapeHtml(text)
-  }
-}
-
-// Memoized filtered roles with search by name, description, and permissions
-const memoizedFilterRoles = useMemoize((searchQuery: string, rolesList: Role[]) => {
-  if (!searchQuery || searchQuery.length < 2) return rolesList
-
-  const query = searchQuery.toLowerCase()
-  return rolesList.filter(
-    (role) =>
-      role.name.toLowerCase().includes(query) ||
-      role.description?.toLowerCase().includes(query) ||
-      role.permissions?.some((p: string) => p.toLowerCase().includes(query)),
-  )
+const roleForm = reactive({
+  id: 0,
+  name: '',
+  description: '',
+  permissions: [] as string[],
 })
+
+const permissionForm = reactive({
+  id: 0,
+  name: '',
+  description: '',
+})
+
+const roleDetailsDialogOpen = ref(false)
+const permissionDetailsDialogOpen = ref(false)
+const selectedRoleDetails = ref<RoleDetail | null>(null)
+const selectedPermissionDetails = ref<PermissionDetail | null>(null)
+
+const deleteDialogOpen = ref(false)
+const deleteTarget = ref<DeleteTarget>(null)
+const deleteRole = ref<Role | null>(null)
+const deletePermission = ref<Permission | null>(null)
+const deleteConfirmation = ref('')
+const deleting = ref(false)
+
+const roleColumns = [
+  { field: 'name', header: 'Role Name' },
+  { field: 'description', header: 'Description' },
+  { field: 'permissions', header: 'Permissions', sortable: false },
+  { field: 'users_count', header: 'Users' },
+  { field: 'actions', header: 'Actions', sortable: false },
+]
+
+const permissionColumns = [
+  { field: 'name', header: 'Permission Name' },
+  { field: 'description', header: 'Description' },
+  { field: 'actions', header: 'Actions', sortable: false },
+]
 
 const filteredRoles = computed(() => {
-  return memoizedFilterRoles(roleSearchDebounced.value, roles.value)
-})
+  const query = roleSearch.value.trim().toLowerCase()
 
-// Display first 50 results for performance
-const displayedRoles = computed(() => {
-  return filteredRoles.value.slice(0, 50)
-})
+  if (!query) {
+    return roles.value
+  }
 
-const shouldShowResultLimit = computed(() => {
-  return roleSearchDebounced.value.length >= 2 && filteredRoles.value.length > 50
-})
-
-// Memoized filtered permissions
-const memoizedFilterPermissions = useMemoize((searchQuery: string, permsList: Permission[]) => {
-  if (!searchQuery || searchQuery.length < 2) return permsList
-
-  const query = searchQuery.toLowerCase()
-  return permsList.filter(
-    (perm) =>
-      perm.name.toLowerCase().includes(query) || perm.description?.toLowerCase().includes(query),
-  )
+  return roles.value.filter((role) => {
+    return (
+      role.name.toLowerCase().includes(query) ||
+      role.description?.toLowerCase().includes(query) ||
+      role.permissions?.some((permissionName) => permissionName.toLowerCase().includes(query))
+    )
+  })
 })
 
 const filteredPermissions = computed(() => {
-  return memoizedFilterPermissions(permSearchDebounced.value, permissions.value)
-})
+  const query = permissionSearch.value.trim().toLowerCase()
 
-const displayedPermissions = computed(() => {
-  return filteredPermissions.value.slice(0, 50)
-})
-
-const shouldShowPermResultLimit = computed(() => {
-  return permSearchDebounced.value.length >= 2 && filteredPermissions.value.length > 50
-})
-
-// Highlight matching permission chips
-function getPermissionChipColor(permissionName: string): string {
-  if (
-    roleSearchDebounced.value.length >= 2 &&
-    permissionName.toLowerCase().includes(roleSearchDebounced.value.toLowerCase())
-  ) {
-    return 'success'
+  if (!query) {
+    return permissions.value
   }
-  return 'default'
-}
 
-// Methods
+  return permissions.value.filter((permissionItem) => {
+    return (
+      permissionItem.name.toLowerCase().includes(query) ||
+      permissionItem.description?.toLowerCase().includes(query)
+    )
+  })
+})
+
+const displayedRoles = computed(() => filteredRoles.value.slice(0, 50))
+const displayedPermissions = computed(() => filteredPermissions.value.slice(0, 50))
+
+const shouldShowRoleResultLimit = computed(() => filteredRoles.value.length > 50)
+const shouldShowPermissionResultLimit = computed(() => filteredPermissions.value.length > 50)
+
+const roleDialogTitle = computed(() => {
+  return roleDialogMode.value === 'create' ? 'Create Role' : 'Edit Role'
+})
+
+const permissionDialogTitle = computed(() => {
+  return permissionDialogMode.value === 'create' ? 'Create Permission' : 'Edit Permission'
+})
+
+const roleDialogSubmitLabel = computed(() => {
+  return roleDialogMode.value === 'create' ? 'Create Role' : 'Save Changes'
+})
+
+const permissionDialogSubmitLabel = computed(() => {
+  return permissionDialogMode.value === 'create' ? 'Create Permission' : 'Save Changes'
+})
+
+const deleteDialogTitle = computed(() => {
+  return deleteTarget.value === 'role' ? 'Delete Role' : 'Delete Permission'
+})
+
+const deleteDialogActionLabel = computed(() => {
+  return deleteTarget.value === 'role' ? 'Delete Role' : 'Delete Permission'
+})
+
+const deleteDialogMessage = computed(() => {
+  if (deleteTarget.value === 'role') {
+    return `Delete ${deleteRole.value?.name || 'this role'}? Users assigned to it will lose those permissions.`
+  }
+
+  return `Delete ${deletePermission.value?.name || 'this permission'}? Roles using it will be updated.`
+})
+
 async function loadData() {
   loading.value = true
   error.value = ''
+
   try {
-    const [rolesData, permsData] = await Promise.all([
+    const [rolesResponse, permissionsResponse] = await Promise.all([
       adminApi.getRoles(),
       adminApi.getPermissions(),
     ])
-    roles.value = rolesData.roles || []
-    if (rolesData.stats) stats.value = rolesData.stats
-    permissions.value = permsData.permissions || []
 
-    // Clear memoization cache when data updates
-    memoizedFilterRoles.clear()
-    memoizedFilterPermissions.clear()
+    roles.value = rolesResponse.roles || []
+    permissions.value = permissionsResponse.permissions || []
+
+    if (rolesResponse.stats) {
+      stats.value = rolesResponse.stats
+    }
   } catch (err: unknown) {
-    error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Failed to load data'
+    error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Failed to load RBAC data'
   } finally {
     loading.value = false
   }
+}
+
+function resetRoleForm() {
+  roleForm.id = 0
+  roleForm.name = ''
+  roleForm.description = ''
+  roleForm.permissions = []
+}
+
+function resetPermissionForm() {
+  permissionForm.id = 0
+  permissionForm.name = ''
+  permissionForm.description = ''
+}
+
+function closeRoleDialog() {
+  roleDialogOpen.value = false
+  resetRoleForm()
+  dialogError.value = ''
+}
+
+function closePermissionDialog() {
+  permissionDialogOpen.value = false
+  resetPermissionForm()
+  dialogError.value = ''
 }
 
 function openCreateRoleDialog() {
-  newRole.value = { name: '', description: '' }
-  roleDialog.value = true
+  roleDialogMode.value = 'create'
+  dialogError.value = ''
+  resetRoleForm()
+  roleDialogOpen.value = true
 }
 
 function openCreatePermissionDialog() {
-  newPermission.value = { name: '', description: '' }
-  permDialog.value = true
-}
-
-async function handleCreateRole() {
-  if (!newRole.value.name) {
-    error.value = 'Role name is required'
-    return
-  }
-  loading.value = true
-  error.value = ''
-  try {
-    await adminApi.createRole(newRole.value)
-    success.value = `Role "${newRole.value.name}" created successfully`
-    roleDialog.value = false
-    await loadData()
-  } catch (err: unknown) {
-    error.value = getApiErrorDetail(err, 'Failed to create role')
-  } finally {
-    loading.value = false
-  }
-}
-
-async function handleCreatePermission() {
-  if (!newPermission.value.name) {
-    error.value = 'Permission name is required'
-    return
-  }
-  loading.value = true
-  error.value = ''
-  try {
-    await adminApi.createPermission(newPermission.value)
-    success.value = `Permission "${newPermission.value.name}" created successfully`
-    permDialog.value = false
-    await loadData()
-  } catch (err: unknown) {
-    error.value = getApiErrorDetail(err, 'Failed to create permission')
-  } finally {
-    loading.value = false
-  }
-}
-
-function confirmDeleteRole(role: Role) {
-  roleToDelete.value = role
-  deleteRoleConfirmation.value = ''
-  deleteRoleDialog.value = true
-}
-
-function cancelDeleteRole() {
-  deleteRoleDialog.value = false
-  roleToDelete.value = null
-  deleteRoleConfirmation.value = ''
-}
-
-async function handleConfirmDeleteRole() {
-  if (deleteRoleConfirmation.value !== 'DELETE' || !roleToDelete.value || deletingRole.value) {
-    return
-  }
-
-  deletingRole.value = true
-  error.value = ''
-  try {
-    await adminApi.deleteRole(roleToDelete.value.id)
-    success.value = `Role "${roleToDelete.value.name}" deleted successfully`
-
-    // Close dialog
-    cancelDeleteRole()
-
-    // Reload data
-    await loadData()
-  } catch (err: unknown) {
-    error.value = getApiErrorDetail(err, 'Failed to delete role')
-  } finally {
-    deletingRole.value = false
-  }
+  permissionDialogMode.value = 'create'
+  dialogError.value = ''
+  resetPermissionForm()
+  permissionDialogOpen.value = true
 }
 
 function handleEditRole(id: number) {
-  const role = roles.value.find((r) => r.id === id)
+  const role = roles.value.find((item) => item.id === id)
   if (!role) {
     error.value = 'Role not found'
     return
   }
-  editRoleForm.value = {
-    id: role.id,
-    name: role.name,
-    description: role.description || '',
-    permissions: role.permissions ? [...role.permissions] : [],
-  }
-  editRoleDialog.value = true
+
+  roleDialogMode.value = 'edit'
+  dialogError.value = ''
+  roleForm.id = role.id
+  roleForm.name = role.name
+  roleForm.description = role.description || ''
+  roleForm.permissions = [...(role.permissions || [])]
+  roleDialogOpen.value = true
 }
 
-async function saveRoleEdit() {
-  if (!editRoleForm.value.name) {
-    error.value = 'Role name is required'
+function handleEditPermission(id: number) {
+  const permissionItem = permissions.value.find((item) => item.id === id)
+  if (!permissionItem) {
+    error.value = 'Permission not found'
     return
   }
-  loading.value = true
-  error.value = ''
+
+  permissionDialogMode.value = 'edit'
+  dialogError.value = ''
+  permissionForm.id = permissionItem.id
+  permissionForm.name = permissionItem.name
+  permissionForm.description = permissionItem.description || ''
+  permissionDialogOpen.value = true
+}
+
+function isRolePermissionSelected(permissionName: string) {
+  return roleForm.permissions.includes(permissionName)
+}
+
+function toggleRolePermission(permissionName: string) {
+  if (isRolePermissionSelected(permissionName)) {
+    roleForm.permissions = roleForm.permissions.filter((item) => item !== permissionName)
+    return
+  }
+
+  roleForm.permissions = [...roleForm.permissions, permissionName]
+}
+
+async function saveRole() {
+  if (!roleForm.name.trim()) {
+    dialogError.value = 'Role name is required.'
+    return
+  }
+
+  dialogLoading.value = true
+  dialogError.value = ''
+
   try {
-    await adminApi.updateRole(editRoleForm.value.id, {
-      name: editRoleForm.value.name,
-      description: editRoleForm.value.description,
-      permissions: editRoleForm.value.permissions,
-    })
-    success.value = `Role "${editRoleForm.value.name}" updated successfully`
-    editRoleDialog.value = false
+    if (roleDialogMode.value === 'create') {
+      const createdRole = await adminApi.createRole({
+        name: roleForm.name.trim(),
+        description: roleForm.description.trim() || undefined,
+      })
+
+      if (roleForm.permissions.length > 0) {
+        for (const permissionItem of permissions.value) {
+          if (roleForm.permissions.includes(permissionItem.name)) {
+            await adminApi.grantPermissionToRole(createdRole.id, permissionItem.id)
+          }
+        }
+      }
+
+      success.value = `Role "${roleForm.name.trim()}" created successfully`
+    } else {
+      await adminApi.updateRole(roleForm.id, {
+        name: roleForm.name.trim(),
+        description: roleForm.description.trim() || '',
+        permissions: [...roleForm.permissions],
+      })
+
+      success.value = `Role "${roleForm.name.trim()}" updated successfully`
+    }
+
+    closeRoleDialog()
     await loadData()
   } catch (err: unknown) {
-    error.value = getApiErrorDetail(err, 'Failed to update role')
+    dialogError.value = getApiErrorDetail(err, 'Failed to save role')
   } finally {
-    loading.value = false
+    dialogLoading.value = false
+  }
+}
+
+async function savePermission() {
+  if (!permissionForm.name.trim()) {
+    dialogError.value = 'Permission name is required.'
+    return
+  }
+
+  dialogLoading.value = true
+  dialogError.value = ''
+
+  try {
+    if (permissionDialogMode.value === 'create') {
+      await adminApi.createPermission({
+        name: permissionForm.name.trim(),
+        description: permissionForm.description.trim() || undefined,
+      })
+      success.value = `Permission "${permissionForm.name.trim()}" created successfully`
+    } else {
+      await adminApi.updatePermission(permissionForm.id, {
+        name: permissionForm.name.trim(),
+        description: permissionForm.description.trim() || '',
+      })
+      success.value = `Permission "${permissionForm.name.trim()}" updated successfully`
+    }
+
+    closePermissionDialog()
+    await loadData()
+  } catch (err: unknown) {
+    dialogError.value = getApiErrorDetail(err, 'Failed to save permission')
+  } finally {
+    dialogLoading.value = false
   }
 }
 
 async function showRoleDetails(id: number) {
   loading.value = true
   error.value = ''
+
   try {
     selectedRoleDetails.value = await adminApi.getRoleDetails(id)
-    roleDetailsDialog.value = true
+    roleDetailsDialogOpen.value = true
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err, 'Failed to load role details')
-  } finally {
-    loading.value = false
-  }
-}
-
-function editRoleFromDetails(id: number) {
-  roleDetailsDialog.value = false
-  handleEditRole(id)
-}
-
-function confirmDeletePermission(perm: Permission) {
-  permToDelete.value = perm
-  deletePermConfirmation.value = ''
-  deletePermDialog.value = true
-}
-
-function cancelDeletePerm() {
-  deletePermDialog.value = false
-  permToDelete.value = null
-  deletePermConfirmation.value = ''
-}
-
-async function handleConfirmDeletePerm() {
-  if (deletePermConfirmation.value !== 'DELETE' || !permToDelete.value || deletingPerm.value) {
-    return
-  }
-
-  deletingPerm.value = true
-  error.value = ''
-  try {
-    await adminApi.deletePermission(permToDelete.value.id)
-    success.value = `Permission "${permToDelete.value.name}" deleted successfully`
-
-    // Close dialog
-    cancelDeletePerm()
-
-    // Reload data
-    await loadData()
-  } catch (err: unknown) {
-    error.value = getApiErrorDetail(err, 'Failed to delete permission')
-  } finally {
-    deletingPerm.value = false
-  }
-}
-
-function handleEditPermission(id: number) {
-  const perm = permissions.value.find((p) => p.id === id)
-  if (!perm) {
-    error.value = 'Permission not found'
-    return
-  }
-  editPermForm.value = {
-    id: perm.id,
-    name: perm.name,
-    description: perm.description || '',
-  }
-  editPermDialog.value = true
-}
-
-async function savePermissionEdit() {
-  if (!editPermForm.value.name) {
-    error.value = 'Permission name is required'
-    return
-  }
-  loading.value = true
-  error.value = ''
-  try {
-    await adminApi.updatePermission(editPermForm.value.id, {
-      name: editPermForm.value.name,
-      description: editPermForm.value.description,
-    })
-    success.value = `Permission "${editPermForm.value.name}" updated successfully`
-    editPermDialog.value = false
-    await loadData()
-  } catch (err: unknown) {
-    error.value = getApiErrorDetail(err, 'Failed to update permission')
   } finally {
     loading.value = false
   }
@@ -978,9 +919,10 @@ async function savePermissionEdit() {
 async function showPermissionDetails(id: number) {
   loading.value = true
   error.value = ''
+
   try {
-    selectedPermDetails.value = await adminApi.getPermissionDetails(id)
-    permDetailsDialog.value = true
+    selectedPermissionDetails.value = await adminApi.getPermissionDetails(id)
+    permissionDetailsDialogOpen.value = true
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err, 'Failed to load permission details')
   } finally {
@@ -988,12 +930,77 @@ async function showPermissionDetails(id: number) {
   }
 }
 
+function editRoleFromDetails(id: number) {
+  roleDetailsDialogOpen.value = false
+  handleEditRole(id)
+}
+
 function editPermissionFromDetails(id: number) {
-  permDetailsDialog.value = false
+  permissionDetailsDialogOpen.value = false
   handleEditPermission(id)
 }
 
-function formatDate(dateString: string): string {
+function confirmDeleteRole(role: Role) {
+  deleteTarget.value = 'role'
+  deleteRole.value = role
+  deletePermission.value = null
+  deleteConfirmation.value = ''
+  deleteDialogOpen.value = true
+}
+
+function confirmDeletePermission(permissionItem: Permission) {
+  deleteTarget.value = 'permission'
+  deletePermission.value = permissionItem
+  deleteRole.value = null
+  deleteConfirmation.value = ''
+  deleteDialogOpen.value = true
+}
+
+function closeDeleteDialog() {
+  deleteDialogOpen.value = false
+  deleteTarget.value = null
+  deleteRole.value = null
+  deletePermission.value = null
+  deleteConfirmation.value = ''
+}
+
+async function handleConfirmDelete() {
+  if (deleteConfirmation.value !== 'DELETE' || deleting.value) {
+    return
+  }
+
+  deleting.value = true
+  error.value = ''
+
+  try {
+    if (deleteTarget.value === 'role' && deleteRole.value) {
+      await adminApi.deleteRole(deleteRole.value.id)
+      success.value = `Role "${deleteRole.value.name}" deleted successfully`
+    }
+
+    if (deleteTarget.value === 'permission' && deletePermission.value) {
+      await adminApi.deletePermission(deletePermission.value.id)
+      success.value = `Permission "${deletePermission.value.name}" deleted successfully`
+    }
+
+    closeDeleteDialog()
+    await loadData()
+  } catch (err: unknown) {
+    error.value = getApiErrorDetail(err, 'Failed to delete item')
+  } finally {
+    deleting.value = false
+  }
+}
+
+function getRolePermissionsPreview(permissionNames: string[] | undefined) {
+  return (permissionNames || []).slice(0, 3)
+}
+
+function getAdditionalRolePermissionCount(permissionNames: string[] | undefined) {
+  return Math.max((permissionNames || []).length - 3, 0)
+}
+
+function formatDate(dateString: string) {
   try {
     return new Date(dateString).toLocaleString()
   } catch {
@@ -1007,23 +1014,613 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.gap-2 {
+.rbac-management-page {
+  --rbac-accent: var(--app-accent);
+  --rbac-accent-strong: var(--app-accent-strong);
+  --rbac-accent-soft: var(--app-accent-soft);
+  --rbac-accent-line: var(--app-ring);
+  --rbac-info: var(--app-info);
+  --rbac-info-soft: var(--app-info-soft);
+  --rbac-info-line: var(--app-info-line);
+  --rbac-success: var(--app-success);
+  --rbac-success-soft: var(--app-success-soft);
+  --rbac-success-line: var(--app-success-line);
+  --rbac-warning: var(--app-warning);
+  --rbac-warning-soft: var(--app-warning-soft);
+  --rbac-warning-line: var(--app-warning-line);
+  --rbac-danger: var(--app-danger);
+  --rbac-danger-soft: var(--app-danger-soft);
+  --rbac-danger-line: var(--app-danger-line);
+}
+
+.rbac-management-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.rbac-management-header__copy {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.rbac-management-header__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--rbac-accent), var(--rbac-info));
+  color: white;
+  font-size: 1.45rem;
+  box-shadow: 0 18px 32px var(--rbac-accent-soft);
+}
+
+.rbac-management-header__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--rbac-accent);
+  font-weight: 700;
+}
+
+.rbac-management-header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 2.5vw, 2.35rem);
+  color: var(--app-ink);
+}
+
+.rbac-management-header p:last-child {
+  max-width: 45rem;
+  margin: 0.45rem 0 0;
+  color: var(--app-muted);
+  line-height: 1.6;
+}
+
+.rbac-management-header__actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.rbac-management-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 0.5rem;
-}
-
-.gap-1 {
-  gap: 0.25rem;
-}
-
-.clickable-name {
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 600;
   cursor: pointer;
-  color: rgb(var(--v-theme-primary));
-  font-weight: 500;
-  transition: opacity 0.2s;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
-.clickable-name:hover {
-  opacity: 0.7;
+.rbac-management-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.rbac-management-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.rbac-management-button--primary {
+  background: linear-gradient(135deg, var(--rbac-accent), var(--rbac-info));
+  color: white;
+  box-shadow: 0 18px 32px var(--rbac-accent-soft);
+}
+
+.rbac-management-button--secondary {
+  background: linear-gradient(135deg, var(--rbac-accent), var(--rbac-accent-strong));
+  color: white;
+}
+
+.rbac-management-button--ghost {
+  background: var(--app-panel-strong);
+  border-color: var(--app-border);
+  color: var(--app-ink);
+}
+
+.rbac-management-button--danger {
+  background: var(--rbac-danger-soft);
+  border-color: var(--rbac-danger-line);
+  color: var(--rbac-danger);
+}
+
+.rbac-management-notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  border: 1px solid transparent;
+  margin-bottom: 1rem;
+}
+
+.rbac-management-notice p {
+  margin: 0.25rem 0 0;
+}
+
+.rbac-management-notice button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.rbac-management-notice--inline {
+  margin-bottom: 0;
+}
+
+.rbac-management-notice--error {
+  background: var(--rbac-danger-soft);
+  border-color: var(--rbac-danger-line);
+  color: var(--rbac-danger);
+}
+
+.rbac-management-notice--success {
+  background: var(--rbac-success-soft);
+  border-color: var(--rbac-success-line);
+  color: var(--rbac-success);
+}
+
+.rbac-management-notice--warning {
+  background: var(--rbac-warning-soft);
+  border-color: var(--rbac-warning-line);
+  color: var(--rbac-warning);
+}
+
+.rbac-management-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.rbac-management-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  padding: 1.2rem;
+  border-radius: 1.2rem;
+  border: 1px solid var(--app-border);
+  background: linear-gradient(180deg, var(--app-panel-strong), var(--app-panel));
+  box-shadow: 0 16px 36px rgb(15 23 42 / 0.06);
+}
+
+.rbac-management-stat-card span {
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-muted);
+  font-weight: 700;
+}
+
+.rbac-management-stat-card strong {
+  font-size: 2rem;
+  color: var(--app-ink);
+}
+
+.rbac-management-stat-card small {
+  color: var(--app-muted);
+  line-height: 1.5;
+}
+
+.rbac-management-stat-card--success {
+  background: linear-gradient(180deg, var(--rbac-success-soft), var(--app-panel-strong));
+}
+
+.rbac-management-stat-card--cool {
+  background: linear-gradient(180deg, var(--rbac-info-soft), var(--app-panel-strong));
+}
+
+.rbac-management-stat-card--warm {
+  background: linear-gradient(180deg, var(--rbac-warning-soft), var(--app-panel-strong));
+}
+
+.rbac-management-shell {
+  border: 1px solid var(--app-border);
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(circle at top left, var(--rbac-accent-soft), transparent 28%),
+    var(--app-panel-strong);
+  box-shadow: 0 26px 60px rgb(15 23 42 / 0.08);
+  overflow: hidden;
+}
+
+.rbac-management-pane {
+  padding: 1.5rem;
+}
+
+.rbac-management-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1.25rem;
+  background: linear-gradient(180deg, var(--app-panel-strong), var(--app-panel));
+}
+
+.rbac-management-panel__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.rbac-management-panel__header--compact {
+  flex-wrap: wrap;
+}
+
+.rbac-management-panel__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--rbac-accent);
+  font-weight: 700;
+}
+
+.rbac-management-panel h2 {
+  margin: 0;
+  color: var(--app-ink);
+}
+
+.rbac-management-search {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: min(100%, 24rem);
+  padding: 0.75rem 0.95rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-panel-strong);
+  color: var(--app-muted);
+}
+
+.rbac-management-search input {
+  width: 100%;
+  border: 0;
+  outline: none;
+  background: transparent;
+  font: inherit;
+  color: var(--app-ink);
+}
+
+.rbac-management-link-button {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  font: inherit;
+  color: var(--rbac-accent);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.rbac-management-link-button:hover {
   text-decoration: underline;
+}
+
+.rbac-management-chip-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.rbac-management-chip,
+.rbac-management-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.32rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.rbac-management-chip {
+  background: var(--rbac-accent-soft);
+  color: var(--rbac-accent);
+}
+
+.rbac-management-chip--muted {
+  background: var(--app-canvas-strong);
+  color: var(--app-muted);
+}
+
+.rbac-management-badge--info {
+  background: var(--rbac-info-soft);
+  color: var(--rbac-info);
+}
+
+.rbac-management-badge--success {
+  background: var(--rbac-success-soft);
+  color: var(--rbac-success);
+}
+
+.rbac-management-badge--danger {
+  background: var(--rbac-danger-soft);
+  color: var(--rbac-danger);
+}
+
+.rbac-management-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.rbac-management-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  cursor: pointer;
+}
+
+.rbac-management-actions button.is-danger {
+  background: var(--rbac-danger-soft);
+  border-color: var(--rbac-danger-line);
+  color: var(--rbac-danger);
+}
+
+.rbac-management-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.rbac-management-empty-state {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--app-muted);
+}
+
+.rbac-management-empty-state p,
+.rbac-management-footnote,
+.rbac-management-empty-copy {
+  margin: 0;
+}
+
+.rbac-management-footnote {
+  color: var(--app-muted);
+  font-size: 0.82rem;
+}
+
+.rbac-management-dialog-form,
+.rbac-management-delete-stack,
+.rbac-management-detail-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.rbac-management-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.rbac-management-field span {
+  font-weight: 600;
+  color: var(--app-ink);
+}
+
+.rbac-management-field input,
+.rbac-management-field textarea {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  padding: 0.78rem 0.95rem;
+  font: inherit;
+  color: var(--app-ink);
+  background: var(--app-panel-strong);
+}
+
+.rbac-management-field input:focus,
+.rbac-management-field textarea:focus {
+  outline: none;
+  border-color: var(--rbac-accent);
+  box-shadow: 0 0 0 4px var(--rbac-accent-soft);
+}
+
+.rbac-management-field textarea {
+  resize: vertical;
+  min-height: 7.5rem;
+}
+
+.rbac-management-permission-picker {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+  max-height: 18rem;
+  overflow: auto;
+  padding: 0.25rem;
+}
+
+.rbac-management-permission-option {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: var(--app-panel);
+  cursor: pointer;
+}
+
+.rbac-management-permission-option input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--rbac-accent);
+}
+
+.rbac-management-permission-option.is-selected {
+  border-color: var(--rbac-accent-line);
+  background: var(--rbac-accent-soft);
+}
+
+.rbac-management-dialog-error {
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  background: var(--rbac-danger-soft);
+  border: 1px solid var(--rbac-danger-line);
+  color: var(--rbac-danger);
+}
+
+.rbac-management-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.rbac-management-detail-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.8rem;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: var(--app-panel);
+}
+
+.rbac-management-detail-panel__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+}
+
+.rbac-management-detail-panel h3 {
+  margin: 0;
+  color: var(--app-ink);
+}
+
+.rbac-management-detail-panel p {
+  margin: 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.rbac-management-user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.rbac-management-user-card {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: var(--app-panel-strong);
+}
+
+.rbac-management-user-card strong,
+.rbac-management-user-card small {
+  display: block;
+}
+
+.rbac-management-user-card small {
+  margin-top: 0.2rem;
+  color: var(--app-muted);
+}
+
+.rbac-management-meta-list {
+  display: grid;
+  gap: 0.75rem;
+  margin: 0;
+}
+
+.rbac-management-meta-list div {
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--app-border);
+}
+
+.rbac-management-meta-list dt {
+  margin-bottom: 0.2rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-muted);
+}
+
+.rbac-management-meta-list dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--app-ink);
+}
+
+@media (max-width: 1100px) {
+  .rbac-management-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .rbac-management-permission-picker {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .rbac-management-header,
+  .rbac-management-header__copy {
+    flex-direction: column;
+  }
+
+  .rbac-management-header__actions,
+  .rbac-management-dialog-footer {
+    width: 100%;
+  }
+
+  .rbac-management-button {
+    width: 100%;
+  }
+
+  .rbac-management-stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .rbac-management-pane {
+    padding: 1rem;
+  }
+
+  .rbac-management-panel {
+    padding: 1rem;
+  }
+
+  .rbac-management-actions {
+    justify-content: flex-start;
+  }
+
+  .rbac-management-user-card,
+  .rbac-management-detail-panel__header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }
 </style>

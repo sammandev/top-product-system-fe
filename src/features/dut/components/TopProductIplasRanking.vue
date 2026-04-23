@@ -1,207 +1,233 @@
 <template>
-  <v-card class="mb-4">
-    <v-card-title class="d-flex justify-space-between align-center flex-wrap">
-      <div>
-        <v-icon class="mr-2" color="warning">mdi-podium-gold</v-icon>
-        <!-- UPDATED: Change title based on whether scores are calculated -->
-        {{ hasScores ? 'iPLAS Data Ranking by Test Station' : 'iPLAS Data Result' }}
-      </div>
-      <div class="d-flex align-center gap-2 flex-wrap">
-        <!-- Save to DB Button -->
-        <v-btn v-if="selectedItems.length > 0" color="primary" variant="tonal" size="small"
-          prepend-icon="mdi-database-plus" :loading="savingToDb" @click="handleSaveToDb">
+  <AppPanel
+    eyebrow="Ranking"
+    :title="hasScores ? 'iPLAS Data Ranking by Test Station' : 'iPLAS Data Result'"
+    :description="hasScores ? 'Rankings are based on scoring. Higher scores indicate better performance.' : 'Calculate scores to rank records by performance score. Records with errors remain grouped at the bottom.'"
+    tone="warm"
+    split-header
+  >
+    <template #header-aside>
+      <div class="ranking-actions">
+        <button
+          v-if="selectedItems.length > 0"
+          type="button"
+          class="ranking-button ranking-button--primary"
+          :disabled="savingToDb"
+          @click="handleSaveToDb"
+        >
           Save to DB ({{ selectedItems.length }})
-        </v-btn>
-        <!-- Export All Button -->
-        <v-btn v-if="totalRecords > 0" color="primary" variant="outlined" size="small" prepend-icon="mdi-file-export"
-          :loading="props.exportingAll" @click="handleExportAll">
+        </button>
+        <button
+          v-if="totalRecords > 0"
+          type="button"
+          class="ranking-button ranking-button--ghost"
+          :disabled="props.exportingAll"
+          @click="handleExportAll"
+        >
           Export All ({{ totalRecords }})
-        </v-btn>
-        <!-- Export Selected Button -->
-        <v-btn v-if="selectedItems.length > 0" color="info" variant="outlined" size="small"
-          prepend-icon="mdi-file-export-outline" :loading="exporting" @click="handleExport">
+        </button>
+        <button
+          v-if="selectedItems.length > 0"
+          type="button"
+          class="ranking-button ranking-button--ghost"
+          :disabled="exporting"
+          @click="handleExport"
+        >
           Export Selected ({{ selectedItems.length }})
-        </v-btn>
-        <!-- Bulk Download Button -->
-        <v-btn v-if="selectedItems.length > 0" color="success" variant="outlined" size="small"
-          prepend-icon="mdi-download-multiple" :loading="bulkDownloading" @click="handleBulkDownload">
+        </button>
+        <button
+          v-if="selectedItems.length > 0"
+          type="button"
+          class="ranking-button ranking-button--success"
+          :disabled="bulkDownloading"
+          @click="handleBulkDownload"
+        >
           Download Selected ({{ selectedItems.length }})
-        </v-btn>
-        <!-- UPDATED: Show Calculate/Re-calculate button -->
-        <v-btn v-if="!hasScores" color="primary" variant="outlined" size="small" prepend-icon="mdi-calculator"
-          :loading="calculatingScores" :disabled="loading" @click="emit('calculate-scores')">
-          Calculate Scores
-        </v-btn>
-        <v-btn v-else color="secondary" variant="outlined" size="small" prepend-icon="mdi-refresh"
-          :loading="calculatingScores" :disabled="loading" @click="emit('calculate-scores')">
-          Re-calculate
-        </v-btn>
-        <v-chip size="small" color="success" variant="tonal" prepend-icon="mdi-barcode">
-          {{ totalRecords }} Records
-        </v-chip>
+        </button>
+        <button
+          type="button"
+          class="ranking-button ranking-button--secondary"
+          :disabled="loading || calculatingScores"
+          @click="emit('calculate-scores')"
+        >
+          {{ hasScores ? 'Re-calculate' : 'Calculate Scores' }}
+        </button>
+        <span class="ranking-pill ranking-pill--success">{{ totalRecords }} Records</span>
       </div>
-    </v-card-title>
+    </template>
 
-    <v-card-subtitle class="text-caption text-medium-emphasis pb-0">
-      <span v-if="hasScores">Rankings are based on scoring. Higher scores indicate better performance.</span>
-      <span v-else>Click "Calculate Scores" to rank records by performance score. Records with errors are shown at
-        the bottom.</span>
-    </v-card-subtitle>
+    <AppTabs v-model="selectedTab" :items="stationTabItems" scrollable>
+      <template v-for="item in stationTabItems" :key="String(item.value)" #[`panel-${item.value}`]>
+        <section class="ranking-panel">
+          <div class="ranking-filter-grid">
+            <label class="ranking-field">
+              <span>Search Records</span>
+              <input v-model="searchQuery" type="text" placeholder="Search ISN, Device ID, Error Code...">
+            </label>
 
-    <v-card-text>
-      <!-- Station Tabs -->
-      <v-tabs v-model="selectedTab" color="primary" density="compact" show-arrows>
-        <v-tab v-for="(ranking, station) in rankingByStation" :key="station" :value="station">
-          <v-icon start size="small">mdi-router-wireless</v-icon>
-          {{ getStationDisplayName(station) }}
-          <v-chip v-if="getStationFailCount(station) > 0" size="x-small" class="ml-2" color="warning">
-            {{ getStationFailCount(station) }} fail
-          </v-chip>
-          <v-chip v-else size="x-small" class="ml-2" color="success">
-            {{ ranking.length }}
-          </v-chip>
-        </v-tab>
-      </v-tabs>
+            <label class="ranking-field">
+              <span>Device IDs</span>
+              <input
+                v-model="deviceFilterEntry"
+                type="text"
+                list="ranking-device-filter-options"
+                placeholder="Type a device and press Enter"
+                @keydown.enter.prevent="commitDeviceFilter"
+                @blur="commitDeviceFilter"
+              >
+              <datalist id="ranking-device-filter-options">
+                <option v-for="device in getUniqueDevices(String(item.value))" :key="device" :value="device" />
+              </datalist>
+              <div v-if="deviceFilter.length > 0" class="ranking-token-row">
+                <button
+                  v-for="device in deviceFilter"
+                  :key="device"
+                  type="button"
+                  class="ranking-token"
+                  @click="removeDeviceFilter(device)"
+                >
+                  <span>{{ device }}</span>
+                  <span aria-hidden="true">x</span>
+                </button>
+              </div>
+            </label>
 
-      <!-- Station Rankings -->
-      <v-window v-model="selectedTab" class="pt-4">
-        <v-window-item v-for="(_, station) in rankingByStation" :key="station" :value="station">
-          <!-- Filters Row: Search, Device, Score Filter -->
-          <v-row class="mb-2" dense>
-            <v-col cols="12" md="4">
-              <v-text-field v-model="searchQuery" label="Search Records" prepend-inner-icon="mdi-magnify"
-                variant="outlined" density="compact" hide-details clearable placeholder="Search ISN, Device ID..." />
-            </v-col>
-            <v-col cols="12" md="3">
-              <v-autocomplete v-model="deviceFilter" :items="getUniqueDevices(station)" label="Device ID"
-                variant="outlined" density="compact" prepend-inner-icon="mdi-chip" hide-details clearable multiple chips
-                closable-chips>
-                <template #chip="{ props, item }">
-                  <v-chip v-bind="props" :text="item.raw" size="small" />
-                </template>
-              </v-autocomplete>
-            </v-col>
-            <!-- Score Filter (only shown when scores are calculated) -->
             <template v-if="hasScores">
-              <v-col cols="12" md="2">
-                <v-select v-model="scoreFilterType" :items="scoreFilterTypeOptions" item-title="title"
-                  item-value="value" label="Score Filter" variant="outlined" density="compact"
-                  prepend-inner-icon="mdi-filter-variant" hide-details clearable
-                  @update:model-value="() => { if (!scoreFilterType) { scoreFilterValue = null; scoreFilterValue2 = null; scoreRangeInput = '' } }" />
-              </v-col>
-              <v-col v-if="scoreFilterType === 'between'" cols="12" md="2">
-                <v-text-field v-model="scoreRangeInput" label="Range (e.g. 8-10)" variant="outlined" density="compact"
-                  hide-details placeholder="8-10" @update:model-value="parseScoreRange" />
-              </v-col>
-              <v-col v-else-if="scoreFilterType" cols="12" md="2">
-                <v-text-field v-model.number="scoreFilterValue" label="Score Value" type="number" variant="outlined"
-                  density="compact" hide-details min="0" max="10" step="0.1" placeholder="0-10" />
-              </v-col>
-            </template>
-            <v-col cols="12" :md="hasScores ? 1 : 3" class="d-flex align-center justify-end">
-              <v-btn v-if="hasActiveFilters" variant="text" size="small" color="primary" @click="clearAllFilters">
-                <v-icon start size="small">mdi-filter-off</v-icon>
-                Clear
-                <v-chip size="x-small" color="primary" class="ml-1">{{ activeFilterCount }}</v-chip>
-              </v-btn>
-            </v-col>
-          </v-row>
+              <label class="ranking-field">
+                <span>Score Filter</span>
+                <select v-model="scoreFilterType" @change="handleScoreFilterTypeChange">
+                  <option :value="null">No filter</option>
+                  <option v-for="option in scoreFilterTypeOptions" :key="option.value" :value="option.value">{{ option.title }}</option>
+                </select>
+              </label>
 
-          <!-- Data Table with Selection -->
-          <v-data-table v-model="selectedItems" :headers="rankingHeaders" :items="filteredRanking" :items-per-page="25"
-            density="comfortable" class="elevation-1 ranking-table cursor-pointer" :row-props="getRowProps" show-select
-            item-value="key" return-object
-            @click:row="(_event: unknown, data: any) => handleRowClick(data.item, station as string)">
-            <!-- Rank Column -->
-            <template #item.rank="{ item }">
-              <div class="d-flex align-center">
-                <template v-if="item.hasError">
-                  <v-icon :color="item.isForcedFailure ? 'warning' : 'error'" size="small">mdi-alert-circle</v-icon>
+              <label class="ranking-field">
+                <span>{{ scoreFilterType === 'between' ? 'Range (e.g. 8-10)' : 'Score Value' }}</span>
+                <input
+                  v-if="scoreFilterType === 'between'"
+                  v-model="scoreRangeInput"
+                  type="text"
+                  placeholder="8-10"
+                  @input="parseScoreRange"
+                >
+                <input
+                  v-else
+                  v-model.number="scoreFilterValue"
+                  type="number"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  placeholder="0-10"
+                  :disabled="!scoreFilterType"
+                >
+              </label>
+            </template>
+
+            <div class="ranking-filter-actions">
+              <button v-if="hasActiveFilters" type="button" class="ranking-button ranking-button--ghost" @click="clearAllFilters">
+                Clear Filters
+              </button>
+              <span v-if="hasActiveFilters" class="ranking-pill ranking-pill--primary">{{ activeFilterCount }} active</span>
+            </div>
+          </div>
+
+          <AppDataGrid
+            :columns="gridColumns"
+            :rows="filteredRanking"
+            data-key="key"
+            :selection="selectedItems"
+            selection-mode="multiple"
+            :show-selection-column="true"
+            :loading="loading"
+            :paginator="true"
+            :rows-per-page="25"
+            scroll-height="40rem"
+            :row-class="getRankingRowClass"
+            :table-style="{ minWidth: '72rem' }"
+            @update:selection="selectedItems = ($event as RankingItem[])"
+            @row-click="handleGridRowClick($event, String(item.value))"
+          >
+            <template #cell-rank="{ data }">
+              <div class="ranking-rank-cell">
+                <template v-if="data.hasError">
+                  <span class="ranking-rank-icon ranking-rank-icon--danger">!</span>
                 </template>
-                <template v-else-if="item.rank === 1">
-                  <v-icon color="warning">mdi-trophy</v-icon>
-                  <span class="ml-1 font-weight-bold">1</span>
+                <template v-else-if="data.rank === 1">
+                  <span class="ranking-rank-icon ranking-rank-icon--gold">1</span>
                 </template>
-                <template v-else-if="item.rank === 2">
-                  <v-icon color="grey-lighten-1">mdi-medal</v-icon>
-                  <span class="ml-1">2</span>
+                <template v-else-if="data.rank === 2">
+                  <span class="ranking-rank-icon ranking-rank-icon--silver">2</span>
                 </template>
-                <template v-else-if="item.rank === 3">
-                  <v-icon color="orange-darken-3">mdi-medal-outline</v-icon>
-                  <span class="ml-1">3</span>
+                <template v-else-if="data.rank === 3">
+                  <span class="ranking-rank-icon ranking-rank-icon--bronze">3</span>
                 </template>
                 <template v-else>
-                  <span class="text-medium-emphasis">{{ item.rank }}</span>
+                  <span class="ranking-rank-fallback">{{ data.rank }}</span>
                 </template>
               </div>
             </template>
 
-            <!-- ISN Column with Copy Icon on Left -->
-            <template #item.isn="{ item }">
-              <div class="d-flex align-center gap-1">
-                <v-btn icon size="x-small" variant="text" color="primary" @click.stop="copyToClipboard(item.isn)">
-                  <v-icon size="small">mdi-content-copy</v-icon>
-                  <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
-                </v-btn>
-                <span class="font-weight-medium font-mono">{{ item.isn }}</span>
+            <template #cell-isn="{ data }">
+              <div class="ranking-isn-cell">
+                <button type="button" class="ranking-inline-icon" @click.stop="copyToClipboard(String(data.isn))" title="Copy ISN">
+                  Copy
+                </button>
+                <span class="ranking-isn-value">{{ data.isn }}</span>
               </div>
             </template>
 
-            <!-- Device Column -->
-            <template #item.device="{ item }">
-              <v-chip size="small" variant="outlined">{{ item.device || '-' }}</v-chip>
+            <template #cell-device="{ value }">
+              <span class="ranking-pill ranking-pill--muted">{{ value || '-' }}</span>
             </template>
 
-            <!-- Test End Time Column -->
-            <template #item.testDate="{ item }">
-              <span class="text-caption">{{ item.testDate }}</span>
+            <template #cell-testDate="{ value }">
+              <span class="ranking-muted">{{ value }}</span>
             </template>
 
-            <!-- Duration Column -->
-            <template #item.duration="{ item }">
-              <span class="text-caption text-medium-emphasis">{{ item.duration }}</span>
+            <template #cell-duration="{ value }">
+              <span class="ranking-muted">{{ value }}</span>
             </template>
 
-            <!-- Status Column -->
-            <template #item.status="{ item }">
-              <v-chip :color="item.isForcedFailure ? 'warning' : (item.hasError ? 'error' : 'success')" size="small">
-                {{ item.status }}
-              </v-chip>
+            <template #cell-status="{ data }">
+              <span
+                class="ranking-pill"
+                :class="data.isForcedFailure ? 'ranking-pill--warning' : (data.hasError ? 'ranking-pill--danger' : 'ranking-pill--success')"
+              >
+                {{ data.status }}
+              </span>
             </template>
 
-            <!-- Score Column -->
-            <template #item.score="{ item }">
-              <template v-if="item.hasError && !item.isForcedFailure">
-                <v-chip size="small" color="error" variant="tonal">FAIL</v-chip>
+            <template #cell-score="{ data }">
+              <template v-if="data.hasError && !data.isForcedFailure">
+                <span class="ranking-pill ranking-pill--danger">FAIL</span>
               </template>
-              <template v-else-if="item.score !== null">
-                <v-chip size="small" :color="getScoreColor(item.score)" variant="flat" class="font-weight-bold">
-                  {{ (item.score * 10).toFixed(2) }}
-                </v-chip>
+              <template v-else-if="data.score !== null">
+                <span class="ranking-score-chip" :class="`ranking-score-chip--${scoreTone(data.score)}`">
+                  {{ (data.score * 10).toFixed(2) }}
+                </span>
               </template>
               <template v-else>
-                <span class="text-medium-emphasis">-</span>
+                <span class="ranking-muted">-</span>
               </template>
             </template>
 
-            <!-- Actions Column -->
-            <template #item.actions="{ item }">
-              <v-btn icon size="small" variant="text" color="success"
-                @click.stop="handleDownloadDetails(item, station as string)">
-                <v-icon>mdi-download</v-icon>
-                <v-tooltip activator="parent" location="top">Download Attachment</v-tooltip>
-              </v-btn>
+            <template #cell-actions="{ data }">
+              <button type="button" class="ranking-inline-icon ranking-inline-icon--success" @click.stop="handleDownloadDetails(data as RankingItem, String(item.value))" title="Download Attachment">
+                Download
+              </button>
             </template>
-          </v-data-table>
-        </v-window-item>
-      </v-window>
-    </v-card-text>
-  </v-card>
+          </AppDataGrid>
+        </section>
+      </template>
+    </AppTabs>
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
 import { useDebounceFn } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
+import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
+import { AppPanel, AppTabs } from '@/shared/ui'
 import type { CsvTestItemData } from '@/features/dut-logs/composables/useIplasApi'
 import { adjustIplasDisplayTime, isStatusPass } from '@/shared/utils/helpers'
 import { getScoreColor } from '../types/scoring.types'
@@ -251,6 +277,7 @@ const searchQuery = ref<string>('')
 // Debounced search query for performance - actual filtering uses this
 const debouncedSearchQuery = ref<string>('')
 const deviceFilter = ref<string[]>([])
+const deviceFilterEntry = ref('')
 
 // Score filter state
 const scoreFilterType = ref<string | null>(null)
@@ -311,6 +338,33 @@ const scoreFilterTypeOptions = [
 // Check if we have scores - must be defined before rankingHeaders
 const hasScores = computed(() => {
   return Object.keys(props.scores || {}).length > 0
+})
+
+const stationTabItems = computed(() =>
+  Object.entries(rankingByStation.value).map(([station, ranking]) => ({
+    value: station,
+    label: getStationDisplayName(station),
+    icon: 'mdi-router-wireless',
+    badgeCount: getStationFailCount(station) > 0 ? getStationFailCount(station) : ranking.length,
+  })),
+)
+
+const gridColumns = computed(() => {
+  const columns = [
+    { key: 'isn', field: 'isn', header: 'DUT ISN', sortable: true, style: { width: '14rem' } },
+    { key: 'device', field: 'device', header: 'Device ID', sortable: true, style: { width: '9rem' } },
+    { key: 'testDate', field: 'testDate', header: 'Test End', sortable: true, style: { width: '12rem' } },
+    { key: 'duration', field: 'duration', header: 'Duration', sortable: true, style: { width: '8rem' } },
+    { key: 'status', field: 'status', header: 'Status', sortable: true, style: { width: '10rem' } },
+    { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '7rem' } },
+    { key: 'actions', field: 'actions', header: 'Actions', style: { width: '8rem' } },
+  ]
+
+  if (hasScores.value) {
+    columns.unshift({ key: 'rank', field: 'rank', header: '#', sortable: true, style: { width: '5rem' } })
+  }
+
+  return columns
 })
 
 // Updated headers: conditional rank column based on hasScores
@@ -567,15 +621,46 @@ function clearAllFilters() {
   searchQuery.value = ''
   debouncedSearchQuery.value = ''
   deviceFilter.value = []
+  deviceFilterEntry.value = ''
   scoreFilterType.value = null
   scoreFilterValue.value = null
   scoreFilterValue2.value = null
   scoreRangeInput.value = ''
 }
 
+function commitDeviceFilter() {
+  const value = deviceFilterEntry.value.trim()
+  deviceFilterEntry.value = ''
+  if (!value || deviceFilter.value.includes(value)) {
+    return
+  }
+
+  deviceFilter.value = [...deviceFilter.value, value]
+}
+
+function removeDeviceFilter(device: string) {
+  deviceFilter.value = deviceFilter.value.filter((value) => value !== device)
+}
+
+function handleScoreFilterTypeChange() {
+  if (!scoreFilterType.value) {
+    scoreFilterValue.value = null
+    scoreFilterValue2.value = null
+    scoreRangeInput.value = ''
+  }
+}
+
 function getRowProps({ item }: { item: RankingItem }) {
   return {
     class: getRankingRowClass(item),
+  }
+}
+
+function handleGridRowClick(event: unknown, stationName: string) {
+  const payload = event as { data?: RankingItem; value?: RankingItem }
+  const row = payload?.data || payload?.value
+  if (row) {
+    handleRowClick(row, stationName)
   }
 }
 
@@ -719,9 +804,25 @@ function handleExportAll(): void {
   // Loading state is managed by parent via exportingAll prop
   emit('export-all', { records: props.records, filenamePrefix: 'all_stations' })
 }
+
+function scoreTone(score: number) {
+  const color = getScoreColor(score)
+  if (color.includes('green') || color.includes('success')) return 'success'
+  if (color.includes('warning') || color.includes('orange')) return 'warning'
+  if (color.includes('error') || color.includes('red')) return 'danger'
+  return 'info'
+}
 </script>
 
 <style scoped>
+:deep(.rank-1-row),
+:deep(.rank-2-row),
+:deep(.rank-3-row),
+:deep(.error-row),
+:deep(.forced-fail-row) {
+  transition: background-color 0.15s ease;
+}
+
 :deep(.rank-1-row) {
   background-color: rgba(255, 215, 0, 0.1) !important;
 }
@@ -742,16 +843,191 @@ function handleExportAll(): void {
   background-color: rgba(255, 152, 0, 0.05) !important;
 }
 
-.ranking-table {
-  border-radius: 8px;
-  overflow: hidden;
+.ranking-panel,
+.ranking-filter-grid,
+.ranking-field {
+  display: grid;
+  gap: 0.85rem;
 }
 
-.cursor-pointer {
+.ranking-actions,
+.ranking-token-row,
+.ranking-isn-cell,
+.ranking-filter-actions,
+.ranking-rank-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.ranking-actions {
+  justify-content: end;
+}
+
+.ranking-filter-grid {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 0.8fr) auto;
+  margin-bottom: 1rem;
+}
+
+.ranking-field span {
+  color: var(--app-ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.ranking-field input,
+.ranking-field select {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  padding: 0.8rem 0.9rem;
+  font: inherit;
+}
+
+.ranking-button,
+.ranking-token,
+.ranking-inline-icon {
+  min-height: 2.6rem;
+  border-radius: 0.95rem;
+  border: 1px solid var(--app-border);
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  font-weight: 700;
   cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.gap-2 {
-  gap: 0.5rem;
+.ranking-button,
+.ranking-token,
+.ranking-inline-icon {
+  padding: 0.6rem 0.9rem;
+}
+
+.ranking-button:hover,
+.ranking-token:hover,
+.ranking-inline-icon:hover {
+  transform: translateY(-1px);
+}
+
+.ranking-button--primary {
+  background: linear-gradient(135deg, #145847, #1b6c58);
+  border-color: #145847;
+  color: white;
+}
+
+.ranking-button--secondary {
+  background: linear-gradient(135deg, #165d92, #1d7fb7);
+  border-color: #165d92;
+  color: white;
+}
+
+.ranking-button--success,
+.ranking-inline-icon--success {
+  background: rgba(20, 88, 71, 0.08);
+  border-color: rgba(20, 88, 71, 0.16);
+  color: #145847;
+}
+
+.ranking-button--ghost {
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.ranking-pill,
+.ranking-score-chip,
+.ranking-rank-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2rem;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 700;
+}
+
+.ranking-pill--success,
+.ranking-score-chip--success {
+  background: rgba(20, 88, 71, 0.1);
+  border-color: rgba(20, 88, 71, 0.16);
+  color: #145847;
+}
+
+.ranking-pill--primary,
+.ranking-score-chip--info {
+  background: rgba(40, 96, 163, 0.08);
+  border-color: rgba(40, 96, 163, 0.16);
+  color: #1f4f89;
+}
+
+.ranking-pill--warning,
+.ranking-score-chip--warning {
+  background: rgba(169, 102, 34, 0.1);
+  border-color: rgba(169, 102, 34, 0.18);
+  color: #88551c;
+}
+
+.ranking-pill--danger,
+.ranking-score-chip--danger {
+  background: rgba(164, 52, 58, 0.08);
+  border-color: rgba(164, 52, 58, 0.16);
+  color: #8e3037;
+}
+
+.ranking-pill--muted {
+  background: rgba(95, 103, 122, 0.1);
+  border-color: rgba(95, 103, 122, 0.16);
+  color: #4c566a;
+}
+
+.ranking-rank-icon--gold {
+  background: rgba(255, 215, 0, 0.16);
+  color: #8a5b00;
+}
+
+.ranking-rank-icon--silver {
+  background: rgba(192, 192, 192, 0.22);
+  color: #5c6872;
+}
+
+.ranking-rank-icon--bronze {
+  background: rgba(205, 127, 50, 0.18);
+  color: #8f4a1d;
+}
+
+.ranking-rank-icon--danger {
+  background: rgba(164, 52, 58, 0.08);
+  color: #8e3037;
+}
+
+.ranking-rank-fallback,
+.ranking-muted {
+  color: var(--app-muted);
+}
+
+.ranking-isn-value {
+  color: var(--app-ink);
+  font-family: var(--app-mono, 'Consolas', monospace);
+  font-weight: 700;
+}
+
+@media (max-width: 1100px) {
+  .ranking-filter-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .ranking-filter-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ranking-actions {
+    justify-content: start;
+  }
 }
 </style>

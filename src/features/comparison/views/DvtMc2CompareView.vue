@@ -1,267 +1,220 @@
 <template>
     <DefaultLayout>
-        <!-- Page Header -->
-        <div class="d-flex justify-space-between align-center mb-6">
-            <div class="d-flex align-center">
-                <v-icon size="40" color="primary" class="mr-3">mdi-file-compare</v-icon>
+        <div class="dvt-compare-header mb-6">
+            <div class="dvt-compare-header__copy">
+                <div class="dvt-compare-header__icon">
+                    <Icon icon="mdi:file-compare" class="dvt-compare-header__icon-glyph" />
+                </div>
                 <div>
-                    <h1 class="text-h4 mb-2">DVT-MC2 Format Compare</h1>
-                    <p class="text-medium-emphasis mb-0">
-                        Compare MasterControl and DVT files to analyze test results
+                    <h1 class="dvt-compare-header__title">DVT-MC2 Format Compare</h1>
+                    <p class="dvt-compare-header__subtitle">
+                        Compare MasterControl and DVT files to analyze test-result drift and export the final payload.
                     </p>
                 </div>
             </div>
-            <v-btn v-if="hasComparisonResult" color="secondary" prepend-icon="mdi-refresh" @click="handleReset">
-                New Comparison
-            </v-btn>
+
+            <button v-if="hasComparisonResult" type="button" class="dvt-compare-button dvt-compare-button--ghost" @click="handleReset">
+                <Icon icon="mdi:refresh" />
+                <span>New Comparison</span>
+            </button>
         </div>
 
-        <!-- Error Alert -->
-        <v-alert v-if="error" type="error" variant="tonal" closable class="mb-4" @click:close="error = ''">
-            {{ error }}
-        </v-alert>
-
-        <!-- Success Alert -->
-        <v-alert v-if="downloadCompleted" type="success" variant="tonal" closable class="mb-4"
-            @click:close="downloadCompleted = false">
-            <div class="d-flex align-center">
-                <v-icon start>mdi-check-circle</v-icon>
-                File downloaded successfully!
+        <div v-if="error" class="dvt-compare-notice dvt-compare-notice--error mb-4">
+            <div>
+                <strong>Comparison failed</strong>
+                <p>{{ error }}</p>
             </div>
-        </v-alert>
+            <button type="button" @click="error = ''">Dismiss</button>
+        </div>
 
-        <!-- File Upload Section -->
-        <v-row class="mb-4">
-            <!-- MasterControl File Upload -->
-            <v-col cols="12" md="4">
-                <v-card>
-                    <v-card-title class="bg-primary">
-                        <v-icon start color="white">mdi-file-document</v-icon>
-                        <span class="text-white">MasterControl File</span>
-                    </v-card-title>
-                    <v-card-text>
-                        <v-file-input v-model="masterFile" label="Select MC2 File" accept=".txt,.csv" variant="outlined"
-                            prepend-icon="mdi-paperclip" :loading="uploading" show-size density="compact">
-                            <template #prepend-inner>
-                                <v-icon>mdi-file-check</v-icon>
-                            </template>
-                        </v-file-input>
+        <div v-if="downloadCompleted" class="dvt-compare-notice dvt-compare-notice--success mb-4">
+            <div>
+                <strong>Download ready</strong>
+                <p>The comparison export was generated successfully.</p>
+            </div>
+            <button type="button" @click="downloadCompleted = false">Dismiss</button>
+        </div>
 
-                        <v-alert v-if="masterFile" type="success" variant="tonal" density="compact" class="mt-2">
-                            <div class="text-caption">
-                                <v-icon size="small" start>mdi-check</v-icon>
-                                {{ getFileName(masterFile) }}
-                            </div>
-                        </v-alert>
-                    </v-card-text>
-                </v-card>
-            </v-col>
+        <div class="dvt-compare-upload-grid mb-4">
+            <AppPanel eyebrow="Source A" title="MasterControl File" description="Accepts `.txt` or `.csv` exports from MasterControl.">
+                <template #header-aside>
+                    <Icon icon="mdi:file-document" class="dvt-compare-panel__icon" />
+                </template>
 
-            <!-- DVT File Upload -->
-            <v-col cols="12" md="4">
-                <v-card>
-                    <v-card-title class="bg-secondary">
-                        <v-icon start color="white">mdi-file-document-outline</v-icon>
-                        <span class="text-white">DVT File</span>
-                    </v-card-title>
-                    <v-card-text>
-                        <v-file-input v-model="dvtFile" label="Select DVT File" accept=".txt,.csv" variant="outlined"
-                            prepend-icon="mdi-paperclip" :loading="uploading" show-size density="compact">
-                            <template #prepend-inner>
-                                <v-icon>mdi-file-check</v-icon>
-                            </template>
-                        </v-file-input>
+                <AppFilePicker
+                    v-model="masterFile"
+                    accept=".txt,.csv"
+                    label="Select MC2 file"
+                    helper-text="Use the raw MasterControl export you want to reconcile."
+                    :disabled="isBusy"
+                />
 
-                        <v-alert v-if="dvtFile" type="success" variant="tonal" density="compact" class="mt-2">
-                            <div class="text-caption">
-                                <v-icon size="small" start>mdi-check</v-icon>
-                                {{ getFileName(dvtFile) }}
-                            </div>
-                        </v-alert>
-                    </v-card-text>
-                </v-card>
-            </v-col>
+                <div v-if="masterFile" class="dvt-compare-file-note">
+                    <strong>{{ getFileName(masterFile) }}</strong>
+                    <span>Ready for comparison.</span>
+                </div>
+            </AppPanel>
 
-            <!-- Spec File Upload (Optional) -->
-            <v-col cols="12" md="4">
-                <v-card>
-                    <v-card-title class="bg-info">
-                        <v-icon start color="white">mdi-file-cog</v-icon>
-                        <span class="text-white">Spec File (Optional)</span>
-                    </v-card-title>
-                    <v-card-text>
-                        <v-file-input v-model="specFile" label="Select Spec File" accept=".json" variant="outlined"
-                            prepend-icon="mdi-paperclip" :loading="uploading" show-size density="compact" clearable>
-                            <template #prepend-inner>
-                                <v-icon>mdi-cog</v-icon>
-                            </template>
-                        </v-file-input>
+            <AppPanel eyebrow="Source B" title="DVT File" description="Upload the DVT export that should be matched against MC2." tone="warm">
+                <template #header-aside>
+                    <Icon icon="mdi:file-document-outline" class="dvt-compare-panel__icon" />
+                </template>
 
-                        <v-alert v-if="specFile" type="info" variant="tonal" density="compact" class="mt-2">
-                            <div class="text-caption">
-                                <v-icon size="small" start>mdi-check</v-icon>
-                                {{ getFileName(specFile) }}
-                            </div>
-                        </v-alert>
-                        <v-alert v-else type="info" variant="tonal" density="compact" class="mt-2">
-                            <div class="text-caption">
-                                Default spec will be used if not provided
-                            </div>
-                        </v-alert>
-                    </v-card-text>
-                </v-card>
-            </v-col>
-        </v-row>
+                <AppFilePicker
+                    v-model="dvtFile"
+                    accept=".txt,.csv"
+                    label="Select DVT file"
+                    helper-text="Use the DVT source with the same metric family and antenna coverage."
+                    :disabled="isBusy"
+                />
 
-        <!-- Configuration Section -->
-        <v-card class="mb-4">
-            <v-card-title>
-                <v-icon start>mdi-cog</v-icon>
-                Comparison Configuration
-            </v-card-title>
-            <v-card-text>
-                <v-row>
-                    <v-col cols="12" md="3">
-                        <v-text-field v-model.number="threshold" label="Threshold" type="number" variant="outlined"
-                            density="compact" step="0.1" hint="Comparison tolerance (optional)" persistent-hint />
-                    </v-col>
-                    <v-col cols="12" md="3">
-                        <v-text-field v-model.number="marginThreshold" label="Margin Threshold" type="number"
-                            variant="outlined" density="compact" step="0.1"
-                            hint="Pass/fail threshold override (optional)" persistent-hint />
-                    </v-col>
-                    <v-col cols="12" md="3">
-                        <v-text-field v-model.number="freqTolerance" label="Freq Tolerance (MHz)" type="number"
-                            variant="outlined" density="compact" step="0.1" hint="Frequency matching tolerance"
-                            persistent-hint />
-                    </v-col>
-                    <v-col cols="12" md="3">
-                        <v-select v-model="outputFormat" :items="outputFormatOptions" label="Output Format"
-                            variant="outlined" density="compact" hint="Result format" persistent-hint />
-                    </v-col>
-                </v-row>
-            </v-card-text>
-        </v-card>
+                <div v-if="dvtFile" class="dvt-compare-file-note">
+                    <strong>{{ getFileName(dvtFile) }}</strong>
+                    <span>Ready for comparison.</span>
+                </div>
+            </AppPanel>
 
-        <!-- Action Buttons -->
-        <v-card class="mb-4">
-            <v-card-text>
-                <v-row dense>
-                    <v-col cols="12" md="6">
-                        <v-btn color="primary" size="large" block :loading="processing" :disabled="!canCompare"
-                            prepend-icon="mdi-compare" @click="handleCompare">
-                            Compare Files
-                        </v-btn>
-                    </v-col>
-                    <v-col cols="12" md="6">
-                        <v-btn color="success" size="large" block :loading="downloading" :disabled="!canDownload"
-                            prepend-icon="mdi-download" @click="handleDownload">
-                            Download {{ outputFormat.toUpperCase() }}
-                        </v-btn>
-                    </v-col>
-                </v-row>
+            <AppPanel eyebrow="Optional" title="Spec File" description="Supply a custom JSON spec or fall back to the default spec bundle." tone="cool">
+                <template #header-aside>
+                    <Icon icon="mdi:file-cog" class="dvt-compare-panel__icon" />
+                </template>
 
-                <!-- Progress -->
-                <v-progress-linear v-if="processing || downloading" :model-value="progress" color="primary" height="6"
-                    striped class="mt-4">
-                    <template #default="{ value }">
-                        <span class="text-caption">{{ Math.round(value) }}%</span>
-                    </template>
-                </v-progress-linear>
-            </v-card-text>
-        </v-card>
+                <AppFilePicker
+                    v-model="specFile"
+                    accept=".json"
+                    label="Select spec file"
+                    helper-text="Leave empty to use the default specification."
+                    :disabled="isBusy"
+                />
 
-        <!-- Comparison Results -->
-        <v-card v-if="comparisonResult">
-            <v-card-title>
-                <v-icon start>mdi-chart-box</v-icon>
-                Comparison Results
-            </v-card-title>
-            <v-card-subtitle v-if="comparisonResult.summary">
-                <v-chip color="success" variant="tonal" size="small" class="mr-2">
-                    Pass: {{ comparisonResult.summary.pass || 0 }}
-                </v-chip>
-                <v-chip color="error" variant="tonal" size="small" class="mr-2">
-                    Fail: {{ comparisonResult.summary.fail || 0 }}
-                </v-chip>
-                <v-chip color="info" variant="tonal" size="small">
-                    Total: {{ comparisonResult.rows?.length || 0 }}
-                </v-chip>
-            </v-card-subtitle>
-            <v-card-text>
-                <v-data-table :headers="resultHeaders" :items="comparisonResult.rows || []" density="compact"
-                    fixed-header height="500" :items-per-page="20">
-                    <template #item.mc2_result="{ item }">
-                        <v-chip :color="getResultColor((item as any).mc2_result)" variant="flat" size="small">
-                            {{ (item as any).mc2_result || 'N/A' }}
-                        </v-chip>
-                    </template>
-                    <template #item.dvt_result="{ item }">
-                        <v-chip :color="getResultColor((item as any).dvt_result)" variant="flat" size="small">
-                            {{ (item as any).dvt_result || 'N/A' }}
-                        </v-chip>
-                    </template>
-                    <template #no-data>
-                        <div class="text-center pa-4">
-                            <v-icon size="48" color="grey">mdi-table-off</v-icon>
-                            <p class="text-medium-emphasis mt-2">No comparison results available</p>
-                        </div>
-                    </template>
-                </v-data-table>
-            </v-card-text>
-        </v-card>
+                <div class="dvt-compare-file-note dvt-compare-file-note--info">
+                    <strong>{{ specFile ? getFileName(specFile) : 'Default spec bundle' }}</strong>
+                    <span>{{ specFile ? 'Custom spec detected.' : 'A built-in specification will be used.' }}</span>
+                </div>
+            </AppPanel>
+        </div>
 
-        <!-- Instructions -->
-        <v-card v-if="!comparisonResult">
-            <v-card-title class="bg-info">
-                <v-icon start color="white">mdi-information</v-icon>
-                <span class="text-white">Instructions</span>
-            </v-card-title>
-            <v-card-text>
-                <v-timeline density="compact" side="end">
-                    <v-timeline-item dot-color="primary" size="small">
-                        <div class="text-subtitle-2 mb-1">1. Upload Files</div>
-                        <div class="text-caption text-medium-emphasis">
-                            Select MasterControl file (.txt, .csv) and DVT file (.txt, .csv)
-                        </div>
-                    </v-timeline-item>
+        <AppPanel eyebrow="Configuration" title="Tuning Parameters" description="Set optional thresholds before generating browser output or downloadable files." class="mb-4">
+            <template #header-aside>
+                <Icon icon="mdi:cog" class="dvt-compare-panel__icon" />
+            </template>
 
-                    <v-timeline-item dot-color="primary" size="small">
-                        <div class="text-subtitle-2 mb-1">2. Optional: Upload Spec</div>
-                        <div class="text-caption text-medium-emphasis">
-                            Provide custom spec file (.json) or use default specification
-                        </div>
-                    </v-timeline-item>
+            <div class="dvt-compare-form-grid">
+                <label class="dvt-compare-field">
+                    <span>Threshold</span>
+                    <input v-model.number="threshold" type="number" step="0.1" placeholder="Optional tolerance">
+                    <small>Comparison tolerance override.</small>
+                </label>
 
-                    <v-timeline-item dot-color="primary" size="small">
-                        <div class="text-subtitle-2 mb-1">3. Configure Parameters</div>
-                        <div class="text-caption text-medium-emphasis">
-                            Set threshold, margin threshold, and frequency tolerance values
-                        </div>
-                    </v-timeline-item>
+                <label class="dvt-compare-field">
+                    <span>Margin Threshold</span>
+                    <input v-model.number="marginThreshold" type="number" step="0.1" placeholder="Optional margin">
+                    <small>Pass/fail threshold override.</small>
+                </label>
 
-                    <v-timeline-item dot-color="primary" size="small">
-                        <div class="text-subtitle-2 mb-1">4. Compare or Download</div>
-                        <div class="text-caption text-medium-emphasis">
-                            View results in browser (JSON) or download as CSV/XLSX
-                        </div>
-                    </v-timeline-item>
-                </v-timeline>
-            </v-card-text>
-        </v-card>
+                <label class="dvt-compare-field">
+                    <span>Frequency Tolerance (MHz)</span>
+                    <input v-model.number="freqTolerance" type="number" step="0.1">
+                    <small>Used for frequency matching.</small>
+                </label>
+
+                <label class="dvt-compare-field">
+                    <span>Output Format</span>
+                    <select v-model="outputFormat">
+                        <option v-for="option in outputFormatOptions" :key="option.value" :value="option.value">
+                            {{ option.title }}
+                        </option>
+                    </select>
+                    <small>JSON stays in-browser. CSV and XLSX trigger downloads.</small>
+                </label>
+            </div>
+        </AppPanel>
+
+        <AppPanel eyebrow="Actions" title="Run Compare or Export" compactHeader class="mb-4">
+
+            <div class="dvt-compare-actions">
+                <button type="button" class="dvt-compare-button dvt-compare-button--primary dvt-compare-button--large" :disabled="!canCompare" @click="handleCompare">
+                    <Icon :icon="processing ? 'mdi:loading' : 'mdi:compare'" :class="{ 'dvt-compare-spin': processing }" />
+                    <span>{{ processing ? 'Comparing...' : 'Compare Files' }}</span>
+                </button>
+                <button type="button" class="dvt-compare-button dvt-compare-button--success dvt-compare-button--large" :disabled="!canDownload" @click="handleDownload">
+                    <Icon :icon="downloading ? 'mdi:loading' : 'mdi:download'" :class="{ 'dvt-compare-spin': downloading }" />
+                    <span>{{ downloading ? `Downloading ${outputFormat.toUpperCase()}...` : `Download ${outputFormat.toUpperCase()}` }}</span>
+                </button>
+            </div>
+
+            <AppProgress v-if="processing || downloading" :value="progress" class="mt-4" aria-live="polite" />
+        </AppPanel>
+
+        <AppPanel v-if="comparisonResult" eyebrow="Results" title="Comparison Results" tone="success" splitHeader>
+            <template #header-aside>
+                <div v-if="comparisonResult.summary" class="dvt-compare-summary-chips">
+                    <span class="dvt-compare-pill dvt-compare-pill--success">Pass: {{ comparisonResult.summary.pass || 0 }}</span>
+                    <span class="dvt-compare-pill dvt-compare-pill--danger">Fail: {{ comparisonResult.summary.fail || 0 }}</span>
+                    <span class="dvt-compare-pill dvt-compare-pill--info">Total: {{ comparisonResult.rows?.length || 0 }}</span>
+                </div>
+            </template>
+
+            <AppDataGrid :columns="resultGridColumns" :rows="comparisonResult.rows || []" paginator :rowsPerPage="20" scrollHeight="500px">
+                <template #cell-mc2_result="slotProps">
+                    <span class="dvt-compare-pill" :class="resultPillClass(String(slotProps.value || ''))">
+                        {{ slotProps.value || 'N/A' }}
+                    </span>
+                </template>
+
+                <template #cell-dvt_result="slotProps">
+                    <span class="dvt-compare-pill" :class="resultPillClass(String(slotProps.value || ''))">
+                        {{ slotProps.value || 'N/A' }}
+                    </span>
+                </template>
+
+                <template #empty>
+                    <div class="dvt-compare-empty-state">
+                        <Icon icon="mdi:table-off" class="dvt-compare-empty-state__icon" />
+                        <p>No comparison results available</p>
+                    </div>
+                </template>
+            </AppDataGrid>
+        </AppPanel>
+
+        <AppPanel v-else eyebrow="Playbook" title="Recommended Flow" description="Use the sequence below to keep the DVT and MC2 comparison run consistent." tone="cool">
+            <template #header-aside>
+                <Icon icon="mdi:information" class="dvt-compare-panel__icon" />
+            </template>
+
+            <ol class="dvt-compare-steps">
+                <li>
+                    <strong>Upload both source files.</strong>
+                    <span>Select the MC2 export and its matching DVT export.</span>
+                </li>
+                <li>
+                    <strong>Add a custom spec only when needed.</strong>
+                    <span>Leave the spec blank to rely on the default configuration.</span>
+                </li>
+                <li>
+                    <strong>Set tolerance values.</strong>
+                    <span>Threshold, margin threshold, and frequency tolerance adjust the comparison behavior.</span>
+                </li>
+                <li>
+                    <strong>Choose output mode.</strong>
+                    <span>Use JSON for in-browser review or CSV/XLSX for a generated export.</span>
+                </li>
+            </ol>
+        </AppPanel>
     </DefaultLayout>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
 import { comparisonApi } from '@/features/comparison/api/comparison.api'
+import { AppDataGrid, AppFilePicker, AppPanel, AppProgress } from '@/shared'
 import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
 
 // State
 const masterFile = ref<File | File[] | null>(null)
 const dvtFile = ref<File | File[] | null>(null)
 const specFile = ref<File | File[] | null>(null)
-const uploading = ref(false)
 const threshold = ref<number | null>(null)
 const marginThreshold = ref<number | null>(null)
 const freqTolerance = ref<number>(2.0)
@@ -285,16 +238,18 @@ const outputFormatOptions = [
   { title: 'XLSX', value: 'xlsx' },
 ]
 
+const isBusy = computed(() => processing.value || downloading.value)
+
 // Computed
 const canCompare = computed(() => {
-  const master = Array.isArray(masterFile.value) ? masterFile.value[0] : masterFile.value
-  const dvt = Array.isArray(dvtFile.value) ? dvtFile.value[0] : dvtFile.value
+    const master = getSelectedFile(masterFile.value)
+    const dvt = getSelectedFile(dvtFile.value)
   return master && dvt && !processing.value && outputFormat.value === 'json'
 })
 
 const canDownload = computed(() => {
-  const master = Array.isArray(masterFile.value) ? masterFile.value[0] : masterFile.value
-  const dvt = Array.isArray(dvtFile.value) ? dvtFile.value[0] : dvtFile.value
+    const master = getSelectedFile(masterFile.value)
+    const dvt = getSelectedFile(dvtFile.value)
   return (
     master &&
     dvt &&
@@ -305,25 +260,28 @@ const canDownload = computed(() => {
 
 const hasComparisonResult = computed(() => comparisonResult.value !== null)
 
-const resultHeaders = computed(() => [
-  { title: 'Antenna', key: 'antenna_dvt', sortable: true, align: 'center' as const },
-  { title: 'Metric', key: 'metric', sortable: true, align: 'center' as const },
-  { title: 'Freq', key: 'freq', sortable: true, align: 'center' as const },
-  { title: 'Standard', key: 'standard', sortable: true, align: 'center' as const },
-  { title: 'Data Rate', key: 'datarate', sortable: true, align: 'center' as const },
-  { title: 'BW', key: 'bandwidth', sortable: true, align: 'center' as const },
-  { title: 'MC2 Value', key: 'mc2_value', sortable: true, align: 'center' as const },
-  { title: 'MC2 Result', key: 'mc2_result', sortable: true, align: 'center' as const },
-  { title: 'DVT Value', key: 'dvt_value', sortable: true, align: 'center' as const },
-  { title: 'DVT Result', key: 'dvt_result', sortable: true, align: 'center' as const },
-  { title: 'Diff', key: 'mc2_dvt_diff', sortable: true, align: 'center' as const },
+const resultGridColumns = computed(() => [
+    { key: 'antenna_dvt', field: 'antenna_dvt', header: 'Antenna', sortable: true },
+    { key: 'metric', field: 'metric', header: 'Metric', sortable: true },
+    { key: 'freq', field: 'freq', header: 'Freq', sortable: true },
+    { key: 'standard', field: 'standard', header: 'Standard', sortable: true },
+    { key: 'datarate', field: 'datarate', header: 'Data Rate', sortable: true },
+    { key: 'bandwidth', field: 'bandwidth', header: 'BW', sortable: true },
+    { key: 'mc2_value', field: 'mc2_value', header: 'MC2 Value', sortable: true },
+    { key: 'mc2_result', field: 'mc2_result', header: 'MC2 Result', sortable: true },
+    { key: 'dvt_value', field: 'dvt_value', header: 'DVT Value', sortable: true },
+    { key: 'dvt_result', field: 'dvt_result', header: 'DVT Result', sortable: true },
+    { key: 'mc2_dvt_diff', field: 'mc2_dvt_diff', header: 'Diff', sortable: true },
 ])
 
 // Methods
 function getFileName(file: File | File[] | null): string {
-  if (!file) return ''
-  const f = Array.isArray(file) ? file[0] : file
-  return f?.name || ''
+    return getSelectedFile(file)?.name || ''
+}
+
+function getSelectedFile(file: File | File[] | null) {
+    if (!file) return null
+    return Array.isArray(file) ? (file[0] ?? null) : file
 }
 
 function getResultColor(result: string): string {
@@ -334,6 +292,14 @@ function getResultColor(result: string): string {
   return 'info'
 }
 
+function resultPillClass(result: string): string {
+    const tone = getResultColor(result)
+    if (tone === 'success') return 'dvt-compare-pill--success'
+    if (tone === 'error') return 'dvt-compare-pill--danger'
+    if (tone === 'info') return 'dvt-compare-pill--info'
+    return 'dvt-compare-pill--neutral'
+}
+
 async function handleCompare() {
   if (!canCompare.value) return
 
@@ -341,19 +307,18 @@ async function handleCompare() {
   progress.value = 0
   error.value = ''
   comparisonResult.value = null
+    const progressInterval = startProgressTicker()
 
   try {
     const formData = new FormData()
-    const master = (
-      Array.isArray(masterFile.value) ? masterFile.value[0] : masterFile.value
-    ) as File
-    const dvt = (Array.isArray(dvtFile.value) ? dvtFile.value[0] : dvtFile.value) as File
+        const master = getSelectedFile(masterFile.value) as File
+        const dvt = getSelectedFile(dvtFile.value) as File
 
     formData.append('master_file', master)
     formData.append('dvt_file', dvt)
 
     if (specFile.value) {
-      const spec = (Array.isArray(specFile.value) ? specFile.value[0] : specFile.value) as File
+            const spec = getSelectedFile(specFile.value) as File
       formData.append('spec_file', spec)
     }
 
@@ -368,21 +333,14 @@ async function handleCompare() {
     formData.append('freq_tol', freqTolerance.value.toString())
     formData.append('human', 'false')
 
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      if (progress.value < 90) {
-        progress.value += 10
-      }
-    }, 100)
-
     const result = await comparisonApi.compareFormats(formData, false)
     comparisonResult.value = result as ComparisonResultData
 
-    clearInterval(progressInterval)
     progress.value = 100
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Comparison failed'
   } finally {
+        clearInterval(progressInterval)
     processing.value = false
   }
 }
@@ -394,19 +352,18 @@ async function handleDownload() {
   progress.value = 0
   error.value = ''
   downloadCompleted.value = false
+    const progressInterval = startProgressTicker()
 
   try {
     const formData = new FormData()
-    const master = (
-      Array.isArray(masterFile.value) ? masterFile.value[0] : masterFile.value
-    ) as File
-    const dvt = (Array.isArray(dvtFile.value) ? dvtFile.value[0] : dvtFile.value) as File
+        const master = getSelectedFile(masterFile.value) as File
+        const dvt = getSelectedFile(dvtFile.value) as File
 
     formData.append('master_file', master)
     formData.append('dvt_file', dvt)
 
     if (specFile.value) {
-      const spec = (Array.isArray(specFile.value) ? specFile.value[0] : specFile.value) as File
+            const spec = getSelectedFile(specFile.value) as File
       formData.append('spec_file', spec)
     }
 
@@ -425,16 +382,8 @@ async function handleDownload() {
       formData.append('return_xlsx', 'true')
     }
 
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      if (progress.value < 90) {
-        progress.value += 10
-      }
-    }, 100)
-
     const blob = (await comparisonApi.compareFormats(formData, true)) as Blob
 
-    clearInterval(progressInterval)
     progress.value = 100
 
     // Download the file
@@ -449,8 +398,17 @@ async function handleDownload() {
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Download failed'
   } finally {
+        clearInterval(progressInterval)
     downloading.value = false
   }
+}
+
+function startProgressTicker() {
+    return window.setInterval(() => {
+        if (progress.value < 90) {
+            progress.value += 10
+        }
+    }, 100)
 }
 
 function handleReset() {
@@ -468,7 +426,302 @@ function handleReset() {
 </script>
 
 <style scoped>
-.text-caption {
-    font-size: 0.75rem;
+.dvt-compare-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.dvt-compare-header__copy {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.dvt-compare-header__icon {
+    display: grid;
+    place-items: center;
+    width: 3.4rem;
+    height: 3.4rem;
+    border-radius: 1.1rem;
+    background: linear-gradient(135deg, rgba(20, 88, 71, 0.16), rgba(161, 104, 57, 0.18));
+    color: var(--app-accent);
+    box-shadow: var(--app-shadow-soft);
+}
+
+.dvt-compare-header__icon-glyph {
+    font-size: 2rem;
+}
+
+.dvt-compare-header__title {
+    margin: 0 0 0.5rem;
+    font-size: clamp(2rem, 3vw, 2.5rem);
+    line-height: 1.08;
+}
+
+.dvt-compare-header__subtitle {
+    margin: 0;
+    color: var(--app-muted);
+    line-height: 1.55;
+}
+
+.dvt-compare-upload-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 1rem;
+}
+
+.dvt-compare-button,
+.dvt-compare-pill,
+.dvt-compare-empty-state,
+.dvt-compare-panel__icon {
+    display: inline-flex;
+}
+
+.dvt-compare-button {
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+    border-radius: 999px;
+    border: 1px solid var(--app-border);
+    padding: 0.78rem 1rem;
+    cursor: pointer;
+    font-weight: 700;
+    background: rgba(255, 251, 247, 0.92);
+    color: var(--app-ink);
+}
+
+.dvt-compare-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.64;
+}
+
+.dvt-compare-button--primary {
+    background: #1f4e86;
+    border-color: #1f4e86;
+    color: #f8f3ec;
+}
+
+.dvt-compare-button--success {
+    background: #145847;
+    border-color: #145847;
+    color: #f8f3ec;
+}
+
+.dvt-compare-button--ghost {
+    background: rgba(255, 251, 247, 0.92);
+    color: var(--app-ink);
+}
+
+.dvt-compare-button--large {
+    padding-inline: 1.15rem;
+}
+
+.dvt-compare-spin {
+    animation: dvt-compare-spin 0.9s linear infinite;
+}
+
+.dvt-compare-panel__icon {
+    font-size: 1.75rem;
+    color: var(--app-ink);
+}
+
+.dvt-compare-file-note,
+.dvt-compare-notice {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    border: 1px solid var(--app-border);
+    border-radius: 1rem;
+    padding: 0.95rem 1rem;
+    box-shadow: var(--app-shadow-soft);
+}
+
+.dvt-compare-file-note {
+    background: rgba(255, 251, 247, 0.92);
+}
+
+.dvt-compare-file-note--info {
+    border-style: dashed;
+}
+
+.dvt-compare-file-note strong {
+    display: block;
+    color: var(--app-ink);
+}
+
+.dvt-compare-file-note span,
+.dvt-compare-notice p {
+    display: block;
+    margin-top: 0.25rem;
+    color: var(--app-muted);
+    line-height: 1.55;
+}
+
+.dvt-compare-notice--error {
+    background: rgba(163, 61, 45, 0.08);
+    border-color: rgba(163, 61, 45, 0.24);
+}
+
+.dvt-compare-notice--success {
+    background: rgba(20, 88, 71, 0.08);
+    border-color: rgba(20, 88, 71, 0.24);
+}
+
+.dvt-compare-notice button {
+    border: 0;
+    background: transparent;
+    color: var(--app-accent);
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.dvt-compare-form-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.9rem;
+}
+
+.dvt-compare-field {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.dvt-compare-field > span {
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--app-muted);
+}
+
+.dvt-compare-field input,
+.dvt-compare-field select {
+    width: 100%;
+    border: 1px solid var(--app-border);
+    border-radius: 1rem;
+    background: rgba(255, 251, 247, 0.92);
+    color: var(--app-ink);
+    box-shadow: var(--app-shadow-soft);
+    padding: 0.85rem 0.95rem;
+}
+
+.dvt-compare-field input:focus,
+.dvt-compare-field select:focus {
+    outline: none;
+    border-color: var(--app-accent);
+    box-shadow: 0 0 0 4px var(--app-ring);
+}
+
+.dvt-compare-field small {
+    color: var(--app-muted);
+    line-height: 1.5;
+}
+
+.dvt-compare-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.dvt-compare-summary-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.dvt-compare-pill {
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    border-radius: 999px;
+    padding: 0.32rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.dvt-compare-pill--success {
+    background: rgba(20, 88, 71, 0.12);
+    color: #145847;
+}
+
+.dvt-compare-pill--danger {
+    background: rgba(163, 61, 45, 0.12);
+    color: #8b2f20;
+}
+
+.dvt-compare-pill--info {
+    background: rgba(20, 113, 153, 0.12);
+    color: #0f6c92;
+}
+
+.dvt-compare-pill--neutral {
+    background: rgba(120, 129, 143, 0.12);
+    color: #4f5d6d;
+}
+
+.dvt-compare-empty-state {
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    padding: 1.25rem;
+    color: var(--app-muted);
+}
+
+.dvt-compare-empty-state__icon {
+    font-size: 3rem;
+    color: #8a94a6;
+}
+
+.dvt-compare-empty-state p {
+    margin: 0;
+}
+
+.dvt-compare-steps {
+    display: grid;
+    gap: 0.9rem;
+    padding-left: 1.25rem;
+    margin: 0;
+}
+
+.dvt-compare-steps li {
+    color: var(--app-muted);
+    line-height: 1.6;
+}
+
+.dvt-compare-steps strong {
+    display: block;
+    color: var(--app-ink);
+}
+
+.dvt-compare-steps span {
+    display: block;
+}
+
+@media (max-width: 960px) {
+    .dvt-compare-upload-grid,
+    .dvt-compare-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .dvt-compare-header {
+        flex-direction: column;
+    }
+
+    .dvt-compare-header__copy {
+        align-items: flex-start;
+    }
+}
+
+@keyframes dvt-compare-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
 }
 </style>

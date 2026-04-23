@@ -1,5 +1,5 @@
-// Components
-export * from './components/layout'
+// UI
+export * from './ui'
 
 // Composables
 export * from './composables'

@@ -1,213 +1,176 @@
 <template>
-  <v-row>
-    <!-- DUT ISN Input with Site/Model Selection -->
-    <v-col cols="12">
+  <section class="top-products-isn-shell">
+    <AppPanel eyebrow="DUT Input" title="Analyze By DUT ISN"
+      description="Keep the existing DUT lookup workflow, then scope the analysis with optional stations, criteria, and universal filters."
+      tone="cool">
       <DUTISNInput ref="dutISNInputRef" v-model="dutISNs" v-model:site-identifiers="siteIdentifier"
-        v-model:model-identifiers="modelIdentifier" :max-i-s-ns="20" class="mb-4" />
-    </v-col>
+        v-model:model-identifiers="modelIdentifier" :max-i-s-ns="20" />
+    </AppPanel>
 
-    <!-- Station Selection (Optional) -->
-    <v-col cols="12" md="6">
-      <v-card>
-        <v-card-title>
-          <v-icon class="mr-2">mdi-access-point</v-icon>
-          Station Selection (Optional)
-        </v-card-title>
+    <div class="top-products-isn-grid">
+      <AppPanel eyebrow="Station Scope" title="Station Selection"
+        description="Leave the selection empty to evaluate all available stations.">
+        <div class="top-products-isn-input-row">
+          <label class="top-products-isn-field">
+            <span>Add station</span>
+            <div class="top-products-isn-entry-row">
+              <input v-model="stationEntry" type="text" list="top-products-isn-stations"
+                placeholder="Type a station name and press Enter" @keydown="handleStationEntryKeydown"
+                @blur="commitStationEntry">
+              <button type="button" @click="commitStationEntry">Add</button>
+            </div>
+          </label>
+          <datalist id="top-products-isn-stations">
+            <option v-for="station in availableStations" :key="station" :value="station" />
+          </datalist>
+        </div>
 
-        <v-card-text>
-          <v-combobox v-model="selectedStations" :items="availableStations" :loading="loadingStations"
-            label="Select Stations" placeholder="Leave empty to evaluate all stations" multiple chips closable-chips
-            clearable hint="Stations are automatically loaded based on DUT ISN. Leave empty for all stations."
-            persistent-hint>
-            <template #chip="{ props: chipProps, item }">
-              <v-chip v-bind="chipProps" :text="String(item.value || item)" closable />
-            </template>
-          </v-combobox>
-        </v-card-text>
-      </v-card>
-    </v-col>
+        <p v-if="loadingStations" class="top-products-isn-inline-note">Loading stations from DUT summaries...</p>
+        <p v-else-if="availableStations.length === 0" class="top-products-isn-inline-note">
+          Stations appear here after DUT summaries load. You can still type a station manually.
+        </p>
 
-    <!-- Criteria Configuration -->
-    <v-col cols="12" md="6">
-      <v-card>
-        <v-card-title class="d-flex align-center">
-          <v-icon class="mr-2">mdi-file-cog</v-icon>
-          Criteria Configuration
-          <v-spacer />
-          <v-btn size="small" variant="outlined" color="primary" prepend-icon="mdi-download"
-            @click="downloadCriteriaTemplate" title="Download criteria JSON template">
-            Download Template
-          </v-btn>
-        </v-card-title>
+        <div v-else class="top-products-isn-choice-grid">
+          <button v-for="station in availableStations" :key="station" type="button" class="top-products-isn-choice"
+            :class="{ 'is-active': selectedStations.includes(station) }" @click="toggleStation(station)">
+            {{ station }}
+          </button>
+        </div>
 
-        <v-card-text>
-          <v-file-input v-model="criteriaFile" label="Criteria JSON File (Optional)" placeholder="Upload criteria JSON file"
-            accept=".json,application/json" prepend-icon="mdi-paperclip" clearable
-            hint="Upload custom criteria JSON file or use default rules" persistent-hint>
-            <template #selection="{ fileNames }">
-              <v-chip v-for="fileName in fileNames" :key="fileName" color="primary" size="small">
-                {{ fileName }}
-              </v-chip>
-            </template>
-          </v-file-input>
+        <div v-if="selectedStations.length > 0" class="top-products-isn-token-row">
+          <button v-for="station in selectedStations" :key="station" type="button" class="top-products-isn-token"
+            @click="removeStation(station)">
+            <span>{{ station }}</span>
+            <span aria-hidden="true">x</span>
+          </button>
 
-          <!-- Debug info -->
-          <v-alert v-if="criteriaFile" type="info" density="compact" class="mt-2">
-            File selected: {{ criteriaFileActual?.name }} ({{ formatFileSize(criteriaFileActual?.size || 0) }})
-          </v-alert>
-        </v-card-text>
-      </v-card>
-    </v-col>
+          <button type="button" class="top-products-isn-link" @click="selectedStations = []">
+            Clear stations
+          </button>
+        </div>
+      </AppPanel>
 
-    <!-- Advanced Filters (Collapsible) -->
-    <v-col cols="12">
-      <v-expansion-panels>
-        <v-expansion-panel>
-          <v-expansion-panel-title>
-            <v-icon class="mr-2">mdi-filter-variant</v-icon>
-            Universal Filters (Apply to All Stations)
-          </v-expansion-panel-title>
+      <AppPanel eyebrow="Criteria" title="Criteria Configuration"
+        description="Upload an optional JSON criteria file or download the starter template." tone="warm" splitHeader>
+        <template #header-aside>
+          <button type="button" class="top-products-isn-link" @click="downloadCriteriaTemplate">
+            Download template
+          </button>
+        </template>
 
-          <v-expansion-panel-text>
-            <v-row>
-              <!-- Device Identifiers -->
-              <v-col cols="12">
-                <v-combobox v-model="deviceIdentifiers" label="Device Identifiers (Optional)"
-                  placeholder="e.g., 1351, 614670" multiple chips closable-chips clearable
-                  hint="Filter by specific device IDs or names (applies to all stations unless overridden)"
-                  persistent-hint />
-              </v-col>
+        <AppFilePicker v-model="criteriaFile" label="Criteria JSON File" accept=".json,application/json"
+          helperText="Use a custom JSON criteria file or leave empty to apply the default rules."
+          placeholder="Drop a criteria file here or browse from disk." />
 
-              <!-- Test Item Include Filters -->
-              <v-col cols="12" md="6">
-                <v-combobox v-model="testItemFilters" label="Include Test Items (Regex)"
-                  placeholder="e.g., WiFi_TX_POW.*" multiple chips closable-chips clearable
-                  hint="Regex patterns to include specific test items (applies to all stations unless overridden)"
-                  persistent-hint />
-              </v-col>
+        <div v-if="criteriaFileActual" class="top-products-isn-file-summary">
+          <strong>{{ criteriaFileActual.name }}</strong>
+          <span>{{ formatFileSize(criteriaFileActual.size) }}</span>
+        </div>
+      </AppPanel>
+    </div>
 
-              <!-- Test Item Exclude Filters -->
-              <v-col cols="12" md="6">
-                <v-combobox v-model="excludeTestItemFilters" label="Exclude Test Items (Regex)"
-                  placeholder="e.g., WiFi_PA_POW_OLD.*" multiple chips closable-chips clearable
-                  hint="Regex patterns to exclude test items (applies to all stations unless overridden)"
-                  persistent-hint />
-              </v-col>
-            </v-row>
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-      </v-expansion-panels>
-    </v-col>
+    <details class="top-products-isn-accordion" open>
+      <summary>
+        <div>
+          <p>Universal Filters</p>
+          <span>Apply shared device and test-item filters across all stations.</span>
+        </div>
+      </summary>
 
-    <!-- Per-Station Filter Configuration -->
-    <v-col v-if="selectedStations.length > 0" cols="12">
-      <v-expansion-panels>
-        <v-expansion-panel>
-          <v-expansion-panel-title>
-            <v-icon class="mr-2">mdi-tune-variant</v-icon>
-            Per-Station Filter Configuration (Optional)
-          </v-expansion-panel-title>
+      <div class="top-products-isn-accordion__body">
+        <div class="top-products-isn-filter-grid">
+          <label class="top-products-isn-field top-products-isn-field--full">
+            <span>Device Identifiers</span>
+            <textarea v-model="deviceIdentifiersText" rows="3" placeholder="e.g. 1351, 614670 or one value per line" />
+            <small>Applies to all stations unless overridden below.</small>
+          </label>
 
-          <v-expansion-panel-text>
-            <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-              Configure specific filters for each selected station. Per-station filters
-              <strong>override</strong>
-              universal filters.
-              Leave empty to use universal filters for all stations.
-            </v-alert>
+          <label class="top-products-isn-field">
+            <span>Include Test Items</span>
+            <textarea v-model="testItemFiltersText" rows="4" placeholder="e.g. WiFi_TX_POW.*" />
+            <small>Provide regex patterns to include matching test items.</small>
+          </label>
 
-            <!-- Loading Test Items & Devices -->
-            <v-progress-linear v-if="loadingTestItems || loadingDevices" indeterminate color="primary" class="mb-4" />
+          <label class="top-products-isn-field">
+            <span>Exclude Test Items</span>
+            <textarea v-model="excludeTestItemFiltersText" rows="4" placeholder="e.g. WiFi_PA_POW_OLD.*" />
+            <small>Provide regex patterns to remove matching test items.</small>
+          </label>
+        </div>
+      </div>
+    </details>
 
-            <v-row>
-              <v-col v-for="station in selectedStations" :key="station" cols="12" md="6">
-                <StationFilterConfig :station-identifier="station" :station-name="station"
-                  :available-test-items="stationTestItems[station] || []"
-                  :available-devices="stationDevices[station] || []" :loading="loadingTestItems || loadingDevices"
-                  v-model="stationFilterConfigs[station]" />
-              </v-col>
-            </v-row>
-          </v-expansion-panel-text>
-        </v-expansion-panel>
-      </v-expansion-panels>
-    </v-col>
+    <details v-if="selectedStations.length > 0" class="top-products-isn-accordion">
+      <summary>
+        <div>
+          <p>Per-Station Filter Configuration</p>
+          <span>Override the universal filters for specific stations when you need tighter control.</span>
+        </div>
+      </summary>
 
-    <!-- Action Buttons -->
-    <v-col cols="12">
-      <v-card>
-        <v-card-text>
-          <v-row class="align-stretch">
-            <v-col cols="12">
-              <v-btn color="primary" size="large" block :loading="loading" :disabled="!canAnalyze"
-                @click="handleAnalyze">
-                <v-icon class="mr-2">mdi-chart-line</v-icon>
-                Analyze DUTs
-              </v-btn>
-            </v-col>
+      <div class="top-products-isn-accordion__body top-products-isn-accordion__body--stacked">
+        <div class="top-products-isn-notice">
+          Per-station filters override the universal filter set. Leave a station empty to inherit the global rules.
+        </div>
 
-            <!-- <v-col cols="12" sm="6" lg="3">
-              <v-btn color="secondary" size="large" block variant="tonal" :loading="loading" :disabled="!canAnalyze"
-                @click="handleAnalyzeWithPATrends">
-                <v-icon class="mr-2">mdi-chart-timeline-variant</v-icon>
-                Analyze with PA Trends
-              </v-btn>
-            </v-col> -->
+        <div v-if="loadingTestItems || loadingDevices" class="top-products-isn-loading-bar" />
 
-            <!-- <v-col cols="12" sm="6" lg="3">
-              <v-btn color="info" size="large" block variant="tonal" :loading="loading" :disabled="!canAnalyze"
-                @click="handleAnalyzeHierarchical">
-                <v-icon class="mr-2">mdi-sitemap</v-icon>
-                Hierarchical Scoring
-              </v-btn>
-            </v-col> -->
+        <div class="top-products-isn-station-config-grid">
+          <section v-for="station in selectedStations" :key="station" class="top-products-isn-station-config-card">
+            <header>
+              <strong>{{ station }}</strong>
+            </header>
+            <StationFilterConfig :station-identifier="station" :station-name="station"
+              :available-test-items="stationTestItems[station] || []" :available-devices="stationDevices[station] || []"
+              :loading="loadingTestItems || loadingDevices" v-model="stationFilterConfigs[station]" />
+          </section>
+        </div>
+      </div>
+    </details>
 
-            <!-- <v-col cols="12" sm="6" lg="3">
-              <FormulaSelectorDialog v-model="showFormulaSelectorDialog" :universal-formula="universalFormula"
-                @update:universal-formula="universalFormula = $event" v-model:category-formulas="categoryFormulas"
-                @reset="handleResetFormulas" @apply="handleApplyFormulas">
-                <template #activator="{ props: dialogProps }">
-                  <v-btn v-bind="dialogProps" color="primary" variant="outlined" prepend-icon="mdi-function-variant"
-                    block>
-                    Formula Selection
-                    <v-badge v-if="formulaSelectionEnabled" :content="activeFormulaStats.enabledCount" color="success"
-                      inline />
-                  </v-btn>
-                </template>
-              </FormulaSelectorDialog>
-            </v-col> -->
-          </v-row>
+    <AppPanel eyebrow="Run Analysis" title="Submit Top Product Analysis"
+      description="Run the current DUT selection through the existing Top Product analysis pipeline." tone="success"
+      splitHeader>
+      <template #header-aside>
+        <div class="top-products-isn-stat-row">
+          <span>{{ dutISNs.length }} DUT{{ dutISNs.length === 1 ? '' : 's' }}</span>
+          <span>{{ selectedStations.length || availableStations.length || 0 }} station scope</span>
+          <span>{{ criteriaFileActual ? 'Custom criteria' : 'Default criteria' }}</span>
+        </div>
+      </template>
 
-          <!-- Validation Alert -->
-          <v-alert v-if="attemptedAnalysis && !canAnalyze" type="warning" variant="tonal" density="compact"
-            class="mt-4">
-            <template #prepend>
-              <v-icon>mdi-alert</v-icon>
-            </template>
-            Please add at least one DUT ISN to continue
-          </v-alert>
-        </v-card-text>
-      </v-card>
-    </v-col>
+      <div class="top-products-isn-actions">
+        <button type="button" class="top-products-isn-primary-button" :disabled="loading || !canAnalyze"
+          @click="handleAnalyze">
+          {{ loading ? 'Analyzing...' : 'Analyze DUTs' }}
+        </button>
+      </div>
 
-    <!-- Error Display -->
-    <v-col v-if="error" cols="12">
-      <v-alert type="error" variant="tonal" closable @click:close="clearError">
-        <div class="font-weight-medium">Analysis Failed</div>
-        <div class="text-caption">{{ error }}</div>
-      </v-alert>
-    </v-col>
+      <div v-if="attemptedAnalysis && !canAnalyze" class="top-products-isn-notice top-products-isn-notice--warning">
+        Please add at least one DUT ISN to continue.
+      </div>
+    </AppPanel>
 
-    <!-- Results Display -->
-    <v-col v-if="hasResults" ref="resultsSection" cols="12">
+    <div v-if="error" class="top-products-isn-notice top-products-isn-notice--error">
+      <div>
+        <strong>Analysis Failed</strong>
+        <p>{{ error }}</p>
+      </div>
+      <button type="button" class="top-products-isn-link" @click="clearError">Dismiss</button>
+    </div>
+
+    <section v-if="hasResults" ref="resultsSection" class="top-products-isn-results">
       <TopProductISNResults :results="processedResults!.results" :errors="processedResults!.errors"
         :custom-scoring-enabled="formulaSelectionEnabled" :universal-formula="universalFormula"
         :category-formulas="categoryFormulas" @export="handleExport" />
-    </v-col>
-  </v-row>
+    </section>
+  </section>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, provide, ref, watch } from 'vue'
+import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
+import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
 import { dutApi } from '../api/dut.api'
 import { dutTopProductApi } from '../api/dutTopProduct.api'
@@ -223,7 +186,6 @@ import type {
 import { downloadCriteriaJsonTemplate } from '../utils/criteriaTemplate'
 // biome-ignore lint/style/useImportType: value import required for template component resolution
 import DUTISNInput from './DUTISNInput.vue'
-import FormulaSelectorDialog from './FormulaSelectorDialog.vue'
 import StationFilterConfig from './StationFilterConfig.vue'
 import TopProductISNResults from './TopProductISNResults.vue'
 
@@ -232,8 +194,6 @@ const {
   universalFormula,
   categoryFormulas,
   formulaSelectionEnabled,
-  activeFormulaStats,
-  resetFormulas,
   applyFormulaSelectionToResults,
 } = useFormulaSelector()
 
@@ -255,11 +215,9 @@ const processedResults = computed(() => {
 // State
 const dutISNInputRef = ref<InstanceType<typeof DUTISNInput> | null>(null)
 const resultsSection = ref<HTMLElement | null>(null)
-const showFormulaSelectorDialog = ref(false)
 const dutISNs = ref<string[]>([])
 const selectedStations = ref<string[]>([])
-// NOTE: Vuetify 3 v-file-input without 'multiple' prop returns File[] (array with one file) or null
-// We need to handle both single File and File[] for compatibility
+const stationEntry = ref('')
 const criteriaFile = ref<File[] | File | null>(null)
 const siteIdentifier = ref<string[]>([])
 const modelIdentifier = ref<string[]>([])
@@ -308,6 +266,65 @@ const siteIdentifierValue = computed(() => {
 const modelIdentifierValue = computed(() => {
   return modelIdentifier.value.length > 0 ? modelIdentifier.value[0] : undefined
 })
+
+const deviceIdentifiersText = computed({
+  get: () => deviceIdentifiers.value.join('\n'),
+  set: (value: string) => {
+    deviceIdentifiers.value = parseMultilineValues(value)
+  },
+})
+
+const testItemFiltersText = computed({
+  get: () => testItemFilters.value.join('\n'),
+  set: (value: string) => {
+    testItemFilters.value = parseMultilineValues(value)
+  },
+})
+
+const excludeTestItemFiltersText = computed({
+  get: () => excludeTestItemFilters.value.join('\n'),
+  set: (value: string) => {
+    excludeTestItemFilters.value = parseMultilineValues(value)
+  },
+})
+
+function parseMultilineValues(value: string): string[] {
+  return [...new Set(value.split(/[\n,]+/).map((entry) => entry.trim()).filter(Boolean))]
+}
+
+function commitStationEntry() {
+  const nextStations = parseMultilineValues(stationEntry.value)
+
+  if (nextStations.length === 0) {
+    stationEntry.value = ''
+    return
+  }
+
+  selectedStations.value = [...new Set([...selectedStations.value, ...nextStations])]
+  stationEntry.value = ''
+}
+
+function handleStationEntryKeydown(event: KeyboardEvent) {
+  if (event.key !== 'Enter' && event.key !== ',') {
+    return
+  }
+
+  event.preventDefault()
+  commitStationEntry()
+}
+
+function toggleStation(station: string) {
+  if (selectedStations.value.includes(station)) {
+    selectedStations.value = selectedStations.value.filter((entry) => entry !== station)
+    return
+  }
+
+  selectedStations.value = [...selectedStations.value, station]
+}
+
+function removeStation(station: string) {
+  selectedStations.value = selectedStations.value.filter((entry) => entry !== station)
+}
 
 // Helper function to fetch all test items for stations
 async function fetchAllTestItems(stationIds: string[], targetMap: Record<string, TestItem[]>) {
@@ -700,21 +717,6 @@ function clearError() {
   error.value = null
 }
 
-// Custom Scoring Handlers
-function handleResetFormulas() {
-  resetFormulas()
-  console.log('Custom formulas reset to default')
-}
-
-function handleApplyFormulas() {
-  console.log('Custom formulas applied:', {
-    universal: universalFormula.value.enabled,
-    categories: activeFormulaStats.value.activeCategories,
-  })
-  showFormulaSelectorDialog.value = false
-  // Results will automatically recalculate when passed to TopProductISNResults
-}
-
 // Scroll to results section after analysis completes
 async function scrollToResults() {
   await nextTick()
@@ -1036,3 +1038,327 @@ function formatFileSize(bytes: number): string {
   return `${Math.round((bytes / k ** i) * 100) / 100} ${sizes[i]}`
 }
 </script>
+
+<style scoped>
+.top-products-isn-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.top-products-isn-grid,
+.top-products-isn-filter-grid,
+.top-products-isn-station-config-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.top-products-isn-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.top-products-isn-filter-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.top-products-isn-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.top-products-isn-field--full {
+  grid-column: 1 / -1;
+}
+
+.top-products-isn-field span {
+  color: var(--app-ink);
+  font-weight: 600;
+}
+
+.top-products-isn-field small,
+.top-products-isn-inline-note {
+  color: var(--app-muted);
+  line-height: 1.5;
+}
+
+.top-products-isn-entry-row {
+  display: flex;
+  gap: 0.65rem;
+}
+
+.top-products-isn-field input,
+.top-products-isn-field textarea {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  padding: 0.82rem 0.95rem;
+  font: inherit;
+  color: var(--app-ink);
+  background: rgba(255, 255, 255, 0.92);
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.top-products-isn-field textarea {
+  resize: vertical;
+  min-height: 7rem;
+}
+
+.top-products-isn-field input:focus,
+.top-products-isn-field textarea:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 4px rgba(20, 88, 71, 0.12);
+}
+
+.top-products-isn-entry-row button,
+.top-products-isn-primary-button,
+.top-products-isn-link,
+.top-products-isn-choice,
+.top-products-isn-token {
+  font: inherit;
+}
+
+.top-products-isn-entry-row button,
+.top-products-isn-primary-button {
+  border: 1px solid transparent;
+  border-radius: 0.95rem;
+  cursor: pointer;
+}
+
+.top-products-isn-entry-row button {
+  min-width: 5rem;
+  padding: 0.78rem 0.95rem;
+  background: rgba(20, 88, 71, 0.08);
+  color: var(--app-accent);
+  font-weight: 700;
+}
+
+.top-products-isn-choice-grid,
+.top-products-isn-token-row,
+.top-products-isn-actions,
+.top-products-isn-stat-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.top-products-isn-choice {
+  padding: 0.55rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid rgba(40, 96, 163, 0.18);
+  background: rgba(40, 96, 163, 0.07);
+  color: #214d86;
+  cursor: pointer;
+  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+
+.top-products-isn-choice:hover,
+.top-products-isn-token:hover,
+.top-products-isn-primary-button:hover:not(:disabled),
+.top-products-isn-entry-row button:hover {
+  transform: translateY(-1px);
+}
+
+.top-products-isn-choice.is-active {
+  border-color: rgba(20, 88, 71, 0.24);
+  background: rgba(20, 88, 71, 0.12);
+  color: var(--app-accent);
+}
+
+.top-products-isn-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.42rem 0.78rem;
+  border: 1px solid rgba(20, 88, 71, 0.18);
+  border-radius: 999px;
+  background: rgba(20, 88, 71, 0.08);
+  color: var(--app-accent);
+  cursor: pointer;
+}
+
+.top-products-isn-link {
+  align-self: center;
+  border: 0;
+  background: transparent;
+  color: var(--app-accent);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.top-products-isn-file-summary,
+.top-products-isn-notice,
+.top-products-isn-stat-row span,
+.top-products-isn-results {
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+}
+
+.top-products-isn-file-summary,
+.top-products-isn-notice {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  background: rgba(20, 88, 71, 0.06);
+}
+
+.top-products-isn-notice {
+  color: var(--app-ink);
+}
+
+.top-products-isn-notice p {
+  margin: 0.25rem 0 0;
+  color: var(--app-muted);
+}
+
+.top-products-isn-notice--warning {
+  background: rgba(245, 158, 11, 0.12);
+  border-color: rgba(245, 158, 11, 0.2);
+  color: #92400e;
+}
+
+.top-products-isn-notice--error {
+  background: rgba(239, 68, 68, 0.08);
+  border-color: rgba(239, 68, 68, 0.18);
+  color: #991b1b;
+}
+
+.top-products-isn-accordion {
+  border: 1px solid var(--app-border);
+  border-radius: 1.35rem;
+  background:
+    radial-gradient(circle at top right, rgba(40, 96, 163, 0.08), transparent 30%),
+    rgba(255, 251, 247, 0.94);
+  box-shadow: var(--app-shadow-soft);
+  overflow: hidden;
+}
+
+.top-products-isn-accordion summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  list-style: none;
+  padding: 1rem 1.15rem;
+}
+
+.top-products-isn-accordion summary::-webkit-details-marker {
+  display: none;
+}
+
+.top-products-isn-accordion summary p {
+  margin: 0;
+  color: var(--app-ink);
+  font-weight: 700;
+}
+
+.top-products-isn-accordion summary span {
+  display: block;
+  margin-top: 0.25rem;
+  color: var(--app-muted);
+  line-height: 1.5;
+}
+
+.top-products-isn-accordion__body {
+  padding: 0 1.15rem 1.15rem;
+}
+
+.top-products-isn-accordion__body--stacked {
+  display: grid;
+  gap: 1rem;
+}
+
+.top-products-isn-loading-bar {
+  height: 0.42rem;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(20, 88, 71, 0.18), rgba(40, 96, 163, 0.5), rgba(20, 88, 71, 0.18));
+  background-size: 200% 100%;
+  animation: top-products-isn-loading 1.1s linear infinite;
+}
+
+.top-products-isn-station-config-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.top-products-isn-station-config-card {
+  border: 1px solid var(--app-border);
+  border-radius: 1.2rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.top-products-isn-station-config-card header {
+  margin-bottom: 0.85rem;
+}
+
+.top-products-isn-primary-button {
+  min-height: 3rem;
+  padding: 0.85rem 1.2rem;
+  background: linear-gradient(135deg, #145847, #2860a3);
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 16px 30px rgba(20, 88, 71, 0.18);
+}
+
+.top-products-isn-primary-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.top-products-isn-stat-row span {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.4rem 0.7rem;
+  background: rgba(255, 255, 255, 0.82);
+  color: var(--app-muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.top-products-isn-results {
+  padding: 1rem;
+  background: rgba(255, 251, 247, 0.74);
+}
+
+@keyframes top-products-isn-loading {
+  from {
+    background-position: 0% 0;
+  }
+
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@media (max-width: 960px) {
+
+  .top-products-isn-grid,
+  .top-products-isn-filter-grid,
+  .top-products-isn-station-config-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+
+  .top-products-isn-entry-row,
+  .top-products-isn-file-summary,
+  .top-products-isn-notice,
+  .top-products-isn-actions {
+    flex-direction: column;
+  }
+
+  .top-products-isn-entry-row button,
+  .top-products-isn-primary-button {
+    width: 100%;
+  }
+
+  .top-products-isn-accordion summary,
+  .top-products-isn-accordion__body {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}
+</style>

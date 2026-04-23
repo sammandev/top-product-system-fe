@@ -1,280 +1,272 @@
 <template>
     <DefaultLayout>
         <!-- Page Header -->
-        <div class="d-flex justify-space-between align-center mb-6">
-            <div class="d-flex align-center">
-                <v-icon size="40" color="primary" class="mr-3">mdi-file-export</v-icon>
+    <div class="parse-download-page-header mb-6">
+      <div class="parse-download-page-header__copy">
+        <Icon icon="mdi:file-export" class="parse-download-page-header__icon" />
                 <div>
-                    <h1 class="text-h4 mb-2">Parse & Download Format</h1>
-                    <p class="text-medium-emphasis mb-0">
+          <h1 class="parse-download-page-title">Parse & Download Format</h1>
+          <p class="parse-download-page-subtitle">
                         Upload file, select data, and download in your preferred format
                     </p>
                 </div>
             </div>
-            <v-btn v-if="hasPreview" color="secondary" prepend-icon="mdi-refresh" @click="handleReset">
-                New Upload
-            </v-btn>
+      <button v-if="hasPreview" type="button" class="parse-download-button parse-download-button--secondary" @click="handleReset">
+        <Icon icon="mdi:refresh" />
+        <span>New Upload</span>
+      </button>
         </div>
 
-        <!-- Error Alert -->
-        <v-alert v-if="error" type="error" variant="tonal" closable class="mb-4" @click:close="error = ''">
-            {{ error }}
-        </v-alert>
+        <div v-if="error" class="parse-download-notice parse-download-notice--error mb-4">
+          <div>
+            <strong>Parse and download failed</strong>
+            <p>{{ error }}</p>
+          </div>
+          <button type="button" @click="error = ''">Dismiss</button>
+        </div>
 
-        <!-- Success Alert -->
-        <v-alert v-if="downloadCompleted" type="success" variant="tonal" closable class="mb-4"
-            @click:close="downloadCompleted = false">
-            <div class="d-flex align-center">
-                <v-icon start>mdi-check-circle</v-icon>
-                File downloaded successfully!
-            </div>
-        </v-alert>
+        <AppPanel v-if="!hasPreview" eyebrow="Step 1" title="Upload Source File" description="Keep the preview in memory, tune the ingest hints, and stage the export flow." class="mb-4">
+          <template #header-aside>
+            <Icon icon="mdi:file-upload" class="parse-download-panel__icon" />
+          </template>
 
-        <!-- Step 1: Upload File -->
-        <v-card v-if="!hasPreview" class="mb-4">
-            <v-card-title>
-                <v-icon start>mdi-file-upload</v-icon>
-                Step 1: Upload File
-            </v-card-title>
-            <v-card-text>
-                <v-file-input v-model="selectedFile" label="Select CSV or Excel file" accept=".csv,.xlsx,.xls"
-                    variant="outlined" prepend-icon="mdi-paperclip" :loading="uploading" show-size
-                    @update:model-value="handleFileChange">
-                    <template #prepend-inner>
-                        <v-icon>mdi-file-document</v-icon>
+          <AppFilePicker v-model="selectedFile" label="Select CSV or Excel file" accept=".csv,.xlsx,.xls"
+            helper-text="CSV and Excel previews stay in memory for this parse-and-download workflow."
+            :disabled="uploading" @select="handleFileChange" />
+
+          <div class="parse-download-upload-options mt-4">
+            <label class="parse-download-toggle">
+              <input v-model="uploadOptions.hasHeader" type="checkbox">
+              <span>First row is header</span>
+            </label>
+            <label class="parse-download-field">
+              <span>Delimiter</span>
+              <input v-model="uploadOptions.delimiter" placeholder="Auto-detect" type="text">
+            </label>
+          </div>
+
+          <AppProgress v-if="uploading" :value="uploadProgress" class="mt-4" aria-live="polite" />
+
+          <button type="button" class="parse-download-button parse-download-button--primary parse-download-button--block parse-download-button--large mt-4"
+            :disabled="!selectedFile || uploading" @click="handleUpload">
+            <Icon :icon="uploading ? 'mdi:loading' : 'mdi:upload'" :class="{ 'parse-download-spin': uploading }" />
+            <span>{{ uploading ? 'Uploading...' : 'Upload and Preview' }}</span>
+          </button>
+        </AppPanel>
+
+        <AppPanel v-if="hasPreview" eyebrow="Step 2" title="Inspect Preview"
+          :description="`${columns.length} columns · ${previewRows.length} preview rows`" splitHeader class="mb-4">
+          <template #header-aside>
+            <span class="parse-download-pill parse-download-pill--primary">
+              {{ preview?.filename }}
+            </span>
+          </template>
+
+          <AppDataGrid :columns="previewGridColumns" :rows="previewRowsWithNumbers" :loading="uploading"
+            paginator :rowsPerPage="20" scrollHeight="300px">
+            <template #empty>
+              <div class="parse-download-empty-state">
+                <Icon icon="mdi:table-off" class="parse-download-empty-state__icon" />
+                <p>No preview data available</p>
+              </div>
+            </template>
+          </AppDataGrid>
+        </AppPanel>
+
+        <div v-if="hasPreview" class="parse-download-layout">
+            <AppPanel eyebrow="Step 3" title="Configure Selection" description="Trim the payload, exclude noisy rows, and export from the current preview snapshot.">
+                    <template #header-aside>
+                      <Icon icon="mdi:filter-variant" class="parse-download-panel__icon" />
                     </template>
-                </v-file-input>
 
-                <!-- Upload Options -->
-                <v-row class="mt-2">
-                    <v-col cols="12" md="4">
-                        <v-checkbox v-model="uploadOptions.hasHeader" label="First row is header" density="compact"
-                            hide-details />
-                    </v-col>
-                    <v-col cols="12" md="4">
-                        <v-text-field v-model="uploadOptions.delimiter" label="Delimiter (optional)"
-                            placeholder="Auto-detect" variant="outlined" density="compact" hide-details clearable />
-                    </v-col>
-                </v-row>
-
-                <!-- Upload Progress -->
-                <v-progress-linear v-if="uploading" :model-value="uploadProgress" color="primary" height="4"
-                    class="mt-4" />
-
-                <!-- Upload Button -->
-                <v-btn :disabled="!selectedFile || uploading" :loading="uploading" color="primary" size="large" block
-                    class="mt-4" @click="handleUpload">
-                    <v-icon start>mdi-upload</v-icon>
-                    Upload and Preview
-                </v-btn>
-            </v-card-text>
-        </v-card>
-
-        <!-- Step 2: Preview & Configure -->
-        <v-card v-if="hasPreview" class="mb-4">
-            <v-card-title>
-                <div class="d-flex justify-space-between align-center w-100">
                     <div>
-                        <v-icon start>mdi-table-eye</v-icon>
-                        Step 2: File Preview
-                    </div>
-                    <v-chip color="primary" variant="tonal">
-                        {{ preview?.filename }}
-                    </v-chip>
-                </div>
-            </v-card-title>
-            <v-card-subtitle>
-                {{ columns.length }} columns · {{ previewRows.length }} preview rows
-            </v-card-subtitle>
-            <v-card-text>
-                <!-- Preview Data Table -->
-                <v-data-table :headers="previewHeaders" :items="previewRowsWithNumbers" density="compact" fixed-header
-                    height="300" :items-per-page="20" :loading="uploading">
-                    <template #no-data>
-                        <div class="text-center pa-4">
-                            <v-icon size="48" color="grey">mdi-table-off</v-icon>
-                            <p class="text-medium-emphasis mt-2">No preview data available</p>
-                        </div>
-                    </template>
-                </v-data-table>
-            </v-card-text>
-        </v-card>
-
-        <!-- Step 3: Selection & Download -->
-        <v-row v-if="hasPreview">
-            <v-col cols="12" lg="6">
-                <v-card>
-                    <v-card-title class="bg-primary">
-                        <v-icon start color="white">mdi-filter-variant</v-icon>
-                        <span class="text-white">Step 3: Configure Selection</span>
-                    </v-card-title>
-
-                    <v-card-text class="pa-4">
-                        <!-- Selection Mode -->
-                        <div class="mb-4">
-                            <div class="text-subtitle-2 mb-3">Selection Mode</div>
-                            <v-radio-group v-model="mode" inline density="compact">
-                                <v-radio label="Columns Only" value="columns" />
-                                <v-radio label="Rows Only" value="rows" />
-                                <v-radio label="Both" value="both" />
-                            </v-radio-group>
+                        <div class="parse-download-section mb-4">
+                          <div class="parse-download-section__title">Selection Mode</div>
+                          <div class="parse-download-choice-grid">
+                            <label v-for="option in modeOptions" :key="option.value" class="parse-download-choice"
+                              :class="{ 'parse-download-choice--active': mode === option.value }">
+                              <input v-model="mode" :value="option.value" type="radio">
+                              <span>{{ option.label }}</span>
+                              <small>{{ option.description }}</small>
+                            </label>
+                          </div>
                         </div>
 
-                        <!-- Download Format -->
-                        <div class="mb-4">
-                            <div class="text-subtitle-2 mb-3">Download Format</div>
-                            <v-radio-group v-model="format" inline density="compact">
-                                <v-radio label="CSV" value="csv" />
-                                <v-radio label="XLSX" value="xlsx" />
-                                <v-radio label="Both (ZIP)" value="both" />
-                            </v-radio-group>
+                        <div class="parse-download-section mb-4">
+                          <div class="parse-download-section__title">Download Format</div>
+                          <div class="parse-download-choice-grid">
+                            <label v-for="option in formatOptions" :key="option.value" class="parse-download-choice"
+                              :class="{ 'parse-download-choice--active': format === option.value }">
+                              <input v-model="format" :value="option.value" type="radio">
+                              <span>{{ option.label }}</span>
+                              <small>{{ option.description }}</small>
+                            </label>
+                          </div>
                         </div>
-
-                        <v-divider class="my-4" />
+                        <div class="parse-download-divider" />
 
                         <!-- Column Selection -->
-                        <div v-if="mode === 'columns' || mode === 'both'" class="mb-4">
-                            <div class="text-subtitle-2 mb-3">
-                                <v-icon size="small" start>mdi-table-column</v-icon>
+                        <div v-if="mode === 'columns' || mode === 'both'" class="parse-download-section mb-4">
+                          <div class="parse-download-section-heading mb-3">
+                                <Icon icon="mdi:table-column" />
                                 Column Selection
                             </div>
 
-                            <v-autocomplete v-model="selectedColumns" :items="columns" label="Select Columns" multiple
-                                chips closable-chips variant="outlined" density="compact" clearable
-                                hint="Select columns to include" persistent-hint class="mb-3" />
+                          <div class="parse-download-toolbar mb-3">
+                            <span class="parse-download-toolbar__meta">{{ selectedColumns.length }} selected</span>
+                            <button class="parse-download-link" type="button" @click="selectAllColumns">Select all</button>
+                            <button class="parse-download-link" type="button" @click="clearSelectedColumns">Clear selected</button>
+                            <button class="parse-download-link" type="button" @click="clearExcludedColumns">Clear excluded</button>
+                          </div>
 
-                            <v-autocomplete v-model="excludeColumns" :items="columns" label="Exclude Columns (optional)"
-                                multiple chips closable-chips variant="outlined" density="compact" clearable
-                                hint="Remove specific columns from selection" persistent-hint />
+                          <div class="parse-download-select-grid">
+                            <label class="parse-download-field">
+                              <span>Include Columns</span>
+                              <select v-model="selectedColumns" class="parse-download-multi-select" multiple :size="Math.min(Math.max(columns.length, 6), 12)">
+                                <option v-for="column in columns" :key="`include-${column}`" :value="column">
+                                  {{ column }}
+                                </option>
+                              </select>
+                              <small class="parse-download-field__hint">Hold Ctrl or Cmd to select multiple columns.</small>
+                            </label>
+
+                            <label class="parse-download-field">
+                              <span>Exclude Columns</span>
+                              <select v-model="excludeColumns" class="parse-download-multi-select" multiple :size="Math.min(Math.max(columns.length, 6), 12)">
+                                <option v-for="column in columns" :key="`exclude-${column}`" :value="column">
+                                  {{ column }}
+                                </option>
+                              </select>
+                              <small class="parse-download-field__hint">Optional removal list applied after the main selection.</small>
+                            </label>
+                          </div>
                         </div>
 
                         <!-- Row Selection -->
-                        <div v-if="mode === 'rows' || mode === 'both'" class="mb-4">
-                            <div class="text-subtitle-2 mb-3">
-                                <v-icon size="small" start>mdi-table-row</v-icon>
+                        <div v-if="mode === 'rows' || mode === 'both'" class="parse-download-section mb-4">
+                          <div class="parse-download-section-heading mb-3">
+                            <Icon icon="mdi:table-row" />
                                 Row Selection
                             </div>
 
-                            <v-text-field v-model="selectedRowsText" label="Selected Row Indices (comma-separated)"
-                                variant="outlined" density="compact" prepend-inner-icon="mdi-check-circle"
-                                hint="e.g., 0, 2, 4 (zero-indexed)" persistent-hint class="mb-3" />
+                          <div class="parse-download-select-grid parse-download-select-grid--single">
+                            <label class="parse-download-field">
+                              <span>Selected Row Indices</span>
+                              <input v-model="selectedRowsText" placeholder="0, 2, 4" type="text">
+                              <small class="parse-download-field__hint">Comma-separated and zero-indexed.</small>
+                            </label>
 
-                            <v-text-field v-model="excludeRowsText" label="Exclude Row Indices (optional)"
-                                variant="outlined" density="compact" prepend-inner-icon="mdi-minus-circle"
-                                hint="e.g., 1, 3" persistent-hint />
+                            <label class="parse-download-field">
+                              <span>Exclude Row Indices</span>
+                              <input v-model="excludeRowsText" placeholder="1, 3" type="text">
+                              <small class="parse-download-field__hint">Optional exclusions applied after selection.</small>
+                            </label>
+                          </div>
                         </div>
 
-                        <v-divider class="my-4" />
+                        <div class="parse-download-summary-card">
+                          <div>
+                            <span>Columns in scope</span>
+                            <strong>{{ mode === 'rows' ? columns.length : selectedColumns.length || columns.length }}</strong>
+                          </div>
+                          <div>
+                            <span>Rows selected</span>
+                            <strong>{{ selectedRowCount || 'All' }}</strong>
+                          </div>
+                          <div>
+                            <span>Rows excluded</span>
+                            <strong>{{ excludedRowCount || 0 }}</strong>
+                          </div>
+                        </div>
+
+                        <div class="parse-download-divider" />
 
                         <!-- Action Buttons -->
-                        <v-row dense>
-                            <v-col cols="12">
-                                <v-btn color="primary" size="large" block :loading="processing" :disabled="!canProcess"
-                                    prepend-icon="mdi-download" @click="handleDownload">
-                                    Parse & Download {{ format.toUpperCase() }}
-                                </v-btn>
-                            </v-col>
-                        </v-row>
+            <button type="button" class="parse-download-button parse-download-button--primary parse-download-button--block parse-download-button--large" :disabled="!canProcess"
+              @click="handleDownload">
+              <Icon :icon="processing ? 'mdi:loading' : 'mdi:download'" :class="{ 'parse-download-spin': processing }" />
+              <span>{{ processing ? 'Processing...' : `Parse & Download ${format.toUpperCase()}` }}</span>
+            </button>
 
-                        <!-- Progress -->
-                        <v-progress-linear v-if="processing" :model-value="progress" color="primary" height="6" striped
-                            class="mt-4">
-                            <template #default="{ value }">
-                                <span class="text-caption">{{ Math.round(value) }}%</span>
-                            </template>
-                        </v-progress-linear>
-                    </v-card-text>
-                </v-card>
-            </v-col>
+            <AppProgress v-if="processing" :value="progress" class="mt-4" aria-live="polite" />
+          </div>
+      </AppPanel>
 
             <!-- Right Panel: Instructions -->
-            <v-col cols="12" lg="6">
-                <v-card>
-                    <v-card-title class="bg-info">
-                        <v-icon start color="white">mdi-information</v-icon>
-                        <span class="text-white">Instructions</span>
-                    </v-card-title>
+      <section class="parse-download-layout__aside">
+                <AppPanel eyebrow="Playbook" title="Recommended Flow" description="Shape the export before it leaves preview." tone="cool" class="parse-download-playbook-panel">
+                <div class="parse-download-playbook">
+                  <div class="parse-download-playbook__hero">
+                    <span>Workflow Brief</span>
+                    <h2>Shape the export before it leaves preview.</h2>
+                    <p>Keep the flow lean: choose scope, trim columns or rows only when needed, then export once.</p>
+                  </div>
 
-                    <v-card-text class="pa-4">
-                        <div class="text-body-2">
-                            <h3 class="text-h6 mb-3">Quick Guide:</h3>
+                  <div class="parse-download-playbook__steps">
+                    <article class="parse-download-step parse-download-step--done">
+                      <strong>1. Preview ready</strong>
+                      <p>{{ preview?.filename }} is loaded with {{ columns.length }} columns.</p>
+                    </article>
+                    <article class="parse-download-step">
+                      <strong>2. Shape the payload</strong>
+                      <p>{{ mode === 'both' ? 'Columns and rows are both active.' : `Only ${mode} selection is active.` }}</p>
+                    </article>
+                    <article class="parse-download-step">
+                      <strong>3. Export once</strong>
+                      <p>{{ format.toUpperCase() }} output will be generated from the current selection.</p>
+                    </article>
+                  </div>
 
-                            <v-timeline density="compact" side="end" class="mb-4">
-                                <v-timeline-item dot-color="success" size="small" icon="mdi-check">
-                                    <div class="text-subtitle-2 mb-1">✓ File Uploaded</div>
-                                    <div class="text-caption text-medium-emphasis">
-                                        Preview showing {{ columns.length }} columns
-                                    </div>
-                                </v-timeline-item>
+                  <div class="parse-download-format-cards">
+                    <article v-for="option in formatOptions" :key="`guide-${option.value}`" class="parse-download-format-card"
+                      :class="{ 'parse-download-format-card--active': format === option.value }">
+                      <span>{{ option.label }}</span>
+                      <p>{{ option.description }}</p>
+                    </article>
+                  </div>
 
-                                <v-timeline-item dot-color="primary" size="small">
-                                    <div class="text-subtitle-2 mb-1">2. Select Data</div>
-                                    <div class="text-caption text-medium-emphasis">
-                                        Choose which columns/rows to include in download
-                                    </div>
-                                </v-timeline-item>
+                  <div class="parse-download-note">
+                    <strong>Fast-path tip</strong>
+                    <p>Leave row inputs empty to export every previewed row, and keep all columns selected when the source schema is already clean.</p>
+                  </div>
+                </div>
+                </AppPanel>
+            </section>
+        </div>
 
-                                <v-timeline-item dot-color="primary" size="small">
-                                    <div class="text-subtitle-2 mb-1">3. Download</div>
-                                    <div class="text-caption text-medium-emphasis">
-                                        Get your filtered file in preferred format
-                                    </div>
-                                </v-timeline-item>
-                            </v-timeline>
-
-                            <v-divider class="my-4" />
-
-                            <h3 class="text-h6 mb-3">Format Options:</h3>
-
-                            <v-list density="compact" class="bg-transparent">
-                                <v-list-item>
-                                    <template #prepend>
-                                        <v-icon size="small">mdi-file-delimited</v-icon>
-                                    </template>
-                                    <v-list-item-title class="text-caption">CSV</v-list-item-title>
-                                    <v-list-item-subtitle class="text-caption">
-                                        Comma-separated values (universal format)
-                                    </v-list-item-subtitle>
-                                </v-list-item>
-
-                                <v-list-item>
-                                    <template #prepend>
-                                        <v-icon size="small">mdi-file-excel</v-icon>
-                                    </template>
-                                    <v-list-item-title class="text-caption">XLSX</v-list-item-title>
-                                    <v-list-item-subtitle class="text-caption">
-                                        Excel spreadsheet format
-                                    </v-list-item-subtitle>
-                                </v-list-item>
-
-                                <v-list-item>
-                                    <template #prepend>
-                                        <v-icon size="small">mdi-folder-zip</v-icon>
-                                    </template>
-                                    <v-list-item-title class="text-caption">Both (ZIP)</v-list-item-title>
-                                    <v-list-item-subtitle class="text-caption">
-                                        Both CSV and XLSX in a single ZIP file
-                                    </v-list-item-subtitle>
-                                </v-list-item>
-                            </v-list>
-
-                            <v-divider class="my-4" />
-
-                            <v-alert type="info" variant="tonal" density="compact">
-                                <div class="text-caption">
-                                    <strong>Tip:</strong> Leave row/column selections empty to include all data
-                                </div>
-                            </v-alert>
-                        </div>
-                    </v-card-text>
-                </v-card>
-            </v-col>
-        </v-row>
+        <AppDialog v-model="downloadCompleted" title="Parsed file downloaded"
+          description="The export has been generated and downloaded to your machine.">
+          <div class="parse-download-summary">
+            <div>
+              <span>Filename</span>
+              <strong>{{ lastDownloadedFilename }}</strong>
+            </div>
+            <div>
+              <span>Selection mode</span>
+              <strong>{{ mode.toUpperCase() }}</strong>
+            </div>
+            <div>
+              <span>Output format</span>
+              <strong>{{ format.toUpperCase() }}</strong>
+            </div>
+            <div>
+              <span>Columns selected</span>
+              <strong>{{ selectedColumns.length || columns.length }}</strong>
+            </div>
+          </div>
+          <template #footer>
+            <div class="parse-download-dialog-footer">
+              <button type="button" class="parse-download-button parse-download-button--ghost parse-download-button--small" @click="downloadCompleted = false">Close</button>
+            </div>
+          </template>
+        </AppDialog>
     </DefaultLayout>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
+import { AppDataGrid, AppDialog, AppFilePicker, AppPanel, AppProgress } from '@/shared'
 import type { UploadPreviewResponse } from '@/core/types/api.types'
 import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
 import { parsingApi } from '../api/parsing.api'
@@ -299,6 +291,19 @@ const excludeRowsText = ref('')
 const processing = ref(false)
 const progress = ref(0)
 const downloadCompleted = ref(false)
+const lastDownloadedFilename = ref('')
+
+const modeOptions = [
+  { value: 'columns', label: 'Columns Only', description: 'Keep every row and trim the schema.' },
+  { value: 'rows', label: 'Rows Only', description: 'Keep the schema and filter row indices.' },
+  { value: 'both', label: 'Both', description: 'Control columns and rows in a single pass.' },
+] as const
+
+const formatOptions = [
+  { value: 'csv', label: 'CSV', description: 'Lightweight flat export for broad compatibility.' },
+  { value: 'xlsx', label: 'XLSX', description: 'Spreadsheet output with Excel-native formatting.' },
+  { value: 'both', label: 'Both (ZIP)', description: 'Bundle CSV and XLSX together for downstream users.' },
+] as const
 
 // Computed
 const hasPreview = computed(() => preview.value !== null)
@@ -341,6 +346,16 @@ const previewRowsWithNumbers = computed(() => {
   }))
 })
 
+const previewGridColumns = computed(() =>
+  previewHeaders.value.map((header) => ({
+    key: String(header.key),
+    field: String(header.key),
+    header: String(header.title),
+    sortable: Boolean(header.sortable),
+    style: 'width' in header && header.width ? { width: `${header.width}px` } : undefined,
+  })),
+)
+
 const canProcess = computed(() => {
   if (!hasPreview.value || processing.value) return false
 
@@ -350,6 +365,9 @@ const canProcess = computed(() => {
 
   return true
 })
+
+const selectedRowCount = computed(() => parseRowIndices(selectedRowsText.value).length)
+const excludedRowCount = computed(() => parseRowIndices(excludeRowsText.value).length)
 
 // Methods
 function handleFileChange() {
@@ -362,6 +380,18 @@ function handleFileChange() {
   }
 }
 
+function selectAllColumns() {
+  selectedColumns.value = [...columns.value]
+}
+
+function clearSelectedColumns() {
+  selectedColumns.value = []
+}
+
+function clearExcludedColumns() {
+  excludeColumns.value = []
+}
+
 async function handleUpload() {
   if (!selectedFile.value) return
 
@@ -371,6 +401,7 @@ async function handleUpload() {
   uploading.value = true
   uploadProgress.value = 0
   error.value = ''
+  const progressInterval = startProgressTicker(uploadProgress)
 
   try {
     const formData = new FormData()
@@ -381,17 +412,9 @@ async function handleUpload() {
     }
     formData.append('persist', 'false') // Don't persist to disk for this workflow
 
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      if (uploadProgress.value < 90) {
-        uploadProgress.value += 10
-      }
-    }, 100)
-
     const response = await parsingApi.uploadPreview(formData)
     preview.value = response
 
-    clearInterval(progressInterval)
     uploadProgress.value = 100
 
     // Auto-select all columns by default
@@ -399,6 +422,7 @@ async function handleUpload() {
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Upload failed'
   } finally {
+    clearInterval(progressInterval)
     uploading.value = false
   }
 }
@@ -420,6 +444,7 @@ async function handleDownload() {
   progress.value = 0
   error.value = ''
   downloadCompleted.value = false
+  const progressInterval = startProgressTicker(progress)
 
   try {
     const formData = new FormData()
@@ -450,16 +475,8 @@ async function handleDownload() {
       }
     }
 
-    // Simulate progress
-    const progressInterval = setInterval(() => {
-      if (progress.value < 90) {
-        progress.value += 10
-      }
-    }, 100)
-
     const blob = await parsingApi.parseDownloadFormat(formData)
 
-    clearInterval(progressInterval)
     progress.value = 100
 
     // Determine filename and extension
@@ -483,12 +500,22 @@ async function handleDownload() {
     link.click()
     URL.revokeObjectURL(url)
 
+    lastDownloadedFilename.value = filename
     downloadCompleted.value = true
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Download failed'
   } finally {
+    clearInterval(progressInterval)
     processing.value = false
   }
+}
+
+function startProgressTicker(target: { value: number }) {
+  return window.setInterval(() => {
+    if (target.value < 90) {
+      target.value += 10
+    }
+  }, 100)
 }
 
 function handleReset() {
@@ -502,6 +529,7 @@ function handleReset() {
   format.value = 'xlsx'
   error.value = ''
   downloadCompleted.value = false
+  lastDownloadedFilename.value = ''
   uploadOptions.value = {
     hasHeader: true,
     delimiter: '',
@@ -510,7 +538,442 @@ function handleReset() {
 </script>
 
 <style scoped>
-.gap-2 {
-    gap: 0.5rem;
+.parse-download-page-header,
+.parse-download-page-header__copy,
+.parse-download-button,
+.parse-download-pill,
+.parse-download-section-heading {
+  display: inline-flex;
+  align-items: center;
+}
+
+.parse-download-page-header {
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.parse-download-page-header__copy {
+  gap: 0.9rem;
+}
+
+.parse-download-page-header__icon {
+  font-size: 2.2rem;
+  color: #1f4e86;
+}
+
+.parse-download-page-title {
+  margin: 0 0 0.5rem;
+  font-size: clamp(2rem, 3vw, 2.5rem);
+  line-height: 1.08;
+}
+
+.parse-download-page-subtitle {
+  margin: 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.parse-download-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(20rem, 0.92fr);
+  gap: 1rem;
+}
+
+.parse-download-layout__aside {
+  min-height: 100%;
+}
+
+.parse-download-panel__icon {
+  font-size: 1.75rem;
+  color: var(--app-ink);
+}
+
+.parse-download-playbook,
+.parse-download-note,
+.parse-download-notice {
+  border: 1px solid var(--app-border);
+  border-radius: 1.25rem;
+  background: rgba(255, 251, 247, 0.88);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.parse-download-notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 0.95rem 1rem;
+}
+
+.parse-download-notice p {
+  margin: 0.25rem 0 0;
+  color: var(--app-muted);
+}
+
+.parse-download-notice--error {
+  background: rgba(163, 61, 45, 0.08);
+  border-color: rgba(163, 61, 45, 0.24);
+}
+
+.parse-download-notice button {
+  border: 0;
+  background: transparent;
+  color: var(--app-accent);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.parse-download-summary {
+    display: grid;
+    gap: 0.75rem;
+}
+
+.parse-download-summary > div {
+    display: grid;
+    gap: 0.2rem;
+}
+
+.parse-download-summary span {
+    font-size: 0.78rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--app-muted);
+}
+
+.parse-download-summary strong {
+    color: var(--app-ink);
+}
+
+.parse-download-button {
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  padding: 0.78rem 1rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.parse-download-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
+}
+
+.parse-download-button--primary {
+  background: #1f4e86;
+  border-color: #1f4e86;
+  color: #f8f3ec;
+}
+
+.parse-download-button--secondary {
+  background: rgba(20, 88, 71, 0.08);
+  border-color: rgba(20, 88, 71, 0.24);
+  color: #145847;
+}
+
+.parse-download-button--ghost {
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.parse-download-button--block {
+  width: 100%;
+}
+
+.parse-download-button--large {
+  padding-inline: 1.15rem;
+}
+
+.parse-download-button--small {
+  padding: 0.62rem 0.85rem;
+  font-size: 0.85rem;
+}
+
+.parse-download-pill {
+  justify-content: center;
+  border: 1px solid rgba(31, 78, 134, 0.18);
+  border-radius: 999px;
+  padding: 0.35rem 0.8rem;
+  background: rgba(31, 78, 134, 0.1);
+  color: #1f4e86;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.parse-download-empty-state {
+  display: grid;
+  place-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  text-align: center;
+  color: var(--app-muted);
+}
+
+.parse-download-empty-state__icon {
+  font-size: 2rem;
+}
+
+.parse-download-section-heading {
+  gap: 0.45rem;
+  color: var(--app-ink);
+  font-weight: 700;
+}
+
+.parse-download-divider {
+  height: 1px;
+  margin: 1rem 0;
+  background: rgba(20, 88, 71, 0.1);
+}
+
+.parse-download-spin {
+  animation: parse-download-spin 0.9s linear infinite;
+}
+
+.parse-download-upload-options,
+.parse-download-select-grid,
+.parse-download-choice-grid,
+.parse-download-playbook__steps,
+.parse-download-format-cards {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.parse-download-upload-options,
+.parse-download-select-grid,
+.parse-download-choice-grid {
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.parse-download-select-grid--single {
+  grid-template-columns: 1fr;
+}
+
+.parse-download-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.parse-download-field > span,
+.parse-download-section__title,
+.parse-download-summary-card span,
+.parse-download-playbook__hero span,
+.parse-download-format-card span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-muted);
+}
+
+.parse-download-field input,
+.parse-download-multi-select {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  box-shadow: var(--app-shadow-soft);
+  padding: 0.85rem 0.95rem;
+}
+
+.parse-download-field input:focus,
+.parse-download-multi-select:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 4px var(--app-ring);
+}
+
+.parse-download-field__hint {
+  color: var(--app-muted);
+  font-size: 0.82rem;
+}
+
+.parse-download-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  box-shadow: var(--app-shadow-soft);
+  padding: 0.95rem 1rem;
+  font-weight: 600;
+}
+
+.parse-download-toggle input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--app-accent);
+}
+
+.parse-download-choice {
+  display: grid;
+  gap: 0.3rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1.15rem;
+  background: rgba(255, 251, 247, 0.84);
+  padding: 1rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.parse-download-choice input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.parse-download-choice span {
+  color: var(--app-ink);
+  font-weight: 700;
+}
+
+.parse-download-choice small {
+  color: var(--app-muted);
+  line-height: 1.5;
+}
+
+.parse-download-choice--active {
+  border-color: var(--app-accent);
+  background: linear-gradient(180deg, rgba(20, 88, 71, 0.1), rgba(255, 251, 247, 0.96));
+  box-shadow: 0 0 0 4px var(--app-ring);
+  transform: translateY(-1px);
+}
+
+.parse-download-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.85rem;
+  align-items: center;
+}
+
+.parse-download-toolbar__meta {
+  color: var(--app-muted);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.parse-download-link {
+  border: 0;
+  background: transparent;
+  color: var(--app-accent);
+  cursor: pointer;
+  font-size: 0.88rem;
+  font-weight: 700;
+}
+
+.parse-download-summary-card {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.9rem;
+  padding: 1rem;
+}
+
+.parse-download-summary-card > div {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.parse-download-summary-card strong,
+.parse-download-playbook__hero h2 {
+  color: var(--app-ink);
+}
+
+.parse-download-playbook {
+  display: grid;
+  gap: 1rem;
+}
+
+.parse-download-playbook-panel {
+  min-height: 100%;
+}
+
+.parse-download-playbook__hero {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.parse-download-playbook__hero h2 {
+  margin: 0;
+  font-family: var(--app-display);
+  font-size: clamp(1.35rem, 1.8vw, 1.9rem);
+}
+
+.parse-download-playbook__hero p,
+.parse-download-step p,
+.parse-download-format-card p,
+.parse-download-note p {
+  margin: 0;
+  color: var(--app-muted);
+  line-height: 1.6;
+}
+
+.parse-download-step,
+.parse-download-format-card,
+.parse-download-note {
+  border-radius: 1rem;
+  padding: 0.95rem 1rem;
+}
+
+.parse-download-step {
+  background: rgba(255, 255, 255, 0.64);
+  border: 1px solid rgba(20, 88, 71, 0.08);
+}
+
+.parse-download-step--done {
+  background: linear-gradient(180deg, rgba(20, 88, 71, 0.12), rgba(255, 255, 255, 0.84));
+}
+
+.parse-download-step strong,
+.parse-download-note strong {
+  display: block;
+  margin-bottom: 0.3rem;
+  color: var(--app-ink);
+}
+
+.parse-download-format-card {
+  border: 1px solid rgba(20, 88, 71, 0.08);
+  background: rgba(255, 255, 255, 0.65);
+}
+
+.parse-download-format-card--active {
+  border-color: var(--app-accent);
+  background: rgba(20, 88, 71, 0.08);
+}
+
+.parse-download-note {
+  background: rgba(245, 168, 71, 0.1);
+}
+
+.parse-download-dialog-footer {
+  display: flex;
+  justify-content: flex-end;
+}
+
+@media (max-width: 960px) {
+  .parse-download-page-header,
+  .parse-download-page-header__copy {
+    align-items: flex-start;
+  }
+
+  .parse-download-layout,
+  .parse-download-choice-grid,
+  .parse-download-upload-options,
+  .parse-download-select-grid,
+  .parse-download-summary-card {
+    grid-template-columns: 1fr;
+  }
+}
+
+@keyframes parse-download-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

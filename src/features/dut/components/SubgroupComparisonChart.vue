@@ -1,31 +1,25 @@
 <template>
-  <v-card>
-    <v-card-title>
-      <v-icon class="mr-2">mdi-chart-bar</v-icon>
-      Subgroup Comparison
-    </v-card-title>
+  <AppPanel
+    eyebrow="Score Summary"
+    title="Subgroup Comparison"
+    description="Compare subgroup performance on a single ECharts rendering path."
+    tone="cool"
+  >
+    <div v-if="!overallGroupScores || Object.keys(overallGroupScores).length === 0" class="subgroup-chart__empty">
+      <strong>No subgroup scores available.</strong>
+      <p>Run the analysis first to generate subgroup comparison data.</p>
+    </div>
 
-    <v-card-text>
-      <!-- Empty State -->
-      <div v-if="!overallGroupScores || Object.keys(overallGroupScores).length === 0" class="text-center py-8">
-        <v-icon size="64" color="grey">mdi-chart-bar-stacked</v-icon>
-        <p class="text-body-1 text-medium-emphasis mt-4">
-          No subgroup scores available
-        </p>
-      </div>
-
-      <!-- Chart -->
-      <v-chart v-else :option="chartOption" :style="{ height: '400px', width: '100%' }" autoresize />
-    </v-card-text>
-  </v-card>
+    <VChart v-else :option="chartOption" class="subgroup-chart__chart" autoresize />
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
 import type { EChartsOption } from 'echarts'
 import { computed, type PropType } from 'vue'
 import type { OverallGroupScores } from '@/core/types'
+import { AppPanel, VChart } from '@/shared/ui'
 
-// Props
 const props = defineProps({
   overallGroupScores: {
     type: Object as PropType<OverallGroupScores | null>,
@@ -37,7 +31,6 @@ const props = defineProps({
   },
 })
 
-// Computed
 const chartOption = computed<EChartsOption>(() => {
   if (!props.overallGroupScores) {
     return {}
@@ -126,4 +119,29 @@ const chartOption = computed<EChartsOption>(() => {
 })
 </script>
 
-<style scoped></style>
+<style scoped>
+.subgroup-chart__chart {
+  width: 100%;
+  height: 25rem;
+  min-height: 25rem;
+}
+
+.subgroup-chart__empty {
+  display: grid;
+  gap: 0.45rem;
+  padding: 1.25rem;
+  border: 1px dashed var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 250, 246, 0.72);
+  text-align: center;
+}
+
+.subgroup-chart__empty strong {
+  color: var(--app-ink);
+}
+
+.subgroup-chart__empty p {
+  margin: 0;
+  color: var(--app-muted);
+}
+</style>

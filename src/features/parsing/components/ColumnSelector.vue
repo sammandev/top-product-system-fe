@@ -1,92 +1,75 @@
 <template>
-  <v-card>
-    <v-card-title class="d-flex justify-space-between align-center">
-      <div>
-        <v-icon start>mdi-table-column</v-icon>
-        Column Selection
-      </div>
-      <v-chip :color="selectedCount > 0 ? 'primary' : 'default'" size="small">
+  <AppPanel eyebrow="Columns" title="Column Selection" :description="panelDescription">
+    <template #header-aside>
+      <span class="column-selector-pill" :class="{ 'column-selector-pill--active': selectedCount > 0 }">
         {{ selectedCount }} / {{ columns.length }} selected
-      </v-chip>
-    </v-card-title>
+      </span>
+    </template>
 
-    <v-card-subtitle v-if="modelValue && modelValue.length > 0">
+    <div v-if="modelValue && modelValue.length > 0" class="column-selector-subtitle">
       {{ modelValue.length }} column{{ modelValue.length !== 1 ? 's' : '' }} selected
-    </v-card-subtitle>
+    </div>
 
-    <v-card-text>
-      <!-- Search Box -->
-      <v-text-field v-model="searchQuery" label="Search columns" variant="outlined" density="compact"
-        prepend-inner-icon="mdi-magnify" clearable hide-details class="mb-4" />
+    <div>
+      <div class="column-selector-tools">
+        <label class="column-selector-field">
+          <span>Search columns</span>
+          <input v-model="searchQuery" placeholder="Filter by column name" type="text">
+        </label>
 
-      <!-- Quick Selection Input -->
-      <v-text-field v-model="quickSelectInput" label="Quick Select (e.g., 'A-Z' or 'A,C,E,J')" variant="outlined"
-        density="compact" prepend-inner-icon="mdi-lightning-bolt" clearable
-        hint="Press Enter to apply. Use ranges (A-Z) or individual columns (A,E,J). Also supports numbers (1-10)."
-        persistent-hint class="mb-4" @keydown.enter.prevent="applyQuickSelect">
-        <template #append-inner>
-          <v-btn size="small" variant="text" color="primary" @click="applyQuickSelect">
-            Apply
-          </v-btn>
-        </template>
-      </v-text-field>
-
-      <!-- Quick Actions -->
-      <div class="d-flex gap-2 mb-4">
-        <v-btn size="small" variant="tonal" prepend-icon="mdi-checkbox-multiple-marked" @click="selectAll">
-          Select All
-        </v-btn>
-        <v-btn size="small" variant="tonal" prepend-icon="mdi-checkbox-multiple-blank-outline" @click="deselectAll">
-          Deselect All
-        </v-btn>
-        <v-btn v-if="modelValue && modelValue.length > 0" size="small" variant="tonal"
-          prepend-icon="mdi-swap-horizontal" @click="invertSelection">
-          Invert
-        </v-btn>
+        <label class="column-selector-field">
+          <span>Quick Select</span>
+          <div class="column-selector-field__action">
+            <input v-model="quickSelectInput" placeholder="A-Z or A,C,E,J" type="text" @keydown.enter.prevent="applyQuickSelect">
+            <button type="button" @click="applyQuickSelect">Apply</button>
+          </div>
+          <small>Use ranges like A-Z or 1-10, or individual columns such as A,E,J.</small>
+        </label>
       </div>
 
-      <!-- Column List -->
-      <v-list v-if="filteredColumns.length > 0" density="compact" class="column-list">
-        <v-list-item v-for="column in filteredColumns" :key="column" class="column-item">
-          <template #prepend>
-            <v-checkbox :model-value="isSelected(column)" hide-details density="compact"
-              @update:model-value="toggleColumn(column)" />
-          </template>
-
-          <v-list-item-title>
-            <span class="text-primary font-weight-bold">[{{ getColumnLetter(props.columns.indexOf(column)) }}]</span>
-            {{ formatColumnName(column) }}
-          </v-list-item-title>
-
-          <template #append>
-            <v-chip size="x-small" variant="tonal" color="primary">
-              {{ getColumnType(column) }}
-            </v-chip>
-          </template>
-        </v-list-item>
-      </v-list>
-
-      <!-- No Results -->
-      <v-alert v-else type="info" variant="tonal" density="compact" class="mt-4">
-        No columns match your search
-      </v-alert>
-
-      <!-- Summary -->
-      <v-divider class="my-4" />
-      <div class="text-caption text-medium-emphasis">
-        <div v-if="selectedCount > 0">
-          Selected: <strong>{{ getSelectedColumnsSummary() }}</strong>
-        </div>
-        <div v-else>
-          No columns selected
-        </div>
+      <div class="column-selector-toolbar">
+        <button type="button" class="column-selector-action" @click="selectAll">
+          <Icon icon="mdi:checkbox-multiple-marked" />
+          <span>Select All</span>
+        </button>
+        <button type="button" class="column-selector-action" @click="deselectAll">
+          <Icon icon="mdi:checkbox-multiple-blank-outline" />
+          <span>Deselect All</span>
+        </button>
+        <button v-if="modelValue && modelValue.length > 0" type="button" class="column-selector-action" @click="invertSelection">
+          <Icon icon="mdi:swap-horizontal" />
+          <span>Invert</span>
+        </button>
       </div>
-    </v-card-text>
-  </v-card>
+
+      <div v-if="filteredColumns.length > 0" class="column-list">
+        <label v-for="column in filteredColumns" :key="column" class="column-item">
+          <div class="column-item__copy">
+            <input :checked="isSelected(column)" type="checkbox" @change="toggleColumn(column)">
+            <div>
+              <strong>[{{ getColumnLetter(props.columns.indexOf(column)) }}]</strong>
+              <span>{{ formatColumnName(column) }}</span>
+            </div>
+          </div>
+          <span class="column-selector-type-pill">{{ getColumnType(column) }}</span>
+        </label>
+      </div>
+
+      <div v-else class="column-selector-notice mt-4">No columns match your search.</div>
+
+      <div class="column-selector-divider" />
+      <div class="column-selector-summary">
+        <div v-if="selectedCount > 0">Selected: <strong>{{ getSelectedColumnsSummary() }}</strong></div>
+        <div v-else>No columns selected</div>
+      </div>
+    </div>
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
+import { AppPanel } from '@/shared'
 
 // Props
 interface Props {
@@ -119,6 +102,12 @@ const filteredColumns = computed(() => {
 
   const query = searchQuery.value.toLowerCase()
   return props.columns.filter((col) => col.toLowerCase().includes(query))
+})
+
+const panelDescription = computed(() => {
+  return selectedCount.value > 0
+    ? 'Trim the schema before parsing or download.'
+    : 'Search, quick-select, and toggle source columns before parsing.'
 })
 
 // Methods
@@ -287,19 +276,77 @@ function applyQuickSelect() {
 </script>
 
 <style scoped>
-.gap-2 {
+.column-selector-toolbar,
+.column-selector-action {
+  display: inline-flex;
+  align-items: center;
+}
+
+.column-selector-toolbar {
+  flex-wrap: wrap;
   gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.column-selector-pill,
+.column-selector-type-pill,
+.column-selector-action {
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+}
+
+.column-selector-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.35rem 0.8rem;
+  background: rgba(255, 251, 247, 0.9);
+  color: var(--app-muted);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.column-selector-pill--active {
+  background: rgba(20, 88, 71, 0.1);
+  border-color: rgba(20, 88, 71, 0.24);
+  color: var(--app-accent);
+}
+
+.column-selector-subtitle,
+.column-selector-summary {
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.column-selector-subtitle {
+  margin-bottom: 1rem;
+}
+
+.column-selector-action {
+  gap: 0.45rem;
+  justify-content: center;
+  padding: 0.62rem 0.85rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  cursor: pointer;
+  font-weight: 700;
 }
 
 .column-list {
   max-height: 400px;
   overflow-y: auto;
-  border: 1px solid rgba(var(--v-border-color), 0.12);
-  border-radius: 4px;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 251, 247, 0.88);
 }
 
 .column-item {
-  border-bottom: 1px solid rgba(var(--v-border-color), 0.06);
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  border-bottom: 1px solid rgba(20, 88, 71, 0.08);
+  padding: 0.85rem 1rem;
 }
 
 .column-item:last-child {
@@ -307,6 +354,123 @@ function applyQuickSelect() {
 }
 
 .column-item:hover {
-  background-color: rgba(var(--v-theme-on-surface), 0.04);
+  background-color: rgba(20, 88, 71, 0.04);
+}
+
+.column-selector-tools {
+  display: grid;
+  gap: 0.9rem;
+  margin-bottom: 1rem;
+}
+
+.column-selector-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.column-selector-field > span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-muted);
+}
+
+.column-selector-field input,
+.column-selector-field__action {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.column-selector-field input {
+  padding: 0.85rem 0.95rem;
+}
+
+.column-selector-field input:focus,
+.column-selector-field__action:focus-within {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 4px var(--app-ring);
+}
+
+.column-selector-field__action {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.2rem 0.2rem 0.2rem 0.85rem;
+}
+
+.column-selector-field__action input {
+  border: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 0.65rem 0;
+}
+
+.column-selector-field__action button {
+  border: 0;
+  border-radius: 0.85rem;
+  background: rgba(20, 88, 71, 0.1);
+  color: var(--app-accent);
+  cursor: pointer;
+  font-weight: 700;
+  padding: 0.7rem 0.9rem;
+}
+
+.column-selector-field small {
+  color: var(--app-muted);
+  line-height: 1.5;
+}
+
+.column-item__copy {
+  display: flex;
+  gap: 0.85rem;
+  align-items: center;
+}
+
+.column-item__copy input {
+  width: 1rem;
+  height: 1rem;
+  accent-color: var(--app-accent);
+}
+
+.column-item__copy strong {
+  color: var(--app-accent);
+  margin-right: 0.35rem;
+}
+
+.column-selector-notice {
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 251, 247, 0.92);
+  padding: 0.9rem 1rem;
+  color: var(--app-muted);
+}
+
+.column-selector-type-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.22rem 0.6rem;
+  background: rgba(31, 78, 134, 0.1);
+  border-color: rgba(31, 78, 134, 0.18);
+  color: #1f4e86;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.column-selector-divider {
+  height: 1px;
+  margin: 1rem 0;
+  background: rgba(20, 88, 71, 0.1);
+}
+
+.column-selector-summary strong {
+  color: var(--app-ink);
 }
 </style>

@@ -13,7 +13,7 @@ export interface HeaderWithPosition extends Record<string, unknown> {
 }
 
 export function useStickyColumns(
-  // biome-ignore lint/suspicious/noExplicitAny: Vuetify header objects have dynamic shape
+  // biome-ignore lint/suspicious/noExplicitAny: header objects can come from multiple table adapters
   headersInput: Ref<any[]> | (() => any[]),
   options: StickyColumnOptions = {},
 ) {
@@ -27,7 +27,7 @@ export function useStickyColumns(
   })
 
   const columnOptions = computed(() => {
-    // biome-ignore lint/suspicious/noExplicitAny: Vuetify header objects have dynamic shape
+    // biome-ignore lint/suspicious/noExplicitAny: header objects can come from multiple table adapters
     return headers.value.map((h: any) => ({
       title: h.title,
       value: h.key ?? h.value,
@@ -37,7 +37,7 @@ export function useStickyColumns(
   const stickyHeaders = computed<HeaderWithPosition[]>(() => {
     let cumulativeLeft = 0
 
-    // biome-ignore lint/suspicious/noExplicitAny: Vuetify header objects have dynamic shape
+    // biome-ignore lint/suspicious/noExplicitAny: header objects can come from multiple table adapters
     return headers.value.map((h: any) => {
       const key = h.key ?? h.value
       const isLocked = lockedColumns.value.includes(key)
@@ -46,7 +46,7 @@ export function useStickyColumns(
         const header: HeaderWithPosition = {
           ...h,
           fixed: true,
-          cellClass: 'v-data-table-column--sticky',
+          cellClass: 'app-data-grid-column--sticky',
           left: cumulativeLeft,
         }
 

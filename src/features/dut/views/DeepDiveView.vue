@@ -1,221 +1,259 @@
 <template>
   <DefaultLayout>
-    <v-container fluid class="pa-6">
-      <!-- Page Header -->
-      <v-row>
-        <v-col cols="12">
-          <div class="d-flex align-center justify-space-between mb-4">
-            <div>
-              <h1 class="text-h4 font-weight-bold mb-2">
-                <v-icon icon="mdi-chart-tree" class="mr-2" />
-                Top Product Hierarchical Analysis
-              </h1>
-              <p class="text-subtitle-1 text-medium-emphasis">
-                Deep dive into hierarchical scoring structure: Group → Subgroup → Antenna → Category
-              </p>
-            </div>
-            <div>
-              <v-btn v-if="hasResults" color="primary" variant="outlined" prepend-icon="mdi-download"
-                :disabled="loading" @click="showExportDialog = true">
-                Export
-              </v-btn>
-            </div>
+    <div class="deep-dive-view">
+      <header class="deep-dive-view__header">
+        <div class="deep-dive-view__header-copy">
+          <span class="deep-dive-view__header-icon">
+            <Icon icon="mdi:chart-tree" />
+          </span>
+          <div>
+            <p class="deep-dive-view__eyebrow">Top Product Analysis</p>
+            <h1>Hierarchical Score Deep Dive</h1>
+            <p>
+              Explore the scoring path from group to subgroup, antenna, and category for each DUT under analysis.
+            </p>
           </div>
-        </v-col>
-      </v-row>
+        </div>
 
-      <!-- Input Section -->
-      <v-row>
-        <v-col cols="12">
-          <v-card elevation="2">
-            <v-card-title class="bg-primary">
-              <v-icon icon="mdi-database-search" class="mr-2" />
-              1. DUT Selection & Filters
-            </v-card-title>
-            <v-card-text class="pa-4">
-              <!-- DUT ISN Input -->
-              <DUTISNInput v-model="dutISNs" :max-i-s-ns="10" @change="onISNChange" />
+        <button
+          v-if="hasResults"
+          type="button"
+          class="deep-dive-view__button deep-dive-view__button--ghost"
+          :disabled="loading"
+          @click="showExportDialog = true"
+        >
+          <Icon icon="mdi:download" />
+          <span>Export</span>
+        </button>
+      </header>
 
-              <v-divider class="my-4" />
+      <AppPanel
+        eyebrow="Hierarchical Pipeline"
+        title="1. DUT Selection & Filters"
+        description="Load up to ten DUT ISNs, narrow the surface, and then run the hierarchical scoring analysis."
+        tone="warm"
+      >
+        <DUTISNInput v-model="dutISNs" :max-i-s-ns="10" @change="onISNChange" />
 
-              <!-- Advanced Filters Panel -->
-              <AdvancedFiltersPanel v-model="filters" @apply="onFiltersApply" />
+        <div class="deep-dive-view__divider" />
 
-              <v-divider class="my-4" />
+        <AdvancedFiltersPanel v-model="filters" @apply="onFiltersApply" />
 
-              <!-- Action Buttons -->
-              <div class="d-flex justify-end gap-2">
-                <v-btn color="error" variant="outlined" prepend-icon="mdi-close-circle" :disabled="loading"
-                  @click="clearAll">
-                  Clear All
-                </v-btn>
-                <v-btn color="primary" variant="flat" prepend-icon="mdi-chart-timeline-variant" :loading="loading"
-                  :disabled="!canAnalyze" @click="performAnalysis">
-                  Analyze Hierarchical Scores
-                </v-btn>
+        <div class="deep-dive-view__divider" />
+
+        <div class="deep-dive-view__actions">
+          <button
+            type="button"
+            class="deep-dive-view__button deep-dive-view__button--ghost"
+            :disabled="loading"
+            @click="clearAll"
+          >
+            <Icon icon="mdi:close-circle-outline" />
+            <span>Clear All</span>
+          </button>
+          <button
+            type="button"
+            class="deep-dive-view__button deep-dive-view__button--primary"
+            :disabled="!canAnalyze"
+            @click="performAnalysis"
+          >
+            <Icon :icon="loading ? 'mdi:loading' : 'mdi:chart-timeline-variant'" :class="{ 'deep-dive-view__spin': loading }" />
+            <span>{{ loading ? 'Analyzing...' : 'Analyze Hierarchical Scores' }}</span>
+          </button>
+        </div>
+      </AppPanel>
+
+      <section v-if="error" class="deep-dive-view__notice deep-dive-view__notice--danger">
+        <div>
+          <strong>Analysis Error</strong>
+          <p>{{ error }}</p>
+        </div>
+        <button
+          type="button"
+          class="deep-dive-view__button deep-dive-view__button--ghost"
+          @click="clearError"
+        >
+          <Icon icon="mdi:close" />
+          <span>Dismiss</span>
+        </button>
+      </section>
+
+      <AppPanel
+        v-if="hasResults"
+        eyebrow="Hierarchical Results"
+        title="2. Analysis Results"
+        description="Review each DUT by station, then inspect overall subgroup scores, the hierarchical tree, and the category heatmap."
+        tone="success"
+      >
+        <AppTabs v-model="selectedTab" :items="resultTabItems" scrollable>
+          <template v-for="result in results" :key="result.dut_isn" #[`panel-${result.dut_isn}`]>
+            <section v-if="getDUTError(result.dut_isn)" class="deep-dive-view__notice deep-dive-view__notice--danger">
+              <div>
+                <strong>DUT {{ result.dut_isn }} Error</strong>
+                <p>{{ getDUTError(result.dut_isn)?.detail }}</p>
               </div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
+            </section>
 
-      <!-- Error Display -->
-      <v-row v-if="error">
-        <v-col cols="12">
-          <v-alert type="error" variant="tonal" closable @click:close="clearError">
-            <v-alert-title>Analysis Error</v-alert-title>
-            {{ error }}
-          </v-alert>
-        </v-col>
-      </v-row>
-
-      <!-- Results Display -->
-      <v-row v-if="hasResults">
-        <v-col cols="12">
-          <v-card elevation="2">
-            <v-card-title class="bg-success">
-              <v-icon icon="mdi-check-circle" class="mr-2" />
-              2. Hierarchical Results
-            </v-card-title>
-            <v-card-text class="pa-4">
-              <!-- DUT Selection Tabs -->
-              <v-tabs v-model="selectedTab" bg-color="transparent" color="primary" show-arrows>
-                <v-tab v-for="result in results" :key="result.dut_isn" :value="result.dut_isn">
-                  <v-icon icon="mdi-chip" class="mr-2" />
-                  DUT {{ result.dut_isn }}
-                  <v-chip v-if="errors.some(e => e.dut_isn === result.dut_isn)" color="error" size="x-small"
-                    class="ml-2">
-                    Error
-                  </v-chip>
-                </v-tab>
-              </v-tabs>
-
-              <v-divider class="my-4" />
-
-              <!-- Tab Content -->
-              <v-window v-model="selectedTab">
-                <v-window-item v-for="result in results" :key="result.dut_isn" :value="result.dut_isn">
-                  <!-- Error Display for This DUT -->
-                  <v-alert v-if="getDUTError(result.dut_isn)" type="error" variant="tonal" class="mb-4">
-                    <v-alert-title>DUT {{ result.dut_isn }} Error</v-alert-title>
-                    {{ getDUTError(result.dut_isn)?.detail }}
-                  </v-alert>
-
-                  <!-- Station Results -->
-                  <div v-else-if="result.test_result && result.test_result.length > 0">
-                    <v-expansion-panels v-model="expandedStations" multiple>
-                      <v-expansion-panel v-for="(station, idx) in result.test_result" :key="idx" :value="idx">
-                        <v-expansion-panel-title>
-                          <div class="d-flex align-center justify-space-between w-100">
-                            <span class="font-weight-bold">
-                              <v-icon icon="mdi-factory" class="mr-2" />
-                              {{ station.station_name }}
-                            </span>
-                            <v-chip v-if="station.overall_group_scores" color="info" size="small" class="mr-4">
-                              {{ Object.keys(station.overall_group_scores).length }} Subgroups
-                            </v-chip>
-                          </div>
-                        </v-expansion-panel-title>
-                        <v-expansion-panel-text>
-                          <!-- Overall Group Scores Chart -->
-                          <v-row v-if="station.overall_group_scores">
-                            <v-col cols="12">
-                              <SubgroupComparisonChart :overall-group-scores="station.overall_group_scores"
-                                :title="`Overall Subgroup Scores - ${station.station_name}`" />
-                            </v-col>
-                          </v-row>
-
-                          <v-divider class="my-4" />
-
-                          <!-- Hierarchical Tree View -->
-                          <v-row v-if="station.group_scores">
-                            <v-col cols="12">
-                              <h3 class="text-h6 mb-3">
-                                <v-icon icon="mdi-file-tree" class="mr-2" />
-                                Hierarchical Score Tree
-                              </h3>
-                              <HierarchicalScoreTree :group-scores="station.group_scores"
-                                :overall-group-scores="station.overall_group_scores" />
-                            </v-col>
-                          </v-row>
-
-                          <v-divider class="my-4" />
-
-                          <!-- Category Heatmap -->
-                          <v-row v-if="station.group_scores">
-                            <v-col cols="12">
-                              <h3 class="text-h6 mb-3">
-                                <v-icon icon="mdi-view-grid" class="mr-2" />
-                                Category Performance Heatmap
-                              </h3>
-                              <CategoryHeatmap :group-scores="station.group_scores" />
-                            </v-col>
-                          </v-row>
-                        </v-expansion-panel-text>
-                      </v-expansion-panel>
-                    </v-expansion-panels>
+            <div
+              v-else-if="result.test_result && result.test_result.length > 0"
+              class="deep-dive-view__station-stack"
+            >
+              <article
+                v-for="(station, idx) in result.test_result"
+                :key="`${result.dut_isn}-${station.station_name}-${idx}`"
+                class="deep-dive-view__station"
+              >
+                <button
+                  type="button"
+                  class="deep-dive-view__station-toggle"
+                  @click="toggleStation(idx)"
+                >
+                  <div class="deep-dive-view__station-copy">
+                    <span class="deep-dive-view__station-icon">
+                      <Icon icon="mdi:factory" />
+                    </span>
+                    <div>
+                      <p class="deep-dive-view__station-eyebrow">Station</p>
+                      <strong>{{ station.station_name }}</strong>
+                    </div>
                   </div>
 
-                  <!-- No Station Data -->
-                  <v-alert v-else type="info" variant="tonal">
-                    No station data available for DUT {{ result.dut_isn }}
-                  </v-alert>
-                </v-window-item>
-              </v-window>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
+                  <div class="deep-dive-view__station-meta">
+                    <span v-if="station.overall_group_scores" class="deep-dive-view__pill deep-dive-view__pill--cool">
+                      {{ Object.keys(station.overall_group_scores).length }} subgroup{{ Object.keys(station.overall_group_scores).length === 1 ? '' : 's' }}
+                    </span>
+                    <Icon
+                      class="deep-dive-view__station-chevron"
+                      :class="{ 'deep-dive-view__station-chevron--open': expandedStations.includes(idx) }"
+                      icon="mdi:chevron-down"
+                    />
+                  </div>
+                </button>
 
-      <!-- Empty State -->
-      <v-row v-else-if="!loading">
-        <v-col cols="12">
-          <v-card elevation="2" class="text-center pa-8">
-            <v-icon icon="mdi-information-outline" size="64" color="info" class="mb-4" />
-            <h2 class="text-h5 mb-2">No Analysis Results Yet</h2>
-            <p class="text-body-1 text-medium-emphasis mb-4">
-              Enter DUT ISN(s) above and click "Analyze Hierarchical Scores" to get started.
-            </p>
-            <p class="text-body-2 text-medium-emphasis">
-              This feature provides deep hierarchical analysis with 4 levels:
-              <strong>Group → Subgroup → Antenna → Category</strong>
-            </p>
-          </v-card>
-        </v-col>
-      </v-row>
+                <div v-if="expandedStations.includes(idx)" class="deep-dive-view__station-body">
+                  <section v-if="station.overall_group_scores" class="deep-dive-view__result-block">
+                    <header class="deep-dive-view__result-block-header">
+                      <div>
+                        <p class="deep-dive-view__station-eyebrow">Summary</p>
+                        <h3>Overall Subgroup Scores</h3>
+                      </div>
+                    </header>
+                    <SubgroupComparisonChart
+                      :overall-group-scores="station.overall_group_scores"
+                      :title="`Overall Subgroup Scores - ${station.station_name}`"
+                    />
+                  </section>
 
-      <!-- Export Dialog -->
-      <v-dialog v-model="showExportDialog" max-width="500">
-        <v-card>
-          <v-card-title class="bg-primary">
-            <v-icon icon="mdi-download" class="mr-2" />
-            Export Hierarchical Results
-          </v-card-title>
-          <v-card-text class="pa-4">
-            <p class="mb-4">Choose export format:</p>
-            <v-radio-group v-model="exportFormat">
-              <v-radio label="JSON (Full hierarchical structure)" value="json" />
-              <v-radio label="CSV (Flattened scores)" value="csv" />
-            </v-radio-group>
-          </v-card-text>
-          <v-card-actions>
-            <v-spacer />
-            <v-btn variant="text" @click="showExportDialog = false">
+                  <section v-if="station.group_scores" class="deep-dive-view__result-block">
+                    <header class="deep-dive-view__result-block-header">
+                      <div>
+                        <p class="deep-dive-view__station-eyebrow">Tree</p>
+                        <h3>Hierarchical Score Tree</h3>
+                      </div>
+                      <span class="deep-dive-view__pill deep-dive-view__pill--neutral">
+                        Group → Subgroup → Antenna → Category
+                      </span>
+                    </header>
+                    <HierarchicalScoreTree
+                      :group-scores="station.group_scores"
+                      :overall-group-scores="station.overall_group_scores"
+                    />
+                  </section>
+
+                  <section v-if="station.group_scores" class="deep-dive-view__result-block">
+                    <header class="deep-dive-view__result-block-header">
+                      <div>
+                        <p class="deep-dive-view__station-eyebrow">Heatmap</p>
+                        <h3>Category Performance Heatmap</h3>
+                      </div>
+                    </header>
+                    <CategoryHeatmap :group-scores="station.group_scores" />
+                  </section>
+                </div>
+              </article>
+            </div>
+
+            <section v-else class="deep-dive-view__notice deep-dive-view__notice--info">
+              <div>
+                <strong>No station data available</strong>
+                <p>DUT {{ result.dut_isn }} returned no hierarchical station details.</p>
+              </div>
+            </section>
+          </template>
+        </AppTabs>
+      </AppPanel>
+
+      <AppPanel
+        v-else-if="!loading"
+        eyebrow="Ready To Analyze"
+        title="No Analysis Results Yet"
+        description="Enter DUT ISNs above and run the analysis to inspect the hierarchical score path across all four levels."
+        tone="cool"
+      >
+        <div class="deep-dive-view__empty-state">
+          <span class="deep-dive-view__empty-icon">
+            <Icon icon="mdi:information-outline" />
+          </span>
+          <p>
+            This view breaks performance down across <strong>Group → Subgroup → Antenna → Category</strong> once results are available.
+          </p>
+        </div>
+      </AppPanel>
+
+      <AppDialog
+        v-model="showExportDialog"
+        title="Export Hierarchical Results"
+        description="Choose the format that best matches the downstream workflow."
+        width="min(92vw, 32rem)"
+      >
+        <div class="deep-dive-view__export-options">
+          <label class="deep-dive-view__export-option" :class="{ 'deep-dive-view__export-option--active': exportFormat === 'json' }">
+            <input v-model="exportFormat" type="radio" value="json" />
+            <div>
+              <strong>JSON</strong>
+              <p>Full hierarchical structure with filters, DUTs, station results, and errors.</p>
+            </div>
+          </label>
+
+          <label class="deep-dive-view__export-option" :class="{ 'deep-dive-view__export-option--active': exportFormat === 'csv' }">
+            <input v-model="exportFormat" type="radio" value="csv" />
+            <div>
+              <strong>CSV</strong>
+              <p>Flattened scoring rows for spreadsheet review and downstream aggregation.</p>
+            </div>
+          </label>
+        </div>
+
+        <template #footer>
+          <div class="deep-dive-view__dialog-footer">
+            <button
+              type="button"
+              class="deep-dive-view__button deep-dive-view__button--ghost"
+              @click="showExportDialog = false"
+            >
               Cancel
-            </v-btn>
-            <v-btn color="primary" variant="flat" @click="performExport">
-              Export
-            </v-btn>
-          </v-card-actions>
-        </v-card>
-      </v-dialog>
-    </v-container>
+            </button>
+            <button
+              type="button"
+              class="deep-dive-view__button deep-dive-view__button--primary"
+              @click="performExport"
+            >
+              <Icon icon="mdi:download" />
+              <span>Export</span>
+            </button>
+          </div>
+        </template>
+      </AppDialog>
+    </div>
   </DefaultLayout>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 import type { GroupScores, HierarchicalError, HierarchicalRequest } from '@/core/types/dut.types'
+import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import { AppDialog, AppPanel, AppTabs } from '@/shared'
 import { useHierarchicalStore } from '../stores'
 
 // Store
@@ -232,7 +270,7 @@ const filters = ref({
   exclude_patterns: [] as string[],
   criteria_file: null as File | null,
 })
-const selectedTab = ref<string>()
+const selectedTab = ref('')
 const expandedStations = ref<number[]>([])
 const showExportDialog = ref(false)
 const exportFormat = ref<'json' | 'csv'>('json')
@@ -245,6 +283,14 @@ const results = computed(() => hierarchicalStore.results)
 const errors = computed(() => hierarchicalStore.errors)
 
 const hasResults = computed(() => results.value.length > 0)
+
+const resultTabItems = computed(() =>
+  results.value.map((result) => ({
+    value: result.dut_isn,
+    label: getDUTError(result.dut_isn) ? `DUT ${result.dut_isn} • Error` : `DUT ${result.dut_isn}`,
+    icon: 'mdi:chip',
+  })),
+)
 
 const canAnalyze = computed(() => {
   return dutISNs.value.length > 0 && isValidISNInput.value && !loading.value
@@ -295,7 +341,7 @@ async function performAnalysis() {
   await hierarchicalStore.fetchHierarchicalAnalysis(request)
 
   // Auto-select first tab if results available
-  if (results.value.length > 0 && !selectedTab.value && results.value[0]) {
+  if (results.value.length > 0 && (!selectedTab.value || !results.value.some((result) => result.dut_isn === selectedTab.value)) && results.value[0]) {
     selectedTab.value = results.value[0].dut_isn
   }
 
@@ -317,7 +363,7 @@ function clearAll() {
     criteria_file: null,
   }
   hierarchicalStore.clearData()
-  selectedTab.value = undefined
+  selectedTab.value = ''
   expandedStations.value = []
 }
 
@@ -327,6 +373,12 @@ function clearError() {
 
 function getDUTError(dutISN: string): HierarchicalError | undefined {
   return errors.value.find((e) => e.dut_isn === dutISN)
+}
+
+function toggleStation(index: number) {
+  expandedStations.value = expandedStations.value.includes(index)
+    ? expandedStations.value.filter((value) => value !== index)
+    : [...expandedStations.value, index]
 }
 
 function performExport() {
@@ -430,14 +482,351 @@ function exportCSV() {
 watch(selectedTab, () => {
   expandedStations.value = [0]
 })
+
+watch(results, (nextResults) => {
+  if (nextResults.length === 0) {
+    selectedTab.value = ''
+    return
+  }
+
+  if (!nextResults.some((result) => result.dut_isn === selectedTab.value) && nextResults[0]) {
+    selectedTab.value = nextResults[0].dut_isn
+  }
+})
 </script>
 
 <style scoped>
-.gap-2 {
-  gap: 0.5rem;
+.deep-dive-view {
+  display: grid;
+  gap: 1.5rem;
+  padding: 1.5rem;
 }
 
-.w-100 {
+.deep-dive-view__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.deep-dive-view__header-copy {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.deep-dive-view__header-icon,
+.deep-dive-view__empty-icon,
+.deep-dive-view__station-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border-radius: 1rem;
+}
+
+.deep-dive-view__header-icon {
+  width: 3.5rem;
+  height: 3.5rem;
+  background: linear-gradient(135deg, rgba(20, 88, 71, 0.14), rgba(161, 104, 57, 0.18));
+  color: var(--app-accent);
+  font-size: 1.55rem;
+  box-shadow: var(--app-shadow-soft);
+}
+
+.deep-dive-view__eyebrow,
+.deep-dive-view__station-eyebrow {
+  margin: 0 0 0.35rem;
+  color: var(--app-accent);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.deep-dive-view__header h1 {
+  margin: 0;
+  color: var(--app-ink);
+  font-size: clamp(1.9rem, 3vw, 2.5rem);
+}
+
+.deep-dive-view__header p:last-child {
+  max-width: 46rem;
+  margin: 0.45rem 0 0;
+  color: var(--app-muted);
+  line-height: 1.6;
+}
+
+.deep-dive-view__divider {
+  height: 1px;
+  background: linear-gradient(90deg, rgba(20, 88, 71, 0.14), rgba(20, 88, 71, 0));
+}
+
+.deep-dive-view__actions,
+.deep-dive-view__dialog-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+.deep-dive-view__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 2.9rem;
+  padding: 0.75rem 1.1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 251, 247, 0.95);
+  color: var(--app-ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.deep-dive-view__button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(20, 88, 71, 0.28);
+  box-shadow: var(--app-shadow-soft);
+}
+
+.deep-dive-view__button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.deep-dive-view__button--primary {
+  border-color: rgba(20, 88, 71, 0.28);
+  background: linear-gradient(135deg, rgba(20, 88, 71, 0.98), rgba(161, 104, 57, 0.92));
+  color: #fff;
+}
+
+.deep-dive-view__button--ghost {
+  background: rgba(255, 251, 247, 0.85);
+}
+
+.deep-dive-view__notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  border: 1px solid transparent;
+  border-radius: 1.25rem;
+  padding: 1rem 1.1rem;
+}
+
+.deep-dive-view__notice strong {
+  display: block;
+  margin-bottom: 0.2rem;
+}
+
+.deep-dive-view__notice p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.deep-dive-view__notice--danger {
+  border-color: rgba(188, 55, 55, 0.24);
+  background: rgba(255, 240, 240, 0.96);
+  color: #7f1d1d;
+}
+
+.deep-dive-view__notice--info {
+  border-color: rgba(40, 96, 163, 0.2);
+  background: rgba(240, 247, 255, 0.96);
+  color: #17406a;
+}
+
+.deep-dive-view__station-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.deep-dive-view__station {
+  border: 1px solid var(--app-border);
+  border-radius: 1.25rem;
+  background: rgba(255, 252, 249, 0.96);
+  overflow: hidden;
+}
+
+.deep-dive-view__station-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   width: 100%;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border: 0;
+  background: rgba(255, 248, 240, 0.92);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.deep-dive-view__station-copy,
+.deep-dive-view__station-meta,
+.deep-dive-view__result-block-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.deep-dive-view__station-icon,
+.deep-dive-view__empty-icon {
+  width: 2.4rem;
+  height: 2.4rem;
+  background: rgba(20, 88, 71, 0.12);
+  color: var(--app-accent);
+}
+
+.deep-dive-view__station-copy strong,
+.deep-dive-view__result-block-header h3 {
+  margin: 0;
+}
+
+.deep-dive-view__station-body {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem 1.1rem 1.1rem;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.deep-dive-view__result-block {
+  display: grid;
+  gap: 0.9rem;
+  border: 1px solid rgba(20, 88, 71, 0.12);
+  border-radius: 1rem;
+  padding: 1rem;
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.deep-dive-view__result-block-header {
+  justify-content: space-between;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.deep-dive-view__pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.38rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.deep-dive-view__pill--cool {
+  background: rgba(40, 96, 163, 0.14);
+  color: #17406a;
+}
+
+.deep-dive-view__pill--neutral {
+  background: rgba(93, 74, 53, 0.12);
+  color: var(--app-ink);
+}
+
+.deep-dive-view__station-chevron {
+  color: var(--app-muted);
+  transition: transform 0.2s ease;
+}
+
+.deep-dive-view__station-chevron--open {
+  transform: rotate(180deg);
+}
+
+.deep-dive-view__empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 0.8rem;
+  padding: 1rem 0.25rem;
+  text-align: center;
+  color: var(--app-muted);
+}
+
+.deep-dive-view__empty-state p {
+  margin: 0;
+  max-width: 36rem;
+  line-height: 1.6;
+}
+
+.deep-dive-view__export-options {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.deep-dive-view__export-option {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.85rem;
+  align-items: flex-start;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: rgba(255, 252, 249, 0.92);
+  cursor: pointer;
+}
+
+.deep-dive-view__export-option input {
+  margin-top: 0.2rem;
+}
+
+.deep-dive-view__export-option strong,
+.deep-dive-view__export-option p {
+  margin: 0;
+}
+
+.deep-dive-view__export-option p {
+  margin-top: 0.25rem;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.deep-dive-view__export-option--active {
+  border-color: rgba(20, 88, 71, 0.3);
+  background: rgba(240, 250, 245, 0.95);
+}
+
+.deep-dive-view__spin {
+  animation: deep-dive-view-spin 0.9s linear infinite;
+}
+
+@keyframes deep-dive-view-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 900px) {
+  .deep-dive-view {
+    padding: 1rem;
+  }
+
+  .deep-dive-view__header,
+  .deep-dive-view__notice,
+  .deep-dive-view__station-toggle,
+  .deep-dive-view__result-block-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .deep-dive-view__actions,
+  .deep-dive-view__dialog-footer {
+    justify-content: stretch;
+  }
+
+  .deep-dive-view__button {
+    width: 100%;
+  }
+
+  .deep-dive-view__station-meta {
+    justify-content: space-between;
+  }
 }
 </style>

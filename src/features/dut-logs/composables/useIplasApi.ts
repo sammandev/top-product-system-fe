@@ -61,7 +61,7 @@ export interface PaginationOptions {
 }
 
 /**
- * Paginated response with total count for v-data-table-server
+ * Paginated response with total count for server-driven tables
  */
 export interface PaginatedResult<T> {
   items: T[]

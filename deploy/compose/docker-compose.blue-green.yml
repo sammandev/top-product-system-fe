@@ -1,0 +1,70 @@
+x-frontend-service: &frontend-service
+  build:
+    context: ../..
+    dockerfile: deploy/docker/Dockerfile.blue-green
+    args:
+      VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://172.18.220.56:7070}
+      VITE_API_URL: ${VITE_API_URL:-http://172.18.220.56:7070}
+      VITE_DUT_API_BASE_URL: ${VITE_DUT_API_BASE_URL:-http://172.18.220.56:9001}
+      VITE_APP_TITLE: ${VITE_APP_TITLE:-AST Tools}
+      VITE_APP_VERSION: ${VITE_APP_VERSION:-1.0.0}
+      VITE_ENABLE_ANALYTICS: ${VITE_ENABLE_ANALYTICS:-false}
+      VITE_SENTRY_DSN: ${VITE_SENTRY_DSN:-}
+      VITE_SENTRY_TRACES_SAMPLE_RATE: ${VITE_SENTRY_TRACES_SAMPLE_RATE:-0.0}
+      VITE_GUEST_API_USERNAME: ${VITE_GUEST_API_USERNAME:-}
+      VITE_GUEST_API_PASSWORD: ${VITE_GUEST_API_PASSWORD:-}
+      VITE_IPLAS_API_PORT: ${VITE_IPLAS_API_PORT:-32678}
+      VITE_IPLAS_API_TIMEOUT: ${VITE_IPLAS_API_TIMEOUT:-60}
+      VITE_IPLAS_V1_API_BASE_URL: ${VITE_IPLAS_V1_API_BASE_URL:-}
+      VITE_IPLAS_V2_API_BASE_URL: ${VITE_IPLAS_V2_API_BASE_URL:-}
+      VITE_IPLAS_API_PTB_BASE_URL: ${VITE_IPLAS_API_PTB_BASE_URL:-http://10.176.33.89}
+      VITE_IPLAS_API_PSZ_BASE_URL: ${VITE_IPLAS_API_PSZ_BASE_URL:-http://172.24.255.25}
+      VITE_IPLAS_API_PXD_BASE_URL: ${VITE_IPLAS_API_PXD_BASE_URL:-http://172.18.212.129}
+      VITE_IPLAS_API_PVN_BASE_URL: ${VITE_IPLAS_API_PVN_BASE_URL:-http://10.177.240.150}
+      VITE_IPLAS_API_PTY_BASE_URL: ${VITE_IPLAS_API_PTY_BASE_URL:-http://172.18.212.129}
+      VITE_IPLAS_API_TOKEN_PTB: ${VITE_IPLAS_API_TOKEN_PTB:-}
+      VITE_IPLAS_API_TOKEN_PSZ: ${VITE_IPLAS_API_TOKEN_PSZ:-}
+      VITE_IPLAS_API_TOKEN_PXD: ${VITE_IPLAS_API_TOKEN_PXD:-}
+      VITE_IPLAS_API_TOKEN_PVN: ${VITE_IPLAS_API_TOKEN_PVN:-}
+      VITE_IPLAS_API_TOKEN_PTY: ${VITE_IPLAS_API_TOKEN_PTY:-}
+  image: ast-tools-frontend:blue-green
+  restart: unless-stopped
+  expose:
+    - "3333"
+  healthcheck:
+    test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:3333/health || exit 1"]
+    interval: 30s
+    timeout: 10s
+    retries: 3
+    start_period: 5s
+  logging:
+    driver: json-file
+    options:
+      max-size: "20m"
+      max-file: "5"
+  networks:
+    - ast-tools-edge
+
+services:
+  frontend-blue:
+    <<: *frontend-service
+    container_name: ast-tools-frontend-blue
+    labels:
+      - "com.ast-tools.project=top-product"
+      - "com.ast-tools.service=frontend"
+      - "com.ast-tools.color=blue"
+      - "com.ast-tools.environment=production"
+
+  frontend-green:
+    <<: *frontend-service
+    container_name: ast-tools-frontend-green
+    labels:
+      - "com.ast-tools.project=top-product"
+      - "com.ast-tools.service=frontend"
+      - "com.ast-tools.color=green"
+      - "com.ast-tools.environment=production"
+
+networks:
+  ast-tools-edge:
+    external: true
+    name: ast-tools-edge

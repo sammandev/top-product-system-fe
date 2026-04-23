@@ -202,8 +202,8 @@ describe('LaTeX Formula Handling', () => {
 describe('UI Integration Tests', () => {
   // These would be actual component tests when components are mounted
 
-  it('FormulaSelectorDialog accepts props', () => {
-    // Would mount FormulaSelectorDialog and test props
+  it('formula selection scenarios stay mount-ready', () => {
+    // Would mount the active custom-scoring surfaces and verify shared props
     expect(true).toBe(true)
   })
 

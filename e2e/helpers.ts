@@ -271,7 +271,7 @@ export class FileUploadHelper {
    * Wait for upload progress
    */
   async waitForUpload() {
-    await this.page.waitForSelector('.v-progress-linear', { state: 'hidden' })
+    await this.page.waitForSelector('.app-progress', { state: 'hidden' })
   }
 
   /**
@@ -292,7 +292,7 @@ export class DataTableHelper {
    * Get table row count
    */
   async getRowCount(): Promise<number> {
-    const rows = this.page.locator('.v-data-table tbody tr')
+    const rows = this.page.locator('.app-data-grid .p-datatable-tbody > tr')
     return await rows.count()
   }
 
@@ -300,7 +300,11 @@ export class DataTableHelper {
    * Get cell value
    */
   async getCellValue(row: number, column: number): Promise<string | null> {
-    const cell = this.page.locator('.v-data-table tbody tr').nth(row).locator('td').nth(column)
+    const cell = this.page
+      .locator('.app-data-grid .p-datatable-tbody > tr')
+      .nth(row)
+      .locator('td')
+      .nth(column)
     return await cell.textContent()
   }
 
@@ -323,7 +327,7 @@ export class DataTableHelper {
    */
   async clickRowAction(row: number, actionName: string | RegExp) {
     const actionButton = this.page
-      .locator('.v-data-table tbody tr')
+      .locator('.app-data-grid .p-datatable-tbody > tr')
       .nth(row)
       .getByRole('button', { name: actionName })
     await actionButton.click()

@@ -7,7 +7,7 @@ import { vi } from 'vitest'
  * Configures the testing environment with necessary mocks and global settings.
  */
 
-// Mock window.matchMedia (used by Vuetify responsive features)
+// Mock window.matchMedia for responsive component behavior
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   value: vi.fn().mockImplementation((query) => ({
@@ -22,7 +22,7 @@ Object.defineProperty(window, 'matchMedia', {
   })),
 })
 
-// Mock IntersectionObserver (used by Vuetify for lazy loading)
+// Mock IntersectionObserver for components that depend on visibility tracking
 // biome-ignore lint/suspicious/noExplicitAny: globalThis mock assignment requires any cast
 ;(globalThis as any).IntersectionObserver = class IntersectionObserver {
   disconnect() {}
@@ -33,7 +33,7 @@ Object.defineProperty(window, 'matchMedia', {
   unobserve() {}
 }
 
-// Mock ResizeObserver (used by Vuetify for responsive components)
+// Mock ResizeObserver for layout-aware components
 // biome-ignore lint/suspicious/noExplicitAny: globalThis mock assignment requires any cast
 ;(globalThis as any).ResizeObserver = class ResizeObserver {
   disconnect() {}
@@ -74,12 +74,9 @@ Object.defineProperty(window, 'localStorage', {
 config.global.stubs = {
   teleport: true,
   Teleport: true,
-  // Stub Vuetify icons to avoid loading MDI fonts in tests
-  'v-icon': true,
-  VIcon: true,
 }
 
-// Suppress Vuetify warnings in tests
+// Suppress noisy component warnings in tests
 const originalConsole = globalThis.console
 // biome-ignore lint/suspicious/noExplicitAny: globalThis mock assignment requires any cast
 ;(globalThis as any).console = {

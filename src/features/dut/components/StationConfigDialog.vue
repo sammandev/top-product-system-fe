@@ -1,530 +1,383 @@
 <template>
-  <v-dialog v-model="internalShow" :fullscreen="isFullscreen" :max-width="isFullscreen ? undefined : 900" persistent
-    scrollable>
-    <v-card class="station-config-card">
-      <v-card-title class="d-flex align-center justify-space-between bg-secondary">
-        <div class="d-flex align-center station-config-title">
-          <v-icon class="mr-2">mdi-cog</v-icon>
-          <span class="text-truncate">Configure Station: {{ station?.display_station_name }}</span>
+  <AppDialog :model-value="internalShow" :width="dialogWidth" :breakpoints="{ '1200px': '96vw', '760px': '98vw' }"
+    persistent :closable="false" @update:modelValue="internalShow = $event">
+    <template #header>
+      <div class="station-config-dialog__header">
+        <div class="station-config-dialog__header-copy">
+          <p class="station-config-dialog__eyebrow">Station Configuration</p>
+          <h2>Configure Station: {{ station?.display_station_name }}</h2>
+          <span>Refine device scope, analyzable items, and scoring rules for this iPLAS station.</span>
         </div>
-        <div class="d-flex align-center gap-1">
-          <v-btn :icon="isFullscreen ? 'mdi-fullscreen-exit' : 'mdi-fullscreen'" variant="text" color="white"
-            :aria-label="isFullscreen ? 'Exit fullscreen' : 'Enter fullscreen'" @click="toggleFullscreen" />
-          <v-btn icon="mdi-close" variant="text" color="white" @click="handleClose" />
+        <div class="station-config-dialog__header-actions">
+          <button type="button" class="station-config-dialog__icon-button"
+            :aria-label="isFullscreen ? 'Exit expanded mode' : 'Expand dialog'" @click="toggleFullscreen">
+            {{ isFullscreen ? 'Collapse' : 'Expand' }}
+          </button>
+          <button type="button" class="station-config-dialog__icon-button" @click="handleClose">
+            Close
+          </button>
         </div>
-      </v-card-title>
+      </div>
+    </template>
 
-      <v-card-text class="pa-4 station-config-body" :class="{ 'station-config-body--fullscreen': isFullscreen }">
-        <v-card variant="outlined" class="mb-4 min-score-section">
-          <v-card-text class="pa-3">
-            <div class="d-flex align-center justify-space-between flex-wrap gap-3">
-              <div class="min-score-summary">
-                <div class="text-subtitle-2 font-weight-medium">Minimum Test Item Score</div>
-                <div class="text-caption text-medium-emphasis">
-                  DUT will be considered as <strong>Min. Score Fail</strong>, if one test item score is below the threshold.
-                </div>
-              </div>
-              <div class="d-flex align-center gap-3 flex-wrap min-score-controls">
-                <v-switch v-model="localConfig.minimumItemScoreEnabled" color="warning" inset density="compact"
-                  label="Enabled" hide-details class="min-score-switch" />
-                <v-text-field v-if="localConfig.minimumItemScoreEnabled" v-model.number="localConfig.minimumItemScore"
-                  label="Threshold" type="number" variant="outlined" density="compact"
-                  prepend-inner-icon="mdi-chart-box-outline" min="0" max="10" step="0.1" suffix="/ 10" hide-details
-                  class="min-score-input" />
-                <v-chip v-else size="small" color="grey" variant="outlined">
-                  Check disabled
-                </v-chip>
-              </div>
+    <section class="station-config-body" :class="{ 'station-config-body--fullscreen': isFullscreen }">
+      <div class="station-config-shell">
+        <AppPanel title="Minimum Test Item Score" tone="warm" compact-header class="min-score-section">
+          <div class="station-config-dialog__min-score-layout">
+            <div class="min-score-summary">
+              <p>DUT will be considered as <strong>Min. Score Fail</strong> if one test item score is below the
+                threshold.
+              </p>
             </div>
-          </v-card-text>
-        </v-card>
+            <div class="station-config-dialog__toggle-row min-score-controls">
+              <label class="station-config-dialog__toggle-pill"
+                :class="{ 'is-active': localConfig.minimumItemScoreEnabled }">
+                <input v-model="localConfig.minimumItemScoreEnabled" type="checkbox" />
+                <span>{{ localConfig.minimumItemScoreEnabled ? 'Enabled' : 'Disabled' }}</span>
+              </label>
+              <label v-if="localConfig.minimumItemScoreEnabled" class="station-config-dialog__field min-score-input">
+                <span>Threshold</span>
+                <input v-model.number="localConfig.minimumItemScore" type="number" min="0" max="10" step="0.1" />
+              </label>
+              <span v-else class="station-config-dialog__pill station-config-dialog__pill--muted">Check disabled</span>
+            </div>
+          </div>
+        </AppPanel>
 
-        <v-row dense class="mb-4">
-          <v-col cols="12">
-            <v-autocomplete v-model="localConfig.deviceIds" :items="availableDeviceIds" label="Device IDs (Default All)"
-              variant="outlined" density="comfortable" prepend-inner-icon="mdi-devices" multiple chips closable-chips
-              hide-details :loading="loadingDevices" :disabled="loadingDevices || availableDeviceIds.length === 0"
-              placeholder="Select Devices (empty = all)" clearable>
-              <template #prepend-item>
-                <v-list-item @click="toggleSelectAllDevices">
-                  <template #prepend>
-                    <v-checkbox-btn :model-value="allDevicesSelected"
-                      :indeterminate="someDevicesSelected && !allDevicesSelected" />
-                  </template>
-                  <v-list-item-title>
-                    {{ allDevicesSelected ? 'Deselect All' : 'Select All' }}
-                  </v-list-item-title>
-                  <template #append>
-                    <v-chip size="x-small" color="primary">{{ availableDeviceIds.length }}</v-chip>
-                  </template>
-                </v-list-item>
-                <v-divider />
-              </template>
-              <template #chip="{ props: chipProps, item }">
-                <v-chip v-bind="chipProps" size="small" closable>{{ item.value }}</v-chip>
-              </template>
-              <template #no-data>
-                <v-list-item>
-                  <v-list-item-title class="text-medium-emphasis">
-                    {{ loadingDevices ? 'Loading devices...' : 'No devices available' }}
-                  </v-list-item-title>
-                </v-list-item>
-              </template>
-              <template #append>
-                <v-btn icon="mdi-refresh" size="small" variant="text" :loading="loadingDevices"
-                  @click.stop="handleRefreshDevices" />
-              </template>
-            </v-autocomplete>
-          </v-col>
-        </v-row>
+        <AppPanel title="Device Scope" tone="cool" compact-header>
+          <div class="station-config-dialog__section-stack">
+            <div class="station-config-dialog__toolbar-row">
+              <button type="button" class="station-config-dialog__button station-config-dialog__button--ghost"
+                @click="toggleSelectAllDevices">
+                {{ allDevicesSelected ? 'Deselect All Devices' : 'Select All Devices' }}
+              </button>
+              <button type="button" class="station-config-dialog__button station-config-dialog__button--ghost"
+                :disabled="loadingDevices" @click="handleRefreshDevices">
+                {{ loadingDevices ? 'Refreshing...' : 'Refresh Devices' }}
+              </button>
+            </div>
 
-        <!-- Error Alert for Device Loading -->
-        <v-alert v-if="deviceError" type="error" variant="tonal" class="mb-4" closable>
+            <div v-if="loadingDevices" class="station-config-dialog__notice station-config-dialog__notice--info">
+              Loading devices for the selected station...
+            </div>
+            <div v-else-if="availableDeviceIds.length === 0"
+              class="station-config-dialog__notice station-config-dialog__notice--info">
+              No devices available yet. Refresh after station data is ready.
+            </div>
+            <div v-else class="station-config-dialog__chip-grid">
+              <button v-for="deviceId in availableDeviceIds" :key="deviceId" type="button"
+                class="station-config-dialog__choice-chip"
+                :class="{ 'is-active': localConfig.deviceIds.includes(deviceId) }" @click="toggleDeviceId(deviceId)">
+                {{ deviceId }}
+              </button>
+            </div>
+
+            <div v-if="localConfig.deviceIds.length > 0" class="station-config-dialog__token-row">
+              <button v-for="deviceId in localConfig.deviceIds" :key="deviceId" type="button"
+                class="station-config-dialog__token" @click="toggleDeviceId(deviceId)">
+                <span>{{ deviceId }}</span>
+                <span aria-hidden="true">x</span>
+              </button>
+            </div>
+          </div>
+        </AppPanel>
+
+        <div v-if="deviceError" class="station-config-dialog__notice station-config-dialog__notice--danger">
           {{ deviceError }}
-        </v-alert>
+        </div>
 
-        <!-- Test Items Selection Section -->
-        <v-card variant="outlined">
-          <v-card-title class="test-item-section-header d-flex align-center justify-space-between flex-wrap">
-            <div class="test-item-section-title d-flex align-center">
-              <v-icon start color="primary">mdi-format-list-checks</v-icon>
-              Test Items Selection
-            </div>
-            <div class="d-flex align-center gap-2 flex-wrap justify-end">
-              <v-btn-toggle :model-value="testItemSource" color="primary" density="compact" mandatory variant="outlined"
-                class="test-item-source-toggle" @update:model-value="handleTestItemSourceChange">
-                <v-btn value="default" size="small">Default</v-btn>
-                <v-btn value="iplas" size="small">iPLAS</v-btn>
-              </v-btn-toggle>
-              <v-btn v-if="!loadingTestItems" color="primary" variant="text" size="small" prepend-icon="mdi-refresh"
+        <AppPanel title="Test Items Selection" compact-header>
+          <template #header-aside>
+            <div class="station-config-dialog__header-chip-row">
+              <button type="button" class="station-config-dialog__toggle-chip"
+                :class="{ 'is-active': testItemSource === 'default' }" @click="handleTestItemSourceChange('default')">
+                Default
+              </button>
+              <button type="button" class="station-config-dialog__toggle-chip"
+                :class="{ 'is-active': testItemSource === 'iplas' }" @click="handleTestItemSourceChange('iplas')">
+                iPLAS
+              </button>
+              <button v-if="!loadingTestItems" type="button"
+                class="station-config-dialog__button station-config-dialog__button--ghost"
                 @click="handleRefreshTestItems">
                 Refresh
-              </v-btn>
+              </button>
             </div>
-          </v-card-title>
-          <v-card-text class="pa-3">
-            <!-- Loading State -->
-            <div v-if="loadingTestItems" class="text-center pa-4">
-              <v-progress-circular indeterminate color="primary" />
-              <div class="text-caption text-medium-emphasis mt-2">Loading test items...</div>
-            </div>
+          </template>
 
-            <!-- Error State -->
-            <v-alert v-else-if="testItemsError" type="error" variant="tonal" class="mb-3">
-              {{ testItemsError }}
-            </v-alert>
-
-            <!-- No Test Items -->
-            <v-alert v-else-if="uniqueAvailableTestItems.length === 0" type="info" variant="tonal">
-              No test items available. Refresh the source after device IDs and date range are ready.
-            </v-alert>
-
-            <!-- Test Items Selection -->
-            <div v-else>
-              <v-row dense class="mb-3">
-                <v-col cols="12" lg="7">
-                  <div class="d-flex align-center gap-2 flex-wrap">
-                    <v-btn-toggle v-model="selectionTarget" color="primary" density="compact" mandatory
-                      variant="outlined" class="selection-mode-toggle">
-                      <v-btn value="include" size="small" prepend-icon="mdi-playlist-plus">
-                        INCLUDE ({{ includedTestItems.length }} Selected)
-                      </v-btn>
-                      <v-btn value="exclude" size="small" prepend-icon="mdi-playlist-remove">
-                        EXCLUDE ({{ excludedTestItems.length }} Selected)
-                      </v-btn>
-                    </v-btn-toggle>
-                    <v-chip size="small" variant="outlined">
-                      {{ filteredTestItemEntries.length }} Showing
-                    </v-chip>
-                  </div>
-                </v-col>
-                <v-col cols="12" lg="5">
-                  <div class="d-flex align-center justify-start justify-lg-end gap-2 flex-wrap">
-                    <v-btn size="small" variant="outlined" prepend-icon="mdi-tune-variant" color="secondary"
-                      @click="openBulkScoringConfig" :disabled="selectedCriteriaCount === 0">
-                      Bulk Scoring ({{ selectedCriteriaCount }})
-                    </v-btn>
-                    <v-menu location="bottom end">
-                      <template #activator="{ props: menuProps }">
-                        <v-btn v-bind="menuProps" size="small" variant="outlined"
-                          prepend-icon="mdi-lightning-bolt-outline">
-                          Quick Actions
-                        </v-btn>
-                      </template>
-                      <v-list density="compact" min-width="260">
-                        <v-list-item @click="selectDisplayedTestItems" :disabled="filteredTestItemEntries.length === 0">
-                          <template #prepend>
-                            <v-icon color="info">mdi-text-box-plus-outline</v-icon>
-                          </template>
-                          <v-list-item-title>
-                            Add Displayed to {{ activeSelectionLabel }}
-                          </v-list-item-title>
-                          <v-list-item-subtitle>
-                            {{ filteredTestItemEntries.length }} visible item(s)
-                          </v-list-item-subtitle>
-                        </v-list-item>
-                        <v-list-item @click="selectValueTestItems">
-                          <template #prepend>
-                            <v-icon color="success">mdi-filter-check-outline</v-icon>
-                          </template>
-                          <v-list-item-title>
-                            Add Criteria to {{ activeSelectionLabel }}
-                          </v-list-item-title>
-                        </v-list-item>
-                        <v-list-item @click="selectNonValueTestItems">
-                          <template #prepend>
-                            <v-icon color="warning">mdi-format-list-bulleted-square</v-icon>
-                          </template>
-                          <v-list-item-title>
-                            Add Non-Criteria to {{ activeSelectionLabel }}
-                          </v-list-item-title>
-                        </v-list-item>
-                        <v-list-item @click="clearTestItemSelection" :disabled="activeSelectionCount === 0">
-                          <template #prepend>
-                            <v-icon color="error">mdi-playlist-remove</v-icon>
-                          </template>
-                          <v-list-item-title>
-                            Clear {{ activeSelectionLabel }}
-                          </v-list-item-title>
-                        </v-list-item>
-                        <v-divider class="my-1" />
-                        <v-list-item v-if="selectionTarget === 'include'" @click="selectDisplayedAndConfigureScore"
-                          :disabled="displayedCriteriaCount === 0">
-                          <template #prepend>
-                            <v-icon color="primary">mdi-playlist-check</v-icon>
-                          </template>
-                          <v-list-item-title>
-                            Add Displayed Criteria And Configure Score
-                          </v-list-item-title>
-                          <v-list-item-subtitle>
-                            {{ displayedCriteriaCount }} criteria item(s)
-                          </v-list-item-subtitle>
-                        </v-list-item>
-                      </v-list>
-                    </v-menu>
-                  </div>
-                </v-col>
-              </v-row>
-
-              <div class="text-caption text-medium-emphasis mb-3">
-                Add items to Include for analysis, add items to Exclude to remove them, and items
-                already assigned to one list are locked while you edit the other list.
+          <div v-if="loadingTestItems" class="station-config-dialog__loading-state">
+            <div class="station-config-dialog__spinner"></div>
+            <p>Loading test items...</p>
+          </div>
+          <div v-else-if="testItemsError" class="station-config-dialog__notice station-config-dialog__notice--danger">
+            {{ testItemsError }}
+          </div>
+          <div v-else-if="uniqueAvailableTestItems.length === 0"
+            class="station-config-dialog__notice station-config-dialog__notice--info">
+            No test items available. Refresh the source after device IDs and date range are ready.
+          </div>
+          <div v-else class="station-config-dialog__section-stack">
+            <div class="station-config-dialog__toolbar-grid">
+              <div class="station-config-dialog__selection-toggle-row">
+                <button type="button" class="station-config-dialog__toggle-chip"
+                  :class="{ 'is-active': selectionTarget === 'include' }" @click="selectionTarget = 'include'">
+                  INCLUDE ({{ includedTestItems.length }} Selected)
+                </button>
+                <button type="button" class="station-config-dialog__toggle-chip"
+                  :class="{ 'is-active': selectionTarget === 'exclude' }" @click="selectionTarget = 'exclude'">
+                  EXCLUDE ({{ excludedTestItems.length }} Selected)
+                </button>
+                <span class="station-config-dialog__pill station-config-dialog__pill--muted">{{
+                  filteredTestItemEntries.length }} Showing</span>
               </div>
-
-              <v-row dense class="mb-3">
-                <v-col cols="12">
-                  <v-combobox v-model="testItemSearchTerms" v-model:search="testItemSearchInput"
-                    :label="`Search ${activeSelectionLabel} Candidates`" :items="[]" multiple chips closable-chips
-                    clearable hide-no-data variant="outlined" density="compact" prepend-inner-icon="mdi-magnify"
-                    placeholder="Type keywords and press Enter, e.g. tx rx 2404" @keydown.enter.prevent="commitTestItemSearchInput"
-                    @keydown.comma.prevent="commitTestItemSearchInput" @blur="commitTestItemSearchInput"
-                    @update:model-value="handleTestItemSearchTermsUpdate" @click:clear="clearTestItemSearch">
-                    <template #chip="{ props: chipProps, item }">
-                      <v-chip v-bind="chipProps" size="small" closable>
-                        {{ item.title }}
-                      </v-chip>
-                    </template>
-                  </v-combobox>
-                </v-col>
-              </v-row>
-
-              <v-alert v-if="overlapItems.length > 0" type="warning" variant="tonal" density="compact" class="mb-3">
-                {{ overlapItems.length }} item(s) exist in both Include and Exclude. They will be
-                excluded from analysis.
-              </v-alert>
-
-              <div class="border rounded test-item-list-container"
-                :class="{ 'test-item-list-container--fullscreen': isFullscreen }">
-                <v-virtual-scroll :items="filteredTestItemEntries" :height="testItemListHeight" item-height="56">
-                  <template #default="{ item: entry }">
-                    <v-list-item :key="entry.name" @click="toggleTestItem(entry.name)" class="test-item-row"
-                      :class="{ 'test-item-row--disabled': entry.isLockedByOppositeSelection }"
-                      :disabled="entry.isLockedByOppositeSelection">
-                      <template #prepend>
-                        <v-checkbox-btn :model-value="entry.isActiveSelection" @click.stop="toggleTestItem(entry.name)"
-                          density="compact" :disabled="entry.isLockedByOppositeSelection" />
-                      </template>
-                      <v-list-item-title class="text-body-2">
-                        {{ entry.name }}
-                      </v-list-item-title>
-                      <template #append>
-                        <div class="d-flex align-center gap-1 test-item-row-actions">
-                          <v-chip v-if="entry.isIncluded" size="x-small" color="success" variant="tonal">
-                            Included
-                          </v-chip>
-                          <v-chip v-if="entry.isExcluded" size="x-small" color="warning" variant="tonal">
-                            Excluded
-                          </v-chip>
-                          <v-btn v-if="entry.canConfigureScoring && entry.scoringLabel" size="x-small" variant="tonal"
-                            :color="entry.scoringColor" @click.stop="openScoringConfig(entry.name)"
-                            class="scoring-config-btn">
-                            <v-icon start size="small">{{ entry.scoringIcon }}</v-icon>
-                            {{ entry.scoringLabel }}
-                            <v-icon end size="x-small">mdi-chevron-down</v-icon>
-                          </v-btn>
-                          <v-chip :color="entry.typeColor" size="x-small" variant="tonal">
-                            {{ entry.typeLabel }}
-                          </v-chip>
-                        </div>
-                      </template>
-                    </v-list-item>
-                  </template>
-                </v-virtual-scroll>
-
-                <div v-if="filteredTestItemEntries.length === 0" class="text-center text-medium-emphasis pa-4">
-                  No matching test items found
-                </div>
-              </div>
-
-              <div class="text-caption text-medium-emphasis mt-2">
-                <v-icon size="x-small">mdi-information</v-icon>
-                Leave Include empty to default to all analyzable items on save. Use the scoring button on included
-                criteria
-                items when you need custom scoring.
+              <div class="station-config-dialog__header-chip-row station-config-dialog__header-chip-row--end">
+                <button type="button" class="station-config-dialog__button station-config-dialog__button--ghost"
+                  :disabled="selectedCriteriaCount === 0" @click="openBulkScoringConfig">
+                  Bulk Scoring ({{ selectedCriteriaCount }})
+                </button>
               </div>
             </div>
-          </v-card-text>
-        </v-card>
 
-        <!-- Scoring Configuration Dialog -->
-        <v-dialog v-model="scoringConfigDialog" max-width="500px">
-          <v-card v-if="scoringConfigItem">
-            <v-card-title class="d-flex align-center bg-info">
-              <v-icon class="mr-2">mdi-tune</v-icon>
-              Configure Scoring
-            </v-card-title>
-            <v-card-subtitle class="bg-info py-3">
-              {{ scoringConfigItem }}
-            </v-card-subtitle>
+            <div class="station-config-dialog__action-grid">
+              <button type="button" class="station-config-dialog__action-tile"
+                :disabled="filteredTestItemEntries.length === 0" @click="selectDisplayedTestItems">
+                <strong>Add Displayed</strong>
+                <span>{{ filteredTestItemEntries.length }} visible item(s)</span>
+              </button>
+              <button type="button" class="station-config-dialog__action-tile" @click="selectValueTestItems">
+                <strong>Add Criteria</strong>
+                <span>Add criteria items to {{ activeSelectionLabel }}</span>
+              </button>
+              <button type="button" class="station-config-dialog__action-tile" @click="selectNonValueTestItems">
+                <strong>Add Non-Criteria</strong>
+                <span>Add non-criteria items to {{ activeSelectionLabel }}</span>
+              </button>
+              <button type="button" class="station-config-dialog__action-tile" :disabled="activeSelectionCount === 0"
+                @click="clearTestItemSelection">
+                <strong>Clear {{ activeSelectionLabel }}</strong>
+                <span>Remove all items from the active list</span>
+              </button>
+              <button v-if="selectionTarget === 'include'" type="button" class="station-config-dialog__action-tile"
+                :disabled="displayedCriteriaCount === 0" @click="selectDisplayedAndConfigureScore">
+                <strong>Add Displayed Criteria And Configure Score</strong>
+                <span>{{ displayedCriteriaCount }} criteria item(s)</span>
+              </button>
+            </div>
 
-            <v-card-text class="pa-4">
-              <!-- Scoring Type Selection -->
-              <v-select :model-value="getTestItemScoringConfig(scoringConfigItem).scoringType"
-                @update:model-value="updateTestItemScoringType(scoringConfigItem!, $event)" :items="scoringTypeOptions"
-                item-title="title" item-value="value" label="Scoring Algorithm" variant="outlined"
-                density="comfortable">
-                <template #item="{ props: itemProps, item }">
-                  <v-list-item v-bind="itemProps">
-                    <template #prepend>
-                      <v-icon :color="item.raw.color">{{ item.raw.icon }}</v-icon>
-                    </template>
-                    <template #subtitle>
-                      {{ item.raw.subtitle }}
-                    </template>
-                    <template #append>
-                      <v-chip v-if="item.raw.requiresTarget" size="x-small" color="warning" variant="tonal">
-                        Requires Target
-                      </v-chip>
-                    </template>
-                  </v-list-item>
-                </template>
-                <template #selection="{ item }">
-                  <v-chip :color="item.raw.color" size="small" variant="flat">
-                    <v-icon start size="small">{{ item.raw.icon }}</v-icon>
-                    {{ item.title }}
-                  </v-chip>
-                </template>
-              </v-select>
+            <p class="station-config-dialog__helper-copy">
+              Add items to Include for analysis, add items to Exclude to remove them, and items already assigned to one
+              list
+              are locked while you edit the other list.
+            </p>
 
-              <!-- Target Value Input (for asymmetrical) -->
-              <v-text-field v-if="currentScoringTypeRequiresTarget"
-                :model-value="getTestItemScoringConfig(scoringConfigItem).target"
-                @update:model-value="updateTestItemTarget(scoringConfigItem!, $event ? Number($event) : undefined)"
-                label="Target Value" type="number" variant="outlined" density="comfortable"
-                hint="Required: Enter the optimal target value for scoring" persistent-hint class="mt-4">
-                <template #prepend-inner>
-                  <v-icon color="warning">mdi-target</v-icon>
-                </template>
-              </v-text-field>
+            <div class="station-config-dialog__search-stack">
+              <label class="station-config-dialog__field">
+                <span>Search {{ activeSelectionLabel }} Candidates</span>
+                <input v-model="testItemSearchInput" type="text"
+                  placeholder="Type keywords and press Enter, e.g. tx rx 2404"
+                  @keydown.enter.prevent="commitTestItemSearchInput" @keydown.comma.prevent="commitTestItemSearchInput"
+                  @blur="commitTestItemSearchInput" />
+              </label>
+              <div v-if="testItemSearchTerms.length > 0" class="station-config-dialog__token-row">
+                <button v-for="term in testItemSearchTerms" :key="term" type="button"
+                  class="station-config-dialog__token" @click="removeTestItemSearchTerm(term)">
+                  <span>{{ term }}</span>
+                  <span aria-hidden="true">x</span>
+                </button>
+                <button type="button" class="station-config-dialog__button station-config-dialog__button--ghost"
+                  @click="clearTestItemSearch">
+                  Clear Search
+                </button>
+              </div>
+            </div>
 
-              <!-- Policy Selection (for asymmetrical only) -->
-              <v-select v-if="currentScoringTypeRequiresPolicy"
-                :model-value="getTestItemScoringConfig(scoringConfigItem).policy || 'symmetrical'"
-                @update:model-value="updateTestItemPolicy(scoringConfigItem!, $event)" :items="policyOptions"
-                item-title="title" item-value="value" label="Scoring Policy" variant="outlined" density="comfortable"
-                class="mt-4">
-                <template #item="{ props: itemProps, item }">
-                  <v-list-item v-bind="itemProps">
-                    <template #prepend>
-                      <v-icon color="primary">{{ item.raw.icon }}</v-icon>
-                    </template>
-                    <template #subtitle>
-                      {{ item.raw.subtitle }}
-                    </template>
-                  </v-list-item>
-                </template>
-                <template #selection="{ item }">
-                  <v-chip color="primary" size="small" variant="flat">
-                    <v-icon start size="small">{{ item.raw.icon }}</v-icon>
-                    {{ item.title }}
-                  </v-chip>
-                </template>
-              </v-select>
+            <div v-if="overlapItems.length > 0"
+              class="station-config-dialog__notice station-config-dialog__notice--warning">
+              {{ overlapItems.length }} item(s) exist in both Include and Exclude. They will be excluded from analysis.
+            </div>
 
-              <!-- Weight Input -->
-              <v-text-field :model-value="getTestItemScoringConfig(scoringConfigItem).weight ?? 1.0"
-                @update:model-value="updateTestItemWeight(scoringConfigItem!, $event ? Number($event) : 1.0)"
-                label="Weight" type="number" variant="outlined" density="comfortable"
-                hint="Weight for this test item in overall score calculation (default: 1.0)" persistent-hint
-                class="mt-4" :min="0" :step="0.1">
-                <template #prepend-inner>
-                  <v-icon color="info">mdi-weight</v-icon>
-                </template>
-              </v-text-field>
-
-              <!-- Formula Preview -->
-              <v-alert type="info" variant="tonal" class="mt-4" density="compact">
-                <div class="text-caption font-weight-bold mb-1">Formula:</div>
-                <div class="text-body-2 font-italic">
-                  {{
-                    getScoringTypeInfo(getTestItemScoringConfig(scoringConfigItem).scoringType).description
-                  }}
+            <div class="test-item-list-container" :class="{ 'test-item-list-container--fullscreen': isFullscreen }">
+              <div class="station-config-dialog__item-list" :style="{ maxHeight: `${testItemListHeight}px` }">
+                <div v-for="entry in filteredTestItemEntries" :key="entry.name" class="test-item-row"
+                  :class="{ 'test-item-row--disabled': entry.isLockedByOppositeSelection, 'is-active': entry.isActiveSelection }"
+                  role="button" :tabindex="entry.isLockedByOppositeSelection ? -1 : 0"
+                  :aria-disabled="entry.isLockedByOppositeSelection"
+                  @click="!entry.isLockedByOppositeSelection && toggleTestItem(entry.name)"
+                  @keydown.enter.prevent="!entry.isLockedByOppositeSelection && toggleTestItem(entry.name)"
+                  @keydown.space.prevent="!entry.isLockedByOppositeSelection && toggleTestItem(entry.name)">
+                  <span class="station-config-dialog__checkmark"
+                    :class="{ 'is-active': entry.isActiveSelection }"></span>
+                  <span class="station-config-dialog__item-name">{{ entry.name }}</span>
+                  <span class="test-item-row-actions">
+                    <span v-if="entry.isIncluded"
+                      class="station-config-dialog__pill station-config-dialog__pill--success">Included</span>
+                    <span v-if="entry.isExcluded"
+                      class="station-config-dialog__pill station-config-dialog__pill--warning">Excluded</span>
+                    <button v-if="entry.canConfigureScoring && entry.scoringLabel" type="button"
+                      class="station-config-dialog__pill-button" :class="getScoringColorClass(entry.scoringColor)"
+                      @click.stop="openScoringConfig(entry.name)">
+                      {{ entry.scoringLabel }}
+                    </button>
+                    <span class="station-config-dialog__pill" :class="getTestItemTypeClass(entry.typeColor)">{{
+                      entry.typeLabel }}</span>
+                  </span>
                 </div>
-              </v-alert>
-            </v-card-text>
+              </div>
+              <div v-if="filteredTestItemEntries.length === 0" class="station-config-dialog__empty-state">
+                No matching test items found.
+              </div>
+            </div>
 
-            <v-divider />
+            <p class="station-config-dialog__helper-copy station-config-dialog__helper-copy--footnote">
+              Leave Include empty to default to all analyzable items on save. Use the scoring button on included
+              criteria
+              items when you need custom scoring.
+            </p>
+          </div>
+        </AppPanel>
+      </div>
+    </section>
 
-            <v-card-actions class="pa-3">
-              <v-spacer />
-              <v-btn color="primary" variant="flat" @click="closeScoringConfig">
-                Done
-              </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
-
-        <!-- Bulk Scoring Configuration Dialog -->
-        <v-dialog v-model="bulkScoringDialog" max-width="550px">
-          <v-card>
-            <v-card-title class="d-flex align-center bg-secondary">
-              <v-icon class="mr-2">mdi-tune-variant</v-icon>
-              Bulk Configure Scoring
-            </v-card-title>
-            <v-card-subtitle class="bg-secondary py-3">
-              Apply to {{ selectedCriteriaCount }} selected criteria test item(s)
-            </v-card-subtitle>
-
-            <v-card-text class="pa-4">
-              <v-alert type="info" variant="tonal" density="compact" class="mb-4">
-                This will apply the selected scoring algorithm and weight to all {{
-                  selectedCriteriaCount }} selected
-                criteria test items.
-              </v-alert>
-
-              <!-- Scoring Type Selection -->
-              <v-select v-model="bulkScoringType" :items="scoringTypeOptions" item-title="title" item-value="value"
-                label="Scoring Algorithm" variant="outlined" density="comfortable">
-                <template #item="{ props: itemProps, item }">
-                  <v-list-item v-bind="itemProps">
-                    <template #prepend>
-                      <v-icon :color="item.raw.color">{{ item.raw.icon }}</v-icon>
-                    </template>
-                    <template #subtitle>
-                      {{ item.raw.subtitle }}
-                    </template>
-                    <template #append>
-                      <v-chip v-if="item.raw.requiresTarget" size="x-small" color="warning" variant="tonal">
-                        Requires Target
-                      </v-chip>
-                    </template>
-                  </v-list-item>
-                </template>
-                <template #selection="{ item }">
-                  <v-chip :color="item.raw.color" size="small" variant="flat">
-                    <v-icon start size="small">{{ item.raw.icon }}</v-icon>
-                    {{ item.title }}
-                  </v-chip>
-                </template>
-              </v-select>
-
-              <!-- Target Value Input (for asymmetrical) -->
-              <v-text-field v-if="bulkScoringTypeRequiresTarget" v-model.number="bulkTarget" label="Target Value"
-                type="number" variant="outlined" density="comfortable"
-                hint="Required: Enter the optimal target value for scoring" persistent-hint class="mt-4">
-                <template #prepend-inner>
-                  <v-icon color="warning">mdi-target</v-icon>
-                </template>
-              </v-text-field>
-
-              <!-- Policy Selection (for asymmetrical only) -->
-              <v-select v-if="bulkScoringTypeRequiresPolicy" v-model="bulkPolicy" :items="policyOptions"
-                item-title="title" item-value="value" label="Scoring Policy" variant="outlined" density="comfortable"
-                class="mt-4">
-                <template #item="{ props: itemProps, item }">
-                  <v-list-item v-bind="itemProps">
-                    <template #prepend>
-                      <v-icon color="primary">{{ item.raw.icon }}</v-icon>
-                    </template>
-                    <template #subtitle>
-                      {{ item.raw.subtitle }}
-                    </template>
-                  </v-list-item>
-                </template>
-                <template #selection="{ item }">
-                  <v-chip color="primary" size="small" variant="flat">
-                    <v-icon start size="small">{{ item.raw.icon }}</v-icon>
-                    {{ item.title }}
-                  </v-chip>
-                </template>
-              </v-select>
-
-              <!-- Weight Input -->
-              <v-text-field v-model.number="bulkWeight" label="Weight" type="number" variant="outlined"
-                density="comfortable" hint="Weight for these test items in overall score calculation (default: 1.0)"
-                persistent-hint class="mt-4" :min="0" :step="0.1">
-                <template #prepend-inner>
-                  <v-icon color="info">mdi-weight</v-icon>
-                </template>
-              </v-text-field>
-
-              <!-- Formula Preview -->
-              <v-alert type="info" variant="tonal" class="mt-4" density="compact">
-                <div class="text-caption font-weight-bold mb-1">Formula:</div>
-                <div class="text-body-2 font-italic">
-                  {{ getScoringTypeInfo(bulkScoringType).description }}
-                </div>
-              </v-alert>
-            </v-card-text>
-
-            <v-divider />
-
-            <v-card-actions class="pa-3">
-              <v-btn color="grey" variant="outlined" @click="closeBulkScoringConfig">
-                Cancel
-              </v-btn>
-              <v-spacer />
-              <v-btn color="primary" variant="flat" @click="applyBulkScoringConfig"
-                :disabled="bulkScoringTypeRequiresTarget && bulkTarget === undefined">
-                Apply to {{ selectedCriteriaCount }} Items
-              </v-btn>
-            </v-card-actions>
-          </v-card>
-        </v-dialog>
-      </v-card-text>
-
-      <v-divider />
-
-      <!-- Actions -->
-      <v-card-actions class="pa-4">
-        <v-btn color="error" variant="outlined" @click="handleRemove" v-if="isExistingConfig">
-          <v-icon start>mdi-delete</v-icon>
+    <template #footer>
+      <div class="station-config-dialog__footer">
+        <button v-if="isExistingConfig" type="button"
+          class="station-config-dialog__button station-config-dialog__button--danger" @click="handleRemove">
           Remove Station
-        </v-btn>
-        <v-spacer />
-        <v-btn color="grey" variant="outlined" @click="handleClose">
+        </button>
+        <div class="station-config-dialog__footer-spacer"></div>
+        <button type="button" class="station-config-dialog__button station-config-dialog__button--ghost"
+          @click="handleClose">
           Cancel
-        </v-btn>
-        <v-btn color="primary" variant="flat" @click="handleSave">
+        </button>
+        <button type="button" class="station-config-dialog__button station-config-dialog__button--primary"
+          @click="handleSave">
           Save Configuration
-        </v-btn>
-      </v-card-actions>
-    </v-card>
-  </v-dialog>
+        </button>
+      </div>
+    </template>
+  </AppDialog>
+
+  <AppDialog :model-value="scoringConfigDialog" title="Configure Scoring" :description="scoringConfigItem ?? ''"
+    width="min(92vw, 34rem)" persistent :closable="false" @update:modelValue="handleScoringDialogVisibility">
+    <div v-if="scoringConfigItem" class="station-config-dialog__modal-stack">
+      <label class="station-config-dialog__field">
+        <span>Scoring Algorithm</span>
+        <select :value="getTestItemScoringConfig(scoringConfigItem).scoringType"
+          @change="updateTestItemScoringType(scoringConfigItem, ($event.target as HTMLSelectElement).value as ScoringType)">
+          <option v-for="option in scoringTypeOptions" :key="option.value" :value="option.value">
+            {{ option.title }}
+          </option>
+        </select>
+        <small>{{ getScoringTypeInfo(getTestItemScoringConfig(scoringConfigItem).scoringType).description }}</small>
+      </label>
+
+      <label v-if="currentScoringTypeRequiresTarget" class="station-config-dialog__field">
+        <span>Target Value</span>
+        <input :value="getTestItemScoringConfig(scoringConfigItem).target ?? ''" type="number"
+          placeholder="Enter the optimal target value"
+          @input="updateTestItemTarget(scoringConfigItem, toOptionalNumber(($event.target as HTMLInputElement).value))" />
+        <small>Required when the selected scoring algorithm depends on a target.</small>
+      </label>
+
+      <label v-if="currentScoringTypeRequiresPolicy" class="station-config-dialog__field">
+        <span>Scoring Policy</span>
+        <select :value="getTestItemScoringConfig(scoringConfigItem).policy || 'symmetrical'"
+          @change="updateTestItemPolicy(scoringConfigItem, ($event.target as HTMLSelectElement).value as ScoringPolicy)">
+          <option v-for="option in policyOptions" :key="option.value" :value="option.value">
+            {{ option.title }}
+          </option>
+        </select>
+      </label>
+
+      <label class="station-config-dialog__field">
+        <span>Weight</span>
+        <input :value="getTestItemScoringConfig(scoringConfigItem).weight ?? 1.0" type="number" min="0" step="0.1"
+          @input="updateTestItemWeight(scoringConfigItem, toNumber(($event.target as HTMLInputElement).value, 1.0))" />
+        <small>Weight for this test item in the overall score calculation.</small>
+      </label>
+
+      <div class="station-config-dialog__notice station-config-dialog__notice--info">
+        <strong>Formula:</strong>
+        <span>{{ getScoringTypeInfo(getTestItemScoringConfig(scoringConfigItem).scoringType).description }}</span>
+      </div>
+    </div>
+
+    <template #footer>
+      <div class="station-config-dialog__footer">
+        <div class="station-config-dialog__footer-spacer"></div>
+        <button type="button" class="station-config-dialog__button station-config-dialog__button--primary"
+          @click="closeScoringConfig">
+          Done
+        </button>
+      </div>
+    </template>
+  </AppDialog>
+
+  <AppDialog :model-value="bulkScoringDialog" title="Bulk Configure Scoring"
+    :description="`Apply to ${selectedCriteriaCount} selected criteria test item(s).`" width="min(92vw, 36rem)"
+    persistent :closable="false" @update:modelValue="bulkScoringDialog = $event">
+    <div class="station-config-dialog__modal-stack">
+      <div class="station-config-dialog__notice station-config-dialog__notice--info">
+        This applies the selected scoring algorithm and weight to all {{ selectedCriteriaCount }} selected criteria
+        items.
+      </div>
+
+      <label class="station-config-dialog__field">
+        <span>Scoring Algorithm</span>
+        <select v-model="bulkScoringType">
+          <option v-for="option in scoringTypeOptions" :key="option.value" :value="option.value">
+            {{ option.title }}
+          </option>
+        </select>
+        <small>{{ getScoringTypeInfo(bulkScoringType).description }}</small>
+      </label>
+
+      <label v-if="bulkScoringTypeRequiresTarget" class="station-config-dialog__field">
+        <span>Target Value</span>
+        <input v-model.number="bulkTarget" type="number" placeholder="Enter the optimal target value" />
+        <small>Required when the selected scoring algorithm depends on a target.</small>
+      </label>
+
+      <label v-if="bulkScoringTypeRequiresPolicy" class="station-config-dialog__field">
+        <span>Scoring Policy</span>
+        <select v-model="bulkPolicy">
+          <option v-for="option in policyOptions" :key="option.value" :value="option.value">
+            {{ option.title }}
+          </option>
+        </select>
+      </label>
+
+      <label class="station-config-dialog__field">
+        <span>Weight</span>
+        <input v-model.number="bulkWeight" type="number" min="0" step="0.1" />
+        <small>Weight for these test items in the overall score calculation.</small>
+      </label>
+
+      <div class="station-config-dialog__notice station-config-dialog__notice--info">
+        <strong>Formula:</strong>
+        <span>{{ getScoringTypeInfo(bulkScoringType).description }}</span>
+      </div>
+    </div>
+
+    <template #footer>
+      <div class="station-config-dialog__footer">
+        <button type="button" class="station-config-dialog__button station-config-dialog__button--ghost"
+          @click="closeBulkScoringConfig">
+          Cancel
+        </button>
+        <div class="station-config-dialog__footer-spacer"></div>
+        <button type="button" class="station-config-dialog__button station-config-dialog__button--primary"
+          :disabled="bulkScoringTypeRequiresTarget && bulkTarget === undefined" @click="applyBulkScoringConfig">
+          Apply to {{ selectedCriteriaCount }} Items
+        </button>
+      </div>
+    </template>
+  </AppDialog>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
+import { AppDialog, AppPanel } from '@/shared/ui'
 import {
   SCORING_POLICIES,
   SCORING_TYPE_INFO,
@@ -606,6 +459,8 @@ const internalShow = computed({
   get: () => props.show,
   set: (value: boolean) => emit('update:show', value),
 })
+
+const dialogWidth = computed(() => (isFullscreen.value ? '98vw' : 'min(96vw, 72rem)'))
 
 const localConfig = ref<StationConfig>({
   displayName: '',
@@ -840,6 +695,10 @@ function clearTestItemSearch(): void {
   testItemSearchInput.value = ''
 }
 
+function removeTestItemSearchTerm(term: string): void {
+  testItemSearchTerms.value = testItemSearchTerms.value.filter((item: string) => item !== term)
+}
+
 // Initialize config when dialog opens
 watch(
   () => props.show,
@@ -871,6 +730,15 @@ function toggleSelectAllDevices(): void {
   } else {
     localConfig.value.deviceIds = [...props.availableDeviceIds]
   }
+}
+
+function toggleDeviceId(deviceId: string): void {
+  if (localConfig.value.deviceIds.includes(deviceId)) {
+    localConfig.value.deviceIds = localConfig.value.deviceIds.filter((id: string) => id !== deviceId)
+    return
+  }
+
+  localConfig.value.deviceIds = [...localConfig.value.deviceIds, deviceId]
 }
 
 function toggleTestItem(name: string): void {
@@ -945,6 +813,37 @@ function getTestItemTypeColor(item: TestItemInfo): string {
   if (item.isValue && (item.hasUcl || item.hasLcl)) return 'success'
   if (item.isValue && !item.hasUcl && !item.hasLcl) return 'warning'
   return 'grey'
+}
+
+function getTestItemTypeClass(typeColor: string): string {
+  switch (typeColor) {
+    case 'success':
+      return 'station-config-dialog__pill--success'
+    case 'warning':
+      return 'station-config-dialog__pill--warning'
+    default:
+      return 'station-config-dialog__pill--muted'
+  }
+}
+
+function getScoringColorClass(color: string): string {
+  switch (color) {
+    case 'success':
+    case 'green':
+      return 'station-config-dialog__pill-button--success'
+    case 'warning':
+    case 'orange':
+      return 'station-config-dialog__pill-button--warning'
+    case 'error':
+    case 'red':
+      return 'station-config-dialog__pill-button--danger'
+    case 'info':
+    case 'primary':
+    case 'blue':
+      return 'station-config-dialog__pill-button--info'
+    default:
+      return 'station-config-dialog__pill-button--violet'
+  }
 }
 
 function handleSave(): void {
@@ -1031,6 +930,15 @@ function closeScoringConfig(): void {
   scoringConfigItem.value = null
 }
 
+function handleScoringDialogVisibility(value: boolean): void {
+  if (!value) {
+    closeScoringConfig()
+    return
+  }
+
+  scoringConfigDialog.value = true
+}
+
 function getScoringTypeInfo(scoringType: ScoringType) {
   return {
     ...SCORING_TYPE_INFO[scoringType],
@@ -1054,6 +962,20 @@ function updateTestItemScoringType(testItemName: string, scoringType: ScoringTyp
   if (!typeInfo.requiredInputs?.includes('target')) {
     delete localConfig.value.testItemScoringConfigs[testItemName].target
   }
+}
+
+function toNumber(value: string, fallback = 0): number {
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : fallback
+}
+
+function toOptionalNumber(value: string): number | undefined {
+  if (value.trim().length === 0) {
+    return undefined
+  }
+
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : undefined
 }
 
 function updateTestItemTarget(testItemName: string, target: number | undefined): void {
@@ -1196,12 +1118,352 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   border: 1px solid rgba(0, 0, 0, 0.12);
 }
 
-.station-config-card {
-  height: 100%;
-}
-
 .station-config-title {
   min-width: 0;
+}
+
+.station-config-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.station-config-dialog__section-stack,
+.station-config-dialog__search-stack,
+.station-config-dialog__item-list,
+.station-config-dialog__chip-grid,
+.station-config-dialog__action-grid,
+.station-config-dialog__min-score-layout,
+.station-config-dialog__toolbar-grid,
+.station-config-dialog__toolbar-row,
+.station-config-dialog__selection-toggle-row,
+.station-config-dialog__header-chip-row,
+.station-config-dialog__token-row,
+.station-config-dialog__toggle-row,
+.test-item-row,
+.test-item-row-actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.station-config-dialog__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  width: 100%;
+}
+
+.station-config-dialog__header-copy {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.station-config-dialog__header-copy h2 {
+  margin: 0;
+  color: var(--app-ink);
+  font-family: var(--app-display);
+  font-size: 1.35rem;
+}
+
+.station-config-dialog__header-copy span {
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.station-config-dialog__eyebrow {
+  margin: 0;
+  color: var(--app-accent);
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.station-config-dialog__header-actions,
+.station-config-dialog__footer {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.station-config-dialog__footer {
+  width: 100%;
+}
+
+.station-config-dialog__footer-spacer {
+  min-width: 1px;
+}
+
+.station-config-dialog__button,
+.station-config-dialog__icon-button {
+  min-height: 2.75rem;
+  border-radius: 0.95rem;
+  border: 1px solid var(--app-border);
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.station-config-dialog__button:hover,
+.station-config-dialog__icon-button:hover {
+  transform: translateY(-1px);
+}
+
+.station-config-dialog__button {
+  padding: 0.7rem 1rem;
+}
+
+.station-config-dialog__icon-button {
+  padding: 0.7rem 0.95rem;
+}
+
+.station-config-dialog__button--primary {
+  background: linear-gradient(135deg, #145847, #1b6c58);
+  border-color: #145847;
+  color: white;
+}
+
+.station-config-dialog__button--danger {
+  border-color: rgba(164, 52, 58, 0.24);
+  color: #8e3037;
+}
+
+.station-config-dialog__button--ghost {
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.station-config-dialog__modal-stack {
+  display: grid;
+  gap: 1rem;
+}
+
+.station-config-dialog__field {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.station-config-dialog__field span {
+  color: var(--app-ink);
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.station-config-dialog__field input,
+.station-config-dialog__field select {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  padding: 0.8rem 0.9rem;
+  font: inherit;
+}
+
+.station-config-dialog__field small {
+  color: var(--app-muted);
+  line-height: 1.5;
+}
+
+.station-config-dialog__notice {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid rgba(40, 96, 163, 0.14);
+  background: rgba(40, 96, 163, 0.08);
+  color: #1f4f89;
+  line-height: 1.55;
+}
+
+.station-config-dialog__notice--info strong {
+  color: #173b66;
+}
+
+.station-config-dialog__notice--danger {
+  border-color: rgba(164, 52, 58, 0.16);
+  background: rgba(164, 52, 58, 0.08);
+  color: #8e3037;
+}
+
+.station-config-dialog__notice--warning {
+  border-color: rgba(169, 102, 34, 0.18);
+  background: rgba(169, 102, 34, 0.1);
+  color: #88551c;
+}
+
+.station-config-dialog__toolbar-row,
+.station-config-dialog__header-chip-row,
+.station-config-dialog__token-row,
+.station-config-dialog__toggle-row,
+.station-config-dialog__selection-toggle-row {
+  grid-auto-flow: column;
+  align-items: center;
+  justify-content: start;
+}
+
+.station-config-dialog__toolbar-grid {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
+.station-config-dialog__header-chip-row--end {
+  justify-content: end;
+}
+
+.station-config-dialog__action-grid,
+.station-config-dialog__chip-grid {
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+}
+
+.station-config-dialog__choice-chip,
+.station-config-dialog__toggle-chip,
+.station-config-dialog__token,
+.station-config-dialog__pill,
+.station-config-dialog__pill-button,
+.station-config-dialog__action-tile,
+.station-config-dialog__toggle-pill {
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-weight: 700;
+}
+
+.station-config-dialog__choice-chip,
+.station-config-dialog__toggle-chip,
+.station-config-dialog__token,
+.station-config-dialog__pill-button,
+.station-config-dialog__action-tile,
+.station-config-dialog__toggle-pill,
+.test-item-row {
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.station-config-dialog__choice-chip:hover,
+.station-config-dialog__toggle-chip:hover,
+.station-config-dialog__token:hover,
+.station-config-dialog__pill-button:hover,
+.station-config-dialog__action-tile:hover,
+.station-config-dialog__toggle-pill:hover,
+.test-item-row:hover {
+  transform: translateY(-1px);
+}
+
+.station-config-dialog__choice-chip,
+.station-config-dialog__toggle-chip,
+.station-config-dialog__token,
+.station-config-dialog__pill,
+.station-config-dialog__pill-button,
+.station-config-dialog__toggle-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.4rem;
+  padding: 0.5rem 0.8rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+}
+
+.station-config-dialog__toggle-pill input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.station-config-dialog__choice-chip.is-active,
+.station-config-dialog__toggle-chip.is-active,
+.station-config-dialog__toggle-pill.is-active {
+  background: rgba(20, 88, 71, 0.1);
+  border-color: rgba(20, 88, 71, 0.18);
+  color: #145847;
+}
+
+.station-config-dialog__token {
+  gap: 0.35rem;
+  border-color: rgba(40, 96, 163, 0.16);
+  background: rgba(40, 96, 163, 0.08);
+  color: #1f4f89;
+}
+
+.station-config-dialog__pill--muted {
+  background: rgba(95, 103, 122, 0.1);
+  border-color: rgba(95, 103, 122, 0.16);
+  color: #4c566a;
+}
+
+.station-config-dialog__pill--success,
+.station-config-dialog__pill-button--success {
+  background: rgba(20, 88, 71, 0.1);
+  border-color: rgba(20, 88, 71, 0.16);
+  color: #145847;
+}
+
+.station-config-dialog__pill--warning,
+.station-config-dialog__pill-button--warning {
+  background: rgba(169, 102, 34, 0.1);
+  border-color: rgba(169, 102, 34, 0.18);
+  color: #88551c;
+}
+
+.station-config-dialog__pill-button--info {
+  background: rgba(40, 96, 163, 0.08);
+  border-color: rgba(40, 96, 163, 0.16);
+  color: #1f4f89;
+}
+
+.station-config-dialog__pill-button--danger {
+  background: rgba(164, 52, 58, 0.08);
+  border-color: rgba(164, 52, 58, 0.16);
+  color: #8e3037;
+}
+
+.station-config-dialog__pill-button--violet {
+  background: rgba(128, 83, 161, 0.08);
+  border-color: rgba(128, 83, 161, 0.16);
+  color: #6e3f91;
+}
+
+.station-config-dialog__action-tile {
+  display: grid;
+  gap: 0.25rem;
+  align-content: start;
+  justify-items: start;
+  min-height: 5.25rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1rem;
+  border-color: rgba(20, 88, 71, 0.12);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--app-ink);
+  text-align: left;
+}
+
+.station-config-dialog__action-tile span,
+.station-config-dialog__helper-copy,
+.min-score-summary p,
+.station-config-dialog__empty-state {
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.station-config-dialog__loading-state {
+  display: grid;
+  place-items: center;
+  gap: 0.8rem;
+  padding: 2rem 1rem;
+  color: var(--app-muted);
+}
+
+.station-config-dialog__spinner {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 3px solid rgba(20, 88, 71, 0.16);
+  border-top-color: #145847;
+  animation: station-config-spin 0.9s linear infinite;
 }
 
 .station-config-body {
@@ -1225,12 +1487,8 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   gap: 0.75rem;
 }
 
-.test-item-row {
-  cursor: pointer;
-}
-
 .test-item-row:hover {
-  background-color: rgba(0, 0, 0, 0.04);
+  background-color: rgba(246, 255, 250, 0.88);
 }
 
 .test-item-row--disabled {
@@ -1316,6 +1574,11 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   flex: 1 1 320px;
 }
 
+.station-config-dialog__min-score-layout {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+}
+
 .min-score-switch {
   min-width: 120px;
 }
@@ -1329,6 +1592,9 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 .test-item-list-container {
+  border: 1px solid rgba(20, 88, 71, 0.12);
+  border-radius: 1rem;
+  background: rgba(255, 255, 255, 0.72);
   overflow: hidden;
 }
 
@@ -1336,12 +1602,65 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   max-height: none;
 }
 
-.test-item-row-actions {
-  flex-wrap: wrap;
-  justify-content: flex-end;
+.test-item-row {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  width: 100%;
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.9rem;
+  border: 1px solid transparent;
+  background: transparent;
+  text-align: left;
 }
 
-@media (max-width: 960px) {
+.test-item-row.is-active {
+  border-color: rgba(20, 88, 71, 0.18);
+}
+
+.test-item-row-actions {
+  grid-auto-flow: column;
+  align-items: center;
+  justify-content: end;
+}
+
+.station-config-dialog__checkmark {
+  width: 1.1rem;
+  height: 1.1rem;
+  border-radius: 0.3rem;
+  border: 1px solid rgba(20, 88, 71, 0.24);
+  background: white;
+}
+
+.station-config-dialog__checkmark.is-active {
+  background: #145847;
+  border-color: #145847;
+  box-shadow: inset 0 0 0 0.2rem white;
+}
+
+.station-config-dialog__item-name {
+  color: var(--app-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.station-config-dialog__helper-copy--footnote {
+  margin: 0;
+}
+
+.station-config-dialog__empty-state {
+  padding: 1.5rem;
+  text-align: center;
+}
+
+@keyframes station-config-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+}
+
+@media (max-width: 840px) {
   .min-score-controls {
     width: 100%;
     justify-content: flex-start;
@@ -1354,6 +1673,26 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 @media (max-width: 600px) {
+
+  .station-config-dialog__toolbar-grid,
+  .station-config-dialog__min-score-layout,
+  .test-item-row,
+  .test-item-row-actions,
+  .station-config-dialog__selection-toggle-row,
+  .station-config-dialog__header-chip-row,
+  .station-config-dialog__token-row,
+  .station-config-dialog__toggle-row {
+    grid-auto-flow: row;
+    grid-template-columns: minmax(0, 1fr);
+    justify-content: stretch;
+  }
+
+  .station-config-dialog__header,
+  .station-config-dialog__header-actions,
+  .station-config-dialog__footer {
+    grid-auto-flow: row;
+  }
+
   .station-config-body {
     padding: 12px !important;
   }

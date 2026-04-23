@@ -44,7 +44,7 @@ export {
   getRecordStatistics,
   getRecordsByFilter,
   getRecordsGroupedBy,
-  // Main query function for v-data-table-server
+  // Main query function for server-driven table integration
   queryRecordsForTable,
   // Types
   type RecordFilter,

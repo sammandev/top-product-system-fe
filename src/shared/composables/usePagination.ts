@@ -25,13 +25,13 @@ export interface PaginationOptions {
  * // Set total after fetching data
  * setTotalItems(100)
  *
- * // Use in v-data-table
- * <v-data-table
+ * // Use in a table or list view
+ * <AppDataGrid
  *   :items="paginatedItems"
  *   :page="page"
- *   :items-per-page="perPage"
+ *   :rowsPerPage="perPage"
  *   @update:page="page = $event"
- *   @update:items-per-page="perPage = $event"
+ *   @update:rowsPerPage="perPage = $event"
  * />
  * ```
  */

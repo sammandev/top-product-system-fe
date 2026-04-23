@@ -1,258 +1,428 @@
 <template>
-    <v-app>
-        <!-- App Bar (Sticky) -->
-        <v-app-bar :elevation="2" app color="primary" density="compact">
-            <v-app-bar-nav-icon variant="text" @click="drawer = !drawer">
-                <v-icon color="white">mdi-menu</v-icon>
-            </v-app-bar-nav-icon>
+  <div class="default-layout min-h-screen" :data-shell-theme="shellTheme">
+    <button
+      v-if="drawer"
+      aria-label="Close navigation"
+      class="fixed inset-0 z-30 bg-black/45 backdrop-blur-[2px] lg:hidden"
+      type="button"
+      @click="drawer = false"
+    />
 
-            <!-- <v-toolbar-title class="d-flex align-center">
-                <v-icon class="mr-2" color="white">mdi-atom-variant</v-icon>
-                <span class="font-weight-bold">{{ appName }}</span>
-            </v-toolbar-title> -->
+    <div class="relative flex min-h-screen flex-col bg-[var(--shell-bg)] text-[var(--shell-ink)]">
+      <header class="sticky top-0 z-40 border-b border-[var(--shell-border)] bg-[color:var(--shell-header)]/90 backdrop-blur">
+        <div class="flex min-h-16 items-center gap-3 px-3 py-3 sm:px-4 lg:px-6">
+          <button
+            aria-label="Toggle navigation"
+            class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] text-[var(--shell-ink)] shadow-[var(--shell-shadow-soft)] transition hover:-translate-y-px hover:border-[var(--shell-accent)] hover:text-[var(--shell-accent)]"
+            type="button"
+            @click="drawer = !drawer"
+          >
+            <Icon class="text-xl" icon="solar:hamburger-menu-line-duotone" />
+          </button>
 
-            <v-spacer />
-
-            <!-- Search Bar (Desktop only) -->
-            <!-- <v-text-field v-if="$vuetify.display.mdAndUp" density="compact" variant="solo"
-                prepend-inner-icon="mdi-magnify" placeholder="Search..." hide-details single-line rounded class="mr-4"
-                style="max-width: 300px" /> -->
-
-            <!-- Notifications -->
-            <!-- <v-btn icon variant="text" class="mr-2">
-                <v-badge color="error" content="3">
-                    <v-icon color="white">mdi-bell</v-icon>
-                </v-badge>
-            </v-btn> -->
-
-            <!-- Theme Toggle -->
-            <v-btn icon variant="text" class="mr-2" @click="toggleTheme">
-                <v-icon color="white">{{ isDark ? 'mdi-weather-sunny' : 'mdi-weather-night' }}</v-icon>
-            </v-btn>
-
-            <!-- User Menu -->
-            <v-menu location="bottom end">
-                <template #activator="{ props }">
-                <v-btn v-bind="props" variant="text" class="text-none px-2" rounded="xl">
-                        <v-avatar size="32" :color="authStore.isGuest ? 'warning' : 'secondary'" class="mr-2">
-                            <v-icon size="small">{{ authStore.isGuest ? 'mdi-account-question' : 'mdi-account' }}</v-icon>
-                        </v-avatar>
-                        <span v-if="$vuetify.display.smAndUp" style="color: white;">
-                            {{ authStore.displayName }}
-                        </span>
-                        <v-icon class="ml-1" size="small" color="white">mdi-chevron-down</v-icon>
-                    </v-btn>
-                </template>
-
-                <v-list min-width="240" class="py-2">
-                    <v-list-item>
-                        <template #prepend>
-                            <v-avatar :color="authStore.isGuest ? 'warning' : 'secondary'" size="40">
-                                <v-icon>{{ authStore.isGuest ? 'mdi-account-question' : 'mdi-account' }}</v-icon>
-                            </v-avatar>
-                        </template>
-                        <v-list-item-title class="font-weight-bold">
-                            {{ authStore.displayName }}
-                        </v-list-item-title>
-                        <v-list-item-subtitle>
-                            {{ authStore.displayRole }}
-                        </v-list-item-subtitle>
-                    </v-list-item>
-
-                    <v-divider class="my-2" />
-
-                    <v-list-item
-                        :prepend-icon="authStore.isGuest ? 'mdi-shield-account' : authStore.loginType === 'external' ? 'mdi-cloud-check' : 'mdi-account-check'"
-                        :title="authStore.isGuest ? 'Guest access' : authStore.loginType === 'external' ? 'External access' : 'Local access'"
-                        :subtitle="authStore.isGuest ? 'Limited access mode' : authStore.hasDUTAccess ? 'DUT session available' : 'App session only'">
-                        <template #append>
-                            <v-chip :color="authStore.isGuest ? 'warning' : authStore.hasDUTAccess ? 'success' : 'info'"
-                                size="small" variant="flat">
-                                {{ authStore.isGuest ? 'Guest' : authStore.hasDUTAccess ? 'Connected' : 'Standard' }}
-                            </v-chip>
-                        </template>
-                    </v-list-item>
-
-                    <v-divider class="my-2" />
-
-                    <v-list-item prepend-icon="mdi-logout" title="Logout" base-color="error" @click="handleLogout" />
-                </v-list>
-            </v-menu>
-        </v-app-bar>
-
-        <!-- Navigation Drawer -->
-        <v-navigation-drawer v-model="drawer" :rail="rail" :expand-on-hover="rail && drawer" app>
-            <!-- Drawer Header -->
-            <v-list-item class="px-2 py-3">
-                <template #prepend>
-                    <v-avatar color="primary" size="40">
-                        <v-icon>mdi-atom-variant</v-icon>
-                    </v-avatar>
-                </template>
-                <v-list-item-title class="font-weight-bold">{{ appName }}</v-list-item-title>
-                <v-list-item-subtitle>v{{ appVersion }}</v-list-item-subtitle>
-            </v-list-item>
-
-            <v-divider />
-
-            <!-- Search Box (only show when not in rail mode) -->
-            <div v-if="!rail" class="pa-3">
-                <v-text-field v-model="searchQuery" density="compact" variant="outlined"
-                    prepend-inner-icon="mdi-magnify" placeholder="Search menu..." hide-details clearable single-line
-                    rounded />
+          <div class="min-w-0 flex-1">
+            <div class="flex min-w-0 items-center gap-3">
+              <div class="hidden h-11 w-11 items-center justify-center rounded-2xl bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)] sm:inline-flex">
+                <Icon class="text-2xl" icon="solar:widget-5-bold-duotone" />
+              </div>
+              <div class="min-w-0">
+                <p class="truncate text-[0.65rem] font-semibold uppercase tracking-[0.26em] text-[var(--shell-muted)]">
+                  {{ appName }}
+                </p>
+                <h1 class="truncate font-[var(--app-display)] text-xl leading-none sm:text-2xl">
+                  {{ currentRouteTitle }}
+                </h1>
+              </div>
             </div>
+          </div>
 
-            <!-- Navigation Items (Scrollable) -->
-            <v-list density="compact" nav class="flex-grow-1 overflow-y-auto">
-                <!-- Main Section -->
-                <v-list-subheader v-if="!rail" class="mt-2">MAIN</v-list-subheader>
-                <template v-for="item in visibleMainItems" :key="item.path">
-                    <!-- Items with children (collapsible groups) -->
-                    <v-list-group v-if="item.children" :value="item.title" fluid>
-                        <template #activator="{ props }">
-                            <v-list-item v-bind="props" :prepend-icon="item.icon" :title="item.title" rounded="xl"
-                                color="primary" class="my-1" :active="isChildActive(item)" />
-                        </template>
-                        <v-list-item v-for="child in item.children" :key="child.path" :prepend-icon="child.icon"
-                            :title="child.title" :to="child.path" :value="child.path" rounded="xl" color="primary"
-                            class="my-1" />
-                    </v-list-group>
-                    <!-- Regular items -->
-                    <v-list-item v-else :prepend-icon="item.icon" :title="item.title" :to="item.path" :value="item.path"
-                        rounded="xl" color="primary" class="my-1" />
-                </template>
+          <div class="hidden min-w-[14rem] max-w-sm flex-1 lg:block xl:max-w-md">
+            <label class="flex items-center gap-3 rounded-full border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-4 py-3 shadow-[var(--shell-shadow-soft)]">
+              <Icon class="text-lg text-[var(--shell-muted)]" icon="solar:magnifer-linear" />
+              <input
+                v-model="searchQuery"
+                class="w-full bg-transparent text-sm text-[var(--shell-ink)] outline-none placeholder:text-[var(--shell-muted)]"
+                placeholder="Search navigation"
+                type="text"
+              />
+            </label>
+          </div>
 
-                <!-- Tools Section (hidden for guests) -->
-                <template v-if="authStore.isUser">
-                    <v-list-subheader v-if="!rail" class="mt-3">TOOLS</v-list-subheader>
-                    <template v-for="item in filteredToolsItems" :key="item.path">
-                        <!-- Items with children (collapsible groups) -->
-                        <v-list-group v-if="item.children" :value="item.title" fluid>
-                            <template #activator="{ props }">
-                                <v-list-item v-bind="props" :prepend-icon="item.icon" :title="item.title" rounded="xl"
-                                    color="primary" class="my-1" />
-                            </template>
-                            <v-list-item v-for="child in item.children" :key="child.path" :prepend-icon="child.icon"
-                                :title="child.title" :to="child.path" :value="child.path" rounded="xl" color="primary"
-                                class="my-1" />
-                        </v-list-group>
-                        <!-- Regular items -->
-                        <v-list-item v-else :prepend-icon="item.icon" :title="item.title" :to="item.path"
-                            :value="item.path" rounded="xl" color="primary" class="my-1" />
-                    </template>
-                </template>
+          <div class="flex items-center gap-2 sm:gap-3">
+            <button
+              :aria-label="quickThemeToggleLabel"
+              class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] text-[var(--shell-ink)] shadow-[var(--shell-shadow-soft)] transition hover:-translate-y-px hover:border-[var(--shell-accent)] hover:text-[var(--shell-accent)]"
+              type="button"
+              @click="toggleTheme"
+            >
+              <Icon
+                class="text-xl"
+                :icon="isDark ? 'solar:sun-bold-duotone' : 'solar:moon-stars-bold-duotone'"
+              />
+            </button>
 
-                <!-- System Section (Admin+ Only) -->
-                <template v-if="authStore.isAdmin">
-                    <v-list-subheader v-if="!rail" class="mt-3">SYSTEM</v-list-subheader>
-                    <template v-for="item in visibleSystemItems" :key="item.path">
-                        <!-- Items with children (collapsible groups like Access Control) -->
-                        <v-list-group v-if="item.children" :value="item.title" fluid>
-                            <template #activator="{ props }">
-                                <v-list-item v-bind="props" :prepend-icon="item.icon" :title="item.title" rounded="xl"
-                                    color="primary" class="my-1" :active="isChildActive(item)" />
-                            </template>
-                            <v-list-item v-for="child in item.children" :key="child.path" :prepend-icon="child.icon"
-                                :title="child.title" :to="child.path" :value="child.path" rounded="xl" color="primary"
-                                class="my-1" />
-                        </v-list-group>
-                        <!-- Regular items -->
-                        <v-list-item v-else :prepend-icon="item.icon" :title="item.title" :to="item.path"
-                            :value="item.path" rounded="xl" color="primary" class="my-1" />
-                    </template>
-                </template>
-            </v-list>
-
-            <!-- Drawer Footer -->
-            <template #append>
-                <v-divider />
-                <div class="default-layout__drawer-footer pa-2">
-                    <v-list v-if="$vuetify.display.lgAndUp" density="compact" nav
-                        class="default-layout__drawer-footer-list">
-                        <v-list-item :prepend-icon="rail ? 'mdi-menu-close' : 'mdi-menu-open'"
-                    :title="rail ? 'Expand navigation' : 'Collapse navigation'" @click="rail = !rail"
-                            rounded="xl" class="default-layout__drawer-footer-toggle" />
-                    </v-list>
+            <details class="relative">
+              <summary class="flex cursor-pointer list-none items-center gap-3 rounded-[1.4rem] border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-3 py-2 shadow-[var(--shell-shadow-soft)] transition hover:-translate-y-px hover:border-[var(--shell-accent)]">
+                <div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--shell-border)] bg-[var(--shell-panel)] text-[var(--shell-ink)]">
+                  <Icon class="text-lg" icon="solar:palette-round-bold-duotone" />
                 </div>
-            </template>
-        </v-navigation-drawer>
+                <div class="hidden min-w-0 text-left xl:block">
+                  <p class="text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                    Theme
+                  </p>
+                  <p class="truncate text-sm font-semibold text-[var(--shell-ink)]">
+                    {{ themeSummaryLabel }}
+                  </p>
+                </div>
+                <Icon class="hidden text-lg text-[var(--shell-muted)] xl:block" icon="solar:alt-arrow-down-linear" />
+              </summary>
 
-        <!-- Navigation Loading Indicator -->
-        <v-progress-linear v-if="appConfigStore.isNavigating" indeterminate color="primary" class="position-fixed"
-            style="z-index: 9999; top: 48px;" />
+              <div class="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[22rem] rounded-[1.6rem] border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] p-4 shadow-[var(--shell-shadow)] backdrop-blur">
+                <div class="flex items-start justify-between gap-3">
+                  <div class="min-w-0">
+                    <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                      Appearance
+                    </p>
+                    <p class="mt-1 text-sm leading-6 text-[var(--shell-muted)]">
+                      {{ themeSummaryDescription }}
+                    </p>
+                  </div>
+                  <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]">
+                    <Icon class="text-xl" :icon="themeSummaryIcon" />
+                  </div>
+                </div>
 
-        <!-- Main Content Area -->
-        <v-main class="default-layout__main">
-            <!-- Content (scrollable) -->
-            <div class="default-layout__content">
-                <slot />
+                <div class="mt-4 space-y-2">
+                  <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                    Mode
+                  </p>
+                  <div class="grid grid-cols-3 gap-2">
+                    <button
+                      v-for="option in THEME_MODE_OPTIONS"
+                      :key="option.value"
+                      class="flex flex-col items-center gap-2 rounded-[1.2rem] border px-3 py-3 text-center transition"
+                      :class="themePreferences.mode === option.value
+                        ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
+                        : 'border-[var(--shell-border)] bg-[var(--shell-panel)] text-[var(--shell-muted)] hover:border-[var(--shell-accent)] hover:text-[var(--shell-ink)]'"
+                      type="button"
+                      @click="setThemePreference({ mode: option.value })"
+                    >
+                      <span class="h-10 w-full rounded-2xl" :style="{ background: option.preview }" />
+                      <span class="text-xs font-semibold uppercase tracking-[0.18em]">{{ option.label }}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="mt-4 space-y-2">
+                  <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                    PrimeVue Preset
+                  </p>
+                  <div class="grid grid-cols-2 gap-2">
+                    <button
+                      v-for="option in THEME_PRESET_OPTIONS"
+                      :key="option.value"
+                      class="rounded-[1.2rem] border px-3 py-3 text-left transition"
+                      :class="themePreferences.preset === option.value
+                        ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
+                        : 'border-[var(--shell-border)] bg-[var(--shell-panel)] text-[var(--shell-muted)] hover:border-[var(--shell-accent)] hover:text-[var(--shell-ink)]'"
+                      type="button"
+                      @click="setThemePreference({ preset: option.value })"
+                    >
+                      <div class="flex items-center gap-3">
+                        <span class="h-9 w-9 shrink-0 rounded-2xl" :style="{ background: option.preview }" />
+                        <div class="min-w-0">
+                          <p class="truncate text-sm font-semibold">{{ option.label }}</p>
+                          <p class="mt-1 text-xs leading-5 opacity-80">{{ option.description }}</p>
+                        </div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="mt-4 grid gap-4 md:grid-cols-2">
+                  <div class="space-y-2">
+                    <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                      Primary
+                    </p>
+                    <div class="grid grid-cols-2 gap-2">
+                      <button
+                        v-for="option in THEME_PRIMARY_OPTIONS"
+                        :key="option.value"
+                        class="flex items-center gap-3 rounded-[1.2rem] border px-3 py-2.5 text-left transition"
+                        :class="themePreferences.primary === option.value
+                          ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
+                          : 'border-[var(--shell-border)] bg-[var(--shell-panel)] text-[var(--shell-muted)] hover:border-[var(--shell-accent)] hover:text-[var(--shell-ink)]'"
+                        type="button"
+                        @click="setThemePreference({ primary: option.value })"
+                      >
+                        <span class="h-8 w-8 shrink-0 rounded-full border border-white/50" :style="{ background: option.preview }" />
+                        <span class="truncate text-sm font-semibold">{{ option.label }}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  <div class="space-y-2">
+                    <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                      Surface
+                    </p>
+                    <div class="space-y-2">
+                      <button
+                        v-for="option in THEME_SURFACE_OPTIONS"
+                        :key="option.value"
+                        class="flex w-full items-center gap-3 rounded-[1.2rem] border px-3 py-2.5 text-left transition"
+                        :class="themePreferences.surface === option.value
+                          ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
+                          : 'border-[var(--shell-border)] bg-[var(--shell-panel)] text-[var(--shell-muted)] hover:border-[var(--shell-accent)] hover:text-[var(--shell-ink)]'"
+                        type="button"
+                        @click="setThemePreference({ surface: option.value })"
+                      >
+                        <span class="h-8 w-8 shrink-0 rounded-2xl border border-white/50" :style="{ background: option.preview }" />
+                        <div class="min-w-0">
+                          <p class="truncate text-sm font-semibold">{{ option.label }}</p>
+                          <p class="mt-1 text-xs leading-5 opacity-80">{{ option.description }}</p>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </details>
+
+            <details class="relative">
+              <summary class="flex cursor-pointer list-none items-center gap-3 rounded-[1.4rem] border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-3 py-2 shadow-[var(--shell-shadow-soft)] transition hover:-translate-y-px hover:border-[var(--shell-accent)]">
+                <div
+                  class="flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-semibold uppercase"
+                  :class="authStore.isGuest ? 'bg-[rgba(198,134,37,0.18)] text-[rgb(156,102,18)]' : 'bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]'"
+                >
+                  {{ userInitial }}
+                </div>
+                <div class="hidden text-left sm:block">
+                  <p class="max-w-[12rem] truncate text-sm font-semibold text-[var(--shell-ink)]">
+                    {{ authStore.displayName }}
+                  </p>
+                  <p class="text-[0.68rem] uppercase tracking-[0.2em] text-[var(--shell-muted)]">
+                    {{ authStore.displayRole }}
+                  </p>
+                </div>
+                <Icon class="hidden text-lg text-[var(--shell-muted)] sm:block" icon="solar:alt-arrow-down-linear" />
+              </summary>
+
+              <div class="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-72 rounded-[1.6rem] border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] p-4 shadow-[var(--shell-shadow)] backdrop-blur">
+                <div class="flex items-center gap-3">
+                  <div
+                    class="flex h-12 w-12 items-center justify-center rounded-2xl text-base font-semibold uppercase"
+                    :class="authStore.isGuest ? 'bg-[rgba(198,134,37,0.18)] text-[rgb(156,102,18)]' : 'bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]'"
+                  >
+                    {{ userInitial }}
+                  </div>
+                  <div class="min-w-0">
+                    <p class="truncate text-base font-semibold text-[var(--shell-ink)]">
+                      {{ authStore.displayName }}
+                    </p>
+                    <p class="text-sm text-[var(--shell-muted)]">{{ authStore.displayRole }}</p>
+                  </div>
+                </div>
+
+                <div class="mt-4 rounded-[1.3rem] border border-[var(--shell-border)] bg-[var(--shell-panel)] p-3">
+                  <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                    Session
+                  </p>
+                  <div class="mt-2 flex items-center justify-between gap-3">
+                    <div>
+                      <p class="text-sm font-semibold text-[var(--shell-ink)]">{{ accessLabel }}</p>
+                      <p class="text-xs leading-5 text-[var(--shell-muted)]">{{ accessDescription }}</p>
+                    </div>
+                    <span
+                      class="rounded-full px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em]"
+                      :class="authStore.isGuest ? 'bg-[rgba(198,134,37,0.18)] text-[rgb(156,102,18)]' : authStore.hasDUTAccess ? 'bg-[rgba(20,88,71,0.18)] text-[var(--shell-accent)]' : 'bg-[rgba(35,83,134,0.14)] text-[rgb(33,87,145)]'"
+                    >
+                      {{ accessBadge }}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[rgba(156,54,41,0.22)] bg-[rgba(163,61,45,0.08)] px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--shell-danger)] transition hover:bg-[rgba(163,61,45,0.14)]"
+                  type="button"
+                  @click="handleLogout"
+                >
+                  <Icon class="text-lg" icon="solar:logout-2-bold-duotone" />
+                  Logout
+                </button>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="border-t border-[var(--shell-border)] px-3 py-3 lg:hidden sm:px-4">
+          <label class="flex items-center gap-3 rounded-full border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-4 py-3 shadow-[var(--shell-shadow-soft)]">
+            <Icon class="text-lg text-[var(--shell-muted)]" icon="solar:magnifer-linear" />
+            <input
+              v-model="searchQuery"
+              class="w-full bg-transparent text-sm text-[var(--shell-ink)] outline-none placeholder:text-[var(--shell-muted)]"
+              placeholder="Search navigation"
+              type="text"
+            />
+          </label>
+        </div>
+
+        <div v-if="appConfigStore.isNavigating" class="default-layout__progress" />
+      </header>
+
+      <div class="flex min-h-0 flex-1">
+        <aside
+          class="fixed inset-y-0 left-0 z-40 flex h-screen flex-col border-r border-[var(--shell-border)] bg-[color:var(--shell-sidebar)]/96 px-3 py-4 shadow-[var(--shell-shadow)] backdrop-blur transition-all duration-200 ease-out lg:sticky lg:top-0 lg:z-20"
+          :class="drawerPanelClasses"
+        >
+          <div class="flex items-center gap-3 rounded-[1.8rem] border border-[var(--shell-border)] bg-[color:var(--shell-panel)] px-3 py-3 shadow-[var(--shell-shadow-soft)]">
+            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.4rem] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]">
+              <Icon class="text-2xl" icon="solar:atom-bold-duotone" />
             </div>
-        </v-main>
+            <div v-if="!rail" class="min-w-0 flex-1">
+              <p class="truncate text-xs font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                Workspace
+              </p>
+              <p class="truncate font-[var(--app-display)] text-xl leading-none text-[var(--shell-ink)]">
+                {{ appName }}
+              </p>
+              <p class="mt-1 truncate text-xs text-[var(--shell-muted)]">v{{ appVersion }}</p>
+            </div>
+          </div>
 
-        <!-- Footer (Fixed at bottom) -->
-        <v-footer app class="default-layout__footer" border>
-            <v-container fluid class="default-layout__footer-container">
-                <v-row align="center" justify="space-between" no-gutters>
-                    <v-col cols="12" sm="auto" class="text-center text-sm-left">
-                        <span class="text-caption">&copy; {{ currentYear }} {{ appName }}. All rights
-                            reserved.</span>
-                    </v-col>
-                    <v-col cols="12" sm="auto" class="text-center text-sm-right">
-                        <span class="text-caption">v{{ appVersion }}</span>
-                    </v-col>
-                </v-row>
-            </v-container>
-        </v-footer>
-    </v-app>
+          <div class="mt-4 flex-1 overflow-y-auto pr-1">
+            <nav class="space-y-4">
+              <section v-for="section in navigationSections" :key="section.id" class="space-y-2">
+                <div v-if="!rail" class="px-2 text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                  {{ section.title }}
+                </div>
+
+                <div class="space-y-1">
+                  <template v-for="item in section.items" :key="item.path || item.title">
+                    <div v-if="item.children" class="space-y-1">
+                      <button
+                        class="flex w-full items-center gap-3 rounded-[1.25rem] border px-3 py-3 text-left transition"
+                        :class="isGroupActive(item)
+                          ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
+                          : 'border-transparent bg-transparent text-[var(--shell-muted)] hover:border-[var(--shell-border)] hover:bg-[var(--shell-panel)] hover:text-[var(--shell-ink)]'"
+                        type="button"
+                        @click="toggleGroup(item)"
+                      >
+                        <Icon class="shrink-0 text-xl" :icon="normalizeIcon(item.icon)" />
+                        <span v-if="!rail" class="min-w-0 flex-1 truncate text-sm font-semibold">
+                          {{ item.title }}
+                        </span>
+                        <Icon
+                          v-if="!rail"
+                          class="shrink-0 text-lg transition"
+                          :class="isGroupOpen(item) ? 'rotate-180' : ''"
+                          icon="solar:alt-arrow-down-linear"
+                        />
+                      </button>
+
+                      <div v-if="!rail && isGroupOpen(item)" class="ml-4 space-y-1 border-l border-[var(--shell-border)] pl-3">
+                        <router-link
+                          v-for="child in item.children"
+                          :key="child.path"
+                          class="flex items-center gap-3 rounded-[1.15rem] border px-3 py-2.5 text-sm transition"
+                          :class="isItemActive(child)
+                            ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
+                            : 'border-transparent text-[var(--shell-muted)] hover:border-[var(--shell-border)] hover:bg-[var(--shell-panel)] hover:text-[var(--shell-ink)]'"
+                          :to="child.path || '/'"
+                          @click="handleNavigationSelection"
+                        >
+                          <Icon class="shrink-0 text-lg" :icon="normalizeIcon(child.icon)" />
+                          <span class="truncate">{{ child.title }}</span>
+                        </router-link>
+                      </div>
+                    </div>
+
+                    <router-link
+                      v-else
+                      class="flex items-center gap-3 rounded-[1.25rem] border px-3 py-3 text-sm font-semibold transition"
+                      :class="isItemActive(item)
+                        ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
+                        : 'border-transparent text-[var(--shell-muted)] hover:border-[var(--shell-border)] hover:bg-[var(--shell-panel)] hover:text-[var(--shell-ink)]'"
+                      :to="item.path || '/'"
+                      @click="handleNavigationSelection"
+                    >
+                      <Icon class="shrink-0 text-xl" :icon="normalizeIcon(item.icon)" />
+                      <span v-if="!rail" class="truncate">{{ item.title }}</span>
+                    </router-link>
+                  </template>
+                </div>
+              </section>
+            </nav>
+          </div>
+
+          <div class="mt-4 space-y-3 border-t border-[var(--shell-border)] pt-4">
+            <div v-if="!rail" class="rounded-[1.4rem] border border-[var(--shell-border)] bg-[var(--shell-panel)] px-3 py-3 shadow-[var(--shell-shadow-soft)]">
+              <div class="flex items-center justify-between gap-3">
+                <div>
+                  <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                    Navigation
+                  </p>
+                  <p class="mt-1 text-sm font-semibold text-[var(--shell-ink)]">
+                    {{ dynamicMenusLoaded ? 'Dynamic access map loaded' : 'Static fallback active' }}
+                  </p>
+                </div>
+                <span
+                  class="h-3 w-3 rounded-full"
+                  :class="dynamicMenusLoaded ? 'bg-[var(--shell-accent)]' : 'bg-[rgb(184,122,40)]'"
+                />
+              </div>
+            </div>
+
+            <button
+              class="hidden w-full items-center justify-center gap-3 rounded-[1.25rem] border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-3 py-3 text-sm font-semibold text-[var(--shell-ink)] shadow-[var(--shell-shadow-soft)] transition hover:-translate-y-px hover:border-[var(--shell-accent)] lg:flex"
+              type="button"
+              @click="rail = !rail"
+            >
+              <Icon
+                class="text-lg"
+                :icon="rail ? 'solar:siderbar-linear' : 'solar:siderbar-bold-duotone'"
+              />
+              <span v-if="!rail">Collapse navigation</span>
+            </button>
+          </div>
+        </aside>
+
+        <div class="flex min-w-0 flex-1 flex-col">
+          <main class="default-layout__content flex-1 overflow-y-auto">
+            <div class="mx-auto min-h-full w-full px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
+              <slot />
+            </div>
+          </main>
+
+          <footer class="border-t border-[var(--shell-border)] bg-[color:var(--shell-panel)]/88 px-3 py-3 backdrop-blur sm:px-4 lg:px-6">
+            <div class="flex flex-col gap-2 text-xs uppercase tracking-[0.18em] text-[var(--shell-muted)] sm:flex-row sm:items-center sm:justify-between">
+              <span>{{ currentYear }} {{ appName }}. All rights reserved.</span>
+              <span>Version {{ appVersion }}</span>
+            </div>
+          </footer>
+        </div>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { useTheme } from 'vuetify'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useMenuAccessStore } from '@/features/admin/stores/menuAccess.store'
-import { useAuthStore } from '@/features/auth/stores'
-import { useDrawerState, useThemeState } from '@/shared/composables'
+import { useAuthStore } from '@/features/auth/stores/auth.store'
+import {
+  THEME_MODE_OPTIONS,
+  THEME_PRESET_OPTIONS,
+  THEME_PRIMARY_OPTIONS,
+  THEME_SURFACE_OPTIONS,
+  resolveThemeMode,
+  useDrawerState,
+  useThemeState,
+} from '@/shared/composables'
 
-const router = useRouter()
-const route = useRoute()
-const authStore = useAuthStore()
-const menuAccessStore = useMenuAccessStore()
-const theme = useTheme()
-const { saveTheme, loadTheme } = useThemeState()
-
-// Drawer state with persistence
-const { drawer, rail } = useDrawerState(true, false)
-
-const searchQuery = ref('')
-
-// Flag to track if dynamic menus are loaded
-const dynamicMenusLoaded = ref(false)
-
-const isDark = computed(() => theme.global.current.value.dark)
-
-// Helper function to check if any child route is active (reactive with route)
-function isChildActive(item: MenuItem): boolean {
-  if (!item.children) return false
-  const currentPath = route.path
-  return item.children.some((child) => child.path === currentPath)
-}
-
-function toggleTheme() {
-  const newTheme = theme.global.current.value.dark ? 'customLightTheme' : 'customDarkTheme'
-  theme.change(newTheme)
-  saveTheme(newTheme)
-}
-
-// Load saved theme on mount
-const savedTheme = loadTheme()
-if (savedTheme) {
-  theme.change(savedTheme)
-}
-
-// Navigation Items - Main Section
 interface MenuItem {
   title: string
   icon: string
@@ -260,7 +430,36 @@ interface MenuItem {
   children?: MenuItem[]
 }
 
-// Static fallback menus (used when DB menus not loaded yet)
+interface NavigationSection {
+  id: string
+  title: string
+  items: MenuItem[]
+}
+
+const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
+const menuAccessStore = useMenuAccessStore()
+const appConfigStore = useAppConfigStore()
+const {
+  applyThemePreferences,
+  cycleThemeMode,
+  loadThemePreferences,
+  setThemePreferences,
+  themePreferences,
+} = useThemeState()
+const { appName, appVersion } = storeToRefs(appConfigStore)
+const { drawer, rail } = useDrawerState(true, false)
+
+const searchQuery = ref('')
+const dynamicMenusLoaded = ref(false)
+const openGroups = ref<string[]>([])
+const currentYear = new Date().getFullYear()
+
+const SUPERADMIN_ONLY_PATHS = new Set(['/admin/menu-access', '/admin/cleanup', '/admin/app-config'])
+const GUEST_MAIN_PATHS = new Set(['/dut/top-products/analysis', '/dut/data-explorer'])
+const ADMIN_MAIN_PATHS = new Set(['/dashboard'])
+
 const staticMainItems: MenuItem[] = [
   { title: 'Dashboard', icon: 'mdi-view-dashboard', path: '/dashboard' },
   {
@@ -271,7 +470,7 @@ const staticMainItems: MenuItem[] = [
       { title: 'Database', icon: 'mdi-circle-small', path: '/dut/top-products/data' },
     ],
   },
-  { title: 'Data Explorer', icon: 'mdi-download-box', path: '/dut/data-explorer' },
+  { title: 'Data Explorer', icon: 'mdi-database-search', path: '/dut/data-explorer' },
 ]
 
 const staticToolsItems: MenuItem[] = [
@@ -285,7 +484,7 @@ const staticToolsItems: MenuItem[] = [
   },
   {
     title: 'Compare Files',
-    icon: 'mdi-compare',
+    icon: 'mdi-file-compare',
     children: [
       { title: 'Compare Files', icon: 'mdi-circle-small', path: '/compare' },
       { title: 'DVT-MC2 Compare', icon: 'mdi-circle-small', path: '/compare/dvt-mc2' },
@@ -301,6 +500,7 @@ const staticSystemItems: MenuItem[] = [
     icon: 'mdi-shield-lock',
     children: [
       { title: 'User Management', icon: 'mdi-circle-small', path: '/admin/users' },
+      { title: 'Roles & Permissions', icon: 'mdi-circle-small', path: '/admin/rbac' },
       { title: 'Menu Access', icon: 'mdi-circle-small', path: '/admin/menu-access' },
       { title: 'App Configuration', icon: 'mdi-circle-small', path: '/admin/app-config' },
     ],
@@ -308,345 +508,366 @@ const staticSystemItems: MenuItem[] = [
   { title: 'System Cleanup', icon: 'mdi-delete-sweep', path: '/admin/cleanup' },
 ]
 
-/** Paths only accessible to superadmin/developer in the System section. */
-const SUPERADMIN_ONLY_PATHS = new Set(['/admin/menu-access', '/admin/cleanup', '/admin/app-config'])
-
-/** Paths a guest can see in the Main section. */
-const GUEST_MAIN_PATHS = new Set(['/dut/top-products/analysis', '/dut/data-explorer'])
-
-/** Paths that require admin+ role in the Main section. */
-const ADMIN_MAIN_PATHS = new Set(['/dashboard'])
-
-// Dynamic menus from database (use static as fallback)
-const mainItems = computed(() => {
-  if (dynamicMenusLoaded.value && menuAccessStore.initialized) {
-    const tree = menuAccessStore.buildMenuTree()
-    return tree.main.length > 0 ? tree.main : staticMainItems
+const shellTheme = computed(() => (isDark.value ? 'dark' : 'light'))
+const isDark = computed(() => theme.global.current.value.dark)
+const resolvedThemeMode = computed(() => resolveThemeMode(themePreferences.value.mode))
+const currentRouteTitle = computed(() => {
+  const title = route.meta.title
+  return typeof title === 'string' && title.trim().length > 0 ? title : appName.value
+})
+const userInitial = computed(() => authStore.displayName.slice(0, 1).toUpperCase())
+const accessLabel = computed(() => {
+  if (authStore.isGuest) return 'Guest access'
+  return authStore.loginType === 'external' ? 'External access' : 'Local access'
+})
+const accessDescription = computed(() => {
+  if (authStore.isGuest) return 'Limited read-only mode for shared visibility.'
+  return authStore.hasDUTAccess ? 'DUT session is connected and available.' : 'Application session only.'
+})
+const accessBadge = computed(() => {
+  if (authStore.isGuest) return 'Guest'
+  return authStore.hasDUTAccess ? 'Connected' : 'Standard'
+})
+const activePresetOption = computed(() =>
+  THEME_PRESET_OPTIONS.find((option) => option.value === themePreferences.value.preset)
+    ?? THEME_PRESET_OPTIONS[0],
+)
+const themeSummaryLabel = computed(() => {
+  if (themePreferences.value.mode === 'system') {
+    return `System ${resolvedThemeMode.value === 'dark' ? 'Dark' : 'Light'}`
   }
-  return staticMainItems
-})
 
-const toolsItems = computed(() => {
-  if (dynamicMenusLoaded.value && menuAccessStore.initialized) {
-    const tree = menuAccessStore.buildMenuTree()
-    return tree.tools.length > 0 ? tree.tools : staticToolsItems
+  return themePreferences.value.mode === 'dark' ? 'Manual Dark' : 'Manual Light'
+})
+const themeSummaryDescription = computed(() => {
+  const presetOption = activePresetOption.value ?? THEME_PRESET_OPTIONS[0]!
+  const primaryOption = THEME_PRIMARY_OPTIONS.find(
+    (option) => option.value === themePreferences.value.primary,
+  )
+  const surfaceOption = THEME_SURFACE_OPTIONS.find(
+    (option) => option.value === themePreferences.value.surface,
+  )
+
+  return `${presetOption.label} preset with ${primaryOption?.label ?? 'Emerald'} accents on ${surfaceOption?.label ?? 'Stone'} surfaces.`
+})
+const themeSummaryIcon = computed(() => {
+  if (themePreferences.value.mode === 'system') return 'solar:monitor-bold-duotone'
+  return resolvedThemeMode.value === 'dark'
+    ? 'solar:moon-stars-bold-duotone'
+    : 'solar:sun-2-bold-duotone'
+})
+const quickThemeToggleLabel = computed(() =>
+  resolvedThemeMode.value === 'dark' ? 'Switch to light mode' : 'Switch to dark mode',
+)
+const drawerPanelClasses = computed(() => {
+  if (!drawer.value) {
+    return 'w-[18rem] -translate-x-full lg:w-0 lg:translate-x-0 lg:overflow-hidden lg:border-transparent lg:px-0 lg:py-0 lg:opacity-0'
   }
-  return staticToolsItems
+  return rail.value
+    ? 'w-[5.5rem] translate-x-0 lg:w-[5.5rem]'
+    : 'w-[18rem] translate-x-0 lg:w-[18rem]'
 })
 
-const systemItems = computed(() => {
-  if (dynamicMenusLoaded.value && menuAccessStore.initialized) {
-    const tree = menuAccessStore.buildMenuTree()
-    return tree.system.length > 0 ? tree.system : staticSystemItems
-  }
-  return staticSystemItems
-})
-
-// Filtered navigation items based on search
-const filteredMainItems = computed(() => {
-  if (!searchQuery.value) return mainItems.value
-  const query = searchQuery.value.toLowerCase()
-  return mainItems.value.filter(
-    (item) =>
-      item.title.toLowerCase().includes(query) ||
-      item.children?.some((child) => child.title.toLowerCase().includes(query)),
-  )
-})
-
-const filteredToolsItems = computed(() => {
-  if (!searchQuery.value) return toolsItems.value
-  const query = searchQuery.value.toLowerCase()
-  return toolsItems.value.filter(
-    (item) =>
-      item.title.toLowerCase().includes(query) ||
-      item.children?.some((child) => child.title.toLowerCase().includes(query)),
-  )
-})
-
-const filteredSystemItems = computed(() => {
-  if (!searchQuery.value) return systemItems.value
-  const query = searchQuery.value.toLowerCase()
-  return systemItems.value.filter(
-    (item) =>
-      item.title.toLowerCase().includes(query) ||
-      item.children?.some((child) => child.title.toLowerCase().includes(query)),
-  )
-})
-
-/**
- * Helper: filter a menu item's children by allowed paths (set-based).
- * Returns a new item with only matching children, or null if none match.
- */
 function filterItemByPaths(item: MenuItem, allowed: Set<string>): MenuItem | null {
   if (item.children) {
-    const filteredChildren = item.children.filter((c) => c.path && allowed.has(c.path))
+    const filteredChildren = item.children.filter((child) => child.path && allowed.has(child.path))
     if (filteredChildren.length === 0) return null
     return { ...item, children: filteredChildren }
   }
-  if (item.path && allowed.has(item.path)) return item
+
+  if (item.path && allowed.has(item.path)) {
+    return item
+  }
+
   return null
 }
 
-/**
- * Helper: remove superadmin-only items from a menu tree.
- * Used by admin role to hide System Cleanup, App Config, Menu Access.
- */
 function filterOutSuperAdminItems(items: MenuItem[]): MenuItem[] {
-  return items.reduce<MenuItem[]>((acc, item) => {
+  return items.reduce<MenuItem[]>((accumulator, item) => {
     if (item.children) {
       const filteredChildren = item.children.filter(
-        (c) => !c.path || !SUPERADMIN_ONLY_PATHS.has(c.path),
+        (child) => !child.path || !SUPERADMIN_ONLY_PATHS.has(child.path),
       )
       if (filteredChildren.length > 0) {
-        acc.push({ ...item, children: filteredChildren })
+        accumulator.push({ ...item, children: filteredChildren })
       }
-    } else if (!item.path || !SUPERADMIN_ONLY_PATHS.has(item.path)) {
-      acc.push(item)
+      return accumulator
     }
-    return acc
+
+    if (!item.path || !SUPERADMIN_ONLY_PATHS.has(item.path)) {
+      accumulator.push(item)
+    }
+
+    return accumulator
   }, [])
 }
 
-/** Main items filtered by role and search query. */
+function filterBySearch(items: MenuItem[]): MenuItem[] {
+  const query = searchQuery.value.trim().toLowerCase()
+  if (!query) return items
+
+  return items.filter(
+    (item) =>
+      item.title.toLowerCase().includes(query) ||
+      item.children?.some((child) => child.title.toLowerCase().includes(query)),
+  )
+}
+
+const menuTree = computed(() => {
+  if (dynamicMenusLoaded.value && menuAccessStore.initialized) {
+    const tree = menuAccessStore.buildMenuTree()
+    return {
+      main: tree.main.length > 0 ? tree.main : staticMainItems,
+      tools: tree.tools.length > 0 ? tree.tools : staticToolsItems,
+      system: tree.system.length > 0 ? tree.system : staticSystemItems,
+    }
+  }
+
+  return {
+    main: staticMainItems,
+    tools: staticToolsItems,
+    system: staticSystemItems,
+  }
+})
+
 const visibleMainItems = computed(() => {
-  let items = filteredMainItems.value
+  let items = filterBySearch(menuTree.value.main)
   if (authStore.isGuest) {
-    // Guest: only Top Products Analysis + Data Explorer
-    items = items.reduce<MenuItem[]>((acc, item) => {
+    items = items.reduce<MenuItem[]>((accumulator, item) => {
       const filtered = filterItemByPaths(item, GUEST_MAIN_PATHS)
-      if (filtered) acc.push(filtered)
-      return acc
+      if (filtered) accumulator.push(filtered)
+      return accumulator
     }, [])
   } else if (!authStore.isAdmin) {
-    // Regular user: hide admin-only main items (Dashboard)
     items = items.filter((item) => !item.path || !ADMIN_MAIN_PATHS.has(item.path))
   }
   return items
 })
 
-/** System items filtered by role: admin sees only User Management + Access Control; superadmin+ sees all. */
-const visibleSystemItems = computed(() => {
-  let items = filteredSystemItems.value
-  if (authStore.isAdmin && !authStore.isSuperAdmin) {
-    items = filterOutSuperAdminItems(items)
-  }
-  return items
+const visibleToolsItems = computed(() => {
+  if (!authStore.isUser) return []
+  return filterBySearch(menuTree.value.tools)
 })
+
+const visibleSystemItems = computed(() => {
+  if (!authStore.isAdmin) return []
+  const searchedItems = filterBySearch(menuTree.value.system)
+  if (authStore.isAdmin && !authStore.isSuperAdmin) {
+    return filterOutSuperAdminItems(searchedItems)
+  }
+  return searchedItems
+})
+
+const navigationSections = computed<NavigationSection[]>(() => {
+  const sections: NavigationSection[] = []
+
+  if (visibleMainItems.value.length > 0) {
+    sections.push({ id: 'main', title: 'Main', items: visibleMainItems.value })
+  }
+
+  if (visibleToolsItems.value.length > 0) {
+    sections.push({ id: 'tools', title: 'Tools', items: visibleToolsItems.value })
+  }
+
+  if (visibleSystemItems.value.length > 0) {
+    sections.push({ id: 'system', title: 'System', items: visibleSystemItems.value })
+  }
+
+  return sections
+})
+
+function groupKey(item: MenuItem) {
+  return item.path || item.title
+}
+
+function isItemActive(item: MenuItem) {
+  return Boolean(item.path && item.path === route.path)
+}
+
+function isGroupActive(item: MenuItem) {
+  if (isItemActive(item)) return true
+  return Boolean(item.children?.some((child) => child.path === route.path))
+}
+
+function isGroupOpen(item: MenuItem) {
+  if (searchQuery.value.trim().length > 0) return true
+  if (isGroupActive(item)) return true
+  return openGroups.value.includes(groupKey(item))
+}
+
+function toggleGroup(item: MenuItem) {
+  const key = groupKey(item)
+  if (openGroups.value.includes(key)) {
+    openGroups.value = openGroups.value.filter((entry) => entry !== key)
+    return
+  }
+  openGroups.value = [...openGroups.value, key]
+}
+
+function normalizeIcon(icon: string | undefined) {
+  if (!icon) return 'solar:widget-5-bold-duotone'
+  if (icon.startsWith('mdi:')) return icon
+  if (icon.startsWith('mdi-')) return icon.replace('mdi-', 'mdi:')
+  return icon
+}
+
+function handleNavigationSelection() {
+  if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+    drawer.value = false
+  }
+}
+
+function applyShellTheme() {
+  document.documentElement.dataset.shellTheme = shellTheme.value
+}
+
+function toggleTheme() {
+  cycleThemeMode()
+}
+
+function setThemePreference(nextPreferences: Partial<typeof themePreferences.value>) {
+  setThemePreferences(nextPreferences)
+}
+
+function syncThemeState() {
+  const storedPreferences = loadThemePreferences()
+  applyThemePreferences(storedPreferences, { persist: false })
+}
+
+async function syncMenus(forceRefresh = false) {
+  if (!authStore.isAuthenticated) {
+    menuAccessStore.clearCache()
+    dynamicMenusLoaded.value = false
+    return
+  }
+
+  try {
+    await Promise.race([
+      menuAccessStore.fetchMenus(authStore.isGuest, forceRefresh),
+      new Promise<void>((resolve) => setTimeout(resolve, 3000)),
+    ])
+  } catch {
+    // Static fallback remains active on errors.
+  }
+
+  dynamicMenusLoaded.value = menuAccessStore.initialized
+}
 
 function handleLogout() {
   authStore.logout()
   menuAccessStore.clearCache()
-  router.push('/login')
+  dynamicMenusLoaded.value = false
+  void router.push('/login')
 }
 
-const currentYear = new Date().getFullYear()
-const appConfigStore = useAppConfigStore()
-const { appName, appVersion } = storeToRefs(appConfigStore)
+let systemThemeMediaQuery: MediaQueryList | null = null
 
-// Fetch user's accessible menus on mount (non-blocking, uses cache)
+function handleSystemThemeChange() {
+  if (themePreferences.value.mode !== 'system') return
+  applyThemePreferences(themePreferences.value, { persist: false })
+}
+
 onMounted(() => {
-  // Don't block rendering - fetch menus in background with timeout
-  // Use Promise.race to ensure quick fallback to static menus
-  const fetchWithTimeout = Promise.race([
-    menuAccessStore.fetchMenus(authStore.isGuest),
-    new Promise<void>((resolve) => setTimeout(() => resolve(), 3000)), // 3 second timeout
-  ])
-
-  fetchWithTimeout
-    .then(() => {
-      if (menuAccessStore.initialized) {
-        dynamicMenusLoaded.value = true
-      }
-    })
-    .catch(() => {
-      // Static menus will be used as fallback - fail silently
-    })
+  syncThemeState()
+  applyShellTheme()
+  if (typeof window !== 'undefined') {
+    systemThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
+    systemThemeMediaQuery.addEventListener('change', handleSystemThemeChange)
+  }
+  void syncMenus()
 })
 
-// Watch for auth changes to refresh menus
+onBeforeUnmount(() => {
+  systemThemeMediaQuery?.removeEventListener('change', handleSystemThemeChange)
+})
+
+watch(isDark, () => {
+  applyShellTheme()
+}, { immediate: true })
+
 watch(
-  () => authStore.isAuthenticated,
-  async (isAuth) => {
-    if (isAuth) {
-      menuAccessStore.fetchMenus(authStore.isGuest)
-      dynamicMenusLoaded.value = true
-    } else {
+  () => route.path,
+  () => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      drawer.value = false
+    }
+  },
+)
+
+watch(
+  [() => authStore.isAuthenticated, () => authStore.isGuest],
+  ([isAuthenticated, isGuest], [wasAuthenticated, wasGuest]) => {
+    if (!isAuthenticated) {
       menuAccessStore.clearCache()
       dynamicMenusLoaded.value = false
+      return
     }
+
+    const forceRefresh = !wasAuthenticated || wasGuest !== isGuest
+    void syncMenus(forceRefresh)
   },
 )
 </script>
 
 <style scoped>
-/* ====== MAIN LAYOUT ====== */
-/* 
- * CRITICAL: v-main with app prop gets automatic height calculation from Vuetify
- * We need to ensure content respects this height and scrolls properly
- */
-.default-layout__main {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    /* Respect Vuetify's calculated height */
+.default-layout {
+  --shell-bg: var(--app-shell-bg, var(--app-canvas));
+  --shell-header: var(--app-shell-header, var(--app-panel-strong));
+  --shell-sidebar: var(--app-shell-sidebar, var(--app-panel));
+  --shell-panel: var(--app-panel);
+  --shell-panel-strong: var(--app-panel-strong);
+  --shell-ink: var(--app-ink);
+  --shell-muted: var(--app-muted);
+  --shell-border: var(--app-border);
+  --shell-accent: var(--app-accent);
+  --shell-accent-soft: var(--app-accent-soft);
+  --shell-danger: var(--app-danger);
+  --shell-shadow: var(--app-shadow);
+  --shell-shadow-soft: var(--app-shadow-soft);
 }
 
-/* Content area - must have defined height to enable scrolling */
 .default-layout__content {
-    flex: 1 1 0;
-    /* CRITICAL: Use 0 as flex-basis to respect parent height */
-    min-height: 0;
-    /* CRITICAL: Allow flex item to shrink below content size */
-    padding: 24px;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-/* Footer - fixed at bottom with app prop */
-.default-layout__footer {
-    flex-shrink: 0;
-    height: 48px;
-    min-height: 48px;
-    max-height: 48px;
-    border-top: 1px solid rgba(0, 0, 0, 0.12);
-    background-color: rgb(var(--v-theme-surface));
-}
-
-/* Footer container - properly sized */
-:deep(.default-layout__footer-container) {
-    height: 100%;
-    padding: 0 16px !important;
-}
-
-:deep(.default-layout__footer .v-row) {
-    height: 100%;
-}
-
-:deep(.default-layout__footer .v-col) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-/* ====== DRAWER STYLING ====== */
-/* Drawer content layout */
-:deep(.v-navigation-drawer__content) {
-    display: flex;
-    flex-direction: column;
-    height: 100%;
-    overflow: hidden;
-}
-
-/* Make menu list scrollable */
-:deep(.v-list.flex-grow-1) {
-    flex: 1;
-    overflow-y: auto;
-    overflow-x: hidden;
-}
-
-/* Center menu icon in rail mode */
-:deep(.v-navigation-drawer--rail .v-list-item__prepend) {
-    justify-content: center;
-}
-
-/* Drawer footer styling */
-:deep(.v-navigation-drawer .v-navigation-drawer__append) {
-    flex-shrink: 0;
-    padding: 0;
-}
-
-.default-layout__drawer-footer {
-    background-color: rgb(var(--v-theme-surface));
-}
-
-.default-layout__drawer-footer-list {
-    padding: 0;
-}
-
-.default-layout__drawer-footer-toggle {
-    margin: 0;
-}
-
-/* Hover expand animation */
-:deep(.v-navigation-drawer--rail.v-navigation-drawer--expand-on-hover:hover) {
-    width: 256px !important;
-}
-
-/* ====== SCROLLBAR STYLING ====== */
-/* Content scrollbar - Thin with no arrows */
-.default-layout__content {
-    scrollbar-width: thin;
-    scrollbar-color: #c1c1c1 #f1f1f1;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 120, 0.45) transparent;
 }
 
 .default-layout__content::-webkit-scrollbar {
-    width: 7px;
-    height: 7px;
-    background-color: #f1f1f1;
-}
-
-.default-layout__content::-webkit-scrollbar-track {
-    -webkit-box-shadow: inset 0 0 6px rgba(83, 83, 83, 0.07);
-    background-color: #f1f1f1;
+  width: 8px;
+  height: 8px;
 }
 
 .default-layout__content::-webkit-scrollbar-thumb {
-    background-color: #c1c1c1;
-    border-radius: 4px;
+  border-radius: 999px;
+  background: rgba(120, 120, 120, 0.45);
 }
 
-.default-layout__content::-webkit-scrollbar-thumb:hover {
-    background-color: #a8a8a8 !important;
+.default-layout__progress {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+  background: rgba(20, 88, 71, 0.12);
 }
 
-/* Remove scrollbar arrows */
-.default-layout__content::-webkit-scrollbar-button {
-    width: 0;
-    height: 0;
+.default-layout__progress::after {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 -35%;
+  width: 35%;
+  background: linear-gradient(90deg, transparent, var(--shell-accent), transparent);
+  animation: default-layout-progress 1.1s linear infinite;
 }
 
-/* Drawer scrollbar */
-:deep(.v-navigation-drawer__content) {
-    scrollbar-width: thin;
-    scrollbar-color: #c1c1c1 #f1f1f1;
+details > summary::-webkit-details-marker {
+  display: none;
 }
 
-:deep(.v-navigation-drawer__content)::-webkit-scrollbar {
-    width: 7px;
-    height: 7px;
-    background-color: #f1f1f1;
-}
+@keyframes default-layout-progress {
+  from {
+    transform: translateX(0);
+  }
 
-:deep(.v-navigation-drawer__content)::-webkit-scrollbar-track {
-    -webkit-box-shadow: inset 0 0 6px rgba(83, 83, 83, 0.07);
-    background-color: #f1f1f1;
-}
-
-:deep(.v-navigation-drawer__content)::-webkit-scrollbar-thumb {
-    background-color: #c1c1c1;
-    border-radius: 4px;
-}
-
-:deep(.v-navigation-drawer__content)::-webkit-scrollbar-thumb:hover {
-    background-color: #a8a8a8 !important;
-}
-
-/* Remove drawer scrollbar arrows */
-:deep(.v-navigation-drawer__content)::-webkit-scrollbar-button {
-    width: 0;
-    height: 0;
-}
-
-/* ====== RESPONSIVE ====== */
-@media (max-width: 960px) {
-    .default-layout__content {
-        padding: 16px;
-    }
-}
-
-@media (max-width: 600px) {
-    .default-layout__content {
-        padding: 12px;
-    }
+  to {
+    transform: translateX(400%);
+  }
 }
 </style>

@@ -1,127 +1,258 @@
 <template>
   <DefaultLayout>
-    <!-- Header -->
-    <div class="d-flex justify-space-between align-center mb-6">
-      <div>
-        <h1 class="text-h4 mb-2">
-          <v-icon color="primary" class="mr-2">mdi-trophy</v-icon>
-          Top Products Analysis
-        </h1>
-        <p class="text-medium-emphasis">
-          Analyze top performing products by station time window or by DUT ISN across multiple stations.
-        </p>
-      </div>
-
-      <!-- Export Button (visible when results exist) -->
-      <v-btn v-if="hasResults" color="success" prepend-icon="mdi-download" @click="handleExport">
-        Export Results
-      </v-btn>
-    </div>
-
-    <!-- Authentication Warning -->
-    <!-- <v-alert v-if="!hasDUTAccess" type="warning" variant="tonal" class="mb-4">
-      <template #prepend>
-        <v-icon>mdi-alert</v-icon>
-      </template>
-      <div>
-        <div class="font-weight-medium">External Login Required</div>
-        <div class="text-caption">
-          This feature requires external login access.
+    <div class="top-products-header">
+      <div class="top-products-header__copy">
+        <div class="top-products-header__icon">
+          <Icon icon="mdi:trophy-outline" />
+        </div>
+        <div>
+          <p class="top-products-header__eyebrow">DUT Workspace</p>
+          <h1>Top Products Analysis</h1>
+          <p>
+            Analyze top-performing products through iPLAS data, DUT ISN lookups, and upload-log
+            driven workflows from one shared route shell.
+          </p>
         </div>
       </div>
-    </v-alert> -->
 
-    <!-- Tab Navigation -->
-    <v-tabs v-model="activeTab" class="mb-6">
-      <!-- <v-tab value="station">
-        <v-icon class="mr-2">mdi-access-point</v-icon>
-        By Station
-      </v-tab> -->
-      <v-tab value="iplas-data">
-        <v-icon class="mr-2">mdi-database-search</v-icon>
-        By iPLAS Data
-      </v-tab>
-      <v-tab value="dut-isn">
-        <v-icon class="mr-2">mdi-barcode-scan</v-icon>
-        By DUT ISN
-      </v-tab>
-      <v-tab value="upload-log">
-        <v-icon class="mr-2">mdi-upload</v-icon>
-        By Upload Log
-      </v-tab>
-    </v-tabs>
+      <button v-if="hasResults" type="button" class="top-products-button top-products-button--primary"
+        @click="handleExport">
+        <Icon icon="mdi:download-outline" />
+        <span>Export Results</span>
+      </button>
+    </div>
 
-    <!-- Error Alert (shared across tabs) -->
-    <v-alert v-if="error" type="error" variant="tonal" class="mb-4" closable @click:close="clearError">
-      {{ error }}
-    </v-alert>
+    <div v-if="error" class="top-products-notice top-products-notice--error">
+      <div>
+        <strong>Top products error</strong>
+        <p>{{ error }}</p>
+      </div>
+      <button type="button" @click="clearError">Dismiss</button>
+    </div>
 
-    <!-- Tab Content -->
-    <v-window v-model="activeTab">
-      <!-- Tab 1: By iPLAS Data -->
-      <v-window-item value="iplas-data">
-        <TopProductsByIplasDataTab />
-      </v-window-item>
+    <section class="top-products-shell">
+      <AppTabs v-model="activeTab" :items="tabItems" scrollable>
+        <template #panel-iplas-data>
+          <section class="top-products-pane">
+            <TopProductsByIplasDataTab v-if="activeTab === 'iplas-data'" />
+          </section>
+        </template>
 
-      <!-- Tab 2: By DUT ISN -->
-      <v-window-item value="dut-isn">
-        <TopProductsByISNTab />
-      </v-window-item>
+        <template #panel-dut-isn>
+          <section class="top-products-pane">
+            <TopProductsByISNTab v-if="activeTab === 'dut-isn'" />
+          </section>
+        </template>
 
-      <!-- Tab 3: By Upload Log -->
-      <v-window-item value="upload-log">
-        <TopProductsByUploadLogTab />
-      </v-window-item>
+        <template #panel-upload-log>
+          <section class="top-products-pane">
+            <TopProductsByUploadLogTab v-if="activeTab === 'upload-log'" />
+          </section>
+        </template>
+      </AppTabs>
 
-      <!-- Hidden legacy tab -->
-      <v-window-item value="station">
-        <TopProductsByStationTab @export="handleExport" />
-      </v-window-item>
-    </v-window>
+    </section>
   </DefaultLayout>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from 'vue'
-import TopProductsByUploadLogTab from '@/features/dut-logs/components/TopProductsByUploadLogTab.vue'
-// import { useRouter } from 'vue-router'
-// import { useAuthStore } from '@/features/auth/stores'
+import { Icon } from '@iconify/vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
+import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
-import TopProductsByIplasDataTab from '../components/TopProductsByIplasDataTab.vue'
-import TopProductsByISNTab from '../components/TopProductsByISNTab.vue'
-import TopProductsByStationTab from '../components/TopProductsByStationTab.vue'
+import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 
-// Stores
-// const router = useRouter()
-// const authStore = useAuthStore()
+const TopProductsByIplasDataTab = defineAsyncComponent(
+  () => import('../components/TopProductsByIplasDataTab.vue'),
+)
+const TopProductsByISNTab = defineAsyncComponent(() => import('../components/TopProductsByISNTab.vue'))
+const TopProductsByUploadLogTab = defineAsyncComponent(
+  () => import('@/features/dut-logs/components/TopProductsByUploadLogTab.vue'),
+)
 
-// Tab State - persisted in URL
-const activeTab = useTabPersistence('tab', 'iplas-data')
-
-// Shared State (minimal - most moved to tab components)
+const activeTab = useTabPersistence<'iplas-data' | 'dut-isn' | 'upload-log'>('tab', 'iplas-data')
 const error = ref<string>('')
 
-// Computed
-// const hasDUTAccess = computed(() => authStore.hasDUTAccess)
+const tabItems = [
+  {
+    value: 'iplas-data',
+    label: 'By iPLAS Data',
+    icon: 'mdi:database-search-outline',
+  },
+  {
+    value: 'dut-isn',
+    label: 'By DUT ISN',
+    icon: 'mdi:barcode-scan',
+  },
+  {
+    value: 'upload-log',
+    label: 'By Upload Log',
+    icon: 'mdi:upload-outline',
+  },
+]
+
 const hasResults = computed(() => false) // TODO: Get from active tab
 
-// Methods
+watch(
+  activeTab,
+  (value) => {
+    if (value === 'iplas-data' || value === 'dut-isn' || value === 'upload-log') {
+      return
+    }
+
+    activeTab.value = 'iplas-data'
+  },
+  { immediate: true },
+)
+
 function handleExport() {
-  // TODO: Implement export based on active tab
   console.log('Export requested for tab:', activeTab.value)
 }
 
 function clearError() {
   error.value = ''
 }
-
-// function goToLogin() {
-//   router.push({ path: '/login', query: { redirect: '/dut/top-products' } })
-// }
 </script>
 
 <style scoped>
-.gap-2 {
+.top-products-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.top-products-header__copy {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.top-products-header__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, #0f766e, #155e75);
+  color: white;
+  font-size: 1.45rem;
+  box-shadow: 0 18px 32px rgb(15 118 110 / 0.22);
+}
+
+.top-products-header__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #0f766e;
+  font-weight: 700;
+}
+
+.top-products-header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 2.5vw, 2.35rem);
+  color: #0f172a;
+}
+
+.top-products-header p:last-child {
+  max-width: 48rem;
+  margin: 0.45rem 0 0;
+  color: #475569;
+  line-height: 1.6;
+}
+
+.top-products-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.75rem 1rem;
+  border-radius: 0.9rem;
+  border: 1px solid transparent;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.top-products-button:hover {
+  transform: translateY(-1px);
+}
+
+.top-products-button--primary {
+  background: linear-gradient(135deg, #0f766e, #155e75);
+  color: white;
+  box-shadow: 0 18px 32px rgb(15 118 110 / 0.22);
+}
+
+.top-products-notice {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+  padding: 1rem 1.1rem;
+  border-radius: 1rem;
+  border: 1px solid transparent;
+  margin-bottom: 1rem;
+}
+
+.top-products-notice p {
+  margin: 0.25rem 0 0;
+  line-height: 1.55;
+}
+
+.top-products-notice button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.top-products-notice--error {
+  background: rgb(239 68 68 / 0.08);
+  border-color: rgb(239 68 68 / 0.22);
+  color: #991b1b;
+}
+
+.top-products-notice--warning {
+  background: rgb(245 158 11 / 0.1);
+  border-color: rgb(245 158 11 / 0.28);
+  color: #92400e;
+}
+
+.top-products-shell {
+  border: 1px solid #dbe4ee;
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(circle at top left, rgb(15 118 110 / 0.08), transparent 28%),
+    #fff;
+  box-shadow: 0 26px 60px rgb(15 23 42 / 0.08);
+  overflow: hidden;
+}
+
+.top-products-pane {
+  padding: 1.25rem;
+}
+
+@media (max-width: 720px) {
+
+  .top-products-header,
+  .top-products-header__copy {
+    flex-direction: column;
+  }
+
+  .top-products-button {
+    width: 100%;
+  }
+
+  .top-products-pane {
+    padding: 1rem;
+  }
 }
 </style>

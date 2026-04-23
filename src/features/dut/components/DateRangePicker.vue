@@ -1,98 +1,69 @@
 <template>
-    <v-card>
-        <v-card-title class="d-flex align-center">
-            <v-icon start>mdi-calendar-range</v-icon>
-            Date Range Selection
-        </v-card-title>
+  <AppPanel
+    eyebrow="Time Window"
+    title="Date Range Selection"
+    :description="`Choose a bounded range of up to ${maxDays} day${maxDays !== 1 ? 's' : ''} for the current query.`"
+    tone="cool"
+  >
+    <div class="date-range-picker__preset-row">
+      <button type="button" class="date-range-picker__button date-range-picker__button--ghost" @click="setToday">
+        <Icon icon="mdi:calendar-today" />
+        <span>Today</span>
+      </button>
+      <button type="button" class="date-range-picker__button date-range-picker__button--ghost" @click="setLast7Days">
+        <Icon icon="mdi:calendar-week" />
+        <span>Last 7 Days</span>
+      </button>
+      <button type="button" class="date-range-picker__button date-range-picker__button--ghost" @click="setLast30Days">
+        <Icon icon="mdi:calendar-month" />
+        <span>Last 30 Days</span>
+      </button>
+      <button v-if="startDate || endDate" type="button" class="date-range-picker__button date-range-picker__button--ghost" @click="clearDates">
+        <Icon icon="mdi:close" />
+        <span>Clear</span>
+      </button>
+    </div>
 
-        <v-card-text>
-            <!-- Preset Buttons -->
-            <div class="d-flex gap-2 mb-4">
-                <v-btn size="small" variant="tonal" prepend-icon="mdi-calendar-today" @click="setToday">
-                    Today
-                </v-btn>
-                <v-btn size="small" variant="tonal" prepend-icon="mdi-calendar-week" @click="setLast7Days">
-                    Last 7 Days
-                </v-btn>
-                <v-btn size="small" variant="tonal" prepend-icon="mdi-calendar-month" @click="setLast30Days">
-                    Last 30 Days
-                </v-btn>
-                <v-btn v-if="startDate || endDate" size="small" variant="text" prepend-icon="mdi-close"
-                    @click="clearDates">
-                    Clear
-                </v-btn>
-            </div>
+    <div class="date-range-picker__grid">
+      <label class="date-range-picker__field">
+        <span>Start Date</span>
+        <input v-model="startDate" type="date" :max="maxStartDate" @input="handleStartDateChange">
+        <small v-if="startDateError" class="date-range-picker__error">{{ startDateError }}</small>
+      </label>
 
-            <v-row>
-                <!-- Start Date -->
-                <v-col cols="12" md="6">
-                    <v-text-field v-model="startDate" label="Start Date" type="date" variant="outlined"
-                        density="comfortable" prepend-inner-icon="mdi-calendar-start" :max="maxStartDate"
-                        :error-messages="startDateError" @update:model-value="handleStartDateChange" />
-                </v-col>
+      <label class="date-range-picker__field">
+        <span>End Date</span>
+        <input v-model="endDate" type="date" :min="minEndDate" :max="today" @input="handleEndDateChange">
+        <small v-if="endDateError" class="date-range-picker__error">{{ endDateError }}</small>
+      </label>
+    </div>
 
-                <!-- End Date -->
-                <v-col cols="12" md="6">
-                    <v-text-field v-model="endDate" label="End Date" type="date" variant="outlined"
-                        density="comfortable" prepend-inner-icon="mdi-calendar-end" :min="minEndDate" :max="today"
-                        :error-messages="endDateError" @update:model-value="handleEndDateChange" />
-                </v-col>
-            </v-row>
+    <section v-if="isValidRange" class="date-range-picker__notice date-range-picker__notice--success">
+      <strong>{{ rangeDays }} day{{ rangeDays !== 1 ? 's' : '' }}</strong>
+      <span>{{ formatDate(startDate) }} to {{ formatDate(endDate) }}</span>
+    </section>
 
-            <!-- Date Range Info -->
-            <v-alert v-if="isValidRange" type="success" variant="tonal" density="compact" class="mt-2">
-                <template #prepend>
-                    <v-icon>mdi-check-circle</v-icon>
-                </template>
-                <div class="text-caption">
-                    <strong>{{ rangeDays }} day{{ rangeDays !== 1 ? 's' : '' }}</strong> selected
-                    ({{ formatDate(startDate) }} to {{ formatDate(endDate) }})
-                </div>
-            </v-alert>
+    <section v-else-if="showValidation && (!startDate || !endDate)" class="date-range-picker__notice date-range-picker__notice--warning">
+      Please select both start and end dates.
+    </section>
 
-            <!-- Validation Alert -->
-            <v-alert v-else-if="showValidation && (!startDate || !endDate)" type="warning" variant="tonal"
-                density="compact" class="mt-2">
-                <template #prepend>
-                    <v-icon>mdi-alert</v-icon>
-                </template>
-                <div class="text-caption">
-                    Please select both start and end dates
-                </div>
-            </v-alert>
+    <section v-else-if="rangeExceeded" class="date-range-picker__notice date-range-picker__notice--danger">
+      Date range cannot exceed {{ maxDays }} days. Current range: {{ rangeDays }} days.
+    </section>
 
-            <!-- Range Exceeded Warning -->
-            <v-alert v-else-if="rangeExceeded" type="error" variant="tonal" density="compact" class="mt-2">
-                <template #prepend>
-                    <v-icon>mdi-alert-circle</v-icon>
-                </template>
-                <div class="text-caption">
-                    Date range cannot exceed {{ maxDays }} days. Current range: {{ rangeDays }} days.
-                </div>
-            </v-alert>
+    <section v-else-if="startDate && endDate && !isValidRange" class="date-range-picker__notice date-range-picker__notice--danger">
+      End date must be after start date.
+    </section>
 
-            <!-- Invalid Range Warning -->
-            <v-alert v-else-if="startDate && endDate && !isValidRange" type="error" variant="tonal" density="compact"
-                class="mt-2">
-                <template #prepend>
-                    <v-icon>mdi-alert-circle</v-icon>
-                </template>
-                <div class="text-caption">
-                    End date must be after start date
-                </div>
-            </v-alert>
-
-            <!-- Hint -->
-            <div class="text-caption text-medium-emphasis mt-2">
-                Maximum date range: {{ maxDays }} days
-            </div>
-        </v-card-text>
-    </v-card>
+    <p class="date-range-picker__hint">Maximum date range: {{ maxDays }} days</p>
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import dayjs from 'dayjs'
 import { computed, ref, watch } from 'vue'
+import { AppPanel } from '@/shared'
 
 // Props
 interface Props {
@@ -272,7 +243,107 @@ watch(
 </script>
 
 <style scoped>
-.gap-2 {
-    gap: 0.5rem;
+.date-range-picker__preset-row,
+.date-range-picker__grid,
+.date-range-picker__button {
+  display: flex;
+}
+
+.date-range-picker__preset-row {
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-bottom: 1rem;
+}
+
+.date-range-picker__grid {
+  gap: 1rem;
+}
+
+.date-range-picker__field {
+  display: grid;
+  gap: 0.45rem;
+  flex: 1;
+}
+
+.date-range-picker__field span,
+.date-range-picker__hint {
+  color: var(--app-muted);
+}
+
+.date-range-picker__field span {
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.date-range-picker__field input {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: rgba(255, 251, 247, 0.92);
+  color: var(--app-ink);
+  padding: 0.82rem 0.95rem;
+}
+
+.date-range-picker__field input:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 4px var(--app-ring);
+}
+
+.date-range-picker__button {
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: rgba(255, 251, 247, 0.92);
+  color: #4f5d6d;
+  cursor: pointer;
+  padding: 0.72rem 0.95rem;
+  font-weight: 700;
+}
+
+.date-range-picker__button:hover {
+  transform: translateY(-1px);
+}
+
+.date-range-picker__notice {
+  border-radius: 1rem;
+  padding: 0.85rem 1rem;
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.9rem;
+}
+
+.date-range-picker__notice--success {
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.date-range-picker__notice--warning {
+  background: rgba(184, 118, 38, 0.16);
+  color: #8f5314;
+}
+
+.date-range-picker__notice--danger {
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
+.date-range-picker__error {
+  color: #8f2020;
+}
+
+.date-range-picker__hint {
+  margin: 0.9rem 0 0;
+  font-size: 0.82rem;
+}
+
+@media (max-width: 720px) {
+  .date-range-picker__grid {
+    flex-direction: column;
+  }
 }
 </style>

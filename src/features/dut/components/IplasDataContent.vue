@@ -1,450 +1,575 @@
 <template>
-  <div>
-    <!-- Sub-tabs for different search modes -->
-    <v-tabs v-model="searchMode" color="secondary" class="mb-4" density="compact">
-      <v-tab value="station">
-        <v-icon start>mdi-router-wireless</v-icon>
-        Station Search
-      </v-tab>
-      <v-tab value="isn">
-        <v-icon start>mdi-barcode-scan</v-icon>
-        ISN Search
-      </v-tab>
-    </v-tabs>
-
-    <v-window v-model="searchMode">
-      <!-- Station Search Mode -->
-      <v-window-item value="station" eager>
-        <!-- Error Alert -->
-        <v-alert v-if="error" type="error" class="mb-4" closable @click:close="error = null">
-          {{ error }}
-        </v-alert>
-
-        <!-- Combined Data Selection Card -->
-        <v-card elevation="2" class="mb-4">
-          <v-card-title class="d-flex align-center justify-space-between bg-primary">
-            <div class="d-flex align-center">
-              <v-icon class="mr-2">mdi-filter-variant</v-icon>
-              Data Selection
+  <div class="iplas-content-shell">
+    <AppTabs v-model="searchMode" :items="searchModeItems">
+      <template #panel-station>
+        <section class="iplas-content-pane">
+          <div v-if="error" class="iplas-notice iplas-notice--error">
+            <div>
+              <strong>iPLAS search error</strong>
+              <p>{{ error }}</p>
             </div>
-            <!-- UPDATED: Added iPLAS Settings button and Refresh button -->
-            <div class="d-flex gap-2">
-              <v-btn color="white" variant="outlined" size="small" prepend-icon="mdi-refresh" :loading="loading"
-                @click="handleRefresh">
-                Refresh
-              </v-btn>
+            <button type="button" @click="error = null">Dismiss</button>
+          </div>
+
+          <AppPanel
+            eyebrow="Selection Controls"
+            title="Station Search"
+            description="Choose the site, project, time range, and configured stations before pulling iPLAS test data. The heavier result surfaces remain on the legacy internals for now."
+            tone="cool"
+          >
+            <div class="iplas-selection-shell">
+              <div class="iplas-selection-shell__toolbar">
+                <div class="iplas-selection-shell__summary">
+                  <span class="iplas-pill">{{ selectedStations.length }} configured station{{ selectedStations.length === 1 ? '' : 's' }}</span>
+                  <span class="iplas-pill iplas-pill--cool">{{ totalDeviceCount }} device candidate{{ totalDeviceCount === 1 ? '' : 's' }}</span>
+                  <span class="iplas-pill iplas-pill--warm">{{ useIndexedDbMode ? 'Streaming to disk' : 'In-memory search' }}</span>
+                </div>
+                <button
+                  type="button"
+                  class="iplas-button iplas-button--ghost"
+                  :disabled="loading"
+                  @click="handleRefresh"
+                >
+                  <Icon :icon="loading ? 'mdi:loading' : 'mdi:refresh'" :class="{ 'iplas-spin': loading }" />
+                  <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
+                </button>
+              </div>
+
+              <div class="iplas-control-grid iplas-control-grid--two">
+                <label class="iplas-field">
+                  <span>Site</span>
+                  <select v-model="selectedSite" :disabled="loading" @change="handleSiteChange">
+                    <option :value="null">Select a site</option>
+                    <option v-for="site in uniqueSites" :key="site" :value="site">{{ site }}</option>
+                  </select>
+                </label>
+
+                <label class="iplas-field">
+                  <span>Project</span>
+                  <select
+                    v-model="selectedProject"
+                    :disabled="!selectedSite || loadingStations"
+                    @change="handleProjectChange"
+                  >
+                    <option :value="null">Select a project</option>
+                    <option v-for="project in availableProjects" :key="project" :value="project">{{ project }}</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="iplas-control-grid iplas-control-grid--three">
+                <label class="iplas-field">
+                  <span>Date Range</span>
+                  <select v-model="dateRangePreset" @change="applyDateRangePreset(dateRangePreset)">
+                    <option v-for="preset in dateRangePresets" :key="preset.value" :value="preset.value">{{ preset.title }}</option>
+                  </select>
+                </label>
+
+                <label class="iplas-field">
+                  <span>Start Time</span>
+                  <input v-model="startTime" type="datetime-local">
+                </label>
+
+                <label class="iplas-field">
+                  <span>End Time</span>
+                  <input v-model="endTime" type="datetime-local">
+                </label>
+              </div>
+
+              <div class="iplas-selection-actions">
+                <button
+                  type="button"
+                  class="iplas-button iplas-button--secondary"
+                  :disabled="!selectedProject || loadingStations"
+                  @click="openStationSelectionDialog"
+                >
+                  <Icon icon="mdi:tune-variant" />
+                  <span>Configure Stations</span>
+                  <strong v-if="selectedStations.length > 0">{{ selectedStations.length }}</strong>
+                </button>
+                <p>
+                  Station and device selection still uses the existing dialog so this slice can focus on the route shell and primary controls.
+                </p>
+              </div>
+
+              <section class="iplas-summary-panel">
+                <div class="iplas-summary-panel__header">
+                  <div>
+                    <p class="iplas-summary-panel__eyebrow">Configured Stations</p>
+                    <h3>Selection summary</h3>
+                  </div>
+                  <span class="iplas-pill iplas-pill--neutral">{{ configuredStations.length }} active</span>
+                </div>
+
+                <div v-if="!selectedProject" class="iplas-empty-state iplas-empty-state--compact">
+                  <Icon icon="mdi:folder-search-outline" />
+                  <div>
+                    <strong>Select a project first</strong>
+                    <p>Projects drive the station options and device lookup for iPLAS search.</p>
+                  </div>
+                </div>
+
+                <div v-else-if="configuredStations.length === 0" class="iplas-empty-state iplas-empty-state--compact">
+                  <Icon icon="mdi:router-wireless-off" />
+                  <div>
+                    <strong>No stations configured yet</strong>
+                    <p>Open the station dialog to choose one or more stations before searching.</p>
+                  </div>
+                </div>
+
+                <div v-else class="iplas-summary-list">
+                  <article
+                    v-for="configuredStation in configuredStations"
+                    :key="configuredStation.stationValue"
+                    class="iplas-summary-item"
+                  >
+                    <div>
+                      <h4>{{ configuredStation.displayName }}</h4>
+                      <p>{{ configuredStation.deviceSummary }}</p>
+                    </div>
+                    <div class="iplas-summary-item__actions">
+                      <span class="iplas-pill iplas-pill--cool">{{ configuredStation.deviceSummary }}</span>
+                      <span v-if="configuredStation.testStatus !== 'ALL'" class="iplas-pill iplas-pill--warm">{{ configuredStation.testStatus }}</span>
+                      <button
+                        type="button"
+                        class="iplas-summary-remove"
+                        @click="removeSelectedStation(configuredStation.stationValue)"
+                      >
+                        <Icon icon="mdi:close" />
+                      </button>
+                    </div>
+                  </article>
+                </div>
+              </section>
+
+              <section v-if="selectedStations.length > 0" class="iplas-fetch-panel">
+                <label class="iplas-toggle-card">
+                  <input v-model="useIndexedDbMode" type="checkbox">
+                  <div>
+                    <span>Stream to Disk</span>
+                    <p>Enable IndexedDB streaming for long or high-volume searches. Searches over 7 days are forced to disk automatically.</p>
+                  </div>
+                </label>
+
+                <div class="iplas-fetch-panel__actions">
+                  <button
+                    type="button"
+                    class="iplas-button iplas-button--primary"
+                    :disabled="isStreaming"
+                    @click="fetchTestItems"
+                  >
+                    <Icon :icon="loadingTestItems || isStreaming ? 'mdi:loading' : 'mdi:database-search-outline'" :class="{ 'iplas-spin': loadingTestItems || isStreaming }" />
+                    <span>{{ useIndexedDbMode ? 'Stream' : 'Search' }} Test Data</span>
+                    <strong>({{ selectedStations.length }} station{{ selectedStations.length > 1 ? 's' : '' }})</strong>
+                  </button>
+
+                  <button
+                    v-if="isStreaming"
+                    type="button"
+                    class="iplas-button iplas-button--danger"
+                    @click="abortIndexedDbStream"
+                  >
+                    <Icon icon="mdi:stop-circle-outline" />
+                    <span>Stop Stream</span>
+                  </button>
+                </div>
+
+                <div v-if="loadingTestItems && chunkProgress && !useIndexedDbMode" class="iplas-progress-card">
+                  <div class="iplas-progress-card__spinner" />
+                  <div>
+                    <strong>Fetching chunk {{ chunkProgress.fetched }} of {{ chunkProgress.total }}</strong>
+                    <p>Regular mode is loading the current response set into memory.</p>
+                  </div>
+                </div>
+
+                <div v-if="isStreaming" class="iplas-progress-card iplas-progress-card--success">
+                  <div class="iplas-progress-card__spinner" />
+                  <div>
+                    <strong>Streaming {{ streamStatus.recordsWritten.toLocaleString() }} records to disk</strong>
+                    <p>
+                      <template v-if="streamStatus.totalEstimated > 0">
+                        Estimated total: {{ streamStatus.totalEstimated.toLocaleString() }} records.
+                      </template>
+                      <template v-else>
+                        Total estimate will appear once the stream reports it.
+                      </template>
+                    </p>
+                  </div>
+                </div>
+              </section>
+
+              <div v-if="autoIndexedDbReason" class="iplas-notice iplas-notice--info">
+                <div>
+                  <strong>Stream mode was enabled automatically</strong>
+                  <p>{{ autoIndexedDbReason }}</p>
+                </div>
+                <button type="button" @click="autoIndexedDbReason = null">Dismiss</button>
+              </div>
+
+              <div v-if="possiblyTruncated && hasRegularModeData" class="iplas-notice iplas-notice--warning">
+                <div>
+                  <strong>5,000-row upstream limit reached</strong>
+                  <p>
+                    Results may be incomplete because the upstream iPLAS API caps each response at 5,000 rows. Narrow the date range or keep Stream to Disk enabled for larger searches.
+                  </p>
+                </div>
+              </div>
             </div>
-          </v-card-title>
-          <v-card-text class="pt-4">
-            <v-row>
-              <!-- Site Selection -->
-              <v-col cols="12" md="6">
-                <v-autocomplete v-model="selectedSite" :items="uniqueSites" label="Site" variant="outlined"
-                  density="comfortable" prepend-inner-icon="mdi-map-marker" :loading="loading" clearable hide-details
-                  @update:model-value="handleSiteChange" />
-              </v-col>
+          </AppPanel>
 
-              <!-- Project Selection -->
-              <v-col cols="12" md="6">
-                <v-autocomplete v-model="selectedProject" :items="availableProjects" label="Project" variant="outlined"
-                  density="comfortable" prepend-inner-icon="mdi-folder" :loading="loadingStations"
-                  :disabled="!selectedSite" clearable hide-details @update:model-value="handleProjectChange" />
-              </v-col>
-            </v-row>
+          <!-- Test Items Results (Regular Mode) -->
+          <AppPanel
+            v-if="!useIndexedDbMode && hasRegularModeData"
+            eyebrow="Regular Mode"
+            title="Test Results"
+            :description="`${regularModeRecordCount} records are loaded in memory. Use station tabs to narrow the current comparison slice before opening the legacy table internals below.`"
+            tone="cool"
+            split-header
+            compact-header
+          >
+            <template #header-aside>
+              <div class="iplas-result-toolbar">
+                <span class="iplas-pill iplas-pill--cool">{{ regularModeRecordCount }} records</span>
+                <button
+                  v-if="selectedRecordIndices.length > 0"
+                  type="button"
+                  class="iplas-button iplas-button--secondary"
+                  :disabled="downloading || downloadingCsv"
+                  @click="downloadAllSelectedRecords"
+                >
+                  <Icon :icon="downloading || downloadingCsv ? 'mdi:loading' : 'mdi:download-multiple'" :class="{ 'iplas-spin': downloading || downloadingCsv }" />
+                  <span>Download All Logs ({{ selectedRecordIndices.length }})</span>
+                </button>
+                <button
+                  v-if="selectedRecordIndices.length > 0"
+                  type="button"
+                  class="iplas-button iplas-button--ghost"
+                  :disabled="downloading"
+                  @click="downloadSelectedRecords"
+                >
+                  <Icon :icon="downloading ? 'mdi:loading' : 'mdi:download'" :class="{ 'iplas-spin': downloading }" />
+                  <span>Download TXT ({{ selectedRecordIndices.length }})</span>
+                </button>
+                <button
+                  v-if="selectedRecordIndices.length > 0"
+                  type="button"
+                  class="iplas-button iplas-button--success"
+                  :disabled="downloadingCsv"
+                  @click="downloadSelectedRecordsCsv"
+                >
+                  <Icon :icon="downloadingCsv ? 'mdi:loading' : 'mdi:file-delimited'" :class="{ 'iplas-spin': downloadingCsv }" />
+                  <span>Download CSV ({{ selectedRecordIndices.length }})</span>
+                </button>
+              </div>
+            </template>
 
-            <v-row class="mt-2">
-              <!-- Date Range Preset -->
-              <v-col cols="12" md="4">
-                <v-select v-model="dateRangePreset" :items="dateRangePresets" label="Date Range" variant="outlined"
-                  density="comfortable" prepend-inner-icon="mdi-calendar-clock" hide-details
-                  @update:model-value="applyDateRangePreset" />
-              </v-col>
-
-              <!-- Start Time -->
-              <v-col cols="12" md="4">
-                <v-text-field v-model="startTime" label="Start Time" type="datetime-local" variant="outlined"
-                  density="comfortable" prepend-inner-icon="mdi-calendar-start" hide-details />
-              </v-col>
-
-              <!-- End Time -->
-              <v-col cols="12" md="4">
-                <v-text-field v-model="endTime" label="End Time" type="datetime-local" variant="outlined"
-                  density="comfortable" prepend-inner-icon="mdi-calendar-end" hide-details />
-              </v-col>
-            </v-row>
-
-            <v-row class="mt-2">
-              <v-col cols="12">
-                <v-btn color="secondary" variant="outlined" block prepend-icon="mdi-format-list-checkbox"
-                  :loading="loadingStations" :disabled="!selectedProject" @click="openStationSelectionDialog">
-                  Configure Station(s)
-                  <v-chip v-if="selectedStations.length > 0" size="small" color="primary" variant="flat" class="ml-2">
-                    {{ selectedStations.length }}
-                  </v-chip>
-                </v-btn>
-              </v-col>
-            </v-row>
-
-            <v-row class="mt-2">
-              <v-col cols="12">
-                <div class="text-subtitle-2 mb-2">Configured Stations Summary</div>
-                <v-sheet border rounded class="pa-3">
-                  <div v-if="!selectedProject" class="text-body-2 text-medium-emphasis">
-                    Select a project to configure stations.
+            <AppTabs v-model="activeStationTabKey" :items="regularStationTabItems" scrollable>
+              <template v-for="(stationGroup, stationIndex) in groupedByStation" :key="stationGroup.stationName" #[`panel-station-${stationIndex}`]>
+                <div class="iplas-result-summary-card">
+                  <div>
+                    <strong>{{ stationGroup.displayName }}</strong>
+                    <p>{{ getFilteredStationRecords(stationGroup).length }} filtered records are ready for download or fullscreen review.</p>
                   </div>
-                  <div v-else-if="configuredStations.length === 0" class="text-body-2 text-medium-emphasis">
-                    No stations configured yet.
+                  <span class="iplas-pill iplas-pill--cool">{{ getFilteredStationRecords(stationGroup).length }} visible</span>
+                </div>
+              </template>
+            </AppTabs>
+
+            <div v-if="currentStationGroup" class="iplas-result-pane">
+              <div class="iplas-filter-grid">
+                <label class="iplas-field">
+                  <span>Search Records</span>
+                  <div class="iplas-input-with-icon">
+                    <Icon icon="mdi:magnify" />
+                    <input
+                      :value="recordSearchQueries[currentStationGroup.stationName] || ''"
+                      type="text"
+                      placeholder="Search ISN, Device ID, Error Code, Error Name..."
+                      @input="handleStationSearchInput(currentStationGroup.stationName, $event)"
+                    >
                   </div>
-                  <div v-else class="d-flex flex-column gap-2">
-                    <div v-for="configuredStation in configuredStations" :key="configuredStation.stationValue"
-                      class="d-flex align-center justify-space-between flex-wrap gap-2">
-                      <div>
-                        <div class="font-weight-medium">{{ configuredStation.displayName }}</div>
-                        <div class="text-caption text-medium-emphasis">{{ configuredStation.deviceSummary }}</div>
-                      </div>
-                      <div class="d-flex align-center gap-2">
-                        <v-chip size="small" color="primary" variant="tonal">
-                          {{ configuredStation.deviceSummary }}
-                        </v-chip>
-                        <v-chip v-if="configuredStation.testStatus !== 'ALL'" size="small" color="secondary"
-                          variant="outlined">
-                          {{ configuredStation.testStatus }}
-                        </v-chip>
-                        <v-btn icon="mdi-close" size="x-small" variant="text"
-                          @click="removeSelectedStation(configuredStation.stationValue)" />
-                      </div>
+                </label>
+
+                <label class="iplas-field">
+                  <span>Status</span>
+                  <select
+                    :value="stationStatusFilters[currentStationGroup.stationName] || 'ALL'"
+                    @change="handleStationStatusChange(currentStationGroup.stationName, $event)"
+                  >
+                    <option value="ALL">All Results</option>
+                    <option value="PASS">PASS</option>
+                    <option value="FAIL">FAIL</option>
+                  </select>
+                </label>
+
+                <div class="iplas-field iplas-field--device-filter">
+                  <div class="iplas-field__row">
+                    <span>Device Filter</span>
+                    <button
+                      v-if="(selectedFilterDeviceIds[currentStationGroup.stationName] || []).length > 0"
+                      type="button"
+                      class="iplas-inline-action"
+                      @click="clearStationDeviceFilters(currentStationGroup.stationName)"
+                    >
+                      Clear
+                    </button>
+                  </div>
+                  <div class="iplas-device-filter-shell">
+                    <p>
+                      {{ (selectedFilterDeviceIds[currentStationGroup.stationName] || []).length }} selected of
+                      {{ getUniqueDeviceIdsForStation(currentStationGroup).length }} devices.
+                    </p>
+                    <div class="iplas-device-filter-list">
+                      <button
+                        v-for="deviceId in getUniqueDeviceIdsForStation(currentStationGroup)"
+                        :key="deviceId"
+                        type="button"
+                        class="iplas-device-chip"
+                        :class="{
+                          'iplas-device-chip--active': isStationDeviceSelected(currentStationGroup.stationName, deviceId),
+                        }"
+                        @click="toggleStationDeviceFilter(currentStationGroup.stationName, deviceId)"
+                      >
+                        <Icon :icon="isStationDeviceSelected(currentStationGroup.stationName, deviceId) ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'" />
+                        <span>{{ deviceId }}</span>
+                      </button>
                     </div>
                   </div>
-                </v-sheet>
-              </v-col>
-            </v-row>
+                </div>
+              </div>
 
-            <!-- Search Test Data Section -->
-            <v-row v-if="selectedStations.length > 0" class="mt-4">
-              <v-col cols="12" class="d-flex align-center gap-3 flex-wrap">
-                <!-- IndexedDB Mode Toggle -->
-                <v-tooltip location="top">
-                  <template #activator="{ props }">
-                    <v-switch v-bind="props" v-model="useIndexedDbMode" label="Stream to Disk" color="success"
-                      density="compact" hide-details class="flex-grow-0" />
+              <IplasRecordTable :items="getFilteredStationRecords(currentStationGroup)"
+                :total-items="getFilteredStationRecords(currentStationGroup).length" :loading="false"
+                :downloading-record="downloadingKey" :downloading-csv-record="downloadingCsvKey" :selectable="true"
+                :selected-keys="getSelectedKeysForStation(currentStationGroup.stationName)" :server-side="false"
+                @update:selected-keys="handleTableSelectionChange(currentStationGroup.stationName, $event)"
+                @row-click="openFullscreen" @download="downloadSingleRecord($event, currentStationGroup.stationName, 0)"
+                @download-csv="downloadCsvRecord($event, currentStationGroup.stationName, 0)" />
+            </div>
+          </AppPanel>
+
+          <!-- IndexedDB Mode Results -->
+          <AppPanel
+            v-if="useIndexedDbMode && (indexedDbTotalItems > 0 || isStreaming)"
+            eyebrow="Disk Mode"
+            title="IndexedDB Results"
+            :description="`${indexedDbTotalItems.toLocaleString()} records currently live on disk${isStreaming ? ' while the stream is still running' : ''}. Use station tabs to scope the current result view before interacting with the existing paginated table.`"
+            tone="success"
+            split-header
+            compact-header
+          >
+            <template #header-aside>
+              <div class="iplas-result-toolbar">
+                <span class="iplas-pill iplas-pill--success">{{ indexedDbTotalItems.toLocaleString() }} on disk</span>
+                <span v-if="isStreaming" class="iplas-pill iplas-pill--warm">Streaming in progress</span>
+                <button
+                  v-if="indexedDbSelectedKeys.length > 0"
+                  type="button"
+                  class="iplas-button iplas-button--ghost"
+                  :disabled="downloading"
+                  @click="downloadIndexedDbSelectedRecords"
+                >
+                  <Icon :icon="downloading ? 'mdi:loading' : 'mdi:download'" :class="{ 'iplas-spin': downloading }" />
+                  <span>Download TXT ({{ indexedDbSelectedKeys.length }})</span>
+                </button>
+                <button
+                  v-if="indexedDbSelectedKeys.length > 0"
+                  type="button"
+                  class="iplas-button iplas-button--success"
+                  :disabled="downloadingCsv"
+                  @click="downloadIndexedDbSelectedRecordsCsv"
+                >
+                  <Icon :icon="downloadingCsv ? 'mdi:loading' : 'mdi:file-delimited'" :class="{ 'iplas-spin': downloadingCsv }" />
+                  <span>Download CSV ({{ indexedDbSelectedKeys.length }})</span>
+                </button>
+              </div>
+            </template>
+
+            <div v-if="streamStatus.error" class="iplas-notice iplas-notice--error">
+              <div>
+                <strong>IndexedDB stream error</strong>
+                <p>{{ streamStatus.error }}</p>
+              </div>
+            </div>
+
+            <AppTabs v-if="indexedDbStationList.length > 0 && !isStreaming" v-model="indexedDbActiveStationTabKey" :items="indexedDbTabItems" scrollable>
+              <template #panel-all>
+                <div class="iplas-result-summary-card">
+                  <div>
+                    <strong>All Stations</strong>
+                    <p>Browse the full disk-backed result set before narrowing to a single station.</p>
+                  </div>
+                  <span class="iplas-pill iplas-pill--cool">{{ indexedDbTotalItems.toLocaleString() }} rows</span>
+                </div>
+              </template>
+              <template v-for="panel in indexedDbStationPanels" :key="panel.stationName" v-slot:[panel.slotName]>
+                <div class="iplas-result-summary-card">
+                  <div>
+                    <strong>{{ panel.stationName }}</strong>
+                    <p>Use the existing server-side table below while the active station filter is applied from the scaffold-era tab shell.</p>
+                  </div>
+                  <span class="iplas-pill iplas-pill--cool">Station filter active</span>
+                </div>
+              </template>
+            </AppTabs>
+            <div v-else class="iplas-result-summary-card">
+              <div>
+                <strong>{{ isStreaming ? 'Streaming to disk' : 'Disk-backed result view' }}</strong>
+                <p>
+                  <template v-if="isStreaming">
+                    Station sub-tabs will appear after the stream finishes and the station list can be derived from the stored payload.
                   </template>
-                  <span>
-                    Enable IndexedDB streaming for long or high-volume searches.<br>
-                    Searches over 7 days are forced to stream to disk automatically.
-                  </span>
-                </v-tooltip>
-
-                <v-btn color="primary" :loading="loadingTestItems || isStreaming" :disabled="isStreaming"
-                  @click="fetchTestItems">
-                  <v-icon start>mdi-download</v-icon>
-                  {{ useIndexedDbMode ? 'Stream' : 'Search' }} Test Data ({{ selectedStations.length }} station{{
-                    selectedStations.length > 1 ? 's' : '' }})
-                </v-btn>
-
-                <!-- Abort Stream Button -->
-                <v-btn v-if="isStreaming" color="error" variant="outlined" size="small" @click="abortIndexedDbStream">
-                  <v-icon start size="small">mdi-stop</v-icon>
-                  Stop Stream
-                </v-btn>
-
-                <!-- Chunk Progress Indicator (regular mode) -->
-                <div v-if="loadingTestItems && chunkProgress && !useIndexedDbMode" class="d-flex align-center gap-2">
-                  <v-progress-circular :model-value="(chunkProgress.fetched / chunkProgress.total) * 100" :size="24"
-                    :width="3" color="primary" />
-                  <span class="text-body-2 text-medium-emphasis">
-                    Fetching chunk {{ chunkProgress.fetched }} of {{ chunkProgress.total }}...
-                  </span>
-                </div>
-
-                <!-- IndexedDB Stream Progress Indicator -->
-                <div v-if="isStreaming" class="d-flex align-center gap-2">
-                  <v-progress-circular :model-value="streamProgress" :size="24" :width="3" color="success" />
-                  <span class="text-body-2 text-medium-emphasis">
-                    Streaming... {{ streamStatus.recordsWritten.toLocaleString() }} records saved
-                    <template v-if="streamStatus.totalEstimated > 0">
-                      of {{ streamStatus.totalEstimated.toLocaleString() }}
-                    </template>
-                  </span>
-                </div>
-              </v-col>
-            </v-row>
-            <v-row v-if="autoIndexedDbReason" class="mt-2">
-              <v-col cols="12">
-                <v-alert type="info" density="compact" variant="tonal" closable
-                  @click:close="autoIndexedDbReason = null">
-                  <v-icon start>mdi-database-arrow-down-outline</v-icon>
-                  {{ autoIndexedDbReason }}
-                </v-alert>
-              </v-col>
-            </v-row>
-            <!-- Possibly Truncated Warning -->
-            <v-row v-if="possiblyTruncated && hasRegularModeData" class="mt-2">
-              <v-col cols="12">
-                <v-alert type="warning" density="compact" variant="tonal" closable>
-                  <div class="d-flex align-center flex-wrap gap-2">
-                    <v-chip size="small" color="warning" variant="flat">
-                      5,000-row limit reached
-                    </v-chip>
-                    <span>
-                      Results may be incomplete because the upstream iPLAS API caps each response at 5,000 rows.
-                      Narrow the date range or keep Stream to Disk enabled for large searches.
-                    </span>
-                  </div>
-                </v-alert>
-              </v-col>
-            </v-row>
-          </v-card-text>
-        </v-card>
-
-        <!-- Test Items Results (Regular Mode) -->
-        <v-card v-if="!useIndexedDbMode && hasRegularModeData" elevation="2" class="mb-4">
-          <v-card-title class="d-flex align-center justify-space-between flex-wrap">
-            <div class="d-flex align-center">
-              <v-icon class="mr-2" color="info">mdi-format-list-checks</v-icon>
-              Test Results
-              <v-chip size="small" color="info" class="ml-2">{{ regularModeRecordCount }} records</v-chip>
+                  <template v-else>
+                    Station sub-tabs will appear once disk-backed rows are available for at least one station.
+                  </template>
+                </p>
+              </div>
             </div>
-            <div class="d-flex align-center gap-2">
-              <!-- Download All (TXT + CSV) -->
-              <v-btn v-if="selectedRecordIndices.length > 0" color="secondary" variant="flat" size="small"
-                :loading="downloading || downloadingCsv" @click="downloadAllSelectedRecords">
-                <v-icon start size="small">mdi-download-multiple</v-icon>
-                Download All Logs ({{ selectedRecordIndices.length }})
-              </v-btn>
-              <!-- Bulk TXT Download -->
-              <v-btn v-if="selectedRecordIndices.length > 0" color="primary" variant="outlined" size="small"
-                :loading="downloading" @click="downloadSelectedRecords">
-                <v-icon start size="small">mdi-download-multiple</v-icon>
-                Download TXT ({{ selectedRecordIndices.length }})
-              </v-btn>
-              <!-- Bulk CSV Download -->
-              <v-btn v-if="selectedRecordIndices.length > 0" color="success" variant="outlined" size="small"
-                :loading="downloadingCsv" @click="downloadSelectedRecordsCsv">
-                <v-icon start size="small">mdi-file-delimited</v-icon>
-                Download CSV ({{ selectedRecordIndices.length }})
-              </v-btn>
+
+            <div class="iplas-indexeddb-status-bar">
+              <div>
+                <strong>{{ indexedDbSelectedKeys.length }} selected row{{ indexedDbSelectedKeys.length === 1 ? '' : 's' }}</strong>
+                <p>
+                  <template v-if="indexedDbActiveStationTab === 0">
+                    The disk-backed table is showing all stations.
+                  </template>
+                  <template v-else>
+                    Active station filter: {{ indexedDbStationList[indexedDbActiveStationTab - 1] || 'Unknown station' }}.
+                  </template>
+                </p>
+              </div>
+              <div>
+                <strong>{{ isStreaming ? 'Stream in progress' : 'Ready for pagination' }}</strong>
+                <p>
+                  <template v-if="isStreaming">
+                    {{ streamStatus.recordsWritten.toLocaleString() }} records written so far.
+                  </template>
+                  <template v-else>
+                    Existing table pagination internals remain unchanged in this slice.
+                  </template>
+                </p>
+              </div>
             </div>
-          </v-card-title>
-          <v-card-text>
-            <!-- Station Sub-Tabs -->
-            <v-tabs v-model="activeStationTab" color="secondary" class="mb-4" show-arrows>
-              <v-tab v-for="(stationGroup, index) in groupedByStation" :key="stationGroup.stationName" :value="index">
-                <v-icon start size="small">mdi-router-wireless</v-icon>
-                {{ stationGroup.displayName }}
-                <v-chip size="x-small" color="info" class="ml-2">{{ getFilteredStationRecords(stationGroup).length
-                }}</v-chip>
-              </v-tab>
-            </v-tabs>
 
-            <v-window v-model="activeStationTab">
-              <v-window-item v-for="(stationGroup, stationIndex) in groupedByStation" :key="stationGroup.stationName"
-                :value="stationIndex" eager>
-                <!-- Search, Status and Device ID Filter -->
-                <v-row class="mb-4" dense>
-                  <v-col cols="12" md="4">
-                    <v-text-field :model-value="recordSearchQueries[stationGroup.stationName] || ''"
-                      label="Search Records" prepend-inner-icon="mdi-magnify" variant="outlined" density="compact"
-                      hide-details clearable
-                      @update:model-value="setRecordSearchQuery(stationGroup.stationName, $event)"
-                      placeholder="Search ISN, Device ID, Error Code, Error Name..." />
-                  </v-col>
-                  <v-col cols="12" md="2">
-                    <v-select v-model="stationStatusFilters[stationGroup.stationName]" :items="['ALL', 'PASS', 'FAIL']"
-                      label="Status" variant="outlined" density="compact" hide-details />
-                  </v-col>
-                  <v-col cols="12" md="6">
-                    <v-autocomplete v-model="selectedFilterDeviceIds[stationGroup.stationName]"
-                      :items="getUniqueDeviceIdsForStation(stationGroup)" label="Filter by Device ID" variant="outlined"
-                      density="compact" prepend-inner-icon="mdi-chip" multiple chips closable-chips clearable
-                      hide-details placeholder="All Device IDs">
-                      <template #chip="{ props, item }">
-                        <v-chip v-bind="props" :text="item.raw" size="small" />
-                      </template>
-                    </v-autocomplete>
-                  </v-col>
-                </v-row>
-
-                <!-- UPDATED: Client-Side Data Table with Selection (changed from server-side for better UX) -->
-                <IplasRecordTable :items="getFilteredStationRecords(stationGroup)"
-                  :total-items="getFilteredStationRecords(stationGroup).length" :loading="false"
-                  :downloading-record="downloadingKey" :downloading-csv-record="downloadingCsvKey" :selectable="true"
-                  :selected-keys="getSelectedKeysForStation(stationGroup.stationName)" :server-side="false"
-                  @update:selected-keys="handleTableSelectionChange(stationGroup.stationName, $event)"
-                  @row-click="openFullscreen" @download="downloadSingleRecord($event, stationGroup.stationName, 0)"
-                  @download-csv="downloadCsvRecord($event, stationGroup.stationName, 0)" />
-              </v-window-item>
-            </v-window>
-          </v-card-text>
-        </v-card>
-
-        <!-- IndexedDB Mode Results -->
-        <v-card v-if="useIndexedDbMode && (indexedDbTotalItems > 0 || isStreaming)" elevation="2" class="mb-4">
-          <v-card-title class="d-flex align-center justify-space-between flex-wrap">
-            <div class="d-flex align-center">
-              <v-icon class="mr-2" color="success">mdi-database</v-icon>
-              IndexedDB Results
-              <v-chip size="small" color="success" class="ml-2" variant="outlined">
-                <v-icon start size="small">mdi-harddisk</v-icon>
-                {{ indexedDbTotalItems.toLocaleString() }} records on disk
-              </v-chip>
-              <v-chip v-if="isStreaming" size="small" color="warning" class="ml-2">
-                <v-icon start size="small">mdi-loading mdi-spin</v-icon>
-                Streaming...
-              </v-chip>
-            </div>
-            <div class="d-flex align-center gap-2">
-              <!-- Bulk TXT Download for IndexedDB -->
-              <v-btn v-if="indexedDbSelectedKeys.length > 0" color="primary" variant="outlined" size="small"
-                :loading="downloading" @click="downloadIndexedDbSelectedRecords">
-                <v-icon start size="small">mdi-download-multiple</v-icon>
-                Download TXT ({{ indexedDbSelectedKeys.length }})
-              </v-btn>
-              <!-- Bulk CSV Download for IndexedDB -->
-              <v-btn v-if="indexedDbSelectedKeys.length > 0" color="success" variant="outlined" size="small"
-                :loading="downloadingCsv" @click="downloadIndexedDbSelectedRecordsCsv">
-                <v-icon start size="small">mdi-file-delimited</v-icon>
-                Download CSV ({{ indexedDbSelectedKeys.length }})
-              </v-btn>
-            </div>
-          </v-card-title>
-          <v-card-text>
-            <!-- Stream Status Alert -->
-            <v-alert v-if="streamStatus.error" type="error" class="mb-4" closable>
-              {{ streamStatus.error }}
-            </v-alert>
-
-            <!-- Station Tabs for IndexedDB Results -->
-            <v-tabs v-if="indexedDbStationList.length > 0 && !isStreaming" v-model="indexedDbActiveStationTab"
-              color="secondary" class="mb-4" show-arrows>
-              <v-tab :value="0">
-                <v-icon start size="small">mdi-view-list</v-icon>
-                All Stations
-                <v-chip size="x-small" color="info" class="ml-2">{{ indexedDbTotalItems }}</v-chip>
-              </v-tab>
-              <v-tab v-for="(stationName, index) in indexedDbStationList" :key="stationName" :value="Number(index) + 1">
-                <v-icon start size="small">mdi-router-wireless</v-icon>
-                {{ stationName }}
-              </v-tab>
-            </v-tabs>
-
-            <!-- IndexedDB Table using v-data-table-server to keep streamed data paginated on disk -->
-            <v-data-table-server v-model="indexedDbSelectedKeys"
-              v-model:items-per-page="indexedDbTableOptions.itemsPerPage" v-model:page="indexedDbTableOptions.page"
-              v-model:sort-by="indexedDbTableOptions.sortBy" :headers="indexedDbHeaders" :items="indexedDbItems"
-              :items-length="indexedDbTotalItems" :loading="indexedDbLoading || isStreaming" item-value="id" show-select
-              hover class="elevation-1" @update:options="loadIndexedDbItems" @click:row="handleIndexedDbRowClick">
-              <!-- ISN Column with Copy Button -->
-              <template #item.ISN="{ item }">
-                <div class="d-flex align-center gap-1">
-                  <v-btn icon size="x-small" variant="text" color="primary" @click.stop="copyToClipboard(item.ISN)">
-                    <v-icon size="small">mdi-content-copy</v-icon>
-                    <v-tooltip activator="parent" location="top">Copy ISN</v-tooltip>
-                  </v-btn>
-                  <span class="font-weight-medium cursor-pointer">{{ item.ISN || '-' }}</span>
+            <AppDataGrid
+              class="iplas-indexeddb-grid"
+              :columns="indexedDbGridColumns"
+              :rows="indexedDbGridRows"
+              data-key="recordKey"
+              :loading="indexedDbLoading || isStreaming"
+              paginator
+              :rows-per-page="indexedDbTableOptions.itemsPerPage"
+              :total-records="indexedDbTotalItems"
+              lazy
+              :selection="indexedDbSelectedRows"
+              selection-mode="multiple"
+              :show-selection-column="true"
+              :sort-field="indexedDbSortField"
+              :sort-order="indexedDbSortOrder"
+              scroll-height="640px"
+              :table-style="{ minWidth: '62rem' }"
+              :row-class="indexedDbRowClass"
+              @update:selection="handleIndexedDbSelectionChange"
+              @page="handleIndexedDbGridPage"
+              @sort="handleIndexedDbGridSort"
+              @row-click="handleIndexedDbRowClick"
+            >
+              <template #cell-ISN="{ data }">
+                <div class="iplas-indexeddb-inline-cell">
+                  <button type="button" class="iplas-indexeddb-icon-button" title="Copy ISN" aria-label="Copy ISN" @click.stop="copyToClipboard(String(data.ISN || ''))">
+                    <Icon icon="mdi:content-copy" />
+                  </button>
+                  <button type="button" class="iplas-indexeddb-copy-value" :title="String(data.ISN || 'No ISN')" @click.stop="copyToClipboard(String(data.ISN || ''))">
+                    {{ data.ISN || '-' }}
+                  </button>
                 </div>
               </template>
 
-              <!-- Device ID Column -->
-              <template #item.DeviceId="{ item }">
-                <v-chip size="x-small" color="secondary" variant="outlined" class="cursor-pointer"
-                  @click.stop="copyToClipboard(item.DeviceId)">
-                  {{ item.DeviceId }}
-                  <v-tooltip activator="parent" location="top">Click to copy</v-tooltip>
-                </v-chip>
+              <template #cell-DeviceId="{ data }">
+                <button type="button" class="iplas-indexeddb-copy-pill" :title="String(data.DeviceId || 'No Device ID')" @click.stop="copyToClipboard(String(data.DeviceId || ''))">
+                  {{ data.DeviceId }}
+                </button>
               </template>
 
-              <!-- Test End Time Column -->
-              <template #item.TestEndTime="{ item }">
-                {{ item.TestEndTime ? adjustIplasDisplayTime(item.TestEndTime, 1) :
-                  adjustIplasDisplayTime(item.TestStartTime, 1) }}
+              <template #cell-TestEndTime="{ value }">
+                {{ value }}
               </template>
 
-              <!-- Duration Column -->
-              <template #item.Duration="{ item }">
-                <v-chip size="x-small" variant="outlined">
-                  {{ calculateIndexedDbDuration(item) }}
-                </v-chip>
+              <template #cell-Duration="{ value }">
+                <span class="iplas-indexeddb-badge iplas-indexeddb-badge--neutral">
+                  {{ value }}
+                </span>
               </template>
 
-              <!-- Status Column -->
-              <template #item.TestStatus="{ item }">
-                <v-chip :color="item.TestStatus === 'PASS' ? 'success' : 'error'" size="x-small">
-                  {{ item.TestStatus }}
-                </v-chip>
+              <template #cell-TestStatus="{ data }">
+                <span class="iplas-indexeddb-badge" :class="data.TestStatus === 'PASS' ? 'iplas-indexeddb-badge--success' : 'iplas-indexeddb-badge--error'">
+                  {{ data.TestStatus }}
+                </span>
               </template>
 
-              <!-- Actions Column -->
-              <template #item.actions="{ item }">
-                <div class="d-flex gap-1">
-                  <v-btn icon size="x-small" variant="outlined" color="primary" :loading="downloading"
-                    @click.stop="downloadIndexedDbRecord(item)">
-                    <v-icon size="small">mdi-download</v-icon>
-                    <v-tooltip activator="parent" location="top">Download Test Log</v-tooltip>
-                  </v-btn>
+              <template #cell-actions="{ data }">
+                <div class="iplas-indexeddb-action-cell">
+                  <button
+                    type="button"
+                    class="iplas-indexeddb-action-button"
+                    :disabled="downloading"
+                    title="Download Test Log"
+                    @click.stop="downloadIndexedDbRecord(data.sourceRecord)"
+                  >
+                    <Icon :icon="downloading ? 'mdi:loading' : 'mdi:download'" :class="{ 'iplas-spin': downloading }" />
+                    <span>TXT</span>
+                  </button>
                 </div>
               </template>
 
-              <!-- No Data Template (during streaming) -->
-              <template #no-data>
-                <div v-if="isStreaming" class="text-center py-4">
-                  <v-progress-circular indeterminate color="success" size="32" />
-                  <div class="text-body-2 mt-2 text-medium-emphasis">
-                    Streaming data to disk...
-                    <br>
-                    {{ streamStatus.recordsWritten.toLocaleString() }} records saved
-                  </div>
+              <template #empty>
+                <div v-if="isStreaming" class="iplas-indexeddb-empty-state">
+                  <Icon icon="mdi:database-sync-outline" class="iplas-indexeddb-empty-state__icon iplas-spin" />
+                  <strong>Streaming data to disk...</strong>
+                  <p>{{ streamStatus.recordsWritten.toLocaleString() }} records saved so far.</p>
                 </div>
-                <div v-else class="text-center py-4">
-                  <v-icon size="48" color="grey">mdi-database-off-outline</v-icon>
-                  <div class="text-h6 mt-2 text-grey">No data in IndexedDB</div>
-                  <div class="text-body-2 text-grey">Start a search with "Stream to Disk" enabled
-                  </div>
+                <div v-else class="iplas-indexeddb-empty-state">
+                  <Icon icon="mdi:database-off-outline" class="iplas-indexeddb-empty-state__icon" />
+                  <strong>No data in IndexedDB</strong>
+                  <p>Start a search with Stream to Disk enabled.</p>
                 </div>
               </template>
 
-              <!-- Loading Template -->
               <template #loading>
-                <v-skeleton-loader type="table-row@5" />
+                <div class="iplas-indexeddb-loading-state">
+                  <Icon icon="mdi:loading" class="iplas-spin" />
+                  <span>{{ isStreaming ? 'Streaming rows from disk...' : 'Loading IndexedDB rows...' }}</span>
+                </div>
               </template>
-            </v-data-table-server>
-          </v-card-text>
-        </v-card>
-      </v-window-item>
+            </AppDataGrid>
+          </AppPanel>
+        </section>
+      </template>
 
-      <!-- ISN Search Mode -->
-      <v-window-item value="isn" eager>
-        <IplasIsnSearchContent />
-      </v-window-item>
-    </v-window>
+      <template #panel-isn>
+        <section class="iplas-content-pane">
+          <IplasIsnSearchContent v-if="searchMode === 'isn'" />
+        </section>
+      </template>
+    </AppTabs>
 
-    <DataExplorerStationSelectionDialog v-model:show="showStationSelectionDialog" :stations="stationOptions"
+    <DataExplorerStationSelectionDialog v-if="showStationSelectionDialog" v-model:show="showStationSelectionDialog" :stations="stationOptions"
       :selected-stations="selectedStations" :device-ids-by-station="deviceIdsByStation"
       :selected-device-ids="stationDeviceIds" :selected-test-status="stationTestStatus"
       :loading-device-ids-by-station="loadingDevicesByStation" :loading="loadingStations"
       @confirm="handleStationSelectionConfirm" @station-toggled="handleDialogStationToggle" />
 
     <!-- Test Items Details Dialog -->
-    <TopProductIplasDetailsDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
+    <TopProductIplasDetailsDialog v-if="showFullscreenDialog" v-model="showFullscreenDialog" :record="fullscreenRecord"
       :downloading="fullscreenDownloading" :loading-test-items="loadingFullscreenTestItems"
       @download="downloadFromFullscreen" />
-
-    <!-- Copy Success Snackbar -->
-    <v-snackbar v-model="showCopySuccess" :timeout="2000" color="success" location="bottom">
-      <v-icon start>mdi-check</v-icon>
-      Copied to clipboard!
-    </v-snackbar>
-
-    <!-- Download Error Snackbar -->
-    <v-snackbar v-model="showDownloadError" :timeout="5000" color="error" location="bottom">
-      <v-icon start>mdi-alert-circle</v-icon>
-      {{ downloadErrorMessage }}
-    </v-snackbar>
   </div>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { useDebounceFn } from '@vueuse/core'
-import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
 import type {
   CsvTestItemData,
   DownloadAttachmentInfo,
@@ -456,13 +581,22 @@ import type { DownloadCsvLogInfo } from '@/features/dut-logs/composables/useIpla
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasLocalData } from '@/features/dut-logs/composables/useIplasLocalData'
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
+import { useNotification } from '@/shared/composables/useNotification'
+import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
+import AppPanel from '@/shared/ui/panel/AppPanel.vue'
+import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
-import DataExplorerStationSelectionDialog from './DataExplorerStationSelectionDialog.vue'
 import type { StationSelectionResult } from './DataExplorerStationSelectionDialog.vue'
-import IplasIsnSearchContent from './IplasIsnSearchContent.vue'
-import IplasRecordTable from './IplasRecordTable.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
-import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
+
+const DataExplorerStationSelectionDialog = defineAsyncComponent(
+  () => import('./DataExplorerStationSelectionDialog.vue'),
+)
+const IplasIsnSearchContent = defineAsyncComponent(() => import('./IplasIsnSearchContent.vue'))
+const IplasRecordTable = defineAsyncComponent(() => import('./IplasRecordTable.vue'))
+const TopProductIplasDetailsDialog = defineAsyncComponent(
+  () => import('./TopProductIplasDetailsDialog.vue'),
+)
 
 // UPDATED: Define emits for iPLAS Settings button
 const emit = defineEmits<(e: 'show-settings') => void>()
@@ -478,6 +612,11 @@ interface StationGroup {
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 
 const searchMode = useTabPersistence<'station' | 'isn'>('subTab', 'station')
+
+const searchModeItems = [
+  { value: 'station', label: 'Station Search', icon: 'mdi:router-wireless' },
+  { value: 'isn', label: 'ISN Search', icon: 'mdi:barcode-search' },
+]
 
 const {
   loading,
@@ -753,12 +892,10 @@ function setRecordSearchQuery(stationName: string, value: string | null): void {
   updateDebouncedSearch(stationName, normalizedValue)
 }
 
-// Copy success snackbar
-const showCopySuccess = ref(false)
-
-// Download error snackbar
-const showDownloadError = ref(false)
-const downloadErrorMessage = ref('')
+const {
+  showError: showErrorNotification,
+  showInfo: showInfoNotification,
+} = useNotification()
 
 // Station tab and device filter controls
 const activeStationTab = ref(0)
@@ -781,7 +918,7 @@ async function copyToClipboard(text: string): Promise<void> {
       document.execCommand('copy')
       document.body.removeChild(textArea)
     }
-    showCopySuccess.value = true
+    showInfoNotification('Copied to clipboard!')
   } catch (err) {
     console.error('Failed to copy:', err)
   }
@@ -1014,6 +1151,14 @@ const selectedRecordIndices = computed(() => {
   return Array.from(selectedRecordKeys.value)
 })
 
+const activeStationTabKey = computed({
+  get: () => `station-${activeStationTab.value}`,
+  set: (value: string) => {
+    const match = value.match(/^station-(\d+)$/)
+    activeStationTab.value = match ? Number(match[1]) : 0
+  },
+})
+
 const groupedByStation = computed<StationGroup[]>(() => {
   const groups: Record<string, StationGroup> = {}
 
@@ -1048,6 +1193,18 @@ const groupedByStation = computed<StationGroup[]>(() => {
   return Object.values(groups)
 })
 
+const regularStationTabItems = computed(() => {
+  return groupedByStation.value.map((stationGroup, index) => ({
+    value: `station-${index}`,
+    label: stationGroup.displayName,
+    icon: 'mdi:router-wireless',
+  }))
+})
+
+const currentStationGroup = computed(() => {
+  return groupedByStation.value[activeStationTab.value] || null
+})
+
 // Headers for IndexedDB table - User requested columns:
 // Checkbox (via show-select), ISN, Device ID, Test End, Duration, Status, Actions
 const indexedDbHeaders = [
@@ -1059,11 +1216,64 @@ const indexedDbHeaders = [
   { title: 'Actions', key: 'actions', sortable: false, width: '100px' },
 ]
 
+const indexedDbGridColumns = indexedDbHeaders.map((header) => ({
+  header: header.title,
+  key: header.key,
+  field: header.key,
+  sortable: header.sortable,
+  style: { width: header.width },
+}))
+
 // Selected keys for IndexedDB table (for bulk download)
 const indexedDbSelectedKeys = ref<string[]>([])
 
+const indexedDbGridRows = computed(() =>
+  indexedDbItems.value.map((item) => ({
+    ...item,
+    recordKey: getIndexedDbRecordKey(item),
+    TestEndTime: item.TestEndTime
+      ? adjustIplasDisplayTime(item.TestEndTime, 1)
+      : adjustIplasDisplayTime(item.TestStartTime, 1),
+    Duration: calculateIndexedDbDuration(item),
+    sourceRecord: item,
+  })),
+)
+
+const indexedDbSelectedRows = computed(() => {
+  if (indexedDbSelectedKeys.value.length === 0) {
+    return []
+  }
+
+  const selectedKeySet = new Set(indexedDbSelectedKeys.value)
+  return indexedDbGridRows.value.filter((item) => selectedKeySet.has(String(item.recordKey)))
+})
+
+const indexedDbSortField = computed(() => indexedDbTableOptions.value.sortBy[0]?.key)
+
+const indexedDbSortOrder = computed(() => {
+  const currentSort = indexedDbTableOptions.value.sortBy[0]
+  if (!currentSort) {
+    return null
+  }
+
+  return currentSort.order === 'desc' ? -1 : 1
+})
+
 // Active station tab for IndexedDB results
 const indexedDbActiveStationTab = ref(0)
+
+const indexedDbActiveStationTabKey = computed({
+  get: () => (indexedDbActiveStationTab.value === 0 ? 'all' : `station-${indexedDbActiveStationTab.value}`),
+  set: (value: string) => {
+    if (value === 'all') {
+      indexedDbActiveStationTab.value = 0
+      return
+    }
+
+    const match = value.match(/^station-(\d+)$/)
+    indexedDbActiveStationTab.value = match ? Number(match[1]) : 0
+  },
+})
 
 // Get distinct stations from IndexedDB data
 const indexedDbStationList = computed(() => {
@@ -1074,6 +1284,24 @@ const indexedDbStationList = computed(() => {
     }
   }
   return Array.from(stations).sort()
+})
+
+const indexedDbTabItems = computed(() => {
+  return [
+    { value: 'all', label: 'All Stations', icon: 'mdi:view-list' },
+    ...indexedDbStationList.value.map((stationName, index) => ({
+      value: `station-${index + 1}`,
+      label: stationName,
+      icon: 'mdi:router-wireless',
+    })),
+  ]
+})
+
+const indexedDbStationPanels = computed(() => {
+  return indexedDbStationList.value.map((stationName, index) => ({
+    stationName,
+    slotName: `panel-station-${index + 1}`,
+  }))
 })
 
 // Calculate duration for IndexedDB records
@@ -1112,9 +1340,12 @@ function getIndexedDbRecordKey(record: (typeof indexedDbItems.value)[0]): string
 
 // Handle IndexedDB row click to show details dialog
 async function handleIndexedDbRowClick(
-  _event: Event,
-  { item }: { item: (typeof indexedDbItems.value)[0] },
+  event: unknown,
 ): Promise<void> {
+  const item = (event as { data?: (typeof indexedDbItems.value)[0]; sourceRecord?: (typeof indexedDbItems.value)[0] }).data
+    ?? (event as { sourceRecord?: (typeof indexedDbItems.value)[0] }).sourceRecord
+  if (!item) return
+
   if (!selectedSite.value || !selectedProject.value) return
 
   // Get station from record - use Station field for API calls (not TSP)
@@ -1157,6 +1388,46 @@ async function handleIndexedDbRowClick(
 
   fullscreenRecord.value = normalizedRecord
   showFullscreenDialog.value = true
+}
+
+function indexedDbRowClass(): string {
+  return 'iplas-indexeddb-row'
+}
+
+function handleIndexedDbSelectionChange(selection: unknown): void {
+  const selectedRows = Array.isArray(selection)
+    ? (selection as Array<{ recordKey: string }>).map((row) => row.recordKey)
+    : []
+  indexedDbSelectedKeys.value = selectedRows
+}
+
+async function handleIndexedDbGridPage(event: unknown): Promise<void> {
+  const pageEvent = event as { page?: number; rows?: number }
+  indexedDbTableOptions.value = {
+    ...indexedDbTableOptions.value,
+    page: typeof pageEvent.page === 'number' ? pageEvent.page + 1 : indexedDbTableOptions.value.page,
+    itemsPerPage:
+      typeof pageEvent.rows === 'number' ? pageEvent.rows : indexedDbTableOptions.value.itemsPerPage,
+  }
+
+  await loadIndexedDbItems({
+    ...indexedDbTableOptions.value,
+  })
+}
+
+async function handleIndexedDbGridSort(event: unknown): Promise<void> {
+  const sortEvent = event as { sortField?: string; sortOrder?: number }
+  indexedDbTableOptions.value = {
+    ...indexedDbTableOptions.value,
+    sortBy:
+      sortEvent.sortField && sortEvent.sortOrder
+        ? [{ key: sortEvent.sortField, order: sortEvent.sortOrder === -1 ? 'desc' : 'asc' }]
+        : [],
+  }
+
+  await loadIndexedDbItems({
+    ...indexedDbTableOptions.value,
+  })
 }
 
 // Download selected IndexedDB records
@@ -1320,6 +1591,40 @@ function getFilteredStationRecords(
   }
 
   return records
+}
+
+function handleStationSearchInput(stationName: string, event: Event): void {
+  const target = event.target as HTMLInputElement | null
+  setRecordSearchQuery(stationName, target?.value ?? '')
+}
+
+function handleStationStatusChange(stationName: string, event: Event): void {
+  const target = event.target as HTMLSelectElement | null
+  stationStatusFilters.value[stationName] =
+    (target?.value as 'ALL' | 'PASS' | 'FAIL' | undefined) || 'ALL'
+}
+
+function isStationDeviceSelected(stationName: string, deviceId: string): boolean {
+  return (selectedFilterDeviceIds.value[stationName] || []).includes(deviceId)
+}
+
+function toggleStationDeviceFilter(stationName: string, deviceId: string): void {
+  const selectedIds = selectedFilterDeviceIds.value[stationName] || []
+  const nextSelectedIds = selectedIds.includes(deviceId)
+    ? selectedIds.filter((value) => value !== deviceId)
+    : [...selectedIds, deviceId]
+
+  selectedFilterDeviceIds.value = {
+    ...selectedFilterDeviceIds.value,
+    [stationName]: nextSelectedIds,
+  }
+}
+
+function clearStationDeviceFilters(stationName: string): void {
+  selectedFilterDeviceIds.value = {
+    ...selectedFilterDeviceIds.value,
+    [stationName]: [],
+  }
 }
 
 /**
@@ -1517,8 +1822,7 @@ async function openFullscreen(record: CsvTestItemData | CompactCsvTestItemData):
 
 async function downloadFromFullscreen(): Promise<void> {
   if (!fullscreenOriginalRecord.value || !selectedSite.value || !selectedProject.value) {
-    downloadErrorMessage.value = 'Missing site or project information for download'
-    showDownloadError.value = true
+    showErrorNotification('Missing site or project information for download')
     return
   }
   fullscreenDownloading.value = true
@@ -1527,8 +1831,7 @@ async function downloadFromFullscreen(): Promise<void> {
     await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
   } catch (err) {
     console.error('Failed to download test log:', err)
-    downloadErrorMessage.value = err instanceof Error ? err.message : 'Failed to download test log'
-    showDownloadError.value = true
+    showErrorNotification(err instanceof Error ? err.message : 'Failed to download test log')
   } finally {
     fullscreenDownloading.value = false
   }
@@ -2214,6 +2517,419 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.iplas-content-shell,
+.iplas-content-pane,
+.iplas-selection-shell {
+  display: grid;
+  gap: 1rem;
+}
+
+.iplas-selection-shell__toolbar,
+.iplas-selection-shell__summary,
+.iplas-selection-actions,
+.iplas-result-toolbar,
+.iplas-summary-item,
+.iplas-summary-item__actions,
+.iplas-fetch-panel__actions,
+.iplas-notice {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.iplas-control-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.iplas-filter-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.2fr) minmax(11rem, 0.5fr) minmax(0, 1.4fr);
+}
+
+.iplas-control-grid--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.iplas-control-grid--three {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.iplas-field {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.iplas-field--device-filter {
+  align-content: start;
+}
+
+.iplas-field__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.iplas-field span,
+.iplas-summary-panel__eyebrow {
+  color: var(--app-ink);
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.iplas-field select,
+.iplas-field input,
+.iplas-button,
+.iplas-notice button,
+.iplas-summary-remove {
+  border-radius: 1rem;
+  font: inherit;
+}
+
+.iplas-field select,
+.iplas-field input {
+  width: 100%;
+  border: 1px solid rgba(20, 88, 71, 0.18);
+  padding: 0.82rem 0.95rem;
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--app-ink);
+}
+
+.iplas-field select:focus,
+.iplas-field input:focus {
+  outline: none;
+  border-color: rgba(20, 88, 71, 0.4);
+  box-shadow: 0 0 0 3px rgba(20, 88, 71, 0.12);
+}
+
+.iplas-input-with-icon {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 0.65rem;
+  border: 1px solid rgba(20, 88, 71, 0.18);
+  border-radius: 1rem;
+  padding: 0 0.95rem;
+  background: rgba(255, 255, 255, 0.92);
+}
+
+.iplas-input-with-icon svg {
+  color: var(--app-muted);
+}
+
+.iplas-input-with-icon input {
+  border: 0;
+  padding-left: 0;
+  padding-right: 0;
+  background: transparent;
+}
+
+.iplas-input-with-icon:focus-within {
+  border-color: rgba(20, 88, 71, 0.4);
+  box-shadow: 0 0 0 3px rgba(20, 88, 71, 0.12);
+}
+
+.iplas-button,
+.iplas-notice button,
+.iplas-summary-remove {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 1px solid transparent;
+  padding: 0.82rem 1rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.iplas-button:disabled,
+.iplas-notice button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.iplas-button--primary {
+  background: linear-gradient(135deg, #145847, #1c7c62);
+  color: #fff;
+}
+
+.iplas-button--secondary {
+  background: rgba(36, 116, 184, 0.12);
+  color: #1d4f91;
+}
+
+.iplas-button--ghost,
+.iplas-notice button,
+.iplas-summary-remove {
+  background: rgba(255, 248, 240, 0.84);
+  border-color: rgba(20, 88, 71, 0.16);
+  color: var(--app-ink);
+}
+
+.iplas-button--danger {
+  background: rgba(180, 54, 45, 0.14);
+  color: #a61b1b;
+}
+
+.iplas-button--success {
+  background: rgba(20, 88, 71, 0.14);
+  color: #145847;
+}
+
+.iplas-inline-action {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--app-accent);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.iplas-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid rgba(20, 88, 71, 0.12);
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  background: rgba(255, 248, 240, 0.84);
+  color: var(--app-ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.iplas-pill--cool {
+  background: rgba(36, 116, 184, 0.12);
+  color: #1d4f91;
+}
+
+.iplas-pill--warm {
+  background: rgba(184, 122, 40, 0.14);
+  color: #9a5a12;
+}
+
+.iplas-pill--neutral {
+  background: rgba(20, 88, 71, 0.08);
+  color: #145847;
+}
+
+.iplas-selection-actions {
+  align-items: flex-start;
+}
+
+.iplas-selection-actions p,
+.iplas-summary-item p,
+.iplas-toggle-card p,
+.iplas-progress-card p,
+.iplas-notice p,
+.iplas-empty-state p {
+  margin: 0.35rem 0 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.iplas-summary-panel,
+.iplas-fetch-panel,
+.iplas-result-pane,
+.iplas-progress-card,
+.iplas-empty-state,
+.iplas-result-summary-card {
+  display: grid;
+  gap: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1.25rem;
+  padding: 1rem 1.1rem;
+  background: rgba(255, 251, 247, 0.94);
+}
+
+.iplas-summary-panel__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.iplas-summary-panel h3,
+.iplas-summary-item h4 {
+  margin: 0;
+  color: var(--app-ink);
+}
+
+.iplas-summary-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.iplas-result-toolbar {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.iplas-result-summary-card {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  background: linear-gradient(180deg, rgba(20, 88, 71, 0.06), rgba(255, 255, 255, 0.92));
+}
+
+.iplas-result-summary-card strong {
+  color: var(--app-ink);
+}
+
+.iplas-device-filter-shell,
+.iplas-indexeddb-status-bar {
+  display: grid;
+  gap: 0.85rem;
+  border: 1px solid rgba(20, 88, 71, 0.12);
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.iplas-device-filter-shell p,
+.iplas-indexeddb-status-bar p {
+  margin: 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.iplas-device-filter-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.iplas-device-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  border: 1px solid rgba(20, 88, 71, 0.12);
+  border-radius: 999px;
+  padding: 0.45rem 0.8rem;
+  background: rgba(255, 248, 240, 0.84);
+  color: var(--app-ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.iplas-device-chip--active {
+  border-color: rgba(20, 88, 71, 0.28);
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
+}
+
+.iplas-indexeddb-status-bar {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  background: linear-gradient(180deg, rgba(20, 88, 71, 0.06), rgba(255, 255, 255, 0.94));
+}
+
+.iplas-indexeddb-status-bar strong {
+  color: var(--app-ink);
+}
+
+.iplas-summary-item {
+  border: 1px solid rgba(20, 88, 71, 0.12);
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.iplas-summary-remove {
+  width: 2.3rem;
+  height: 2.3rem;
+  padding: 0;
+  border-radius: 999px;
+}
+
+.iplas-toggle-card {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  border: 1px solid rgba(20, 88, 71, 0.12);
+  border-radius: 1rem;
+  padding: 0.9rem 1rem;
+  background: rgba(20, 88, 71, 0.05);
+}
+
+.iplas-toggle-card input {
+  width: 1rem;
+  height: 1rem;
+  margin-top: 0.2rem;
+}
+
+.iplas-toggle-card span {
+  display: block;
+  color: var(--app-ink);
+  font-weight: 700;
+}
+
+.iplas-progress-card {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.iplas-progress-card strong,
+.iplas-empty-state strong,
+.iplas-notice strong {
+  color: var(--app-ink);
+}
+
+.iplas-progress-card--success {
+  background: rgba(240, 253, 244, 0.9);
+}
+
+.iplas-progress-card__spinner {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 999px;
+  border: 3px solid rgba(20, 88, 71, 0.14);
+  border-top-color: #145847;
+  animation: iplas-spin 0.9s linear infinite;
+}
+
+.iplas-notice {
+  border-radius: 1.2rem;
+  padding: 1rem 1.1rem;
+}
+
+.iplas-notice--error {
+  border: 1px solid rgba(180, 54, 45, 0.18);
+  background: rgba(254, 242, 242, 0.92);
+}
+
+.iplas-notice--info {
+  border: 1px solid rgba(36, 116, 184, 0.18);
+  background: rgba(240, 249, 255, 0.92);
+}
+
+.iplas-notice--warning {
+  border: 1px solid rgba(184, 122, 40, 0.18);
+  background: rgba(255, 247, 237, 0.92);
+}
+
+.iplas-empty-state {
+  grid-template-columns: auto 1fr;
+  align-items: center;
+}
+
+.iplas-empty-state svg {
+  font-size: 1.8rem;
+  color: rgba(20, 88, 71, 0.45);
+}
+
+.iplas-empty-state--compact {
+  min-height: auto;
+}
+
+.iplas-spin {
+  animation: iplas-spin 1s linear infinite;
+}
+
 .w-100 {
   width: 100%;
 }
@@ -2237,5 +2953,43 @@ onUnmounted(() => {
 
 :deep(.v-theme--dark .v-table--striped tbody tr:nth-of-type(even)) {
   background-color: rgba(255, 255, 255, 0.02);
+}
+
+@media (max-width: 960px) {
+  .iplas-filter-grid,
+  .iplas-control-grid--two,
+  .iplas-control-grid--three {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .iplas-selection-shell__toolbar,
+  .iplas-selection-shell__summary,
+  .iplas-selection-actions,
+  .iplas-result-toolbar,
+  .iplas-summary-panel__header,
+  .iplas-summary-item,
+  .iplas-summary-item__actions,
+  .iplas-fetch-panel__actions,
+  .iplas-notice,
+  .iplas-empty-state,
+  .iplas-progress-card,
+  .iplas-result-summary-card,
+  .iplas-indexeddb-status-bar {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@keyframes iplas-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
 }
 </style>

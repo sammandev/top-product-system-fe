@@ -1,11 +1,11 @@
 # AST Parser Frontend
 
-Modern Vue 3 single-page application (SPA) for wireless test data analysis, file parsing, and DUT (Device Under Test) management. Built with TypeScript, Vite, and Vuetify following Material Design 3 principles.
+Modern Vue 3 single-page application (SPA) for wireless test data analysis, file parsing, and DUT (Device Under Test) management. Built with TypeScript, Vite, PrimeVue, and scaffold-era shared UI components.
 
 [![Vue.js](https://img.shields.io/badge/Vue.js-3.5+-4FC08D.svg?logo=vue.js)](https://vuejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-3178C6.svg?logo=typescript)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-7.x-646CFF.svg?logo=vite)](https://vitejs.dev/)
-[![Vuetify](https://img.shields.io/badge/Vuetify-3.11+-1867C0.svg?logo=vuetify)](https://vuetifyjs.com/)
+[![Vite](https://img.shields.io/badge/Vite-7.x-646CFF.svg?logo=vite)](https://vitejsP.dev/)
+[![PrimeVue](https://img.shields.io/badge/PrimeVue-4.5+-10B981.svg)](https://primevue.org/)
 [![Tests](https://img.shields.io/badge/tests-65%20passing-brightgreen.svg)](./src/)
 
 ---
@@ -44,9 +44,11 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 - **Vite 7.2.7** - Next-generation frontend build tool with HMR
 
 ### UI & Styling
-- **Vuetify 3.11.3** - Material Design 3 component framework
-- **@mdi/font 7.4.47** - Material Design Icons (comprehensive icon library)
-- **Sass 1.95.0** - CSS preprocessor for custom styling
+- **PrimeVue 4.5.5** - Component foundation for shared app primitives
+- **@primeuix/themes 2.0.3** - Runtime theme presets and palette integration
+- **@iconify/vue 5.0.0** - Icon system used across scaffold-era surfaces
+- **Tailwind CSS 4.2.3** + **tailwindcss-primeui 0.6.1** - Utility styling and PrimeVue tokens
+- **Sass 1.98.0** - CSS preprocessor for custom styling where needed
 
 ### State & Routing
 - **Vue Router 4.6.3** - Official routing solution with navigation guards
@@ -59,10 +61,10 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 
 ### Visualization & Utilities
 - **ECharts 6.0.0** - Professional data visualization library
+- **vue-echarts 8.0.1** - Vue bindings for the shared charting path
 - **VueUse 14.1.0** - Collection of composition utilities
   - **@vueuse/core** - Essential Vue composition functions
   - **@vueuse/motion 3.0.3** - Animation and motion utilities
-- **Chart.js 4.5.1** + **vue-chartjs 5.3.3** - Simple chart components
 - **KaTeX 0.16.27** - Fast LaTeX math rendering
 
 ### Excel & Document Processing
@@ -135,7 +137,7 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 - **Real-time Data**: Direct integration with intranet DUT API
 
 ### User Experience
-- **Material Design 3**: Modern, accessible UI components
+- **Scaffold-First UI**: Shared PrimeVue-backed surfaces plus native controls and Iconify icons
 - **Responsive Design**: Mobile, tablet, and desktop support
 - **Dark/Light Themes**: Customizable theme support
 - **Progressive Web App**: Installable on devices
@@ -147,18 +149,17 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 
 ```
 src/
-├── api/                    # API service layer
-│   ├── client.ts          # Axios instance with auth interceptors
-│   ├── auth.ts            # Authentication endpoints
-│   └── dut.ts             # DUT management endpoints
+├── app/                    # App bootstrap, providers, and styles
+│   ├── providers/         # PrimeVue, Pinia, and query provider setup
+│   └── styles/            # App-level stylesheet entry points
 ├── assets/                # Static assets (images, global CSS)
 │   └── main.css          # Global styles and utilities
-├── components/            # Reusable components (deprecated structure)
 ├── core/                  # Core application functionality
 │   ├── api/              # API utilities
 │   ├── config/           # App configuration
-│   ├── plugins/          # Vue plugins
+│   ├── plugins/          # Core plugin exports
 │   ├── router/           # Route definitions
+│   ├── stores/           # Cross-feature stores
 │   └── types/            # Core TypeScript types
 ├── features/              # Feature modules (new structure)
 │   ├── auth/             # Authentication feature
@@ -176,29 +177,22 @@ src/
 │       └── views/        # Parsing page
 ├── layouts/               # Layout components
 │   └── DefaultLayout.vue # Main app layout
-├── plugins/               # Vue plugins configuration
-│   └── vuetify.ts        # Vuetify theme config
 ├── router/                # Vue Router
 │   └── index.ts          # Route definitions with guards
 ├── shared/                # Shared utilities
-│   ├── components/       # Shared components
-│   │   ├── base/         # Base components
-│   │   ├── common/       # Common components
-│   │   ├── error/        # Error pages (404)
-│   │   ├── form/         # Form components
-│   │   └── layout/       # Layout components
+│   ├── components/       # Legacy shared components
 │   ├── composables/      # Shared composables
-│   ├── types/            # Shared TypeScript types
+│   ├── constants/        # Shared constants
+│   ├── ui/               # AppPanel, AppDialog, AppDataGrid, AppTabs, and peers
 │   └── utils/            # Utility functions
-├── stores/                # Pinia stores (deprecated location)
-│   ├── auth.ts           # Authentication state
-│   └── dut.ts            # DUT data state
+├── test/                  # Test setup and helpers
+│   ├── setup.ts          # Vitest global setup
+│   └── utils.ts          # Shared mount and test helpers
 ├── types/                 # TypeScript type definitions
 │   └── api.ts            # API response/request types
-├── utils/                 # Helper functions
-├── views/                 # Page components (deprecated location)
 ├── App.vue                # Root component
-└── main.ts                # Application entry point
+├── main.ts                # Application entry point
+└── style.css              # Base global stylesheet
 ```
 
 ### Architecture Notes
@@ -275,7 +269,7 @@ src/
 
 ```bash
 git clone <repository-url>
-cd frontend_vuetify
+cd top-product-system-fe
 ```
 
 ### 2. Install Dependencies
@@ -342,7 +336,7 @@ Application will be available at `http://localhost:3000`
    cd backend_fastapi && make dev
    
    # Terminal 2: Frontend
-  cd frontend_vuetify && pnpm run dev
+  cd top-product-system-fe && pnpm run dev
    ```
 
 2. **Make Changes**: Edit files in `src/` directory
@@ -437,44 +431,37 @@ describe('Auth Store', () => {
 
 ### E2E Tests
 
-**Framework**: Playwright 1.56+ (Multi-browser testing)
+**Framework**: Playwright 1.58+ (multi-browser testing)
 
-**Test Coverage**:
-- ✅ **Authentication Flows**: Login, logout, token management (11 tests)
-- ✅ **Navigation & Routing**: Route guards, protected routes (16 tests)  
-- ✅ **Form Validation**: Input validation, error handling (2 tests)
-- ✅ **Accessibility**: Keyboard navigation, ARIA labels (2 tests)
-- ✅ **Responsive Design**: Mobile/tablet layouts (2 tests)
-- ✅ **CRITICAL**: Issue #9 regression test (inline error display)
-- **Total**: 43 E2E tests, 58% passing (25/43)
+- ✅ **Authentication Flows**: Login, logout, and token management coverage
+- ✅ **Navigation & Routing**: Route guards and protected-route coverage
+- ✅ **Critical Regression Checks**: Targeted auth regression protection
 
 **Run E2E Tests**:
 
 ```bash
-# Run all E2E tests (all browsers)
-npm run test:e2e
+# Run all E2E tests
+pnpm run test:e2e
 
-# Run specific browser
-npm run test:e2e -- --project=chromium
-npm run test:e2e -- --project=firefox
-npm run test:e2e -- --project=webkit
+# Run a specific browser project
+pnpm run test:e2e -- --project=chromium
+pnpm run test:e2e -- --project=firefox
+pnpm run test:e2e -- --project=webkit
 
-# Run specific test file
-npm run test:e2e e2e/auth.spec.ts
+# Run a specific test file
+pnpm run test:e2e e2e/auth.spec.ts
 
-# Run tests matching pattern
-npm run test:e2e -- -g "login"
+# Run tests matching a title pattern
+pnpm run test:e2e -- -g "login"
 
-# Interactive UI mode (recommended for development)
-npm run test:e2e:ui
+# Interactive UI mode
+pnpm run test:e2e:ui
 
-# Debug mode
-npm run test:e2e -- --debug
+# Debug and headed modes
+pnpm run test:e2e -- --debug
+pnpm run test:e2e -- --headed
 
-# Headed mode (see browser)
-npm run test:e2e -- --headed
-
-# Generate report
+# Generate the HTML report
 npx playwright show-report
 ```
 
@@ -529,7 +516,7 @@ test('should login successfully', async ({ page }) => {
 ```yaml
 # .github/workflows/test.yml
 - name: Run E2E tests
-  run: npm run test:e2e -- --project=chromium
+  run: pnpm run test:e2e -- --project=chromium
 ```
 
 ---
@@ -622,12 +609,11 @@ Protected routes require authentication via route guards.
 
 ## 🎨 UI Components
 
-Vuetify 3 provides comprehensive Material Design components:
-- Data tables with sorting/filtering
-- Forms with validation
-- Charts and visualizations
-- File upload with progress
-- Responsive layouts
+The current UI layer is scaffold-first and combines shared wrappers with native controls:
+- `AppDataGrid`, `AppDialog`, `AppPanel`, `AppProgress`, and `AppTabs` cover repeated app surfaces
+- PrimeVue provides the underlying dialog, table, theme, and toast primitives
+- Iconify supplies the icon layer used across navigation and result states
+- Native buttons, inputs, and semantic layout markup are preferred for local feature controls
 
 ## 🐛 Troubleshooting
 
@@ -645,7 +631,7 @@ server: { port: 3001 }
 **Module errors:**
 ```bash
 rm -rf node_modules package-lock.json
-npm install
+pnpm install
 ```
 
 ---
@@ -684,10 +670,10 @@ const username = user?.profile?.username ?? 'Anonymous'
 
 ```vue
 <template>
-  <v-card>
-    <v-card-title>{{ title }}</v-card-title>
-    <v-card-text>{{ message }}</v-card-text>
-  </v-card>
+  <section class="card">
+    <h2>{{ title }}</h2>
+    <p>{{ message }}</p>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -730,7 +716,10 @@ onMounted(() => {
 </script>
 
 <style scoped>
-/* Component-specific styles */
+.card {
+  display: grid;
+  gap: 0.75rem;
+}
 </style>
 ```
 
@@ -777,7 +766,7 @@ import type { User } from '../../shared/types/api'
 
 **Auto-format before commits**:
 ```bash
-npm run format && npm run lint:fix
+pnpm run format && pnpm run lint:fix
 ```
 
 ---
@@ -859,46 +848,25 @@ try {
 }
 ```
 
-### Vuetify Best Practices
+### Scaffold UI Best Practices
 
-**Use Vuetify components over custom HTML**:
+**Use shared UI primitives for repeated app surfaces**:
 
 ```vue
-<!-- ✅ Correct -->
-<v-btn color="primary" @click="handleClick">
-  Click Me
-</v-btn>
-
-<!-- ❌ Avoid -->
-<button class="custom-button" @click="handleClick">
-  Click Me
-</button>
+<AppPanel title="Results" description="Review the latest parsed records">
+  <AppDataGrid :columns="columns" :rows="rows" />
+</AppPanel>
 ```
 
-**Responsive Design**:
+**Prefer native controls for local interactions**:
 
 ```vue
-<v-container>
-  <v-row>
-    <v-col cols="12" md="6" lg="4">
-      <!-- Content -->
-    </v-col>
-  </v-row>
-</v-container>
-```
+<label class="field">
+  <span>Email</span>
+  <input v-model="email" type="email" required />
+</label>
 
-**Form Validation**:
-
-```vue
-<v-form ref="formRef" v-model="valid" @submit.prevent="handleSubmit">
-  <v-text-field
-    v-model="email"
-    :rules="[rules.required, rules.email]"
-    label="Email"
-    variant="outlined"
-  />
-  <v-btn :disabled="!valid" type="submit">Submit</v-btn>
-</v-form>
+<button :disabled="!email" type="submit">Submit</button>
 ```
 
 ### Performance Optimization
@@ -940,11 +908,11 @@ function getFilteredItems() {
 ### Pull Request Guidelines
 
 **Before Submitting**:
-- ✅ Run `npm run type-check` - No TypeScript errors
-- ✅ Run `npm run lint` - No ESLint errors
-- ✅ Run `npm run test:unit` - All unit tests passing
-- ✅ Run `npm run test:e2e -- --project=chromium` - Critical E2E tests passing
-- ✅ Run `npm run format` - Code formatted
+- ✅ Run `pnpm run type-check` - No TypeScript errors
+- ✅ Run `pnpm run lint` - No Biome errors
+- ✅ Run `pnpm run test:run` - All unit tests passing
+- ✅ Run `pnpm run test:e2e -- --project=chromium` - Critical E2E tests passing
+- ✅ Run `pnpm run format` - Code formatted
 - ✅ Update README if adding features
 - ✅ Add/update tests for new functionality
 
@@ -1010,8 +978,9 @@ test(e2e): add navigation test cases
 
 - **[Vue 3 Documentation](https://vuejs.org/)** - Core framework guide
 - **[Vue 3 Composition API](https://vuejs.org/guide/extras/composition-api-faq.html)** - API reference
-- **[Vuetify 3 Documentation](https://vuetifyjs.com/)** - UI components
-- **[Vuetify 3 Components](https://vuetifyjs.com/en/components/all/)** - Component API
+- **[PrimeVue Documentation](https://primevue.org/)** - UI components and theme guides
+- **[PrimeVue DataTable](https://primevue.org/datatable/)** - Data grid reference
+- **[Iconify for Vue](https://iconify.design/docs/icon-components/vue/)** - Icon component usage
 - **[Vite Documentation](https://vitejs.dev/)** - Build tool
 - **[Pinia Documentation](https://pinia.vuejs.org/)** - State management
 - **[Vue Router Documentation](https://router.vuejs.org/)** - Routing
@@ -1047,10 +1016,6 @@ export default defineConfig({
 
 ```bash
 # Clear cache and reinstall
-rm -rf node_modules package-lock.json
-npm install
-
-# Or with pnpm
 rm -rf node_modules pnpm-lock.yaml
 pnpm install
 ```
@@ -1062,14 +1027,14 @@ pnpm install
 # Command Palette: "TypeScript: Restart TS Server"
 
 # Check for type errors
-npm run type-check
+pnpm run type-check
 ```
 
 #### Hot Module Replacement Not Working
 
 ```bash
 # Restart dev server
-npm run dev
+pnpm run dev
 
 # Clear Vite cache
 rm -rf node_modules/.vite
@@ -1079,7 +1044,7 @@ rm -rf node_modules/.vite
 
 ```bash
 # Clear test cache
-npm run test:unit -- --clearCache
+pnpm exec vitest --clearCache
 
 # Playwright browser issues
 npx playwright install
@@ -1106,7 +1071,7 @@ npx playwright install-deps
 
 1. **Setup Environment**:
    ```bash
-   npm install
+  pnpm install
    cp .env.example .env.local
    ```
 
@@ -1116,7 +1081,7 @@ npx playwright install-deps
    cd ../backend_fastapi && make dev
    
    # Terminal 2: Frontend
-   npm run dev
+  pnpm run dev
    ```
 
 3. **Verify Setup**:
@@ -1128,7 +1093,7 @@ npx playwright install-deps
 
 1. **Review Guidelines**: Read [Contributing](#-contributing) section
 2. **Setup Dev Tools**: Install recommended VS Code extensions
-3. **Run Tests**: Ensure `npm run test:unit` passes
+3. **Run Tests**: Ensure `pnpm run test:run` passes
 4. **Create Feature Branch**: Follow branching strategy
 5. **Write Tests**: Add tests for new functionality
 
@@ -1207,11 +1172,11 @@ npx playwright install-deps
 - Parallel ISN processing with asyncio.gather() (backend optimization)
 
 **Dependencies**:
-- Vite 7.2.7 (latest stable)
-- Vuetify 3.11.3 with Material Design 3
-- Vue Router 4.6.3 with enhanced navigation guards
+- Vite 7.3.1
+- PrimeVue 4.5.5 with shared scaffold wrappers
+- Vue Router 4.6.4 with enhanced navigation guards
 - Pinia 3.0.4 for state management
-- Axios 1.13.2 with request/response interceptors
+- Axios 1.13.6 with request/response interceptors
 
 ### Quality Standards
 
@@ -1271,13 +1236,13 @@ npx playwright install-deps
 
 ### Technology Versions
 
-- Vue: 3.5.22
+- Vue: 3.5.30
 - TypeScript: 5.9.3
-- Vite: 7.1.12
-- Vuetify: 3.10.8
-- Pinia: 3.0.3
-- Playwright: 1.56.1
-- Vitest: 3.3.3
+- Vite: 7.3.1
+- PrimeVue: 4.5.5
+- Pinia: 3.0.4
+- Playwright: 1.58.2
+- Vitest: 4.1.0
 
 ---
 
@@ -1286,4 +1251,4 @@ npx playwright install-deps
 See `LICENSE` file for details.
 
 
-**Built with ❤️ using Vue 3 + TypeScript + Vite + Vuetify**
+**Built with ❤️ using Vue 3 + TypeScript + Vite + PrimeVue**

@@ -1,576 +1,825 @@
 <template>
   <DefaultLayout>
-    <v-container fluid class="py-6">
-      <!-- Page Header -->
-      <div class="d-flex align-center mb-4">
-        <v-icon class="mr-2" size="28">mdi-cog</v-icon>
-        <h1 class="text-h5 font-weight-bold">App Configuration</h1>
+    <section class="app-config-page">
+      <div class="app-config-header">
+        <div class="app-config-header__copy">
+          <div class="app-config-header__icon">
+            <Icon icon="mdi:cog-outline" />
+          </div>
+          <div>
+            <p class="app-config-header__eyebrow">Admin Control Center</p>
+            <h1>App Configuration</h1>
+            <p>
+              Maintain logo, environment overrides, and guest access from one tabbed admin workspace.
+            </p>
+          </div>
+        </div>
       </div>
 
-      <!-- Tabs -->
-      <v-card elevation="2">
-        <v-tabs v-model="activeTab" color="primary" show-arrows>
-          <v-tab value="general" prepend-icon="mdi-application">General</v-tab>
-          <v-tab value="branding" prepend-icon="mdi-palette">Branding</v-tab>
-          <v-tab v-if="authStore.isSuperAdmin" value="iplas" prepend-icon="mdi-server-network">
-            iPLAS Tokens
-          </v-tab>
-          <v-tab v-if="authStore.isSuperAdmin" value="sfistsp" prepend-icon="mdi-api">
-            SFISTSP
-          </v-tab>
-          <v-tab v-if="authStore.isSuperAdmin" value="guest" prepend-icon="mdi-account-question">
-            Guest Access
-          </v-tab>
-        </v-tabs>
+      <section class="app-config-shell">
+        <AppTabs v-model="activeTab" :items="configTabs" scrollable>
+          <template #panel-general>
+            <div class="app-config-pane app-config-pane--split">
+              <section class="app-config-panel app-config-panel--form">
+                <div class="app-config-panel__header">
+                  <div>
+                    <p class="app-config-panel__eyebrow">Core Metadata</p>
+                    <h2>Application Identity</h2>
+                  </div>
+                </div>
 
-        <v-divider />
+                <div class="app-config-notice app-config-notice--info">
+                  <strong>What this changes</strong>
+                  <p>Update the application name, version, description, and browser tab title.</p>
+                </div>
 
-        <v-tabs-window v-model="activeTab">
-          <!-- ==================== General Tab ==================== -->
-          <v-tabs-window-item value="general">
-            <v-card-text>
-              <v-row>
-                <v-col cols="12" md="8">
-                  <v-alert type="info" density="compact" class="mb-4">
-                    Update the application name, version, description and browser tab title.
-                  </v-alert>
+                <form class="app-config-form" @submit.prevent="handleGeneralSave">
+                  <label class="app-config-field">
+                    <span>Application Name</span>
+                    <input v-model="generalForm.name" type="text" autocomplete="off" placeholder="Top Product System">
+                  </label>
 
-                  <v-form ref="generalFormRef" v-model="generalFormValid" @submit.prevent="handleGeneralSave">
-                    <v-text-field v-model="generalForm.name" label="Application Name" :rules="[rules.required]"
-                      prepend-inner-icon="mdi-application" variant="outlined" class="mb-3" />
+                  <label class="app-config-field">
+                    <span>Application Version</span>
+                    <input v-model="generalForm.version" type="text" autocomplete="off" placeholder="1.0.0">
+                  </label>
 
-                    <v-text-field v-model="generalForm.version" label="Application Version" :rules="[rules.required]"
-                      prepend-inner-icon="mdi-tag" variant="outlined" class="mb-3" />
+                  <label class="app-config-field">
+                    <span>Description</span>
+                    <textarea v-model="generalForm.description" rows="4"
+                      placeholder="Short description shown across the app." />
+                  </label>
 
-                    <v-textarea v-model="generalForm.description" label="Description" prepend-inner-icon="mdi-text-long"
-                      variant="outlined" rows="3" auto-grow class="mb-3" />
+                  <label class="app-config-field">
+                    <span>Browser Tab Title</span>
+                    <input v-model="generalForm.tab_title" type="text" autocomplete="off"
+                      placeholder="Top Product System">
+                    <small>Leave empty to use the default app name in the browser tab.</small>
+                  </label>
 
-                    <v-text-field v-model="generalForm.tab_title" label="Browser Tab Title" prepend-inner-icon="mdi-tab"
-                      variant="outlined" class="mb-3" hint="Text shown in the browser tab. Leave empty for default."
-                      persistent-hint />
+                  <div v-if="generalError" class="app-config-notice app-config-notice--error">
+                    <strong>Save failed</strong>
+                    <p>{{ generalError }}</p>
+                  </div>
 
-                    <v-alert v-if="generalError" type="error" density="compact" class="mb-3">
-                      {{ generalError }}
-                    </v-alert>
+                  <div class="app-config-button-row">
+                    <button type="submit" class="app-config-button app-config-button--primary"
+                      :disabled="generalLoading || !generalFormValid">
+                      <Icon icon="mdi:content-save-outline" />
+                      <span>{{ generalLoading ? 'Saving...' : 'Save Changes' }}</span>
+                    </button>
+                    <button type="button" class="app-config-button app-config-button--ghost" :disabled="generalLoading"
+                      @click="resetGeneralForm">
+                      <Icon icon="mdi:restore" />
+                      <span>Reset</span>
+                    </button>
+                  </div>
+                </form>
+              </section>
 
-                    <div class="d-flex flex-wrap gap-2">
-                      <v-btn color="primary" :loading="generalLoading" :disabled="!generalFormValid" type="submit">
-                        <v-icon start>mdi-content-save</v-icon>
-                        Save Changes
-                      </v-btn>
-                      <v-btn variant="outlined" :disabled="generalLoading" @click="resetGeneralForm">
-                        Reset
-                      </v-btn>
-                    </div>
-                  </v-form>
-                </v-col>
+              <aside class="app-config-panel app-config-panel--preview">
+                <div class="app-config-panel__header">
+                  <div>
+                    <p class="app-config-panel__eyebrow">Preview</p>
+                    <h2>Current Presentation</h2>
+                  </div>
+                </div>
 
-                <v-col cols="12" md="4">
-                  <v-card variant="tonal" class="pa-4">
-                    <div class="text-overline mb-1">Preview</div>
-                    <div class="text-subtitle-1 font-weight-bold">
-                      {{ generalForm.name || appName }}
-                    </div>
-                    <div class="text-caption text-medium-emphasis">
-                      v{{ generalForm.version || appVersion }}
-                    </div>
-                    <p class="text-body-2 mt-3">
-                      {{ generalForm.description || appDescription }}
-                    </p>
-                    <v-divider class="my-3" />
-                    <div class="text-caption text-medium-emphasis" v-if="lastUpdated">
-                      Last updated: {{ lastUpdated }}
-                    </div>
-                    <div class="text-caption text-medium-emphasis" v-if="updatedBy">
-                      Updated by: {{ updatedBy }}
-                    </div>
-                  </v-card>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-tabs-window-item>
+                <div class="app-config-preview-card">
+                  <span class="app-config-preview-card__label">Application</span>
+                  <strong>{{ generalForm.name || appName }}</strong>
+                  <small>v{{ generalForm.version || appVersion }}</small>
+                  <p>{{ generalForm.description || appDescription }}</p>
+                </div>
 
-          <!-- ==================== Branding Tab ==================== -->
-          <v-tabs-window-item value="branding">
-            <v-card-text>
-              <v-alert type="info" density="compact" class="mb-4">
-                Upload a custom favicon for the browser tab. Supported formats: ICO, PNG, SVG
-                (max 1 MB).
-              </v-alert>
+                <dl class="app-config-meta-list">
+                  <div>
+                    <dt>Browser tab</dt>
+                    <dd>{{ generalForm.tab_title || appName }}</dd>
+                  </div>
+                  <div v-if="lastUpdated">
+                    <dt>Last updated</dt>
+                    <dd>{{ lastUpdated }}</dd>
+                  </div>
+                  <div v-if="updatedBy">
+                    <dt>Updated by</dt>
+                    <dd>{{ updatedBy }}</dd>
+                  </div>
+                </dl>
+              </aside>
+            </div>
+          </template>
 
-              <v-row>
-                <v-col cols="12" md="6">
-                  <div class="text-subtitle-2 mb-2">Current Favicon</div>
-                  <div class="d-flex align-center ga-4 mb-4">
-                    <v-avatar size="48" rounded="sm" color="grey-lighten-3">
-                      <v-img v-if="currentFaviconUrl" :src="currentFaviconUrl" />
-                      <v-icon v-else>mdi-image-off</v-icon>
-                    </v-avatar>
-                    <div>
-                      <div class="text-body-2">
-                        {{ currentFaviconUrl ? 'Custom favicon set' : 'Using default favicon' }}
+          <template #panel-branding>
+            <div class="app-config-pane">
+              <section class="app-config-panel">
+                <div class="app-config-panel__header">
+                  <div>
+                    <p class="app-config-panel__eyebrow">Branding</p>
+                    <h2>Browser Favicon</h2>
+                  </div>
+                </div>
+
+                <div class="app-config-notice app-config-notice--info">
+                  <strong>Upload guidance</strong>
+                  <p>Supported formats: ICO, PNG, SVG. Maximum file size: 1 MB.</p>
+                </div>
+
+                <div class="app-config-branding-grid">
+                  <div class="app-config-branding-card">
+                    <span class="app-config-branding-card__label">Current favicon</span>
+                    <div class="app-config-favicon-preview">
+                      <img v-if="currentFaviconUrl" :src="currentFaviconUrl" alt="Current favicon">
+                      <div v-else class="app-config-favicon-preview__empty">
+                        <Icon icon="mdi:image-off-outline" />
                       </div>
-                      <v-btn v-if="currentFaviconUrl" variant="text" color="error" size="small" class="mt-1"
-                        :loading="faviconLoading" @click="handleDeleteFavicon">
-                        <v-icon start size="small">mdi-delete</v-icon>
-                        Remove
-                      </v-btn>
+                    </div>
+                    <p>
+                      {{ currentFaviconUrl ? 'Custom favicon is active.' : 'Default favicon is currently in use.' }}
+                    </p>
+
+                    <button v-if="currentFaviconUrl" type="button" class="app-config-button app-config-button--danger"
+                      :disabled="faviconLoading" @click="handleDeleteFavicon">
+                      <Icon icon="mdi:delete-outline" />
+                      <span>{{ faviconLoading ? 'Removing...' : 'Remove Favicon' }}</span>
+                    </button>
+                  </div>
+
+                  <div class="app-config-branding-upload">
+                    <AppFilePicker v-model="faviconFile" label="Upload favicon" accept=".ico,.png,.svg"
+                      helper-text="Max 1 MB. ICO, PNG, or SVG." :disabled="faviconLoading" :maxFileSizeMb="1" />
+
+                    <div class="app-config-button-row">
+                      <button type="button" class="app-config-button app-config-button--primary"
+                        :disabled="faviconLoading || !selectedFaviconFile" @click="handleUploadFavicon">
+                        <Icon icon="mdi:upload-outline" />
+                        <span>{{ faviconLoading ? 'Uploading...' : 'Upload Favicon' }}</span>
+                      </button>
+                    </div>
+
+                    <div v-if="faviconError" class="app-config-notice app-config-notice--error">
+                      <strong>Upload failed</strong>
+                      <p>{{ faviconError }}</p>
+                    </div>
+
+                    <div v-if="faviconSuccess" class="app-config-notice app-config-notice--success">
+                      <strong>Branding updated</strong>
+                      <p>{{ faviconSuccess }}</p>
                     </div>
                   </div>
+                </div>
+              </section>
+            </div>
+          </template>
 
-                  <v-file-input v-model="faviconFile" label="Upload Favicon" accept=".ico,.png,.svg"
-                    prepend-icon="mdi-image" variant="outlined" :rules="[rules.faviconSize]"
-                    hint="Max 1 MB. ICO, PNG, or SVG" persistent-hint />
-
-                  <v-btn color="primary" class="mt-3" :loading="faviconLoading"
-                    :disabled="!faviconFile || faviconFile.length === 0" @click="handleUploadFavicon">
-                    <v-icon start>mdi-upload</v-icon>
-                    Upload Favicon
-                  </v-btn>
-
-                  <v-alert v-if="faviconError" type="error" density="compact" class="mt-3">
-                    {{ faviconError }}
-                  </v-alert>
-                  <v-alert v-if="faviconSuccess" type="success" density="compact" class="mt-3">
-                    {{ faviconSuccess }}
-                  </v-alert>
-                </v-col>
-              </v-row>
-            </v-card-text>
-          </v-tabs-window-item>
-
-          <!-- ==================== iPLAS Tokens Tab ==================== -->
-          <v-tabs-window-item v-if="authStore.isSuperAdmin" value="iplas">
-            <v-card-text>
-              <div class="d-flex align-center justify-space-between mb-4">
-                <v-alert type="info" density="compact" class="flex-grow-1 mr-4">
-                  Manage iPLAS API tokens per site. Only one token per site can be active at a time.
-                  Active tokens override environment variable configuration.
-                </v-alert>
-                <v-btn color="primary" @click="openIplasDialog()">
-                  <v-icon start>mdi-plus</v-icon>
-                  Add Token
-                </v-btn>
-              </div>
-
-              <v-data-table :headers="iplasHeaders" :items="iplasTokens" :loading="iplasLoading" class="elevation-1"
-                density="comfortable" items-per-page="10">
-                <template #item.is_active="{ item }">
-                  <v-chip :color="item.is_active ? 'success' : 'grey'" size="small" label>
-                    {{ item.is_active ? 'Active' : 'Inactive' }}
-                  </v-chip>
-                </template>
-                <template #item.token_masked="{ item }">
-                  <code class="text-caption">{{ item.token_masked }}</code>
-                </template>
-                <template #item.updated_at="{ item }">
-                  {{ formatDate(item.updated_at) }}
-                </template>
-                <template #item.actions="{ item }">
-                  <div class="d-flex ga-1">
-                    <v-btn v-if="!item.is_active" icon size="x-small" variant="text" color="success" title="Activate"
-                      @click="handleActivateIplas(item.id)">
-                      <v-icon size="small">mdi-check-circle</v-icon>
-                    </v-btn>
-                    <v-btn icon size="x-small" variant="text" color="primary" title="Edit"
-                      @click="openIplasDialog(item)">
-                      <v-icon size="small">mdi-pencil</v-icon>
-                    </v-btn>
-                    <v-btn icon size="x-small" variant="text" color="error" title="Delete"
-                      @click="confirmDeleteIplas(item)">
-                      <v-icon size="small">mdi-delete</v-icon>
-                    </v-btn>
+          <template #panel-iplas>
+            <div class="app-config-pane">
+              <section class="app-config-panel">
+                <div class="app-config-panel__header app-config-panel__header--actions">
+                  <div>
+                    <p class="app-config-panel__eyebrow">External Overrides</p>
+                    <h2>iPLAS Tokens</h2>
                   </div>
-                </template>
-              </v-data-table>
 
-              <v-alert v-if="iplasError" type="error" density="compact" class="mt-3">
-                {{ iplasError }}
-              </v-alert>
-            </v-card-text>
-          </v-tabs-window-item>
+                  <button type="button" class="app-config-button app-config-button--primary" @click="openIplasDialog()">
+                    <Icon icon="mdi:plus" />
+                    <span>Add Token</span>
+                  </button>
+                </div>
 
-          <!-- ==================== SFISTSP Tab ==================== -->
-          <v-tabs-window-item v-if="authStore.isSuperAdmin" value="sfistsp">
-            <v-card-text>
-              <div class="d-flex align-center justify-space-between mb-4">
-                <v-alert type="info" density="compact" class="flex-grow-1 mr-4">
-                  Manage SFISTSP API configuration. Only one config can be active at a time.
-                  Active config overrides environment variables.
-                </v-alert>
-                <v-btn color="primary" @click="openSfistspDialog()">
-                  <v-icon start>mdi-plus</v-icon>
-                  Add Config
-                </v-btn>
-              </div>
+                <div class="app-config-notice app-config-notice--info">
+                  <strong>Activation rules</strong>
+                  <p>
+                    Only one token per site can be active at a time. Active tokens override
+                    environment variable configuration.
+                  </p>
+                </div>
 
-              <v-data-table :headers="sfistspHeaders" :items="sfistspConfigs" :loading="sfistspLoading"
-                class="elevation-1" density="comfortable" items-per-page="10">
-                <template #item.is_active="{ item }">
-                  <v-chip :color="item.is_active ? 'success' : 'grey'" size="small" label>
-                    {{ item.is_active ? 'Active' : 'Inactive' }}
-                  </v-chip>
-                </template>
-                <template #item.password_masked="{ item }">
-                  <code class="text-caption">{{ item.password_masked }}</code>
-                </template>
-                <template #item.updated_at="{ item }">
-                  {{ formatDate(item.updated_at) }}
-                </template>
-                <template #item.actions="{ item }">
-                  <div class="d-flex ga-1">
-                    <v-btn v-if="!item.is_active" icon size="x-small" variant="text" color="success" title="Activate"
-                      @click="handleActivateSfistsp(item.id)">
-                      <v-icon size="small">mdi-check-circle</v-icon>
-                    </v-btn>
-                    <v-btn icon size="x-small" variant="text" color="primary" title="Edit"
-                      @click="openSfistspDialog(item)">
-                      <v-icon size="small">mdi-pencil</v-icon>
-                    </v-btn>
-                    <v-btn icon size="x-small" variant="text" color="error" title="Delete"
-                      @click="confirmDeleteSfistsp(item)">
-                      <v-icon size="small">mdi-delete</v-icon>
-                    </v-btn>
+                <AppDataGrid :columns="iplasGridColumns" :rows="iplasTokens" :loading="iplasLoading" paginator
+                  :rowsPerPage="10" dataKey="id">
+                  <template #cell-is_active="{ data }">
+                    <span class="app-config-chip" :class="data.is_active ? 'is-success' : 'is-muted'">
+                      {{ data.is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </template>
+
+                  <template #cell-token_masked="{ data }">
+                    <code class="app-config-code">{{ data.token_masked }}</code>
+                  </template>
+
+                  <template #cell-updated_at="{ data }">
+                    {{ formatDate(data.updated_at) }}
+                  </template>
+
+                  <template #cell-actions="{ data }">
+                    <div class="app-config-actions">
+                      <button v-if="!data.is_active" type="button" title="Activate token"
+                        @click="handleActivateIplas(data.id)">
+                        <Icon icon="mdi:check-circle-outline" />
+                      </button>
+                      <button type="button" title="Edit token" @click="openIplasDialog(data)">
+                        <Icon icon="mdi:pencil-outline" />
+                      </button>
+                      <button type="button" class="is-danger" title="Delete token" @click="confirmDeleteIplas(data)">
+                        <Icon icon="mdi:delete-outline" />
+                      </button>
+                    </div>
+                  </template>
+
+                  <template #empty>
+                    <div class="app-config-empty-state">
+                      <strong>No iPLAS tokens configured.</strong>
+                      <p>Create the first site override to activate managed credentials.</p>
+                    </div>
+                  </template>
+                </AppDataGrid>
+
+                <div v-if="iplasError" class="app-config-notice app-config-notice--error">
+                  <strong>iPLAS update failed</strong>
+                  <p>{{ iplasError }}</p>
+                </div>
+              </section>
+            </div>
+          </template>
+
+          <template #panel-sfistsp>
+            <div class="app-config-pane">
+              <section class="app-config-panel">
+                <div class="app-config-panel__header app-config-panel__header--actions">
+                  <div>
+                    <p class="app-config-panel__eyebrow">External Overrides</p>
+                    <h2>SFISTSP Configurations</h2>
                   </div>
-                </template>
-              </v-data-table>
 
-              <v-alert v-if="sfistspError" type="error" density="compact" class="mt-3">
-                {{ sfistspError }}
-              </v-alert>
-            </v-card-text>
-          </v-tabs-window-item>
+                  <button type="button" class="app-config-button app-config-button--primary"
+                    @click="openSfistspDialog()">
+                    <Icon icon="mdi:plus" />
+                    <span>Add Config</span>
+                  </button>
+                </div>
 
-          <!-- ==================== Guest Access Tab ==================== -->
-          <v-tabs-window-item v-if="authStore.isSuperAdmin" value="guest">
-            <v-card-text>
-              <div class="d-flex align-center justify-space-between mb-4">
-                <v-alert type="info" density="compact" class="flex-grow-1 mr-4">
-                  Manage guest login credentials. Only one credential can be active at a time.
-                  Active credentials are used for the "Continue as Guest" button on the login page.
-                </v-alert>
-                <v-btn color="primary" @click="openGuestDialog()">
-                  <v-icon start>mdi-plus</v-icon>
-                  Add Credential
-                </v-btn>
-              </div>
+                <div class="app-config-notice app-config-notice--info">
+                  <strong>Activation rules</strong>
+                  <p>
+                    Only one configuration can be active at a time. Active records override
+                    environment variables.
+                  </p>
+                </div>
 
-              <v-data-table :headers="guestHeaders" :items="guestCredentials" :loading="guestLoading"
-                class="elevation-1" density="comfortable" items-per-page="10">
-                <template #item.is_active="{ item }">
-                  <v-chip :color="item.is_active ? 'success' : 'grey'" size="small" label>
-                    {{ item.is_active ? 'Active' : 'Inactive' }}
-                  </v-chip>
-                </template>
-                <template #item.username_masked="{ item }">
-                  <code class="text-caption">{{ item.username_masked }}</code>
-                </template>
-                <template #item.updated_at="{ item }">
-                  {{ formatDate(item.updated_at) }}
-                </template>
-                <template #item.actions="{ item }">
-                  <div class="d-flex ga-1">
-                    <v-btn v-if="!item.is_active" icon size="x-small" variant="text" color="success" title="Activate"
-                      @click="handleActivateGuest(item.id)">
-                      <v-icon size="small">mdi-check-circle</v-icon>
-                    </v-btn>
-                    <v-btn icon size="x-small" variant="text" color="primary" title="Edit"
-                      @click="openGuestDialog(item)">
-                      <v-icon size="small">mdi-pencil</v-icon>
-                    </v-btn>
-                    <v-btn icon size="x-small" variant="text" color="error" title="Delete"
-                      @click="confirmDeleteGuest(item)">
-                      <v-icon size="small">mdi-delete</v-icon>
-                    </v-btn>
+                <AppDataGrid :columns="sfistspGridColumns" :rows="sfistspConfigs" :loading="sfistspLoading" paginator
+                  :rowsPerPage="10" dataKey="id">
+                  <template #cell-is_active="{ data }">
+                    <span class="app-config-chip" :class="data.is_active ? 'is-success' : 'is-muted'">
+                      {{ data.is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </template>
+
+                  <template #cell-password_masked="{ data }">
+                    <code class="app-config-code">{{ data.password_masked }}</code>
+                  </template>
+
+                  <template #cell-timeout="{ data }">
+                    {{ data.timeout }}s
+                  </template>
+
+                  <template #cell-updated_at="{ data }">
+                    {{ formatDate(data.updated_at) }}
+                  </template>
+
+                  <template #cell-actions="{ data }">
+                    <div class="app-config-actions">
+                      <button v-if="!data.is_active" type="button" title="Activate config"
+                        @click="handleActivateSfistsp(data.id)">
+                        <Icon icon="mdi:check-circle-outline" />
+                      </button>
+                      <button type="button" title="Edit config" @click="openSfistspDialog(data)">
+                        <Icon icon="mdi:pencil-outline" />
+                      </button>
+                      <button type="button" class="is-danger" title="Delete config" @click="confirmDeleteSfistsp(data)">
+                        <Icon icon="mdi:delete-outline" />
+                      </button>
+                    </div>
+                  </template>
+
+                  <template #empty>
+                    <div class="app-config-empty-state">
+                      <strong>No SFISTSP configurations available.</strong>
+                      <p>Add the first configuration when you need an override-managed connection.</p>
+                    </div>
+                  </template>
+                </AppDataGrid>
+
+                <div v-if="sfistspError" class="app-config-notice app-config-notice--error">
+                  <strong>SFISTSP update failed</strong>
+                  <p>{{ sfistspError }}</p>
+                </div>
+              </section>
+            </div>
+          </template>
+
+          <template #panel-guest>
+            <div class="app-config-pane">
+              <section class="app-config-panel">
+                <div class="app-config-panel__header app-config-panel__header--actions">
+                  <div>
+                    <p class="app-config-panel__eyebrow">Access Overrides</p>
+                    <h2>Guest Credentials</h2>
                   </div>
-                </template>
-              </v-data-table>
 
-              <v-alert v-if="guestError" type="error" density="compact" class="mt-3">
-                {{ guestError }}
-              </v-alert>
-            </v-card-text>
-          </v-tabs-window-item>
-        </v-tabs-window>
-      </v-card>
+                  <button type="button" class="app-config-button app-config-button--primary" @click="openGuestDialog()">
+                    <Icon icon="mdi:plus" />
+                    <span>Add Guest Account</span>
+                  </button>
+                </div>
 
-      <!-- ==================== iPLAS Token Dialog ==================== -->
-      <v-dialog v-model="iplasDialogOpen" max-width="560" persistent>
-        <v-card class="app-dialog">
-          <div class="app-dialog-header">
-            <v-card-title>{{ iplasEditId ? 'Edit' : 'Add' }} iPLAS Token</v-card-title>
+                <div class="app-config-notice app-config-notice--info">
+                  <strong>Activation rules</strong>
+                  <p>
+                    Only one guest credential can be active at a time. Use guest accounts for
+                    temporary or kiosk-style access.
+                  </p>
+                </div>
+
+                <AppDataGrid :columns="guestGridColumns" :rows="guestCredentials" :loading="guestLoading" paginator
+                  :rowsPerPage="10" dataKey="id">
+                  <template #cell-is_active="{ data }">
+                    <span class="app-config-chip" :class="data.is_active ? 'is-success' : 'is-muted'">
+                      {{ data.is_active ? 'Active' : 'Inactive' }}
+                    </span>
+                  </template>
+
+                  <template #cell-username_masked="{ data }">
+                    <code class="app-config-code">{{ data.username_masked }}</code>
+                  </template>
+
+                  <template #cell-updated_at="{ data }">
+                    {{ formatDate(data.updated_at) }}
+                  </template>
+
+                  <template #cell-actions="{ data }">
+                    <div class="app-config-actions">
+                      <button v-if="!data.is_active" type="button" title="Activate credential"
+                        @click="handleActivateGuest(data.id)">
+                        <Icon icon="mdi:check-circle-outline" />
+                      </button>
+                      <button type="button" title="Edit credential" @click="openGuestDialog(data)">
+                        <Icon icon="mdi:pencil-outline" />
+                      </button>
+                      <button type="button" class="is-danger" title="Delete credential"
+                        @click="confirmDeleteGuest(data)">
+                        <Icon icon="mdi:delete-outline" />
+                      </button>
+                    </div>
+                  </template>
+
+                  <template #empty>
+                    <div class="app-config-empty-state">
+                      <strong>No guest credentials configured.</strong>
+                      <p>Create a managed guest account when external users need temporary access.</p>
+                    </div>
+                  </template>
+                </AppDataGrid>
+
+                <div v-if="guestError" class="app-config-notice app-config-notice--error">
+                  <strong>Guest credential update failed</strong>
+                  <p>{{ guestError }}</p>
+                </div>
+              </section>
+            </div>
+          </template>
+        </AppTabs>
+      </section>
+
+      <AppDialog v-model="iplasDialogOpen" :title="iplasDialogTitle" width="36rem">
+        <form class="app-config-dialog-form" @submit.prevent="handleSaveIplas">
+          <div class="app-config-field-grid">
+            <label class="app-config-field">
+              <span>Site</span>
+              <input v-model="iplasForm.site" type="text" autocomplete="off" placeholder="PLANT-01">
+            </label>
+
+            <label class="app-config-field">
+              <span>Base URL</span>
+              <input v-model="iplasForm.base_url" type="url" autocomplete="off"
+                placeholder="https://iplas.internal.example">
+            </label>
           </div>
-          <div class="app-dialog-body">
-            <v-card-text>
-            <v-form ref="iplasFormRef" v-model="iplasFormValid">
-              <v-select v-model="iplasForm.site" label="Site" :items="IPLAS_SITE_OPTIONS" :rules="[rules.required]"
-                variant="outlined" class="mb-3" />
 
-              <v-text-field v-model="iplasForm.base_url" label="Base URL" :rules="[rules.required]" variant="outlined"
-                class="mb-3" placeholder="http://10.176.33.89" />
+          <label class="app-config-field">
+            <span>Label</span>
+            <input v-model="iplasForm.label" type="text" autocomplete="off" placeholder="Optional display label">
+          </label>
 
-              <v-text-field v-model="iplasForm.token_value" label="Token Value"
-                :rules="iplasEditId ? [] : [rules.required]" variant="outlined" class="mb-3"
-                :placeholder="iplasEditId ? '(leave blank to keep current)' : ''" />
+          <label class="app-config-field">
+            <span>Token Value</span>
+            <textarea v-model="iplasForm.token_value" rows="5"
+              :placeholder="editingIplasId ? 'Leave blank to keep the current token value.' : 'Paste the API token'" />
+          </label>
 
-              <v-text-field v-model="iplasForm.label" label="Label (optional)" variant="outlined" class="mb-3" />
-
-              <v-switch v-model="iplasForm.is_active" label="Active" color="success" hide-details class="mb-3" />
-            </v-form>
-            </v-card-text>
+          <div v-if="iplasFormError" class="app-config-notice app-config-notice--error">
+            <strong>Save failed</strong>
+            <p>{{ iplasFormError }}</p>
           </div>
-          <div class="app-dialog-footer">
-            <v-card-actions>
-              <v-spacer />
-              <v-btn variant="text" @click="iplasDialogOpen = false">Cancel</v-btn>
-              <v-btn color="primary" :loading="iplasLoading" :disabled="!iplasFormValid" @click="handleSaveIplas">
-                Save
-              </v-btn>
-            </v-card-actions>
+
+          <div class="app-config-dialog-footer">
+            <button type="button" class="app-config-button app-config-button--ghost" @click="closeIplasDialog">
+              Cancel
+            </button>
+            <button type="submit" class="app-config-button app-config-button--primary" :disabled="iplasSaving">
+              {{ iplasSaving ? 'Saving...' : 'Save Token' }}
+            </button>
           </div>
-        </v-card>
-      </v-dialog>
+        </form>
+      </AppDialog>
 
-      <!-- ==================== SFISTSP Config Dialog ==================== -->
-      <v-dialog v-model="sfistspDialogOpen" max-width="560" persistent>
-        <v-card class="app-dialog">
-          <div class="app-dialog-header">
-            <v-card-title>{{ sfistspEditId ? 'Edit' : 'Add' }} SFISTSP Config</v-card-title>
+      <AppDialog v-model="sfistspDialogOpen" :title="sfistspDialogTitle" width="38rem">
+        <form class="app-config-dialog-form" @submit.prevent="handleSaveSfistsp">
+          <div class="app-config-field-grid">
+            <label class="app-config-field">
+              <span>Base URL</span>
+              <input v-model="sfistspForm.base_url" type="url" autocomplete="off"
+                placeholder="https://sfistsp.internal.example">
+            </label>
+
+            <label class="app-config-field">
+              <span>Program ID</span>
+              <input v-model="sfistspForm.program_id" type="text" autocomplete="off" placeholder="program-id">
+            </label>
           </div>
-          <div class="app-dialog-body">
-            <v-card-text>
-            <v-form ref="sfistspFormRef" v-model="sfistspFormValid">
-              <v-text-field v-model="sfistspForm.base_url" label="Base URL" :rules="[rules.required]" variant="outlined"
-                class="mb-3" placeholder="https://sfistsp.example.com" />
 
-              <v-text-field v-model="sfistspForm.program_id" label="Program ID" :rules="[rules.required]"
-                variant="outlined" class="mb-3" />
+          <div class="app-config-field-grid">
+            <label class="app-config-field">
+              <span>Program Password</span>
+              <div class="app-config-password-field">
+                <input v-model="sfistspForm.program_password" :type="showSfistspPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  :placeholder="editingSfistspId ? 'Leave blank to keep the current password.' : 'Enter password'">
+                <button type="button" @click="showSfistspPassword = !showSfistspPassword">
+                  <Icon :icon="showSfistspPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'" />
+                </button>
+              </div>
+            </label>
 
-              <v-text-field v-model="sfistspForm.program_password" label="Program Password"
-                :rules="sfistspEditId ? [] : [rules.required]" variant="outlined" class="mb-3"
-                :type="showSfistspPassword ? 'text' : 'password'"
-                :append-inner-icon="showSfistspPassword ? 'mdi-eye-off' : 'mdi-eye'"
-                :placeholder="sfistspEditId ? '(leave blank to keep current)' : ''"
-                @click:append-inner="showSfistspPassword = !showSfistspPassword" />
-
-              <v-text-field v-model.number="sfistspForm.timeout" label="Timeout (seconds)" type="number"
-                variant="outlined" class="mb-3" hint="Default: 30 seconds" persistent-hint />
-
-              <v-text-field v-model="sfistspForm.label" label="Label (optional)" variant="outlined" class="mb-3" />
-
-              <v-switch v-model="sfistspForm.is_active" label="Active" color="success" hide-details class="mb-3" />
-            </v-form>
-            </v-card-text>
+            <label class="app-config-field">
+              <span>Timeout (seconds)</span>
+              <input v-model="sfistspForm.timeout" type="number" min="1" step="1" autocomplete="off"
+                placeholder="30">
+            </label>
           </div>
-          <div class="app-dialog-footer">
-            <v-card-actions>
-              <v-spacer />
-              <v-btn variant="text" @click="sfistspDialogOpen = false">Cancel</v-btn>
-              <v-btn color="primary" :loading="sfistspLoading" :disabled="!sfistspFormValid" @click="handleSaveSfistsp">
-                Save
-              </v-btn>
-            </v-card-actions>
-          </div>
-        </v-card>
-      </v-dialog>
 
-      <!-- ==================== Guest Credential Dialog ==================== -->
-      <v-dialog v-model="guestDialogOpen" max-width="560" persistent>
-        <v-card class="app-dialog">
-          <div class="app-dialog-header">
-            <v-card-title>{{ guestEditId ? 'Edit' : 'Add' }} Guest Credential</v-card-title>
-          </div>
-          <div class="app-dialog-body">
-            <v-card-text>
-            <v-form ref="guestFormRef" v-model="guestFormValid">
-              <v-text-field v-model="guestForm.username" label="Username" :rules="guestEditId ? [] : [rules.required]"
-                variant="outlined" class="mb-3" :placeholder="guestEditId ? '(leave blank to keep current)' : ''" />
+          <label class="app-config-field">
+            <span>Label</span>
+            <input v-model="sfistspForm.label" type="text" autocomplete="off" placeholder="Optional display label">
+          </label>
 
-              <v-text-field v-model="guestForm.password" label="Password" :rules="guestEditId ? [] : [rules.required]"
-                variant="outlined" class="mb-3" :type="showGuestPassword ? 'text' : 'password'"
-                :append-inner-icon="showGuestPassword ? 'mdi-eye-off' : 'mdi-eye'"
-                :placeholder="guestEditId ? '(leave blank to keep current)' : ''"
-                @click:append-inner="showGuestPassword = !showGuestPassword" />
+          <div v-if="sfistspFormError" class="app-config-notice app-config-notice--error">
+            <strong>Save failed</strong>
+            <p>{{ sfistspFormError }}</p>
+          </div>
 
-              <v-text-field v-model="guestForm.label" label="Label (optional)" variant="outlined" class="mb-3" />
+          <div class="app-config-dialog-footer">
+            <button type="button" class="app-config-button app-config-button--ghost" @click="closeSfistspDialog">
+              Cancel
+            </button>
+            <button type="submit" class="app-config-button app-config-button--primary" :disabled="sfistspSaving">
+              {{ sfistspSaving ? 'Saving...' : 'Save Config' }}
+            </button>
+          </div>
+        </form>
+      </AppDialog>
 
-              <v-switch v-model="guestForm.is_active" label="Active" color="success" hide-details class="mb-3" />
-            </v-form>
-            </v-card-text>
-          </div>
-          <div class="app-dialog-footer">
-            <v-card-actions>
-              <v-spacer />
-              <v-btn variant="text" @click="guestDialogOpen = false">Cancel</v-btn>
-              <v-btn color="primary" :loading="guestLoading" :disabled="!guestFormValid" @click="handleSaveGuest">
-                Save
-              </v-btn>
-            </v-card-actions>
-          </div>
-        </v-card>
-      </v-dialog>
+      <AppDialog v-model="guestDialogOpen" :title="guestDialogTitle" width="38rem">
+        <form class="app-config-dialog-form" @submit.prevent="handleSaveGuest">
+          <div class="app-config-field-grid">
+            <label class="app-config-field">
+              <span>Username</span>
+              <input v-model="guestForm.username" type="text" autocomplete="off"
+                :placeholder="editingGuestId ? 'Leave blank to keep the current username.' : 'guest-user'">
+            </label>
 
-      <!-- ==================== Delete Confirmation Dialog ==================== -->
-      <v-dialog v-model="deleteDialogOpen" max-width="420">
-        <v-card class="app-dialog">
-          <div class="app-dialog-header">
-            <v-card-title>Confirm Delete</v-card-title>
+            <label class="app-config-field">
+              <span>Password</span>
+              <div class="app-config-password-field">
+                <input v-model="guestForm.password" :type="showGuestPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  :placeholder="editingGuestId ? 'Leave blank to keep the current password.' : 'Enter password'">
+                <button type="button" @click="showGuestPassword = !showGuestPassword">
+                  <Icon :icon="showGuestPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'" />
+                </button>
+              </div>
+            </label>
           </div>
-          <div class="app-dialog-body">
-            <v-card-text>
-            Are you sure you want to delete this {{ deleteTarget.type }}?
-            This action cannot be undone.
-            </v-card-text>
-          </div>
-          <div class="app-dialog-footer">
-            <v-card-actions>
-              <v-spacer />
-              <v-btn variant="text" @click="deleteDialogOpen = false">Cancel</v-btn>
-              <v-btn color="error" :loading="deleteLoading" @click="handleConfirmDelete">
-                Delete
-              </v-btn>
-            </v-card-actions>
-          </div>
-        </v-card>
-      </v-dialog>
 
-      <!-- Snackbar -->
-      <v-snackbar v-model="snackbar.show" :color="snackbar.color" :timeout="3000" location="bottom right">
-        {{ snackbar.text }}
-      </v-snackbar>
-    </v-container>
+          <label class="app-config-field">
+            <span>Label</span>
+            <input v-model="guestForm.label" type="text" autocomplete="off" placeholder="Optional display label">
+          </label>
+
+          <div v-if="guestFormError" class="app-config-notice app-config-notice--error">
+            <strong>Save failed</strong>
+            <p>{{ guestFormError }}</p>
+          </div>
+
+          <div class="app-config-dialog-footer">
+            <button type="button" class="app-config-button app-config-button--ghost" @click="closeGuestDialog">
+              Cancel
+            </button>
+            <button type="submit" class="app-config-button app-config-button--primary" :disabled="guestSaving">
+              {{ guestSaving ? 'Saving...' : 'Save Guest' }}
+            </button>
+          </div>
+        </form>
+      </AppDialog>
+
+      <AppDialog v-model="deleteDialogOpen" :title="deleteDialogTitle" width="30rem">
+        <div class="app-config-dialog-form">
+          <div class="app-config-notice app-config-notice--warning">
+            <strong>Destructive action</strong>
+            <p>{{ deleteDialogMessage }}</p>
+          </div>
+
+          <div class="app-config-dialog-footer">
+            <button type="button" class="app-config-button app-config-button--ghost" @click="closeDeleteDialog">
+              Cancel
+            </button>
+            <button type="button" class="app-config-button app-config-button--danger" :disabled="deleteLoading"
+              @click="handleConfirmDelete">
+              {{ deleteLoading ? 'Deleting...' : 'Delete' }}
+            </button>
+          </div>
+        </div>
+      </AppDialog>
+    </section>
   </DefaultLayout>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { appConfigApi } from '@/core/api/appConfigApi'
-import { useAppConfigStore } from '@/core/stores/appConfig.store'
-import type {
-  GuestCredential,
-  IplasToken,
-  SfistspConfigItem,
-} from '@/core/types'
-import { useAuthStore } from '@/features/auth/stores'
+import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import { useAuthStore } from '@/features/auth/stores/auth.store'
+import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
+import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
+import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
+import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
-import { getApiErrorDetail } from '@/shared/utils'
+import { useNotification } from '@/shared/composables/useNotification'
+import { appConfigApi } from '@/core/api/appConfigApi'
+import type {
+  AppConfigUpdateRequest,
+  GuestCredential,
+  GuestCredentialCreateRequest,
+  GuestCredentialUpdateRequest,
+  IplasToken,
+  IplasTokenCreateRequest,
+  IplasTokenUpdateRequest,
+  SfistspConfigCreateRequest,
+  SfistspConfigItem,
+  SfistspConfigUpdateRequest,
+} from '@/core/types'
+import { useAppConfigStore } from '@/core/stores/appConfig.store'
 
-// ============================================================================
-// Stores & Tab Persistence
-// ============================================================================
+type ConfigTab = 'general' | 'branding' | 'iplas' | 'sfistsp' | 'guest'
+type DeleteTarget = 'iplas' | 'sfistsp' | 'guest' | null
 
+type IplasFormState = {
+  site: string
+  base_url: string
+  token_value: string
+  label: string
+}
+
+type SfistspFormState = {
+  base_url: string
+  program_id: string
+  program_password: string
+  timeout: string
+  label: string
+}
+
+type GuestFormState = {
+  username: string
+  password: string
+  label: string
+}
+
+const activeTab = useTabPersistence<ConfigTab>('tab', 'general')
+const configTabs: Array<{ label: string; value: ConfigTab }> = [
+  { label: 'General', value: 'general' },
+  { label: 'Branding', value: 'branding' },
+  { label: 'iPLAS', value: 'iplas' },
+  { label: 'SFISTSP', value: 'sfistsp' },
+  { label: 'Guest', value: 'guest' },
+]
+
+const notify = useNotification()
 const appConfigStore = useAppConfigStore()
 const authStore = useAuthStore()
-const activeTab = useTabPersistence<string>('tab', 'general')
+const { config } = storeToRefs(appConfigStore)
 
-const { appName, appVersion, appDescription, config } = storeToRefs(appConfigStore)
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const IPLAS_SITE_OPTIONS = ['PTB', 'PSZ', 'PXD', 'PVN', 'PTY']
-
-const rules = {
-  required: (value: string) => !!value || 'Required field',
-  faviconSize: (files: File[] | undefined) => {
-    if (!files || files.length === 0) return true
-    const file = files[0]
-    if (!file) return true
-    return file.size <= 1_048_576 || 'File must be under 1 MB'
-  },
-}
-
-// ============================================================================
-// Snackbar
-// ============================================================================
-
-const snackbar = reactive({ show: false, text: '', color: 'success' })
-function showSnackbar(text: string, color = 'success') {
-  snackbar.text = text
-  snackbar.color = color
-  snackbar.show = true
-}
-
-// ============================================================================
-// General Tab
-// ============================================================================
-
-const generalFormRef = ref()
-const generalFormValid = ref(false)
 const generalLoading = ref(false)
-const generalError = ref<string | null>(null)
-
-const generalForm = reactive({
+const generalError = ref('')
+const generalForm = reactive<AppConfigUpdateRequest>({
   name: '',
   version: '',
   description: '',
   tab_title: '',
 })
 
-const lastUpdated = computed(() => config.value?.updated_at || '')
-const updatedBy = computed(() => config.value?.updated_by || '')
+const faviconLoading = ref(false)
+const faviconError = ref('')
+const faviconSuccess = ref('')
+const faviconFile = ref<File | File[] | null>(null)
+
+const iplasLoading = ref(false)
+const iplasError = ref('')
+const iplasTokens = ref<IplasToken[]>([])
+const iplasDialogOpen = ref(false)
+const iplasSaving = ref(false)
+const iplasFormError = ref('')
+const editingIplasId = ref<number | null>(null)
+const iplasForm = reactive<IplasFormState>({
+  site: '',
+  base_url: '',
+  token_value: '',
+  label: '',
+})
+
+const sfistspLoading = ref(false)
+const sfistspError = ref('')
+const sfistspConfigs = ref<SfistspConfigItem[]>([])
+const sfistspDialogOpen = ref(false)
+const sfistspSaving = ref(false)
+const sfistspFormError = ref('')
+const editingSfistspId = ref<number | null>(null)
+const sfistspForm = reactive<SfistspFormState>({
+  base_url: '',
+  program_id: '',
+  program_password: '',
+  timeout: '30',
+  label: '',
+})
+const showSfistspPassword = ref(false)
+
+const guestLoading = ref(false)
+const guestError = ref('')
+const guestCredentials = ref<GuestCredential[]>([])
+const guestDialogOpen = ref(false)
+const guestSaving = ref(false)
+const guestFormError = ref('')
+const editingGuestId = ref<number | null>(null)
+const guestForm = reactive<GuestFormState>({
+  username: '',
+  password: '',
+  label: '',
+})
+const showGuestPassword = ref(false)
+
+const deleteDialogOpen = ref(false)
+const deleteLoading = ref(false)
+const deleteTarget = ref<DeleteTarget>(null)
+const deleteTargetId = ref<number | null>(null)
+const deleteTargetLabel = ref('')
+
+const iplasGridColumns = [
+  { key: 'site', field: 'site', header: 'Site' },
+  { key: 'label', field: 'label', header: 'Label' },
+  { key: 'token_masked', field: 'token_masked', header: 'Token' },
+  { key: 'is_active', field: 'is_active', header: 'Status' },
+  { key: 'updated_at', field: 'updated_at', header: 'Updated' },
+  { key: 'actions', field: 'actions', header: 'Actions', sortable: false },
+]
+
+const sfistspGridColumns = [
+  { key: 'base_url', field: 'base_url', header: 'Base URL' },
+  { key: 'program_id', field: 'program_id', header: 'Program ID' },
+  { key: 'label', field: 'label', header: 'Label' },
+  { key: 'password_masked', field: 'password_masked', header: 'Password' },
+  { key: 'timeout', field: 'timeout', header: 'Timeout' },
+  { key: 'is_active', field: 'is_active', header: 'Status' },
+  { key: 'updated_at', field: 'updated_at', header: 'Updated' },
+  { key: 'actions', field: 'actions', header: 'Actions', sortable: false },
+]
+
+const guestGridColumns = [
+  { key: 'username_masked', field: 'username_masked', header: 'Username' },
+  { key: 'label', field: 'label', header: 'Label' },
+  { key: 'is_active', field: 'is_active', header: 'Status' },
+  { key: 'updated_at', field: 'updated_at', header: 'Updated' },
+  { key: 'actions', field: 'actions', header: 'Actions', sortable: false },
+]
+
+const appName = computed(() => config.value?.name || 'Top Product System')
+const appVersion = computed(() => config.value?.version || '')
+const appDescription = computed(() => config.value?.description || 'No description configured yet.')
+const lastUpdated = computed(() => formatDate(config.value?.updated_at || null))
+const updatedBy = computed(() => config.value?.updated_by || authStore.user?.username || '')
+
+const generalFormValid = computed(() => {
+  return Boolean(generalForm.name?.trim() && generalForm.version?.trim())
+})
+
+const selectedFaviconFile = computed<File | null>(() => {
+  if (Array.isArray(faviconFile.value)) {
+    return faviconFile.value[0] ?? null
+  }
+  return faviconFile.value instanceof File ? faviconFile.value : null
+})
+
+const currentFaviconUrl = computed(() => {
+  return config.value?.favicon_url || ''
+})
+
+const iplasDialogTitle = computed(() => {
+  return editingIplasId.value ? 'Edit iPLAS Token' : 'Add iPLAS Token'
+})
+
+const sfistspDialogTitle = computed(() => {
+  return editingSfistspId.value ? 'Edit SFISTSP Configuration' : 'Add SFISTSP Configuration'
+})
+
+const guestDialogTitle = computed(() => {
+  return editingGuestId.value ? 'Edit Guest Credential' : 'Add Guest Credential'
+})
+
+const deleteDialogTitle = computed(() => {
+  if (deleteTarget.value === 'iplas') return 'Delete iPLAS Token'
+  if (deleteTarget.value === 'sfistsp') return 'Delete SFISTSP Configuration'
+  if (deleteTarget.value === 'guest') return 'Delete Guest Credential'
+  return 'Delete Configuration'
+})
+
+const deleteDialogMessage = computed(() => {
+  if (!deleteTarget.value) return 'This action cannot be undone.'
+
+  const label = deleteTargetLabel.value || 'this configuration'
+  if (deleteTarget.value === 'iplas') {
+    return `Delete the iPLAS token for ${label}? This action cannot be undone.`
+  }
+  if (deleteTarget.value === 'sfistsp') {
+    return `Delete the SFISTSP configuration for ${label}? This action cannot be undone.`
+  }
+  return `Delete the guest credential for ${label}? This action cannot be undone.`
+})
 
 function populateGeneralForm() {
-  generalForm.name = config.value?.name || appName.value
-  generalForm.version = config.value?.version || appVersion.value
-  generalForm.description = config.value?.description || appDescription.value
+  generalForm.name = config.value?.name || ''
+  generalForm.version = config.value?.version || ''
+  generalForm.description = config.value?.description || ''
   generalForm.tab_title = config.value?.tab_title || ''
 }
 
+function resetGeneralForm() {
+  generalError.value = ''
+  populateGeneralForm()
+}
+
 async function handleGeneralSave() {
-  if (!generalFormValid.value) return
+  generalError.value = ''
   generalLoading.value = true
-  generalError.value = null
+
   try {
-    await appConfigStore.updateConfig({
+    const payload: AppConfigUpdateRequest = {
       name: generalForm.name.trim(),
       version: generalForm.version.trim(),
       description: generalForm.description?.trim() || '',
-      tab_title: generalForm.tab_title?.trim() || null,
-    })
+      tab_title: generalForm.tab_title?.trim() || '',
+    }
+
+    const updatedConfig = await appConfigApi.update(payload)
+    appConfigStore.config = updatedConfig
     populateGeneralForm()
-    generalFormRef.value?.resetValidation?.()
-    showSnackbar('Configuration saved')
-  } catch (err: unknown) {
-    generalError.value = getApiErrorDetail(err, 'Failed to save configuration')
+    showSnackbar('Application configuration updated successfully.', 'success')
+  } catch (error) {
+    generalError.value = getErrorMessage(error, 'Failed to update application configuration.')
   } finally {
     generalLoading.value = false
   }
 }
 
-function resetGeneralForm() {
-  populateGeneralForm()
-  generalFormRef.value?.resetValidation?.()
-}
-
-// ============================================================================
-// Branding Tab (Favicon)
-// ============================================================================
-
-const faviconFile = ref<File[]>()
-const faviconLoading = ref(false)
-const faviconError = ref<string | null>(null)
-const faviconSuccess = ref<string | null>(null)
-
-const currentFaviconUrl = computed(() => config.value?.favicon_url || null)
-
 async function handleUploadFavicon() {
-  if (!faviconFile.value || faviconFile.value.length === 0) return
-  const file = faviconFile.value[0]
-  if (!file) return
+  const file = selectedFaviconFile.value
+  if (!file) {
+    faviconError.value = 'Select a favicon file before uploading.'
+    return
+  }
+
   faviconLoading.value = true
-  faviconError.value = null
-  faviconSuccess.value = null
+  faviconError.value = ''
+  faviconSuccess.value = ''
+
   try {
-    const data = await appConfigApi.uploadFavicon(file)
-    appConfigStore.config = { ...appConfigStore.config, ...data }
-    faviconFile.value = undefined
-    faviconSuccess.value = 'Favicon uploaded successfully'
-    showSnackbar('Favicon uploaded')
-  } catch (err: unknown) {
-    faviconError.value = getApiErrorDetail(err, 'Failed to upload favicon')
+    const response = await appConfigApi.uploadFavicon(file)
+    appConfigStore.config = {
+      ...(appConfigStore.config || {}),
+      favicon_url: response.favicon_url,
+    }
+    faviconFile.value = null
+    faviconSuccess.value = 'Favicon uploaded successfully.'
+    showSnackbar('Favicon uploaded successfully.', 'success')
+  } catch (error) {
+    faviconError.value = getErrorMessage(error, 'Failed to upload favicon.')
   } finally {
     faviconLoading.value = false
   }
@@ -578,416 +827,430 @@ async function handleUploadFavicon() {
 
 async function handleDeleteFavicon() {
   faviconLoading.value = true
-  faviconError.value = null
-  faviconSuccess.value = null
+  faviconError.value = ''
+  faviconSuccess.value = ''
+
   try {
     await appConfigApi.deleteFavicon()
-    if (appConfigStore.config) {
-      appConfigStore.config = { ...appConfigStore.config, favicon_url: null }
+    appConfigStore.config = {
+      ...(appConfigStore.config || {}),
+      favicon_url: null,
     }
-    showSnackbar('Favicon removed')
-  } catch (err: unknown) {
-    faviconError.value = getApiErrorDetail(err, 'Failed to delete favicon')
+    faviconSuccess.value = 'Favicon removed successfully.'
+    showSnackbar('Favicon removed successfully.', 'success')
+  } catch (error) {
+    faviconError.value = getErrorMessage(error, 'Failed to remove favicon.')
   } finally {
     faviconLoading.value = false
   }
 }
 
-// ============================================================================
-// iPLAS Tokens Tab
-// ============================================================================
-
-const iplasTokens = ref<IplasToken[]>([])
-const iplasLoading = ref(false)
-const iplasError = ref<string | null>(null)
-const iplasDialogOpen = ref(false)
-const iplasFormRef = ref()
-const iplasFormValid = ref(false)
-const iplasEditId = ref<number | null>(null)
-
-const iplasForm = reactive({
-  site: '',
-  base_url: '',
-  token_value: '',
-  label: '',
-  is_active: true,
-})
-
-const iplasHeaders = [
-  { title: 'Site', key: 'site', width: '80px' },
-  { title: 'Base URL', key: 'base_url' },
-  { title: 'Token', key: 'token_masked' },
-  { title: 'Label', key: 'label' },
-  { title: 'Status', key: 'is_active', width: '100px' },
-  { title: 'Updated', key: 'updated_at', width: '160px' },
-  { title: 'Actions', key: 'actions', sortable: false, width: '120px' },
-]
-
 async function fetchIplasTokens() {
   iplasLoading.value = true
-  iplasError.value = null
+  iplasError.value = ''
   try {
-    const resp = await appConfigApi.getIplasTokens()
-    iplasTokens.value = resp.tokens
-  } catch (err: unknown) {
-    iplasError.value = getApiErrorDetail(err, 'Failed to load iPLAS tokens')
+    const response = await appConfigApi.getIplasTokens()
+    iplasTokens.value = response.tokens
+  } catch (error) {
+    iplasError.value = getErrorMessage(error, 'Failed to load iPLAS tokens.')
   } finally {
     iplasLoading.value = false
   }
 }
 
-function openIplasDialog(item?: IplasToken) {
-  if (item) {
-    iplasEditId.value = item.id
-    iplasForm.site = item.site
-    iplasForm.base_url = item.base_url
-    iplasForm.token_value = ''
-    iplasForm.label = item.label || ''
-    iplasForm.is_active = item.is_active
-  } else {
-    iplasEditId.value = null
-    iplasForm.site = ''
-    iplasForm.base_url = ''
-    iplasForm.token_value = ''
-    iplasForm.label = ''
-    iplasForm.is_active = true
-  }
+function openIplasDialog(token?: IplasToken) {
+  iplasFormError.value = ''
+  editingIplasId.value = token?.id || null
+  iplasForm.site = token?.site || ''
+  iplasForm.base_url = token?.base_url || ''
+  iplasForm.token_value = ''
+  iplasForm.label = token?.label || ''
   iplasDialogOpen.value = true
 }
 
+function closeIplasDialog() {
+  iplasDialogOpen.value = false
+  editingIplasId.value = null
+  iplasForm.site = ''
+  iplasForm.base_url = ''
+  iplasForm.token_value = ''
+  iplasForm.label = ''
+  iplasFormError.value = ''
+}
+
 async function handleSaveIplas() {
-  if (!iplasFormValid.value) return
-  iplasLoading.value = true
+  if (!iplasForm.site?.trim()) {
+    iplasFormError.value = 'Site is required.'
+    return
+  }
+
+  if (!iplasForm.base_url?.trim()) {
+    iplasFormError.value = 'Base URL is required.'
+    return
+  }
+
+  if (!editingIplasId.value && !iplasForm.token_value?.trim()) {
+    iplasFormError.value = 'Token value is required.'
+    return
+  }
+
+  iplasSaving.value = true
+  iplasFormError.value = ''
+
   try {
-    if (iplasEditId.value) {
-      const payload: Record<string, unknown> = {}
-      if (iplasForm.site) payload.site = iplasForm.site
-      if (iplasForm.base_url) payload.base_url = iplasForm.base_url
-      if (iplasForm.token_value) payload.token_value = iplasForm.token_value
-      payload.label = iplasForm.label || null
-      payload.is_active = iplasForm.is_active
-      await appConfigApi.updateIplasToken(iplasEditId.value, payload)
-      showSnackbar('Token updated')
+    if (editingIplasId.value) {
+      const payload: IplasTokenUpdateRequest = {
+        site: iplasForm.site.trim(),
+        base_url: iplasForm.base_url.trim(),
+        token_value: iplasForm.token_value?.trim() || undefined,
+        label: iplasForm.label.trim() || null,
+      }
+      await appConfigApi.updateIplasToken(editingIplasId.value, payload)
+      showSnackbar('iPLAS token updated successfully.', 'success')
     } else {
-      await appConfigApi.createIplasToken({
-        site: iplasForm.site,
-        base_url: iplasForm.base_url,
-        token_value: iplasForm.token_value,
-        label: iplasForm.label || null,
-        is_active: iplasForm.is_active,
-      })
-      showSnackbar('Token created')
+      const payload: IplasTokenCreateRequest = {
+        site: iplasForm.site.trim(),
+        base_url: iplasForm.base_url.trim(),
+        token_value: iplasForm.token_value?.trim() || '',
+        label: iplasForm.label.trim() || null,
+      }
+      await appConfigApi.createIplasToken(payload)
+      showSnackbar('iPLAS token created successfully.', 'success')
     }
-    iplasDialogOpen.value = false
+
+    closeIplasDialog()
     await fetchIplasTokens()
-  } catch (err: unknown) {
-    iplasError.value = getApiErrorDetail(err, 'Failed to save token')
+  } catch (error) {
+    iplasFormError.value = getErrorMessage(error, 'Failed to save iPLAS token.')
   } finally {
-    iplasLoading.value = false
+    iplasSaving.value = false
   }
 }
 
 async function handleActivateIplas(id: number) {
-  iplasLoading.value = true
   try {
     await appConfigApi.activateIplasToken(id)
-    showSnackbar('Token activated')
+    showSnackbar('iPLAS token activated.', 'success')
     await fetchIplasTokens()
-  } catch (err: unknown) {
-    iplasError.value = getApiErrorDetail(err, 'Failed to activate token')
-  } finally {
-    iplasLoading.value = false
+  } catch (error) {
+    iplasError.value = getErrorMessage(error, 'Failed to activate iPLAS token.')
   }
 }
 
-// ============================================================================
-// SFISTSP Config Tab
-// ============================================================================
-
-const sfistspConfigs = ref<SfistspConfigItem[]>([])
-const sfistspLoading = ref(false)
-const sfistspError = ref<string | null>(null)
-const sfistspDialogOpen = ref(false)
-const sfistspFormRef = ref()
-const sfistspFormValid = ref(false)
-const sfistspEditId = ref<number | null>(null)
-const showSfistspPassword = ref(false)
-
-const sfistspForm = reactive({
-  base_url: '',
-  program_id: '',
-  program_password: '',
-  timeout: 30,
-  label: '',
-  is_active: true,
-})
-
-const sfistspHeaders = [
-  { title: 'Base URL', key: 'base_url' },
-  { title: 'Program ID', key: 'program_id' },
-  { title: 'Password', key: 'password_masked', width: '140px' },
-  { title: 'Timeout', key: 'timeout', width: '90px' },
-  { title: 'Label', key: 'label' },
-  { title: 'Status', key: 'is_active', width: '100px' },
-  { title: 'Updated', key: 'updated_at', width: '160px' },
-  { title: 'Actions', key: 'actions', sortable: false, width: '120px' },
-]
+function confirmDeleteIplas(token: IplasToken) {
+  deleteTarget.value = 'iplas'
+  deleteTargetId.value = token.id
+  deleteTargetLabel.value = token.site
+  deleteDialogOpen.value = true
+}
 
 async function fetchSfistspConfigs() {
   sfistspLoading.value = true
-  sfistspError.value = null
+  sfistspError.value = ''
   try {
-    const resp = await appConfigApi.getSfistspConfigs()
-    sfistspConfigs.value = resp.configs
-  } catch (err: unknown) {
-    sfistspError.value = getApiErrorDetail(err, 'Failed to load SFISTSP configs')
+    const response = await appConfigApi.getSfistspConfigs()
+    const configs: SfistspConfigItem[] = response.configs
+    sfistspConfigs.value = configs
+  } catch (error) {
+    sfistspError.value = getErrorMessage(error, 'Failed to load SFISTSP configurations.')
   } finally {
     sfistspLoading.value = false
   }
 }
 
-function openSfistspDialog(item?: SfistspConfigItem) {
+function openSfistspDialog(configItem?: SfistspConfigItem) {
+  sfistspFormError.value = ''
+  editingSfistspId.value = configItem?.id || null
+  sfistspForm.base_url = configItem?.base_url || ''
+  sfistspForm.program_id = configItem?.program_id || ''
+  sfistspForm.program_password = ''
+  sfistspForm.timeout = String(configItem?.timeout ?? 30)
+  sfistspForm.label = configItem?.label || ''
   showSfistspPassword.value = false
-  if (item) {
-    sfistspEditId.value = item.id
-    sfistspForm.base_url = item.base_url
-    sfistspForm.program_id = item.program_id
-    sfistspForm.program_password = ''
-    sfistspForm.timeout = item.timeout
-    sfistspForm.label = item.label || ''
-    sfistspForm.is_active = item.is_active
-  } else {
-    sfistspEditId.value = null
-    sfistspForm.base_url = ''
-    sfistspForm.program_id = ''
-    sfistspForm.program_password = ''
-    sfistspForm.timeout = 30
-    sfistspForm.label = ''
-    sfistspForm.is_active = true
-  }
   sfistspDialogOpen.value = true
 }
 
+function closeSfistspDialog() {
+  sfistspDialogOpen.value = false
+  editingSfistspId.value = null
+  sfistspForm.base_url = ''
+  sfistspForm.program_id = ''
+  sfistspForm.program_password = ''
+  sfistspForm.timeout = '30'
+  sfistspForm.label = ''
+  sfistspFormError.value = ''
+  showSfistspPassword.value = false
+}
+
 async function handleSaveSfistsp() {
-  if (!sfistspFormValid.value) return
-  sfistspLoading.value = true
+  if (!sfistspForm.base_url?.trim()) {
+    sfistspFormError.value = 'Base URL is required.'
+    return
+  }
+
+  if (!sfistspForm.program_id?.trim()) {
+    sfistspFormError.value = 'Program ID is required.'
+    return
+  }
+
+  if (!editingSfistspId.value && !sfistspForm.program_password?.trim()) {
+    sfistspFormError.value = 'Program password is required.'
+    return
+  }
+
+  const timeoutValue = Number.parseInt(sfistspForm.timeout, 10)
+  if (Number.isNaN(timeoutValue) || timeoutValue <= 0) {
+    sfistspFormError.value = 'Timeout must be greater than zero.'
+    return
+  }
+
+  sfistspSaving.value = true
+  sfistspFormError.value = ''
+
   try {
-    if (sfistspEditId.value) {
-      const payload: Record<string, unknown> = {}
-      if (sfistspForm.base_url) payload.base_url = sfistspForm.base_url
-      if (sfistspForm.program_id) payload.program_id = sfistspForm.program_id
-      if (sfistspForm.program_password) payload.program_password = sfistspForm.program_password
-      payload.timeout = sfistspForm.timeout
-      payload.label = sfistspForm.label || null
-      payload.is_active = sfistspForm.is_active
-      await appConfigApi.updateSfistspConfig(sfistspEditId.value, payload)
-      showSnackbar('Config updated')
+    if (editingSfistspId.value) {
+      const payload: SfistspConfigUpdateRequest = {
+        base_url: sfistspForm.base_url.trim(),
+        program_id: sfistspForm.program_id.trim(),
+        program_password: sfistspForm.program_password?.trim() || undefined,
+        timeout: timeoutValue,
+        label: sfistspForm.label.trim() || null,
+      }
+      await appConfigApi.updateSfistspConfig(editingSfistspId.value, payload)
+      showSnackbar('SFISTSP configuration updated successfully.', 'success')
     } else {
-      await appConfigApi.createSfistspConfig({
-        base_url: sfistspForm.base_url,
-        program_id: sfistspForm.program_id,
-        program_password: sfistspForm.program_password,
-        timeout: sfistspForm.timeout,
-        label: sfistspForm.label || null,
-        is_active: sfistspForm.is_active,
-      })
-      showSnackbar('Config created')
+      const payload: SfistspConfigCreateRequest = {
+        base_url: sfistspForm.base_url.trim(),
+        program_id: sfistspForm.program_id.trim(),
+        program_password: sfistspForm.program_password?.trim() || '',
+        timeout: timeoutValue,
+        label: sfistspForm.label.trim() || null,
+      }
+      await appConfigApi.createSfistspConfig(payload)
+      showSnackbar('SFISTSP configuration created successfully.', 'success')
     }
-    sfistspDialogOpen.value = false
+
+    closeSfistspDialog()
     await fetchSfistspConfigs()
-  } catch (err: unknown) {
-    sfistspError.value = getApiErrorDetail(err, 'Failed to save config')
+  } catch (error) {
+    sfistspFormError.value = getErrorMessage(error, 'Failed to save SFISTSP configuration.')
   } finally {
-    sfistspLoading.value = false
+    sfistspSaving.value = false
   }
 }
 
 async function handleActivateSfistsp(id: number) {
-  sfistspLoading.value = true
   try {
     await appConfigApi.activateSfistspConfig(id)
-    showSnackbar('Config activated')
+    showSnackbar('SFISTSP configuration activated.', 'success')
     await fetchSfistspConfigs()
-  } catch (err: unknown) {
-    sfistspError.value = getApiErrorDetail(err, 'Failed to activate config')
-  } finally {
-    sfistspLoading.value = false
+  } catch (error) {
+    sfistspError.value = getErrorMessage(error, 'Failed to activate SFISTSP configuration.')
   }
 }
 
-// ============================================================================
-// Guest Credentials Tab
-// ============================================================================
-
-const guestCredentials = ref<GuestCredential[]>([])
-const guestLoading = ref(false)
-const guestError = ref<string | null>(null)
-const guestDialogOpen = ref(false)
-const guestFormRef = ref()
-const guestFormValid = ref(false)
-const guestEditId = ref<number | null>(null)
-const showGuestPassword = ref(false)
-
-const guestForm = reactive({
-  username: '',
-  password: '',
-  label: '',
-  is_active: true,
-})
-
-const guestHeaders = [
-  { title: 'Username', key: 'username_masked' },
-  { title: 'Label', key: 'label' },
-  { title: 'Status', key: 'is_active', width: '100px' },
-  { title: 'Updated', key: 'updated_at', width: '160px' },
-  { title: 'Actions', key: 'actions', sortable: false, width: '120px' },
-]
+function confirmDeleteSfistsp(configItem: SfistspConfigItem) {
+  deleteTarget.value = 'sfistsp'
+  deleteTargetId.value = configItem.id
+  deleteTargetLabel.value = configItem.label || configItem.program_id
+  deleteDialogOpen.value = true
+}
 
 async function fetchGuestCredentials() {
   guestLoading.value = true
-  guestError.value = null
+  guestError.value = ''
   try {
-    const resp = await appConfigApi.getGuestCredentials()
-    guestCredentials.value = resp.credentials
-  } catch (err: unknown) {
-    guestError.value = getApiErrorDetail(err, 'Failed to load guest credentials')
+    const response = await appConfigApi.getGuestCredentials()
+    guestCredentials.value = response.credentials
+  } catch (error) {
+    guestError.value = getErrorMessage(error, 'Failed to load guest credentials.')
   } finally {
     guestLoading.value = false
   }
 }
 
-function openGuestDialog(item?: GuestCredential) {
+function openGuestDialog(credential?: GuestCredential) {
+  guestFormError.value = ''
+  editingGuestId.value = credential?.id || null
+  guestForm.username = ''
+  guestForm.password = ''
+  guestForm.label = credential?.label || ''
   showGuestPassword.value = false
-  if (item) {
-    guestEditId.value = item.id
-    guestForm.username = ''
-    guestForm.password = ''
-    guestForm.label = item.label || ''
-    guestForm.is_active = item.is_active
-  } else {
-    guestEditId.value = null
-    guestForm.username = ''
-    guestForm.password = ''
-    guestForm.label = ''
-    guestForm.is_active = true
-  }
   guestDialogOpen.value = true
 }
 
+function closeGuestDialog() {
+  guestDialogOpen.value = false
+  editingGuestId.value = null
+  guestForm.username = ''
+  guestForm.password = ''
+  guestForm.label = ''
+  guestFormError.value = ''
+  showGuestPassword.value = false
+}
+
 async function handleSaveGuest() {
-  if (!guestFormValid.value) return
-  guestLoading.value = true
+  if (!editingGuestId.value && !guestForm.username?.trim()) {
+    guestFormError.value = 'Username is required.'
+    return
+  }
+
+  if (!editingGuestId.value && !guestForm.password?.trim()) {
+    guestFormError.value = 'Password is required.'
+    return
+  }
+
+  guestSaving.value = true
+  guestFormError.value = ''
+
   try {
-    if (guestEditId.value) {
-      const payload: Record<string, unknown> = {}
-      if (guestForm.username) payload.username = guestForm.username
-      if (guestForm.password) payload.password = guestForm.password
-      payload.label = guestForm.label || null
-      payload.is_active = guestForm.is_active
-      await appConfigApi.updateGuestCredential(guestEditId.value, payload)
-      showSnackbar('Credential updated')
+    if (editingGuestId.value) {
+      const payload: GuestCredentialUpdateRequest = {
+        username: guestForm.username?.trim() || undefined,
+        password: guestForm.password?.trim() || undefined,
+        label: guestForm.label.trim() || null,
+      }
+      await appConfigApi.updateGuestCredential(editingGuestId.value, payload)
+      showSnackbar('Guest credential updated successfully.', 'success')
     } else {
-      await appConfigApi.createGuestCredential({
-        username: guestForm.username,
-        password: guestForm.password,
-        label: guestForm.label || null,
-        is_active: guestForm.is_active,
-      })
-      showSnackbar('Credential created')
+      const payload: GuestCredentialCreateRequest = {
+        username: guestForm.username.trim(),
+        password: guestForm.password?.trim() || '',
+        label: guestForm.label.trim() || null,
+      }
+      await appConfigApi.createGuestCredential(payload)
+      showSnackbar('Guest credential created successfully.', 'success')
     }
-    guestDialogOpen.value = false
+
+    closeGuestDialog()
     await fetchGuestCredentials()
-  } catch (err: unknown) {
-    guestError.value = getApiErrorDetail(err, 'Failed to save credential')
+  } catch (error) {
+    guestFormError.value = getErrorMessage(error, 'Failed to save guest credential.')
   } finally {
-    guestLoading.value = false
+    guestSaving.value = false
   }
 }
 
 async function handleActivateGuest(id: number) {
-  guestLoading.value = true
   try {
     await appConfigApi.activateGuestCredential(id)
-    showSnackbar('Credential activated')
+    showSnackbar('Guest credential activated.', 'success')
     await fetchGuestCredentials()
-  } catch (err: unknown) {
-    guestError.value = getApiErrorDetail(err, 'Failed to activate credential')
-  } finally {
-    guestLoading.value = false
+  } catch (error) {
+    guestError.value = getErrorMessage(error, 'Failed to activate guest credential.')
   }
 }
 
-// ============================================================================
-// Delete Confirmation (shared)
-// ============================================================================
-
-const deleteDialogOpen = ref(false)
-const deleteLoading = ref(false)
-const deleteTarget = reactive<{ type: string; id: number | null }>({ type: '', id: null })
-
-function confirmDeleteIplas(item: IplasToken) {
-  deleteTarget.type = 'iPLAS token'
-  deleteTarget.id = item.id
+function confirmDeleteGuest(credential: GuestCredential) {
+  deleteTarget.value = 'guest'
+  deleteTargetId.value = credential.id
+  deleteTargetLabel.value = credential.label || credential.username_masked
   deleteDialogOpen.value = true
 }
 
-function confirmDeleteSfistsp(item: SfistspConfigItem) {
-  deleteTarget.type = 'SFISTSP config'
-  deleteTarget.id = item.id
-  deleteDialogOpen.value = true
-}
-
-function confirmDeleteGuest(item: GuestCredential) {
-  deleteTarget.type = 'guest credential'
-  deleteTarget.id = item.id
-  deleteDialogOpen.value = true
+function closeDeleteDialog() {
+  deleteDialogOpen.value = false
+  deleteTarget.value = null
+  deleteTargetId.value = null
+  deleteTargetLabel.value = ''
 }
 
 async function handleConfirmDelete() {
-  if (!deleteTarget.id) return
+  if (!deleteTarget.value || !deleteTargetId.value) {
+    return
+  }
+
   deleteLoading.value = true
+
   try {
-    if (deleteTarget.type === 'iPLAS token') {
-      await appConfigApi.deleteIplasToken(deleteTarget.id)
+    if (deleteTarget.value === 'iplas') {
+      await appConfigApi.deleteIplasToken(deleteTargetId.value)
+      showSnackbar('iPLAS token deleted.', 'success')
       await fetchIplasTokens()
-    } else if (deleteTarget.type === 'SFISTSP config') {
-      await appConfigApi.deleteSfistspConfig(deleteTarget.id)
+    }
+
+    if (deleteTarget.value === 'sfistsp') {
+      await appConfigApi.deleteSfistspConfig(deleteTargetId.value)
+      showSnackbar('SFISTSP configuration deleted.', 'success')
       await fetchSfistspConfigs()
-    } else if (deleteTarget.type === 'guest credential') {
-      await appConfigApi.deleteGuestCredential(deleteTarget.id)
+    }
+
+    if (deleteTarget.value === 'guest') {
+      await appConfigApi.deleteGuestCredential(deleteTargetId.value)
+      showSnackbar('Guest credential deleted.', 'success')
       await fetchGuestCredentials()
     }
-    showSnackbar(`${deleteTarget.type} deleted`)
-    deleteDialogOpen.value = false
-  } catch (err: unknown) {
-    showSnackbar(getApiErrorDetail(err, 'Delete failed'), 'error')
+
+    closeDeleteDialog()
+  } catch (error) {
+    const message = getErrorMessage(error, 'Failed to delete configuration.')
+
+    if (deleteTarget.value === 'iplas') iplasError.value = message
+    if (deleteTarget.value === 'sfistsp') sfistspError.value = message
+    if (deleteTarget.value === 'guest') guestError.value = message
   } finally {
     deleteLoading.value = false
   }
 }
 
-// ============================================================================
-// Utilities
-// ============================================================================
-
-function formatDate(dateStr: string | null | undefined): string {
-  if (!dateStr) return '—'
-  return new Date(dateStr).toLocaleString()
+function showSnackbar(message: string, type: 'success' | 'error' = 'success') {
+  if (type === 'success') {
+    notify.showSuccess(message)
+  } else {
+    notify.showError(message)
+  }
 }
 
-// ============================================================================
-// Tab change watcher — lazy-load data per section
-// ============================================================================
+function getErrorMessage(error: unknown, fallback: string) {
+  if (error instanceof Error && error.message) {
+    return error.message
+  }
 
-watch(activeTab, (tab) => {
-  if (tab === 'iplas' && iplasTokens.value.length === 0) fetchIplasTokens()
-  if (tab === 'sfistsp' && sfistspConfigs.value.length === 0) fetchSfistspConfigs()
-  if (tab === 'guest' && guestCredentials.value.length === 0) fetchGuestCredentials()
-}, { immediate: true })
+  if (typeof error === 'object' && error && 'response' in error) {
+    const maybeResponse = error as {
+      response?: { data?: { detail?: string | { message?: string } } }
+    }
+    const detail = maybeResponse.response?.data?.detail
 
-// ============================================================================
-// Lifecycle
-// ============================================================================
+    if (typeof detail === 'string') {
+      return detail
+    }
+
+    if (detail && typeof detail === 'object' && 'message' in detail) {
+      return String(detail.message || fallback)
+    }
+  }
+
+  return fallback
+}
+
+function formatDate(value: string | null | undefined) {
+  if (!value) return ''
+
+  try {
+    return new Date(value).toLocaleString()
+  } catch {
+    return value
+  }
+}
+
+watch(
+  activeTab,
+  async (tabValue) => {
+    if (tabValue === 'iplas' && iplasTokens.value.length === 0 && !iplasLoading.value) {
+      await fetchIplasTokens()
+    }
+
+    if (tabValue === 'sfistsp' && sfistspConfigs.value.length === 0 && !sfistspLoading.value) {
+      await fetchSfistspConfigs()
+    }
+
+    if (tabValue === 'guest' && guestCredentials.value.length === 0 && !guestLoading.value) {
+      await fetchGuestCredentials()
+    }
+  },
+  { immediate: true },
+)
 
 onMounted(async () => {
   await appConfigStore.fetchConfig()
@@ -996,7 +1259,524 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-.gap-2 {
+.app-config-page {
+  --app-config-accent: var(--app-accent);
+  --app-config-accent-strong: var(--app-accent-strong);
+  --app-config-accent-soft: var(--app-accent-soft);
+  --app-config-accent-line: var(--app-ring);
+  --app-config-info: var(--app-info);
+  --app-config-info-soft: var(--app-info-soft);
+  --app-config-info-line: var(--app-info-line);
+  --app-config-success: var(--app-success);
+  --app-config-success-soft: var(--app-success-soft);
+  --app-config-success-line: var(--app-success-line);
+  --app-config-warning: var(--app-warning);
+  --app-config-warning-soft: var(--app-warning-soft);
+  --app-config-warning-line: var(--app-warning-line);
+  --app-config-danger: var(--app-danger);
+  --app-config-danger-soft: var(--app-danger-soft);
+  --app-config-danger-line: var(--app-danger-line);
+}
+
+.app-config-header {
+  margin-bottom: 1.5rem;
+}
+
+.app-config-header__copy {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.app-config-header__icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 1rem;
+  background: linear-gradient(135deg, var(--app-config-accent), var(--app-config-info));
+  color: white;
+  font-size: 1.4rem;
+  box-shadow: 0 18px 32px var(--app-config-accent-soft);
+}
+
+.app-config-header__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--app-config-accent);
+  font-weight: 700;
+}
+
+.app-config-header h1 {
+  margin: 0;
+  font-size: clamp(1.8rem, 2.5vw, 2.35rem);
+  font-weight: 700;
+  color: var(--app-ink);
+}
+
+.app-config-header p:last-child {
+  max-width: 44rem;
+  margin: 0.45rem 0 0;
+  color: var(--app-muted);
+  line-height: 1.6;
+}
+
+.app-config-shell {
+  border: 1px solid var(--app-border);
+  border-radius: 1.5rem;
+  background:
+    radial-gradient(circle at top left, var(--app-config-accent-soft), transparent 28%),
+    var(--app-panel-strong);
+  box-shadow: 0 26px 60px rgb(15 23 42 / 0.08);
+  overflow: hidden;
+}
+
+.app-config-pane {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.app-config-pane--split {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(18rem, 1fr);
+  align-items: start;
+}
+
+.app-config-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  padding: 1.5rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1.25rem;
+  background: linear-gradient(180deg, var(--app-panel-strong), var(--app-panel));
+}
+
+.app-config-panel--preview {
+  position: sticky;
+  top: 1rem;
+}
+
+.app-config-panel__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.app-config-panel__header--actions {
+  flex-wrap: wrap;
+}
+
+.app-config-panel__eyebrow {
+  margin: 0 0 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--app-config-accent);
+  font-weight: 700;
+}
+
+.app-config-panel h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  color: var(--app-ink);
+}
+
+.app-config-form,
+.app-config-dialog-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.app-config-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.app-config-field span {
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--app-ink);
+}
+
+.app-config-field small {
+  color: var(--app-muted);
+  line-height: 1.45;
+}
+
+.app-config-field input,
+.app-config-field textarea {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  padding: 0.78rem 0.95rem;
+  font: inherit;
+  color: var(--app-ink);
+  background: var(--app-panel-strong);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.app-config-field input:focus,
+.app-config-field textarea:focus {
+  outline: none;
+  border-color: var(--app-config-accent);
+  box-shadow: 0 0 0 4px var(--app-config-accent-soft);
+}
+
+.app-config-field textarea {
+  resize: vertical;
+  min-height: 8rem;
+}
+
+.app-config-field-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.app-config-password-field {
+  display: flex;
+  align-items: center;
   gap: 0.5rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  padding: 0 0.35rem 0 0;
+  background: var(--app-panel-strong);
+}
+
+.app-config-password-field input {
+  border: 0;
+  box-shadow: none;
+}
+
+.app-config-password-field button {
+  border: 0;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 999px;
+}
+
+.app-config-password-field:focus-within {
+  border-color: var(--app-config-accent);
+  box-shadow: 0 0 0 4px var(--app-config-accent-soft);
+}
+
+.app-config-password-field:focus-within input {
+  box-shadow: none;
+}
+
+.app-config-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.95rem 1rem;
+  border-radius: 1rem;
+  border: 1px solid transparent;
+}
+
+.app-config-notice strong {
+  color: inherit;
+}
+
+.app-config-notice p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.app-config-notice--info {
+  background: var(--app-config-info-soft);
+  border-color: var(--app-config-info-line);
+  color: var(--app-ink);
+}
+
+.app-config-notice--success {
+  background: var(--app-config-success-soft);
+  border-color: var(--app-config-success-line);
+  color: var(--app-config-success);
+}
+
+.app-config-notice--error {
+  background: var(--app-config-danger-soft);
+  border-color: var(--app-config-danger-line);
+  color: var(--app-config-danger);
+}
+
+.app-config-notice--warning {
+  background: var(--app-config-warning-soft);
+  border-color: var(--app-config-warning-line);
+  color: var(--app-config-warning);
+}
+
+.app-config-button-row,
+.app-config-dialog-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.app-config-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 0.9rem;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
+}
+
+.app-config-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.app-config-button:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.app-config-button--primary {
+  background: linear-gradient(135deg, var(--app-config-accent), var(--app-config-info));
+  box-shadow: 0 18px 28px var(--app-config-accent-soft);
+  color: white;
+}
+
+.app-config-button--ghost {
+  background: var(--app-panel-strong);
+  border-color: var(--app-border);
+  color: var(--app-ink);
+}
+
+.app-config-button--danger {
+  background: var(--app-config-danger-soft);
+  border-color: var(--app-config-danger-line);
+  color: var(--app-config-danger);
+}
+
+.app-config-preview-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: linear-gradient(145deg, var(--app-config-accent-strong), var(--app-config-info));
+  color: white;
+}
+
+.app-config-preview-card__label,
+.app-config-branding-card__label {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgb(226 232 240 / 0.72);
+}
+
+.app-config-preview-card strong {
+  font-size: 1.2rem;
+}
+
+.app-config-preview-card small,
+.app-config-preview-card p {
+  margin: 0;
+  color: rgb(226 232 240 / 0.84);
+}
+
+.app-config-meta-list {
+  display: grid;
+  gap: 0.85rem;
+  margin: 0;
+}
+
+.app-config-meta-list div {
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--app-border);
+}
+
+.app-config-meta-list dt {
+  margin-bottom: 0.25rem;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--app-muted);
+}
+
+.app-config-meta-list dd {
+  margin: 0;
+  font-weight: 600;
+  color: var(--app-ink);
+}
+
+.app-config-branding-grid {
+  display: grid;
+  grid-template-columns: minmax(16rem, 20rem) minmax(0, 1fr);
+  gap: 1rem;
+}
+
+.app-config-branding-card,
+.app-config-branding-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 1rem;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+}
+
+.app-config-branding-card p {
+  margin: 0;
+  color: var(--app-muted);
+}
+
+.app-config-favicon-preview {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1rem;
+  background: var(--app-panel-strong);
+  border: 1px solid var(--app-border);
+  overflow: hidden;
+}
+
+.app-config-favicon-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.app-config-favicon-preview__empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  color: var(--app-muted);
+}
+
+.app-config-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.35rem;
+}
+
+.app-config-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  cursor: pointer;
+}
+
+.app-config-actions button.is-danger {
+  color: var(--app-config-danger);
+  border-color: var(--app-config-danger-line);
+  background: var(--app-config-danger-soft);
+}
+
+.app-config-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 5.5rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.app-config-chip.is-success {
+  background: var(--app-config-success-soft);
+  color: var(--app-config-success);
+}
+
+.app-config-chip.is-muted {
+  background: var(--app-canvas-strong);
+  color: var(--app-muted);
+}
+
+.app-config-code {
+  font-size: 0.8rem;
+  font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.app-config-empty-state {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+  color: var(--app-muted);
+}
+
+.app-config-empty-state p {
+  margin: 0;
+}
+
+@media (max-width: 1100px) {
+
+  .app-config-pane--split,
+  .app-config-branding-grid,
+  .app-config-field-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .app-config-panel--preview {
+    position: static;
+  }
+}
+
+@media (max-width: 720px) {
+  .app-config-header__copy {
+    flex-direction: column;
+  }
+
+  .app-config-pane {
+    padding: 1rem;
+  }
+
+  .app-config-panel {
+    padding: 1rem;
+  }
+
+  .app-config-panel__header,
+  .app-config-button-row,
+  .app-config-dialog-footer {
+    align-items: stretch;
+  }
+
+  .app-config-button {
+    width: 100%;
+  }
+
+  .app-config-actions {
+    justify-content: flex-start;
+  }
 }
 </style>

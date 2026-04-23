@@ -8,7 +8,7 @@
  */
 
 import type { AxiosError, InternalAxiosRequestConfig } from 'axios'
-import { useAuthStore } from '@/features/auth/stores'
+import { useAuthStore } from '@/features/auth/stores/auth.store'
 
 /**
  * Request interceptor to inject JWT token into Authorization header

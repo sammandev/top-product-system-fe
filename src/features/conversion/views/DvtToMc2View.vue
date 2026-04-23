@@ -1,294 +1,166 @@
 <template>
     <DefaultLayout>
-        <!-- Page Header -->
-        <div class="d-flex justify-space-between align-center mb-6">
-            <div class="d-flex align-center">
-                <v-icon size="40" color="primary" class="mr-3">mdi-file-swap</v-icon>
+        <div class="dvt-converter-header mb-6">
+            <div class="dvt-converter-header__copy">
+                <div class="dvt-converter-header__icon">
+                    <Icon icon="mdi:file-swap" class="dvt-converter-header__icon-glyph" />
+                </div>
                 <div>
-                    <h1 class="text-h4 mb-2">DVT to MC2 Converter</h1>
-                    <p class="text-medium-emphasis mb-0">
-                        Convert DVT format test files to MC2 format (supports batch processing)
+                    <h1 class="dvt-converter-header__title">DVT to MC2 Converter</h1>
+                    <p class="dvt-converter-header__subtitle">
+                        Convert one or many DVT files into MC2 exports with lightweight preview checks before download.
                     </p>
                 </div>
             </div>
         </div>
 
-        <!-- Error Alert -->
-        <v-alert v-if="showError" type="error" variant="tonal" closable class="mb-4" @click:close="showError = false">
-            {{ errorMessage }}
-        </v-alert>
-
-        <v-row>
-            <!-- Left Panel: File Upload -->
-            <v-col cols="12" lg="6">
-                <v-card elevation="2">
-                    <v-card-title class="bg-primary">
-                        <v-icon start color="white">mdi-file-upload</v-icon>
-                        <span class="text-white">Upload DVT Files</span>
-                    </v-card-title>
-
-                    <v-card-text class="pa-4">
-                        <!-- DVT File Upload (Multiple) -->
-                        <div class="mb-4">
-                            <div class="text-subtitle-2 mb-3 d-flex align-center">
-                                <v-icon start size="small">mdi-file-document-multiple</v-icon>
-                                DVT Files (CSV or XLSX)
-                                <v-chip size="small" color="info" class="ml-2">Multiple files supported</v-chip>
-                            </div>
-
-                            <v-file-input v-model="dvtFiles" label="Upload DVT file(s)" accept=".csv,.xlsx"
-                                variant="outlined" density="comfortable" prepend-icon="mdi-file-document-multiple"
-                                multiple clearable show-size :error-messages="dvtFilesError"
-                                @update:model-value="handleDvtFilesChange">
-                                <template #selection="{ fileNames }">
-                                    <v-chip v-for="fileName in fileNames.slice(0, 2)" :key="fileName" size="small"
-                                        color="primary" class="me-2">
-                                        {{ fileName }}
-                                    </v-chip>
-                                    <v-chip v-if="fileNames.length > 2" size="small" color="grey" class="me-2">
-                                        +{{ fileNames.length - 2 }} more
-                                    </v-chip>
-                                </template>
-                            </v-file-input>
-
-                            <v-alert v-if="dvtFiles.length > 0" type="info" variant="tonal" density="compact"
-                                class="mt-2">
-                                {{ dvtFiles.length }} file(s) selected ({{ formatTotalSize(dvtFiles) }})
-                            </v-alert>
-                        </div>
-
-                        <v-divider class="my-4" />
-
-                        <!-- Action Buttons -->
-                        <v-row dense>
-                            <v-col cols="12">
-                                <v-btn color="primary" size="large" block :loading="converting" :disabled="!canConvert"
-                                    prepend-icon="mdi-play-circle" @click="handleConvert">
-                                    {{ dvtFiles.length > 1 ? `Convert ${dvtFiles.length} Files` : 'Convert to MC2' }}
-                                </v-btn>
-                            </v-col>
-                        </v-row>
-                    </v-card-text>
-                </v-card>
-
-                <!-- File Previews -->
-                <v-card v-if="filePreviews.length > 0 && !converting" elevation="2" class="mt-4">
-                    <v-card-title class="bg-grey-lighten-4">
-                        <v-icon start size="small">mdi-eye</v-icon>
-                        File Previews
-                    </v-card-title>
-
-                    <v-card-text class="pa-0">
-                        <v-list density="compact">
-                            <v-list-item v-for="(preview, index) in filePreviews" :key="index">
-                                <template #prepend>
-                                    <v-icon size="small" color="info">mdi-file-document</v-icon>
-                                </template>
-
-                                <v-list-item-title class="text-body-2">{{ preview.filename }}</v-list-item-title>
-                                <v-list-item-subtitle class="text-caption">
-                                    <v-chip v-if="preview.serialNumber" size="x-small" class="mr-1">
-                                        SN: {{ preview.serialNumber }}
-                                    </v-chip>
-                                    <v-chip v-for="band in preview.detectedBands" :key="band" size="x-small"
-                                        class="mr-1" color="primary">
-                                        {{ band }}
-                                    </v-chip>
-                                </v-list-item-subtitle>
-                            </v-list-item>
-                        </v-list>
-                    </v-card-text>
-                </v-card>
-            </v-col>
-
-            <!-- Right Panel: Conversion Progress/Results -->
-            <v-col cols="12" lg="6">
-                <!-- Conversion in Progress -->
-                <v-card v-if="converting" elevation="2">
-                    <v-card-title class="bg-info">
-                        <v-icon start color="white">mdi-progress-clock</v-icon>
-                        <span class="text-white">Converting Files...</span>
-                    </v-card-title>
-
-                    <v-card-text class="pa-4">
-                        <v-list density="compact">
-                            <v-list-item v-for="(progress, index) in conversionProgress" :key="index">
-                                <template #prepend>
-                                    <v-icon v-if="progress.progress === 100" color="success">mdi-check-circle</v-icon>
-                                    <v-progress-circular v-else :model-value="progress.progress" size="24" width="3"
-                                        color="primary" />
-                                </template>
-
-                                <v-list-item-title class="text-body-2">{{ progress.filename }}</v-list-item-title>
-                                <v-list-item-subtitle class="text-caption">
-                                    {{ progress.progress }}% complete
-                                </v-list-item-subtitle>
-
-                                <template #append>
-                                    <v-chip size="small" :color="progress.progress === 100 ? 'success' : 'primary'">
-                                        {{ progress.progress }}%
-                                    </v-chip>
-                                </template>
-                            </v-list-item>
-                        </v-list>
-                    </v-card-text>
-                </v-card>
-
-                <!-- Conversion Results -->
-                <v-card v-else-if="conversionResults.length > 0" elevation="2">
-                    <v-card-title class="bg-success">
-                        <v-icon start color="white">mdi-check-circle</v-icon>
-                        <span class="text-white">Conversion Complete</span>
-                    </v-card-title>
-
-                    <v-card-text class="pa-4">
-                        <v-alert type="success" variant="tonal" class="mb-4">
-                            <template #prepend>
-                                <v-icon>mdi-download</v-icon>
-                            </template>
-                            <div class="text-body-2">
-                                <strong>{{ successCount }} of {{ conversionResults.length }} files converted
-                                    successfully!</strong><br>
-                                <span v-if="successCount > 0" class="text-caption">
-                                    MC2 files have been downloaded automatically.
-                                </span>
-                            </div>
-                        </v-alert>
-
-                        <div class="text-subtitle-2 mb-2">Conversion Results:</div>
-                        <v-list density="compact" class="bg-transparent">
-                            <v-list-item v-for="(result, index) in conversionResults" :key="index">
-                                <template #prepend>
-                                    <v-icon :color="result.success ? 'success' : 'error'">
-                                        {{ result.success ? 'mdi-check-circle' : 'mdi-alert-circle' }}
-                                    </v-icon>
-                                </template>
-
-                                <v-list-item-title class="text-body-2">{{ result.originalName }}</v-list-item-title>
-                                <v-list-item-subtitle v-if="result.success" class="text-caption text-success">
-                                    → {{ result.filename }}
-                                </v-list-item-subtitle>
-                                <v-list-item-subtitle v-else class="text-caption text-error">
-                                    {{ result.error }}
-                                </v-list-item-subtitle>
-                            </v-list-item>
-                        </v-list>
-
-                        <v-divider class="my-4" />
-
-                        <v-row dense>
-                            <v-col cols="6">
-                                <v-btn block color="primary" variant="outlined" prepend-icon="mdi-refresh"
-                                    @click="resetForm">
-                                    Convert More Files
-                                </v-btn>
-                            </v-col>
-                            <v-col v-if="successCount > 0" cols="6">
-                                <v-btn block color="success" variant="outlined" prepend-icon="mdi-download-multiple"
-                                    @click="downloadAllResults">
-                                    Re-download All
-                                </v-btn>
-                            </v-col>
-                        </v-row>
-                    </v-card-text>
-                </v-card>
-
-                <!-- Instructions -->
-                <v-card v-else elevation="2">
-                    <v-card-title class="bg-grey-lighten-4">
-                        <v-icon start size="small">mdi-information</v-icon>
-                        How to Use
-                    </v-card-title>
-
-                    <v-card-text class="pa-4">
-                        <v-timeline side="end" density="compact" class="mb-2">
-                            <v-timeline-item dot-color="primary" size="small">
-                                <template #opposite>
-                                    <div class="text-caption">Step 1</div>
-                                </template>
-                                <div class="text-body-2">
-                                    <strong>Select DVT File(s)</strong><br>
-                                    <span class="text-caption text-medium-emphasis">
-                                        Choose one or more DVT format files (CSV or XLSX)
-                                    </span>
-                                </div>
-                            </v-timeline-item>
-
-                            <v-timeline-item dot-color="success" size="small">
-                                <template #opposite>
-                                    <div class="text-caption">Step 2</div>
-                                </template>
-                                <div class="text-body-2">
-                                    <strong>Preview Files</strong><br>
-                                    <span class="text-caption text-medium-emphasis">
-                                        Review detected serial numbers and frequency bands
-                                    </span>
-                                </div>
-                            </v-timeline-item>
-
-                            <v-timeline-item dot-color="info" size="small">
-                                <template #opposite>
-                                    <div class="text-caption">Step 3</div>
-                                </template>
-                                <div class="text-body-2">
-                                    <strong>Convert</strong><br>
-                                    <span class="text-caption text-medium-emphasis">
-                                        Click "Convert" to process and download MC2 files
-                                    </span>
-                                </div>
-                            </v-timeline-item>
-                        </v-timeline>
-
-                        <v-divider class="my-4" />
-
-                        <div class="text-subtitle-2 mb-2">Conversion Details:</div>
-                        <v-list density="compact" class="bg-transparent">
-                            <v-list-item>
-                                <template #prepend>
-                                    <v-icon size="small">mdi-table</v-icon>
-                                </template>
-                                <v-list-item-title class="text-caption">Input Format</v-list-item-title>
-                                <v-list-item-subtitle class="text-caption">DVT CSV/XLSX with standard test data
-                                    structure</v-list-item-subtitle>
-                            </v-list-item>
-                            <v-list-item>
-                                <template #prepend>
-                                    <v-icon size="small">mdi-file-excel</v-icon>
-                                </template>
-                                <v-list-item-title class="text-caption">Output Format</v-list-item-title>
-                                <v-list-item-subtitle class="text-caption">MC2 CSV with header, USL/LSL rows, and
-                                    measurement
-                                    data</v-list-item-subtitle>
-                            </v-list-item>
-                            <v-list-item>
-                                <template #prepend>
-                                    <v-icon size="small" color="primary">mdi-file-multiple</v-icon>
-                                </template>
-                                <v-list-item-title class="text-caption">Batch Processing</v-list-item-title>
-                                <v-list-item-subtitle class="text-caption">Convert multiple files
-                                    simultaneously</v-list-item-subtitle>
-                            </v-list-item>
-                        </v-list>
-                    </v-card-text>
-                </v-card>
-            </v-col>
-        </v-row>
-
-        <!-- Error Display -->
-        <v-snackbar v-model="showError" color="error" :timeout="6000" location="bottom">
-            <div class="d-flex align-center">
-                <v-icon start>mdi-alert-circle</v-icon>
-                {{ errorMessage }}
+        <div v-if="showError" class="dvt-converter-notice dvt-converter-notice--error mb-4">
+            <div>
+                <strong>Conversion failed</strong>
+                <p>{{ errorMessage }}</p>
             </div>
-            <template #actions>
-                <v-btn variant="text" @click="showError = false">Close</v-btn>
-            </template>
-        </v-snackbar>
+            <button type="button" @click="showError = false">Dismiss</button>
+        </div>
+
+        <div class="dvt-converter-layout">
+            <div class="dvt-converter-layout__main">
+                <AppPanel eyebrow="Upload" title="Batch Source Files" description="Load one or many DVT CSV or XLSX files and validate them before conversion." class="mb-4">
+                    <template #header-aside>
+                        <span class="dvt-converter-pill dvt-converter-pill--info">Multiple files supported</span>
+                    </template>
+
+                    <AppFilePicker :modelValue="dvtFiles" accept=".csv,.xlsx" label="Upload DVT file(s)"
+                        helper-text="The converter accepts multiple DVT files and will generate a batch of MC2 outputs."
+                        :invalid="Boolean(dvtFilesError)" :invalidMessage="dvtFilesError" multiple
+                        @update:modelValue="handleDvtFilesSelection" />
+
+                    <div v-if="dvtFiles.length > 0" class="dvt-converter-file-summary">
+                        <div>
+                            <strong>{{ dvtFiles.length }} file(s) selected</strong>
+                            <p>{{ formatTotalSize(dvtFiles) }}</p>
+                        </div>
+                    </div>
+
+                    <button type="button" class="dvt-converter-button dvt-converter-button--primary dvt-converter-button--block dvt-converter-button--large mt-4" :disabled="!canConvert"
+                        @click="handleConvert">
+                        <Icon :icon="converting ? 'mdi:loading' : 'mdi:play-circle'" :class="{ 'dvt-converter-spin': converting }" />
+                        <span>{{ dvtFiles.length > 1 ? `Convert ${dvtFiles.length} Files` : 'Convert to MC2' }}</span>
+                    </button>
+                </AppPanel>
+
+                <AppPanel v-if="filePreviews.length > 0 && !converting" eyebrow="Preview" title="Detected File Traits" compactHeader>
+
+                    <div class="dvt-converter-preview-list">
+                        <article v-for="(preview, index) in filePreviews" :key="index" class="dvt-converter-preview-item">
+                            <div>
+                                <strong>{{ preview.filename }}</strong>
+                                <p v-if="preview.serialNumber">SN: {{ preview.serialNumber }}</p>
+                                <p v-else>No serial number detected.</p>
+                            </div>
+                            <div class="dvt-converter-preview-bands">
+                                <span v-for="band in preview.detectedBands" :key="band" class="dvt-converter-pill dvt-converter-pill--primary dvt-converter-pill--small">
+                                    {{ band }}
+                                </span>
+                                <span v-if="preview.detectedBands.length === 0">No bands detected</span>
+                            </div>
+                        </article>
+                    </div>
+                </AppPanel>
+            </div>
+
+            <div class="dvt-converter-layout__side">
+                <AppPanel v-if="converting" eyebrow="Progress" title="Converting Files" compactHeader>
+
+                    <div class="dvt-converter-progress-list">
+                        <article v-for="(progressItem, index) in conversionProgress" :key="index" class="dvt-converter-progress-item">
+                            <div class="dvt-converter-progress-item__copy">
+                                <strong>{{ progressItem.filename }}</strong>
+                                <p>{{ progressItem.progress }}% complete</p>
+                            </div>
+                            <div class="dvt-converter-progress-track">
+                                <div class="dvt-converter-progress-bar" :style="{ width: `${Math.max(progressItem.progress, 8)}%` }" />
+                            </div>
+                        </article>
+                    </div>
+                </AppPanel>
+
+                <AppPanel v-else-if="conversionResults.length > 0" eyebrow="Results" title="Conversion Complete"
+                    :description="`${successCount} of ${conversionResults.length} file(s) converted successfully.`" tone="success">
+
+                    <div class="dvt-converter-notice dvt-converter-notice--success">
+                        <div>
+                            <strong>Downloads generated</strong>
+                            <p v-if="successCount > 0">MC2 files were downloaded automatically after conversion.</p>
+                            <p v-else>No successful conversions were produced in this run.</p>
+                        </div>
+                    </div>
+
+                    <div class="dvt-converter-result-list">
+                        <article v-for="(result, index) in conversionResults" :key="index" class="dvt-converter-result-item"
+                            :class="{ 'dvt-converter-result-item--success': result.success, 'dvt-converter-result-item--error': !result.success }">
+                            <strong>{{ result.originalName }}</strong>
+                            <p v-if="result.success">→ {{ result.filename }}</p>
+                            <p v-else>{{ result.error }}</p>
+                        </article>
+                    </div>
+
+                    <div class="dvt-converter-actions">
+                        <button type="button" class="dvt-converter-button dvt-converter-button--ghost" @click="resetForm">
+                            <Icon icon="mdi:refresh" />
+                            <span>Convert More Files</span>
+                        </button>
+                        <button v-if="successCount > 0" type="button" class="dvt-converter-button dvt-converter-button--success-ghost"
+                            @click="downloadAllResults">
+                            <Icon icon="mdi:download-multiple" />
+                            <span>Re-download All</span>
+                        </button>
+                    </div>
+                </AppPanel>
+
+                <AppPanel v-else eyebrow="Playbook" title="Recommended Flow"
+                    description="Use previews to catch malformed files before you trigger the batch conversion." tone="cool">
+
+                    <ol class="dvt-converter-steps">
+                        <li>
+                            <strong>Select one or more DVT files.</strong>
+                            <span>CSV and XLSX files are both accepted.</span>
+                        </li>
+                        <li>
+                            <strong>Review the preview hints.</strong>
+                            <span>Check detected serial numbers and band tags before conversion.</span>
+                        </li>
+                        <li>
+                            <strong>Run the converter once.</strong>
+                            <span>The route downloads MC2 outputs automatically for successful conversions.</span>
+                        </li>
+                    </ol>
+
+                    <div class="dvt-converter-detail-cards">
+                        <article class="dvt-converter-detail-card">
+                            <span>Input</span>
+                            <p>DVT CSV/XLSX with the standard test-data structure.</p>
+                        </article>
+                        <article class="dvt-converter-detail-card">
+                            <span>Output</span>
+                            <p>MC2 CSV with header rows, USL/LSL rows, and measurement values.</p>
+                        </article>
+                        <article class="dvt-converter-detail-card">
+                            <span>Batch Mode</span>
+                            <p>Multiple files can be converted and downloaded in a single run.</p>
+                        </article>
+                    </div>
+                </AppPanel>
+            </div>
+        </div>
+
     </DefaultLayout>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
+import { AppFilePicker, AppPanel } from '@/shared'
+import { useNotification } from '@/shared/composables/useNotification'
 import {
   type BatchConvertResult,
   convertDvtToMc2Batch,
@@ -318,6 +190,7 @@ const conversionResults = ref<BatchConvertResult[]>([])
 const filePreviews = ref<FilePreview[]>([])
 const showError = ref(false)
 const errorMessage = ref('')
+const { showError: showErrorNotification } = useNotification()
 
 // Computed
 const canConvert = computed(() => {
@@ -384,6 +257,11 @@ async function handleDvtFilesChange() {
   }
 }
 
+function handleDvtFilesSelection(value: File | File[] | null) {
+    dvtFiles.value = Array.isArray(value) ? value : value ? [value] : []
+    void handleDvtFilesChange()
+}
+
 async function handleConvert() {
   if (dvtFiles.value.length === 0) return
 
@@ -412,12 +290,14 @@ async function handleConvert() {
     if (failedCount > 0) {
       errorMessage.value = `${failedCount} file(s) failed to convert. See results for details.`
       showError.value = true
+            showErrorNotification(errorMessage.value)
     }
   } catch (error) {
     console.error('Batch conversion failed:', error)
     errorMessage.value =
       error instanceof Error ? error.message : 'Conversion failed. Please try again.'
     showError.value = true
+        showErrorNotification(errorMessage.value)
   } finally {
     converting.value = false
   }
@@ -435,9 +315,300 @@ function resetForm() {
   conversionProgress.value = []
   conversionResults.value = []
   filePreviews.value = []
+    showError.value = false
+    errorMessage.value = ''
 }
 </script>
 
 <style scoped>
-/* Add any custom styles here */
+.dvt-converter-header__copy {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.dvt-converter-header__icon {
+    display: grid;
+    place-items: center;
+    width: 3.4rem;
+    height: 3.4rem;
+    border-radius: 1.1rem;
+    background: linear-gradient(135deg, rgba(20, 88, 71, 0.16), rgba(161, 104, 57, 0.18));
+    color: var(--app-accent);
+    box-shadow: var(--app-shadow-soft);
+}
+
+.dvt-converter-header__icon-glyph {
+    font-size: 2rem;
+}
+
+.dvt-converter-header__title {
+    margin: 0 0 0.5rem;
+    font-size: clamp(2rem, 3vw, 2.5rem);
+    line-height: 1.08;
+}
+
+.dvt-converter-header__subtitle {
+    margin: 0;
+    color: var(--app-muted);
+    line-height: 1.55;
+}
+
+.dvt-converter-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(20rem, 0.92fr);
+    gap: 1rem;
+}
+
+.dvt-converter-layout__main,
+.dvt-converter-layout__side {
+    display: grid;
+    gap: 1rem;
+}
+
+.dvt-converter-notice,
+.dvt-converter-file-summary {
+    border: 1px solid var(--app-border);
+    border-radius: 1.25rem;
+    background: rgba(255, 251, 247, 0.88);
+    box-shadow: var(--app-shadow-soft);
+}
+
+.dvt-converter-detail-card span {
+    margin: 0;
+    color: var(--app-accent);
+    font-size: 0.76rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.dvt-converter-file-summary p,
+.dvt-converter-preview-item p,
+.dvt-converter-progress-item p,
+.dvt-converter-result-item p,
+.dvt-converter-detail-card p,
+.dvt-converter-steps span,
+.dvt-converter-notice p {
+    margin: 0.25rem 0 0;
+    color: var(--app-muted);
+    line-height: 1.55;
+}
+
+.dvt-converter-notice {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+    padding: 0.95rem 1rem;
+}
+
+.dvt-converter-notice--error {
+    background: rgba(163, 61, 45, 0.08);
+    border-color: rgba(163, 61, 45, 0.24);
+}
+
+.dvt-converter-notice--success {
+    background: rgba(20, 88, 71, 0.08);
+    border-color: rgba(20, 88, 71, 0.24);
+}
+
+.dvt-converter-notice button {
+    border: 0;
+    background: transparent;
+    color: var(--app-accent);
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.dvt-converter-file-summary {
+    padding: 0.95rem 1rem;
+}
+
+.dvt-converter-file-summary strong,
+.dvt-converter-preview-item strong,
+.dvt-converter-progress-item strong,
+.dvt-converter-result-item strong,
+.dvt-converter-steps strong {
+    color: var(--app-ink);
+}
+
+.dvt-converter-preview-list,
+.dvt-converter-progress-list,
+.dvt-converter-result-list,
+.dvt-converter-detail-cards {
+    display: grid;
+    gap: 0.85rem;
+}
+
+.dvt-converter-preview-item,
+.dvt-converter-progress-item,
+.dvt-converter-result-item,
+.dvt-converter-detail-card {
+    border: 1px solid rgba(20, 88, 71, 0.1);
+    border-radius: 1rem;
+    background: rgba(255, 255, 255, 0.68);
+    padding: 0.95rem 1rem;
+}
+
+.dvt-converter-preview-item {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.dvt-converter-preview-bands {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    justify-content: flex-end;
+}
+
+.dvt-converter-preview-bands span {
+    color: var(--app-muted);
+    font-size: 0.82rem;
+}
+
+.dvt-converter-progress-item {
+    display: grid;
+    gap: 0.6rem;
+}
+
+.dvt-converter-progress-track {
+    position: relative;
+    overflow: hidden;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: rgba(20, 88, 71, 0.12);
+}
+
+.dvt-converter-progress-bar {
+    height: 100%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, rgba(20, 88, 71, 0.8), rgba(161, 104, 57, 0.8));
+    transition: width 0.2s ease;
+}
+
+.dvt-converter-result-item--success {
+    border-color: rgba(20, 88, 71, 0.2);
+}
+
+.dvt-converter-result-item--error {
+    border-color: rgba(163, 61, 45, 0.24);
+}
+
+.dvt-converter-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+}
+
+.dvt-converter-button,
+.dvt-converter-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.45rem;
+}
+
+.dvt-converter-button {
+    border-radius: 999px;
+    border: 1px solid var(--app-border);
+    padding: 0.78rem 1rem;
+    cursor: pointer;
+    font-weight: 700;
+    background: rgba(255, 251, 247, 0.92);
+    color: var(--app-ink);
+}
+
+.dvt-converter-button:disabled {
+    cursor: not-allowed;
+    opacity: 0.64;
+}
+
+.dvt-converter-button--primary {
+    background: #1f4e86;
+    border-color: #1f4e86;
+    color: #f8f3ec;
+}
+
+.dvt-converter-button--ghost {
+    background: rgba(255, 251, 247, 0.92);
+    color: var(--app-ink);
+}
+
+.dvt-converter-button--success-ghost {
+    background: rgba(20, 88, 71, 0.08);
+    border-color: rgba(20, 88, 71, 0.24);
+    color: #145847;
+}
+
+.dvt-converter-button--block {
+    width: 100%;
+}
+
+.dvt-converter-button--large {
+    padding-inline: 1.15rem;
+}
+
+.dvt-converter-spin {
+    animation: dvt-converter-spin 0.9s linear infinite;
+}
+
+.dvt-converter-pill {
+    border-radius: 999px;
+    padding: 0.32rem 0.75rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+}
+
+.dvt-converter-pill--info {
+    background: rgba(20, 113, 153, 0.12);
+    color: #0f6c92;
+}
+
+.dvt-converter-pill--primary {
+    background: rgba(40, 96, 163, 0.12);
+    color: #1f4e86;
+}
+
+.dvt-converter-pill--small {
+    padding: 0.22rem 0.6rem;
+    font-size: 0.72rem;
+}
+
+.dvt-converter-steps {
+    display: grid;
+    gap: 0.9rem;
+    padding-left: 1.25rem;
+    margin: 0;
+}
+
+.dvt-converter-detail-card p {
+    margin-top: 0.35rem;
+}
+
+@media (max-width: 960px) {
+    .dvt-converter-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .dvt-converter-preview-item {
+        flex-direction: column;
+    }
+
+    .dvt-converter-preview-bands {
+        justify-content: flex-start;
+    }
+}
+
+@keyframes dvt-converter-spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
 </style>

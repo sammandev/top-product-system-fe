@@ -1,184 +1,136 @@
-s<template>
-  <v-card>
-    <v-card-title class="d-flex justify-space-between align-center">
-      <div>
-        <v-icon start>mdi-file-compare</v-icon>
-        Comparison Results
-      </div>
-      <v-chip :color="hasResults ? 'success' : 'default'" size="small">
+<template>
+  <AppPanel
+    eyebrow="Comparison Output"
+    title="Comparison Results"
+    description="Review summary metrics, structural differences, and row-level comparisons from the current compare run."
+    tone="warm"
+    split-header
+  >
+    <template #header-aside>
+      <span class="comparison-results__pill" :class="hasResults ? 'comparison-results__pill--success' : 'comparison-results__pill--neutral'">
         {{ mode.toUpperCase() }} Mode
-      </v-chip>
-    </v-card-title>
+      </span>
+    </template>
 
-    <v-card-text>
-      <!-- Summary Stats -->
-      <v-row v-if="hasResults && summary" class="mb-4">
-        <v-col cols="12" sm="6" md="3">
-          <v-card color="info" variant="tonal">
-            <v-card-text class="text-center">
-              <div class="text-h4">{{ summary.total_rows || 0 }}</div>
-              <div class="text-caption">Total Rows</div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        <v-col cols="12" sm="6" md="3">
-          <v-card color="success" variant="tonal">
-            <v-card-text class="text-center">
-              <div class="text-h4">{{ summary.matching_rows || 0 }}</div>
-              <div class="text-caption">Matching Rows</div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        <v-col cols="12" sm="6" md="3">
-          <v-card color="warning" variant="tonal">
-            <v-card-text class="text-center">
-              <div class="text-h4">{{ summary.different_rows || 0 }}</div>
-              <div class="text-caption">Different Rows</div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-        <v-col cols="12" sm="6" md="3">
-          <v-card color="primary" variant="tonal">
-            <v-card-text class="text-center">
-              <div class="text-h4">{{ summary.columns_compared?.length || 0 }}</div>
-              <div class="text-caption">Columns Compared</div>
-            </v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
+    <section v-if="hasResults && summary" class="comparison-results__stat-grid">
+      <article class="comparison-results__stat-card comparison-results__stat-card--info">
+        <small>Total Rows</small>
+        <strong>{{ summary.total_rows || 0 }}</strong>
+      </article>
+      <article class="comparison-results__stat-card comparison-results__stat-card--success">
+        <small>Matching Rows</small>
+        <strong>{{ summary.matching_rows || 0 }}</strong>
+      </article>
+      <article class="comparison-results__stat-card comparison-results__stat-card--warning">
+        <small>Different Rows</small>
+        <strong>{{ summary.different_rows || 0 }}</strong>
+      </article>
+      <article class="comparison-results__stat-card comparison-results__stat-card--primary">
+        <small>Columns Compared</small>
+        <strong>{{ summary.columns_compared?.length || 0 }}</strong>
+      </article>
+    </section>
 
-      <!-- Column Comparison Results -->
-      <div v-if="showColumnComparison && columnResults" class="mb-6">
-        <v-divider class="mb-4" />
-        <div class="text-h6 mb-3">
-          <v-icon start>mdi-table-column</v-icon>
-          Column Structure Comparison
-        </div>
-
-        <v-row>
-          <!-- Columns in Both -->
-          <v-col cols="12" md="4">
-            <v-card color="success" variant="tonal">
-              <v-card-title class="text-subtitle-1">
-                <v-icon start>mdi-check-circle</v-icon>
-                Both Files ({{ columnResults.both?.length || 0 }})
-              </v-card-title>
-              <v-card-text>
-                <v-chip v-for="col in columnResults.both" :key="`both-${col}`" size="small" color="success"
-                  class="ma-1">
-                  {{ col }}
-                </v-chip>
-                <div v-if="!columnResults.both || columnResults.both.length === 0"
-                  class="text-caption text-medium-emphasis">
-                  No common columns
-                </div>
-              </v-card-text>
-            </v-card>
-          </v-col>
-
-          <!-- Only in File A -->
-          <v-col cols="12" md="4">
-            <v-card color="error" variant="tonal">
-              <v-card-title class="text-subtitle-1">
-                <v-icon start>mdi-minus-circle</v-icon>
-                Only in A ({{ columnResults.onlyInA?.length || 0 }})
-              </v-card-title>
-              <v-card-text>
-                <v-chip v-for="col in columnResults.onlyInA" :key="`a-${col}`" size="small" color="error" class="ma-1">
-                  {{ col }}
-                </v-chip>
-                <div v-if="!columnResults.onlyInA || columnResults.onlyInA.length === 0"
-                  class="text-caption text-medium-emphasis">
-                  No unique columns in File A
-                </div>
-              </v-card-text>
-            </v-card>
-          </v-col>
-
-          <!-- Only in File B -->
-          <v-col cols="12" md="4">
-            <v-card color="info" variant="tonal">
-              <v-card-title class="text-subtitle-1">
-                <v-icon start>mdi-plus-circle</v-icon>
-                Only in B ({{ columnResults.onlyInB?.length || 0 }})
-              </v-card-title>
-              <v-card-text>
-                <v-chip v-for="col in columnResults.onlyInB" :key="`b-${col}`" size="small" color="info" class="ma-1">
-                  {{ col }}
-                </v-chip>
-                <div v-if="!columnResults.onlyInB || columnResults.onlyInB.length === 0"
-                  class="text-caption text-medium-emphasis">
-                  No unique columns in File B
-                </div>
-              </v-card-text>
-            </v-card>
-          </v-col>
-        </v-row>
+    <section v-if="showColumnComparison && columnResults" class="comparison-results__section">
+      <div class="comparison-results__divider"></div>
+      <div class="comparison-results__section-heading">
+        <Icon icon="mdi:table-column" />
+        <span>Column Structure Comparison</span>
       </div>
 
-      <!-- Row Comparison Results -->
-      <div v-if="showRowComparison && rowResults && rowResults.length > 0" class="mb-4">
-        <v-divider class="mb-4" />
-        <div class="text-h6 mb-3">
-          <v-icon start>mdi-table-row</v-icon>
-          Row Data Comparison
-        </div>
+      <div class="comparison-results__column-grid">
+        <article class="comparison-results__bucket comparison-results__bucket--success">
+          <header>
+            <h3>Both Files</h3>
+            <span class="comparison-results__pill comparison-results__pill--success">{{ columnResults.both?.length || 0 }}</span>
+          </header>
+          <div v-if="columnResults.both && columnResults.both.length > 0" class="comparison-results__chip-row">
+            <span v-for="col in columnResults.both" :key="`both-${col}`" class="comparison-results__chip comparison-results__chip--success">{{ col }}</span>
+          </div>
+          <p v-else class="comparison-results__muted">No common columns</p>
+        </article>
 
-        <!-- Row Comparison Table -->
-        <v-data-table :headers="rowHeaders" :items="displayedRowResults" :items-per-page="10" class="elevation-1"
-          density="comfortable" :loading="false">
-          <!-- Status Column -->
-          <template #item.status="{ item }">
-            <v-chip :color="getStatusColor(item.status)" size="small" variant="tonal">
-              <v-icon start size="small">
-                {{ getStatusIcon(item.status) }}
-              </v-icon>
-              {{ getStatusText(item.status) }}
-            </v-chip>
-          </template>
+        <article class="comparison-results__bucket comparison-results__bucket--danger">
+          <header>
+            <h3>Only in A</h3>
+            <span class="comparison-results__pill comparison-results__pill--danger">{{ columnResults.onlyInA?.length || 0 }}</span>
+          </header>
+          <div v-if="columnResults.onlyInA && columnResults.onlyInA.length > 0" class="comparison-results__chip-row">
+            <span v-for="col in columnResults.onlyInA" :key="`a-${col}`" class="comparison-results__chip comparison-results__chip--danger">{{ col }}</span>
+          </div>
+          <p v-else class="comparison-results__muted">No unique columns in File A</p>
+        </article>
 
-          <!-- Value A Column -->
-          <template #item.valueA="{ item }">
-            <span :class="getValueClass(item.status, 'A')">
-              {{ formatValue(item.valueA) }}
-            </span>
-          </template>
+        <article class="comparison-results__bucket comparison-results__bucket--info">
+          <header>
+            <h3>Only in B</h3>
+            <span class="comparison-results__pill comparison-results__pill--info">{{ columnResults.onlyInB?.length || 0 }}</span>
+          </header>
+          <div v-if="columnResults.onlyInB && columnResults.onlyInB.length > 0" class="comparison-results__chip-row">
+            <span v-for="col in columnResults.onlyInB" :key="`b-${col}`" class="comparison-results__chip comparison-results__chip--info">{{ col }}</span>
+          </div>
+          <p v-else class="comparison-results__muted">No unique columns in File B</p>
+        </article>
+      </div>
+    </section>
 
-          <!-- Value B Column -->
-          <template #item.valueB="{ item }">
-            <span :class="getValueClass(item.status, 'B')">
-              {{ formatValue(item.valueB) }}
-            </span>
-          </template>
-
-          <!-- Difference Column (if applicable) -->
-          <template #item.difference="{ item }">
-            <span v-if="item.difference !== undefined">
-              {{ formatValue(item.difference) }}
-            </span>
-            <span v-else class="text-medium-emphasis">—</span>
-          </template>
-        </v-data-table>
+    <section v-if="showRowComparison && rowResults && rowResults.length > 0" class="comparison-results__section">
+      <div class="comparison-results__divider"></div>
+      <div class="comparison-results__section-heading">
+        <Icon icon="mdi:table-row" />
+        <span>Row Data Comparison</span>
       </div>
 
-      <!-- No Results -->
-      <v-alert v-if="!hasResults" type="info" variant="tonal" density="compact">
-        No comparison results yet. Configure comparison settings and click "Compare Files" to start.
-      </v-alert>
-
-      <!-- Empty Results -->
-      <v-alert v-else-if="isEmpty" type="warning" variant="tonal" density="compact">
-        <template #prepend>
-          <v-icon>mdi-alert</v-icon>
+      <AppDataGrid
+        :columns="rowGridColumns"
+        :rows="displayedRowResults"
+        paginator
+        :rowsPerPage="10"
+        scrollHeight="24rem"
+      >
+        <template #cell-status="{ data }">
+          <span class="comparison-results__pill" :class="statusPillClass(String(data.status))">
+            <Icon :icon="getStatusIcon(String(data.status))" />
+            {{ getStatusText(String(data.status)) }}
+          </span>
         </template>
-        No differences found. The files are identical based on the selected comparison mode.
-      </v-alert>
-    </v-card-text>
-  </v-card>
+
+        <template #cell-valueA="{ data }">
+          <span :class="getValueClass(String(data.status), 'A')">
+            {{ formatValue(data.valueA) }}
+          </span>
+        </template>
+
+        <template #cell-valueB="{ data }">
+          <span :class="getValueClass(String(data.status), 'B')">
+            {{ formatValue(data.valueB) }}
+          </span>
+        </template>
+
+        <template #cell-difference="{ data }">
+          <span v-if="data.difference !== undefined">
+            {{ formatValue(data.difference) }}
+          </span>
+          <span v-else class="comparison-results__muted">—</span>
+        </template>
+      </AppDataGrid>
+    </section>
+
+    <div v-if="!hasResults" class="comparison-results__notice comparison-results__notice--info">
+      No comparison results yet. Configure comparison settings and click "Compare Files" to start.
+    </div>
+
+    <div v-else-if="isEmpty" class="comparison-results__notice comparison-results__notice--warning">
+      <Icon icon="mdi:alert" />
+      <span>No differences found. The files are identical based on the selected comparison mode.</span>
+    </div>
+  </AppPanel>
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed } from 'vue'
+import { AppDataGrid, AppPanel } from '@/shared'
 import type { ComparisonMode } from './ComparisonModeSelector.vue'
 
 // Types
@@ -286,6 +238,15 @@ const rowHeaders = computed(() => {
   return headers
 })
 
+const rowGridColumns = computed(() =>
+  rowHeaders.value.map((header) => ({
+    key: String(header.key),
+    field: String(header.key),
+    header: String(header.title),
+    sortable: Boolean(header.sortable),
+  })),
+)
+
 // Methods
 function getStatusColor(status: string): string {
   switch (status) {
@@ -299,6 +260,21 @@ function getStatusColor(status: string): string {
       return 'info'
     default:
       return 'default'
+  }
+}
+
+function statusPillClass(status: string): string {
+  switch (getStatusColor(status)) {
+    case 'success':
+      return 'comparison-results__pill--success'
+    case 'warning':
+      return 'comparison-results__pill--warning'
+    case 'error':
+      return 'comparison-results__pill--danger'
+    case 'info':
+      return 'comparison-results__pill--info'
+    default:
+      return 'comparison-results__pill--neutral'
   }
 }
 
@@ -352,23 +328,197 @@ function formatValue(value: unknown): string {
 </script>
 
 <style scoped>
+.comparison-results__stat-grid,
+.comparison-results__column-grid,
+.comparison-results__chip-row,
+.comparison-results__section-heading,
+.comparison-results__notice,
+.comparison-results__pill,
+.comparison-results__bucket header {
+  display: flex;
+}
+
+.comparison-results__stat-grid,
+.comparison-results__column-grid {
+  display: grid;
+  gap: 1rem;
+}
+
+.comparison-results__stat-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-bottom: 1rem;
+}
+
+.comparison-results__stat-card,
+.comparison-results__bucket,
+.comparison-results__notice {
+  border: 1px solid var(--app-border);
+  border-radius: 1.1rem;
+  padding: 1rem;
+  box-shadow: var(--app-shadow-soft);
+}
+
+.comparison-results__stat-card {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.comparison-results__stat-card small,
+.comparison-results__muted {
+  color: var(--app-muted);
+}
+
+.comparison-results__stat-card strong,
+.comparison-results__bucket h3 {
+  color: var(--app-ink);
+}
+
+.comparison-results__stat-card strong {
+  font-size: 1.6rem;
+}
+
+.comparison-results__stat-card--info {
+  background: rgba(20, 113, 153, 0.1);
+}
+
+.comparison-results__stat-card--success {
+  background: rgba(20, 88, 71, 0.1);
+}
+
+.comparison-results__stat-card--warning {
+  background: rgba(184, 118, 38, 0.12);
+}
+
+.comparison-results__stat-card--primary {
+  background: rgba(40, 96, 163, 0.1);
+}
+
+.comparison-results__section {
+  margin-bottom: 1rem;
+}
+
+.comparison-results__divider {
+  height: 1px;
+  background: var(--app-border);
+  margin: 0 0 1rem;
+}
+
+.comparison-results__section-heading {
+  align-items: center;
+  gap: 0.55rem;
+  margin-bottom: 0.85rem;
+  color: var(--app-ink);
+  font-weight: 700;
+}
+
+.comparison-results__column-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.comparison-results__bucket {
+  display: grid;
+  gap: 0.85rem;
+  background: rgba(255, 251, 247, 0.92);
+}
+
+.comparison-results__bucket header {
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.comparison-results__bucket h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.comparison-results__bucket--success {
+  background: linear-gradient(180deg, rgba(20, 88, 71, 0.08), rgba(255, 251, 247, 0.96));
+}
+
+.comparison-results__bucket--danger {
+  background: linear-gradient(180deg, rgba(163, 61, 45, 0.08), rgba(255, 251, 247, 0.96));
+}
+
+.comparison-results__bucket--info {
+  background: linear-gradient(180deg, rgba(20, 113, 153, 0.08), rgba(255, 251, 247, 0.96));
+}
+
+.comparison-results__chip-row {
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.comparison-results__chip,
+.comparison-results__pill {
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.32rem 0.75rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.comparison-results__chip--success,
+.comparison-results__pill--success,
 .text-success {
-  color: rgb(var(--v-theme-success));
+  background: rgba(20, 88, 71, 0.12);
+  color: #145847;
 }
 
-.text-warning {
-  color: rgb(var(--v-theme-warning));
-}
-
+.comparison-results__chip--danger,
+.comparison-results__pill--danger,
 .text-error {
-  color: rgb(var(--v-theme-error));
+  background: rgba(163, 61, 45, 0.12);
+  color: #8b2f20;
 }
 
+.comparison-results__chip--info,
+.comparison-results__pill--info,
 .text-info {
-  color: rgb(var(--v-theme-info));
+  background: rgba(20, 113, 153, 0.12);
+  color: #0f6c92;
 }
 
-:deep(.v-data-table) {
-  border-radius: 4px;
+.comparison-results__pill--warning,
+.text-warning {
+  background: rgba(184, 118, 38, 0.14);
+  color: #8f5314;
+}
+
+.comparison-results__pill--neutral {
+  background: rgba(120, 129, 143, 0.12);
+  color: #4f5d6d;
+}
+
+.comparison-results__notice {
+  align-items: center;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.comparison-results__notice--info {
+  background: rgba(20, 113, 153, 0.08);
+  color: #0f6c92;
+}
+
+.comparison-results__notice--warning {
+  background: rgba(245, 168, 71, 0.1);
+  color: #8f5314;
+}
+
+@media (max-width: 960px) {
+  .comparison-results__stat-grid,
+  .comparison-results__column-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 720px) {
+  .comparison-results__stat-grid,
+  .comparison-results__column-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
