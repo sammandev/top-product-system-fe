@@ -1,118 +1,50 @@
 # Frontend Blue-Green Deployment
 
-This frontend repo now includes the release-slot assets for a blue-green rollout modeled on the PTB_OT frontend deployment pattern.
+This is the production deployment flow for `top-product-system-fe`.
 
-This implementation is intentionally frontend-only for the first phase:
+## Ports
 
-- Public frontend entry stays at `172.18.220.56:9090`.
-- Backend stays stable at `172.18.220.56:7070`.
-- Internal frontend slot traffic uses Docker-network port `19090` only and is never exposed publicly.
-- Port `8008` is not used anywhere in the top-product-system deployment flow.
-- The shared edge proxy and active-color state do **not** live in this repo because frontend and backend are split across repositories.
+- Public frontend: `http://172.18.220.56:9090`
+- Public backend: `http://172.18.220.56:7070`
+- Internal frontend slot port: `19090`
 
-## Canonical Frontend Files
+The top-product deployment does not use public ports `3333` or `8008`.
 
-- `deploy/compose/docker-compose.blue-green.yml`
-- `deploy/docker/Dockerfile.blue-green`
-- `deploy/nginx/nginx.blue-green.conf`
-- `deploy/scripts/bootstrap-ubuntu-worktrees.sh`
-- `deploy/scripts/deploy-blue-green.sh`
-- `deploy/scripts/deploy-primevue.sh`
-- `.env.production.example`
+## Layout
 
-## Separate Edge-Proxy Home
+Use this server layout:
 
-The deployment script expects a separate server-side edge-proxy home that owns host port `9090` and tracks the active frontend color.
+- PrimeVue checkout: `/data/ptb/TOP_PROD/top-product-system-fe`
+- Optional Vuetify fallback worktree: `/data/ptb/TOP_PROD/top-product-system-fe-vuetify`
+- Shared edge proxy home: `/data/ptb/TOP_PROD/deployment-infra/edge-proxy`
 
-Recommended operator variable:
+The frontend repo owns the release image, the blue-green deploy scripts, and the edge-proxy template.
 
-```bash
-export TOP_PRODUCT_EDGE_DIR=/srv/top-product-deployment/edge-proxy
-```
+## One-Time Setup
 
-If your deploy user cannot write under `/srv`, use a writable sibling path under `/data/ptb/TOP_PROD` instead:
-
-```bash
-export TOP_PRODUCT_EDGE_DIR=/data/ptb/TOP_PROD/deployment-infra/edge-proxy
-```
-
-Optional network override:
-
-```bash
-export TOP_PRODUCT_EDGE_NETWORK=ast-tools-edge
-```
-
-The script will also auto-detect these common sibling paths when present:
-
-- `../top-product-deployment/edge-proxy`
-- `../deployment-infra/edge-proxy`
-
-## Bootstrapping Edge Proxy
-
-The frontend release containers only expose port `19090` on the shared Docker network. Public traffic at `172.18.220.56:9090` is owned by the separate edge proxy, so the site will not become reachable until that edge-proxy home exists and is started.
-
-This repo now includes a server template under `deploy/server-template/edge-proxy`.
-
-Recommended one-time Ubuntu setup:
-
-```bash
-mkdir -p /data/ptb/TOP_PROD/deployment-infra
-rm -rf /data/ptb/TOP_PROD/deployment-infra/edge-proxy
-cp -r /data/ptb/TOP_PROD/top-product-system-fe/deploy/server-template/edge-proxy /data/ptb/TOP_PROD/deployment-infra/edge-proxy
-
-cd /data/ptb/TOP_PROD/deployment-infra/edge-proxy
-bash ./scripts/bootstrap-edge.sh
-```
-
-That creates the shared Docker network when needed, starts the public Nginx edge proxy on port `9090`, and initializes frontend upstream state.
-
-Important: this edge-proxy template now sets an explicit Docker Compose project name so it does not collide with PTB_OT. Without that, two different folders both named `edge-proxy` can share the same default Compose project identity and Docker may try to recreate the wrong proxy container.
-
-Useful operator commands:
-
-```bash
-cd /data/ptb/TOP_PROD/deployment-infra/edge-proxy
-bash ./scripts/status.sh
-bash ./scripts/switch-frontend-color.sh blue
-bash ./scripts/switch-frontend-color.sh green
-```
-
-## Build-Time API Strategy
-
-For this first rollout, the frontend keeps using an explicit backend URL at build time.
-
-Default build arguments in the blue-green compose file point to:
-
-- `VITE_API_BASE_URL=http://172.18.220.56:7070`
-- `VITE_API_URL=http://172.18.220.56:7070`
-
-Override them from a real `.env.production` file or exported shell environment before building the release image.
-
-Example:
-
-```bash
-set -a
-source .env.production
-set +a
-```
-
-## Safer Server Worktrees
-
-For your current Ubuntu server layout, keep the existing folder on PrimeVue `main` and keep Vuetify in a separate fallback worktree beside it.
-
-Exact commands:
+### 1. Prepare the PrimeVue checkout
 
 ```bash
 cd /data/ptb/TOP_PROD/top-product-system-fe
+git config core.filemode false
 git fetch origin --prune
 git switch main
 git pull --ff-only origin main
+cp .env.production.example .env.production
+nano .env.production
+```
+
+### 2. Optional Vuetify fallback worktree
+
+```bash
+cd /data/ptb/TOP_PROD/top-product-system-fe
 
 if [ ! -d ../top-product-system-fe-vuetify ]; then
   git worktree add ../top-product-system-fe-vuetify origin/original-vuetify
 fi
 
 cd /data/ptb/TOP_PROD/top-product-system-fe-vuetify
+git config core.filemode false
 
 if git show-ref --verify --quiet refs/heads/original-vuetify; then
   git switch original-vuetify
@@ -123,103 +55,51 @@ fi
 git pull --ff-only origin original-vuetify
 ```
 
-If you already created the Vuetify worktree with:
+### 3. Bootstrap the edge proxy
+
+The edge proxy owns public port `9090`. Until it exists, the frontend will not be reachable even if a blue or green slot is healthy.
 
 ```bash
-git worktree add ../top-product-system-fe-vuetify origin/original-vuetify
+mkdir -p /data/ptb/TOP_PROD/deployment-infra
+rm -rf /data/ptb/TOP_PROD/deployment-infra/edge-proxy
+cp -r /data/ptb/TOP_PROD/top-product-system-fe/deploy/server-template/edge-proxy /data/ptb/TOP_PROD/deployment-infra/edge-proxy
+
+cd /data/ptb/TOP_PROD/deployment-infra/edge-proxy
+bash ./scripts/bootstrap-edge.sh
+bash ./scripts/status.sh
 ```
 
-then Git leaves that worktree on a detached HEAD. Convert it to a normal tracking branch with:
+Notes:
 
-```bash
-cd /data/ptb/TOP_PROD/top-product-system-fe-vuetify
+- The edge-proxy template has its own Docker Compose project name, so it does not collide with PTB_OT.
+- Run the edge-proxy helper scripts with `bash ...` on Ubuntu. That avoids executable-bit noise in git.
 
-if git show-ref --verify --quiet refs/heads/original-vuetify; then
-  git switch original-vuetify
-else
-  git switch -c original-vuetify --track origin/original-vuetify
-fi
-```
+## Deploy
 
-PrimeVue deployment preparation remains in the existing folder:
+Use the PrimeVue checkout only.
 
 ```bash
 cd /data/ptb/TOP_PROD/top-product-system-fe
-git config core.filemode false
-git fetch origin --prune
-git switch main
-git pull --ff-only origin main
-cp .env.production.example .env.production
-nano .env.production
-chmod +x ./deploy/scripts/deploy-blue-green.sh
-```
 
-You can automate the server worktree layout with:
+export TOP_PRODUCT_EDGE_DIR=/data/ptb/TOP_PROD/deployment-infra/edge-proxy
+export TOP_PRODUCT_EDGE_NETWORK=ast-tools-edge
 
-```bash
-cd /data/ptb/TOP_PROD/top-product-system-fe
-./deploy/scripts/bootstrap-ubuntu-worktrees.sh
-```
-
-Recommended meaning of each folder:
-
-- `/data/ptb/TOP_PROD/top-product-system-fe` stays on `main` and is the only checkout that should run `deploy-blue-green.sh`.
-- `/data/ptb/TOP_PROD/top-product-system-fe-vuetify` stays on `original-vuetify` for fallback reference or rollback preparation.
-
-Routine update commands for the PrimeVue deployment checkout:
-
-```bash
-cd /data/ptb/TOP_PROD/top-product-system-fe
 git fetch origin --prune
 git pull --ff-only origin main
-export TOP_PRODUCT_EDGE_DIR=/srv/top-product-deployment/edge-proxy
+
 set -a
 source .env.production
 set +a
-./deploy/scripts/deploy-blue-green.sh
+
+bash ./deploy/scripts/deploy-primevue.sh
 ```
 
-To force operators through the canonical PrimeVue checkout even when they are currently in the wrong directory, use the wrapper script:
+This will:
 
-```bash
-cd /data/ptb/TOP_PROD/top-product-system-fe
-./deploy/scripts/deploy-primevue.sh
-```
-
-The wrapper always changes into `/data/ptb/TOP_PROD/top-product-system-fe` before it invokes `deploy-blue-green.sh`, and it refuses to continue if that canonical checkout is not currently on `main`.
-
-If the deployed branch on Ubuntu does not yet preserve executable bits for these scripts, prefer invoking them with `bash ...` instead of `chmod +x ...`. Using `chmod` on a tracked non-executable script makes the git tree look dirty and the deploy preflight will refuse to continue.
-
-For existing server checkouts, run this once in each frontend worktree to ignore chmod-only changes:
-
-```bash
-git config core.filemode false
-```
-
-## One-Time Cutover
-
-The first cutover is not zero-downtime because host port `9090` must move from the current dev-mode serving path to the new shared edge proxy.
-
-Recommended order:
-
-1. Export the production frontend environment values.
-2. Start the initial `frontend-blue` slot on the shared edge network.
-3. Verify the slot health endpoint.
-4. Stop the current frontend process or container that directly owns `9090`.
-5. Start the shared edge proxy on `9090`.
-6. Switch frontend traffic to `blue`.
-7. Validate public page load, login, and at least one API-backed route.
-
-## Routine Release
-
-```bash
-cd /path/to/top-product-system-fe
-export TOP_PRODUCT_EDGE_DIR=/srv/top-product-deployment/edge-proxy
-set -a
-source .env.production
-set +a
-./deploy/scripts/deploy-blue-green.sh
-```
+- build the inactive frontend slot
+- wait for it to become healthy
+- switch the edge proxy to the new slot
+- optionally stop the old slot
 
 Optional flags:
 
@@ -227,15 +107,64 @@ Optional flags:
 - `--keep-old`
 - `--skip-cleanup`
 
-## Rollback
-
-Rollback is a traffic switch in the shared edge-proxy home, not a rebuild.
-
-Example operator flow:
+Example:
 
 ```bash
-cd /srv/top-product-deployment/edge-proxy
-./scripts/switch-frontend-color.sh blue
+bash ./deploy/scripts/deploy-primevue.sh --keep-old
 ```
 
-Replace `blue` with `green` as needed.
+## Check
+
+```bash
+cd /data/ptb/TOP_PROD/deployment-infra/edge-proxy
+bash ./scripts/status.sh
+
+curl -I http://172.18.220.56:9090/healthz
+curl -I http://172.18.220.56:9090/
+```
+
+You should see:
+
+- `ast-tools-edge-proxy` running on `9090`
+- either `ast-tools-frontend-blue` or `ast-tools-frontend-green` healthy
+- `status.sh` showing the same active color as the running frontend slot
+- `curl /healthz` returns `200`
+
+## Rollback
+
+Rollback is only a proxy switch. No rebuild is required.
+
+```bash
+cd /data/ptb/TOP_PROD/deployment-infra/edge-proxy
+bash ./scripts/switch-frontend-color.sh blue
+bash ./scripts/switch-frontend-color.sh green
+```
+
+Use the color that points to the last known good frontend slot.
+
+## Common Issues
+
+### `502 Bad Gateway` on `9090`
+
+Usually means the edge proxy is pointing at a missing or unhealthy slot. Run:
+
+```bash
+cd /data/ptb/TOP_PROD/deployment-infra/edge-proxy
+bash ./scripts/status.sh
+```
+
+### `Missing switch-frontend-color.sh`
+
+The edge-proxy home was not bootstrapped or you pointed `TOP_PRODUCT_EDGE_DIR` at the wrong path.
+
+### Dirty git tree during deploy
+
+Run this once in each frontend worktree:
+
+```bash
+git config core.filemode false
+```
+
+### PTB_OT containers appear as orphans
+
+Pull the latest `main` for `top-product-system-fe`. The top-product blue-green compose file now uses its own explicit project name.
