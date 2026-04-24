@@ -534,7 +534,7 @@ function handleReset() {
   display: grid;
   gap: 1rem;
   border: 1px solid var(--app-border);
-  border-radius: 1.5rem;
+  border-radius: 0.75rem;
   padding: 1.2rem;
   background:
     radial-gradient(circle at top right, rgba(15, 118, 110, 0.06), transparent 32%),
@@ -579,8 +579,8 @@ function handleReset() {
   color: var(--app-accent);
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .parsing-view-workbench {
@@ -747,8 +747,8 @@ function handleReset() {
 .parsing-view-field > span {
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--app-muted);
 }
 

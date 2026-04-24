@@ -283,8 +283,8 @@ function handleReset(): void {
   color: var(--app-accent);
   font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .iplas-settings-dialog__header-copy h2 {
@@ -371,7 +371,7 @@ function handleReset(): void {
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .iplas-settings-dialog__field input,

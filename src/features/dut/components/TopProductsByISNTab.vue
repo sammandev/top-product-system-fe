@@ -1283,7 +1283,7 @@ function formatFileSize(bytes: number): string {
 
 .top-products-isn-station-config-card {
   border: 1px solid var(--app-border);
-  border-radius: 1.2rem;
+  border-radius: 0.75rem;
   padding: 1rem;
   background: rgba(255, 255, 255, 0.72);
 }

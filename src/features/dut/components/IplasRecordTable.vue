@@ -437,7 +437,7 @@ function onSelectionChange(selection: unknown) {
   padding: 0.3rem 0.65rem;
   font-size: 0.72rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
 }
 
 .iplas-record-table-action-button--primary {

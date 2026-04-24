@@ -452,8 +452,8 @@ watch(
 .advanced-filters-panel__section-eyebrow {
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .advanced-filters-panel__toggle h3,

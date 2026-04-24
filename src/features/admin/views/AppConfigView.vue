@@ -1304,8 +1304,8 @@ onMounted(async () => {
 .app-config-header__eyebrow {
   margin: 0 0 0.35rem;
   font-size: 0.72rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--app-config-accent);
   font-weight: 700;
 }
@@ -1326,7 +1326,7 @@ onMounted(async () => {
 
 .app-config-shell {
   border: 1px solid var(--app-border);
-  border-radius: 1.5rem;
+  border-radius: 0.75rem;
   background:
     radial-gradient(circle at top left, var(--app-config-accent-soft), transparent 28%),
     var(--app-panel-strong);
@@ -1376,8 +1376,8 @@ onMounted(async () => {
 .app-config-panel__eyebrow {
   margin: 0 0 0.35rem;
   font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--app-config-accent);
   font-weight: 700;
 }
@@ -1585,8 +1585,8 @@ onMounted(async () => {
 .app-config-preview-card__label,
 .app-config-branding-card__label {
   font-size: 0.75rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: rgb(226 232 240 / 0.72);
 }
 
@@ -1614,8 +1614,8 @@ onMounted(async () => {
 .app-config-meta-list dt {
   margin-bottom: 0.25rem;
   font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--app-muted);
 }
 

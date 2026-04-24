@@ -1451,8 +1451,8 @@ watch(
   color: var(--iplas-muted);
   font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .iplas-details-dialog__header-icon,

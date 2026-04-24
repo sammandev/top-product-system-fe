@@ -157,8 +157,8 @@ async function handleDownloadFromDialog() {
 .top-products-iplas-panel__eyebrow {
   margin: 0 0 0.35rem;
   font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: #0f766e;
   font-weight: 700;
 }

@@ -1094,7 +1094,7 @@ const hasLatestError = (station: Station): boolean => {
     justify-content: center;
     width: 3.5rem;
     height: 3.5rem;
-    border-radius: 1.2rem;
+    border-radius: 0.75rem;
     background: linear-gradient(135deg, rgba(45, 212, 191, 0.18), rgba(15, 118, 110, 0.14));
     color: var(--app-accent);
     font-size: 1.6rem;
@@ -1106,8 +1106,8 @@ const hasLatestError = (station: Station): boolean => {
     color: var(--app-accent);
     font-size: 0.76rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .test-log-view__header h1 {
@@ -1314,8 +1314,8 @@ const hasLatestError = (station: Station): boolean => {
     color: var(--app-muted);
     font-size: 0.76rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .test-log-view__summary-card strong {

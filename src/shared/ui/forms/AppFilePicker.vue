@@ -257,8 +257,8 @@ function formatBytes(bytes: number) {
 .app-file-picker__label {
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--app-muted);
 }
 

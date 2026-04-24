@@ -1673,7 +1673,7 @@ async function handleSearch(): Promise<void> {
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .iplas-isn-field input,
@@ -1732,8 +1732,8 @@ async function handleSearch(): Promise<void> {
   color: var(--app-accent);
   font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .iplas-isn-reference-panel__header h3 {
@@ -1786,8 +1786,8 @@ async function handleSearch(): Promise<void> {
   color: var(--app-muted);
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .iplas-isn-summary-card strong {
@@ -1967,7 +1967,7 @@ async function handleSearch(): Promise<void> {
   font-size: 0.75rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .iplas-isn-reference-code strong {

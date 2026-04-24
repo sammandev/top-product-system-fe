@@ -1,128 +1,84 @@
 <template>
-    <PublicScaffold
-        :app-name="appName"
-        title="Sign in to your account"
-        description="Access product analytics, data exploration, and workflow tools from one unified platform."
-        panel-eyebrow="Sign In"
-        panel-description="Use your credentials for full access, or continue as guest for a limited read-only session."
-    >
-        <template #hero>
-            <ul role="list" class="grid gap-3 sm:grid-cols-2">
-                <li class="rounded-[1.25rem] border border-[var(--app-border)] bg-white/70 p-4 shadow-[var(--app-shadow-soft)]">
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.75rem] bg-[var(--app-accent-soft)] text-xl text-[var(--app-accent)]">
-                            <Icon icon="solar:shield-user-bold-duotone" />
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--app-muted)]">Secure</p>
-                            <p class="mt-1 text-sm text-[var(--app-ink)]">Role-based access control</p>
-                        </div>
-                    </div>
-                </li>
-                <li class="rounded-[1.25rem] border border-[var(--app-border)] bg-white/70 p-4 shadow-[var(--app-shadow-soft)]">
-                    <div class="flex items-center gap-3">
-                        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[0.75rem] bg-[var(--app-info-soft)] text-xl text-[var(--app-info)]">
-                            <Icon icon="solar:chart-2-bold-duotone" />
-                        </div>
-                        <div>
-                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[var(--app-muted)]">Analytics</p>
-                            <p class="mt-1 text-sm text-[var(--app-ink)]">Real-time product insights</p>
-                        </div>
-                    </div>
-                </li>
-            </ul>
-        </template>
-
-        <form class="space-y-5" @submit.prevent="handleLogin">
-            <div class="space-y-2">
-                <label class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]" for="username">
-                    Username
-                </label>
-                <input
-                    id="username"
-                    v-model="username"
-                    autocomplete="username"
-                    class="w-full rounded-[1.2rem] border border-[var(--app-border)] bg-white px-4 py-3 text-base text-[var(--app-ink)] shadow-[var(--app-shadow-soft)] outline-none transition focus:border-[var(--app-accent)] focus:ring-4 focus:ring-[var(--app-ring)]"
-                    :aria-invalid="Boolean(usernameError)"
-                    name="username"
-                    placeholder="Enter your username"
-                    type="text"
-                    @input="clearError"
-                />
-                <p v-if="usernameError" class="text-sm text-[var(--app-danger)]">{{ usernameError }}</p>
-            </div>
-
-            <div class="space-y-2">
-                <div class="flex items-center justify-between gap-4">
-                    <label class="text-xs font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]" for="password">
-                        Password
-                    </label>
-                    <button
-                        class="text-xs font-semibold uppercase tracking-[0.18em] text-[var(--app-accent)]"
-                        type="button"
-                        @click="showPassword = !showPassword"
-                    >
-                        {{ showPassword ? 'Hide' : 'Show' }}
-                    </button>
+    <div class="login-page">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">
+                    <Icon icon="solar:atom-bold-duotone" />
                 </div>
-                <input
-                    id="password"
-                    v-model="password"
-                    autocomplete="current-password"
-                    class="w-full rounded-[1.2rem] border border-[var(--app-border)] bg-white px-4 py-3 text-base text-[var(--app-ink)] shadow-[var(--app-shadow-soft)] outline-none transition focus:border-[var(--app-accent)] focus:ring-4 focus:ring-[var(--app-ring)]"
-                    :aria-invalid="Boolean(passwordError)"
-                    name="password"
-                    placeholder="Enter your password"
-                    :type="showPassword ? 'text' : 'password'"
-                    @input="clearError"
-                />
-                <p v-if="passwordError" class="text-sm text-[var(--app-danger)]">{{ passwordError }}</p>
+                <h1 class="login-title">{{ appName }}</h1>
+                <p class="login-subtitle">Sign in to continue</p>
             </div>
 
-            <label class="flex items-center gap-3 rounded-[1.2rem] border border-[var(--app-border)] bg-white/70 px-4 py-3 text-sm text-[var(--app-muted)] shadow-[var(--app-shadow-soft)]">
-                <input
-                    v-model="rememberMe"
-                    class="h-4 w-4 rounded border-[var(--app-border)] text-[var(--app-accent)] focus:ring-[var(--app-ring)]"
-                    type="checkbox"
-                />
-                <span>Remember this username on this device</span>
-            </label>
+            <form class="login-form" @submit.prevent="handleLogin">
+                <div class="login-field">
+                    <label for="username">Username</label>
+                    <input
+                        id="username"
+                        v-model="username"
+                        autocomplete="username"
+                        :aria-invalid="Boolean(usernameError)"
+                        name="username"
+                        placeholder="Enter your username"
+                        type="text"
+                        @input="clearError"
+                    />
+                    <p v-if="usernameError" class="login-error">{{ usernameError }}</p>
+                </div>
 
-            <div v-if="error" class="rounded-[1.2rem] border border-[rgba(163,61,45,0.24)] bg-[var(--app-danger-soft)] px-4 py-3 text-sm text-[var(--app-danger)]">
-                {{ error }}
-            </div>
+                <div class="login-field">
+                    <div class="login-field__row">
+                        <label for="password">Password</label>
+                        <button class="login-toggle" type="button" @click="showPassword = !showPassword">
+                            {{ showPassword ? 'Hide' : 'Show' }}
+                        </button>
+                    </div>
+                    <input
+                        id="password"
+                        v-model="password"
+                        autocomplete="current-password"
+                        :aria-invalid="Boolean(passwordError)"
+                        name="password"
+                        placeholder="Enter your password"
+                        :type="showPassword ? 'text' : 'password'"
+                        @input="clearError"
+                    />
+                    <p v-if="passwordError" class="login-error">{{ passwordError }}</p>
+                </div>
 
-            <Button
-                class="!w-full !rounded-full !border-0 !bg-[var(--app-accent)] !px-5 !py-3 !text-sm !font-semibold !uppercase !tracking-[0.22em]"
-                :disabled="!canSubmit"
-                :loading="loading"
-                type="submit"
-            >
-                Login
-            </Button>
+                <label class="login-remember">
+                    <input v-model="rememberMe" type="checkbox" />
+                    <span>Remember me</span>
+                </label>
 
-            <div class="relative py-2 text-center">
-                <div class="absolute inset-x-0 top-1/2 border-t border-[var(--app-border)]" />
-                <span class="relative inline-block bg-[color:var(--app-panel-strong)] px-3 text-[0.7rem] font-semibold uppercase tracking-[0.24em] text-[var(--app-muted)]">
-                    or continue in limited mode
-                </span>
-            </div>
+                <div v-if="error" class="login-alert">{{ error }}</div>
 
-            <Button
-                class="!w-full !rounded-full !border !border-[var(--app-border)] !bg-transparent !px-5 !py-3 !text-sm !font-semibold !uppercase !tracking-[0.22em] !text-[var(--app-ink)]"
-                :loading="guestLoading"
-                severity="secondary"
-                type="button"
-                @click="handleGuestLogin"
-            >
-                Continue as Guest
-            </Button>
+                <Button
+                    class="login-submit"
+                    :disabled="!canSubmit"
+                    :loading="loading"
+                    type="submit"
+                >
+                    Sign in
+                </Button>
 
-            <p class="text-center text-sm leading-6 text-[var(--app-muted)]">
-                Guest access keeps the app explorable while blocking write-sensitive workflows.
-            </p>
-        </form>
-    </PublicScaffold>
+                <div class="login-divider">
+                    <span>or</span>
+                </div>
+
+                <Button
+                    class="login-guest"
+                    :loading="guestLoading"
+                    severity="secondary"
+                    type="button"
+                    @click="handleGuestLogin"
+                >
+                    Continue as Guest
+                </Button>
+            </form>
+
+            <p class="login-footer">{{ currentYear }} {{ appName }}</p>
+        </div>
+    </div>
 </template>
 
 <script setup lang="ts">
@@ -130,7 +86,6 @@ import { Icon } from '@iconify/vue'
 import Button from 'primevue/button'
 import { storeToRefs } from 'pinia'
 import { computed, ref } from 'vue'
-import PublicScaffold from '@/shared/ui/public-shell/PublicScaffold.vue'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useAuth } from '../composables'
 import { useAuthStore } from '../stores'
@@ -140,6 +95,7 @@ const authStore = useAuthStore()
 const appConfigStore = useAppConfigStore()
 const { appName } = storeToRefs(appConfigStore)
 
+const currentYear = new Date().getFullYear()
 const guestLoading = ref(false)
 const submitAttempted = ref(false)
 const username = ref('')
@@ -168,19 +124,10 @@ function clearError() {
 
 async function handleLogin() {
     submitAttempted.value = true
-
-    if (!canSubmit.value) {
-        return
-    }
-
+    if (!canSubmit.value) return
     clearError()
-
     try {
-        await externalLogin({
-            username: username.value,
-            password: password.value,
-        })
-
+        await externalLogin({ username: username.value, password: password.value })
         if (rememberMe.value) {
             localStorage.setItem('remember_me', 'true')
             localStorage.setItem('remember_username', username.value)
@@ -196,7 +143,6 @@ async function handleLogin() {
 async function handleGuestLogin() {
     clearError()
     guestLoading.value = true
-
     try {
         await guestLogin()
     } catch (guestError) {
@@ -206,3 +152,185 @@ async function handleGuestLogin() {
     }
 }
 </script>
+
+<style scoped>
+.login-page {
+    display: grid;
+    place-items: center;
+    min-height: 100vh;
+    padding: 1.5rem;
+    background: var(--app-canvas);
+}
+
+.login-card {
+    width: 100%;
+    max-width: 24rem;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.login-logo {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.75rem;
+    background: var(--app-accent);
+    color: #fff;
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+}
+
+.login-title {
+    margin: 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--app-ink);
+}
+
+.login-subtitle {
+    margin: 0.25rem 0 0;
+    color: var(--app-muted);
+    font-size: 0.875rem;
+}
+
+.login-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    background: var(--app-panel-strong);
+    border: 1px solid var(--app-border);
+    border-radius: 0.75rem;
+    padding: 1.5rem;
+}
+
+.login-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.375rem;
+}
+
+.login-field label {
+    font-size: 0.8125rem;
+    font-weight: 500;
+    color: var(--app-ink);
+}
+
+.login-field input {
+    width: 100%;
+    border: 1px solid var(--app-border);
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.875rem;
+    color: var(--app-ink);
+    background: var(--app-canvas);
+    outline: none;
+    transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.login-field input:focus {
+    border-color: var(--app-accent);
+    box-shadow: 0 0 0 3px var(--app-ring);
+}
+
+.login-field__row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.login-toggle {
+    border: 0;
+    background: none;
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: var(--app-accent);
+    cursor: pointer;
+    padding: 0;
+}
+
+.login-remember {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.8125rem;
+    color: var(--app-muted);
+    cursor: pointer;
+}
+
+.login-remember input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: var(--app-accent);
+}
+
+.login-error {
+    margin: 0;
+    font-size: 0.8125rem;
+    color: var(--app-danger);
+}
+
+.login-alert {
+    border: 1px solid rgba(220, 38, 38, 0.2);
+    background: var(--app-danger-soft);
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    font-size: 0.8125rem;
+    color: var(--app-danger);
+}
+
+.login-submit :deep(.p-button) {
+    width: 100%;
+}
+
+.login-submit {
+    width: 100%;
+    border: 0;
+    border-radius: 0.5rem;
+    background: var(--app-accent);
+    color: #fff;
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.login-divider {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: var(--app-muted);
+    font-size: 0.75rem;
+}
+
+.login-divider::before,
+.login-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--app-border);
+}
+
+.login-guest {
+    width: 100%;
+    border: 1px solid var(--app-border);
+    border-radius: 0.5rem;
+    background: transparent;
+    color: var(--app-ink);
+    padding: 0.625rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.75rem;
+    color: var(--app-muted);
+}
+</style>

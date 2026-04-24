@@ -1655,7 +1655,7 @@ onUnmounted(() => {
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .top-product-iplas-isn-summary-panel__eyebrow {

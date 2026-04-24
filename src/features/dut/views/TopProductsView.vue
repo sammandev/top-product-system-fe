@@ -145,8 +145,8 @@ function clearError() {
 .top-products-header__eyebrow {
   margin: 0 0 0.35rem;
   font-size: 0.72rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: #0f766e;
   font-weight: 700;
 }
@@ -228,7 +228,7 @@ function clearError() {
 
 .top-products-shell {
   border: 1px solid #dbe4ee;
-  border-radius: 1.5rem;
+  border-radius: 0.75rem;
   background:
     radial-gradient(circle at top left, rgb(15 118 110 / 0.08), transparent 28%),
     #fff;

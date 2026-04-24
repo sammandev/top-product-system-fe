@@ -13,7 +13,7 @@
         <div class="flex min-h-16 items-center gap-3 px-3 py-3 sm:px-4 lg:px-6">
           <button
             aria-label="Toggle navigation"
-            class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] text-[var(--shell-ink)] shadow-[var(--shell-shadow-soft)] transition hover:-translate-y-px hover:border-[var(--shell-accent)] hover:text-[var(--shell-accent)]"
+            class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] text-[var(--shell-ink)] transition hover:border-[var(--shell-accent)] hover:text-[var(--shell-accent)]"
             type="button"
             @click="drawer = !drawer"
           >
@@ -22,11 +22,11 @@
 
           <div class="min-w-0 flex-1">
             <div class="flex min-w-0 items-center gap-3">
-              <div class="hidden h-11 w-11 items-center justify-center rounded-2xl bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)] sm:inline-flex">
+              <div class="hidden h-10 w-10 items-center justify-center rounded-lg bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] sm:inline-flex">
                 <Icon class="text-2xl" icon="solar:widget-5-bold-duotone" />
               </div>
               <div class="min-w-0">
-                <p class="truncate text-[0.65rem] font-semibold uppercase tracking-[0.26em] text-[var(--shell-muted)]">
+                <p class="truncate text-xs font-medium text-[var(--shell-muted)]">
                   {{ appName }}
                 </p>
                 <h1 class="truncate font-[var(--app-display)] text-xl leading-none sm:text-2xl">
@@ -37,7 +37,7 @@
           </div>
 
           <div class="hidden min-w-[14rem] max-w-sm flex-1 lg:block xl:max-w-md">
-            <label class="flex items-center gap-3 rounded-full border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-4 py-3 shadow-[var(--shell-shadow-soft)]">
+            <label class="flex items-center gap-3 rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-4 py-2.5">
               <Icon class="text-lg text-[var(--shell-muted)]" icon="solar:magnifer-linear" />
               <input
                 v-model="searchQuery"
@@ -51,7 +51,7 @@
           <div class="flex items-center gap-2 sm:gap-3">
             <button
               :aria-label="quickThemeToggleLabel"
-              class="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] text-[var(--shell-ink)] shadow-[var(--shell-shadow-soft)] transition hover:-translate-y-px hover:border-[var(--shell-accent)] hover:text-[var(--shell-accent)]"
+              class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] text-[var(--shell-ink)] transition hover:border-[var(--shell-accent)] hover:text-[var(--shell-accent)]"
               type="button"
               @click="toggleTheme"
             >
@@ -62,12 +62,12 @@
             </button>
 
             <details class="relative">
-              <summary class="flex cursor-pointer list-none items-center gap-3 rounded-[1.4rem] border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-3 py-2 shadow-[var(--shell-shadow-soft)] transition hover:-translate-y-px hover:border-[var(--shell-accent)]">
-                <div class="flex h-10 w-10 items-center justify-center rounded-2xl border border-[var(--shell-border)] bg-[var(--shell-panel)] text-[var(--shell-ink)]">
+              <summary class="flex cursor-pointer list-none items-center gap-3 rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-3 py-2 transition hover:border-[var(--shell-accent)]">
+                <div class="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--shell-border)] bg-[var(--shell-panel)] text-[var(--shell-ink)]">
                   <Icon class="text-lg" icon="solar:palette-round-bold-duotone" />
                 </div>
                 <div class="hidden min-w-0 text-left xl:block">
-                  <p class="text-[0.62rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                  <p class="text-xs font-medium text-[var(--shell-muted)]">
                     Theme
                   </p>
                   <p class="truncate text-sm font-semibold text-[var(--shell-ink)]">
@@ -77,23 +77,23 @@
                 <Icon class="hidden text-lg text-[var(--shell-muted)] xl:block" icon="solar:alt-arrow-down-linear" />
               </summary>
 
-              <div class="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[22rem] rounded-[1.6rem] border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] p-4 shadow-[var(--shell-shadow)] backdrop-blur">
+              <div class="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[22rem] rounded-xl border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] p-4 shadow-[var(--shell-shadow)] backdrop-blur">
                 <div class="flex items-start justify-between gap-3">
                   <div class="min-w-0">
-                    <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                    <p class="text-xs font-semibold text-[var(--shell-muted)]">
                       Appearance
                     </p>
                     <p class="mt-1 text-sm leading-6 text-[var(--shell-muted)]">
                       {{ themeSummaryDescription }}
                     </p>
                   </div>
-                  <div class="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]">
+                  <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]">
                     <Icon class="text-xl" :icon="themeSummaryIcon" />
                   </div>
                 </div>
 
                 <div class="mt-4 space-y-2">
-                  <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                  <p class="text-xs font-semibold text-[var(--shell-muted)]">
                     Mode
                   </p>
                   <div class="grid grid-cols-3 gap-2">
@@ -107,14 +107,14 @@
                       type="button"
                       @click="setThemePreference({ mode: option.value })"
                     >
-                      <span class="h-10 w-full rounded-2xl" :style="{ background: option.preview }" />
-                      <span class="text-xs font-semibold uppercase tracking-[0.18em]">{{ option.label }}</span>
+                      <span class="h-10 w-full rounded-lg" :style="{ background: option.preview }" />
+                      <span class="text-xs font-medium">{{ option.label }}</span>
                     </button>
                   </div>
                 </div>
 
                 <div class="mt-4 space-y-2">
-                  <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                  <p class="text-xs font-semibold text-[var(--shell-muted)]">
                     PrimeVue Preset
                   </p>
                   <div class="grid grid-cols-2 gap-2">
@@ -141,7 +141,7 @@
 
                 <div class="mt-4 grid gap-4 md:grid-cols-2">
                   <div class="space-y-2">
-                    <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                    <p class="text-xs font-semibold text-[var(--shell-muted)]">
                       Primary
                     </p>
                     <div class="grid grid-cols-2 gap-2">
@@ -162,7 +162,7 @@
                   </div>
 
                   <div class="space-y-2">
-                    <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                    <p class="text-xs font-semibold text-[var(--shell-muted)]">
                       Surface
                     </p>
                     <div class="space-y-2">
@@ -189,9 +189,9 @@
             </details>
 
             <details class="relative">
-              <summary class="flex cursor-pointer list-none items-center gap-3 rounded-[1.4rem] border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-3 py-2 shadow-[var(--shell-shadow-soft)] transition hover:-translate-y-px hover:border-[var(--shell-accent)]">
+              <summary class="flex cursor-pointer list-none items-center gap-3 rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-3 py-2 transition hover:border-[var(--shell-accent)]">
                 <div
-                  class="flex h-10 w-10 items-center justify-center rounded-2xl text-sm font-semibold uppercase"
+                  class="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold uppercase"
                   :class="authStore.isGuest ? 'bg-[rgba(198,134,37,0.18)] text-[rgb(156,102,18)]' : 'bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]'"
                 >
                   {{ userInitial }}
@@ -200,17 +200,17 @@
                   <p class="max-w-[12rem] truncate text-sm font-semibold text-[var(--shell-ink)]">
                     {{ authStore.displayName }}
                   </p>
-                  <p class="text-[0.68rem] uppercase tracking-[0.2em] text-[var(--shell-muted)]">
+                  <p class="text-xs text-[var(--shell-muted)]">
                     {{ authStore.displayRole }}
                   </p>
                 </div>
                 <Icon class="hidden text-lg text-[var(--shell-muted)] sm:block" icon="solar:alt-arrow-down-linear" />
               </summary>
 
-              <div class="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-72 rounded-[1.6rem] border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] p-4 shadow-[var(--shell-shadow)] backdrop-blur">
+              <div class="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-72 rounded-xl border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] p-4 shadow-[var(--shell-shadow)] backdrop-blur">
                 <div class="flex items-center gap-3">
                   <div
-                    class="flex h-12 w-12 items-center justify-center rounded-2xl text-base font-semibold uppercase"
+                    class="flex h-11 w-11 items-center justify-center rounded-lg text-base font-semibold uppercase"
                     :class="authStore.isGuest ? 'bg-[rgba(198,134,37,0.18)] text-[rgb(156,102,18)]' : 'bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]'"
                   >
                     {{ userInitial }}
@@ -223,8 +223,8 @@
                   </div>
                 </div>
 
-                <div class="mt-4 rounded-[1.3rem] border border-[var(--shell-border)] bg-[var(--shell-panel)] p-3">
-                  <p class="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                <div class="mt-4 rounded-lg border border-[var(--shell-border)] bg-[var(--shell-panel)] p-3">
+                  <p class="text-xs font-semibold text-[var(--shell-muted)]">
                     Session
                   </p>
                   <div class="mt-2 flex items-center justify-between gap-3">
@@ -233,7 +233,7 @@
                       <p class="text-xs leading-5 text-[var(--shell-muted)]">{{ accessDescription }}</p>
                     </div>
                     <span
-                      class="rounded-full px-3 py-1 text-[0.68rem] font-semibold uppercase tracking-[0.16em]"
+                      class="rounded-full px-3 py-1 text-xs font-semibold"
                       :class="authStore.isGuest ? 'bg-[rgba(198,134,37,0.18)] text-[rgb(156,102,18)]' : authStore.hasDUTAccess ? 'bg-[rgba(15,118,110,0.16)] text-[var(--shell-accent)]' : 'bg-[rgba(35,83,134,0.14)] text-[rgb(33,87,145)]'"
                     >
                       {{ accessBadge }}
@@ -242,7 +242,7 @@
                 </div>
 
                 <button
-                  class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-full border border-[rgba(156,54,41,0.22)] bg-[rgba(163,61,45,0.08)] px-4 py-3 text-sm font-semibold uppercase tracking-[0.18em] text-[var(--shell-danger)] transition hover:bg-[rgba(163,61,45,0.14)]"
+                  class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[rgba(156,54,41,0.22)] bg-[rgba(163,61,45,0.08)] px-4 py-2.5 text-sm font-medium text-[var(--shell-danger)] transition hover:bg-[rgba(163,61,45,0.14)]"
                   type="button"
                   @click="handleLogout"
                 >
@@ -255,7 +255,7 @@
         </div>
 
         <div class="border-t border-[var(--shell-border)] px-3 py-3 lg:hidden sm:px-4">
-          <label class="flex items-center gap-3 rounded-full border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-4 py-3 shadow-[var(--shell-shadow-soft)]">
+          <label class="flex items-center gap-3 rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-4 py-2.5">
             <Icon class="text-lg text-[var(--shell-muted)]" icon="solar:magnifer-linear" />
             <input
               v-model="searchQuery"
@@ -274,12 +274,12 @@
           class="fixed inset-y-0 left-0 z-40 flex h-screen flex-col border-r border-[var(--shell-border)] bg-[color:var(--shell-sidebar)]/96 px-3 py-4 shadow-[var(--shell-shadow)] backdrop-blur transition-all duration-200 ease-out lg:sticky lg:top-0 lg:z-20"
           :class="drawerPanelClasses"
         >
-          <div class="flex items-center gap-3 rounded-[1.8rem] border border-[var(--shell-border)] bg-[color:var(--shell-panel)] px-3 py-3 shadow-[var(--shell-shadow-soft)]">
-            <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[1.4rem] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]">
+          <div class="flex items-center gap-3 rounded-xl border border-[var(--shell-border)] bg-[color:var(--shell-panel)] px-3 py-3">
+            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]">
               <Icon class="text-2xl" icon="solar:atom-bold-duotone" />
             </div>
             <div v-if="!rail" class="min-w-0 flex-1">
-              <p class="truncate text-xs font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+              <p class="truncate text-xs font-medium text-[var(--shell-muted)]">
                 Workspace
               </p>
               <p class="truncate font-[var(--app-display)] text-xl leading-none text-[var(--shell-ink)]">
@@ -292,7 +292,7 @@
           <div class="mt-4 flex-1 overflow-y-auto pr-1">
             <nav class="space-y-4">
               <section v-for="section in navigationSections" :key="section.id" class="space-y-2">
-                <div v-if="!rail" class="px-2 text-[0.65rem] font-semibold uppercase tracking-[0.22em] text-[var(--shell-muted)]">
+                <div v-if="!rail" class="px-2 text-xs font-medium text-[var(--shell-muted)]">
                   {{ section.title }}
                 </div>
 
@@ -300,7 +300,7 @@
                   <template v-for="item in section.items" :key="item.path || item.title">
                     <div v-if="item.children" class="space-y-1">
                       <button
-                        class="flex w-full items-center gap-3 rounded-[1.25rem] border px-3 py-3 text-left transition"
+                        class="flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition"
                         :class="isGroupActive(item)
                           ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
                           : 'border-transparent bg-transparent text-[var(--shell-muted)] hover:border-[var(--shell-border)] hover:bg-[var(--shell-panel)] hover:text-[var(--shell-ink)]'"
@@ -323,7 +323,7 @@
                         <router-link
                           v-for="child in item.children"
                           :key="child.path"
-                          class="flex items-center gap-3 rounded-[1.15rem] border px-3 py-2.5 text-sm transition"
+                          class="flex items-center gap-3 rounded-lg border px-3 py-2 text-sm transition"
                           :class="isItemActive(child)
                             ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
                             : 'border-transparent text-[var(--shell-muted)] hover:border-[var(--shell-border)] hover:bg-[var(--shell-panel)] hover:text-[var(--shell-ink)]'"
@@ -338,7 +338,7 @@
 
                     <router-link
                       v-else
-                      class="flex items-center gap-3 rounded-[1.25rem] border px-3 py-3 text-sm font-semibold transition"
+                      class="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium transition"
                       :class="isItemActive(item)
                         ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
                         : 'border-transparent text-[var(--shell-muted)] hover:border-[var(--shell-border)] hover:bg-[var(--shell-panel)] hover:text-[var(--shell-ink)]'"
@@ -356,7 +356,7 @@
 
           <div class="mt-4 space-y-3 border-t border-[var(--shell-border)] pt-4">
             <button
-              class="hidden w-full items-center justify-center gap-3 rounded-[1.25rem] border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-3 py-3 text-sm font-semibold text-[var(--shell-ink)] shadow-[var(--shell-shadow-soft)] transition hover:-translate-y-px hover:border-[var(--shell-accent)] lg:flex"
+              class="hidden w-full items-center justify-center gap-3 rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-3 py-2.5 text-sm font-medium text-[var(--shell-ink)] transition hover:border-[var(--shell-accent)] lg:flex"
               type="button"
               @click="rail = !rail"
             >
@@ -377,7 +377,7 @@
           </main>
 
           <footer class="border-t border-[var(--shell-border)] bg-[color:var(--shell-panel)]/88 px-3 py-3 backdrop-blur sm:px-4 lg:px-6">
-            <div class="flex flex-col gap-2 text-xs uppercase tracking-[0.18em] text-[var(--shell-muted)] sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex flex-col gap-2 text-xs text-[var(--shell-muted)] sm:flex-row sm:items-center sm:justify-between">
               <span>{{ currentYear }} {{ appName }}. All rights reserved.</span>
               <span>Version {{ appVersion }}</span>
             </div>

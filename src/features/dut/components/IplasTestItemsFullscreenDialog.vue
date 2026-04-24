@@ -618,8 +618,8 @@ watch(
   color: var(--app-accent);
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .fullscreen-dialog__header-icon,
@@ -734,8 +734,8 @@ watch(
 .fullscreen-dialog__info-button small {
   color: var(--app-muted);
   font-size: 0.72rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .fullscreen-dialog__metadata-grid {
@@ -791,7 +791,7 @@ watch(
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .fullscreen-dialog__field input,

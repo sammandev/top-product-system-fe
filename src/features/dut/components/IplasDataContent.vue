@@ -2581,8 +2581,8 @@ onUnmounted(() => {
   color: var(--app-ink);
   font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .iplas-field select,
@@ -2896,7 +2896,7 @@ onUnmounted(() => {
 }
 
 .iplas-notice {
-  border-radius: 1.2rem;
+  border-radius: 0.75rem;
   padding: 1rem 1.1rem;
 }
 

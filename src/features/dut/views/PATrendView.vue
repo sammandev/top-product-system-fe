@@ -359,8 +359,8 @@ function handleExport() {
 .pa-trend-panel__eyebrow {
     margin: 0 0 0.35rem;
     font-size: 0.72rem;
-    letter-spacing: 0.16em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
     color: #0f766e;
     font-weight: 700;
 }

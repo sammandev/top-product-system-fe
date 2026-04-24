@@ -537,7 +537,7 @@ function statusPillClass(value: string, isCalculated?: boolean): string {
 .compare-result-view__stat-card,
 .compare-result-view__section {
   border: 1px solid var(--app-border);
-  border-radius: 1.2rem;
+  border-radius: 0.75rem;
   background: var(--app-panel);
 }
 
@@ -596,8 +596,8 @@ function statusPillClass(value: string, isCalculated?: boolean): string {
   margin: 0;
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .compare-result-view__section-header--primary {
@@ -693,8 +693,8 @@ function statusPillClass(value: string, isCalculated?: boolean): string {
 .result-surface-search span {
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--app-muted);
 }
 

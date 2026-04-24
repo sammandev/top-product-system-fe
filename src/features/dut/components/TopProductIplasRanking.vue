@@ -875,7 +875,7 @@ function scoreTone(score: number) {
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .ranking-field input,

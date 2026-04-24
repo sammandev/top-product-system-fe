@@ -1394,7 +1394,7 @@ watch(selectedIplasStation, async () => {
 .upload-log-shell__notice,
 .upload-log-shell__summary {
   border: 1px solid var(--app-border);
-  border-radius: 1.2rem;
+  border-radius: 0.75rem;
 }
 
 .upload-log-shell__notice {
@@ -1497,8 +1497,8 @@ watch(selectedIplasStation, async () => {
   color: var(--app-muted);
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .upload-log-comparison__field select,
@@ -1561,8 +1561,8 @@ watch(selectedIplasStation, async () => {
   color: var(--app-ink);
   font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   text-align: center;
 }
 
@@ -1597,7 +1597,7 @@ watch(selectedIplasStation, async () => {
   margin: 1rem;
   padding: 1rem;
   border: 1px solid var(--app-border);
-  border-radius: 1.5rem;
+  border-radius: 0.75rem;
   background: var(--app-panel);
   box-shadow: var(--app-shadow);
 }
@@ -1636,7 +1636,7 @@ watch(selectedIplasStation, async () => {
 .upload-log-breakdown__summary-card,
 .upload-log-breakdown__table-wrap {
   border: 1px solid var(--app-border);
-  border-radius: 1.2rem;
+  border-radius: 0.75rem;
   background: var(--app-panel);
 }
 

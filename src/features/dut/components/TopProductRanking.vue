@@ -573,7 +573,7 @@ function handleScoreFilterValueInput(event: Event) {
   gap: 1rem;
   align-items: flex-start;
   border: 1px solid var(--app-border);
-  border-radius: 1.2rem;
+  border-radius: 0.75rem;
   background: linear-gradient(145deg, rgba(255, 244, 223, 0.9), var(--app-panel));
   padding: 1rem 1.1rem;
 }
@@ -589,8 +589,8 @@ function handleScoreFilterValueInput(event: Event) {
 .top-product-ranking__field span {
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .top-product-ranking__station-hero h3 {

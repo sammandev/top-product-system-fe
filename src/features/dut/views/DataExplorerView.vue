@@ -97,8 +97,8 @@ const tabItems = [
     color: var(--app-accent);
     font-size: 0.76rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .data-explorer-header h1 {
@@ -122,7 +122,7 @@ const tabItems = [
     display: flex;
     gap: 1rem;
     border: 1px solid rgba(36, 116, 184, 0.18);
-    border-radius: 1.2rem;
+    border-radius: 0.75rem;
     padding: 1rem 1.1rem;
     background: rgba(240, 249, 255, 0.92);
 }

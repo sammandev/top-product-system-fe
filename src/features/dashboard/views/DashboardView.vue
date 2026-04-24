@@ -350,7 +350,7 @@ function formatStorageAmount(amount: number) {
   position: relative;
   overflow: hidden;
   border-color: var(--app-ring);
-  border-radius: 2rem;
+  border-radius: 0.75rem;
   padding: 1.75rem;
   background:
     radial-gradient(circle at top right, var(--app-accent-soft), transparent 34%),
@@ -375,10 +375,10 @@ function formatStorageAmount(amount: number) {
 .dashboard-hero__meta,
 .dashboard-panel__eyebrow {
   margin: 0;
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--app-muted);
 }
 
@@ -467,7 +467,7 @@ function formatStorageAmount(amount: number) {
 .dashboard-action-card,
 .dashboard-activity-item,
 .dashboard-status-item {
-  border-radius: 1.5rem;
+  border-radius: 0.75rem;
 }
 
 .dashboard-stat-card {
@@ -529,21 +529,21 @@ function formatStorageAmount(amount: number) {
 
 .dashboard-icon-badge {
   display: inline-grid;
-  width: 3rem;
-  height: 3rem;
+  width: 2.5rem;
+  height: 2.5rem;
   place-items: center;
-  border-radius: 1rem;
+  border-radius: 0.5rem;
   background: var(--dashboard-accent-soft, rgba(15, 118, 110, 0.1));
   color: var(--dashboard-accent, var(--app-accent));
-  font-size: 1.35rem;
+  font-size: 1.2rem;
   flex-shrink: 0;
 }
 
 .dashboard-icon-badge--sm {
-  width: 2.4rem;
-  height: 2.4rem;
-  border-radius: 0.85rem;
-  font-size: 1.05rem;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.375rem;
+  font-size: 1rem;
 }
 
 .dashboard-main-grid {
@@ -564,8 +564,8 @@ function formatStorageAmount(amount: number) {
 }
 
 .dashboard-panel__title {
-  margin-top: 0.35rem;
-  font-size: 1.55rem;
+  margin-top: 0.25rem;
+  font-size: 1.125rem;
 }
 
 .dashboard-panel__header--split {

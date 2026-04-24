@@ -542,8 +542,8 @@ function handleClose() {
   color: var(--app-accent);
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .spec-builder__fields {

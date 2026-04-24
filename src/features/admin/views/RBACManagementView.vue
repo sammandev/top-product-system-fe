@@ -1063,8 +1063,8 @@ onMounted(() => {
 .rbac-management-header__eyebrow {
   margin: 0 0 0.35rem;
   font-size: 0.72rem;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--rbac-accent);
   font-weight: 700;
 }
@@ -1194,7 +1194,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 0.45rem;
   padding: 1.2rem;
-  border-radius: 1.2rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--app-border);
   background: linear-gradient(180deg, var(--app-panel-strong), var(--app-panel));
   box-shadow: 0 16px 36px rgb(15 23 42 / 0.06);
@@ -1202,8 +1202,8 @@ onMounted(() => {
 
 .rbac-management-stat-card span {
   font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--app-muted);
   font-weight: 700;
 }
@@ -1232,7 +1232,7 @@ onMounted(() => {
 
 .rbac-management-shell {
   border: 1px solid var(--app-border);
-  border-radius: 1.5rem;
+  border-radius: 0.75rem;
   background:
     radial-gradient(circle at top left, var(--rbac-accent-soft), transparent 28%),
     var(--app-panel-strong);
@@ -1268,8 +1268,8 @@ onMounted(() => {
 .rbac-management-panel__eyebrow {
   margin: 0 0 0.35rem;
   font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--rbac-accent);
   font-weight: 700;
 }
@@ -1565,8 +1565,8 @@ onMounted(() => {
 .rbac-management-meta-list dt {
   margin-bottom: 0.2rem;
   font-size: 0.8rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--app-muted);
 }
 

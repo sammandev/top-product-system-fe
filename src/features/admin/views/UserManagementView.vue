@@ -1378,8 +1378,8 @@ onMounted(() => {
 .user-management-field > span {
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--app-muted);
 }
 
@@ -1405,8 +1405,8 @@ onMounted(() => {
   color: var(--app-accent);
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .user-management-panel__header h2 {
@@ -1490,8 +1490,8 @@ onMounted(() => {
   color: var(--app-ink);
   font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .user-management-badge--warning {
@@ -1701,8 +1701,8 @@ onMounted(() => {
   color: var(--app-ink);
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .user-management-resource-cell {

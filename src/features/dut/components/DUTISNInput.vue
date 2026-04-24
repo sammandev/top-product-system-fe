@@ -424,7 +424,7 @@ defineExpose({
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .dut-isn-input__field small,

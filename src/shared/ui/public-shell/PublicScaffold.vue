@@ -3,10 +3,10 @@
     <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_top_left,rgba(15,118,110,0.06),transparent_50%),radial-gradient(ellipse_at_bottom_right,rgba(100,116,139,0.05),transparent_50%)]" />
 
     <div class="relative mx-auto flex min-h-screen max-w-7xl flex-col gap-6 px-4 py-6 sm:px-6 lg:grid lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:px-8 lg:py-8">
-      <aside class="flex flex-col justify-between gap-8 rounded-[1.25rem] border border-[var(--app-border)] bg-[color:var(--app-panel)] p-6 shadow-[var(--app-shadow-soft)] backdrop-blur xl:p-10">
+      <aside class="flex flex-col justify-between gap-8 rounded-xl border border-[var(--app-border)] bg-[color:var(--app-panel)] p-6 shadow-[var(--app-shadow-soft)] backdrop-blur xl:p-10">
         <div class="space-y-6">
           <div class="space-y-4">
-            <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--app-accent)]">
+            <p class="text-xs font-semibold text-[var(--app-accent)]">
               {{ appName }}
             </p>
             <h1 class="text-3xl font-semibold leading-tight sm:text-4xl lg:text-5xl">
@@ -26,10 +26,10 @@
       </aside>
 
       <main class="flex items-center justify-center lg:py-6">
-        <section class="w-full max-w-xl rounded-[1.25rem] border border-[var(--app-border)] bg-[color:var(--app-panel-strong)] p-6 shadow-[var(--app-shadow-soft)] backdrop-blur xl:p-8">
+        <section class="w-full max-w-xl rounded-xl border border-[var(--app-border)] bg-[color:var(--app-panel-strong)] p-6 shadow-[var(--app-shadow-soft)] backdrop-blur xl:p-8">
           <div class="mb-6 flex items-start justify-between gap-4 border-b border-[var(--app-border)] pb-5">
             <div>
-              <p class="text-xs font-semibold uppercase tracking-[0.2em] text-[var(--app-accent)]">
+              <p class="text-xs font-semibold text-[var(--app-accent)]">
                 {{ panelEyebrow }}
               </p>
               <p class="mt-2 text-sm leading-6 text-[var(--app-muted)]">

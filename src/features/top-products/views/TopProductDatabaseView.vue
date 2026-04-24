@@ -1055,8 +1055,8 @@ onBeforeUnmount(() => {
     color: var(--app-accent);
     font-size: 0.76rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .top-product-db-header h1 {
@@ -1126,7 +1126,7 @@ onBeforeUnmount(() => {
     gap: 0.9rem;
     align-items: center;
     border: 1px solid var(--app-border);
-    border-radius: 1.4rem;
+    border-radius: 0.75rem;
     padding: 1rem 1.1rem;
     background: var(--app-panel);
     box-shadow: var(--app-shadow-soft);
@@ -1160,8 +1160,8 @@ onBeforeUnmount(() => {
     display: block;
     color: var(--app-muted);
     font-size: 0.78rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .top-product-db-stat-card strong {
@@ -1186,8 +1186,8 @@ onBeforeUnmount(() => {
     color: var(--app-ink);
     font-size: 0.82rem;
     font-weight: 700;
-    letter-spacing: 0.04em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .top-product-db-field input,
@@ -1434,8 +1434,8 @@ onBeforeUnmount(() => {
     color: var(--app-accent);
     font-size: 0.76rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .top-product-db-dialog-header h2,
@@ -1508,8 +1508,8 @@ onBeforeUnmount(() => {
     display: block;
     color: var(--app-muted);
     font-size: 0.78rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .top-product-db-detail-hero__card strong,

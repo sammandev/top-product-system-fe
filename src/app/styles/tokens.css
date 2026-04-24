@@ -48,9 +48,9 @@
   --app-shell-header: rgba(255, 255, 255, 0.82);
   --app-shell-sidebar: rgba(255, 255, 255, 0.92);
 
-  /* Fonts — clean sans-serif */
-  --app-display: 'Segoe UI', system-ui, -apple-system, sans-serif;
-  --app-body: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  /* Fonts */
+  --app-display: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --app-body: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
 
   color-scheme: light;
 }

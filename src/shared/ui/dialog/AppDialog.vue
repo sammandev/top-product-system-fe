@@ -96,7 +96,7 @@ function handleVisibleUpdate(value: boolean) {
 .app-dialog :deep(.p-dialog) {
   overflow: hidden;
   border: 1px solid var(--app-border);
-  border-radius: 1.5rem;
+  border-radius: 0.75rem;
   background: var(--app-panel-strong);
   box-shadow: var(--app-shadow);
 }

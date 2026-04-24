@@ -1409,8 +1409,8 @@ function rankingRowClass(row: Record<string, unknown>) {
   color: var(--app-accent);
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .top-product-ranking-upload-log__dialog-header h2,
@@ -1574,8 +1574,8 @@ function rankingRowClass(row: Record<string, unknown>) {
   color: var(--app-ink);
   font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .top-product-ranking-upload-log__field input,

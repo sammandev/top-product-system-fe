@@ -55,8 +55,8 @@ const hasHeader = computed(
   display: grid;
   gap: 1rem;
   border: 1px solid var(--app-border);
-  border-radius: 1rem;
-  padding: 1.2rem;
+  border-radius: 0.75rem;
+  padding: 1.25rem;
   background: var(--app-panel);
   box-shadow: var(--app-shadow-soft);
 }
@@ -99,16 +99,17 @@ const hasHeader = computed(
 .app-panel__eyebrow {
   margin: 0;
   color: var(--app-accent);
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .app-panel__title {
   margin: 0;
   color: var(--app-ink);
-  font-size: 1.1rem;
+  font-size: 1.125rem;
+  font-weight: 600;
 }
 
 .app-panel__description {

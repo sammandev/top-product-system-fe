@@ -241,8 +241,8 @@ function formatMean(value: number | null): string {
 .pa-trend-results-detail-summary__eyebrow {
   margin: 0 0 0.35rem;
   font-size: 0.72rem;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: #0f766e;
   font-weight: 700;
 }
@@ -332,8 +332,8 @@ function formatMean(value: number | null): string {
 .pa-trend-results-stat span,
 .pa-trend-results-detail-summary dt {
   font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: #64748b;
   font-weight: 700;
 }
@@ -433,8 +433,8 @@ function formatMean(value: number | null): string {
   background: #f8fafc;
   color: #475569;
   font-size: 0.78rem;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 @keyframes pa-trend-spin {

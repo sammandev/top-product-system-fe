@@ -254,8 +254,8 @@ watch(
   color: var(--app-accent);
   font-size: 0.74rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .station-selection-dialog__header-copy h2 {
@@ -326,7 +326,7 @@ watch(
   font-size: 0.8rem;
   font-weight: 700;
   letter-spacing: 0.05em;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 .station-selection-dialog__search-input {

@@ -415,7 +415,7 @@ function valuePillClass(value: string, isCalculated?: boolean): string {
 .parsing-result-view__section,
 .parsing-result-view__stat-card {
   border: 1px solid var(--app-border);
-  border-radius: 1.2rem;
+  border-radius: 0.75rem;
   background: var(--app-panel);
 }
 
@@ -505,8 +505,8 @@ function valuePillClass(value: string, isCalculated?: boolean): string {
   margin: 0 0 0.2rem;
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .parsing-result-view__section-heading h3 {
@@ -608,8 +608,8 @@ function valuePillClass(value: string, isCalculated?: boolean): string {
 .result-surface-search span {
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
   color: var(--app-muted);
 }
 

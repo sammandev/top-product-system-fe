@@ -540,8 +540,8 @@ watch(results, (nextResults) => {
   color: var(--app-accent);
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .deep-dive-view__header h1 {

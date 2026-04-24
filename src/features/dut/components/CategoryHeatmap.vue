@@ -266,8 +266,8 @@ watch(
   color: var(--app-muted);
   font-size: 0.8rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .category-heatmap__select {

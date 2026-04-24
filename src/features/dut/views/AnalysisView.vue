@@ -716,8 +716,8 @@ function formatScore(score: number | null | undefined) {
   color: var(--app-accent);
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .analysis-view-header h1 {
@@ -759,8 +759,8 @@ function formatScore(score: number | null | undefined) {
   color: var(--app-ink);
   font-size: 0.82rem;
   font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .analysis-view-field input,
@@ -918,7 +918,7 @@ function formatScore(score: number | null | undefined) {
 .analysis-view-empty-state {
   display: flex;
   gap: 1rem;
-  border-radius: 1.2rem;
+  border-radius: 0.75rem;
   padding: 1rem 1.1rem;
 }
 
@@ -1004,8 +1004,8 @@ function formatScore(score: number | null | undefined) {
   color: var(--app-muted);
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .analysis-view-stat-card strong {
@@ -1060,8 +1060,8 @@ function formatScore(score: number | null | undefined) {
 .analysis-view-station-card__metrics dt {
   color: var(--app-muted);
   font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
+  text-transform: none;
+  letter-spacing: 0;
 }
 
 .analysis-view-station-card__metrics dd {
@@ -1099,8 +1099,8 @@ function formatScore(score: number | null | undefined) {
   color: var(--app-accent);
   font-size: 0.76rem;
   font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  letter-spacing: 0;
+  text-transform: none;
 }
 
 .analysis-view-station-focus h3 {

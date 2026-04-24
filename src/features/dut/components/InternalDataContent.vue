@@ -978,7 +978,7 @@ const hasLatestError = (station: Station): boolean => {
     justify-content: space-between;
     gap: 1rem;
     align-items: flex-start;
-    border-radius: 1.2rem;
+    border-radius: 0.75rem;
     padding: 1rem 1.1rem;
 }
 
@@ -1028,8 +1028,8 @@ const hasLatestError = (station: Station): boolean => {
     color: var(--app-ink);
     font-size: 0.82rem;
     font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .internal-data-input-row {
@@ -1148,8 +1148,8 @@ const hasLatestError = (station: Station): boolean => {
     color: var(--app-muted);
     font-size: 0.75rem;
     font-weight: 700;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
+    letter-spacing: 0;
+    text-transform: none;
 }
 
 .internal-data-summary-card strong {
