@@ -697,7 +697,8 @@ watch(
 }
 
 .fullscreen-dialog__summary-card--highlight {
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), var(--app-panel));
+  border-color: var(--app-success-line);
+  background: var(--app-panel);
 }
 
 .fullscreen-dialog__info-button {
@@ -738,27 +739,27 @@ watch(
 }
 
 .fullscreen-dialog__pill--cool {
-  background: rgba(40, 96, 163, 0.08);
-  border-color: rgba(40, 96, 163, 0.16);
-  color: #1f4f89;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .fullscreen-dialog__pill--neutral {
   background: rgba(95, 103, 122, 0.08);
   border-color: rgba(95, 103, 122, 0.16);
-  color: #455065;
+  color: var(--app-muted);
 }
 
 .fullscreen-dialog__pill--success {
-  background: rgba(15, 118, 110, 0.1);
-  border-color: rgba(15, 118, 110, 0.16);
-  color: var(--app-accent);
+  background: var(--app-success-soft);
+  border-color: var(--app-success-line);
+  color: var(--app-success);
 }
 
 .fullscreen-dialog__pill--danger {
-  background: rgba(164, 52, 58, 0.08);
-  border-color: rgba(164, 52, 58, 0.16);
-  color: #8e3037;
+  background: var(--app-danger-soft);
+  border-color: var(--app-danger-line);
+  color: var(--app-danger);
 }
 
 .fullscreen-dialog__filters {

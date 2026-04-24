@@ -496,11 +496,13 @@ watch(
 }
 
 .advanced-filters-panel__section--success {
-  background: linear-gradient(145deg, rgba(15, 118, 110, 0.06), var(--app-panel));
+  border-color: var(--app-success-line);
+  background: var(--app-panel);
 }
 
 .advanced-filters-panel__section--danger {
-  background: linear-gradient(145deg, rgba(189, 64, 64, 0.06), var(--app-panel));
+  border-color: var(--app-danger-line);
+  background: var(--app-panel);
 }
 
 .advanced-filters-panel__field {

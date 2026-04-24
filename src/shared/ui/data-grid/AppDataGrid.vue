@@ -198,7 +198,14 @@ function resolveFieldValue(row: GridRow, field?: string) {
 </script>
 
 <style scoped>
+.app-data-grid {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .app-data-grid :deep(.p-datatable) {
+  width: 100%;
+  min-width: 0;
   border-radius: 0.625rem;
   overflow: hidden;
   border: 1px solid var(--app-border);
@@ -206,15 +213,23 @@ function resolveFieldValue(row: GridRow, field?: string) {
   box-shadow: none;
 }
 
+.app-data-grid :deep(.p-datatable-wrapper),
+.app-data-grid :deep(.p-datatable-table-container) {
+  max-width: 100%;
+  overflow-x: auto;
+  overscroll-behavior-inline: contain;
+  touch-action: pan-x pan-y;
+}
+
 .app-data-grid :deep(.p-datatable-header),
 .app-data-grid :deep(.p-datatable-footer) {
   border: 0;
-  background: rgba(15, 118, 110, 0.025);
+  background: var(--app-panel);
 }
 
 .app-data-grid :deep(.p-datatable-thead > tr > th) {
   border-color: var(--app-border);
-  background: rgba(15, 23, 42, 0.02);
+  background: var(--app-panel);
   color: var(--app-ink);
   font-size: 0.76rem;
   font-weight: 700;
@@ -230,6 +245,6 @@ function resolveFieldValue(row: GridRow, field?: string) {
 .app-data-grid :deep(.p-paginator) {
   border: 0;
   border-top: 1px solid var(--app-border);
-  background: rgba(15, 23, 42, 0.02);
+  background: var(--app-panel);
 }
 </style>

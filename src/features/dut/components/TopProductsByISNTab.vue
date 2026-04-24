@@ -1093,7 +1093,7 @@ function formatFileSize(bytes: number): string {
   padding: 0.74rem 0.85rem;
   font: inherit;
   color: var(--app-ink);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--app-panel-strong);
   transition: border-color 0.18s ease, box-shadow 0.18s ease;
 }
 
@@ -1106,7 +1106,7 @@ function formatFileSize(bytes: number): string {
 .top-products-isn-field textarea:focus {
   outline: none;
   border-color: var(--app-accent);
-  box-shadow: 0 0 0 4px rgba(15, 118, 110, 0.12);
+  box-shadow: none;
 }
 
 .top-products-isn-entry-row button,
@@ -1127,8 +1127,9 @@ function formatFileSize(bytes: number): string {
 .top-products-isn-entry-row button {
   min-width: 5rem;
   padding: 0.78rem 0.95rem;
-  background: rgba(15, 118, 110, 0.08);
-  color: var(--app-accent);
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
   font-weight: 700;
 }
 
@@ -1144,9 +1145,9 @@ function formatFileSize(bytes: number): string {
 .top-products-isn-choice {
   padding: 0.55rem 0.8rem;
   border-radius: 999px;
-  border: 1px solid rgba(40, 96, 163, 0.18);
-  background: rgba(40, 96, 163, 0.07);
-  color: #214d86;
+  border: 1px solid var(--app-info-line);
+  background: var(--app-info-soft);
+  color: var(--app-info);
   cursor: pointer;
   transition: border-color 0.18s ease, background 0.18s ease;
 }
@@ -1160,7 +1161,7 @@ function formatFileSize(bytes: number): string {
 
 .top-products-isn-choice.is-active {
   border-color: rgba(15, 118, 110, 0.24);
-  background: rgba(15, 118, 110, 0.12);
+  background: var(--app-accent-soft);
   color: var(--app-accent);
 }
 
@@ -1169,10 +1170,10 @@ function formatFileSize(bytes: number): string {
   align-items: center;
   gap: 0.45rem;
   padding: 0.42rem 0.78rem;
-  border: 1px solid rgba(15, 118, 110, 0.18);
+  border: 1px solid var(--app-info-line);
   border-radius: 999px;
-  background: rgba(15, 118, 110, 0.08);
-  color: var(--app-accent);
+  background: var(--app-info-soft);
+  color: var(--app-info);
   cursor: pointer;
 }
 
@@ -1200,7 +1201,7 @@ function formatFileSize(bytes: number): string {
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.85rem 1rem;
-  background: rgba(15, 118, 110, 0.06);
+  background: var(--app-panel);
 }
 
 .top-products-isn-notice {
@@ -1213,15 +1214,15 @@ function formatFileSize(bytes: number): string {
 }
 
 .top-products-isn-notice--warning {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.2);
-  color: #92400e;
+  background: var(--app-warning-soft);
+  border-color: var(--app-warning-line);
+  color: var(--app-warning);
 }
 
 .top-products-isn-notice--error {
-  background: rgba(239, 68, 68, 0.08);
-  border-color: rgba(239, 68, 68, 0.18);
-  color: #991b1b;
+  background: var(--app-danger-soft);
+  border-color: var(--app-danger-line);
+  color: var(--app-danger);
 }
 
 .top-products-isn-accordion {
@@ -1269,7 +1270,7 @@ function formatFileSize(bytes: number): string {
 .top-products-isn-loading-bar {
   height: 0.42rem;
   border-radius: 999px;
-  background: linear-gradient(90deg, rgba(15, 118, 110, 0.18), rgba(40, 96, 163, 0.5), rgba(15, 118, 110, 0.18));
+  background: var(--app-border);
   background-size: 200% 100%;
   animation: top-products-isn-loading 1.1s linear infinite;
 }
@@ -1282,7 +1283,7 @@ function formatFileSize(bytes: number): string {
   border: 1px solid var(--app-border);
   border-radius: 0.7rem;
   padding: 0.9rem;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--app-panel);
 }
 
 .top-products-isn-station-config-card header {
@@ -1292,8 +1293,9 @@ function formatFileSize(bytes: number): string {
 .top-products-isn-primary-button {
   min-height: 3rem;
   padding: 0.85rem 1.2rem;
-  background: linear-gradient(135deg, #0f766e, #2860a3);
-  color: white;
+  background: var(--app-accent);
+  border-color: var(--app-accent);
+  color: var(--app-canvas);
   font-weight: 700;
 }
 
@@ -1307,7 +1309,7 @@ function formatFileSize(bytes: number): string {
   display: inline-flex;
   align-items: center;
   padding: 0.4rem 0.7rem;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--app-panel-strong);
   color: var(--app-muted);
   font-size: 0.82rem;
   font-weight: 700;

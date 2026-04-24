@@ -60,6 +60,7 @@ const tabItems = [
 .data-explorer-shell {
     display: grid;
     gap: 1.25rem;
+    min-width: 0;
 }
 
 .data-explorer-header {
@@ -82,8 +83,8 @@ const tabItems = [
     width: 2.7rem;
     height: 2.7rem;
     border-radius: 0.75rem;
-    background: linear-gradient(135deg, rgba(15, 118, 110, 0.16), rgba(45, 212, 191, 0.16));
-    color: var(--app-accent);
+    background: var(--app-panel-strong);
+    color: var(--app-info);
     font-size: 1.3rem;
 }
 
@@ -111,19 +112,20 @@ const tabItems = [
 .data-explorer-pane {
     display: grid;
     gap: 1rem;
+    min-width: 0;
 }
 
 .data-explorer-notice {
     display: flex;
     gap: 1rem;
-    border: 1px solid rgba(36, 116, 184, 0.18);
+    border: 1px solid var(--app-info-line);
     border-radius: 0.7rem;
     padding: 0.9rem 1rem;
-    background: rgba(240, 249, 255, 0.92);
+    background: var(--app-info-soft);
 }
 
 .data-explorer-notice strong {
-    color: #1d4f91;
+    color: var(--app-info);
 }
 
 @media (max-width: 720px) {

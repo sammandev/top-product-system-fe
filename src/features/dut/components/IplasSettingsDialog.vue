@@ -291,9 +291,9 @@ function handleReset(): void {
 .iplas-settings-dialog__button--primary,
 .iplas-settings-dialog__toggle-chip.is-active,
 .iplas-settings-dialog__site-chip.is-active {
-  background: linear-gradient(135deg, #0f766e, #1c7c62);
+  background: var(--app-accent);
   border-color: var(--app-accent);
-  color: white;
+  color: var(--app-canvas);
 }
 
 .iplas-settings-dialog__button--ghost {
@@ -356,19 +356,21 @@ function handleReset(): void {
 }
 
 .iplas-settings-dialog__notice--info {
-  color: #1f4f89;
+  border-color: var(--app-info-line);
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .iplas-settings-dialog__notice--success {
-  border-color: rgba(15, 118, 110, 0.16);
-  background: rgba(15, 118, 110, 0.08);
-  color: var(--app-accent);
+  border-color: var(--app-success-line);
+  background: var(--app-success-soft);
+  color: var(--app-success);
 }
 
 .iplas-settings-dialog__notice--warning {
-  border-color: rgba(169, 102, 34, 0.18);
-  background: rgba(169, 102, 34, 0.1);
-  color: #88551c;
+  border-color: var(--app-warning-line);
+  background: var(--app-warning-soft);
+  color: var(--app-warning);
 }
 
 .iplas-settings-dialog__footer {

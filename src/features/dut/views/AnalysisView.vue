@@ -699,8 +699,8 @@ function formatScore(score: number | null | undefined) {
   width: 2.75rem;
   height: 2.75rem;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.16), rgba(36, 116, 184, 0.16));
-  color: var(--app-accent);
+  background: var(--app-panel-strong);
+  color: var(--app-info);
   font-size: 1.3rem;
 }
 
@@ -759,10 +759,10 @@ function formatScore(score: number | null | undefined) {
 .analysis-view-field input,
 .analysis-view-field textarea {
   width: 100%;
-  border: 1px solid rgba(15, 118, 110, 0.18);
+  border: 1px solid var(--app-border);
   border-radius: 0.75rem;
   padding: 0.72rem 0.85rem;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--app-panel-strong);
   color: var(--app-ink);
 }
 
@@ -775,7 +775,7 @@ function formatScore(score: number | null | undefined) {
 .analysis-view-field textarea:focus {
   outline: none;
   border-color: rgba(15, 118, 110, 0.4);
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+  box-shadow: none;
 }
 
 .analysis-view-field small {
@@ -803,8 +803,9 @@ function formatScore(score: number | null | undefined) {
 }
 
 .analysis-view-token-entry button {
-  background: rgba(15, 118, 110, 0.12);
-  color: var(--app-accent);
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
   white-space: nowrap;
 }
 
@@ -818,17 +819,18 @@ function formatScore(score: number | null | undefined) {
   display: inline-flex;
   align-items: center;
   gap: 0.4rem;
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid var(--app-info-line);
   border-radius: 999px;
   padding: 0.4rem 0.7rem;
-  background: rgba(15, 118, 110, 0.12);
-  color: var(--app-accent);
+  background: var(--app-info-soft);
+  color: var(--app-info);
   cursor: pointer;
 }
 
 .analysis-view-token--cool {
-  background: rgba(36, 116, 184, 0.12);
-  color: #1d4f91;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .analysis-view-inline-summary {
@@ -857,23 +859,23 @@ function formatScore(score: number | null | undefined) {
 }
 
 .analysis-view-pill--cool {
-  background: rgba(36, 116, 184, 0.12);
-  color: #1d4f91;
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .analysis-view-pill--success {
-  background: rgba(15, 118, 110, 0.12);
-  color: var(--app-accent);
+  background: var(--app-success-soft);
+  color: var(--app-success);
 }
 
 .analysis-view-pill--warning {
-  background: rgba(184, 122, 40, 0.14);
-  color: #9a5a12;
+  background: var(--app-warning-soft);
+  color: var(--app-warning);
 }
 
 .analysis-view-pill--danger {
-  background: rgba(180, 54, 45, 0.14);
-  color: #a61b1b;
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
 }
 
 .analysis-view-action-row,
@@ -897,14 +899,14 @@ function formatScore(score: number | null | undefined) {
 }
 
 .analysis-view-button--primary {
-  background: linear-gradient(135deg, #0f766e, #1c7c62);
-  color: #fff;
+  background: var(--app-accent);
+  color: var(--app-canvas);
 }
 
 .analysis-view-button--ghost,
 .analysis-view-notice button {
-  background: var(--app-surface);
-  border-color: rgba(15, 118, 110, 0.16);
+  background: var(--app-panel);
+  border-color: var(--app-border);
   color: var(--app-ink);
 }
 
@@ -922,22 +924,22 @@ function formatScore(score: number | null | undefined) {
 }
 
 .analysis-view-notice--warning {
-  border: 1px solid rgba(184, 122, 40, 0.18);
-  background: rgba(255, 247, 237, 0.92);
+  border: 1px solid var(--app-warning-line);
+  background: var(--app-warning-soft);
 }
 
 .analysis-view-notice--warning strong {
-  color: #9a5a12;
+  color: var(--app-warning);
 }
 
 .analysis-view-notice--error {
   justify-content: space-between;
-  border: 1px solid rgba(180, 54, 45, 0.18);
-  background: rgba(254, 242, 242, 0.92);
+  border: 1px solid var(--app-danger-line);
+  background: var(--app-danger-soft);
 }
 
 .analysis-view-notice--error strong {
-  color: #a61b1b;
+  color: var(--app-danger);
 }
 
 .analysis-view-loading-panel,
@@ -964,7 +966,7 @@ function formatScore(score: number | null | undefined) {
 
 .analysis-view-empty-state svg {
   font-size: 2.6rem;
-  color: rgba(15, 118, 110, 0.45);
+  color: var(--app-info);
 }
 
 .analysis-view-stat-grid,
@@ -986,15 +988,15 @@ function formatScore(score: number | null | undefined) {
 }
 
 .analysis-view-stat-card--cool {
-  background: linear-gradient(180deg, rgba(36, 116, 184, 0.12), var(--app-panel));
+  border-color: var(--app-info-line);
 }
 
 .analysis-view-stat-card--warm {
-  background: linear-gradient(180deg, rgba(184, 122, 40, 0.12), var(--app-panel));
+  border-color: var(--app-warning-line);
 }
 
 .analysis-view-stat-card--success {
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.12), rgba(249, 255, 251, 0.97));
+  border-color: var(--app-success-line);
 }
 
 .analysis-view-stat-card span {
@@ -1031,7 +1033,7 @@ function formatScore(score: number | null | undefined) {
 
 .analysis-view-station-card--active {
   border-color: rgba(15, 118, 110, 0.42);
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.09), var(--app-panel));
+  background: var(--app-panel-strong);
 }
 
 .analysis-view-station-card__header {

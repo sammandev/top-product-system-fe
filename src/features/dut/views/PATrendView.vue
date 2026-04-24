@@ -344,8 +344,8 @@ function handleExport() {
     width: 2.7rem;
     height: 2.7rem;
     border-radius: 0.75rem;
-    background: linear-gradient(135deg, #0f766e, #155e75);
-    color: white;
+    background: var(--app-panel-strong);
+    color: var(--app-info);
     font-size: 1.3rem;
 }
 
@@ -355,14 +355,14 @@ function handleExport() {
     font-size: 0.72rem;
     letter-spacing: 0;
     text-transform: none;
-    color: #0f766e;
+    color: var(--app-accent);
     font-weight: 700;
 }
 
 .pa-trend-header h1,
 .pa-trend-panel h2 {
     margin: 0;
-    color: #0f172a;
+    color: var(--app-ink);
 }
 
 .pa-trend-header h1 {
@@ -372,7 +372,7 @@ function handleExport() {
 .pa-trend-header p:last-child {
     max-width: 48rem;
     margin: 0.45rem 0 0;
-    color: #475569;
+    color: var(--app-muted);
     line-height: 1.5;
 }
 
@@ -388,11 +388,7 @@ function handleExport() {
     font: inherit;
     font-weight: 600;
     cursor: pointer;
-    transition: transform 0.18s ease, box-shadow 0.18s ease;
-}
-
-.pa-trend-button:hover:not(:disabled) {
-    transform: translateY(-1px);
+    transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
 }
 
 .pa-trend-button:disabled {
@@ -401,20 +397,21 @@ function handleExport() {
 }
 
 .pa-trend-button--primary {
-    background: linear-gradient(135deg, #0f766e, #155e75);
-    color: white;
+    background: var(--app-accent);
+    border-color: var(--app-accent);
+    color: var(--app-canvas);
 }
 
 .pa-trend-button--ghost {
-    background: white;
-    border-color: #cbd5e1;
-    color: #0f172a;
+    background: var(--app-panel);
+    border-color: var(--app-border);
+    color: var(--app-ink);
 }
 
 .pa-trend-notice,
 .pa-trend-panel,
 .pa-trend-shell {
-    border: 1px solid #dbe4ee;
+    border: 1px solid var(--app-border);
     border-radius: 0.85rem;
     background: var(--app-panel);
 }
@@ -443,14 +440,15 @@ function handleExport() {
 }
 
 .pa-trend-notice--warning {
-    background: linear-gradient(135deg, rgb(245 158 11 / 0.12), rgb(251 191 36 / 0.08));
-    color: #92400e;
+    border-color: var(--app-warning-line);
+    background: var(--app-warning-soft);
+    color: var(--app-warning);
 }
 
 .pa-trend-notice--error {
-    background: rgb(239 68 68 / 0.08);
-    border-color: rgb(239 68 68 / 0.22);
-    color: #991b1b;
+    background: var(--app-danger-soft);
+    border-color: var(--app-danger-line);
+    color: var(--app-danger);
 }
 
 .pa-trend-panel {

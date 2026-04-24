@@ -124,8 +124,15 @@
       </div>
     </div>
 
-    <!-- Results Section with Ranking Table -->
-    <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
+    <Teleport v-if="props.rankingTarget && props.isActive && testItemData.length > 0" :to="props.rankingTarget">
+      <TopProductIplasRanking :records="testItemData" :scores="recordScores"
+        :forced-failures="forcedFailures" :calculating-scores="calculatingScores" :loading="loadingTestItems"
+        :exporting-all="exportingAll" @row-click="handleRowClick" @download="handleDownloadRecord"
+        @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords" @export-all="handleExportAllRecords"
+        @calculate-scores="handleCalculateScores" @save-to-db="handleSaveToDb" />
+    </Teleport>
+
+    <TopProductIplasRanking v-else-if="!props.rankingTarget && testItemData.length > 0" :records="testItemData" :scores="recordScores"
       :forced-failures="forcedFailures" :calculating-scores="calculatingScores" :loading="loadingTestItems"
       :exporting-all="exportingAll" @row-click="handleRowClick" @download="handleDownloadRecord"
       @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords" @export-all="handleExportAllRecords"
@@ -181,6 +188,14 @@ import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFulls
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
 import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
+
+const props = withDefaults(defineProps<{
+  rankingTarget?: string
+  isActive?: boolean
+}>(), {
+  rankingTarget: '',
+  isActive: false,
+})
 
 // Emits
 const emit = defineEmits<{
@@ -1444,15 +1459,15 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-station-button--primary {
-  background: linear-gradient(135deg, #0f766e, #1c7c62);
+  background: var(--app-accent);
   border-color: var(--app-accent);
-  color: white;
+  color: var(--app-canvas);
 }
 
 .top-product-iplas-station-button--secondary {
-  background: rgba(40, 96, 163, 0.08);
-  border-color: rgba(40, 96, 163, 0.16);
-  color: #1f4f89;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .top-product-iplas-station-button--ghost {
@@ -1477,21 +1492,21 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-station-pill--info {
-  background: rgba(40, 96, 163, 0.08);
-  border-color: rgba(40, 96, 163, 0.16);
-  color: #1f4f89;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .top-product-iplas-station-pill--warning {
-  background: rgba(169, 102, 34, 0.1);
-  border-color: rgba(169, 102, 34, 0.18);
-  color: #88551c;
+  background: var(--app-warning-soft);
+  border-color: var(--app-warning-line);
+  color: var(--app-warning);
 }
 
 .top-product-iplas-station-pill--muted {
   background: rgba(95, 103, 122, 0.1);
   border-color: rgba(95, 103, 122, 0.16);
-  color: #4c566a;
+  color: var(--app-muted);
 }
 
 .top-product-iplas-station-action-card,
@@ -1537,9 +1552,9 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-station-notice--error {
-  border-color: rgba(164, 52, 58, 0.16);
-  background: rgba(164, 52, 58, 0.08);
-  color: #8e3037;
+  border-color: var(--app-danger-line);
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
 }
 
 .top-product-iplas-station-loading-card {

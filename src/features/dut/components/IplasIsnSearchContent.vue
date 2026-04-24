@@ -1623,15 +1623,15 @@ async function handleSearch(): Promise<void> {
 
 .iplas-isn-toggle-chip.is-active,
 .iplas-isn-button--primary {
-  background: linear-gradient(135deg, #0f766e, #1c7c62);
+  background: var(--app-accent);
   border-color: var(--app-accent);
-  color: white;
+  color: var(--app-canvas);
 }
 
 .iplas-isn-button--secondary {
-  background: rgba(40, 96, 163, 0.08);
-  border-color: rgba(40, 96, 163, 0.16);
-  color: #1f4f89;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .iplas-isn-button--ghost {
@@ -1797,15 +1797,18 @@ async function handleSearch(): Promise<void> {
 
 .iplas-isn-summary-card--primary {
   cursor: pointer;
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.12), var(--app-panel));
+  border-color: var(--app-success-line);
+  background: var(--app-panel);
 }
 
 .iplas-isn-summary-card--success {
-  background: rgba(15, 118, 110, 0.08);
+  border-color: var(--app-success-line);
+  background: var(--app-success-soft);
 }
 
 .iplas-isn-summary-card--danger {
-  background: rgba(164, 52, 58, 0.08);
+  border-color: var(--app-danger-line);
+  background: var(--app-danger-soft);
 }
 
 .iplas-isn-station-grid {
@@ -1823,7 +1826,7 @@ async function handleSearch(): Promise<void> {
   width: 100%;
   padding: 1rem 1.1rem;
   border: 0;
-  background: rgba(15, 118, 110, 0.08);
+  background: var(--app-panel);
   color: var(--app-ink);
   text-align: left;
   cursor: pointer;
@@ -1831,7 +1834,7 @@ async function handleSearch(): Promise<void> {
 
 .iplas-isn-station-card__header.is-error,
 .iplas-isn-station-section__toggle.is-error {
-  background: rgba(164, 52, 58, 0.1);
+  background: var(--app-danger-soft);
 }
 
 .iplas-isn-station-card__header p,
@@ -1857,13 +1860,15 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-record-card.is-pass,
 .iplas-isn-list-row.is-pass,
 .iplas-isn-compact-card.is-pass {
-  background: rgba(15, 118, 110, 0.06);
+  border-color: var(--app-success-line);
+  background: var(--app-success-soft);
 }
 
 .iplas-isn-record-card.is-fail,
 .iplas-isn-list-row.is-fail,
 .iplas-isn-compact-card.is-fail {
-  background: rgba(164, 52, 58, 0.06);
+  border-color: var(--app-danger-line);
+  background: var(--app-danger-soft);
 }
 
 .iplas-isn-record-card__status {
@@ -1877,7 +1882,7 @@ async function handleSearch(): Promise<void> {
 
 .iplas-isn-record-card__status.is-fail,
 .iplas-isn-text-danger {
-  color: #8e3037;
+  color: var(--app-danger);
 }
 
 .iplas-isn-record-card__actions {
@@ -1937,11 +1942,13 @@ async function handleSearch(): Promise<void> {
 }
 
 .iplas-isn-reference-card--success {
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), var(--app-panel));
+  border-color: var(--app-success-line);
+  background: var(--app-panel);
 }
 
 .iplas-isn-reference-card--error {
-  background: linear-gradient(180deg, rgba(164, 52, 58, 0.08), var(--app-panel));
+  border-color: var(--app-danger-line);
+  background: var(--app-panel);
 }
 
 .iplas-isn-reference-card__topline {
@@ -1981,15 +1988,15 @@ async function handleSearch(): Promise<void> {
 }
 
 .iplas-isn-notice--error {
-  border-color: rgba(164, 52, 58, 0.18);
-  background: rgba(164, 52, 58, 0.08);
-  color: #8e3037;
+  border-color: var(--app-danger-line);
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
 }
 
 .iplas-isn-notice--info {
-  border-color: rgba(40, 96, 163, 0.16);
-  background: rgba(40, 96, 163, 0.08);
-  color: #1f4f89;
+  border-color: var(--app-info-line);
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .iplas-isn-pill {
@@ -2010,21 +2017,21 @@ async function handleSearch(): Promise<void> {
 }
 
 .iplas-isn-pill--danger {
-  background: rgba(164, 52, 58, 0.08);
-  border-color: rgba(164, 52, 58, 0.16);
-  color: #8e3037;
+  background: var(--app-danger-soft);
+  border-color: var(--app-danger-line);
+  color: var(--app-danger);
 }
 
 .iplas-isn-pill--primary {
-  background: rgba(40, 96, 163, 0.08);
-  border-color: rgba(40, 96, 163, 0.16);
-  color: #1f4f89;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .iplas-isn-pill--neutral {
   background: rgba(95, 103, 122, 0.08);
   border-color: rgba(95, 103, 122, 0.16);
-  color: #455065;
+  color: var(--app-muted);
 }
 
 .w-100 {
@@ -2049,11 +2056,11 @@ async function handleSearch(): Promise<void> {
 
 /* Striped table styling */
 :deep(.v-table--striped tbody tr:nth-of-type(even)) {
-    background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--app-panel-strong);
 }
 
 :deep(.v-theme--dark .v-table--striped tbody tr:nth-of-type(even)) {
-    background-color: rgba(255, 255, 255, 0.02);
+  background-color: var(--app-panel-strong);
 }
 
 @media (max-width: 900px) {

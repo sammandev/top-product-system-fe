@@ -961,15 +961,15 @@ const hasLatestError = (station: Station): boolean => {
 
 .internal-data-mode-toggle__button,
 .internal-data-view-toggle__button {
-    background: var(--app-surface);
-    border-color: rgba(15, 118, 110, 0.12);
+    background: var(--app-panel);
+    border-color: var(--app-border);
     color: var(--app-muted);
 }
 
 .internal-data-mode-toggle__button--active,
 .internal-data-view-toggle__button--active {
-    background: rgba(15, 118, 110, 0.12);
-    border-color: rgba(15, 118, 110, 0.22);
+    background: var(--app-accent-soft);
+    border-color: rgba(15, 118, 110, 0.24);
     color: var(--app-accent);
 }
 
@@ -983,12 +983,12 @@ const hasLatestError = (station: Station): boolean => {
 }
 
 .internal-data-notice--error {
-    border: 1px solid rgba(180, 54, 45, 0.18);
-    background: rgba(254, 242, 242, 0.92);
+    border: 1px solid var(--app-danger-line);
+    background: var(--app-danger-soft);
 }
 
 .internal-data-notice strong {
-    color: #a61b1b;
+    color: var(--app-danger);
 }
 
 .internal-data-notice p {
@@ -1041,24 +1041,24 @@ const hasLatestError = (station: Station): boolean => {
 
 .internal-data-input-icon {
     font-size: 1.2rem;
-    color: var(--app-accent);
+    color: var(--app-info);
 }
 
 .internal-data-text-input,
 .internal-data-textarea {
     width: 100%;
-    border: 1px solid rgba(15, 118, 110, 0.16);
+    border: 1px solid var(--app-border);
     border-radius: 0.75rem;
     padding: 0.75rem 0.82rem;
-    background: rgba(255, 255, 255, 0.94);
+    background: var(--app-panel-strong);
     color: var(--app-ink);
     font: inherit;
 }
 
 .internal-data-text-input:focus,
 .internal-data-textarea:focus {
-    outline: 2px solid rgba(15, 118, 110, 0.2);
-    outline-offset: 1px;
+    outline: 1px solid rgba(15, 118, 110, 0.28);
+    outline-offset: 0;
 }
 
 .internal-data-textarea {
@@ -1076,11 +1076,11 @@ const hasLatestError = (station: Station): boolean => {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    border: 1px solid rgba(15, 118, 110, 0.14);
+    border: 1px solid var(--app-info-line);
     border-radius: 999px;
     padding: 0.45rem 0.75rem;
-    background: rgba(15, 118, 110, 0.1);
-    color: var(--app-accent);
+    background: var(--app-info-soft);
+    color: var(--app-info);
     font: inherit;
     font-weight: 700;
     cursor: pointer;
@@ -1088,9 +1088,9 @@ const hasLatestError = (station: Station): boolean => {
 
 .internal-data-chip--draft {
     cursor: default;
-    background: rgba(36, 116, 184, 0.08);
-    border-color: rgba(36, 116, 184, 0.14);
-    color: #2474b8;
+    background: var(--app-panel-strong);
+    border-color: var(--app-border);
+    color: var(--app-muted);
 }
 
 .internal-data-context-pill {
@@ -1099,25 +1099,25 @@ const hasLatestError = (station: Station): boolean => {
     gap: 0.45rem;
     border-radius: 999px;
     padding: 0.42rem 0.78rem;
-    background: rgba(15, 118, 110, 0.1);
-    color: var(--app-accent);
+    background: var(--app-info-soft);
+    color: var(--app-info);
     font-size: 0.78rem;
     font-weight: 800;
 }
 
 .internal-data-context-pill--cool {
-    background: rgba(36, 116, 184, 0.1);
-    color: #2474b8;
+    background: var(--app-info-soft);
+    color: var(--app-info);
 }
 
 .internal-data-context-pill--success {
-    background: rgba(28, 126, 84, 0.1);
-    color: #1c7e54;
+    background: var(--app-success-soft);
+    color: var(--app-success);
 }
 
 .internal-data-context-pill--error {
-    background: rgba(180, 54, 45, 0.12);
-    color: #a61b1b;
+    background: var(--app-danger-soft);
+    color: var(--app-danger);
 }
 
 .internal-data-summary-bar {
@@ -1141,7 +1141,7 @@ const hasLatestError = (station: Station): boolean => {
 }
 
 .internal-data-summary-card--cool {
-    background: linear-gradient(180deg, rgba(36, 116, 184, 0.12), var(--app-panel));
+    border-color: var(--app-info-line);
 }
 
 .internal-data-summary-card span {
@@ -1177,7 +1177,7 @@ const hasLatestError = (station: Station): boolean => {
 }
 
 .internal-data-section-card--alert {
-    border-color: rgba(180, 54, 45, 0.2);
+    border-color: var(--app-danger-line);
 }
 
 .internal-data-section-card__header,
@@ -1199,7 +1199,7 @@ const hasLatestError = (station: Station): boolean => {
 }
 
 .internal-data-station-card--alert {
-    border-color: rgba(180, 54, 45, 0.2);
+    border-color: var(--app-danger-line);
 }
 
 .internal-data-station-card__header,
@@ -1238,13 +1238,13 @@ const hasLatestError = (station: Station): boolean => {
 }
 
 .internal-data-badge--success {
-    background: rgba(28, 126, 84, 0.12);
-    color: #1c7e54;
+    background: var(--app-success-soft);
+    color: var(--app-success);
 }
 
 .internal-data-badge--error {
-    background: rgba(180, 54, 45, 0.12);
-    color: #a61b1b;
+    background: var(--app-danger-soft);
+    color: var(--app-danger);
 }
 
 .internal-data-carousel-toolbar {
@@ -1262,9 +1262,9 @@ const hasLatestError = (station: Station): boolean => {
     justify-content: center;
     width: 2rem;
     height: 2rem;
-    border: 1px solid rgba(15, 118, 110, 0.12);
+    border: 1px solid var(--app-border);
     border-radius: 999px;
-    background: var(--app-surface);
+    background: var(--app-panel);
     color: var(--app-ink);
     cursor: pointer;
 }
@@ -1282,11 +1282,13 @@ const hasLatestError = (station: Station): boolean => {
 }
 
 .internal-data-record-card--success {
-    background: rgba(240, 253, 246, 0.96);
+    border: 1px solid var(--app-success-line);
+    background: var(--app-panel);
 }
 
 .internal-data-record-card--error {
-    background: rgba(254, 242, 242, 0.96);
+    border: 1px solid var(--app-danger-line);
+    background: var(--app-panel);
 }
 
 .internal-data-record-title {
@@ -1305,13 +1307,13 @@ const hasLatestError = (station: Station): boolean => {
 }
 
 .internal-data-record-icon--success {
-    background: rgba(28, 126, 84, 0.12);
-    color: #1c7e54;
+    background: var(--app-success-soft);
+    color: var(--app-success);
 }
 
 .internal-data-record-icon--error {
-    background: rgba(180, 54, 45, 0.12);
-    color: #a61b1b;
+    background: var(--app-danger-soft);
+    color: var(--app-danger);
 }
 
 .internal-data-empty-state {
@@ -1319,7 +1321,7 @@ const hasLatestError = (station: Station): boolean => {
     justify-items: center;
     gap: 0.45rem;
     padding: 1.4rem 1rem;
-    border: 1px dashed rgba(15, 118, 110, 0.16);
+    border: 1px dashed var(--app-border);
     border-radius: 1rem;
     text-align: center;
     color: var(--app-muted);

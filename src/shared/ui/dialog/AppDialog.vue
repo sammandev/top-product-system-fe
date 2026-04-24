@@ -145,7 +145,7 @@ function toggleFullscreen() {
   border: 1px solid var(--app-border);
   border-radius: 0.625rem;
   background: var(--app-panel-strong);
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   max-height: 90vh;
@@ -253,7 +253,7 @@ function toggleFullscreen() {
 .app-dialog__header-btn--close:hover {
   color: var(--app-danger);
   border-color: var(--app-danger);
-  background: rgba(163, 61, 45, 0.08);
+  background: var(--app-danger-soft);
 }
 
 .app-dialog__body {

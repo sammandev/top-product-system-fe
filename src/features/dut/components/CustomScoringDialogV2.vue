@@ -494,9 +494,9 @@ const handleApply = () => {
   gap: 1rem;
   align-items: center;
   padding: 0.95rem 1rem;
-  border: 1px solid rgba(40, 96, 163, 0.15);
+  border: 1px solid var(--app-info-line);
   border-radius: 1rem;
-  background: linear-gradient(180deg, rgba(40, 96, 163, 0.08), rgba(40, 96, 163, 0.03));
+  background: var(--app-panel);
   color: var(--app-ink);
 }
 
@@ -520,7 +520,7 @@ const handleApply = () => {
 
 .custom-scoring-dialog__section[open],
 .custom-scoring-dialog__category-card[open] {
-  box-shadow: var(--app-shadow-soft);
+  box-shadow: none;
 }
 
 .custom-scoring-dialog__section-header,
@@ -636,8 +636,8 @@ const handleApply = () => {
 }
 
 .custom-scoring-dialog__tag--primary {
-  background: rgba(40, 96, 163, 0.14);
-  color: #1f4f89;
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .custom-scoring-dialog__tag--success {
@@ -646,8 +646,8 @@ const handleApply = () => {
 }
 
 .custom-scoring-dialog__tag--info {
-  background: rgba(40, 96, 163, 0.14);
-  color: #1f4f89;
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .custom-scoring-dialog__tag--warning {
@@ -657,8 +657,8 @@ const handleApply = () => {
 
 .custom-scoring-dialog__tag--danger,
 .custom-scoring-dialog__tag--error {
-  background: rgba(164, 52, 58, 0.14);
-  color: #8e3037;
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
 }
 
 .custom-scoring-dialog__tag--muted,

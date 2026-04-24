@@ -2,8 +2,8 @@
   /* Canvas & surfaces */
   --app-canvas: #f8fafc;
   --app-canvas-strong: #e2e8f0;
-  --app-panel: rgba(255, 255, 255, 0.88);
-  --app-panel-strong: rgba(255, 255, 255, 0.96);
+  --app-panel: #ffffff;
+  --app-panel-strong: #ffffff;
 
   /* Typography */
   --app-ink: #0f172a;
@@ -40,13 +40,13 @@
   --app-danger-line: rgba(239, 68, 68, 0.16);
 
   /* Elevation */
-  --app-shadow: 0 16px 48px rgba(15, 23, 42, 0.1);
-  --app-shadow-soft: 0 2px 12px rgba(15, 23, 42, 0.05);
+  --app-shadow: none;
+  --app-shadow-soft: none;
 
   /* Shell */
   --app-shell-bg: #f1f5f9;
-  --app-shell-header: rgba(255, 255, 255, 0.82);
-  --app-shell-sidebar: rgba(255, 255, 255, 0.92);
+  --app-shell-header: #ffffff;
+  --app-shell-sidebar: #f8fafc;
 
   /* Fonts */
   --app-display: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
@@ -58,8 +58,8 @@
 :root.app-dark {
   --app-canvas: #0f172a;
   --app-canvas-strong: #1e293b;
-  --app-panel: rgba(30, 41, 59, 0.88);
-  --app-panel-strong: rgba(30, 41, 59, 0.96);
+  --app-panel: #1e293b;
+  --app-panel-strong: #1e293b;
   --app-ink: #f1f5f9;
   --app-muted: #94a3b8;
   --app-accent: #2dd4bf;
@@ -67,10 +67,10 @@
   --app-accent-soft: rgba(45, 212, 191, 0.1);
   --app-border: rgba(241, 245, 249, 0.08);
   --app-ring: rgba(45, 212, 191, 0.24);
-  --app-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
-  --app-shadow-soft: 0 2px 12px rgba(0, 0, 0, 0.2);
+  --app-shadow: none;
+  --app-shadow-soft: none;
   --app-shell-bg: #0f172a;
-  --app-shell-header: rgba(15, 23, 42, 0.85);
-  --app-shell-sidebar: rgba(15, 23, 42, 0.92);
+  --app-shell-header: #0f172a;
+  --app-shell-sidebar: #111827;
   color-scheme: dark;
 }

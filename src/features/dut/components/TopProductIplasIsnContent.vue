@@ -134,8 +134,15 @@
       {{ error }}
     </div>
 
-    <!-- UPDATED: Results Section with TopProductIplasRanking (like Station Search) -->
-    <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
+    <Teleport v-if="props.rankingTarget && props.isActive && testItemData.length > 0" :to="props.rankingTarget">
+      <TopProductIplasRanking :records="testItemData" :scores="recordScores"
+        :forced-failures="forcedFailures" :calculating-scores="calculatingScores" :exporting-all="exportingAll"
+        @row-click="handleRowClick" @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords"
+        @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores"
+        @save-to-db="handleSaveToDb" />
+    </Teleport>
+
+    <TopProductIplasRanking v-else-if="!props.rankingTarget && testItemData.length > 0" :records="testItemData" :scores="recordScores"
       :forced-failures="forcedFailures" :calculating-scores="calculatingScores" :exporting-all="exportingAll"
       @row-click="handleRowClick" @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords"
       @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores"
@@ -201,6 +208,14 @@ import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vu
 import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
+
+const props = withDefaults(defineProps<{
+  rankingTarget?: string
+  isActive?: boolean
+}>(), {
+  rankingTarget: '',
+  isActive: false,
+})
 
 const { showSuccess, showError: showErrorNotification } = useNotification()
 const ISN_SEARCH_BATCH_LIMIT = 100
@@ -1679,20 +1694,20 @@ onUnmounted(() => {
 .top-product-iplas-isn-token:hover,
 .top-product-iplas-isn-token-card:hover,
 .top-product-iplas-isn-remove:hover {
-  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .top-product-iplas-isn-button--primary,
 .top-product-iplas-isn-toggle-chip.is-active {
-  background: linear-gradient(135deg, #0f766e, #1c7c62);
+  background: var(--app-accent);
   border-color: var(--app-accent);
-  color: white;
+  color: var(--app-canvas);
 }
 
 .top-product-iplas-isn-button--secondary {
-  background: rgba(40, 96, 163, 0.08);
-  border-color: rgba(40, 96, 163, 0.16);
-  color: #1f4f89;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .top-product-iplas-isn-button--ghost {
@@ -1750,9 +1765,9 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-isn-pill--info {
-  background: rgba(40, 96, 163, 0.08);
-  border-color: rgba(40, 96, 163, 0.16);
-  color: #1f4f89;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .top-product-iplas-isn-pill--success {
@@ -1762,15 +1777,15 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-isn-pill--warning {
-  background: rgba(169, 102, 34, 0.1);
-  border-color: rgba(169, 102, 34, 0.18);
-  color: #88551c;
+  background: var(--app-warning-soft);
+  border-color: var(--app-warning-line);
+  color: var(--app-warning);
 }
 
 .top-product-iplas-isn-pill--muted {
   background: rgba(95, 103, 122, 0.1);
   border-color: rgba(95, 103, 122, 0.16);
-  color: #4c566a;
+  color: var(--app-muted);
 }
 
 .top-product-iplas-isn-token-grid {
@@ -1792,9 +1807,9 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-isn-notice--error {
-  border-color: rgba(164, 52, 58, 0.16);
-  background: rgba(164, 52, 58, 0.08);
-  color: #8e3037;
+  border-color: var(--app-danger-line);
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
 }
 
 @media (max-width: 840px) {

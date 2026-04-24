@@ -1369,7 +1369,7 @@ watch(
 .iplas-details-dialog {
   --iplas-border: var(--app-border);
   --iplas-panel: var(--app-panel);
-  --iplas-panel-strong: var(--app-surface);
+  --iplas-panel-strong: var(--app-panel-strong);
   --iplas-muted: var(--app-muted);
   --iplas-ink: var(--app-ink);
   --iplas-accent: var(--app-accent);
@@ -1451,20 +1451,20 @@ watch(
   width: 2.35rem;
   height: 2.35rem;
   border-radius: 0.75rem;
-  background: rgba(15, 118, 110, 0.12);
-  color: var(--iplas-accent);
+  background: var(--app-panel-strong);
+  color: var(--app-info);
   font-size: 1.05rem;
   flex-shrink: 0;
 }
 
 .iplas-details-dialog__info-icon--warning {
-  background: rgba(245, 158, 11, 0.14);
-  color: #b45309;
+  background: var(--app-warning-soft);
+  color: var(--app-warning);
 }
 
 .iplas-details-dialog__info-icon--success {
-  background: rgba(34, 197, 94, 0.14);
-  color: #15803d;
+  background: var(--app-success-soft);
+  color: var(--app-success);
 }
 
 .iplas-details-dialog__summary-grid,
@@ -1503,7 +1503,8 @@ watch(
 
 .iplas-details-dialog__summary-card--highlight,
 .iplas-details-dialog__summary-card--score {
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), var(--app-panel));
+  border-color: var(--app-success-line);
+  background: var(--app-panel);
 }
 
 .iplas-details-dialog__info-button,
@@ -1571,29 +1572,33 @@ watch(
 }
 
 .iplas-details-dialog__pill--cool {
-  background: rgba(6, 182, 212, 0.08);
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .iplas-details-dialog__pill--neutral {
-  background: rgba(15, 23, 42, 0.04);
+  background: rgba(95, 103, 122, 0.1);
+  border-color: rgba(95, 103, 122, 0.16);
+  color: var(--app-muted);
 }
 
 .iplas-details-dialog__pill--success {
-  background: rgba(34, 197, 94, 0.12);
-  border-color: rgba(34, 197, 94, 0.26);
-  color: #166534;
+  background: var(--app-success-soft);
+  border-color: var(--app-success-line);
+  color: var(--app-success);
 }
 
 .iplas-details-dialog__pill--warning {
-  background: rgba(245, 158, 11, 0.12);
-  border-color: rgba(245, 158, 11, 0.24);
-  color: #92400e;
+  background: var(--app-warning-soft);
+  border-color: var(--app-warning-line);
+  color: var(--app-warning);
 }
 
 .iplas-details-dialog__pill--danger {
-  background: rgba(163, 61, 45, 0.12);
-  border-color: rgba(163, 61, 45, 0.24);
-  color: #a33d2d;
+  background: var(--app-danger-soft);
+  border-color: var(--app-danger-line);
+  color: var(--app-danger);
 }
 
 .iplas-details-dialog__pill--interactive {
@@ -1672,8 +1677,8 @@ watch(
 .iplas-details-dialog__chip-option,
 .iplas-details-dialog__ghost-action,
 .iplas-details-dialog__button--ghost {
-  background: rgba(15, 118, 110, 0.08);
-  color: var(--iplas-accent);
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .iplas-details-dialog__chip-select {
@@ -1683,7 +1688,7 @@ watch(
 
 .iplas-details-dialog__chip-option--active {
   background: var(--iplas-accent);
-  color: white;
+  color: var(--app-canvas);
 }
 
 .iplas-details-dialog__button {
@@ -1723,11 +1728,12 @@ watch(
   gap: 1rem;
   padding: 0.75rem 0.85rem;
   border-radius: 0.8rem;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--iplas-panel-strong);
 }
 
 .iplas-details-dialog__metric-row--score {
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), rgba(255, 255, 255, 0.76));
+  border: 1px solid var(--app-success-line);
+  background: var(--iplas-panel);
 }
 
 .iplas-details-dialog__simple-list {
@@ -1770,23 +1776,23 @@ watch(
 }
 
 .iplas-details-dialog__score-chip--success {
-  background: rgba(34, 197, 94, 0.16);
-  color: #166534;
+  background: var(--app-success-soft);
+  color: var(--app-success);
 }
 
 .iplas-details-dialog__score-chip--primary {
-  background: rgba(15, 118, 110, 0.14);
-  color: var(--iplas-accent);
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .iplas-details-dialog__score-chip--warning {
-  background: rgba(245, 158, 11, 0.16);
-  color: #92400e;
+  background: var(--app-warning-soft);
+  color: var(--app-warning);
 }
 
 .iplas-details-dialog__score-chip--danger {
-  background: rgba(163, 61, 45, 0.16);
-  color: #a33d2d;
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
 }
 
 .iplas-details-dialog__explanation-card {
@@ -1797,6 +1803,7 @@ watch(
 .iplas-details-dialog__table-shell :deep(.p-datatable-table-container) {
   max-width: 100%;
   overflow-x: auto;
+  touch-action: pan-x pan-y;
 }
 
 .iplas-details-dialog__explanation-card summary {
@@ -1876,11 +1883,11 @@ watch(
 
 .summary-stat-button:hover .text-body-2,
 .summary-stat-button:focus-visible .text-body-2 {
-  color: rgba(var(--v-theme-on-surface), 0.88) !important;
+  color: var(--iplas-ink) !important;
 }
 
 .summary-stat-button:focus-visible {
-  outline: 2px solid rgba(var(--v-theme-primary), 0.4);
+  outline: 2px solid rgba(15, 118, 110, 0.32);
   outline-offset: 4px;
   border-radius: 10px;
 }
@@ -1889,15 +1896,15 @@ watch(
   height: 100%;
   padding: 0.9rem 1rem;
   border-radius: 12px;
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
-  background: rgba(var(--v-theme-on-surface), 0.03);
+  border: 1px solid var(--iplas-border);
+  background: var(--iplas-panel);
 }
 
 .score-explanation-primary {
   padding: 1rem;
   border-radius: 14px;
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
-  background: rgba(var(--v-theme-on-surface), 0.03);
+  border: 1px solid var(--app-success-line);
+  background: var(--iplas-panel);
 }
 
 .score-explanation-primary__score {
@@ -1914,15 +1921,15 @@ watch(
 .score-formula-panel {
   padding: 1rem;
   border-radius: 14px;
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
-  background: linear-gradient(180deg, rgba(var(--v-theme-primary), 0.05), rgba(var(--v-theme-on-surface), 0.02));
+  border: 1px solid var(--iplas-border);
+  background: var(--iplas-panel);
 }
 
 .score-formula-equation {
   padding: 0.85rem 1rem;
   border-radius: 12px;
-  background: rgba(var(--v-theme-surface), 0.88);
-  border: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  background: var(--iplas-panel-strong);
+  border: 1px solid var(--iplas-border);
   font-family: Consolas, 'Courier New', monospace;
   overflow-wrap: anywhere;
 }
@@ -1946,8 +1953,8 @@ watch(
   width: 28px;
   height: 28px;
   border-radius: 999px;
-  background: rgba(var(--v-theme-primary), 0.12);
-  color: rgb(var(--v-theme-primary));
+  background: var(--app-info-soft);
+  color: var(--app-info);
   font-size: 0.8rem;
   font-weight: 700;
 }
@@ -1965,7 +1972,7 @@ watch(
 }
 
 .table-limit {
-  color: rgba(var(--v-theme-on-surface), 0.56);
+  color: var(--iplas-muted);
   font-variant-numeric: tabular-nums;
 }
 
@@ -1976,11 +1983,11 @@ watch(
 }
 
 :deep(.v-table--striped tbody tr:nth-of-type(even)) {
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--iplas-panel-strong);
 }
 
 :deep(.v-theme--dark .v-table--striped tbody tr:nth-of-type(even)) {
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: var(--iplas-panel-strong);
 }
 
 /* Clickable rows styling when scores are available */
@@ -1990,7 +1997,7 @@ watch(
 }
 
 .clickable-rows :deep(tbody tr:hover) {
-  background-color: rgba(var(--v-theme-primary), 0.08) !important;
+  background-color: var(--iplas-panel-strong) !important;
 }
 
 .forced-fail-item :deep(.v-list-item__content) {

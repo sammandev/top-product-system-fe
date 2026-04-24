@@ -476,14 +476,14 @@ defineExpose({
 .dut-isn-input__toggle-chip:hover,
 .dut-isn-input__token:hover,
 .dut-isn-input__link:hover {
-  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .dut-isn-input__button--primary,
 .dut-isn-input__toggle-chip.is-active {
-  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  background: var(--app-accent);
   border-color: var(--app-accent);
-  color: white;
+  color: var(--app-canvas);
 }
 
 .dut-isn-input__button--ghost,
@@ -494,9 +494,9 @@ defineExpose({
 
 .dut-isn-input__section {
   padding: 1rem;
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--app-panel);
 }
 
 .dut-isn-input__token {
@@ -506,16 +506,16 @@ defineExpose({
 }
 
 .dut-isn-input__token--info {
-  border-color: rgba(40, 96, 163, 0.16);
-  background: rgba(40, 96, 163, 0.08);
-  color: #1f4f89;
+  border-color: var(--app-info-line);
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .dut-isn-input__notice {
   padding: 0.9rem 1rem;
   border-radius: 0.95rem;
-  border: 1px solid rgba(40, 96, 163, 0.14);
-  background: rgba(40, 96, 163, 0.08);
+  border: 1px solid var(--app-info-line);
+  background: var(--app-info-soft);
 }
 
 .dut-isn-input__notice--success {
@@ -525,15 +525,15 @@ defineExpose({
 }
 
 .dut-isn-input__notice--warning {
-  border-color: rgba(169, 102, 34, 0.18);
-  background: rgba(169, 102, 34, 0.1);
-  color: #88551c;
+  border-color: var(--app-warning-line);
+  background: var(--app-warning-soft);
+  color: var(--app-warning);
 }
 
 .dut-isn-input__notice--error {
-  border-color: rgba(164, 52, 58, 0.16);
-  background: rgba(164, 52, 58, 0.08);
-  color: #8e3037;
+  border-color: var(--app-danger-line);
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
 }
 
 @media (max-width: 760px) {

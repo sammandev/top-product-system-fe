@@ -416,8 +416,8 @@ function onSelectionChange(selection: unknown) {
 }
 
 .iplas-record-table-badge--error {
-  background: rgba(180, 54, 45, 0.12);
-  color: #a61b1b;
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
 }
 
 .iplas-record-table-caption {
@@ -429,7 +429,7 @@ function onSelectionChange(selection: unknown) {
 }
 
 .iplas-record-table-error-name {
-  color: #a61b1b;
+  color: var(--app-danger);
   font-weight: 600;
 }
 

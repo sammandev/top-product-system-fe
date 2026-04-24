@@ -1095,10 +1095,10 @@ const hasLatestError = (station: Station): boolean => {
     width: 3.5rem;
     height: 3.5rem;
     border-radius: 0.75rem;
-    background: linear-gradient(135deg, rgba(45, 212, 191, 0.18), rgba(15, 118, 110, 0.14));
-    color: var(--app-accent);
+    background: var(--app-panel-strong);
+    color: var(--app-info);
     font-size: 1.6rem;
-    box-shadow: var(--app-shadow-soft);
+    box-shadow: none;
 }
 
 .test-log-view__eyebrow {
@@ -1150,7 +1150,7 @@ const hasLatestError = (station: Station): boolean => {
     color: var(--app-ink);
     font: inherit;
     cursor: pointer;
-    transition: border-color 0.18s ease, transform 0.18s ease, background-color 0.18s ease, color 0.18s ease;
+    transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
 }
 
 .test-log-view__mode-button,
@@ -1165,7 +1165,6 @@ const hasLatestError = (station: Station): boolean => {
 .test-log-view__button:hover,
 .test-log-view__token:hover,
 .test-log-view__icon-action:hover {
-    transform: translateY(-1px);
     border-color: rgba(15, 118, 110, 0.45);
 }
 
@@ -1173,12 +1172,13 @@ const hasLatestError = (station: Station): boolean => {
 .test-log-view__view-button--active,
 .test-log-view__button--primary {
     border-color: rgba(15, 118, 110, 0.28);
-    background: linear-gradient(135deg, rgba(15, 118, 110, 0.96), rgba(40, 96, 163, 0.88));
-    color: #f8f5f0;
+    background: var(--app-accent);
+    color: var(--app-canvas);
 }
 
 .test-log-view__button--ghost {
-    background: rgba(255, 249, 242, 0.92);
+    background: var(--app-panel);
+    border-color: var(--app-border);
     color: var(--app-ink);
 }
 
@@ -1243,7 +1243,9 @@ const hasLatestError = (station: Station): boolean => {
 
 .test-log-view__token {
     padding-inline: 0.9rem;
-    background: rgba(40, 96, 163, 0.1);
+    background: var(--app-info-soft);
+    border-color: var(--app-info-line);
+    color: var(--app-info);
 }
 
 .test-log-view__action-slot,
@@ -1266,25 +1268,25 @@ const hasLatestError = (station: Station): boolean => {
 }
 
 .test-log-view__notice--error {
-    border-color: rgba(178, 45, 70, 0.24);
-    background: rgba(255, 239, 243, 0.92);
+    border-color: var(--app-danger-line);
+    background: var(--app-danger-soft);
 }
 
 .test-log-view__notice strong {
     display: block;
     margin-bottom: 0.25rem;
-    color: #7d2138;
+    color: var(--app-danger);
 }
 
 .test-log-view__notice p {
     margin: 0;
-    color: #7d2138;
+    color: var(--app-muted);
 }
 
 .test-log-view__notice button {
     border: 0;
     background: transparent;
-    color: #7d2138;
+    color: var(--app-danger);
     font: inherit;
     font-weight: 700;
     cursor: pointer;
@@ -1324,16 +1326,18 @@ const hasLatestError = (station: Station): boolean => {
 }
 
 .test-log-view__summary-card--cool {
-    background: rgba(40, 96, 163, 0.08);
+    border-color: var(--app-info-line);
+    background: var(--app-panel);
 }
 
 .test-log-view__summary-card--accent {
-    background: rgba(15, 118, 110, 0.08);
+    border-color: var(--app-success-line);
+    background: var(--app-panel);
 }
 
 .test-log-view__result-divider {
     height: 1px;
-    background: linear-gradient(90deg, rgba(15, 118, 110, 0.18), rgba(15, 118, 110, 0));
+    background: var(--app-border);
 }
 
 .test-log-view__grid-table {

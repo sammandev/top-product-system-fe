@@ -363,9 +363,9 @@ const testExpression = () => {
   display: grid;
   gap: 0.85rem;
   padding: 1rem;
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid var(--app-border);
   border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--app-panel);
 }
 
 .formula-editor__section-header {
@@ -500,12 +500,12 @@ const testExpression = () => {
   color: var(--app-ink);
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s ease, background-color 0.15s ease, border-color 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .formula-editor__button:hover,
 .formula-editor__icon-button:hover {
-  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .formula-editor__button {
@@ -518,8 +518,8 @@ const testExpression = () => {
 }
 
 .formula-editor__icon-button--danger {
-  border-color: rgba(164, 52, 58, 0.2);
-  color: #8e3037;
+  border-color: var(--app-danger-line);
+  color: var(--app-danger);
 }
 
 .formula-editor__icon-button:disabled {
@@ -539,9 +539,9 @@ const testExpression = () => {
 }
 
 .formula-editor__notice--info {
-  border-color: rgba(40, 96, 163, 0.16);
-  background: rgba(40, 96, 163, 0.08);
-  color: #1f4f89;
+  border-color: var(--app-info-line);
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .formula-editor__notice--success {
@@ -551,15 +551,15 @@ const testExpression = () => {
 }
 
 .formula-editor__notice--danger {
-  border-color: rgba(164, 52, 58, 0.16);
-  background: rgba(164, 52, 58, 0.08);
-  color: #8e3037;
+  border-color: var(--app-danger-line);
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
 }
 
 code {
   font-family: 'Courier New', monospace;
   font-size: 0.85em;
-  background-color: rgba(255, 255, 255, 0.72);
+  background-color: var(--app-panel-strong);
   padding: 0.15rem 0.35rem;
   border-radius: 0.35rem;
 }

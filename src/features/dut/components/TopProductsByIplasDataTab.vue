@@ -20,6 +20,8 @@
         <template #panel-station>
           <section class="top-products-iplas-pane">
             <TopProductIplasStationContent
+              :is-active="searchMode === 'station'"
+              ranking-target="#top-products-iplas-results-slot"
               @show-details="handleShowDetails"
               @show-settings="showSettingsDialog = true"
             />
@@ -28,11 +30,16 @@
 
         <template #panel-isn>
           <section class="top-products-iplas-pane">
-            <TopProductIplasIsnContent />
+            <TopProductIplasIsnContent
+              :is-active="searchMode === 'isn'"
+              ranking-target="#top-products-iplas-results-slot"
+            />
           </section>
         </template>
       </AppTabs>
     </section>
+
+    <div id="top-products-iplas-results-slot" class="top-products-iplas-results-slot"></div>
 
     <TopProductIplasDetailsDialog
       v-model="showDetailsDialog"
@@ -93,10 +100,10 @@ async function handleDownloadFromDialog() {
 
 .top-products-iplas-notice,
 .top-products-iplas-panel {
-  border: 1px solid #dbe4ee;
-  border-radius: 1.25rem;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
-  box-shadow: 0 16px 36px rgb(15 23 42 / 0.06);
+  border: 1px solid var(--app-border);
+  border-radius: 0.8rem;
+  background: var(--app-panel);
+  box-shadow: none;
 }
 
 .top-products-iplas-notice {
@@ -105,18 +112,19 @@ async function handleDownloadFromDialog() {
   gap: 1rem;
   align-items: flex-start;
   padding: 1rem 1.15rem;
-  background: linear-gradient(135deg, rgb(14 165 233 / 0.08), rgb(15 118 110 / 0.08));
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
 }
 
 .top-products-iplas-notice p {
   margin: 0.35rem 0 0;
-  color: #475569;
+  color: var(--app-muted);
   line-height: 1.55;
 }
 
 .top-products-iplas-inline-label {
   font-weight: 700;
-  color: #0f172a;
+  color: var(--app-ink);
 }
 
 .top-products-iplas-badge {
@@ -130,17 +138,26 @@ async function handleDownloadFromDialog() {
 }
 
 .top-products-iplas-badge.is-system {
-  background: rgb(34 197 94 / 0.12);
-  color: #166534;
+  background: var(--app-success-soft);
+  color: var(--app-success);
 }
 
 .top-products-iplas-badge.is-custom {
-  background: rgb(245 158 11 / 0.14);
-  color: #92400e;
+  background: var(--app-warning-soft);
+  color: var(--app-warning);
 }
 
 .top-products-iplas-panel {
   overflow: hidden;
+}
+
+.top-products-iplas-results-slot {
+  display: grid;
+  min-width: 0;
+}
+
+.top-products-iplas-results-slot:empty {
+  display: none;
 }
 
 .top-products-iplas-panel__header {
@@ -162,6 +179,7 @@ async function handleDownloadFromDialog() {
 }
 
 .top-products-iplas-pane {
+  min-width: 0;
   padding: 1rem 1.1rem 1.1rem;
 }
 

@@ -3,7 +3,7 @@
     v-bind="attrs"
     :value="modelValue"
     :scrollable="scrollable"
-    class="app-tabs"
+    :class="['app-tabs', `app-tabs--${variant}`]"
     @update:value="emit('update:modelValue', $event)"
   >
     <TabList>
@@ -51,9 +51,11 @@ withDefaults(
     modelValue: string | number
     items: readonly AppTabItem[]
     scrollable?: boolean
+    variant?: 'underline' | 'segmented'
   }>(),
   {
     scrollable: false,
+    variant: 'underline',
   },
 )
 
@@ -104,6 +106,37 @@ function panelSlotName(value: string | number) {
 .app-tabs :deep(.p-tabpanels) {
   border-radius: 0;
   background: transparent;
+
+.app-tabs--segmented :deep(.p-tablist-tab-list) {
+  gap: 0.45rem;
+  border-bottom: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 0.8rem;
+  background: var(--app-panel);
+  padding: 0.3rem;
+}
+
+.app-tabs--segmented :deep(.p-tab) {
+  border: 1px solid transparent;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--app-muted);
+  padding: 0.55rem 0.8rem;
+}
+
+.app-tabs--segmented :deep(.p-tab-active) {
+  border-color: var(--app-border);
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+}
+
+.app-tabs--segmented :deep(.p-tab:hover) {
+  color: var(--app-ink);
+}
+
+.app-tabs--segmented :deep(.p-tabpanels) {
+  padding-top: 0.75rem;
+}
   padding: 0.875rem 0 0;
 }
 

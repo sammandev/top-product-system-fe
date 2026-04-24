@@ -133,8 +133,8 @@ function clearError() {
   width: 2.7rem;
   height: 2.7rem;
   border-radius: 0.75rem;
-  background: linear-gradient(135deg, #0f766e, #155e75);
-  color: white;
+  background: var(--app-panel-strong);
+  color: var(--app-info);
   font-size: 1.3rem;
 }
 
@@ -143,20 +143,20 @@ function clearError() {
   font-size: 0.72rem;
   letter-spacing: 0;
   text-transform: none;
-  color: #0f766e;
+  color: var(--app-accent);
   font-weight: 700;
 }
 
 .top-products-header h1 {
   margin: 0;
   font-size: clamp(1.8rem, 2.5vw, 2.35rem);
-  color: #0f172a;
+  color: var(--app-ink);
 }
 
 .top-products-header p:last-child {
   max-width: 48rem;
   margin: 0.45rem 0 0;
-  color: #475569;
+  color: var(--app-muted);
   line-height: 1.5;
 }
 
@@ -172,16 +172,13 @@ function clearError() {
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-}
-
-.top-products-button:hover {
-  transform: translateY(-1px);
+  transition: border-color 0.18s ease, background-color 0.18s ease, color 0.18s ease;
 }
 
 .top-products-button--primary {
-  background: linear-gradient(135deg, #0f766e, #155e75);
-  color: white;
+  background: var(--app-accent);
+  border-color: var(--app-accent);
+  color: var(--app-canvas);
 }
 
 .top-products-notice {

@@ -1164,12 +1164,12 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   color: var(--app-ink);
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .station-config-dialog__button:hover,
 .station-config-dialog__icon-button:hover {
-  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .station-config-dialog__button {
@@ -1181,14 +1181,14 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 .station-config-dialog__button--primary {
-  background: linear-gradient(135deg, #0f766e, #1c7c62);
+  background: var(--app-accent);
   border-color: var(--app-accent);
-  color: white;
+  color: var(--app-canvas);
 }
 
 .station-config-dialog__button--danger {
-  border-color: rgba(164, 52, 58, 0.24);
-  color: #8e3037;
+  border-color: var(--app-danger-line);
+  color: var(--app-danger);
 }
 
 .station-config-dialog__button--ghost {
@@ -1234,26 +1234,26 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   gap: 0.35rem;
   padding: 0.85rem 0.95rem;
   border-radius: 0.8rem;
-  border: 1px solid rgba(40, 96, 163, 0.14);
-  background: rgba(40, 96, 163, 0.08);
-  color: #1f4f89;
+  border: 1px solid var(--app-info-line);
+  background: var(--app-info-soft);
+  color: var(--app-info);
   line-height: 1.55;
 }
 
 .station-config-dialog__notice--info strong {
-  color: #173b66;
+  color: var(--app-info);
 }
 
 .station-config-dialog__notice--danger {
-  border-color: rgba(164, 52, 58, 0.16);
-  background: rgba(164, 52, 58, 0.08);
-  color: #8e3037;
+  border-color: var(--app-danger-line);
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
 }
 
 .station-config-dialog__notice--warning {
-  border-color: rgba(169, 102, 34, 0.18);
-  background: rgba(169, 102, 34, 0.1);
-  color: #88551c;
+  border-color: var(--app-warning-line);
+  background: var(--app-warning-soft);
+  color: var(--app-warning);
 }
 
 .station-config-dialog__toolbar-row,
@@ -1300,7 +1300,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-dialog__toggle-pill,
 .test-item-row {
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .station-config-dialog__choice-chip:hover,
@@ -1310,7 +1310,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-dialog__action-tile:hover,
 .station-config-dialog__toggle-pill:hover,
 .test-item-row:hover {
-  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .station-config-dialog__choice-chip,
@@ -1337,22 +1337,22 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-dialog__choice-chip.is-active,
 .station-config-dialog__toggle-chip.is-active,
 .station-config-dialog__toggle-pill.is-active {
-  background: rgba(15, 118, 110, 0.1);
-  border-color: rgba(15, 118, 110, 0.18);
+  background: var(--app-accent-soft);
+  border-color: rgba(15, 118, 110, 0.24);
   color: var(--app-accent);
 }
 
 .station-config-dialog__token {
   gap: 0.35rem;
-  border-color: rgba(40, 96, 163, 0.16);
-  background: rgba(40, 96, 163, 0.08);
-  color: #1f4f89;
+  border-color: var(--app-info-line);
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .station-config-dialog__pill--muted {
   background: rgba(95, 103, 122, 0.1);
   border-color: rgba(95, 103, 122, 0.16);
-  color: #4c566a;
+  color: var(--app-muted);
 }
 
 .station-config-dialog__pill--success,
@@ -1364,27 +1364,27 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 
 .station-config-dialog__pill--warning,
 .station-config-dialog__pill-button--warning {
-  background: rgba(169, 102, 34, 0.1);
-  border-color: rgba(169, 102, 34, 0.18);
-  color: #88551c;
+  background: var(--app-warning-soft);
+  border-color: var(--app-warning-line);
+  color: var(--app-warning);
 }
 
 .station-config-dialog__pill-button--info {
-  background: rgba(40, 96, 163, 0.08);
-  border-color: rgba(40, 96, 163, 0.16);
-  color: #1f4f89;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .station-config-dialog__pill-button--danger {
-  background: rgba(164, 52, 58, 0.08);
-  border-color: rgba(164, 52, 58, 0.16);
-  color: #8e3037;
+  background: var(--app-danger-soft);
+  border-color: var(--app-danger-line);
+  color: var(--app-danger);
 }
 
 .station-config-dialog__pill-button--violet {
-  background: rgba(128, 83, 161, 0.08);
-  border-color: rgba(128, 83, 161, 0.16);
-  color: #6e3f91;
+  background: var(--app-panel-strong);
+  border-color: var(--app-border);
+  color: var(--app-ink);
 }
 
 .station-config-dialog__action-tile {
@@ -1447,7 +1447,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 .test-item-row:hover {
-  background-color: rgba(246, 255, 250, 0.88);
+  background-color: var(--app-panel-strong);
 }
 
 .test-item-row--disabled {
@@ -1465,11 +1465,9 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 .test-item-section-header {
-  background: linear-gradient(135deg,
-      rgba(var(--v-theme-surface-variant), 0.18),
-      rgba(var(--v-theme-surface), 0.94));
-  color: rgb(var(--v-theme-on-surface));
-  border-bottom: 1px solid rgba(var(--v-theme-on-surface), 0.08);
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  border-bottom: 1px solid var(--app-border);
   gap: 0.75rem;
   white-space: normal;
 }
@@ -1481,28 +1479,28 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 
 .test-item-source-toggle {
   border-radius: 999px;
-  background-color: rgba(var(--v-theme-background), 0.92);
-  border: 1px solid rgba(var(--v-theme-primary), 0.2);
-  box-shadow: inset 0 0 0 1px rgba(var(--v-theme-on-surface), 0.04);
+  background-color: var(--app-panel);
+  border: 1px solid var(--app-border);
+  box-shadow: none;
   padding: 0.1875rem;
 }
 
 :deep(.test-item-source-toggle .v-btn) {
   min-width: 84px;
-  color: rgba(var(--v-theme-on-surface), 0.82) !important;
+  color: var(--app-muted) !important;
   border-color: transparent !important;
   font-weight: 600;
   letter-spacing: 0.01em;
 }
 
 :deep(.test-item-source-toggle .v-btn:hover) {
-  background-color: rgba(var(--v-theme-primary), 0.12);
+  background-color: var(--app-panel-strong);
 }
 
 :deep(.test-item-source-toggle .v-btn.v-btn--active) {
-  color: rgb(var(--v-theme-on-primary)) !important;
-  background-color: rgb(var(--v-theme-primary)) !important;
-  box-shadow: 0 4px 12px rgba(var(--v-theme-primary), 0.28);
+  color: var(--app-canvas) !important;
+  background-color: var(--app-accent) !important;
+  box-shadow: none;
 }
 
 .selection-mode-toggle {
@@ -1525,8 +1523,8 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 .min-score-section {
-  border-color: rgba(255, 193, 7, 0.28);
-  background: rgba(255, 193, 7, 0.05);
+  border-color: var(--app-warning-line);
+  background: var(--app-warning-soft);
 }
 
 .min-score-summary {
@@ -1551,9 +1549,9 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 .test-item-list-container {
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid var(--app-border);
   border-radius: 0.7rem;
-  background: rgba(255, 255, 255, 0.9);
+  background: var(--app-panel);
   display: flex;
   flex-direction: column;
   overflow: hidden;

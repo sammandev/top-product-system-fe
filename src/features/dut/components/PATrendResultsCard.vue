@@ -272,10 +272,10 @@ function formatMean(value: number | null): string {
 .pa-trend-results-loading,
 .pa-trend-results-empty,
 .pa-trend-results-detail-summary {
-  border: 1px solid #dbe4ee;
+  border: 1px solid var(--app-border);
   border-radius: 1.25rem;
-  background: linear-gradient(180deg, #ffffff, #f8fafc);
-  box-shadow: 0 16px 36px rgb(15 23 42 / 0.06);
+  background: var(--app-panel);
+  box-shadow: none;
 }
 
 .pa-trend-results-loading,
@@ -292,7 +292,7 @@ function formatMean(value: number | null): string {
 .pa-trend-results-loading p,
 .pa-trend-results-empty p {
   margin: 0;
-  color: #64748b;
+  color: var(--app-muted);
 }
 
 .pa-trend-results-empty :deep(svg) {

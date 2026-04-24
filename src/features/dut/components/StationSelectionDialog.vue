@@ -267,7 +267,7 @@ watch(
 .station-selection-dialog__button:hover,
 .station-selection-dialog__clear-button:hover,
 .station-item:hover {
-  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .station-selection-dialog__icon-button,
@@ -277,9 +277,9 @@ watch(
 }
 
 .station-selection-dialog__button--primary {
-  background: linear-gradient(135deg, #0f766e, #1c7c62);
+  background: var(--app-accent);
   border-color: var(--app-accent);
-  color: white;
+  color: var(--app-canvas);
 }
 
 .station-selection-dialog__button--ghost {
@@ -331,23 +331,23 @@ watch(
   padding: 0.85rem 0.9rem;
   border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 0.8rem;
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--app-panel);
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .station-item:hover {
   border-color: rgba(15, 118, 110, 0.18);
-  background-color: rgba(246, 255, 250, 0.88);
+  background-color: var(--app-panel-strong);
 }
 
 .station-configured {
-  border-color: rgba(15, 118, 110, 0.18);
-  background-color: rgba(246, 255, 250, 0.88);
+  border-color: var(--app-accent-soft);
+  background-color: var(--app-panel-strong);
 }
 
 .station-configured:hover {
-  background-color: rgba(236, 250, 243, 0.95);
+  background-color: var(--app-panel-strong);
 }
 
 .station-selection-dialog__checkmark {
@@ -355,13 +355,13 @@ watch(
   height: 1.15rem;
   border-radius: 0.35rem;
   border: 1px solid rgba(15, 118, 110, 0.24);
-  background: white;
+  background: var(--app-panel-strong);
 }
 
 .station-selection-dialog__checkmark.is-active {
   background: var(--app-accent);
   border-color: var(--app-accent);
-  box-shadow: inset 0 0 0 0.2rem white;
+  box-shadow: inset 0 0 0 0.2rem var(--app-panel-strong);
 }
 
 .station-selection-dialog__station-copy {
@@ -395,7 +395,7 @@ watch(
 .station-selection-dialog__pill--muted {
   background: rgba(95, 103, 122, 0.1);
   border-color: rgba(95, 103, 122, 0.16);
-  color: #4c566a;
+  color: var(--app-muted);
 }
 
 .station-selection-dialog__pill--success {
@@ -405,21 +405,21 @@ watch(
 }
 
 .station-selection-dialog__pill--primary {
-  background: rgba(40, 96, 163, 0.08);
-  border-color: rgba(40, 96, 163, 0.16);
-  color: #1f4f89;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .station-selection-dialog__pill--info {
-  background: rgba(43, 123, 143, 0.08);
-  border-color: rgba(43, 123, 143, 0.16);
-  color: #1d6375;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .station-selection-dialog__pill--warning {
-  background: rgba(169, 102, 34, 0.1);
-  border-color: rgba(169, 102, 34, 0.18);
-  color: #88551c;
+  background: var(--app-warning-soft);
+  border-color: var(--app-warning-line);
+  color: var(--app-warning);
 }
 
 .station-selection-dialog__chevron {

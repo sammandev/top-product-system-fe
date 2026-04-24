@@ -56,7 +56,7 @@
       </div>
     </template>
 
-    <AppTabs v-model="selectedTab" :items="stationTabItems" scrollable>
+    <AppTabs v-model="selectedTab" :items="stationTabItems" scrollable variant="segmented">
       <template v-for="item in stationTabItems" :key="String(item.value)" #[`panel-${item.value}`]>
         <section class="ranking-panel">
           <div class="ranking-filter-grid">
@@ -129,22 +129,23 @@
             </div>
           </div>
 
-          <AppDataGrid
-            :columns="gridColumns"
-            :rows="filteredRanking"
-            data-key="key"
-            :selection="selectedItems"
-            selection-mode="multiple"
-            :show-selection-column="true"
-            :loading="loading"
-            :paginator="true"
-            :rows-per-page="25"
-            scroll-height="40rem"
-            :row-class="getRankingRowClass"
-            :table-style="{ minWidth: '72rem' }"
-            @update:selection="selectedItems = ($event as RankingItem[])"
-            @row-click="handleGridRowClick($event, String(item.value))"
-          >
+          <div class="ranking-table-shell">
+            <AppDataGrid
+              :columns="gridColumns"
+              :rows="filteredRanking"
+              data-key="key"
+              :selection="selectedItems"
+              selection-mode="multiple"
+              :show-selection-column="true"
+              :loading="loading"
+              :paginator="true"
+              :rows-per-page="25"
+              scroll-height="40rem"
+              :row-class="getRankingRowClass"
+              :table-style="{ minWidth: '72rem' }"
+              @update:selection="selectedItems = ($event as RankingItem[])"
+              @row-click="handleGridRowClick($event, String(item.value))"
+            >
             <template #cell-rank="{ data }">
               <div class="ranking-rank-cell">
                 <template v-if="data.hasError">
@@ -214,7 +215,8 @@
                 Download
               </button>
             </template>
-          </AppDataGrid>
+            </AppDataGrid>
+          </div>
         </section>
       </template>
     </AppTabs>
@@ -925,15 +927,15 @@ function scoreTone(score: number) {
 }
 
 .ranking-button--primary {
-  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  background: var(--app-accent);
   border-color: var(--app-accent);
-  color: white;
+  color: var(--app-canvas);
 }
 
 .ranking-button--secondary {
-  background: linear-gradient(135deg, #165d92, #1d7fb7);
-  border-color: #165d92;
-  color: white;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .ranking-button--success,
@@ -969,29 +971,29 @@ function scoreTone(score: number) {
 
 .ranking-pill--primary,
 .ranking-score-chip--info {
-  background: rgba(40, 96, 163, 0.08);
-  border-color: rgba(40, 96, 163, 0.16);
-  color: #1f4f89;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .ranking-pill--warning,
 .ranking-score-chip--warning {
-  background: rgba(169, 102, 34, 0.1);
-  border-color: rgba(169, 102, 34, 0.18);
-  color: #88551c;
+  background: var(--app-warning-soft);
+  border-color: var(--app-warning-line);
+  color: var(--app-warning);
 }
 
 .ranking-pill--danger,
 .ranking-score-chip--danger {
-  background: rgba(164, 52, 58, 0.08);
-  border-color: rgba(164, 52, 58, 0.16);
-  color: #8e3037;
+  background: var(--app-danger-soft);
+  border-color: var(--app-danger-line);
+  color: var(--app-danger);
 }
 
 .ranking-pill--muted {
   background: rgba(95, 103, 122, 0.1);
   border-color: rgba(95, 103, 122, 0.16);
-  color: #4c566a;
+  color: var(--app-muted);
 }
 
 .ranking-rank-icon--gold {
@@ -1010,8 +1012,14 @@ function scoreTone(score: number) {
 }
 
 .ranking-rank-icon--danger {
-  background: rgba(164, 52, 58, 0.08);
-  color: #8e3037;
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
+}
+
+.ranking-table-shell {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
 }
 
 .ranking-rank-fallback,
@@ -1029,6 +1037,7 @@ function scoreTone(score: number) {
 .ranking-panel :deep(.p-datatable-wrapper) {
   max-width: 100%;
   overflow-x: auto;
+  touch-action: pan-x pan-y;
 }
 
 @media (max-width: 1100px) {

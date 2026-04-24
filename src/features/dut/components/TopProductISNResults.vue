@@ -1626,7 +1626,8 @@ function stationRowClass(row: Record<string, unknown>) {
 }
 
 .top-product-isn-results__summary-card--highlight {
-  background: linear-gradient(145deg, rgba(15, 118, 110, 0.14), var(--app-panel));
+  border-color: var(--app-success-line);
+  background: var(--app-panel);
 }
 
 .top-product-isn-results__summary-icon {
@@ -1636,8 +1637,8 @@ function stationRowClass(row: Record<string, unknown>) {
   align-items: center;
   justify-content: center;
   border-radius: 999px;
-  background: rgba(15, 118, 110, 0.12);
-  color: var(--app-accent);
+  background: var(--app-panel-strong);
+  color: var(--app-info);
 }
 
 .top-product-isn-results__summary-card small,
@@ -1677,14 +1678,16 @@ function stationRowClass(row: Record<string, unknown>) {
 .top-product-isn-results__token {
   border: 1px solid var(--app-border);
   border-radius: 999px;
-  background: var(--app-surface);
+  background: var(--app-panel);
   color: var(--app-ink);
   padding: 0.35rem 0.75rem;
   cursor: pointer;
 }
 
 .top-product-isn-results__token--cool {
-  background: rgba(40, 96, 163, 0.1);
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .top-product-isn-results__linked-details {
@@ -1715,11 +1718,13 @@ function stationRowClass(row: Record<string, unknown>) {
 }
 
 .top-product-isn-results__status-card--error {
-  background: rgba(189, 64, 64, 0.08);
+  background: var(--app-danger-soft);
+  border-color: var(--app-danger-line);
 }
 
 .top-product-isn-results__status-card--success {
-  background: rgba(15, 118, 110, 0.08);
+  background: var(--app-success-soft);
+  border-color: var(--app-success-line);
 }
 
 .top-product-isn-results__filter-grid {
@@ -1803,28 +1808,28 @@ function stationRowClass(row: Record<string, unknown>) {
 }
 
 .top-product-isn-results__badge--primary {
-  background: rgba(40, 96, 163, 0.12);
-  color: #1f4e86;
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .top-product-isn-results__badge--success {
-  background: rgba(15, 118, 110, 0.12);
-  color: var(--app-accent);
+  background: var(--app-success-soft);
+  color: var(--app-success);
 }
 
 .top-product-isn-results__badge--warning {
-  background: rgba(184, 118, 38, 0.16);
-  color: #8f5314;
+  background: var(--app-warning-soft);
+  color: var(--app-warning);
 }
 
 .top-product-isn-results__badge--error {
-  background: rgba(189, 64, 64, 0.14);
-  color: #8f2020;
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
 }
 
 .top-product-isn-results__badge--neutral {
   background: rgba(120, 129, 143, 0.12);
-  color: #4f5d6d;
+  color: var(--app-muted);
 }
 
 .top-product-isn-results__score-button {
@@ -1843,7 +1848,7 @@ function stationRowClass(row: Record<string, unknown>) {
 
 .top-product-isn-results__mono--error,
 .top-product-isn-results__station-cell--error {
-  color: #8f2020;
+  color: var(--app-danger);
 }
 
 .top-product-isn-results__primary-button,
@@ -1859,8 +1864,9 @@ function stationRowClass(row: Record<string, unknown>) {
 
 .top-product-isn-results__primary-button {
   border: 1px solid rgba(15, 118, 110, 0.12);
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.95), rgba(40, 96, 163, 0.92));
-  color: #fff;
+  background: var(--app-accent);
+  border-color: var(--app-accent);
+  color: var(--app-canvas);
 }
 
 .top-product-isn-results__ghost-button {

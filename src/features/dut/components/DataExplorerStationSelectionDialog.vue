@@ -485,7 +485,7 @@ watch(
 
 .station-dialog__device-chip--active {
   border-color: rgba(15, 118, 110, 0.28);
-  background: rgba(15, 118, 110, 0.12);
+  background: var(--app-accent-soft);
   color: var(--app-accent);
 }
 
@@ -497,8 +497,8 @@ watch(
 
 .station-dialog__primary-action {
   border-color: rgba(15, 118, 110, 0.32);
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.98), rgba(28, 124, 98, 0.92));
-  color: #fff;
+  background: var(--app-accent);
+  color: var(--app-canvas);
 }
 
 .station-dialog__ghost-action:disabled,

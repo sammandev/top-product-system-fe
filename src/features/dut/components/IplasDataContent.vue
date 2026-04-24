@@ -2520,9 +2520,9 @@ onUnmounted(() => {
 .iplas-field select,
 .iplas-field input {
   width: 100%;
-  border: 1px solid rgba(15, 118, 110, 0.18);
+  border: 1px solid var(--app-border);
   padding: 0.74rem 0.82rem;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--app-panel-strong);
   color: var(--app-ink);
 }
 
@@ -2530,7 +2530,7 @@ onUnmounted(() => {
 .iplas-field input:focus {
   outline: none;
   border-color: rgba(15, 118, 110, 0.4);
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+  box-shadow: none;
 }
 
 .iplas-input-with-icon {
@@ -2538,10 +2538,10 @@ onUnmounted(() => {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
   gap: 0.65rem;
-  border: 1px solid rgba(15, 118, 110, 0.18);
+  border: 1px solid var(--app-border);
   border-radius: 0.75rem;
   padding: 0 0.95rem;
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--app-panel-strong);
 }
 
 .iplas-input-with-icon svg {
@@ -2557,7 +2557,7 @@ onUnmounted(() => {
 
 .iplas-input-with-icon:focus-within {
   border-color: rgba(15, 118, 110, 0.4);
-  box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.12);
+  box-shadow: none;
 }
 
 .iplas-button,
@@ -2580,31 +2580,34 @@ onUnmounted(() => {
 }
 
 .iplas-button--primary {
-  background: linear-gradient(135deg, #0f766e, #1c7c62);
-  color: #fff;
+  background: var(--app-accent);
+  color: var(--app-canvas);
 }
 
 .iplas-button--secondary {
-  background: rgba(36, 116, 184, 0.12);
-  color: #1d4f91;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .iplas-button--ghost,
 .iplas-notice button,
 .iplas-summary-remove {
-  background: var(--app-surface);
-  border-color: rgba(15, 118, 110, 0.16);
+  background: var(--app-panel);
+  border-color: var(--app-border);
   color: var(--app-ink);
 }
 
 .iplas-button--danger {
-  background: rgba(180, 54, 45, 0.14);
-  color: #a61b1b;
+  background: var(--app-danger-soft);
+  border-color: var(--app-danger-line);
+  color: var(--app-danger);
 }
 
 .iplas-button--success {
-  background: rgba(15, 118, 110, 0.14);
-  color: var(--app-accent);
+  background: var(--app-success-soft);
+  border-color: var(--app-success-line);
+  color: var(--app-success);
 }
 
 .iplas-inline-action {
@@ -2621,28 +2624,31 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid var(--app-border);
   border-radius: 999px;
   padding: 0.35rem 0.7rem;
-  background: var(--app-surface);
+  background: var(--app-panel);
   color: var(--app-ink);
   font-size: 0.82rem;
   font-weight: 700;
 }
 
 .iplas-pill--cool {
-  background: rgba(36, 116, 184, 0.12);
-  color: #1d4f91;
+  background: var(--app-info-soft);
+  border-color: var(--app-info-line);
+  color: var(--app-info);
 }
 
 .iplas-pill--warm {
-  background: rgba(184, 122, 40, 0.14);
-  color: #9a5a12;
+  background: var(--app-warning-soft);
+  border-color: var(--app-warning-line);
+  color: var(--app-warning);
 }
 
 .iplas-pill--neutral {
-  background: rgba(15, 118, 110, 0.08);
-  color: var(--app-accent);
+  background: rgba(95, 103, 122, 0.1);
+  border-color: rgba(95, 103, 122, 0.16);
+  color: var(--app-muted);
 }
 
 .iplas-selection-actions {
@@ -2710,10 +2716,10 @@ onUnmounted(() => {
 .iplas-indexeddb-status-bar {
   display: grid;
   gap: 0.85rem;
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid var(--app-border);
   border-radius: 0.8rem;
   padding: 0.85rem 0.9rem;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--app-panel);
 }
 
 .iplas-device-filter-shell p,
@@ -2733,18 +2739,18 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid var(--app-border);
   border-radius: 999px;
   padding: 0.45rem 0.8rem;
-  background: var(--app-surface);
+  background: var(--app-panel);
   color: var(--app-ink);
   font: inherit;
   cursor: pointer;
 }
 
 .iplas-device-chip--active {
-  border-color: rgba(15, 118, 110, 0.28);
-  background: rgba(15, 118, 110, 0.12);
+  border-color: rgba(15, 118, 110, 0.24);
+  background: var(--app-accent-soft);
   color: var(--app-accent);
 }
 
@@ -2757,10 +2763,10 @@ onUnmounted(() => {
 }
 
 .iplas-summary-item {
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid var(--app-border);
   border-radius: 0.8rem;
   padding: 0.8rem 0.9rem;
-  background: rgba(255, 255, 255, 0.82);
+  background: var(--app-panel);
 }
 
 .iplas-summary-remove {
@@ -2774,10 +2780,10 @@ onUnmounted(() => {
   display: flex;
   gap: 0.85rem;
   align-items: flex-start;
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid var(--app-border);
   border-radius: 0.8rem;
   padding: 0.85rem 0.9rem;
-  background: rgba(15, 118, 110, 0.05);
+  background: var(--app-panel);
 }
 
 .iplas-toggle-card input {
@@ -2804,7 +2810,8 @@ onUnmounted(() => {
 }
 
 .iplas-progress-card--success {
-  background: rgba(240, 253, 244, 0.9);
+  border-color: var(--app-success-line);
+  background: var(--app-panel);
 }
 
 .iplas-progress-card__spinner {
@@ -2822,18 +2829,18 @@ onUnmounted(() => {
 }
 
 .iplas-notice--error {
-  border: 1px solid rgba(180, 54, 45, 0.18);
-  background: rgba(254, 242, 242, 0.92);
+  border: 1px solid var(--app-danger-line);
+  background: var(--app-danger-soft);
 }
 
 .iplas-notice--info {
-  border: 1px solid rgba(36, 116, 184, 0.18);
-  background: rgba(240, 249, 255, 0.92);
+  border: 1px solid var(--app-info-line);
+  background: var(--app-info-soft);
 }
 
 .iplas-notice--warning {
-  border: 1px solid rgba(184, 122, 40, 0.18);
-  background: rgba(255, 247, 237, 0.92);
+  border: 1px solid var(--app-warning-line);
+  background: var(--app-warning-soft);
 }
 
 .iplas-empty-state {
@@ -2843,7 +2850,7 @@ onUnmounted(() => {
 
 .iplas-empty-state svg {
   font-size: 1.8rem;
-  color: rgba(15, 118, 110, 0.45);
+  color: var(--app-info);
 }
 
 .iplas-empty-state--compact {
@@ -2872,11 +2879,11 @@ onUnmounted(() => {
 
 /* Striped table styling */
 :deep(.v-table--striped tbody tr:nth-of-type(even)) {
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--app-panel-strong);
 }
 
 :deep(.v-theme--dark .v-table--striped tbody tr:nth-of-type(even)) {
-  background-color: rgba(255, 255, 255, 0.02);
+  background-color: var(--app-panel-strong);
 }
 
 @media (max-width: 960px) {
