@@ -15,29 +15,23 @@
       </span>
     </div>
 
-    <section class="top-products-iplas-panel">
-      <AppTabs v-model="searchMode" :items="tabItems" scrollable>
-        <template #panel-station>
-          <section class="top-products-iplas-pane">
-            <TopProductIplasStationContent
-              :is-active="searchMode === 'station'"
-              ranking-target="#top-products-iplas-results-slot"
-              @show-details="handleShowDetails"
-              @show-settings="showSettingsDialog = true"
-            />
-          </section>
-        </template>
+    <AppTabs v-model="searchMode" :items="tabItems" scrollable class="top-products-iplas-tabs">
+      <template #panel-station>
+        <TopProductIplasStationContent
+          :is-active="searchMode === 'station'"
+          ranking-target="#top-products-iplas-results-slot"
+          @show-details="handleShowDetails"
+          @show-settings="showSettingsDialog = true"
+        />
+      </template>
 
-        <template #panel-isn>
-          <section class="top-products-iplas-pane">
-            <TopProductIplasIsnContent
-              :is-active="searchMode === 'isn'"
-              ranking-target="#top-products-iplas-results-slot"
-            />
-          </section>
-        </template>
-      </AppTabs>
-    </section>
+      <template #panel-isn>
+        <TopProductIplasIsnContent
+          :is-active="searchMode === 'isn'"
+          ranking-target="#top-products-iplas-results-slot"
+        />
+      </template>
+    </AppTabs>
 
     <div id="top-products-iplas-results-slot" class="top-products-iplas-results-slot"></div>
 
@@ -98,8 +92,7 @@ async function handleDownloadFromDialog() {
   gap: 1rem;
 }
 
-.top-products-iplas-notice,
-.top-products-iplas-panel {
+.top-products-iplas-notice {
   border: 1px solid var(--app-border);
   border-radius: 0.8rem;
   background: var(--app-panel);
@@ -147,8 +140,8 @@ async function handleDownloadFromDialog() {
   color: var(--app-warning);
 }
 
-.top-products-iplas-panel {
-  overflow: hidden;
+.top-products-iplas-tabs {
+  min-width: 0;
 }
 
 .top-products-iplas-results-slot {
@@ -160,36 +153,9 @@ async function handleDownloadFromDialog() {
   display: none;
 }
 
-.top-products-iplas-panel__header {
-  padding: 1.15rem 1.25rem 0;
-}
-
-.top-products-iplas-panel__eyebrow {
-  margin: 0 0 0.35rem;
-  font-size: 0.72rem;
-  letter-spacing: 0;
-  text-transform: none;
-  color: #0f766e;
-  font-weight: 700;
-}
-
-.top-products-iplas-panel h2 {
-  margin: 0;
-  color: #0f172a;
-}
-
-.top-products-iplas-pane {
-  min-width: 0;
-  padding: 1rem 1.1rem 1.1rem;
-}
-
 @media (max-width: 720px) {
   .top-products-iplas-notice {
     flex-direction: column;
-  }
-
-  .top-products-iplas-pane {
-    padding: 0.9rem;
   }
 }
 </style>

@@ -16,10 +16,9 @@
         </div>
       </div>
 
-      <section class="app-config-shell">
-        <AppTabs v-model="activeTab" :items="configTabs" scrollable>
+      <AppTabs v-model="activeTab" :items="configTabs" scrollable>
           <template #panel-general>
-            <div class="app-config-pane app-config-pane--split">
+            <div class="app-config-tab-content app-config-tab-content--split">
               <section class="app-config-panel app-config-panel--form">
                 <div class="app-config-panel__header">
                   <div>
@@ -111,7 +110,7 @@
           </template>
 
           <template #panel-branding>
-            <div class="app-config-pane">
+            <div class="app-config-tab-content">
               <section class="app-config-panel">
                 <div class="app-config-panel__header">
                   <div>
@@ -173,7 +172,7 @@
           </template>
 
           <template #panel-iplas>
-            <div class="app-config-pane">
+            <div class="app-config-tab-content">
               <section class="app-config-panel">
                 <div class="app-config-panel__header app-config-panel__header--actions">
                   <div>
@@ -243,7 +242,7 @@
           </template>
 
           <template #panel-sfistsp>
-            <div class="app-config-pane">
+            <div class="app-config-tab-content">
               <section class="app-config-panel">
                 <div class="app-config-panel__header app-config-panel__header--actions">
                   <div>
@@ -318,7 +317,7 @@
           </template>
 
           <template #panel-guest>
-            <div class="app-config-pane">
+            <div class="app-config-tab-content">
               <section class="app-config-panel">
                 <div class="app-config-panel__header app-config-panel__header--actions">
                   <div>
@@ -388,7 +387,6 @@
             </div>
           </template>
         </AppTabs>
-      </section>
 
       <AppDialog v-model="iplasDialogOpen" :title="iplasDialogTitle" width="36rem">
         <form class="app-config-dialog-form" @submit.prevent="handleSaveIplas">
@@ -1324,24 +1322,13 @@ onMounted(async () => {
   line-height: 1.6;
 }
 
-.app-config-shell {
-  border: 1px solid var(--app-border);
-  border-radius: 0.75rem;
-  background:
-    radial-gradient(circle at top left, var(--app-config-accent-soft), transparent 28%),
-    var(--app-panel-strong);
-  box-shadow: 0 26px 60px rgb(15 23 42 / 0.08);
-  overflow: hidden;
-}
-
-.app-config-pane {
+.app-config-tab-content {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  padding: 1.5rem;
 }
 
-.app-config-pane--split {
+.app-config-tab-content--split {
   display: grid;
   grid-template-columns: minmax(0, 1.7fr) minmax(18rem, 1fr);
   align-items: start;
@@ -1741,7 +1728,7 @@ onMounted(async () => {
 
 @media (max-width: 1100px) {
 
-  .app-config-pane--split,
+  .app-config-tab-content--split,
   .app-config-branding-grid,
   .app-config-field-grid {
     grid-template-columns: 1fr;
@@ -1755,10 +1742,6 @@ onMounted(async () => {
 @media (max-width: 720px) {
   .app-config-header__copy {
     flex-direction: column;
-  }
-
-  .app-config-pane {
-    padding: 1rem;
   }
 
   .app-config-panel {

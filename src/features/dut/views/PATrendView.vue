@@ -138,30 +138,22 @@
             <button type="button" @click="dutStore.paTrendError = null">Dismiss</button>
         </div>
 
-        <section class="pa-trend-shell">
-            <AppTabs v-model="activeTab" :items="tabItems" scrollable>
-                <template #panel-auto>
-                    <section class="pa-trend-pane">
-                        <PATrendResultsCard :data="dutStore.paTrendAutoData" :loading="dutStore.paTrendLoading"
-                            title="Auto Trend Results" type="auto" />
-                    </section>
-                </template>
+        <AppTabs v-model="activeTab" :items="tabItems" scrollable class="pa-trend-tabs">
+            <template #panel-auto>
+                <PATrendResultsCard :data="dutStore.paTrendAutoData" :loading="dutStore.paTrendLoading"
+                    title="Auto Trend Results" type="auto" />
+            </template>
 
-                <template #panel-dex>
-                    <section class="pa-trend-pane">
-                        <PATrendResultsCard :data="dutStore.paTrendDexData" :loading="dutStore.paTrendLoading"
-                            title="Dex Trend Results" type="dex" />
-                    </section>
-                </template>
+            <template #panel-dex>
+                <PATrendResultsCard :data="dutStore.paTrendDexData" :loading="dutStore.paTrendLoading"
+                    title="Dex Trend Results" type="dex" />
+            </template>
 
-                <template #panel-diff>
-                    <section class="pa-trend-pane">
-                        <PATrendResultsCard :data="dutStore.paDiffData" :loading="dutStore.paTrendLoading"
-                            title="Differential Results" type="diff" />
-                    </section>
-                </template>
-            </AppTabs>
-        </section>
+            <template #panel-diff>
+                <PATrendResultsCard :data="dutStore.paDiffData" :loading="dutStore.paTrendLoading"
+                    title="Differential Results" type="diff" />
+            </template>
+        </AppTabs>
     </DefaultLayout>
 </template>
 
@@ -409,8 +401,7 @@ function handleExport() {
 }
 
 .pa-trend-notice,
-.pa-trend-panel,
-.pa-trend-shell {
+.pa-trend-panel {
     border: 1px solid var(--app-border);
     border-radius: 0.85rem;
     background: var(--app-panel);
@@ -578,12 +569,8 @@ function handleExport() {
     flex-wrap: wrap;
 }
 
-.pa-trend-shell {
-    overflow: hidden;
-}
-
-.pa-trend-pane {
-    padding: 1rem;
+.pa-trend-tabs {
+    min-width: 0;
 }
 
 @media (max-width: 920px) {
@@ -608,8 +595,7 @@ function handleExport() {
         width: 100%;
     }
 
-    .pa-trend-panel,
-    .pa-trend-pane {
+    .pa-trend-panel {
         padding: 1rem;
     }
 }

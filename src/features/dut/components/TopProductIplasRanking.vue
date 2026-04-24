@@ -56,7 +56,7 @@
       </div>
     </template>
 
-    <AppTabs v-model="selectedTab" :items="stationTabItems" scrollable variant="segmented">
+    <AppTabs v-model="selectedTab" :items="stationTabItems" scrollable>
       <template v-for="item in stationTabItems" :key="String(item.value)" #[`panel-${item.value}`]>
         <section class="ranking-panel">
           <div class="ranking-filter-grid">

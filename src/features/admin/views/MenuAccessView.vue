@@ -59,10 +59,9 @@
     </section>
 
     <div v-else class="menu-access-layout">
-      <section class="menu-access-shell">
-        <AppTabs v-model="activeTab" :items="roleTabItems" scrollable>
+      <AppTabs v-model="activeTab" :items="roleTabItems" scrollable>
           <template v-for="role in availableRoles" :key="role" #[`panel-${role}`]>
-            <div class="menu-access-role-panel">
+            <div class="menu-access-tab-content">
               <section
                 v-for="section in sectionDefinitions"
                 :key="`${role}-${section.key}`"
@@ -126,7 +125,6 @@
             </div>
           </template>
         </AppTabs>
-      </section>
 
       <aside class="menu-access-sidebar">
         <section class="menu-access-sidebar-panel">
@@ -545,7 +543,6 @@ onMounted(() => {
 
 .menu-access-notice,
 .menu-access-loading,
-.menu-access-shell,
 .menu-access-sidebar-panel,
 .menu-access-section,
 .menu-access-option,
@@ -616,12 +613,7 @@ onMounted(() => {
   gap: 1rem;
 }
 
-.menu-access-shell {
-  overflow: hidden;
-  padding: 0;
-}
-
-.menu-access-role-panel,
+.menu-access-tab-content,
 .menu-access-summary-list,
 .menu-access-playbook,
 .menu-access-section,
@@ -631,10 +623,10 @@ onMounted(() => {
   gap: 1rem;
 }
 
-.menu-access-role-panel,
+.menu-access-tab-content,
 .menu-access-summary-list,
 .menu-access-playbook {
-  padding: 1rem;
+  padding-top: 1rem;
 }
 
 .menu-access-section {

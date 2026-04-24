@@ -86,10 +86,9 @@
       </article>
     </div>
 
-    <section class="rbac-management-shell">
-      <AppTabs v-model="activeTab" :items="tabItems" scrollable>
+    <AppTabs v-model="activeTab" :items="tabItems" scrollable>
         <template #panel-roles>
-          <section class="rbac-management-pane">
+          <section class="rbac-management-tab-content">
             <section class="rbac-management-panel">
               <div class="rbac-management-panel__header rbac-management-panel__header--compact">
                 <div>
@@ -203,7 +202,7 @@
         </template>
 
         <template #panel-permissions>
-          <section class="rbac-management-pane">
+          <section class="rbac-management-tab-content">
             <section class="rbac-management-panel">
               <div class="rbac-management-panel__header rbac-management-panel__header--compact">
                 <div>
@@ -285,7 +284,6 @@
           </section>
         </template>
       </AppTabs>
-    </section>
 
     <AppDialog v-model:visible="roleDialogOpen" :title="roleDialogTitle" width="42rem">
       <form class="rbac-management-dialog-form" @submit.prevent="saveRole">
@@ -1230,18 +1228,9 @@ onMounted(() => {
   background: linear-gradient(180deg, var(--rbac-warning-soft), var(--app-panel-strong));
 }
 
-.rbac-management-shell {
-  border: 1px solid var(--app-border);
-  border-radius: 0.75rem;
-  background:
-    radial-gradient(circle at top left, var(--rbac-accent-soft), transparent 28%),
-    var(--app-panel-strong);
-  box-shadow: 0 26px 60px rgb(15 23 42 / 0.08);
-  overflow: hidden;
-}
-
-.rbac-management-pane {
-  padding: 1.5rem;
+.rbac-management-tab-content {
+  display: grid;
+  gap: 1rem;
 }
 
 .rbac-management-panel {
@@ -1577,10 +1566,6 @@ onMounted(() => {
 }
 
 @media (max-width: 1100px) {
-  .rbac-management-stats-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .rbac-management-permission-picker {
     grid-template-columns: 1fr;
   }

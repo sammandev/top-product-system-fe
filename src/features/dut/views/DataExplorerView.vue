@@ -14,15 +14,13 @@
                 </div>
             </header>
 
-            <AppTabs v-model="activeTab" :items="tabItems">
+            <AppTabs v-model="activeTab" :items="tabItems" class="data-explorer-tabs">
                 <template #panel-iplas>
-                    <section class="data-explorer-pane">
-                        <IplasDataContent v-if="activeTab === 'iplas'" />
-                    </section>
+                    <IplasDataContent v-if="activeTab === 'iplas'" />
                 </template>
 
                 <template #panel-internal>
-                    <section class="data-explorer-pane">
+                    <div class="data-explorer-pane">
                         <div class="data-explorer-notice">
                             <div>
                                 <strong>Internal data snapshot</strong>
@@ -30,7 +28,7 @@
                             </div>
                         </div>
                         <InternalDataContent v-if="activeTab === 'internal'" />
-                    </section>
+                    </div>
                 </template>
             </AppTabs>
         </div>
@@ -112,6 +110,10 @@ const tabItems = [
 .data-explorer-pane {
     display: grid;
     gap: 1rem;
+    min-width: 0;
+}
+
+.data-explorer-tabs {
     min-width: 0;
 }
 

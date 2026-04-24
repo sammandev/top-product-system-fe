@@ -27,28 +27,19 @@
       <button type="button" @click="clearError">Dismiss</button>
     </div>
 
-    <section class="top-products-shell">
-      <AppTabs v-model="activeTab" :items="tabItems" scrollable>
-        <template #panel-iplas-data>
-          <section class="top-products-pane">
-            <TopProductsByIplasDataTab v-if="activeTab === 'iplas-data'" />
-          </section>
-        </template>
+    <AppTabs v-model="activeTab" :items="tabItems" scrollable class="top-products-tabs">
+      <template #panel-iplas-data>
+        <TopProductsByIplasDataTab v-if="activeTab === 'iplas-data'" />
+      </template>
 
-        <template #panel-dut-isn>
-          <section class="top-products-pane">
-            <TopProductsByISNTab v-if="activeTab === 'dut-isn'" />
-          </section>
-        </template>
+      <template #panel-dut-isn>
+        <TopProductsByISNTab v-if="activeTab === 'dut-isn'" />
+      </template>
 
-        <template #panel-upload-log>
-          <section class="top-products-pane">
-            <TopProductsByUploadLogTab v-if="activeTab === 'upload-log'" />
-          </section>
-        </template>
-      </AppTabs>
-
-    </section>
+      <template #panel-upload-log>
+        <TopProductsByUploadLogTab v-if="activeTab === 'upload-log'" />
+      </template>
+    </AppTabs>
   </DefaultLayout>
 </template>
 
@@ -207,28 +198,19 @@ function clearError() {
 }
 
 .top-products-notice--error {
-  background: rgb(239 68 68 / 0.08);
-  border-color: rgb(239 68 68 / 0.22);
-  color: #991b1b;
+  background: var(--app-danger-soft);
+  border-color: var(--app-danger-line);
+  color: var(--app-danger);
 }
 
 .top-products-notice--warning {
-  background: rgb(245 158 11 / 0.1);
-  border-color: rgb(245 158 11 / 0.28);
-  color: #92400e;
+  background: var(--app-warning-soft);
+  border-color: var(--app-warning-line);
+  color: var(--app-warning);
 }
 
-.top-products-shell {
-  border: 1px solid #dbe4ee;
-  border-radius: 0.75rem;
-  background:
-    radial-gradient(circle at top left, rgb(15 118 110 / 0.08), transparent 28%),
-    #fff;
-  overflow: hidden;
-}
-
-.top-products-pane {
-  padding: 1.25rem;
+.top-products-tabs {
+  min-width: 0;
 }
 
 @media (max-width: 720px) {
@@ -242,8 +224,5 @@ function clearError() {
     width: 100%;
   }
 
-  .top-products-pane {
-    padding: 1rem;
-  }
 }
 </style>

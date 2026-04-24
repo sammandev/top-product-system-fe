@@ -11,9 +11,16 @@
             <button type="button" @click="error = null">Dismiss</button>
           </div>
 
-          <AppPanel eyebrow="Controls" title="Station Search"
-            description="Choose the site, project, time range, and stations before pulling iPLAS data."
-            tone="cool">
+          <section class="iplas-section">
+            <div class="iplas-section__header">
+              <div>
+                <p class="iplas-section__eyebrow">Controls</p>
+                <h2>Station Search</h2>
+                <p class="iplas-section__description">
+                  Choose the site, project, time range, and stations before pulling iPLAS data.
+                </p>
+              </div>
+            </div>
             <div class="iplas-selection-shell">
               <div class="iplas-selection-shell__toolbar">
                 <div class="iplas-selection-shell__summary">
@@ -193,13 +200,18 @@
                 </div>
               </div>
             </div>
-          </AppPanel>
+          </section>
 
           <!-- Test Items Results (Regular Mode) -->
-          <AppPanel v-if="!useIndexedDbMode && hasRegularModeData" eyebrow="Regular Mode" title="Test Results"
-            :description="`${regularModeRecordCount} records are loaded in memory. Use station tabs to narrow the current result set.`"
-            tone="cool" split-header compact-header>
-            <template #header-aside>
+          <section v-if="!useIndexedDbMode && hasRegularModeData" class="iplas-section">
+            <div class="iplas-section__header iplas-section__header--split">
+              <div>
+                <p class="iplas-section__eyebrow">Regular Mode</p>
+                <h2>Test Results</h2>
+                <p class="iplas-section__description">
+                  {{ regularModeRecordCount }} records are loaded in memory. Use station tabs to narrow the current result set.
+                </p>
+              </div>
               <div class="iplas-result-toolbar">
                 <span class="iplas-pill iplas-pill--cool">{{ regularModeRecordCount }} records</span>
                 <button v-if="selectedRecordIndices.length > 0" type="button"
@@ -221,7 +233,7 @@
                   <span>Download CSV ({{ selectedRecordIndices.length }})</span>
                 </button>
               </div>
-            </template>
+            </div>
 
             <AppTabs v-model="activeStationTabKey" :items="regularStationTabItems" scrollable>
               <template v-for="(stationGroup, stationIndex) in groupedByStation" :key="stationGroup.stationName"
@@ -295,14 +307,18 @@
                 @row-click="openFullscreen" @download="downloadSingleRecord($event, currentStationGroup.stationName, 0)"
                 @download-csv="downloadCsvRecord($event, currentStationGroup.stationName, 0)" />
             </div>
-          </AppPanel>
+          </section>
 
           <!-- IndexedDB Mode Results -->
-          <AppPanel v-if="useIndexedDbMode && (indexedDbTotalItems > 0 || isStreaming)" eyebrow="Disk Mode"
-            title="IndexedDB Results"
-            :description="`${indexedDbTotalItems.toLocaleString()} records currently live on disk${isStreaming ? ' while the stream is still running' : ''}. Use station tabs to scope the current result view.`"
-            tone="success" split-header compact-header>
-            <template #header-aside>
+          <section v-if="useIndexedDbMode && (indexedDbTotalItems > 0 || isStreaming)" class="iplas-section">
+            <div class="iplas-section__header iplas-section__header--split">
+              <div>
+                <p class="iplas-section__eyebrow">Disk Mode</p>
+                <h2>IndexedDB Results</h2>
+                <p class="iplas-section__description">
+                  {{ indexedDbTotalItems.toLocaleString() }} records currently live on disk{{ isStreaming ? ' while the stream is still running' : '' }}. Use station tabs to scope the current result view.
+                </p>
+              </div>
               <div class="iplas-result-toolbar">
                 <span class="iplas-pill iplas-pill--success">{{ indexedDbTotalItems.toLocaleString() }} on disk</span>
                 <span v-if="isStreaming" class="iplas-pill iplas-pill--warm">Streaming in progress</span>
@@ -318,7 +334,7 @@
                   <span>Download CSV ({{ indexedDbSelectedKeys.length }})</span>
                 </button>
               </div>
-            </template>
+            </div>
 
             <div v-if="streamStatus.error" class="iplas-notice iplas-notice--error">
               <div>
@@ -465,7 +481,7 @@
                 </div>
               </template>
             </AppDataGrid>
-          </AppPanel>
+          </section>
         </section>
       </template>
 
@@ -506,7 +522,6 @@ import { useIplasLocalData } from '@/features/dut-logs/composables/useIplasLocal
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { useNotification } from '@/shared/composables/useNotification'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
-import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 import type { StationSelectionResult } from './DataExplorerStationSelectionDialog.vue'
@@ -2450,6 +2465,47 @@ onUnmounted(() => {
   gap: 1rem;
 }
 
+.iplas-section {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: var(--app-panel);
+}
+
+.iplas-section__header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.iplas-section__header--split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.iplas-section__eyebrow {
+  margin: 0;
+  color: var(--app-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.iplas-section__header h2 {
+  margin: 0;
+  color: var(--app-ink);
+  font-size: 1.12rem;
+}
+
+.iplas-section__description {
+  margin: 0.25rem 0 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
 .iplas-selection-shell__toolbar,
 .iplas-selection-shell__summary,
 .iplas-selection-actions,
@@ -2897,6 +2953,7 @@ onUnmounted(() => {
 
 @media (max-width: 720px) {
 
+  .iplas-section__header--split,
   .iplas-selection-shell__toolbar,
   .iplas-selection-shell__summary,
   .iplas-selection-actions,

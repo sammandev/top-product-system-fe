@@ -53,10 +53,9 @@
       <button type="button" @click="success = ''">Dismiss</button>
     </div>
 
-    <section class="user-management-shell">
-      <AppTabs v-model="activeTab" :items="tabItems" scrollable>
+    <AppTabs v-model="activeTab" :items="tabItems" scrollable>
         <template #panel-users>
-          <div class="user-management-pane">
+          <div class="user-management-tab-content">
             <div class="user-management-stats-grid">
               <article class="user-management-stat-card">
                 <span>Total Users</span>
@@ -168,7 +167,7 @@
         </template>
 
         <template #panel-roles>
-          <section class="user-management-pane">
+          <section class="user-management-tab-content">
             <section class="user-management-panel">
               <div class="user-management-panel__header user-management-panel__header--compact">
                 <div>
@@ -291,7 +290,6 @@
           </section>
         </template>
       </AppTabs>
-    </section>
 
     <AppDialog
       v-model="detailsDialog"
@@ -1271,7 +1269,6 @@ onMounted(() => {
 }
 
 .user-management-notice,
-.user-management-shell,
 .user-management-panel,
 .user-management-stat-card,
 .user-management-dialog-card,
@@ -1322,12 +1319,7 @@ onMounted(() => {
   font-weight: 700;
 }
 
-.user-management-shell {
-  overflow: hidden;
-  padding: 0;
-}
-
-.user-management-pane,
+.user-management-tab-content,
 .user-management-stats-grid,
 .user-management-form-grid,
 .user-management-dialog-grid,
@@ -1336,10 +1328,6 @@ onMounted(() => {
 .user-management-flag-list {
   display: grid;
   gap: 1rem;
-}
-
-.user-management-pane {
-  padding: 1rem;
 }
 
 .user-management-stats-grid {

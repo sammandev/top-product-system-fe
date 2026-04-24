@@ -1,15 +1,30 @@
 <template>
   <section class="top-products-isn-shell">
-    <AppPanel eyebrow="Input" title="Analyze By DUT ISN"
-      description="Add DUTs, then narrow the run with optional station and criteria scope."
-      tone="cool">
+    <section class="top-products-isn-section">
+      <div class="top-products-isn-section__header">
+        <div>
+          <p class="top-products-isn-section__eyebrow">Input</p>
+          <h2>Analyze By DUT ISN</h2>
+          <p class="top-products-isn-section__description">
+            Add DUTs, then narrow the run with optional station and criteria scope.
+          </p>
+        </div>
+      </div>
       <DUTISNInput ref="dutISNInputRef" v-model="dutISNs" v-model:site-identifiers="siteIdentifier"
         v-model:model-identifiers="modelIdentifier" :max-i-s-ns="20" />
-    </AppPanel>
+    </section>
 
     <div class="top-products-isn-grid">
-      <AppPanel eyebrow="Stations" title="Station Selection"
-        description="Optional. Leave empty to evaluate all available stations.">
+      <section class="top-products-isn-section">
+        <div class="top-products-isn-section__header">
+          <div>
+            <p class="top-products-isn-section__eyebrow">Stations</p>
+            <h2>Station Selection</h2>
+            <p class="top-products-isn-section__description">
+              Optional. Leave empty to evaluate all available stations.
+            </p>
+          </div>
+        </div>
         <div class="top-products-isn-input-row">
           <label class="top-products-isn-field">
             <span>Add station</span>
@@ -48,15 +63,19 @@
             Clear stations
           </button>
         </div>
-      </AppPanel>
+      </section>
 
-      <AppPanel eyebrow="Criteria" title="Criteria Configuration"
-      description="Optional JSON criteria file." tone="warm" splitHeader>
-        <template #header-aside>
+      <section class="top-products-isn-section">
+        <div class="top-products-isn-section__header top-products-isn-section__header--split">
+          <div>
+            <p class="top-products-isn-section__eyebrow">Criteria</p>
+            <h2>Criteria Configuration</h2>
+            <p class="top-products-isn-section__description">Optional JSON criteria file.</p>
+          </div>
           <button type="button" class="top-products-isn-link" @click="downloadCriteriaTemplate">
             Download template
           </button>
-        </template>
+        </div>
 
         <AppFilePicker v-model="criteriaFile" label="Criteria JSON File" accept=".json,application/json"
           helperText="Leave empty to use the default rules."
@@ -66,7 +85,7 @@
           <strong>{{ criteriaFileActual.name }}</strong>
           <span>{{ formatFileSize(criteriaFileActual.size) }}</span>
         </div>
-      </AppPanel>
+      </section>
     </div>
 
     <details class="top-products-isn-accordion" open>
@@ -128,16 +147,21 @@
       </div>
     </details>
 
-    <AppPanel eyebrow="Run" title="Top Product Analysis"
-      description="Run the current DUT set through the Top Product pipeline." tone="success"
-      splitHeader>
-      <template #header-aside>
+    <section class="top-products-isn-section">
+      <div class="top-products-isn-section__header top-products-isn-section__header--split">
+        <div>
+          <p class="top-products-isn-section__eyebrow">Run</p>
+          <h2>Top Product Analysis</h2>
+          <p class="top-products-isn-section__description">
+            Run the current DUT set through the Top Product pipeline.
+          </p>
+        </div>
         <div class="top-products-isn-stat-row">
           <span>{{ dutISNs.length }} DUT{{ dutISNs.length === 1 ? '' : 's' }}</span>
           <span>{{ selectedStations.length || availableStations.length || 0 }} station scope</span>
           <span>{{ criteriaFileActual ? 'Custom criteria' : 'Default criteria' }}</span>
         </div>
-      </template>
+      </div>
 
       <div class="top-products-isn-actions">
         <button type="button" class="top-products-isn-primary-button" :disabled="loading || !canAnalyze"
@@ -149,7 +173,7 @@
       <div v-if="attemptedAnalysis && !canAnalyze" class="top-products-isn-notice top-products-isn-notice--warning">
         Please add at least one DUT ISN to continue.
       </div>
-    </AppPanel>
+    </section>
 
     <div v-if="error" class="top-products-isn-notice top-products-isn-notice--error">
       <div>
@@ -170,7 +194,6 @@
 <script setup lang="ts">
 import { computed, nextTick, provide, ref, watch } from 'vue'
 import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
-import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
 import { dutApi } from '../api/dut.api'
 import { dutTopProductApi } from '../api/dutTopProduct.api'
@@ -1045,6 +1068,47 @@ function formatFileSize(bytes: number): string {
   gap: 1rem;
 }
 
+.top-products-isn-section {
+  display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: var(--app-panel);
+}
+
+.top-products-isn-section__header {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.top-products-isn-section__header--split {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.top-products-isn-section__eyebrow {
+  margin: 0;
+  color: var(--app-accent);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.top-products-isn-section__header h2 {
+  margin: 0;
+  color: var(--app-ink);
+  font-size: 1.12rem;
+}
+
+.top-products-isn-section__description {
+  margin: 0.25rem 0 0;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
 .top-products-isn-grid,
 .top-products-isn-filter-grid,
 .top-products-isn-station-config-grid {
@@ -1345,7 +1409,8 @@ function formatFileSize(bytes: number): string {
   .top-products-isn-entry-row,
   .top-products-isn-file-summary,
   .top-products-isn-notice,
-  .top-products-isn-actions {
+  .top-products-isn-actions,
+  .top-products-isn-section__header--split {
     flex-direction: column;
   }
 
