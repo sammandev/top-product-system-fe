@@ -94,9 +94,7 @@
                 </span>
                 <span class="top-product-iplas-station-pill"
                   :class="(config.minimumItemScoreEnabled ?? true) ? 'top-product-iplas-station-pill--warning' : 'top-product-iplas-station-pill--muted'">
-                  {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` :
-                  'Min
-                  Off' }}
+                  {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` : 'MinOff' }}
                 </span>
                 <span role="button" tabindex="0" class="top-product-iplas-station-remove"
                   @click.stop="removeStationConfig(displayName)"
