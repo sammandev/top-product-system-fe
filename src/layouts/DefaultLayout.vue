@@ -1,389 +1,290 @@
 <template>
-  <div class="default-layout min-h-screen" :data-shell-theme="shellTheme">
+  <div class="default-layout" :data-shell-theme="shellTheme">
+    <!-- Mobile overlay -->
     <button
-      v-if="drawer"
+      v-if="drawer && !isDesktop"
       aria-label="Close navigation"
-      class="fixed inset-0 z-30 bg-black/45 backdrop-blur-[2px] lg:hidden"
+      class="fixed inset-0 z-30 bg-black/40 backdrop-blur-[2px] lg:hidden"
       type="button"
       @click="drawer = false"
     />
 
-    <div class="relative flex min-h-screen flex-col bg-[var(--shell-bg)] text-[var(--shell-ink)]">
-      <header class="sticky top-0 z-40 border-b border-[var(--shell-border)] bg-[color:var(--shell-header)]/90 backdrop-blur">
-        <div class="flex min-h-16 items-center gap-3 px-3 py-3 sm:px-4 lg:px-6">
-          <button
-            aria-label="Toggle navigation"
-            class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] text-[var(--shell-ink)] transition hover:border-[var(--shell-accent)] hover:text-[var(--shell-accent)]"
-            type="button"
-            @click="drawer = !drawer"
-          >
-            <Icon class="text-xl" icon="solar:hamburger-menu-line-duotone" />
-          </button>
+    <!-- Sidebar -->
+    <aside
+      class="sidebar"
+      :class="sidebarClasses"
+      @mouseenter="handleSidebarMouseEnter"
+      @mouseleave="handleSidebarMouseLeave"
+    >
+      <div class="sidebar__header">
+        <div class="sidebar__logo">
+          <Icon icon="solar:atom-bold-duotone" />
+        </div>
+        <div v-if="sidebarExpanded" class="sidebar__brand">
+          <span class="sidebar__app-name">{{ appName }}</span>
+          <span class="sidebar__version">v{{ appVersion }}</span>
+        </div>
+      </div>
 
-          <div class="min-w-0 flex-1">
-            <div class="flex min-w-0 items-center gap-3">
-              <div class="hidden h-10 w-10 items-center justify-center rounded-lg bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] sm:inline-flex">
-                <Icon class="text-2xl" icon="solar:widget-5-bold-duotone" />
-              </div>
-              <div class="min-w-0">
-                <p class="truncate text-xs font-medium text-[var(--shell-muted)]">
-                  {{ appName }}
-                </p>
-                <h1 class="truncate font-[var(--app-display)] text-xl leading-none sm:text-2xl">
-                  {{ currentRouteTitle }}
-                </h1>
+      <nav class="sidebar__nav">
+        <div v-for="section in navigationSections" :key="section.id" class="sidebar__section">
+          <div v-if="sidebarExpanded" class="sidebar__section-label">{{ section.title }}</div>
+
+          <template v-for="item in section.items" :key="item.path || item.title">
+            <!-- Group with children -->
+            <div v-if="item.children">
+              <button
+                class="sidebar__item"
+                :class="{ 'sidebar__item--active': isGroupActive(item) }"
+                type="button"
+                :title="sidebarExpanded ? undefined : item.title"
+                @click="toggleGroup(item)"
+              >
+                <Icon class="sidebar__item-icon" :icon="normalizeIcon(item.icon)" />
+                <span v-if="sidebarExpanded" class="sidebar__item-label">{{ item.title }}</span>
+                <Icon
+                  v-if="sidebarExpanded"
+                  class="sidebar__item-chevron"
+                  :class="{ 'rotate-180': isGroupOpen(item) }"
+                  icon="solar:alt-arrow-down-linear"
+                />
+              </button>
+
+              <div v-if="sidebarExpanded && isGroupOpen(item)" class="sidebar__children">
+                <router-link
+                  v-for="child in item.children"
+                  :key="child.path"
+                  class="sidebar__item sidebar__item--child"
+                  :class="{ 'sidebar__item--active': isItemActive(child) }"
+                  :to="child.path || '/'"
+                  @click="handleNavigationSelection"
+                >
+                  <Icon class="sidebar__item-icon sidebar__item-icon--sm" :icon="normalizeIcon(child.icon)" />
+                  <span class="sidebar__item-label">{{ child.title }}</span>
+                </router-link>
               </div>
             </div>
-          </div>
 
-          <div class="hidden min-w-[14rem] max-w-sm flex-1 lg:block xl:max-w-md">
-            <label class="flex items-center gap-3 rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-4 py-2.5">
-              <Icon class="text-lg text-[var(--shell-muted)]" icon="solar:magnifer-linear" />
-              <input
-                v-model="searchQuery"
-                class="w-full bg-transparent text-sm text-[var(--shell-ink)] outline-none placeholder:text-[var(--shell-muted)]"
-                placeholder="Search navigation"
-                type="text"
-              />
-            </label>
-          </div>
-
-          <div class="flex items-center gap-2 sm:gap-3">
-            <button
-              :aria-label="quickThemeToggleLabel"
-              class="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] text-[var(--shell-ink)] transition hover:border-[var(--shell-accent)] hover:text-[var(--shell-accent)]"
-              type="button"
-              @click="toggleTheme"
+            <!-- Single item -->
+            <router-link
+              v-else
+              class="sidebar__item"
+              :class="{ 'sidebar__item--active': isItemActive(item) }"
+              :title="sidebarExpanded ? undefined : item.title"
+              :to="item.path || '/'"
+              @click="handleNavigationSelection"
             >
-              <Icon
-                class="text-xl"
-                :icon="isDark ? 'solar:sun-bold-duotone' : 'solar:moon-stars-bold-duotone'"
-              />
+              <Icon class="sidebar__item-icon" :icon="normalizeIcon(item.icon)" />
+              <span v-if="sidebarExpanded" class="sidebar__item-label">{{ item.title }}</span>
+            </router-link>
+          </template>
+        </div>
+      </nav>
+
+      <div class="sidebar__footer">
+        <button
+          class="sidebar__collapse-btn"
+          type="button"
+          :title="rail ? 'Expand sidebar' : 'Collapse sidebar'"
+          @click="rail = !rail"
+        >
+          <Icon :icon="rail ? 'solar:alt-arrow-right-linear' : 'solar:alt-arrow-left-linear'" />
+          <span v-if="sidebarExpanded">Collapse</span>
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main area -->
+    <div class="main-area">
+      <header class="topbar">
+        <button
+          aria-label="Toggle navigation"
+          class="topbar__menu-btn lg:hidden"
+          type="button"
+          @click="drawer = !drawer"
+        >
+          <Icon icon="solar:hamburger-menu-line-duotone" />
+        </button>
+
+        <!-- Search -->
+        <div class="topbar__search">
+          <Icon class="topbar__search-icon" icon="solar:magnifer-linear" />
+          <input
+            v-model="searchQuery"
+            class="topbar__search-input"
+            placeholder="Search..."
+            type="text"
+          />
+          <kbd v-if="!searchQuery" class="topbar__search-kbd">⌘K</kbd>
+        </div>
+
+        <div class="topbar__actions">
+          <!-- Theme toggle -->
+          <button
+            :aria-label="quickThemeToggleLabel"
+            class="topbar__icon-btn"
+            type="button"
+            @click="toggleTheme"
+          >
+            <Icon :icon="isDark ? 'solar:sun-bold-duotone' : 'solar:moon-stars-bold-duotone'" />
+          </button>
+
+          <!-- Theme settings -->
+          <div class="topbar__dropdown" ref="themeDropdownRef">
+            <button
+              class="topbar__icon-btn"
+              type="button"
+              :title="'Appearance: ' + themeSummaryLabel"
+              @click="themeDropdownOpen = !themeDropdownOpen"
+            >
+              <Icon icon="solar:palette-round-bold-duotone" />
             </button>
 
-            <details class="relative">
-              <summary class="flex cursor-pointer list-none items-center gap-3 rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-3 py-2 transition hover:border-[var(--shell-accent)]">
-                <div class="flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--shell-border)] bg-[var(--shell-panel)] text-[var(--shell-ink)]">
-                  <Icon class="text-lg" icon="solar:palette-round-bold-duotone" />
-                </div>
-                <div class="hidden min-w-0 text-left xl:block">
-                  <p class="text-xs font-medium text-[var(--shell-muted)]">
-                    Theme
-                  </p>
-                  <p class="truncate text-sm font-semibold text-[var(--shell-ink)]">
-                    {{ themeSummaryLabel }}
-                  </p>
-                </div>
-                <Icon class="hidden text-lg text-[var(--shell-muted)] xl:block" icon="solar:alt-arrow-down-linear" />
-              </summary>
-
-              <div class="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-[22rem] rounded-xl border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] p-4 shadow-[var(--shell-shadow)] backdrop-blur">
-                <div class="flex items-start justify-between gap-3">
-                  <div class="min-w-0">
-                    <p class="text-xs font-semibold text-[var(--shell-muted)]">
-                      Appearance
-                    </p>
-                    <p class="mt-1 text-sm leading-6 text-[var(--shell-muted)]">
-                      {{ themeSummaryDescription }}
-                    </p>
-                  </div>
-                  <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]">
-                    <Icon class="text-xl" :icon="themeSummaryIcon" />
-                  </div>
-                </div>
-
-                <div class="mt-4 space-y-2">
-                  <p class="text-xs font-semibold text-[var(--shell-muted)]">
-                    Mode
-                  </p>
-                  <div class="grid grid-cols-3 gap-2">
+            <Transition name="dropdown">
+              <div v-if="themeDropdownOpen" class="topbar__dropdown-panel topbar__dropdown-panel--theme">
+                <div class="dropdown-section">
+                  <p class="dropdown-label">Mode</p>
+                  <div class="theme-mode-grid">
                     <button
                       v-for="option in THEME_MODE_OPTIONS"
                       :key="option.value"
-                      class="flex flex-col items-center gap-2 rounded-[1.2rem] border px-3 py-3 text-center transition"
-                      :class="themePreferences.mode === option.value
-                        ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
-                        : 'border-[var(--shell-border)] bg-[var(--shell-panel)] text-[var(--shell-muted)] hover:border-[var(--shell-accent)] hover:text-[var(--shell-ink)]'"
+                      class="theme-mode-btn"
+                      :class="{ 'theme-mode-btn--active': themePreferences.mode === option.value }"
                       type="button"
                       @click="setThemePreference({ mode: option.value })"
                     >
-                      <span class="h-10 w-full rounded-lg" :style="{ background: option.preview }" />
-                      <span class="text-xs font-medium">{{ option.label }}</span>
+                      <span class="theme-mode-preview" :style="{ background: option.preview }" />
+                      <span>{{ option.label }}</span>
                     </button>
                   </div>
                 </div>
 
-                <div class="mt-4 space-y-2">
-                  <p class="text-xs font-semibold text-[var(--shell-muted)]">
-                    PrimeVue Preset
-                  </p>
-                  <div class="grid grid-cols-2 gap-2">
+                <div class="dropdown-section">
+                  <p class="dropdown-label">Preset</p>
+                  <div class="theme-preset-grid">
                     <button
                       v-for="option in THEME_PRESET_OPTIONS"
                       :key="option.value"
-                      class="rounded-[1.2rem] border px-3 py-3 text-left transition"
-                      :class="themePreferences.preset === option.value
-                        ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
-                        : 'border-[var(--shell-border)] bg-[var(--shell-panel)] text-[var(--shell-muted)] hover:border-[var(--shell-accent)] hover:text-[var(--shell-ink)]'"
+                      class="theme-option-btn"
+                      :class="{ 'theme-option-btn--active': themePreferences.preset === option.value }"
                       type="button"
                       @click="setThemePreference({ preset: option.value })"
                     >
-                      <div class="flex items-center gap-3">
-                        <span class="h-9 w-9 shrink-0 rounded-2xl" :style="{ background: option.preview }" />
-                        <div class="min-w-0">
-                          <p class="truncate text-sm font-semibold">{{ option.label }}</p>
-                          <p class="mt-1 text-xs leading-5 opacity-80">{{ option.description }}</p>
-                        </div>
-                      </div>
+                      <span class="theme-swatch" :style="{ background: option.preview }" />
+                      <span>{{ option.label }}</span>
                     </button>
                   </div>
                 </div>
 
-                <div class="mt-4 grid gap-4 md:grid-cols-2">
-                  <div class="space-y-2">
-                    <p class="text-xs font-semibold text-[var(--shell-muted)]">
-                      Primary
-                    </p>
-                    <div class="grid grid-cols-2 gap-2">
-                      <button
-                        v-for="option in THEME_PRIMARY_OPTIONS"
-                        :key="option.value"
-                        class="flex items-center gap-3 rounded-[1.2rem] border px-3 py-2.5 text-left transition"
-                        :class="themePreferences.primary === option.value
-                          ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
-                          : 'border-[var(--shell-border)] bg-[var(--shell-panel)] text-[var(--shell-muted)] hover:border-[var(--shell-accent)] hover:text-[var(--shell-ink)]'"
-                        type="button"
-                        @click="setThemePreference({ primary: option.value })"
-                      >
-                        <span class="h-8 w-8 shrink-0 rounded-full border border-white/50" :style="{ background: option.preview }" />
-                        <span class="truncate text-sm font-semibold">{{ option.label }}</span>
-                      </button>
-                    </div>
+                <div class="dropdown-section">
+                  <p class="dropdown-label">Primary Color</p>
+                  <div class="theme-color-grid">
+                    <button
+                      v-for="option in THEME_PRIMARY_OPTIONS"
+                      :key="option.value"
+                      class="theme-color-btn"
+                      :class="{ 'theme-color-btn--active': themePreferences.primary === option.value }"
+                      :title="option.label"
+                      type="button"
+                      @click="setThemePreference({ primary: option.value })"
+                    >
+                      <span class="theme-color-dot" :style="{ background: option.preview }" />
+                    </button>
                   </div>
+                </div>
 
-                  <div class="space-y-2">
-                    <p class="text-xs font-semibold text-[var(--shell-muted)]">
-                      Surface
-                    </p>
-                    <div class="space-y-2">
-                      <button
-                        v-for="option in THEME_SURFACE_OPTIONS"
-                        :key="option.value"
-                        class="flex w-full items-center gap-3 rounded-[1.2rem] border px-3 py-2.5 text-left transition"
-                        :class="themePreferences.surface === option.value
-                          ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
-                          : 'border-[var(--shell-border)] bg-[var(--shell-panel)] text-[var(--shell-muted)] hover:border-[var(--shell-accent)] hover:text-[var(--shell-ink)]'"
-                        type="button"
-                        @click="setThemePreference({ surface: option.value })"
-                      >
-                        <span class="h-8 w-8 shrink-0 rounded-2xl border border-white/50" :style="{ background: option.preview }" />
-                        <div class="min-w-0">
-                          <p class="truncate text-sm font-semibold">{{ option.label }}</p>
-                          <p class="mt-1 text-xs leading-5 opacity-80">{{ option.description }}</p>
-                        </div>
-                      </button>
-                    </div>
+                <div class="dropdown-section">
+                  <p class="dropdown-label">Surface</p>
+                  <div class="theme-color-grid">
+                    <button
+                      v-for="option in THEME_SURFACE_OPTIONS"
+                      :key="option.value"
+                      class="theme-color-btn"
+                      :class="{ 'theme-color-btn--active': themePreferences.surface === option.value }"
+                      :title="option.label"
+                      type="button"
+                      @click="setThemePreference({ surface: option.value })"
+                    >
+                      <span class="theme-color-dot" :style="{ background: option.preview }" />
+                    </button>
                   </div>
                 </div>
               </div>
-            </details>
+            </Transition>
+          </div>
 
-            <details class="relative">
-              <summary class="flex cursor-pointer list-none items-center gap-3 rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-3 py-2 transition hover:border-[var(--shell-accent)]">
-                <div
-                  class="flex h-9 w-9 items-center justify-center rounded-lg text-sm font-semibold uppercase"
-                  :class="authStore.isGuest ? 'bg-[rgba(198,134,37,0.18)] text-[rgb(156,102,18)]' : 'bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]'"
-                >
-                  {{ userInitial }}
-                </div>
-                <div class="hidden text-left sm:block">
-                  <p class="max-w-[12rem] truncate text-sm font-semibold text-[var(--shell-ink)]">
-                    {{ authStore.displayName }}
-                  </p>
-                  <p class="text-xs text-[var(--shell-muted)]">
-                    {{ authStore.displayRole }}
-                  </p>
-                </div>
-                <Icon class="hidden text-lg text-[var(--shell-muted)] sm:block" icon="solar:alt-arrow-down-linear" />
-              </summary>
+          <!-- User menu -->
+          <div class="topbar__dropdown" ref="userDropdownRef">
+            <button
+              class="topbar__user-btn"
+              type="button"
+              @click="userDropdownOpen = !userDropdownOpen"
+            >
+              <span
+                class="topbar__avatar"
+                :class="authStore.isGuest ? 'topbar__avatar--guest' : ''"
+              >{{ userInitial }}</span>
+              <span class="topbar__user-name hidden sm:block">{{ authStore.displayName }}</span>
+              <Icon class="topbar__user-chevron hidden sm:block" icon="solar:alt-arrow-down-linear" />
+            </button>
 
-              <div class="absolute right-0 top-[calc(100%+0.5rem)] z-50 w-72 rounded-xl border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] p-4 shadow-[var(--shell-shadow)] backdrop-blur">
-                <div class="flex items-center gap-3">
-                  <div
-                    class="flex h-11 w-11 items-center justify-center rounded-lg text-base font-semibold uppercase"
-                    :class="authStore.isGuest ? 'bg-[rgba(198,134,37,0.18)] text-[rgb(156,102,18)]' : 'bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]'"
-                  >
-                    {{ userInitial }}
-                  </div>
-                  <div class="min-w-0">
-                    <p class="truncate text-base font-semibold text-[var(--shell-ink)]">
-                      {{ authStore.displayName }}
-                    </p>
-                    <p class="text-sm text-[var(--shell-muted)]">{{ authStore.displayRole }}</p>
+            <Transition name="dropdown">
+              <div v-if="userDropdownOpen" class="topbar__dropdown-panel topbar__dropdown-panel--user">
+                <div class="user-panel__header">
+                  <span
+                    class="user-panel__avatar"
+                    :class="authStore.isGuest ? 'topbar__avatar--guest' : ''"
+                  >{{ userInitial }}</span>
+                  <div class="user-panel__info">
+                    <p class="user-panel__name">{{ authStore.displayName }}</p>
+                    <p class="user-panel__role">{{ authStore.displayRole }}</p>
                   </div>
                 </div>
 
-                <div class="mt-4 rounded-lg border border-[var(--shell-border)] bg-[var(--shell-panel)] p-3">
-                  <p class="text-xs font-semibold text-[var(--shell-muted)]">
-                    Session
-                  </p>
-                  <div class="mt-2 flex items-center justify-between gap-3">
+                <div class="user-panel__session">
+                  <div class="user-panel__session-row">
                     <div>
-                      <p class="text-sm font-semibold text-[var(--shell-ink)]">{{ accessLabel }}</p>
-                      <p class="text-xs leading-5 text-[var(--shell-muted)]">{{ accessDescription }}</p>
+                      <p class="user-panel__session-label">{{ accessLabel }}</p>
+                      <p class="user-panel__session-desc">{{ accessDescription }}</p>
                     </div>
                     <span
-                      class="rounded-full px-3 py-1 text-xs font-semibold"
-                      :class="authStore.isGuest ? 'bg-[rgba(198,134,37,0.18)] text-[rgb(156,102,18)]' : authStore.hasDUTAccess ? 'bg-[rgba(15,118,110,0.16)] text-[var(--shell-accent)]' : 'bg-[rgba(35,83,134,0.14)] text-[rgb(33,87,145)]'"
-                    >
-                      {{ accessBadge }}
-                    </span>
+                      class="user-panel__badge"
+                      :class="authStore.isGuest ? 'user-panel__badge--guest' : authStore.hasDUTAccess ? 'user-panel__badge--connected' : 'user-panel__badge--standard'"
+                    >{{ accessBadge }}</span>
                   </div>
                 </div>
 
-                <button
-                  class="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-[rgba(156,54,41,0.22)] bg-[rgba(163,61,45,0.08)] px-4 py-2.5 text-sm font-medium text-[var(--shell-danger)] transition hover:bg-[rgba(163,61,45,0.14)]"
-                  type="button"
-                  @click="handleLogout"
-                >
-                  <Icon class="text-lg" icon="solar:logout-2-bold-duotone" />
-                  Logout
+                <button class="user-panel__logout" type="button" @click="handleLogout">
+                  <Icon icon="solar:logout-2-bold-duotone" />
+                  Sign out
                 </button>
               </div>
-            </details>
+            </Transition>
           </div>
         </div>
 
-        <div class="border-t border-[var(--shell-border)] px-3 py-3 lg:hidden sm:px-4">
-          <label class="flex items-center gap-3 rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-4 py-2.5">
-            <Icon class="text-lg text-[var(--shell-muted)]" icon="solar:magnifer-linear" />
-            <input
-              v-model="searchQuery"
-              class="w-full bg-transparent text-sm text-[var(--shell-ink)] outline-none placeholder:text-[var(--shell-muted)]"
-              placeholder="Search navigation"
-              type="text"
-            />
-          </label>
-        </div>
-
-        <div v-if="appConfigStore.isNavigating" class="default-layout__progress" />
+        <div v-if="appConfigStore.isNavigating" class="topbar__progress" />
       </header>
 
-      <div class="flex min-h-0 flex-1">
-        <aside
-          class="fixed inset-y-0 left-0 z-40 flex h-screen flex-col border-r border-[var(--shell-border)] bg-[color:var(--shell-sidebar)]/96 px-3 py-4 shadow-[var(--shell-shadow)] backdrop-blur transition-all duration-200 ease-out lg:sticky lg:top-0 lg:z-20"
-          :class="drawerPanelClasses"
-        >
-          <div class="flex items-center gap-3 rounded-xl border border-[var(--shell-border)] bg-[color:var(--shell-panel)] px-3 py-3">
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[var(--shell-accent-soft)] text-[var(--shell-accent)]">
-              <Icon class="text-2xl" icon="solar:atom-bold-duotone" />
-            </div>
-            <div v-if="!rail" class="min-w-0 flex-1">
-              <p class="truncate text-xs font-medium text-[var(--shell-muted)]">
-                Workspace
-              </p>
-              <p class="truncate font-[var(--app-display)] text-xl leading-none text-[var(--shell-ink)]">
-                {{ appName }}
-              </p>
-              <p class="mt-1 truncate text-xs text-[var(--shell-muted)]">v{{ appVersion }}</p>
-            </div>
-          </div>
-
-          <div class="mt-4 flex-1 overflow-y-auto pr-1">
-            <nav class="space-y-4">
-              <section v-for="section in navigationSections" :key="section.id" class="space-y-2">
-                <div v-if="!rail" class="px-2 text-xs font-medium text-[var(--shell-muted)]">
-                  {{ section.title }}
-                </div>
-
-                <div class="space-y-1">
-                  <template v-for="item in section.items" :key="item.path || item.title">
-                    <div v-if="item.children" class="space-y-1">
-                      <button
-                        class="flex w-full items-center gap-3 rounded-lg border px-3 py-2.5 text-left transition"
-                        :class="isGroupActive(item)
-                          ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
-                          : 'border-transparent bg-transparent text-[var(--shell-muted)] hover:border-[var(--shell-border)] hover:bg-[var(--shell-panel)] hover:text-[var(--shell-ink)]'"
-                        type="button"
-                        @click="toggleGroup(item)"
-                      >
-                        <Icon class="shrink-0 text-xl" :icon="normalizeIcon(item.icon)" />
-                        <span v-if="!rail" class="min-w-0 flex-1 truncate text-sm font-semibold">
-                          {{ item.title }}
-                        </span>
-                        <Icon
-                          v-if="!rail"
-                          class="shrink-0 text-lg transition"
-                          :class="isGroupOpen(item) ? 'rotate-180' : ''"
-                          icon="solar:alt-arrow-down-linear"
-                        />
-                      </button>
-
-                      <div v-if="!rail && isGroupOpen(item)" class="ml-4 space-y-1 border-l border-[var(--shell-border)] pl-3">
-                        <router-link
-                          v-for="child in item.children"
-                          :key="child.path"
-                          class="flex items-center gap-3 rounded-lg border px-3 py-2 text-sm transition"
-                          :class="isItemActive(child)
-                            ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
-                            : 'border-transparent text-[var(--shell-muted)] hover:border-[var(--shell-border)] hover:bg-[var(--shell-panel)] hover:text-[var(--shell-ink)]'"
-                          :to="child.path || '/'"
-                          @click="handleNavigationSelection"
-                        >
-                          <Icon class="shrink-0 text-lg" :icon="normalizeIcon(child.icon)" />
-                          <span class="truncate">{{ child.title }}</span>
-                        </router-link>
-                      </div>
-                    </div>
-
-                    <router-link
-                      v-else
-                      class="flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-medium transition"
-                      :class="isItemActive(item)
-                        ? 'border-[var(--shell-accent)] bg-[var(--shell-accent-soft)] text-[var(--shell-accent)] shadow-[var(--shell-shadow-soft)]'
-                        : 'border-transparent text-[var(--shell-muted)] hover:border-[var(--shell-border)] hover:bg-[var(--shell-panel)] hover:text-[var(--shell-ink)]'"
-                      :to="item.path || '/'"
-                      @click="handleNavigationSelection"
-                    >
-                      <Icon class="shrink-0 text-xl" :icon="normalizeIcon(item.icon)" />
-                      <span v-if="!rail" class="truncate">{{ item.title }}</span>
-                    </router-link>
-                  </template>
-                </div>
-              </section>
-            </nav>
-          </div>
-
-          <div class="mt-4 space-y-3 border-t border-[var(--shell-border)] pt-4">
-            <button
-              class="hidden w-full items-center justify-center gap-3 rounded-lg border border-[var(--shell-border)] bg-[color:var(--shell-panel-strong)] px-3 py-2.5 text-sm font-medium text-[var(--shell-ink)] transition hover:border-[var(--shell-accent)] lg:flex"
-              type="button"
-              @click="rail = !rail"
-            >
-              <Icon
-                class="text-lg"
-                :icon="rail ? 'solar:siderbar-linear' : 'solar:siderbar-bold-duotone'"
-              />
-              <span v-if="!rail">Collapse navigation</span>
-            </button>
-          </div>
-        </aside>
-
-        <div class="flex min-w-0 flex-1 flex-col">
-          <main class="default-layout__content flex-1 overflow-y-auto">
-            <div class="mx-auto min-h-full w-full px-3 py-3 sm:px-4 sm:py-4 lg:px-6 lg:py-5">
-              <slot />
-            </div>
-          </main>
-
-          <footer class="border-t border-[var(--shell-border)] bg-[color:var(--shell-panel)]/88 px-3 py-3 backdrop-blur sm:px-4 lg:px-6">
-            <div class="flex flex-col gap-2 text-xs text-[var(--shell-muted)] sm:flex-row sm:items-center sm:justify-between">
-              <span>{{ currentYear }} {{ appName }}. All rights reserved.</span>
-              <span>Version {{ appVersion }}</span>
-            </div>
-          </footer>
-        </div>
+      <!-- Mobile search -->
+      <div class="topbar__mobile-search lg:hidden">
+        <Icon class="topbar__search-icon" icon="solar:magnifer-linear" />
+        <input
+          v-model="searchQuery"
+          class="topbar__search-input"
+          placeholder="Search..."
+          type="text"
+        />
       </div>
+
+      <main class="main-content">
+        <slot />
+      </main>
+
+      <footer class="app-footer">
+        <span>{{ currentYear }} {{ appName }}</span>
+        <span>v{{ appVersion }}</span>
+      </footer>
     </div>
   </div>
 </template>
@@ -438,10 +339,23 @@ const searchQuery = ref('')
 const dynamicMenusLoaded = ref(false)
 const openGroups = ref<string[]>([])
 const currentYear = new Date().getFullYear()
+const hoverExpanded = ref(false)
+const themeDropdownOpen = ref(false)
+const userDropdownOpen = ref(false)
+const themeDropdownRef = ref<HTMLElement | null>(null)
+const userDropdownRef = ref<HTMLElement | null>(null)
+const isDesktop = ref(typeof window !== 'undefined' ? window.innerWidth >= 1024 : true)
+
+const sidebarExpanded = computed(() => {
+  if (!drawer.value) return false
+  if (!rail.value) return true
+  return hoverExpanded.value
+})
 
 const SUPERADMIN_ONLY_PATHS = new Set(['/admin/menu-access', '/admin/cleanup', '/admin/app-config'])
 const GUEST_MAIN_PATHS = new Set(['/dut/top-products/analysis', '/dut/data-explorer'])
 const ADMIN_MAIN_PATHS = new Set(['/dashboard'])
+const DUPLICATE_MENU_TITLES = new Set(['System Config'])
 
 const staticMainItems: MenuItem[] = [
   { title: 'Dashboard', icon: 'mdi-view-dashboard', path: '/dashboard' },
@@ -494,61 +408,39 @@ const staticSystemItems: MenuItem[] = [
 const resolvedThemeMode = computed(() => resolveThemeMode(themePreferences.value.mode))
 const isDark = computed(() => resolvedThemeMode.value === 'dark')
 const shellTheme = computed(() => (isDark.value ? 'dark' : 'light'))
-const currentRouteTitle = computed(() => {
-  const title = route.meta.title
-  return typeof title === 'string' && title.trim().length > 0 ? title : appName.value
-})
 const userInitial = computed(() => authStore.displayName.slice(0, 1).toUpperCase())
 const accessLabel = computed(() => {
   if (authStore.isGuest) return 'Guest access'
   return authStore.loginType === 'external' ? 'External access' : 'Local access'
 })
 const accessDescription = computed(() => {
-  if (authStore.isGuest) return 'Limited read-only mode for shared visibility.'
-  return authStore.hasDUTAccess ? 'DUT session is connected and available.' : 'Application session only.'
+  if (authStore.isGuest) return 'Limited read-only mode.'
+  return authStore.hasDUTAccess ? 'DUT session connected.' : 'Application session only.'
 })
 const accessBadge = computed(() => {
   if (authStore.isGuest) return 'Guest'
   return authStore.hasDUTAccess ? 'Connected' : 'Standard'
 })
-const activePresetOption = computed(() =>
-  THEME_PRESET_OPTIONS.find((option) => option.value === themePreferences.value.preset)
-    ?? THEME_PRESET_OPTIONS[0],
-)
 const themeSummaryLabel = computed(() => {
   if (themePreferences.value.mode === 'system') {
     return `System ${resolvedThemeMode.value === 'dark' ? 'Dark' : 'Light'}`
   }
-
-  return themePreferences.value.mode === 'dark' ? 'Manual Dark' : 'Manual Light'
-})
-const themeSummaryDescription = computed(() => {
-  const presetOption = activePresetOption.value ?? THEME_PRESET_OPTIONS[0]!
-  const primaryOption = THEME_PRIMARY_OPTIONS.find(
-    (option) => option.value === themePreferences.value.primary,
-  )
-  const surfaceOption = THEME_SURFACE_OPTIONS.find(
-    (option) => option.value === themePreferences.value.surface,
-  )
-
-  return `${presetOption.label} preset with ${primaryOption?.label ?? 'Emerald'} accents on ${surfaceOption?.label ?? 'Stone'} surfaces.`
-})
-const themeSummaryIcon = computed(() => {
-  if (themePreferences.value.mode === 'system') return 'solar:monitor-bold-duotone'
-  return resolvedThemeMode.value === 'dark'
-    ? 'solar:moon-stars-bold-duotone'
-    : 'solar:sun-2-bold-duotone'
+  return themePreferences.value.mode === 'dark' ? 'Dark' : 'Light'
 })
 const quickThemeToggleLabel = computed(() =>
   resolvedThemeMode.value === 'dark' ? 'Switch to light mode' : 'Switch to dark mode',
 )
-const drawerPanelClasses = computed(() => {
+const sidebarClasses = computed(() => {
   if (!drawer.value) {
-    return 'w-[18rem] -translate-x-full lg:w-0 lg:translate-x-0 lg:overflow-hidden lg:border-transparent lg:px-0 lg:py-0 lg:opacity-0'
+    return 'sidebar--hidden'
   }
-  return rail.value
-    ? 'w-[5.5rem] translate-x-0 lg:w-[5.5rem]'
-    : 'w-[18rem] translate-x-0 lg:w-[18rem]'
+  if (rail.value && !hoverExpanded.value) {
+    return 'sidebar--collapsed'
+  }
+  if (rail.value && hoverExpanded.value) {
+    return 'sidebar--collapsed sidebar--hover-expanded'
+  }
+  return 'sidebar--expanded'
 })
 
 function filterItemByPaths(item: MenuItem, allowed: Set<string>): MenuItem | null {
@@ -634,7 +526,8 @@ const visibleToolsItems = computed(() => {
 
 const visibleSystemItems = computed(() => {
   if (!authStore.isAdmin) return []
-  const searchedItems = filterBySearch(menuTree.value.system)
+  let searchedItems = filterBySearch(menuTree.value.system)
+  searchedItems = searchedItems.filter((item) => !DUPLICATE_MENU_TITLES.has(item.title))
   if (authStore.isAdmin && !authStore.isSuperAdmin) {
     return filterOutSuperAdminItems(searchedItems)
   }
@@ -700,6 +593,30 @@ function handleNavigationSelection() {
   }
 }
 
+function handleSidebarMouseEnter() {
+  if (rail.value && isDesktop.value) {
+    hoverExpanded.value = true
+  }
+}
+
+function handleSidebarMouseLeave() {
+  hoverExpanded.value = false
+}
+
+function handleClickOutside(event: MouseEvent) {
+  const target = event.target as Node
+  if (themeDropdownOpen.value && themeDropdownRef.value && !themeDropdownRef.value.contains(target)) {
+    themeDropdownOpen.value = false
+  }
+  if (userDropdownOpen.value && userDropdownRef.value && !userDropdownRef.value.contains(target)) {
+    userDropdownOpen.value = false
+  }
+}
+
+function handleResize() {
+  isDesktop.value = window.innerWidth >= 1024
+}
+
 function applyShellTheme() {
   document.documentElement.dataset.shellTheme = shellTheme.value
 }
@@ -756,12 +673,16 @@ onMounted(() => {
   if (typeof window !== 'undefined') {
     systemThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
     systemThemeMediaQuery.addEventListener('change', handleSystemThemeChange)
+    document.addEventListener('click', handleClickOutside)
+    window.addEventListener('resize', handleResize)
   }
   void syncMenus()
 })
 
 onBeforeUnmount(() => {
   systemThemeMediaQuery?.removeEventListener('change', handleSystemThemeChange)
+  document.removeEventListener('click', handleClickOutside)
+  window.removeEventListener('resize', handleResize)
 })
 
 watch(isDark, () => {
@@ -807,50 +728,736 @@ watch(
   --shell-danger: var(--app-danger);
   --shell-shadow: var(--app-shadow);
   --shell-shadow-soft: var(--app-shadow-soft);
+  --sidebar-width: 15rem;
+  --sidebar-collapsed-width: 4rem;
+
+  display: flex;
+  height: 100vh;
+  background: var(--shell-bg);
+  color: var(--shell-ink);
 }
 
-.default-layout__content {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(120, 120, 120, 0.45) transparent;
-}
-
-.default-layout__content::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
-.default-layout__content::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-  background: rgba(120, 120, 120, 0.45);
-}
-
-.default-layout__progress {
-  position: relative;
-  height: 3px;
+/* ── Sidebar ── */
+.sidebar {
+  position: fixed;
+  inset-block: 0;
+  left: 0;
+  z-index: 40;
+  display: flex;
+  flex-direction: column;
+  width: var(--sidebar-width);
+  border-right: 1px solid var(--shell-border);
+  background: var(--shell-sidebar);
+  padding: 0.75rem;
   overflow: hidden;
-  background: rgba(15, 118, 110, 0.08);
+  transition: width 0.2s ease, transform 0.2s ease;
 }
 
-.default-layout__progress::after {
+@media (min-width: 1024px) {
+  .sidebar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    height: 100vh;
+  }
+}
+
+.sidebar--hidden {
+  transform: translateX(-100%);
+}
+
+@media (min-width: 1024px) {
+  .sidebar--hidden {
+    width: 0;
+    padding: 0;
+    border-right: 0;
+    transform: none;
+    overflow: hidden;
+  }
+}
+
+.sidebar--collapsed {
+  width: var(--sidebar-collapsed-width);
+}
+
+.sidebar--collapsed.sidebar--hover-expanded {
+  width: var(--sidebar-width);
+  box-shadow: var(--shell-shadow);
+  z-index: 30;
+}
+
+.sidebar--expanded {
+  width: var(--sidebar-width);
+}
+
+.sidebar__header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding: 0.5rem;
+  margin-bottom: 0.75rem;
+  min-height: 2.5rem;
+}
+
+.sidebar__logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  background: var(--shell-accent-soft);
+  color: var(--shell-accent);
+  font-size: 1.125rem;
+  flex-shrink: 0;
+}
+
+.sidebar__brand {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+.sidebar__app-name {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--shell-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar__version {
+  font-size: 0.6875rem;
+  color: var(--shell-muted);
+}
+
+.sidebar__nav {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 120, 0.3) transparent;
+}
+
+.sidebar__section {
+  margin-bottom: 1rem;
+}
+
+.sidebar__section-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--shell-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 0.25rem 0.5rem;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+}
+
+.sidebar__item {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  width: 100%;
+  padding: 0.5rem;
+  border-radius: 0.375rem;
+  border: none;
+  background: transparent;
+  color: var(--shell-muted);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  text-align: left;
+}
+
+.sidebar__item:hover {
+  background: var(--shell-panel);
+  color: var(--shell-ink);
+}
+
+.sidebar__item--active {
+  background: var(--shell-accent-soft);
+  color: var(--shell-accent);
+  font-weight: 600;
+}
+
+.sidebar__item-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+}
+
+.sidebar__item-icon--sm {
+  font-size: 1rem;
+}
+
+.sidebar__item-label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar__item-chevron {
+  font-size: 0.875rem;
+  flex-shrink: 0;
+  transition: transform 0.15s;
+}
+
+.sidebar__children {
+  margin-left: 1rem;
+  padding-left: 0.625rem;
+  border-left: 1px solid var(--shell-border);
+}
+
+.sidebar__item--child {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.8125rem;
+}
+
+.sidebar__footer {
+  border-top: 1px solid var(--shell-border);
+  padding-top: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.sidebar__collapse-btn {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--shell-muted);
+  font-size: 0.8125rem;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+@media (min-width: 1024px) {
+  .sidebar__collapse-btn {
+    display: flex;
+  }
+}
+
+.sidebar__collapse-btn:hover {
+  background: var(--shell-panel);
+  color: var(--shell-ink);
+}
+
+/* ── Main area ── */
+.main-area {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ── Topbar ── */
+.topbar {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.5rem 1rem;
+  border-bottom: 1px solid var(--shell-border);
+  background: var(--shell-header);
+  backdrop-filter: blur(8px);
+  min-height: 3rem;
+  flex-shrink: 0;
+  position: relative;
+}
+
+.topbar__menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--shell-ink);
+  font-size: 1.25rem;
+  cursor: pointer;
+}
+
+.topbar__menu-btn:hover {
+  background: var(--shell-panel);
+}
+
+.topbar__search {
+  display: none;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  max-width: 24rem;
+  padding: 0.375rem 0.75rem;
+  border: 1px solid var(--shell-border);
+  border-radius: 0.375rem;
+  background: var(--shell-panel-strong);
+}
+
+@media (min-width: 1024px) {
+  .topbar__search {
+    display: flex;
+  }
+}
+
+.topbar__search-icon {
+  font-size: 1rem;
+  color: var(--shell-muted);
+  flex-shrink: 0;
+}
+
+.topbar__search-input {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  font-size: 0.8125rem;
+  color: var(--shell-ink);
+  outline: none;
+}
+
+.topbar__search-input::placeholder {
+  color: var(--shell-muted);
+}
+
+.topbar__search-kbd {
+  font-size: 0.6875rem;
+  color: var(--shell-muted);
+  background: var(--shell-panel);
+  border: 1px solid var(--shell-border);
+  border-radius: 0.25rem;
+  padding: 0.0625rem 0.375rem;
+  font-family: inherit;
+}
+
+.topbar__mobile-search {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.375rem 0.75rem;
+  margin: 0.5rem 1rem;
+  border: 1px solid var(--shell-border);
+  border-radius: 0.375rem;
+  background: var(--shell-panel-strong);
+}
+
+@media (min-width: 1024px) {
+  .topbar__mobile-search {
+    display: none;
+  }
+}
+
+.topbar__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+}
+
+.topbar__icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--shell-muted);
+  font-size: 1.125rem;
+  cursor: pointer;
+  transition: color 0.15s, background 0.15s;
+}
+
+.topbar__icon-btn:hover {
+  background: var(--shell-panel);
+  color: var(--shell-ink);
+}
+
+.topbar__dropdown {
+  position: relative;
+}
+
+.topbar__dropdown-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 0.5rem);
+  z-index: 50;
+  border: 1px solid var(--shell-border);
+  border-radius: 0.5rem;
+  background: var(--shell-panel-strong);
+  box-shadow: var(--shell-shadow);
+  padding: 0.75rem;
+}
+
+.topbar__dropdown-panel--theme {
+  width: 18rem;
+}
+
+.topbar__dropdown-panel--user {
+  width: 16rem;
+}
+
+.dropdown-section {
+  padding: 0.5rem 0;
+}
+
+.dropdown-section + .dropdown-section {
+  border-top: 1px solid var(--shell-border);
+}
+
+.dropdown-label {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  color: var(--shell-muted);
+  margin-bottom: 0.375rem;
+}
+
+.theme-mode-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.375rem;
+}
+
+.theme-mode-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.375rem;
+  border: 1px solid var(--shell-border);
+  border-radius: 0.375rem;
+  background: var(--shell-panel);
+  color: var(--shell-muted);
+  font-size: 0.6875rem;
+  cursor: pointer;
+  transition: border-color 0.15s, color 0.15s;
+}
+
+.theme-mode-btn:hover {
+  border-color: var(--shell-accent);
+  color: var(--shell-ink);
+}
+
+.theme-mode-btn--active {
+  border-color: var(--shell-accent);
+  background: var(--shell-accent-soft);
+  color: var(--shell-accent);
+}
+
+.theme-mode-preview {
+  display: block;
+  width: 100%;
+  height: 1.5rem;
+  border-radius: 0.25rem;
+}
+
+.theme-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.375rem;
+}
+
+.theme-option-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.375rem;
+  border: 1px solid var(--shell-border);
+  border-radius: 0.375rem;
+  background: var(--shell-panel);
+  color: var(--shell-muted);
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.theme-option-btn:hover {
+  border-color: var(--shell-accent);
+}
+
+.theme-option-btn--active {
+  border-color: var(--shell-accent);
+  background: var(--shell-accent-soft);
+  color: var(--shell-accent);
+}
+
+.theme-swatch {
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.25rem;
+  flex-shrink: 0;
+}
+
+.theme-color-grid {
+  display: flex;
+  gap: 0.375rem;
+  flex-wrap: wrap;
+}
+
+.theme-color-btn {
+  width: 1.75rem;
+  height: 1.75rem;
+  padding: 0.1875rem;
+  border: 2px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+
+.theme-color-btn:hover {
+  border-color: var(--shell-muted);
+}
+
+.theme-color-btn--active {
+  border-color: var(--shell-accent);
+}
+
+.theme-color-dot {
+  display: block;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+}
+
+/* ── User dropdown ── */
+.topbar__user-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  padding-right: 0.5rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: transparent;
+  color: var(--shell-ink);
+  cursor: pointer;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  transition: background 0.15s;
+}
+
+.topbar__user-btn:hover {
+  background: var(--shell-panel);
+}
+
+.topbar__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  background: var(--shell-accent-soft);
+  color: var(--shell-accent);
+  font-size: 0.75rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.topbar__avatar--guest {
+  background: rgba(198, 134, 37, 0.18);
+  color: rgb(156, 102, 18);
+}
+
+.topbar__user-name {
+  max-width: 8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.topbar__user-chevron {
+  font-size: 0.75rem;
+  color: var(--shell-muted);
+}
+
+.user-panel__header {
+  display: flex;
+  align-items: center;
+  gap: 0.625rem;
+  padding-bottom: 0.625rem;
+  border-bottom: 1px solid var(--shell-border);
+}
+
+.user-panel__avatar {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 50%;
+  background: var(--shell-accent-soft);
+  color: var(--shell-accent);
+  font-size: 0.875rem;
+  font-weight: 600;
+  flex-shrink: 0;
+}
+
+.user-panel__info {
+  min-width: 0;
+}
+
+.user-panel__name {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--shell-ink);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-panel__role {
+  margin: 0;
+  font-size: 0.75rem;
+  color: var(--shell-muted);
+}
+
+.user-panel__session {
+  padding: 0.5rem 0;
+}
+
+.user-panel__session-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.user-panel__session-label {
+  margin: 0;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--shell-ink);
+}
+
+.user-panel__session-desc {
+  margin: 0;
+  font-size: 0.6875rem;
+  color: var(--shell-muted);
+}
+
+.user-panel__badge {
+  font-size: 0.6875rem;
+  font-weight: 600;
+  padding: 0.125rem 0.5rem;
+  border-radius: 999px;
+  flex-shrink: 0;
+}
+
+.user-panel__badge--guest {
+  background: rgba(198, 134, 37, 0.18);
+  color: rgb(156, 102, 18);
+}
+
+.user-panel__badge--connected {
+  background: rgba(15, 118, 110, 0.16);
+  color: var(--shell-accent);
+}
+
+.user-panel__badge--standard {
+  background: rgba(35, 83, 134, 0.14);
+  color: rgb(33, 87, 145);
+}
+
+.user-panel__logout {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.375rem;
+  width: 100%;
+  padding: 0.5rem;
+  border: none;
+  border-radius: 0.375rem;
+  background: rgba(163, 61, 45, 0.08);
+  color: var(--shell-danger);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.user-panel__logout:hover {
+  background: rgba(163, 61, 45, 0.16);
+}
+
+/* ── Main content ── */
+.main-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 1rem 1.5rem;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(120, 120, 120, 0.35) transparent;
+}
+
+.main-content::-webkit-scrollbar {
+  width: 6px;
+}
+
+.main-content::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(120, 120, 120, 0.35);
+}
+
+.app-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.5rem 1.5rem;
+  border-top: 1px solid var(--shell-border);
+  font-size: 0.6875rem;
+  color: var(--shell-muted);
+  flex-shrink: 0;
+}
+
+/* ── Progress bar ── */
+.topbar__progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: rgba(15, 118, 110, 0.08);
+  overflow: hidden;
+}
+
+.topbar__progress::after {
   content: '';
   position: absolute;
   inset: 0 auto 0 -35%;
   width: 35%;
   background: linear-gradient(90deg, transparent, var(--shell-accent), transparent);
-  animation: default-layout-progress 1.1s linear infinite;
+  animation: progress-slide 1.1s linear infinite;
 }
 
-details > summary::-webkit-details-marker {
-  display: none;
+/* ── Dropdown transitions ── */
+.dropdown-enter-active {
+  transition: opacity 0.15s ease, transform 0.15s ease;
 }
 
-@keyframes default-layout-progress {
-  from {
-    transform: translateX(0);
-  }
+.dropdown-leave-active {
+  transition: opacity 0.1s ease, transform 0.1s ease;
+}
 
-  to {
-    transform: translateX(400%);
-  }
+.dropdown-enter-from,
+.dropdown-leave-to {
+  opacity: 0;
+  transform: translateY(-4px);
+}
+
+@keyframes progress-slide {
+  from { transform: translateX(0); }
+  to { transform: translateX(400%); }
 }
 </style>

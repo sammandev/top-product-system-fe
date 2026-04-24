@@ -1,55 +1,110 @@
 <template>
-  <PublicScaffold
-    :app-name="appName"
-    title="Page not found"
-    description="The page you're looking for doesn't exist or may have been moved."
-    panel-eyebrow="404"
-    panel-description="This address does not match any active route."
-  >
-    <template #hero>
-      <div class="rounded-[1.25rem] border border-[var(--app-border)] bg-white/70 p-5 shadow-[var(--app-shadow-soft)]">
-        <div class="flex items-center gap-4">
-          <div class="flex h-12 w-12 shrink-0 items-center justify-center rounded-[0.75rem] bg-[var(--app-warning-soft)] text-2xl text-[var(--app-warning)]">
-            <Icon icon="solar:danger-triangle-bold-duotone" />
-          </div>
-          <div>
-            <p class="text-sm font-semibold text-[var(--app-ink)]">No matching route</p>
-            <p class="mt-1 text-sm text-[var(--app-muted)]">Check the URL and try again.</p>
-          </div>
-        </div>
+  <div class="notfound-page">
+    <div class="notfound-card">
+      <div class="notfound-icon">
+        <Icon icon="solar:danger-triangle-bold-duotone" />
       </div>
-    </template>
-
-    <div class="space-y-6">
-      <p class="text-sm leading-7 text-[var(--app-muted)]">
-        Return to the dashboard if you are signed in, or go back to login if you reached this page from an expired or malformed link.
-      </p>
-
-      <div class="grid gap-3 sm:grid-cols-2">
-        <RouterLink
-          class="rounded-[0.75rem] bg-[var(--app-accent)] px-5 py-3 text-center text-sm font-semibold text-white shadow-[var(--app-shadow-soft)] transition hover:bg-[var(--app-accent-strong)]"
-          to="/dashboard"
-        >
+      <h1 class="notfound-code">404</h1>
+      <p class="notfound-title">Page not found</p>
+      <p class="notfound-desc">The page you're looking for doesn't exist or may have been moved.</p>
+      <div class="notfound-actions">
+        <RouterLink class="notfound-btn notfound-btn--primary" to="/dashboard">
           Go to Dashboard
         </RouterLink>
-        <RouterLink
-          class="rounded-[0.75rem] border border-[var(--app-border)] bg-white/70 px-5 py-3 text-center text-sm font-semibold text-[var(--app-ink)] shadow-[var(--app-shadow-soft)] transition hover:border-[var(--app-accent)]"
-          to="/login"
-        >
+        <RouterLink class="notfound-btn notfound-btn--secondary" to="/login">
           Back to Login
         </RouterLink>
       </div>
     </div>
-  </PublicScaffold>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { storeToRefs } from 'pinia'
 import { RouterLink } from 'vue-router'
-import PublicScaffold from '@/shared/ui/public-shell/PublicScaffold.vue'
-import { useAppConfigStore } from '@/core/stores/appConfig.store'
-
-const appConfigStore = useAppConfigStore()
-const { appName } = storeToRefs(appConfigStore)
 </script>
+
+<style scoped>
+.notfound-page {
+  display: grid;
+  place-items: center;
+  min-height: 100vh;
+  padding: 1.5rem;
+  background: var(--app-canvas);
+}
+
+.notfound-card {
+  text-align: center;
+  max-width: 24rem;
+}
+
+.notfound-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 3rem;
+  height: 3rem;
+  border-radius: 0.75rem;
+  background: var(--app-warning-soft);
+  color: var(--app-warning);
+  font-size: 1.5rem;
+  margin-bottom: 1rem;
+}
+
+.notfound-code {
+  margin: 0;
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--app-ink);
+  line-height: 1;
+}
+
+.notfound-title {
+  margin: 0.5rem 0 0;
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--app-ink);
+}
+
+.notfound-desc {
+  margin: 0.5rem 0 0;
+  font-size: 0.875rem;
+  color: var(--app-muted);
+  line-height: 1.5;
+}
+
+.notfound-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+}
+
+.notfound-btn {
+  padding: 0.5rem 1.25rem;
+  border-radius: 0.375rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: background 0.15s;
+}
+
+.notfound-btn--primary {
+  background: var(--app-accent);
+  color: #fff;
+}
+
+.notfound-btn--primary:hover {
+  background: var(--app-accent-strong);
+}
+
+.notfound-btn--secondary {
+  border: 1px solid var(--app-border);
+  background: transparent;
+  color: var(--app-ink);
+}
+
+.notfound-btn--secondary:hover {
+  border-color: var(--app-accent);
+}
+</style>
