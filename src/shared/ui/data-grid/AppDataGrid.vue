@@ -22,7 +22,6 @@
       :stateKey="stateKey"
       :rowClass="rowClass ?? undefined"
       removableSort
-      showGridlines
       stripedRows
       class="app-data-grid__table"
       @update:selection="onSelectionChange"
@@ -228,7 +227,8 @@ function resolveFieldValue(row: GridRow, field?: string) {
 }
 
 .app-data-grid :deep(.p-datatable-thead > tr > th) {
-  border-color: var(--app-border);
+  border: 0;
+  border-bottom: 1px solid var(--app-border);
   background: var(--app-panel);
   color: var(--app-ink);
   font-size: 0.76rem;
@@ -239,7 +239,12 @@ function resolveFieldValue(row: GridRow, field?: string) {
 }
 
 .app-data-grid :deep(.p-datatable-tbody > tr > td) {
-  border-color: var(--app-border);
+  border: 0;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.app-data-grid :deep(.p-datatable-tbody > tr:last-child > td) {
+  border-bottom: 0;
 }
 
 .app-data-grid :deep(.p-paginator) {

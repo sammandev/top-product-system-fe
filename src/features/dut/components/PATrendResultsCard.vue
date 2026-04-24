@@ -101,22 +101,18 @@
         </section>
 
         <div class="pa-trend-results-detail-table-wrap">
-          <table class="pa-trend-results-detail-table">
-            <thead>
-              <tr>
-                <th>Test Item Name</th>
-                <th>MID</th>
-                <th>Mean</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="(trendItem, index) in getTrendItems(selectedRow)" :key="`${selectedRow.rowKey}-${index}`">
-                <td class="pa-trend-results-strong">{{ trendItem.test_item_name }}</td>
-                <td>{{ trendItem.mid ?? 'N/A' }}</td>
-                <td>{{ formatMean(trendItem.mean) }}</td>
-              </tr>
-            </tbody>
-          </table>
+          <AppDataGrid
+            :columns="detailColumns"
+            :rows="detailRows"
+            data-key="rowKey"
+            :paginator="false"
+            :rows-per-page="20"
+            :table-style="{ minWidth: '34rem' }"
+          >
+            <template #cell-test_item_name="slotProps">
+              <span class="pa-trend-results-strong">{{ slotProps.data.test_item_name }}</span>
+            </template>
+          </AppDataGrid>
         </div>
       </div>
 
@@ -172,6 +168,12 @@ const columns = [
   { key: 'actions', header: 'Actions', sortable: false },
 ]
 
+const detailColumns = [
+  { key: 'test_item_name', field: 'test_item_name', header: 'Test Item Name', sortable: false, style: { width: '22rem' } },
+  { key: 'mid', field: 'mid', header: 'MID', sortable: false, style: { width: '8rem' } },
+  { key: 'mean', field: 'mean', header: 'Mean', sortable: false, style: { width: '8rem' } },
+]
+
 const gridRows = computed<TrendRow[]>(() => {
   return props.data.map((item, index) => ({
     ...item,
@@ -181,6 +183,19 @@ const gridRows = computed<TrendRow[]>(() => {
 
 const totalTrendItems = computed(() => {
   return gridRows.value.reduce((sum, item) => sum + getTrendItemsCount(item), 0)
+})
+
+const detailRows = computed(() => {
+  if (!selectedRow.value) {
+    return []
+  }
+
+  return getTrendItems(selectedRow.value).map((trendItem, index) => ({
+    ...trendItem,
+    rowKey: `${selectedRow.value?.rowKey}-${index}`,
+    mid: trendItem.mid ?? 'N/A',
+    mean: formatMean(trendItem.mean),
+  }))
 })
 
 function getTrendItems(item: PATrendStationDataSchema | PADiffStationDataSchema): PATrendStationItemSchema[] {

@@ -225,17 +225,17 @@ watch(
     justify-content: space-between;
     gap: 0.5rem;
     width: 100%;
-    padding: 0.4375rem 0.625rem;
+    padding: 0.75rem 0.95rem;
     border: 1px solid var(--app-border);
-    border-radius: 0.375rem;
+    border-radius: 0.75rem;
     background: var(--app-panel-strong);
     color: var(--app-ink);
-    font-size: 0.8125rem;
+    font-size: 0.9375rem;
     font-family: inherit;
     cursor: pointer;
     transition: border-color 0.15s;
     text-align: left;
-    min-height: 2rem;
+    min-height: 2.875rem;
 }
 
 .app-select__trigger:hover {
@@ -259,7 +259,7 @@ watch(
 }
 
 .app-select__chevron {
-    font-size: 0.75rem;
+    font-size: 0.9rem;
     color: var(--app-muted);
     flex-shrink: 0;
     transition: transform 0.15s;
@@ -274,20 +274,20 @@ watch(
 /* Dropdown is teleported, cannot be scoped */
 .app-select__dropdown {
     border: 1px solid var(--app-border);
-    border-radius: 0.5rem;
+    border-radius: 0.85rem;
     background: var(--app-panel-strong);
     box-shadow: none;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    max-height: 18rem;
+    max-height: 20rem;
 }
 
 .app-select__search {
     display: flex;
     align-items: center;
     gap: 0.5rem;
-    padding: 0.5rem;
+    padding: 0.75rem 0.85rem;
     border-bottom: 1px solid var(--app-border);
     flex-shrink: 0;
 }
@@ -302,7 +302,7 @@ watch(
     flex: 1;
     border: none;
     background: transparent;
-    font-size: 0.8125rem;
+    font-size: 0.9375rem;
     color: var(--app-ink);
     outline: none;
     font-family: inherit;
@@ -325,15 +325,16 @@ watch(
     justify-content: space-between;
     gap: 0.5rem;
     width: 100%;
-    padding: 0.4375rem 0.625rem;
+    padding: 0.72rem 0.85rem;
     border: none;
     background: transparent;
     color: var(--app-ink);
-    font-size: 0.8125rem;
+    font-size: 0.9375rem;
     font-family: inherit;
     cursor: pointer;
     text-align: left;
     transition: background 0.1s;
+    min-height: 2.75rem;
 }
 
 .app-select__option:hover,
@@ -355,7 +356,7 @@ watch(
 }
 
 .app-select__option-check {
-    font-size: 0.875rem;
+    font-size: 1rem;
     color: var(--app-accent);
     flex-shrink: 0;
 }
@@ -363,7 +364,7 @@ watch(
 .app-select__empty {
     padding: 1rem;
     text-align: center;
-    font-size: 0.8125rem;
+    font-size: 0.875rem;
     color: var(--app-muted);
 }
 </style>

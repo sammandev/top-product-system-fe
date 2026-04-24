@@ -9,6 +9,7 @@
     :draggable="draggable"
     :maximizable="false"
     :style="dialogStyle"
+    :contentStyle="dialogContentStyle"
     :breakpoints="breakpoints"
     :class="['app-dialog', { 'app-dialog--fullscreen': internalFullscreen }]"
     @update:visible="handleVisibleUpdate"
@@ -52,8 +53,13 @@
       <slot />
     </div>
 
-    <template v-if="$slots.footer" #footer>
-      <slot name="footer" />
+    <template v-if="$slots.footer || closable" #footer>
+      <div class="app-dialog__footer">
+        <slot v-if="$slots.footer" name="footer" />
+        <button v-else type="button" class="app-dialog__footer-button" @click="handleClose">
+          Close
+        </button>
+      </div>
     </template>
   </Dialog>
 </template>
@@ -117,6 +123,13 @@ const resolvedVisible = computed(() => props.modelValue ?? props.visible ?? fals
 
 const dialogStyle = computed(() => ({
   width: internalFullscreen.value ? '100vw' : props.width,
+  height: internalFullscreen.value ? '100dvh' : undefined,
+  maxHeight: internalFullscreen.value ? '100dvh' : undefined,
+  margin: internalFullscreen.value ? '0' : undefined,
+}))
+
+const dialogContentStyle = computed(() => ({
+  paddingTop: internalFullscreen.value ? '0.875rem' : '1rem',
 }))
 
 function handleVisibleUpdate(value: boolean) {
@@ -143,12 +156,21 @@ function toggleFullscreen() {
 :deep(.app-dialog) {
   overflow: hidden;
   border: 1px solid var(--app-border);
-  border-radius: 0.625rem;
+  border-radius: 1rem;
   background: var(--app-panel-strong);
   box-shadow: none;
   display: flex;
   flex-direction: column;
   max-height: 90vh;
+}
+
+:deep(.p-dialog-mask) {
+  padding: 1rem;
+}
+
+:deep(.p-dialog-mask:has(.app-dialog--fullscreen)) {
+  padding: 0;
+  align-items: stretch;
 }
 
 :deep(.app-dialog .p-dialog-header) {
@@ -159,7 +181,7 @@ function toggleFullscreen() {
 }
 
 :deep(.app-dialog .p-dialog-content) {
-  padding-top: 1rem;
+  padding: 1rem 1.125rem 1.125rem;
   color: var(--app-ink);
   overflow-y: auto;
   flex: 1;
@@ -172,30 +194,38 @@ function toggleFullscreen() {
   border-top: 1px solid var(--app-border);
   background: var(--app-panel-strong);
   flex-shrink: 0;
+  padding: 0;
 }
 
 :deep(.app-dialog.app-dialog--fullscreen) {
   width: 100vw !important;
   max-width: 100vw !important;
+  min-width: 100vw !important;
   height: 100dvh;
   max-height: 100dvh;
   margin: 0;
+  inset: 0;
   border-width: 0;
   border-radius: 0;
 }
 
 :deep(.app-dialog.app-dialog--fullscreen .p-dialog-content) {
-  padding-top: 0.875rem;
+  padding: 1rem 1.25rem 1.25rem;
+}
+
+:deep(.app-dialog.app-dialog--fullscreen .p-dialog-header),
+:deep(.app-dialog.app-dialog--fullscreen .p-dialog-footer) {
+  border-color: color-mix(in srgb, var(--app-border) 82%, transparent);
 }
 
 /* Header layout */
 .app-dialog__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
+  gap: 1rem;
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 1rem 1.125rem;
 }
 
 .app-dialog__header-left {
@@ -205,27 +235,28 @@ function toggleFullscreen() {
 
 .app-dialog__header-copy {
   display: grid;
-  gap: 0.125rem;
+  gap: 0.3rem;
 }
 
 .app-dialog__title {
   margin: 0;
-  font-size: 0.9375rem;
-  font-weight: 600;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1.2;
   color: var(--app-ink);
 }
 
 .app-dialog__description {
   margin: 0;
   color: var(--app-muted);
-  font-size: 0.8125rem;
-  line-height: 1.4;
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
 .app-dialog__header-actions {
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: 0.4rem;
   flex-shrink: 0;
 }
 
@@ -233,21 +264,22 @@ function toggleFullscreen() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.4rem;
+  height: 2.4rem;
   border: 1px solid var(--app-border);
-  border-radius: 0.375rem;
-  background: transparent;
+  border-radius: 0.75rem;
+  background: var(--app-panel);
   color: var(--app-muted);
-  font-size: 1.125rem;
+  font-size: 1.15rem;
   cursor: pointer;
-  transition: color 0.15s, background 0.15s, border-color 0.15s;
+  transition: color 0.15s, background 0.15s, border-color 0.15s, transform 0.15s;
 }
 
 .app-dialog__header-btn:hover {
-  background: var(--app-panel);
+  background: var(--app-canvas);
   color: var(--app-ink);
   border-color: var(--app-accent);
+  transform: translateY(-1px);
 }
 
 .app-dialog__header-btn--close:hover {
@@ -260,5 +292,40 @@ function toggleFullscreen() {
   display: grid;
   gap: 1rem;
   min-height: 0;
+}
+
+.app-dialog__footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  padding: 0.9rem 1.125rem;
+}
+
+.app-dialog__footer-button {
+  min-height: 2.75rem;
+  padding: 0.7rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.8rem;
+  background: var(--app-panel);
+  color: var(--app-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.app-dialog__footer-button:hover {
+  border-color: var(--app-accent);
+  background: var(--app-canvas);
+}
+
+@media (max-width: 640px) {
+  .app-dialog__header {
+    padding: 0.9rem 1rem;
+  }
+
+  .app-dialog__footer {
+    padding: 0.85rem 1rem;
+  }
 }
 </style>

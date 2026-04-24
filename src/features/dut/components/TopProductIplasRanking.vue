@@ -1,55 +1,27 @@
 <template>
-  <AppPanel
-    eyebrow="Results"
-    :title="hasScores ? 'Ranking by Station' : 'Station Results'"
+  <AppPanel eyebrow="Results" :title="hasScores ? 'Ranking by Station' : 'Station Results'"
     :description="hasScores ? 'Review scored records by station.' : 'Calculate scores to rank records by station.'"
-    tone="warm"
-    split-header
-  >
+    tone="warm" split-header>
     <template #header-aside>
       <div class="ranking-actions">
-        <button
-          v-if="selectedItems.length > 0"
-          type="button"
-          class="ranking-button ranking-button--primary"
-          :disabled="savingToDb"
-          @click="handleSaveToDb"
-        >
+        <button v-if="selectedItems.length > 0" type="button" class="ranking-button ranking-button--primary"
+          :disabled="savingToDb" @click="handleSaveToDb">
           Save to DB ({{ selectedItems.length }})
         </button>
-        <button
-          v-if="totalRecords > 0"
-          type="button"
-          class="ranking-button ranking-button--ghost"
-          :disabled="props.exportingAll"
-          @click="handleExportAll"
-        >
+        <button v-if="totalRecords > 0" type="button" class="ranking-button ranking-button--ghost"
+          :disabled="props.exportingAll" @click="handleExportAll">
           Export All ({{ totalRecords }})
         </button>
-        <button
-          v-if="selectedItems.length > 0"
-          type="button"
-          class="ranking-button ranking-button--ghost"
-          :disabled="exporting"
-          @click="handleExport"
-        >
+        <button v-if="selectedItems.length > 0" type="button" class="ranking-button ranking-button--ghost"
+          :disabled="exporting" @click="handleExport">
           Export Selected ({{ selectedItems.length }})
         </button>
-        <button
-          v-if="selectedItems.length > 0"
-          type="button"
-          class="ranking-button ranking-button--success"
-          :disabled="bulkDownloading"
-          @click="handleBulkDownload"
-        >
+        <button v-if="selectedItems.length > 0" type="button" class="ranking-button ranking-button--success"
+          :disabled="bulkDownloading" @click="handleBulkDownload">
           Download Selected ({{ selectedItems.length }})
         </button>
-        <button
-          type="button"
-          class="ranking-button ranking-button--secondary"
-          :disabled="loading || calculatingScores"
-          @click="emit('calculate-scores')"
-        >
+        <button type="button" class="ranking-button ranking-button--secondary" :disabled="loading || calculatingScores"
+          @click="emit('calculate-scores')">
           {{ hasScores ? 'Re-calculate' : 'Calculate Scores' }}
         </button>
         <span class="ranking-pill ranking-pill--success">{{ totalRecords }} Records</span>
@@ -67,25 +39,15 @@
 
             <label class="ranking-field">
               <span>Device IDs</span>
-              <input
-                v-model="deviceFilterEntry"
-                type="text"
-                list="ranking-device-filter-options"
-                placeholder="Type a device and press Enter"
-                @keydown.enter.prevent="commitDeviceFilter"
-                @blur="commitDeviceFilter"
-              >
+              <input v-model="deviceFilterEntry" type="text" list="ranking-device-filter-options"
+                placeholder="Type a device and press Enter" @keydown.enter.prevent="commitDeviceFilter"
+                @blur="commitDeviceFilter">
               <datalist id="ranking-device-filter-options">
                 <option v-for="device in getUniqueDevices(String(item.value))" :key="device" :value="device" />
               </datalist>
               <div v-if="deviceFilter.length > 0" class="ranking-token-row">
-                <button
-                  v-for="device in deviceFilter"
-                  :key="device"
-                  type="button"
-                  class="ranking-token"
-                  @click="removeDeviceFilter(device)"
-                >
+                <button v-for="device in deviceFilter" :key="device" type="button" class="ranking-token"
+                  @click="removeDeviceFilter(device)">
                   <span>{{ device }}</span>
                   <span aria-hidden="true">x</span>
                 </button>
@@ -101,120 +63,99 @@
 
               <label class="ranking-field">
                 <span>{{ scoreFilterType === 'between' ? 'Range (e.g. 8-10)' : 'Score Value' }}</span>
-                <input
-                  v-if="scoreFilterType === 'between'"
-                  v-model="scoreRangeInput"
-                  type="text"
-                  placeholder="8-10"
-                  @input="parseScoreRange"
-                >
-                <input
-                  v-else
-                  v-model.number="scoreFilterValue"
-                  type="number"
-                  min="0"
-                  max="10"
-                  step="0.1"
-                  placeholder="0-10"
-                  :disabled="!scoreFilterType"
-                >
+                <input v-if="scoreFilterType === 'between'" v-model="scoreRangeInput" type="text" placeholder="8-10"
+                  @input="parseScoreRange">
+                <input v-else v-model.number="scoreFilterValue" type="number" min="0" max="10" step="0.1"
+                  placeholder="0-10" :disabled="!scoreFilterType">
               </label>
             </template>
 
             <div class="ranking-filter-actions">
-              <button v-if="hasActiveFilters" type="button" class="ranking-button ranking-button--ghost" @click="clearAllFilters">
+              <button v-if="hasActiveFilters" type="button" class="ranking-button ranking-button--ghost"
+                @click="clearAllFilters">
                 Clear Filters
               </button>
-              <span v-if="hasActiveFilters" class="ranking-pill ranking-pill--primary">{{ activeFilterCount }} active</span>
+              <span v-if="hasActiveFilters" class="ranking-pill ranking-pill--primary">{{ activeFilterCount }}
+                active</span>
             </div>
           </div>
 
           <div class="ranking-table-shell">
-            <AppDataGrid
-              :columns="gridColumns"
-              :rows="filteredRanking"
-              data-key="key"
-              :selection="selectedItems"
-              selection-mode="multiple"
-              :show-selection-column="true"
-              :loading="loading"
-              :paginator="true"
-              :rows-per-page="25"
-              scroll-height="40rem"
-              :row-class="getRankingRowClass"
-              :table-style="{ minWidth: '72rem' }"
-              @update:selection="selectedItems = ($event as RankingItem[])"
-              @row-click="handleGridRowClick($event, String(item.value))"
-            >
-            <template #cell-rank="{ data }">
-              <div class="ranking-rank-cell">
-                <template v-if="data.hasError">
-                  <span class="ranking-rank-icon ranking-rank-icon--danger">!</span>
-                </template>
-                <template v-else-if="data.rank === 1">
-                  <span class="ranking-rank-icon ranking-rank-icon--gold">1</span>
-                </template>
-                <template v-else-if="data.rank === 2">
-                  <span class="ranking-rank-icon ranking-rank-icon--silver">2</span>
-                </template>
-                <template v-else-if="data.rank === 3">
-                  <span class="ranking-rank-icon ranking-rank-icon--bronze">3</span>
-                </template>
-                <template v-else>
-                  <span class="ranking-rank-fallback">{{ data.rank }}</span>
-                </template>
-              </div>
-            </template>
-
-            <template #cell-isn="{ data }">
-              <div class="ranking-isn-cell">
-                <button type="button" class="ranking-inline-icon" @click.stop="copyToClipboard(String(data.isn))" title="Copy ISN">
-                  Copy
-                </button>
-                <span class="ranking-isn-value">{{ data.isn }}</span>
-              </div>
-            </template>
-
-            <template #cell-device="{ value }">
-              <span class="ranking-pill ranking-pill--muted">{{ value || '-' }}</span>
-            </template>
-
-            <template #cell-testDate="{ value }">
-              <span class="ranking-muted">{{ value }}</span>
-            </template>
-
-            <template #cell-duration="{ value }">
-              <span class="ranking-muted">{{ value }}</span>
-            </template>
-
-            <template #cell-status="{ data }">
-              <span
-                class="ranking-pill"
-                :class="data.isForcedFailure ? 'ranking-pill--warning' : (data.hasError ? 'ranking-pill--danger' : 'ranking-pill--success')"
-              >
-                {{ data.status }}
-              </span>
-            </template>
-
-            <template #cell-score="{ data }">
-              <template v-if="data.hasError && !data.isForcedFailure">
-                <span class="ranking-pill ranking-pill--danger">FAIL</span>
+            <AppDataGrid :columns="gridColumns" :rows="filteredRanking" data-key="key" :selection="selectedItems"
+              selection-mode="multiple" :show-selection-column="true" :loading="loading" :paginator="true"
+              :rows-per-page="25" scroll-height="40rem" :row-class="getRankingRowClass"
+              :table-style="{ minWidth: '72rem' }" @update:selection="selectedItems = ($event as RankingItem[])"
+              @row-click="handleGridRowClick($event, String(item.value))">
+              <template #cell-rank="{ data }">
+                <div class="ranking-rank-cell">
+                  <template v-if="data.hasError">
+                    <span class="ranking-rank-icon ranking-rank-icon--danger">!</span>
+                  </template>
+                  <template v-else-if="data.rank === 1">
+                    <span class="ranking-rank-icon ranking-rank-icon--gold">1</span>
+                  </template>
+                  <template v-else-if="data.rank === 2">
+                    <span class="ranking-rank-icon ranking-rank-icon--silver">2</span>
+                  </template>
+                  <template v-else-if="data.rank === 3">
+                    <span class="ranking-rank-icon ranking-rank-icon--bronze">3</span>
+                  </template>
+                  <template v-else>
+                    <span class="ranking-rank-fallback">{{ data.rank }}</span>
+                  </template>
+                </div>
               </template>
-              <template v-else-if="data.score !== null">
-                <span class="ranking-score-chip" :class="`ranking-score-chip--${scoreTone(data.score)}`">
-                  {{ (data.score * 10).toFixed(2) }}
+
+              <template #cell-isn="{ data }">
+                <div class="ranking-isn-cell">
+                  <button type="button" class="ranking-inline-icon" @click.stop="copyToClipboard(String(data.isn))"
+                    title="Copy ISN">
+                    <Icon icon="mdi:content-copy" />
+                  </button>
+                  <span class="ranking-isn-value">{{ data.isn }}</span>
+                </div>
+              </template>
+
+              <template #cell-device="{ value }">
+                <span class="ranking-pill ranking-pill--muted">{{ value || '-' }}</span>
+              </template>
+
+              <template #cell-testDate="{ value }">
+                <span class="ranking-muted">{{ value }}</span>
+              </template>
+
+              <template #cell-duration="{ value }">
+                <span class="ranking-muted">{{ value }}</span>
+              </template>
+
+              <template #cell-status="{ data }">
+                <span class="ranking-pill"
+                  :class="data.isForcedFailure ? 'ranking-pill--warning' : (data.hasError ? 'ranking-pill--danger' : 'ranking-pill--success')">
+                  {{ data.status }}
                 </span>
               </template>
-              <template v-else>
-                <span class="ranking-muted">-</span>
-              </template>
-            </template>
 
-            <template #cell-actions="{ data }">
-              <button type="button" class="ranking-inline-icon ranking-inline-icon--success" @click.stop="handleDownloadDetails(data as RankingItem, String(item.value))" title="Download Attachment">
-                Download
-              </button>
-            </template>
+              <template #cell-score="{ data }">
+                <template v-if="data.hasError && !data.isForcedFailure">
+                  <span class="ranking-pill ranking-pill--danger">FAIL</span>
+                </template>
+                <template v-else-if="data.score !== null">
+                  <span class="ranking-score-chip" :class="`ranking-score-chip--${scoreTone(data.score)}`">
+                    {{ (data.score * 10).toFixed(2) }}
+                  </span>
+                </template>
+                <template v-else>
+                  <span class="ranking-muted">-</span>
+                </template>
+              </template>
+
+              <template #cell-actions="{ data }">
+                <button type="button" class="ranking-inline-icon ranking-inline-icon--success"
+                  @click.stop="handleDownloadDetails(data as RankingItem, String(item.value))"
+                  title="Download Attachment">
+                  <Icon icon="solar:download-minimalistic-linear" />
+                </button>
+              </template>
             </AppDataGrid>
           </div>
         </section>
@@ -224,6 +165,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { useDebounceFn } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
@@ -904,6 +846,9 @@ function scoreTone(score: number) {
 .ranking-button,
 .ranking-token,
 .ranking-inline-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 2.6rem;
   border-radius: 0.75rem;
   border: 1px solid var(--app-border);
@@ -918,6 +863,13 @@ function scoreTone(score: number) {
 .ranking-token,
 .ranking-inline-icon {
   padding: 0.6rem 0.9rem;
+}
+
+.ranking-inline-icon {
+  width: 2.6rem;
+  min-width: 2.6rem;
+  padding: 0;
+  font-size: 1.05rem;
 }
 
 .ranking-button:hover,

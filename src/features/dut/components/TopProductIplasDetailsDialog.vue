@@ -274,29 +274,41 @@
         </div>
       </label>
 
-      <div class="iplas-details-dialog__simple-list">
-        <button
-          v-for="item in filteredForcedFailureDetails"
-          :key="item.name"
-          type="button"
-          class="forced-fail-item"
-          @click="copyToClipboard(item.name)"
+      <section v-if="forcedFailRows.length > 0" class="iplas-details-dialog__data-grid-shell">
+        <AppDataGrid
+          :columns="forcedFailColumns"
+          :rows="forcedFailRows"
+          data-key="rowKey"
+          :paginator="false"
+          :rows-per-page="25"
+          scroll-height="22rem"
+          :table-style="{ minWidth: '38rem' }"
         >
-          <div class="forced-fail-item__copy">
-            <span class="forced-fail-item__icon"><Icon icon="mdi:alert-circle" /></span>
-            <span class="forced-fail-item-title" :title="item.name">{{ item.name }}</span>
-          </div>
-          <div class="forced-fail-item-append">
-            <span class="iplas-details-dialog__score-chip" :class="`iplas-details-dialog__score-chip--${scoreTone(item.score)}`">
-              {{ (item.score * 10).toFixed(2) }} / 10
+          <template #cell-name="{ data }">
+            <button type="button" class="iplas-details-dialog__row-copy" @click="copyToClipboard(String(data.name))">
+              <span class="forced-fail-item__icon"><Icon icon="mdi:alert-circle" /></span>
+              <span class="forced-fail-item-title" :title="String(data.name)">{{ data.name }}</span>
+            </button>
+          </template>
+
+          <template #cell-score="{ data }">
+            <span class="iplas-details-dialog__score-chip" :class="`iplas-details-dialog__score-chip--${scoreTone(data.score)}`">
+              {{ (data.score * 10).toFixed(2) }} / 10
             </span>
-            <Icon icon="mdi:content-copy" />
-          </div>
-        </button>
-        <div v-if="filteredForcedFailureDetails.length === 0" class="iplas-details-dialog__empty-state">
-          <Icon icon="mdi:database-search-outline" />
-          <p>No failed items match the current search.</p>
-        </div>
+          </template>
+
+          <template #cell-actions="{ data }">
+            <button type="button" class="iplas-details-dialog__icon-action" title="Copy test item"
+              @click="copyToClipboard(String(data.name))">
+              <Icon icon="mdi:content-copy" />
+            </button>
+          </template>
+        </AppDataGrid>
+      </section>
+
+      <div v-else class="iplas-details-dialog__empty-state">
+        <Icon icon="mdi:database-search-outline" />
+        <p>No failed items match the current search.</p>
       </div>
     </div>
 
@@ -317,70 +329,53 @@
     persistent
   >
     <div v-if="selectedTestItem" class="iplas-details-subdialog">
-      <section class="iplas-details-dialog__notice iplas-details-dialog__notice--info">
-        <strong>{{ selectedTestItem.NAME }}</strong>
+      <section class="iplas-details-dialog__breakdown-hero">
+        <div>
+          <p class="iplas-details-dialog__eyebrow">Selected Test Item</p>
+          <h3>{{ selectedTestItem.NAME }}</h3>
+          <p class="iplas-details-dialog__muted">Thresholds, target selection, and weighted score are shown below.</p>
+        </div>
+        <div class="iplas-details-dialog__breakdown-hero-score">
+          <span class="iplas-details-dialog__metric-label">Final Score</span>
+          <span class="iplas-details-dialog__score-chip" :class="`iplas-details-dialog__score-chip--${scoreTone(selectedTestItem.score ?? 0)}`">
+            {{ selectedTestItem.score !== undefined ? formatScoreValue(selectedTestItem.score) : '-' }}
+          </span>
+        </div>
       </section>
 
-      <div class="iplas-details-dialog__metric-list">
-        <article class="iplas-details-dialog__metric-row">
-          <div>
-            <small>Upper Criteria Limit (UCL)</small>
-            <strong>{{ selectedTestItem.UCL || '-' }}</strong>
-          </div>
-          <Icon icon="mdi:arrow-up-bold" />
-        </article>
-        <article class="iplas-details-dialog__metric-row">
-          <div>
-            <small>Lower Criteria Limit (LCL)</small>
-            <strong>{{ selectedTestItem.LCL || '-' }}</strong>
-          </div>
-          <Icon icon="mdi:arrow-down-bold" />
-        </article>
-        <article class="iplas-details-dialog__metric-row">
-          <div>
-            <small>Measured Value</small>
-            <strong>{{ selectedTestItem.VALUE }}</strong>
-          </div>
-          <Icon icon="mdi:speedometer" />
-        </article>
-        <article class="iplas-details-dialog__metric-row">
-          <div>
-            <small>Target ({{ getTargetLabel(selectedTestItem) }})</small>
-            <strong>{{ computeTarget(selectedTestItem) }}</strong>
-          </div>
-          <Icon icon="mdi:target" />
-        </article>
-        <article class="iplas-details-dialog__metric-row">
-          <div>
-            <small>Scoring Algorithm</small>
-            <strong>{{ formatScoringType(selectedTestItem.scoringType) }}</strong>
-          </div>
-          <Icon icon="mdi:function-variant" />
-        </article>
-        <article class="iplas-details-dialog__metric-row">
-          <div>
-            <small>Score Weight</small>
-            <strong>{{ formatWeight(selectedTestItem.weight) }}</strong>
-          </div>
-          <Icon icon="mdi:weight" />
-        </article>
-        <article v-if="selectedTestItem.deviation !== undefined" class="iplas-details-dialog__metric-row">
-          <div>
-            <small>Deviation from Target</small>
-            <strong>{{ selectedTestItem.deviation?.toFixed(2) }}</strong>
-          </div>
-          <Icon icon="mdi:delta" />
-        </article>
-        <article class="iplas-details-dialog__metric-row iplas-details-dialog__metric-row--score">
-          <div>
-            <small>Final Score</small>
-            <strong>{{ selectedTestItem.score !== undefined ? ((selectedTestItem.score ?? 0) * 10).toFixed(2) : '-' }} / 10</strong>
-          </div>
-          <span class="iplas-details-dialog__score-chip" :class="`iplas-details-dialog__score-chip--${scoreTone(selectedTestItem.score ?? 0)}`">
-            {{ selectedTestItem.score !== undefined ? ((selectedTestItem.score ?? 0) * 10).toFixed(2) : '-' }}
-          </span>
-        </article>
-      </div>
+      <section class="iplas-details-dialog__data-grid-shell">
+        <AppDataGrid
+          :columns="breakdownColumns"
+          :rows="breakdownRows"
+          data-key="key"
+          :paginator="false"
+          :rows-per-page="10"
+          :table-style="{ minWidth: '32rem' }"
+        >
+          <template #cell-label="{ value }">
+            <span class="iplas-details-dialog__breakdown-label">{{ value }}</span>
+          </template>
+
+          <template #cell-value="{ data }">
+            <span
+              v-if="data.valueTone === 'score'"
+              class="iplas-details-dialog__score-chip"
+              :class="`iplas-details-dialog__score-chip--${scoreTone(selectedTestItem.score ?? 0)}`"
+            >
+              {{ data.value }}
+            </span>
+            <span v-else-if="data.valueTone === 'algorithm'" class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
+              {{ data.value }}
+            </span>
+            <span v-else-if="data.valueTone === 'policy'" class="iplas-details-dialog__pill iplas-details-dialog__pill--neutral">
+              {{ data.value }}
+            </span>
+            <span v-else :class="data.valueTone === 'warning' ? 'text-warning font-weight-bold' : ''">
+              {{ data.value }}
+            </span>
+          </template>
+        </AppDataGrid>
+      </section>
 
       <details class="iplas-details-dialog__explanation-card">
         <summary>
@@ -436,44 +431,46 @@
         </div>
       </div>
 
-      <div class="score-formula-panel">
-        <div class="iplas-details-dialog__metric-label">Formula</div>
-        <div class="score-formula-equation">Aggregate = sum(item score × effective weight) / sum(effective weight)</div>
-        <div class="score-formula-steps">
-          <div class="score-formula-step">
-            <div class="score-formula-step__index">1</div>
-            <div>
-              <div>Convert each configured weight into an effective weight.</div>
-              <div class="iplas-details-dialog__muted">Effective weight = configured weight × configured weight.</div>
+      <div class="iplas-details-dialog__overall-grid">
+        <div class="score-formula-panel">
+          <div class="iplas-details-dialog__metric-label">Formula</div>
+          <div class="score-formula-equation">Aggregate = sum(item score × effective weight) / sum(effective weight)</div>
+          <div class="score-formula-steps">
+            <div class="score-formula-step">
+              <div class="score-formula-step__index">1</div>
+              <div>
+                <div>Convert each configured weight into an effective weight.</div>
+                <div class="iplas-details-dialog__muted">Effective weight = configured weight × configured weight.</div>
+              </div>
             </div>
-          </div>
-          <div class="score-formula-step">
-            <div class="score-formula-step__index">2</div>
-            <div>
-              <div>Use only test items that actually have a score.</div>
-              <div class="iplas-details-dialog__muted">Each scored item contributes score × effective weight to the numerator.</div>
+            <div class="score-formula-step">
+              <div class="score-formula-step__index">2</div>
+              <div>
+                <div>Use only test items that actually have a score.</div>
+                <div class="iplas-details-dialog__muted">Each scored item contributes score × effective weight to the numerator.</div>
+              </div>
             </div>
-          </div>
-          <div class="score-formula-step">
-            <div class="score-formula-step__index">3</div>
-            <div>
-              <div>Divide by the total effective weight, then display the result on a /10 scale.</div>
-              <div class="iplas-details-dialog__muted">The backend stores and averages scores on a 0-1 scale before the UI formats them as /10.</div>
+            <div class="score-formula-step">
+              <div class="score-formula-step__index">3</div>
+              <div>
+                <div>Divide by the total effective weight, then display the result on a /10 scale.</div>
+                <div class="iplas-details-dialog__muted">The backend stores and averages scores on a 0-1 scale before the UI formats them as /10.</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
 
-      <div class="iplas-details-dialog__stats-grid">
-        <div class="score-explanation-stat">
-          <div class="iplas-details-dialog__metric-label">Scored Test Items</div>
-          <div class="iplas-details-dialog__stat-value">{{ overallScoreExplanation.scoredItemCount }}</div>
-          <div class="iplas-details-dialog__muted">{{ overallScoreExplanation.valueItemCount }} value, {{ overallScoreExplanation.binaryItemCount }} binary</div>
-        </div>
-        <div class="score-explanation-stat">
-          <div class="iplas-details-dialog__metric-label">Total Effective Weight</div>
-          <div class="iplas-details-dialog__stat-value">{{ formatCompactNumber(overallScoreExplanation.totalEffectiveWeight) }}</div>
-          <div class="iplas-details-dialog__muted">Based on squared per-item weights.</div>
+        <div class="iplas-details-dialog__stats-grid">
+          <div class="score-explanation-stat">
+            <div class="iplas-details-dialog__metric-label">Scored Test Items</div>
+            <div class="iplas-details-dialog__stat-value">{{ overallScoreExplanation.scoredItemCount }}</div>
+            <div class="iplas-details-dialog__muted">{{ overallScoreExplanation.valueItemCount }} value, {{ overallScoreExplanation.binaryItemCount }} binary</div>
+          </div>
+          <div class="score-explanation-stat">
+            <div class="iplas-details-dialog__metric-label">Total Effective Weight</div>
+            <div class="iplas-details-dialog__stat-value">{{ formatCompactNumber(overallScoreExplanation.totalEffectiveWeight) }}</div>
+            <div class="iplas-details-dialog__muted">Based on squared per-item weights.</div>
+          </div>
         </div>
       </div>
 
@@ -538,6 +535,19 @@ interface OverallScoreExplanation {
   totalEffectiveWeight: number
   failingItemCount: number
   forcedFailureThreshold: string
+}
+
+interface ForcedFailGridRow {
+  rowKey: string
+  name: string
+  score: number
+}
+
+interface BreakdownGridRow {
+  key: string
+  label: string
+  value: string
+  valueTone?: 'score' | 'algorithm' | 'policy' | 'warning'
 }
 
 interface Props {
@@ -606,6 +616,17 @@ const scoreFilterSelectOptions = [
     label: option.title,
     value: option.value,
   })),
+]
+
+const forcedFailColumns = [
+  { key: 'name', field: 'name', header: 'Failed Test Item', sortable: true, style: { width: '34rem' } },
+  { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '10rem' } },
+  { key: 'actions', header: 'Actions', sortable: false, style: { width: '6rem' } },
+]
+
+const breakdownColumns = [
+  { key: 'label', field: 'label', header: 'Metric', sortable: false, style: { width: '15rem' } },
+  { key: 'value', field: 'value', header: 'Value', sortable: false },
 ]
 
 // Computed: check if scores are available
@@ -819,6 +840,83 @@ const filteredForcedFailureDetails = computed(() => {
   }
 
   return details.filter((item) => item.name.toLowerCase().includes(query))
+})
+
+const forcedFailRows = computed<ForcedFailGridRow[]>(() => {
+  return filteredForcedFailureDetails.value.map((item, index) => ({
+    rowKey: `${item.name}-${index}`,
+    name: item.name,
+    score: item.score,
+  }))
+})
+
+const breakdownRows = computed<BreakdownGridRow[]>(() => {
+  const item = selectedTestItem.value
+
+  if (!item) {
+    return []
+  }
+
+  const rows: BreakdownGridRow[] = [
+    {
+      key: 'scoringType',
+      label: 'Scoring Algorithm',
+      value: formatScoringType(item.scoringType),
+      valueTone: 'algorithm',
+    },
+    {
+      key: 'weight',
+      label: 'Score Weight',
+      value: formatWeight(item.weight),
+    },
+    {
+      key: 'target',
+      label: `Target (${getTargetLabel(item)})`,
+      value: computeTarget(item),
+    },
+    {
+      key: 'actual',
+      label: 'Measured Value',
+      value: item.VALUE || '-',
+    },
+    {
+      key: 'ucl',
+      label: 'Upper Criteria Limit (UCL)',
+      value: item.UCL || '-',
+    },
+    {
+      key: 'lcl',
+      label: 'Lower Criteria Limit (LCL)',
+      value: item.LCL || '-',
+    },
+  ]
+
+  if (item.policy) {
+    rows.push({
+      key: 'policy',
+      label: 'Policy',
+      value: formatPolicyLabel(item.policy),
+      valueTone: 'policy',
+    })
+  }
+
+  if (item.deviation !== undefined) {
+    rows.push({
+      key: 'deviation',
+      label: 'Deviation From Target',
+      value: item.deviation.toFixed(2),
+      valueTone: Math.abs(item.deviation) > 1 ? 'warning' : undefined,
+    })
+  }
+
+  rows.push({
+    key: 'score',
+    label: 'Final Score',
+    value: item.score !== undefined ? formatScoreValue(item.score) : '-',
+    valueTone: 'score',
+  })
+
+  return rows
 })
 
 // Helper functions
@@ -1308,6 +1406,16 @@ function computeTarget(item: NormalizedTestItem): string {
 function formatWeight(weight?: number): string {
   const w = weight ?? 1.0
   return `${w.toFixed(1)}x`
+}
+
+function formatPolicyLabel(policy?: string): string {
+  const policyLabels: Record<string, string> = {
+    higher: 'Higher is Better',
+    lower: 'Lower is Better',
+    symmetrical: 'Centered',
+  }
+
+  return policyLabels[policy ?? ''] ?? policy ?? 'Unknown'
 }
 
 // UPDATED: Added helper to format policy for display
@@ -2015,10 +2123,98 @@ watch(
   flex-wrap: nowrap;
 }
 
+.iplas-details-dialog__eyebrow {
+  margin: 0 0 0.3rem;
+  color: var(--iplas-muted);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.iplas-details-dialog__data-grid-shell {
+  min-width: 0;
+  border: 1px solid var(--iplas-border);
+  border-radius: 1rem;
+  background: var(--iplas-panel);
+  overflow: hidden;
+}
+
+.iplas-details-dialog__row-copy {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.iplas-details-dialog__icon-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 1px solid var(--iplas-border);
+  border-radius: 0.75rem;
+  background: var(--iplas-panel-strong);
+  color: var(--iplas-text-primary);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.iplas-details-dialog__icon-action:hover {
+  border-color: var(--iplas-accent);
+  background: var(--iplas-panel-muted);
+  transform: translateY(-1px);
+}
+
+.iplas-details-dialog__breakdown-hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--iplas-border);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, var(--iplas-panel-strong), var(--iplas-panel));
+}
+
+.iplas-details-dialog__breakdown-hero h3 {
+  margin: 0;
+  color: var(--iplas-text-primary);
+  font-size: 1rem;
+}
+
+.iplas-details-dialog__breakdown-hero-score {
+  display: grid;
+  justify-items: end;
+  align-content: start;
+  gap: 0.45rem;
+}
+
+.iplas-details-dialog__breakdown-label {
+  font-weight: 700;
+  color: var(--iplas-text-primary);
+}
+
+.iplas-details-dialog__overall-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.85fr);
+  align-items: start;
+}
+
 @media (max-width: 840px) {
   .iplas-details-dialog__header,
   .iplas-details-dialog__score-overview,
-  .forced-fail-item {
+  .forced-fail-item,
+  .iplas-details-dialog__breakdown-hero {
     flex-direction: column;
     align-items: flex-start;
   }
@@ -2031,12 +2227,17 @@ watch(
   .iplas-details-dialog__summary-grid,
   .iplas-details-dialog__metadata-grid,
   .iplas-details-dialog__stats-grid,
-  .iplas-details-dialog__score-filter-grid {
+  .iplas-details-dialog__score-filter-grid,
+  .iplas-details-dialog__overall-grid {
     grid-template-columns: 1fr;
   }
 
   .summary-stat-button {
     width: 100%;
+  }
+
+  .iplas-details-dialog__breakdown-hero-score {
+    justify-items: start;
   }
 }
 </style>

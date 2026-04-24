@@ -506,59 +506,32 @@
         </div>
       </section>
 
-      <div class="upload-log-breakdown__table-wrap">
-        <table class="upload-log-breakdown__table">
-          <tbody>
-            <tr>
-              <td>Scoring Type</td>
-              <td>
-                <span :class="scoringTypeChipClass(breakdownItem.score_breakdown?.scoring_type ?? '')">
-                  {{ breakdownItem.score_breakdown?.scoring_type ?? 'N/A' }}
-                </span>
-              </td>
-            </tr>
-            <tr v-if="breakdownItem.score_breakdown?.ucl !== null && breakdownItem.score_breakdown?.ucl !== undefined">
-              <td>UCL (Upper Limit)</td>
-              <td>{{ breakdownItem.score_breakdown.ucl }}</td>
-            </tr>
-            <tr v-if="breakdownItem.score_breakdown?.lcl !== null && breakdownItem.score_breakdown?.lcl !== undefined">
-              <td>LCL (Lower Limit)</td>
-              <td>{{ breakdownItem.score_breakdown.lcl }}</td>
-            </tr>
-            <tr v-if="breakdownItem.score_breakdown?.target !== null && breakdownItem.score_breakdown?.target !== undefined">
-              <td>Target</td>
-              <td class="upload-log-breakdown__emphasis">{{ breakdownItem.score_breakdown.target?.toFixed(2) }}</td>
-            </tr>
-            <tr v-if="breakdownItem.score_breakdown?.actual !== null && breakdownItem.score_breakdown?.actual !== undefined">
-              <td>Actual Value</td>
-              <td class="upload-log-breakdown__emphasis">{{ breakdownItem.score_breakdown.actual }}</td>
-            </tr>
-            <tr v-if="breakdownItem.score_breakdown?.deviation !== null && breakdownItem.score_breakdown?.deviation !== undefined">
-              <td>Deviation</td>
-              <td :class="{ 'upload-log-breakdown__deviation-warning': Math.abs(breakdownItem.score_breakdown.deviation ?? 0) > 1 }">
-                {{ breakdownItem.score_breakdown.deviation?.toFixed(2) }}
-              </td>
-            </tr>
-            <tr v-if="breakdownItem.score_breakdown?.policy">
-              <td>Policy</td>
-              <td>
-                <span class="upload-log-comparison__pill">{{ breakdownItem.score_breakdown.policy }}</span>
-              </td>
-            </tr>
-            <tr>
-              <td>Weight</td>
-              <td>{{ breakdownItem.score_breakdown?.weight ?? 1.0 }}</td>
-            </tr>
-            <tr>
-              <td>Score (0-10)</td>
-              <td>
-                <span :class="scoreChipClass(breakdownItem.score_breakdown?.score ?? 0)">
-                  {{ breakdownItem.score_breakdown?.score?.toFixed(2) ?? 'N/A' }}
-                </span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
+      <div class="upload-log-breakdown__table-wrap upload-log-breakdown__grid">
+        <DataTable :value="breakdownRows" class="p-datatable-sm" dataKey="key">
+          <Column field="label" header="Metric">
+            <template #body="slotProps">
+              <span class="upload-log-breakdown__metric-label">{{ slotProps.data.label }}</span>
+            </template>
+          </Column>
+          <Column field="value" header="Value">
+            <template #body="slotProps">
+              <span v-if="slotProps.data.valueType === 'scoring-type'"
+                :class="scoringTypeChipClass(breakdownItem?.score_breakdown?.scoring_type ?? '')">
+                {{ slotProps.data.value }}
+              </span>
+              <span v-else-if="slotProps.data.valueType === 'policy'" class="upload-log-comparison__pill">
+                {{ slotProps.data.value }}
+              </span>
+              <span v-else-if="slotProps.data.valueType === 'score'"
+                :class="scoreChipClass(breakdownItem?.score_breakdown?.score ?? 0)">
+                {{ slotProps.data.value }}
+              </span>
+              <span v-else :class="slotProps.data.valueType === 'warning' ? 'upload-log-breakdown__deviation-warning' : ''">
+                {{ slotProps.data.value }}
+              </span>
+            </template>
+          </Column>
+        </DataTable>
       </div>
     </div>
 
@@ -648,6 +621,61 @@ const appliedScoringConfigs = ref<RescoreScoringConfig[]>([])
 const showBreakdownDialog = ref(false)
 const breakdownFullscreen = ref(false)
 const breakdownItem = ref<ParsedTestItemEnhanced | null>(null)
+
+const breakdownRows = computed(() => {
+  if (!breakdownItem.value) {
+    return []
+  }
+
+  const breakdown = breakdownItem.value.score_breakdown
+  const rows: Array<{ key: string; label: string; value: string; valueType?: 'scoring-type' | 'policy' | 'score' | 'warning' }> = [
+    {
+      key: 'scoring_type',
+      label: 'Scoring Type',
+      value: breakdown?.scoring_type ?? 'N/A',
+      valueType: 'scoring-type',
+    },
+  ]
+
+  if (breakdown?.ucl !== null && breakdown?.ucl !== undefined) {
+    rows.push({ key: 'ucl', label: 'UCL (Upper Limit)', value: String(breakdown.ucl) })
+  }
+
+  if (breakdown?.lcl !== null && breakdown?.lcl !== undefined) {
+    rows.push({ key: 'lcl', label: 'LCL (Lower Limit)', value: String(breakdown.lcl) })
+  }
+
+  if (breakdown?.target !== null && breakdown?.target !== undefined) {
+    rows.push({ key: 'target', label: 'Target', value: breakdown.target.toFixed(2) })
+  }
+
+  if (breakdown?.actual !== null && breakdown?.actual !== undefined) {
+    rows.push({ key: 'actual', label: 'Actual Value', value: String(breakdown.actual) })
+  }
+
+  if (breakdown?.deviation !== null && breakdown?.deviation !== undefined) {
+    rows.push({
+      key: 'deviation',
+      label: 'Deviation',
+      value: breakdown.deviation.toFixed(2),
+      valueType: Math.abs(breakdown.deviation ?? 0) > 1 ? 'warning' : undefined,
+    })
+  }
+
+  if (breakdown?.policy) {
+    rows.push({ key: 'policy', label: 'Policy', value: breakdown.policy, valueType: 'policy' })
+  }
+
+  rows.push({ key: 'weight', label: 'Weight', value: String(breakdown?.weight ?? 1.0) })
+  rows.push({
+    key: 'score',
+    label: 'Score (0-10)',
+    value: breakdown?.score?.toFixed(2) ?? 'N/A',
+    valueType: 'score',
+  })
+
+  return rows
+})
 
 // Comparison section fullscreen
 const comparisonFullscreen = ref(false)

@@ -508,32 +508,26 @@
       </div>
 
       <div class="user-management-permissions-table-wrap">
-        <table class="user-management-permissions-table">
-          <thead>
-            <tr>
-              <th>Resource</th>
-              <th v-for="action in acAvailableActions" :key="action">{{ capitalize(action) }}</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="resource in acAvailableResources" :key="resource">
-              <td>
-                <div class="user-management-resource-cell">
-                  <Icon :icon="getResourceIcon(resource)" />
-                  <span>{{ formatResourceName(resource) }}</span>
-                </div>
-              </td>
-              <td v-for="action in acAvailableActions" :key="`${resource}-${action}`">
-                <input
-                  class="user-management-permission-checkbox"
-                  :checked="hasPermission(resource, action)"
-                  type="checkbox"
-                  @change="togglePermission(resource, action, ($event.target as HTMLInputElement).checked)"
-                >
-              </td>
-            </tr>
-          </tbody>
-        </table>
+        <DataTable :value="permissionMatrixRows" dataKey="resource" class="p-datatable-sm user-management-permissions-grid">
+          <Column field="resource" header="Resource">
+            <template #body="slotProps">
+              <div class="user-management-resource-cell">
+                <Icon :icon="getResourceIcon(slotProps.data.resource)" />
+                <span>{{ formatResourceName(slotProps.data.resource) }}</span>
+              </div>
+            </template>
+          </Column>
+          <Column v-for="action in acAvailableActions" :key="action" :field="action" :header="capitalize(action)">
+            <template #body="slotProps">
+              <input
+                class="user-management-permission-checkbox"
+                :checked="hasPermission(slotProps.data.resource, action)"
+                type="checkbox"
+                @change="togglePermission(slotProps.data.resource, action, ($event.target as HTMLInputElement).checked)"
+              >
+            </template>
+          </Column>
+        </DataTable>
       </div>
 
       <template #footer>
@@ -553,6 +547,8 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import Column from 'primevue/column'
+import DataTable from 'primevue/datatable'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { AppDataGrid, AppDialog, AppTabs } from '@/shared'
@@ -714,6 +710,10 @@ const filteredAcUsers = computed(() => {
       user.role.toLowerCase().includes(query)
     )
   })
+})
+
+const permissionMatrixRows = computed(() => {
+  return acAvailableResources.value.map((resource) => ({ resource }))
 })
 
 const currentUserFormValid = computed(() => {

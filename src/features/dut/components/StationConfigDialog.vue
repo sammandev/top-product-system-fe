@@ -129,10 +129,6 @@
               </button>
             </div>
 
-            <p class="station-config-dialog__helper-copy">
-              Add items to Include for analysis, add items to Exclude to remove them, and items already assigned to one list stay locked while you edit the other.
-            </p>
-
             <div class="station-config-dialog__search-stack">
               <label class="station-config-dialog__field">
                 <span>Search {{ activeSelectionLabel }} Candidates</span>

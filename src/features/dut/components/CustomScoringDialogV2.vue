@@ -66,67 +66,39 @@
           </label>
 
           <AppPanel v-if="testMeasurement" title="Test Results" compact-header>
-            <table class="custom-scoring-dialog__table">
-              <tbody>
-                <tr>
-                  <th>Test Item</th>
-                  <td>{{ testMeasurement.test_item }}</td>
-                </tr>
-                <tr>
-                  <th>Category</th>
-                  <td>
-                    <span class="custom-scoring-dialog__tag custom-scoring-dialog__tag--primary">
-                      {{ testMeasurement.category || 'General' }}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <th>Measured Value</th>
-                  <td>{{ testMeasurement.actual.toFixed(4) }}</td>
-                </tr>
-                <tr>
-                  <th>Target Value</th>
-                  <td>{{ testMeasurement.target !== null ? testMeasurement.target.toFixed(4) : 'N/A' }}</td>
-                </tr>
-                <tr>
-                  <th>USL / LSL</th>
-                  <td>
-                    {{ testMeasurement.usl !== null ? testMeasurement.usl.toFixed(4) : 'N/A' }} /
-                    {{ testMeasurement.lsl !== null ? testMeasurement.lsl.toFixed(4) : 'N/A' }}
-                  </td>
-                </tr>
-                <tr>
-                  <th>System Score</th>
-                  <td>
-                    <span class="custom-scoring-dialog__tag" :class="scoreClass(testMeasurement.systemScore)">
-                      {{ testMeasurement.systemScore.toFixed(2) }}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <th>Custom Score</th>
-                  <td class="custom-scoring-dialog__table-score-cell">
-                    <span class="custom-scoring-dialog__tag" :class="scoreClass(testResult.customScore)">
-                      {{ testResult.customScore.toFixed(2) }}
-                    </span>
-                    <span class="custom-scoring-dialog__tag custom-scoring-dialog__tag--muted">
-                      {{ testResult.formulaName }}
-                    </span>
-                  </td>
-                </tr>
-                <tr>
-                  <th>Difference</th>
-                  <td class="custom-scoring-dialog__table-score-cell">
-                    <span class="custom-scoring-dialog__tag" :class="differenceClass(testResult.difference)">
-                      {{ testResult.difference > 0 ? '+' : '' }}{{ testResult.difference.toFixed(2) }}
-                    </span>
-                    <span class="custom-scoring-dialog__difference-note">
-                      ({{ testResult.difference > 0 ? 'Higher' : testResult.difference < 0 ? 'Lower' : 'Same' }} than system)
-                    </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+            <AppDataGrid :columns="measurementResultColumns" :rows="measurementResultRows" data-key="key" :paginator="false"
+              :rows-per-page="10" :table-style="{ minWidth: '34rem' }">
+              <template #cell-label="slotProps">
+                <span class="custom-scoring-dialog__metric-label">{{ slotProps.data.label }}</span>
+              </template>
+
+              <template #cell-value="slotProps">
+                <span v-if="slotProps.data.valueType === 'category'" class="custom-scoring-dialog__tag custom-scoring-dialog__tag--primary">
+                  {{ slotProps.data.value }}
+                </span>
+                <span v-else-if="slotProps.data.valueType === 'system-score'" class="custom-scoring-dialog__tag"
+                  :class="scoreClass(testMeasurement.systemScore)">
+                  {{ slotProps.data.value }}
+                </span>
+                <span v-else-if="slotProps.data.valueType === 'custom-score'" class="custom-scoring-dialog__table-score-cell">
+                  <span class="custom-scoring-dialog__tag" :class="scoreClass(testResult.customScore)">
+                    {{ slotProps.data.value }}
+                  </span>
+                  <span class="custom-scoring-dialog__tag custom-scoring-dialog__tag--muted">
+                    {{ testResult.formulaName }}
+                  </span>
+                </span>
+                <span v-else-if="slotProps.data.valueType === 'difference'" class="custom-scoring-dialog__table-score-cell">
+                  <span class="custom-scoring-dialog__tag" :class="differenceClass(testResult.difference)">
+                    {{ slotProps.data.value }}
+                  </span>
+                  <span class="custom-scoring-dialog__difference-note">
+                    ({{ testResult.difference > 0 ? 'Higher' : testResult.difference < 0 ? 'Lower' : 'Same' }} than system)
+                  </span>
+                </span>
+                <span v-else>{{ slotProps.data.value }}</span>
+              </template>
+            </AppDataGrid>
           </AppPanel>
 
           <div v-else class="custom-scoring-dialog__notice custom-scoring-dialog__notice--subtle">
@@ -201,7 +173,7 @@
 
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
-import { AppDialog, AppPanel } from '@/shared/ui'
+import { AppDataGrid, AppDialog, AppPanel } from '@/shared/ui'
 import type {
   CategoryFormulasV2,
   CustomFormulaV2,
@@ -233,6 +205,13 @@ interface TestMeasurement {
   usl: number | null
   lsl: number | null
   systemScore: number
+}
+
+interface MeasurementResultRow {
+  key: string
+  label: string
+  value: string
+  valueType?: 'category' | 'system-score' | 'custom-score' | 'difference'
 }
 
 const props = defineProps<Props>()
@@ -357,6 +336,51 @@ const testResult = computed(() => {
     difference: customScore - m.systemScore,
     formulaName,
   }
+})
+
+const measurementResultColumns = [
+  { key: 'label', field: 'label', header: 'Metric', sortable: false, style: { width: '14rem' } },
+  { key: 'value', field: 'value', header: 'Value', sortable: false },
+]
+
+const measurementResultRows = computed<MeasurementResultRow[]>(() => {
+  if (!testMeasurement.value) {
+    return []
+  }
+
+  return [
+    { key: 'test-item', label: 'Test Item', value: testMeasurement.value.test_item },
+    { key: 'category', label: 'Category', value: testMeasurement.value.category || 'General', valueType: 'category' },
+    { key: 'actual', label: 'Measured Value', value: testMeasurement.value.actual.toFixed(4) },
+    {
+      key: 'target',
+      label: 'Target Value',
+      value: testMeasurement.value.target !== null ? testMeasurement.value.target.toFixed(4) : 'N/A',
+    },
+    {
+      key: 'limits',
+      label: 'USL / LSL',
+      value: `${testMeasurement.value.usl !== null ? testMeasurement.value.usl.toFixed(4) : 'N/A'} / ${testMeasurement.value.lsl !== null ? testMeasurement.value.lsl.toFixed(4) : 'N/A'}`,
+    },
+    {
+      key: 'system-score',
+      label: 'System Score',
+      value: testMeasurement.value.systemScore.toFixed(2),
+      valueType: 'system-score',
+    },
+    {
+      key: 'custom-score',
+      label: 'Custom Score',
+      value: testResult.value.customScore.toFixed(2),
+      valueType: 'custom-score',
+    },
+    {
+      key: 'difference',
+      label: 'Difference',
+      value: `${testResult.value.difference > 0 ? '+' : ''}${testResult.value.difference.toFixed(2)}`,
+      valueType: 'difference',
+    },
+  ]
 })
 
 // Score color helper (matching parent component)

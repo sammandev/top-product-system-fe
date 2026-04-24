@@ -200,17 +200,17 @@ onBeforeUnmount(() => {
   justify-content: space-between;
   gap: 0.5rem;
   width: 100%;
-  padding: 0.4375rem 0.625rem;
+  padding: 0.75rem 0.95rem;
   border: 1px solid var(--app-border);
-  border-radius: 0.375rem;
+  border-radius: 0.75rem;
   background: var(--app-panel-strong);
   color: var(--app-ink);
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-family: inherit;
   cursor: pointer;
   transition: border-color 0.15s;
   text-align: left;
-  min-height: 2rem;
+  min-height: 2.875rem;
 }
 
 .app-multi-select__trigger:hover {
@@ -234,7 +234,7 @@ onBeforeUnmount(() => {
 }
 
 .app-multi-select__chevron {
-  font-size: 0.75rem;
+  font-size: 0.9rem;
   color: var(--app-muted);
   flex-shrink: 0;
   transition: transform 0.15s;
@@ -249,7 +249,7 @@ onBeforeUnmount(() => {
 /* Teleported dropdown — cannot be scoped */
 .app-multi-select__dropdown {
   border: 1px solid var(--app-border);
-  border-radius: 0.5rem;
+  border-radius: 0.85rem;
   background: var(--app-panel-strong);
   box-shadow: none;
   overflow: hidden;
@@ -262,7 +262,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.5rem;
+  padding: 0.75rem 0.85rem;
   border-bottom: 1px solid var(--app-border);
   flex-shrink: 0;
 }
@@ -277,7 +277,7 @@ onBeforeUnmount(() => {
   flex: 1;
   border: none;
   background: transparent;
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   color: var(--app-ink);
   outline: none;
   font-family: inherit;
@@ -291,7 +291,7 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.375rem 0.5rem;
+  padding: 0.625rem 0.85rem;
   border-bottom: 1px solid var(--app-border);
   flex-shrink: 0;
 }
@@ -300,7 +300,7 @@ onBeforeUnmount(() => {
   border: none;
   background: transparent;
   color: var(--app-accent);
-  font-size: 0.75rem;
+  font-size: 0.8125rem;
   font-family: inherit;
   cursor: pointer;
   padding: 0;
@@ -312,7 +312,7 @@ onBeforeUnmount(() => {
 
 .app-multi-select__toolbar-count {
   margin-left: auto;
-  font-size: 0.6875rem;
+  font-size: 0.8125rem;
   color: var(--app-muted);
 }
 
@@ -328,15 +328,16 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 0.5rem;
   width: 100%;
-  padding: 0.375rem 0.625rem;
+  padding: 0.72rem 0.85rem;
   border: none;
   background: transparent;
   color: var(--app-ink);
-  font-size: 0.8125rem;
+  font-size: 0.9375rem;
   font-family: inherit;
   cursor: pointer;
   text-align: left;
   transition: background 0.1s;
+  min-height: 2.75rem;
 }
 
 .app-multi-select__option:hover {
@@ -352,12 +353,12 @@ onBeforeUnmount(() => {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1rem;
-  height: 1rem;
+  width: 1.1rem;
+  height: 1.1rem;
   border: 1.5px solid var(--app-border);
   border-radius: 0.25rem;
   flex-shrink: 0;
-  font-size: 0.625rem;
+  font-size: 0.7rem;
   transition: border-color 0.15s, background 0.15s;
 }
 
@@ -378,7 +379,7 @@ onBeforeUnmount(() => {
 .app-multi-select__empty {
   padding: 1rem;
   text-align: center;
-  font-size: 0.8125rem;
+  font-size: 0.875rem;
   color: var(--app-muted);
 }
 </style>
