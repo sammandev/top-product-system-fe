@@ -556,7 +556,7 @@ watch(
 .fullscreen-dialog__body {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.75rem;
   min-height: 0;
   height: 100%;
 }
@@ -601,51 +601,16 @@ watch(
 
 .fullscreen-dialog__dialog-title h2 {
   margin: 0;
-  color: var(--app-ink);
+  color: inherit;
+  font-size: 1.18rem;
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
 
 .fullscreen-dialog__dialog-title :deep(svg) {
-  font-size: 1.18rem;
-  color: var(--app-info);
+  font-size: 1.08rem;
+  color: currentColor;
   flex-shrink: 0;
-}
-
-/* ── Blue header ── */
-:deep(.fullscreen-dialog .p-dialog-header) {
-  background: #2196f3;
-  border-bottom-color: #1e88e5;
-}
-
-:deep(.fullscreen-dialog .app-dialog__header) {
-  color: #fff;
-}
-
-.fullscreen-dialog .fullscreen-dialog__dialog-title h2 {
-  color: #fff;
-}
-
-.fullscreen-dialog .fullscreen-dialog__dialog-title :deep(svg) {
-  color: #fff;
-}
-
-:deep(.fullscreen-dialog .app-dialog__header-btn) {
-  border-color: rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-:deep(.fullscreen-dialog .app-dialog__header-btn:hover) {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.55);
-  color: #fff;
-}
-
-:deep(.fullscreen-dialog .app-dialog__header-btn--close:hover) {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.55);
-  color: #fff;
 }
 
 .fullscreen-dialog__header-copy h2 {
@@ -765,9 +730,9 @@ watch(
 .fullscreen-dialog__summary-card,
 .fullscreen-dialog__metadata-card {
   border: 1px solid var(--app-border);
-  border-radius: 1.25rem;
+  border-radius: 0.82rem;
   background: var(--app-panel-strong);
-  padding: 0.35rem;
+  padding: 0.32rem;
 }
 
 .fullscreen-dialog__summary-card--highlight {
@@ -806,13 +771,15 @@ watch(
 .fullscreen-dialog__meta-pills {
   display: flex;
   flex-wrap: wrap;
+  gap: 0.55rem;
 }
 
 .fullscreen-dialog__pill {
-  padding: 0.45rem 0.8rem;
+  padding: 0.42rem 0.72rem;
   font-weight: 700;
   max-width: 100%;
   overflow-wrap: anywhere;
+  font-size: 0.78rem;
 }
 
 .fullscreen-dialog__pill--cool {
@@ -842,6 +809,10 @@ watch(
 .fullscreen-dialog__filters {
   grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.2fr) minmax(0, 0.8fr) auto;
   align-items: end;
+  padding: 0.82rem 0.9rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.82rem;
+  background: var(--app-panel);
 }
 
 .fullscreen-dialog__field {
@@ -861,10 +832,10 @@ watch(
 .fullscreen-dialog__field select {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
+  border-radius: 0.72rem;
   background: var(--app-panel-strong);
   color: var(--app-ink);
-  padding: 0.8rem 0.9rem;
+  padding: 0.68rem 0.8rem;
   font: inherit;
 }
 
@@ -893,6 +864,11 @@ watch(
   min-height: 0;
   flex: 1;
   display: flex;
+  padding: 0.55rem 0.55rem 0;
+  border: 1px solid var(--app-border);
+  border-radius: 0.82rem;
+  background: var(--app-panel);
+  overflow: hidden;
 }
 
 .fullscreen-dialog__body--fullscreen .fullscreen-dialog__table-shell {

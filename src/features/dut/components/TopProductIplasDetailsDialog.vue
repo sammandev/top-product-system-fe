@@ -1534,53 +1534,17 @@ watch(
 
 .iplas-details-dialog__dialog-title h2 {
   margin: 0;
-  color: var(--iplas-ink);
-  font-size: 1.02rem;
+  color: inherit;
+  font-size: 1.18rem;
   font-weight: 700;
   line-height: 1.2;
   overflow-wrap: anywhere;
 }
 
 .iplas-details-dialog__dialog-title :deep(svg) {
-  font-size: 1.18rem;
-  color: var(--app-info);
+  font-size: 1.08rem;
+  color: currentColor;
   flex-shrink: 0;
-}
-
-/* ── Blue header for all iPLAS dialogs ── */
-:deep(.iplas-details-dialog .p-dialog-header) {
-  background: #2196f3;
-  border-bottom-color: #1e88e5;
-}
-
-:deep(.iplas-details-dialog .app-dialog__header) {
-  color: #fff;
-}
-
-.iplas-details-dialog .iplas-details-dialog__dialog-title h2 {
-  color: #fff;
-}
-
-.iplas-details-dialog .iplas-details-dialog__dialog-title :deep(svg) {
-  color: #fff;
-}
-
-:deep(.iplas-details-dialog .app-dialog__header-btn) {
-  border-color: rgba(255, 255, 255, 0.35);
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-}
-
-:deep(.iplas-details-dialog .app-dialog__header-btn:hover) {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.55);
-  color: #fff;
-}
-
-:deep(.iplas-details-dialog .app-dialog__header-btn--close:hover) {
-  background: rgba(255, 255, 255, 0.22);
-  border-color: rgba(255, 255, 255, 0.55);
-  color: #fff;
 }
 
 .iplas-details-dialog__header-copy p,
@@ -1638,8 +1602,15 @@ watch(
   color: var(--app-success);
 }
 
-.iplas-details-dialog__summary-grid,
-.iplas-details-dialog__metadata-grid,
+.iplas-details-dialog__summary-grid {
+  grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr));
+  align-items: stretch;
+}
+
+.iplas-details-dialog__metadata-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
 .iplas-details-dialog__stats-grid,
 .iplas-details-dialog__score-filter-grid {
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
@@ -1648,7 +1619,7 @@ watch(
 .iplas-details-dialog__body {
   display: flex;
   flex-direction: column;
-  gap: 0.85rem;
+  gap: 0.75rem;
   min-height: 0;
   height: 100%;
 }
@@ -1668,7 +1639,7 @@ watch(
 .iplas-details-dialog__simple-list,
 .iplas-details-dialog__explanation-card {
   border: 1px solid var(--iplas-border);
-  border-radius: 0.9rem;
+  border-radius: 0.82rem;
   background: var(--iplas-panel);
 }
 
@@ -1681,13 +1652,22 @@ watch(
 .iplas-details-dialog__metric-list,
 .iplas-details-dialog__simple-list,
 .iplas-details-dialog__table-shell {
-  padding: 0.9rem;
+  padding: 0.82rem;
+}
+
+.iplas-details-dialog__table-shell {
+  padding: 0.55rem 0.55rem 0;
+  overflow: hidden;
 }
 
 .iplas-details-dialog__summary-card--highlight,
 .iplas-details-dialog__summary-card--score {
   border-color: color-mix(in srgb, var(--app-info) 18%, var(--iplas-border));
   background: var(--app-panel);
+}
+
+.iplas-details-dialog__metadata-card {
+  background: var(--iplas-panel-strong);
 }
 
 .iplas-details-dialog__download-button {
@@ -1735,7 +1715,7 @@ watch(
 .iplas-details-dialog__copy-row {
   width: 100%;
   display: flex;
-  gap: 0.9rem;
+  gap: 0.72rem;
   align-items: center;
   text-align: left;
   cursor: pointer;
@@ -1775,7 +1755,7 @@ watch(
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  padding: 0.55rem 0.8rem;
+  padding: 0.42rem 0.72rem;
   border-radius: 999px;
   border: 1px solid var(--iplas-border);
   background: var(--app-surface);
@@ -1783,6 +1763,22 @@ watch(
   width: fit-content;
   max-width: 100%;
   overflow-wrap: anywhere;
+  font-size: 0.78rem;
+}
+
+.iplas-details-dialog__meta-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem;
+}
+
+.iplas-details-dialog__filters {
+  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1.05fr);
+  align-items: end;
+  padding: 0.82rem 0.9rem;
+  border: 1px solid var(--iplas-border);
+  border-radius: 0.82rem;
+  background: var(--iplas-panel);
 }
 
 .iplas-details-dialog__pill--cool {
@@ -1824,27 +1820,32 @@ watch(
   gap: 0.45rem;
 }
 
+.iplas-details-dialog__field > span {
+  color: var(--iplas-ink);
+  font-size: 0.74rem;
+}
+
 .iplas-details-dialog__field input,
 .iplas-details-dialog__field select,
 .iplas-details-dialog__search-shell,
 .iplas-details-dialog__token-shell {
   width: 100%;
   border: 1px solid var(--iplas-border);
-  border-radius: 0.75rem;
+  border-radius: 0.7rem;
   background: var(--iplas-panel-strong);
   color: var(--iplas-ink);
 }
 
 .iplas-details-dialog__field input,
 .iplas-details-dialog__field select {
-  padding: 0.72rem 0.82rem;
+  padding: 0.68rem 0.8rem;
 }
 
 .iplas-details-dialog__search-shell,
 .iplas-details-dialog__token-shell {
   display: grid;
   gap: 0.6rem;
-  padding: 0.75rem 0.85rem;
+  padding: 0.68rem 0.8rem;
 }
 
 .iplas-details-dialog__search-shell {
@@ -1899,6 +1900,7 @@ watch(
 .iplas-details-dialog__chip-select {
   display: flex;
   flex-wrap: wrap;
+  gap: 0.45rem;
 }
 
 .iplas-details-dialog__chip-option--active {
@@ -1927,7 +1929,7 @@ watch(
 
 .iplas-details-dialog__table-shell {
   flex: 1;
-  min-height: 24rem;
+  min-height: 23rem;
 }
 
 .iplas-details-dialog__body--fullscreen .iplas-details-dialog__table-shell {
@@ -2475,6 +2477,7 @@ watch(
   .iplas-details-dialog__summary-grid,
   .iplas-details-dialog__metadata-grid,
   .iplas-details-dialog__stats-grid,
+  .iplas-details-dialog__filters,
   .iplas-details-dialog__score-filter-grid,
   .iplas-details-dialog__stats-row {
     grid-template-columns: 1fr;
