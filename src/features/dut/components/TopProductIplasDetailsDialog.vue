@@ -6,12 +6,13 @@
     fullscreen-width="98vw"
     :breakpoints="{ '1200px': '94vw', '768px': '98vw' }"
     fullscreenable
+    :show-footer="false"
     class="iplas-details-dialog"
   >
     <template #header>
-      <div class="iplas-details-dialog__header-copy">
+      <div class="iplas-details-dialog__dialog-title">
+        <Icon icon="mdi:table-eye" />
         <h2>Test Items Details</h2>
-        <p v-if="record">Inspect test items, identifiers, and score details.</p>
       </div>
     </template>
     <template #header-actions>
@@ -213,7 +214,7 @@
           :columns="testItemColumns"
           :rows="tableTestItems"
           data-key="NAME"
-          :paginator="false"
+          :paginator="true"
           :rows-per-page="50"
           :loading="loadingTestItems"
           scroll-height="flex"
@@ -323,11 +324,17 @@
 
   <AppDialog
     v-model="showBreakdownDialog"
-    title="Score Breakdown"
-    description="Review thresholds, target, and scoring method."
     width="min(92vw, 34rem)"
     persistent
+    :show-footer="false"
   >
+    <template #header>
+      <div class="iplas-details-dialog__dialog-title">
+        <Icon icon="mdi:table-search" />
+        <h2>Score Breakdown</h2>
+      </div>
+    </template>
+
     <div v-if="selectedTestItem" class="iplas-details-subdialog">
       <section class="iplas-details-dialog__breakdown-hero">
         <div>
@@ -399,21 +406,20 @@
       </details>
     </div>
 
-    <template #footer>
-      <div class="iplas-details-dialog__footer-actions">
-        <button type="button" class="iplas-details-dialog__button iplas-details-dialog__button--ghost" @click="showBreakdownDialog = false">
-          Close
-        </button>
-      </div>
-    </template>
   </AppDialog>
 
   <AppDialog
     v-model="showOverallScoreDialog"
-    title="How This Score Is Calculated"
-    description="Review the aggregate weighting behind the displayed score."
     width="min(92vw, 40rem)"
+    :show-footer="false"
   >
+    <template #header>
+      <div class="iplas-details-dialog__dialog-title">
+        <Icon icon="mdi:chart-line" />
+        <h2>How This Score Is Calculated</h2>
+      </div>
+    </template>
+
     <div v-if="record && scoreSummaryPrimary && overallScoreExplanation" class="iplas-details-subdialog">
       <div class="score-explanation-primary">
         <div class="iplas-details-dialog__score-overview">
@@ -485,13 +491,6 @@
       </section>
     </div>
 
-    <template #footer>
-      <div class="iplas-details-dialog__footer-actions">
-        <button type="button" class="iplas-details-dialog__button iplas-details-dialog__button--ghost" @click="showOverallScoreDialog = false">
-          Close
-        </button>
-      </div>
-    </template>
   </AppDialog>
 </template>
 
@@ -1521,6 +1520,27 @@ watch(
   color: var(--iplas-ink);
 }
 
+.iplas-details-dialog__dialog-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.iplas-details-dialog__dialog-title h2 {
+  margin: 0;
+  color: var(--iplas-ink);
+  font-size: 1.02rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.iplas-details-dialog__dialog-title :deep(svg) {
+  font-size: 1.18rem;
+  color: var(--app-info);
+  flex-shrink: 0;
+}
+
 .iplas-details-dialog__header-copy p,
 .iplas-details-dialog__metric-caption,
 .iplas-details-dialog__metric-secondary,
@@ -1580,6 +1600,18 @@ watch(
 .iplas-details-dialog__stats-grid,
 .iplas-details-dialog__score-filter-grid {
   grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
+}
+
+.iplas-details-dialog__body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  min-height: 0;
+  height: 100%;
+}
+
+.iplas-details-dialog__body--fullscreen {
+  flex: 1;
 }
 
 .iplas-details-dialog__summary-card,
@@ -1818,6 +1850,15 @@ watch(
   gap: 0.8rem;
 }
 
+.iplas-details-dialog__table-shell {
+  flex: 1;
+  min-height: 24rem;
+}
+
+.iplas-details-dialog__body--fullscreen .iplas-details-dialog__table-shell {
+  min-height: 0;
+}
+
 .iplas-details-dialog__loading-state,
 .iplas-details-dialog__empty-state,
 .iplas-details-dialog__footer-actions {
@@ -1912,6 +1953,36 @@ watch(
   max-width: 100%;
   overflow-x: auto;
   touch-action: pan-x pan-y;
+}
+
+:deep(.iplas-details-dialog.app-dialog--fullscreen .p-dialog-content) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:deep(.iplas-details-dialog.app-dialog--fullscreen .app-dialog__body) {
+  flex: 1;
+  min-height: 0;
+}
+
+.iplas-details-dialog__table-shell > .app-data-grid {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.iplas-details-dialog__table-shell :deep(.p-datatable) {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.iplas-details-dialog__table-shell :deep(.p-datatable-wrapper),
+.iplas-details-dialog__table-shell :deep(.p-datatable-table-container) {
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .iplas-details-dialog__explanation-card summary {

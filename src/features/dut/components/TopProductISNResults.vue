@@ -210,7 +210,7 @@
             removableSort
             showGridlines
             stripedRows
-            class="top-product-isn-results__data-table"
+            class="top-product-isn-results__data-table app-interactive-datatable"
           >
             <Column
               v-for="column in measurementHeaders"
@@ -365,7 +365,7 @@
             removableSort
             showGridlines
             stripedRows
-            class="top-product-isn-results__data-table"
+            class="top-product-isn-results__data-table app-interactive-datatable"
           >
             <Column
               v-for="column in comparisonHeaders"
@@ -580,7 +580,7 @@
             removableSort
             showGridlines
             stripedRows
-            class="top-product-isn-results__data-table"
+            class="top-product-isn-results__data-table app-interactive-datatable"
           >
             <Column
               v-for="column in comparisonHeaders"

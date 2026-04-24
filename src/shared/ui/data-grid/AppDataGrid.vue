@@ -243,6 +243,15 @@ function resolveFieldValue(row: GridRow, field?: string) {
   border-bottom: 1px solid var(--app-border);
 }
 
+.app-data-grid :deep(.p-datatable-tbody > tr) {
+  cursor: pointer;
+  transition: background-color 0.12s ease;
+}
+
+.app-data-grid :deep(.p-datatable-tbody > tr:hover) {
+  background: color-mix(in srgb, var(--app-accent) 4%, var(--app-panel-strong));
+}
+
 .app-data-grid :deep(.p-datatable-tbody > tr:last-child > td) {
   border-bottom: 0;
 }

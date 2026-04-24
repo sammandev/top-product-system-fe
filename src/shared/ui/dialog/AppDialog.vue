@@ -53,7 +53,7 @@
       <slot />
     </div>
 
-    <template v-if="$slots.footer || closable" #footer>
+    <template v-if="showFooter && ($slots.footer || closable)" #footer>
       <div class="app-dialog__footer">
         <slot v-if="$slots.footer" name="footer" />
         <button v-else type="button" class="app-dialog__footer-button" @click="handleClose">
@@ -84,6 +84,7 @@ const props = withDefaults(
     persistent?: boolean
     dismissableMask?: boolean
     closable?: boolean
+    showFooter?: boolean
     closeOnEscape?: boolean
     draggable?: boolean
     maximizable?: boolean
@@ -99,6 +100,7 @@ const props = withDefaults(
     persistent: false,
     dismissableMask: true,
     closable: true,
+    showFooter: true,
     closeOnEscape: true,
     draggable: false,
     maximizable: false,

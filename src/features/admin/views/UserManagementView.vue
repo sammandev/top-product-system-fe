@@ -508,7 +508,7 @@
       </div>
 
       <div class="user-management-permissions-table-wrap">
-        <DataTable :value="permissionMatrixRows" dataKey="resource" class="p-datatable-sm user-management-permissions-grid">
+        <DataTable :value="permissionMatrixRows" dataKey="resource" class="p-datatable-sm user-management-permissions-grid app-interactive-datatable">
           <Column field="resource" header="Resource">
             <template #body="slotProps">
               <div class="user-management-resource-cell">

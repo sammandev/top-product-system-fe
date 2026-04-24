@@ -211,7 +211,7 @@
         removableSort
         showGridlines
         stripedRows
-        class="upload-log-comparison__table"
+        class="upload-log-comparison__table app-interactive-datatable"
       >
         <ColumnGroup type="header">
           <Row>
@@ -507,7 +507,7 @@
       </section>
 
       <div class="upload-log-breakdown__table-wrap upload-log-breakdown__grid">
-        <DataTable :value="breakdownRows" class="p-datatable-sm" dataKey="key">
+        <DataTable :value="breakdownRows" class="p-datatable-sm app-interactive-datatable" dataKey="key">
           <Column field="label" header="Metric">
             <template #body="slotProps">
               <span class="upload-log-breakdown__metric-label">{{ slotProps.data.label }}</span>

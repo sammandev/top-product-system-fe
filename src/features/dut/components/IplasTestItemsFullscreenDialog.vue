@@ -6,6 +6,7 @@
     fullscreen-width="98vw"
     :breakpoints="{ '1200px': '94vw', '768px': '98vw' }"
     fullscreenable
+    :show-footer="false"
     class="fullscreen-dialog"
   >
     <template #header>
@@ -165,7 +166,7 @@
           data-key="NAME"
           :paginator="true"
           :rows-per-page="50"
-          scroll-height="32rem"
+          :scroll-height="isFullscreen ? 'flex' : '32rem'"
           :table-style="{ minWidth: '54rem' }"
         >
           <template #cell-STATUS="{ data }">
@@ -551,15 +552,15 @@ watch(
 
 <style scoped>
 .fullscreen-dialog__body {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
-  max-height: calc(100vh - 10rem);
-  overflow: auto;
-  padding-right: 0.25rem;
+  min-height: 0;
+  height: 100%;
 }
 
 .fullscreen-dialog__body--fullscreen {
-  max-height: calc(100vh - 6rem);
+  flex: 1;
 }
 
 .fullscreen-dialog__header,
@@ -813,6 +814,42 @@ watch(
 }
 
 .fullscreen-dialog__table-shell {
+  min-height: 0;
+  flex: 1;
+  display: flex;
+}
+
+.fullscreen-dialog__body--fullscreen .fullscreen-dialog__table-shell {
+  min-height: 0;
+}
+
+:deep(.fullscreen-dialog.app-dialog--fullscreen .p-dialog-content) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+:deep(.fullscreen-dialog.app-dialog--fullscreen .app-dialog__body) {
+  flex: 1;
+  min-height: 0;
+}
+
+.fullscreen-dialog__table-shell > .app-data-grid {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.fullscreen-dialog__table-shell :deep(.p-datatable) {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.fullscreen-dialog__table-shell :deep(.p-datatable-wrapper),
+.fullscreen-dialog__table-shell :deep(.p-datatable-table-container) {
+  flex: 1 1 auto;
   min-height: 0;
 }
 

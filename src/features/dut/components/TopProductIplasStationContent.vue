@@ -9,18 +9,6 @@
       </template>
 
       <div class="top-product-iplas-station-stack">
-        <div class="top-product-iplas-station-summary-row">
-          <span class="top-product-iplas-station-pill top-product-iplas-station-pill--primary">
-            {{ configuredStationsCount }} configured station{{ configuredStationsCount === 1 ? '' : 's' }}
-          </span>
-          <span class="top-product-iplas-station-pill top-product-iplas-station-pill--info">
-            {{ selectedSite || 'No site selected' }}
-          </span>
-          <span class="top-product-iplas-station-pill top-product-iplas-station-pill--muted">
-            {{ selectedProject || 'No project selected' }}
-          </span>
-        </div>
-
         <div class="top-product-iplas-station-grid top-product-iplas-station-grid--two">
           <label class="top-product-iplas-station-field">
             <span>Site</span>
