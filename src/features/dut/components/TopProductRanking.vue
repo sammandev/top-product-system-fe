@@ -1,8 +1,8 @@
 <template>
   <AppPanel
-    eyebrow="Ranking"
-    title="Top Product Ranking by Test Station"
-    description="Rankings are based on overall scoring. DUTs with error items remain grouped at the bottom of each station view."
+    eyebrow="Results"
+    title="Ranking by Station"
+    description="Review scored DUTs and failures by station."
     tone="warm"
     split-header
   >
@@ -22,7 +22,7 @@
         <section v-if="selectedTab === String(item.value)" class="top-product-ranking__station-panel">
           <div class="top-product-ranking__station-hero">
             <div>
-              <p class="top-product-ranking__section-eyebrow">Station Workspace</p>
+              <p class="top-product-ranking__section-eyebrow">Station</p>
               <h3>{{ String(item.value) }}</h3>
             </div>
 
@@ -51,12 +51,8 @@
 
               <label class="top-product-ranking__field">
                 <span>Score Filter</span>
-                <select :value="scoreFilterType ?? ''" @change="handleScoreFilterTypeInput">
-                  <option value="">No filter</option>
-                  <option v-for="option in scoreFilterTypes" :key="option.value" :value="option.value">
-                    {{ option.title }}
-                  </option>
-                </select>
+                <AppSelect v-model="scoreFilterType" :options="scoreFilterTypeSelectOptions"
+                  placeholder="No filter" :searchable="false" />
               </label>
 
               <label class="top-product-ranking__field">
@@ -72,20 +68,13 @@
 
               <label class="top-product-ranking__field">
                 <span>Status</span>
-                <select :value="statusFilter ?? ''" @change="handleStatusFilterInput">
-                  <option value="">All</option>
-                  <option v-for="option in statusFilterOptions" :key="option.value" :value="option.value">
-                    {{ option.title }}
-                  </option>
-                </select>
+                <AppSelect v-model="statusFilter" :options="statusFilterSelectOptions" placeholder="All"
+                  :searchable="false" />
               </label>
 
               <label class="top-product-ranking__field">
                 <span>Site</span>
-                <select :value="siteFilter ?? ''" @change="handleSiteFilterInput">
-                  <option value="">All</option>
-                  <option v-for="site in availableSites" :key="site" :value="site">{{ site }}</option>
-                </select>
+                <AppSelect v-model="siteFilter" :options="siteFilterSelectOptions" placeholder="All" />
               </label>
             </div>
 
@@ -196,7 +185,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { AppDataGrid, AppPanel, AppTabs } from '@/shared'
+import { AppDataGrid, AppPanel, AppSelect, AppTabs } from '@/shared'
 import { formatDate } from '@/shared/utils/helpers'
 import type { TopProductResult } from '../types/dutTopProduct.types'
 
@@ -240,6 +229,22 @@ const scoreFilterTypes = [
 const statusFilterOptions = [
   { title: 'Passed Only', value: 'passed' },
   { title: 'Failed Only', value: 'failed' },
+]
+
+const scoreFilterTypeSelectOptions = [
+  { label: 'No filter', value: null },
+  ...scoreFilterTypes.map((option) => ({
+    label: option.title,
+    value: option.value,
+  })),
+]
+
+const statusFilterSelectOptions = [
+  { label: 'All', value: null },
+  ...statusFilterOptions.map((option) => ({
+    label: option.title,
+    value: option.value,
+  })),
 ]
 
 const rankingByStation = computed(() => {
@@ -337,6 +342,14 @@ const availableSites = computed(() => {
   })
   return Array.from(sites)
 })
+
+const siteFilterSelectOptions = computed(() => [
+  { label: 'All', value: null },
+  ...availableSites.value.map((site) => ({
+    label: site,
+    value: site,
+  })),
+])
 
 const filteredRanking = computed(() => {
   const currentStation = selectedTab.value
@@ -519,30 +532,16 @@ function handleGridRowClick(event: unknown, stationName: string) {
   }
 }
 
-function getSelectValue(event: Event): string | null {
-  const value = (event.target as HTMLSelectElement).value
-  return value || null
-}
-
-function handleScoreFilterTypeInput(event: Event) {
-  scoreFilterType.value = getSelectValue(event)
-  if (!scoreFilterType.value) {
-    scoreFilterValue.value = null
-  }
-}
-
-function handleStatusFilterInput(event: Event) {
-  statusFilter.value = getSelectValue(event)
-}
-
-function handleSiteFilterInput(event: Event) {
-  siteFilter.value = getSelectValue(event)
-}
-
 function handleScoreFilterValueInput(event: Event) {
   const value = (event.target as HTMLInputElement).value
   scoreFilterValue.value = value === '' ? null : Number(value)
 }
+
+watch(scoreFilterType, (value) => {
+  if (!value) {
+    scoreFilterValue.value = null
+  }
+})
 </script>
 
 <style scoped>
@@ -561,6 +560,11 @@ function handleScoreFilterValueInput(event: Event) {
   gap: 1rem;
 }
 
+.top-product-ranking__station-panel,
+.top-product-ranking__workspace {
+  min-width: 0;
+}
+
 .top-product-ranking__summary-pills,
 .top-product-ranking__station-pills,
 .top-product-ranking__active-filters {
@@ -573,9 +577,9 @@ function handleScoreFilterValueInput(event: Event) {
   gap: 1rem;
   align-items: flex-start;
   border: 1px solid var(--app-border);
-  border-radius: 0.75rem;
-  background: linear-gradient(145deg, rgba(255, 244, 223, 0.9), var(--app-panel));
-  padding: 1rem 1.1rem;
+  border-radius: 0.7rem;
+  background: var(--app-panel);
+  padding: 0.9rem 1rem;
 }
 
 .top-product-ranking__section-eyebrow,
@@ -598,7 +602,7 @@ function handleScoreFilterValueInput(event: Event) {
 }
 
 .top-product-ranking__filter-grid {
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
 }
 
 .top-product-ranking__field {
@@ -614,10 +618,10 @@ function handleScoreFilterValueInput(event: Event) {
 .top-product-ranking__field select {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   background: var(--app-panel);
   color: var(--app-ink);
-  padding: 0.82rem 0.95rem;
+  padding: 0.74rem 0.85rem;
 }
 
 .top-product-ranking__field input:focus,
@@ -743,6 +747,12 @@ function handleScoreFilterValueInput(event: Event) {
 .top-product-ranking__notice--info {
   background: rgba(40, 96, 163, 0.08);
   color: #1f4e86;
+}
+
+.top-product-ranking__workspace :deep(.p-datatable-table-container),
+.top-product-ranking__workspace :deep(.p-datatable-wrapper) {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .top-product-ranking__results-copy {

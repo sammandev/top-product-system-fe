@@ -8,10 +8,7 @@
         <div>
           <p class="top-products-header__eyebrow">DUT Workspace</p>
           <h1>Top Products Analysis</h1>
-          <p>
-            Analyze top-performing products through iPLAS data, DUT ISN lookups, and upload-log
-            driven workflows from one shared route shell.
-          </p>
+          <p>Run Top Products by iPLAS data, DUT ISN, or upload log from one workspace.</p>
         </div>
       </div>
 
@@ -120,12 +117,12 @@ function clearError() {
   align-items: flex-start;
   justify-content: space-between;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
 .top-products-header__copy {
   display: flex;
-  gap: 1rem;
+  gap: 0.85rem;
   align-items: flex-start;
 }
 
@@ -133,13 +130,12 @@ function clearError() {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 1rem;
+  width: 2.7rem;
+  height: 2.7rem;
+  border-radius: 0.75rem;
   background: linear-gradient(135deg, #0f766e, #155e75);
   color: white;
-  font-size: 1.45rem;
-  box-shadow: 0 18px 32px rgb(15 118 110 / 0.22);
+  font-size: 1.3rem;
 }
 
 .top-products-header__eyebrow {
@@ -161,7 +157,7 @@ function clearError() {
   max-width: 48rem;
   margin: 0.45rem 0 0;
   color: #475569;
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .top-products-button {
@@ -186,7 +182,6 @@ function clearError() {
 .top-products-button--primary {
   background: linear-gradient(135deg, #0f766e, #155e75);
   color: white;
-  box-shadow: 0 18px 32px rgb(15 118 110 / 0.22);
 }
 
 .top-products-notice {
@@ -232,7 +227,6 @@ function clearError() {
   background:
     radial-gradient(circle at top left, rgb(15 118 110 / 0.08), transparent 28%),
     #fff;
-  box-shadow: 0 26px 60px rgb(15 23 42 / 0.08);
   overflow: hidden;
 }
 

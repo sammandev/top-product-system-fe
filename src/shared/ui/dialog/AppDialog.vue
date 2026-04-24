@@ -3,14 +3,14 @@
     v-bind="attrs"
     :visible="resolvedVisible"
     :modal="modal"
-    :dismissableMask="!persistent && dismissableMask"
+    :dismissableMask="dismissableMask"
     :closable="false"
-    :closeOnEscape="!persistent && closeOnEscape"
+    :closeOnEscape="closeOnEscape"
     :draggable="draggable"
     :maximizable="false"
     :style="dialogStyle"
     :breakpoints="breakpoints"
-    class="app-dialog"
+    :class="['app-dialog', { 'app-dialog--fullscreen': internalFullscreen }]"
     @update:visible="handleVisibleUpdate"
     @show="emit('show')"
     @hide="emit('hide')"
@@ -36,7 +36,7 @@
             <Icon :icon="internalFullscreen ? 'solar:quit-full-screen-square-linear' : 'solar:full-screen-square-linear'" />
           </button>
           <button
-            v-if="!persistent"
+            v-if="closable"
             type="button"
             class="app-dialog__header-btn app-dialog__header-btn--close"
             title="Close"
@@ -60,7 +60,7 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, ref, useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import Dialog from 'primevue/dialog'
 
 defineOptions({ inheritAttrs: false })
@@ -116,15 +116,20 @@ const internalFullscreen = defineModel<boolean>('fullscreen', { default: false }
 const resolvedVisible = computed(() => props.modelValue ?? props.visible ?? false)
 
 const dialogStyle = computed(() => ({
-  width: internalFullscreen.value ? props.fullscreenWidth : props.width,
+  width: internalFullscreen.value ? '100vw' : props.width,
 }))
 
 function handleVisibleUpdate(value: boolean) {
+  if (!value) {
+    internalFullscreen.value = false
+  }
+
   emit('update:modelValue', value)
   emit('update:visible', value)
 }
 
 function handleClose() {
+  internalFullscreen.value = false
   emit('update:modelValue', false)
   emit('update:visible', false)
 }
@@ -135,25 +140,25 @@ function toggleFullscreen() {
 </script>
 
 <style scoped>
-.app-dialog :deep(.p-dialog) {
+:deep(.app-dialog) {
   overflow: hidden;
   border: 1px solid var(--app-border);
-  border-radius: 0.75rem;
+  border-radius: 0.625rem;
   background: var(--app-panel-strong);
-  box-shadow: var(--app-shadow);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.12);
   display: flex;
   flex-direction: column;
   max-height: 90vh;
 }
 
-.app-dialog :deep(.p-dialog-header) {
+:deep(.app-dialog .p-dialog-header) {
   border-bottom: 1px solid var(--app-border);
   background: var(--app-panel-strong);
   flex-shrink: 0;
   padding: 0;
 }
 
-.app-dialog :deep(.p-dialog-content) {
+:deep(.app-dialog .p-dialog-content) {
   padding-top: 1rem;
   color: var(--app-ink);
   overflow-y: auto;
@@ -163,10 +168,24 @@ function toggleFullscreen() {
   scrollbar-color: rgba(120, 120, 120, 0.3) transparent;
 }
 
-.app-dialog :deep(.p-dialog-footer) {
+:deep(.app-dialog .p-dialog-footer) {
   border-top: 1px solid var(--app-border);
   background: var(--app-panel-strong);
   flex-shrink: 0;
+}
+
+:deep(.app-dialog.app-dialog--fullscreen) {
+  width: 100vw !important;
+  max-width: 100vw !important;
+  height: 100dvh;
+  max-height: 100dvh;
+  margin: 0;
+  border-width: 0;
+  border-radius: 0;
+}
+
+:deep(.app-dialog.app-dialog--fullscreen .p-dialog-content) {
+  padding-top: 0.875rem;
 }
 
 /* Header layout */
@@ -240,5 +259,6 @@ function toggleFullscreen() {
 .app-dialog__body {
   display: grid;
   gap: 1rem;
+  min-height: 0;
 }
 </style>

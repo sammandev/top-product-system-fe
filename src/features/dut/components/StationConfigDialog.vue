@@ -1,7 +1,7 @@
 <template>
   <AppDialog :model-value="internalShow" v-model:fullscreen="isFullscreen" width="min(96vw, 72rem)"
     fullscreen-width="98vw" :breakpoints="{ '1200px': '96vw', '760px': '98vw' }" fullscreenable persistent
-    :title="`Configure Station: ${station?.display_station_name ?? ''}`" description="Station Configuration"
+    :title="`Configure Station: ${station?.display_station_name ?? ''}`" description="Configure device scope and test items."
     @update:modelValue="internalShow = $event" @hide="handleClose">
 
     <section class="station-config-body" :class="{ 'station-config-body--fullscreen': isFullscreen }">
@@ -9,9 +9,7 @@
         <AppPanel title="Minimum Test Item Score" tone="warm" compact-header class="min-score-section">
           <div class="station-config-dialog__min-score-layout">
             <div class="min-score-summary">
-              <p>DUT will be considered as <strong>Min. Score Fail</strong> if one test item score is below the
-                threshold.
-              </p>
+              <p>DUT is marked as <strong>Min. Score Fail</strong> when one test item drops below the threshold.</p>
             </div>
             <div class="station-config-dialog__toggle-row min-score-controls">
               <label class="station-config-dialog__toggle-pill"
@@ -132,9 +130,7 @@
             </div>
 
             <p class="station-config-dialog__helper-copy">
-              Add items to Include for analysis, add items to Exclude to remove them, and items already assigned to one
-              list
-              are locked while you edit the other list.
+              Add items to Include for analysis, add items to Exclude to remove them, and items already assigned to one list stay locked while you edit the other.
             </p>
 
             <div class="station-config-dialog__search-stack">
@@ -196,9 +192,7 @@
             </div>
 
             <p class="station-config-dialog__helper-copy station-config-dialog__helper-copy--footnote">
-              Leave Include empty to default to all analyzable items on save. Use the scoring button on included
-              criteria
-              items when you need custom scoring.
+              Leave Include empty to use all analyzable items on save. Use the scoring button on included criteria items when you need custom scoring.
             </p>
           </div>
         </AppPanel>
@@ -229,12 +223,9 @@
     <div v-if="scoringConfigItem" class="station-config-dialog__modal-stack">
       <label class="station-config-dialog__field">
         <span>Scoring Algorithm</span>
-        <select :value="getTestItemScoringConfig(scoringConfigItem).scoringType"
-          @change="updateTestItemScoringType(scoringConfigItem, ($event.target as HTMLSelectElement).value as ScoringType)">
-          <option v-for="option in scoringTypeOptions" :key="option.value" :value="option.value">
-            {{ option.title }}
-          </option>
-        </select>
+        <AppSelect :model-value="getTestItemScoringConfig(scoringConfigItem).scoringType"
+          :options="scoringTypeSelectOptions"
+          @update:modelValue="updateTestItemScoringType(scoringConfigItem, $event as ScoringType)" />
         <small>{{ getScoringTypeInfo(getTestItemScoringConfig(scoringConfigItem).scoringType).description }}</small>
       </label>
 
@@ -248,12 +239,9 @@
 
       <label v-if="currentScoringTypeRequiresPolicy" class="station-config-dialog__field">
         <span>Scoring Policy</span>
-        <select :value="getTestItemScoringConfig(scoringConfigItem).policy || 'symmetrical'"
-          @change="updateTestItemPolicy(scoringConfigItem, ($event.target as HTMLSelectElement).value as ScoringPolicy)">
-          <option v-for="option in policyOptions" :key="option.value" :value="option.value">
-            {{ option.title }}
-          </option>
-        </select>
+        <AppSelect :model-value="getTestItemScoringConfig(scoringConfigItem).policy || 'symmetrical'"
+          :options="policySelectOptions"
+          @update:modelValue="updateTestItemPolicy(scoringConfigItem, $event as ScoringPolicy)" />
       </label>
 
       <label class="station-config-dialog__field">
@@ -291,11 +279,7 @@
 
       <label class="station-config-dialog__field">
         <span>Scoring Algorithm</span>
-        <select v-model="bulkScoringType">
-          <option v-for="option in scoringTypeOptions" :key="option.value" :value="option.value">
-            {{ option.title }}
-          </option>
-        </select>
+        <AppSelect v-model="bulkScoringType" :options="scoringTypeSelectOptions" />
         <small>{{ getScoringTypeInfo(bulkScoringType).description }}</small>
       </label>
 
@@ -307,11 +291,7 @@
 
       <label v-if="bulkScoringTypeRequiresPolicy" class="station-config-dialog__field">
         <span>Scoring Policy</span>
-        <select v-model="bulkPolicy">
-          <option v-for="option in policyOptions" :key="option.value" :value="option.value">
-            {{ option.title }}
-          </option>
-        </select>
+        <AppSelect v-model="bulkPolicy" :options="policySelectOptions" />
       </label>
 
       <label class="station-config-dialog__field">
@@ -344,7 +324,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { AppDialog, AppPanel, AppMultiSelect } from '@/shared/ui'
+import { AppDialog, AppPanel, AppMultiSelect, AppSelect } from '@/shared/ui'
 import {
   SCORING_POLICIES,
   SCORING_TYPE_INFO,
@@ -386,6 +366,16 @@ const policyOptions = SCORING_POLICIES.map((p) => ({
   title: p.label,
   subtitle: p.description,
   icon: (p as { icon?: string }).icon ?? 'mdi-swap-horizontal',
+}))
+
+const scoringTypeSelectOptions = scoringTypeOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+
+const policySelectOptions = policyOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
 }))
 
 interface Props {
@@ -1094,6 +1084,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-shell {
   display: grid;
   gap: 1rem;
+  min-height: 0;
 }
 
 .station-config-dialog__section-stack,
@@ -1167,7 +1158,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-dialog__button,
 .station-config-dialog__icon-button {
   min-height: 2.75rem;
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--app-border);
   background: var(--app-panel);
   color: var(--app-ink);
@@ -1182,15 +1173,15 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 .station-config-dialog__button {
-  padding: 0.7rem 1rem;
+  padding: 0.65rem 0.9rem;
 }
 
 .station-config-dialog__icon-button {
-  padding: 0.7rem 0.95rem;
+  padding: 0.65rem 0.88rem;
 }
 
 .station-config-dialog__button--primary {
-  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  background: linear-gradient(135deg, #0f766e, #1c7c62);
   border-color: var(--app-accent);
   color: white;
 }
@@ -1226,10 +1217,10 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-dialog__field select {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   background: var(--app-panel-strong);
   color: var(--app-ink);
-  padding: 0.8rem 0.9rem;
+  padding: 0.72rem 0.82rem;
   font: inherit;
 }
 
@@ -1241,8 +1232,8 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-dialog__notice {
   display: grid;
   gap: 0.35rem;
-  padding: 0.9rem 1rem;
-  border-radius: 1rem;
+  padding: 0.85rem 0.95rem;
+  border-radius: 0.8rem;
   border: 1px solid rgba(40, 96, 163, 0.14);
   background: rgba(40, 96, 163, 0.08);
   color: #1f4f89;
@@ -1402,10 +1393,10 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   align-content: start;
   justify-items: start;
   min-height: 5.25rem;
-  padding: 0.9rem 1rem;
-  border-radius: 1rem;
+  padding: 0.8rem 0.9rem;
+  border-radius: 0.8rem;
   border-color: rgba(15, 118, 110, 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--app-panel);
   color: var(--app-ink);
   text-align: left;
 }
@@ -1436,12 +1427,11 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 .station-config-body {
-  max-height: 70vh;
-  overflow-y: auto;
+  min-height: 0;
 }
 
 .station-config-body--fullscreen {
-  max-height: calc(100vh - 64px);
+  min-height: 0;
 }
 
 .gap-1 {
@@ -1536,7 +1526,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 
 .min-score-section {
   border-color: rgba(255, 193, 7, 0.28);
-  background: linear-gradient(180deg, rgba(255, 193, 7, 0.08), rgba(255, 193, 7, 0.02));
+  background: rgba(255, 193, 7, 0.05);
 }
 
 .min-score-summary {
@@ -1562,13 +1552,23 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 
 .test-item-list-container {
   border: 1px solid rgba(15, 118, 110, 0.12);
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.72);
+  border-radius: 0.7rem;
+  background: rgba(255, 255, 255, 0.9);
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
+  max-height: min(55vh, 34rem);
 }
 
 .test-item-list-container--fullscreen {
-  max-height: none;
+  max-height: min(72vh, 44rem);
+}
+
+.station-config-dialog__item-list {
+  min-height: 0;
+  max-height: none !important;
+  overflow-y: auto;
+  padding: 0.375rem;
 }
 
 .test-item-row {

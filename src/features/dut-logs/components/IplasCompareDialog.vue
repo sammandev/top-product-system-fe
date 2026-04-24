@@ -7,7 +7,7 @@
     :breakpoints="dialogBreakpoints"
     fullscreenable
     :title="`Compare With iPLAS${isn ? ` - ${isn}` : ''}`"
-    description="Review uploaded measurements against iPLAS values, re-score both sides with the same rules, and export the aligned result set."
+    description="Review uploaded measurements against iPLAS values and export the aligned result set."
     class="iplas-compare-dialog"
   >
 
@@ -851,8 +851,8 @@ function comparisonRowClass(row: Record<string, unknown>) {
 .iplas-compare-dialog__field select {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
-  padding: 0.75rem 0.9rem;
+  border-radius: 0.75rem;
+  padding: 0.72rem 0.82rem;
   background: var(--app-panel);
   color: var(--app-ink);
 }
@@ -862,7 +862,7 @@ function comparisonRowClass(row: Record<string, unknown>) {
   align-items: center;
   gap: 0.45rem;
   border-radius: 999px;
-  padding: 0.7rem 1rem;
+  padding: 0.62rem 0.9rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -885,7 +885,7 @@ function comparisonRowClass(row: Record<string, unknown>) {
   gap: 0.5rem;
   border: 1px solid var(--app-border);
   border-radius: 999px;
-  padding: 0.55rem 0.9rem;
+  padding: 0.48rem 0.82rem;
   background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
@@ -900,17 +900,17 @@ function comparisonRowClass(row: Record<string, unknown>) {
   display: grid;
   gap: 0.35rem;
   border: 1px solid var(--app-border);
-  border-radius: 1.1rem;
-  padding: 1rem;
+  border-radius: 0.85rem;
+  padding: 0.9rem;
   background: var(--app-panel);
 }
 
 .iplas-compare-dialog__summary-card--primary {
-  background: linear-gradient(145deg, rgba(40, 96, 163, 0.14), var(--app-panel));
+  background: rgba(40, 96, 163, 0.08);
 }
 
 .iplas-compare-dialog__summary-card--secondary {
-  background: linear-gradient(145deg, rgba(15, 118, 110, 0.12), var(--app-panel));
+  background: rgba(15, 118, 110, 0.08);
 }
 
 .iplas-compare-dialog__summary-card small,
@@ -965,10 +965,10 @@ function comparisonRowClass(row: Record<string, unknown>) {
   display: grid;
   justify-items: center;
   gap: 0.5rem;
-  padding: 2rem 1rem;
+  padding: 1.5rem 1rem;
   text-align: center;
   border: 1px solid var(--app-border);
-  border-radius: 1.25rem;
+  border-radius: 0.9rem;
 }
 
 .iplas-compare-dialog__notice--error {
@@ -983,7 +983,7 @@ function comparisonRowClass(row: Record<string, unknown>) {
   display: grid;
   grid-column: 1 / -1;
   border: 1px solid var(--app-border);
-  border-radius: 1rem;
+  border-radius: 0.8rem;
   overflow: hidden;
 }
 
@@ -991,7 +991,7 @@ function comparisonRowClass(row: Record<string, unknown>) {
   display: grid;
   grid-template-columns: minmax(10rem, 14rem) 1fr;
   gap: 1rem;
-  padding: 0.85rem 1rem;
+  padding: 0.75rem 0.9rem;
   border-top: 1px solid var(--app-border);
   background: var(--app-panel);
 }

@@ -1,5 +1,6 @@
 <template>
   <AppDialog :model-value="modelValue" width="min(96vw, 44rem)" persistent title="iPLAS API Settings"
+    description="Choose the site and token mode used for iPLAS requests."
     @update:modelValue="$emit('update:modelValue', $event)">
 
     <div class="iplas-settings-dialog__stack">
@@ -10,22 +11,22 @@
         <div class="iplas-settings-dialog__chip-row">
           <button type="button" class="iplas-settings-dialog__toggle-chip"
             :class="{ 'is-active': localSettingsMode === 'system' }" @click="localSettingsMode = 'system'">
-            Use System Settings
+            Use System
           </button>
           <button type="button" class="iplas-settings-dialog__toggle-chip"
             :class="{ 'is-active': localSettingsMode === 'custom' }" @click="localSettingsMode = 'custom'">
-            Customize Settings
+            Custom
           </button>
         </div>
         <div v-if="localSettingsMode === 'system'"
           class="iplas-settings-dialog__notice iplas-settings-dialog__notice--info">
-          iPLAS default system tokens are managed by the system administrator.
+          System tokens are managed by the administrator.
         </div>
       </section>
 
       <section class="iplas-settings-dialog__section">
         <div class="iplas-settings-dialog__section-copy">
-          <strong>Select iPLAS Site</strong>
+          <strong>Site</strong>
         </div>
         <div class="iplas-settings-dialog__chip-row">
           <button v-for="server in servers" :key="server.id" type="button" class="iplas-settings-dialog__site-chip"
@@ -38,15 +39,15 @@
       <section v-if="currentServer" class="iplas-settings-dialog__section iplas-settings-dialog__section--panel">
         <div class="iplas-settings-dialog__section-copy">
           <strong>{{ currentServer.name }} Configuration</strong>
-          <span>Review the live address and token that will be used by the iPLAS requests for this site.</span>
+          <span>Review the address and token used for this site.</span>
         </div>
 
         <label class="iplas-settings-dialog__field">
-          <span>Server IP Address</span>
+          <span>Server Host</span>
           <input :value="displayBaseIp" type="text" placeholder="e.g. 10.176.33.89"
             :readonly="localSettingsMode === 'system'" :class="{ 'is-readonly': localSettingsMode === 'system' }"
             @input="localBaseIp = ($event.target as HTMLInputElement).value" />
-          <small>Update the raw host or IP only when custom settings are enabled.</small>
+          <small>Change the host only in custom mode.</small>
         </label>
 
         <label class="iplas-settings-dialog__field">
@@ -54,8 +55,7 @@
           <textarea :value="displayToken" rows="3" :readonly="localSettingsMode === 'system'"
             :class="{ 'is-readonly': localSettingsMode === 'system' }"
             @input="localToken = ($event.target as HTMLTextAreaElement).value" />
-          <small v-if="localSettingsMode === 'custom'">Please generate and use your own iPLAS token to access the iPLAS
-            server.</small>
+          <small v-if="localSettingsMode === 'custom'">Use your own iPLAS token in custom mode.</small>
         </label>
 
         <div v-if="localSettingsMode === 'system'" class="iplas-settings-dialog__notice"
@@ -64,7 +64,7 @@
             System token configured.
           </template>
           <template v-else>
-            No active system token configured for {{ currentServer.name }}. Contact the administrator.
+            No active system token is configured for {{ currentServer.name }}.
           </template>
         </div>
       </section>
@@ -74,7 +74,7 @@
       <div class="iplas-settings-dialog__footer">
         <button v-if="localSettingsMode === 'custom'" type="button"
           class="iplas-settings-dialog__button iplas-settings-dialog__button--ghost" @click="handleReset">
-          Reset to Defaults
+          Reset
         </button>
         <div class="iplas-settings-dialog__footer-spacer"></div>
         <button type="button" class="iplas-settings-dialog__button iplas-settings-dialog__button--ghost"
@@ -262,36 +262,36 @@ function handleReset(): void {
 .iplas-settings-dialog__toggle-chip,
 .iplas-settings-dialog__site-chip {
   min-height: 2.7rem;
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--app-border);
   background: var(--app-panel);
   color: var(--app-ink);
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .iplas-settings-dialog__icon-button,
 .iplas-settings-dialog__button {
-  padding: 0.7rem 1rem;
+  padding: 0.62rem 0.9rem;
 }
 
 .iplas-settings-dialog__toggle-chip,
 .iplas-settings-dialog__site-chip {
-  padding: 0.55rem 0.9rem;
+  padding: 0.5rem 0.82rem;
 }
 
 .iplas-settings-dialog__icon-button:hover,
 .iplas-settings-dialog__button:hover,
 .iplas-settings-dialog__toggle-chip:hover,
 .iplas-settings-dialog__site-chip:hover {
-  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .iplas-settings-dialog__button--primary,
 .iplas-settings-dialog__toggle-chip.is-active,
 .iplas-settings-dialog__site-chip.is-active {
-  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  background: linear-gradient(135deg, #0f766e, #1c7c62);
   border-color: var(--app-accent);
   color: white;
 }
@@ -307,14 +307,14 @@ function handleReset(): void {
 }
 
 .iplas-settings-dialog__section {
-  padding: 1rem;
+  padding: 0.9rem;
   border: 1px solid rgba(15, 118, 110, 0.12);
-  border-radius: 1rem;
-  background: rgba(255, 255, 255, 0.72);
+  border-radius: 0.8rem;
+  background: var(--app-panel);
 }
 
 .iplas-settings-dialog__section--panel {
-  background: linear-gradient(180deg, rgba(250, 252, 255, 0.92), rgba(255, 255, 255, 0.78));
+  background: var(--app-panel);
 }
 
 .iplas-settings-dialog__section-copy strong,
@@ -333,10 +333,10 @@ function handleReset(): void {
 .iplas-settings-dialog__field textarea {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   background: var(--app-panel-strong);
   color: var(--app-ink);
-  padding: 0.8rem 0.9rem;
+  padding: 0.72rem 0.82rem;
   font: inherit;
 }
 
@@ -349,8 +349,8 @@ function handleReset(): void {
 }
 
 .iplas-settings-dialog__notice {
-  padding: 0.9rem 1rem;
-  border-radius: 0.95rem;
+  padding: 0.82rem 0.9rem;
+  border-radius: 0.8rem;
   border: 1px solid rgba(40, 96, 163, 0.14);
   background: rgba(40, 96, 163, 0.08);
 }

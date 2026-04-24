@@ -5,7 +5,7 @@
       width="98vw"
       :breakpoints="dialogBreakpoints"
       title="Complete Ranking"
-      description="Review the full upload-log ranking set without leaving the Top Product workspace."
+      description="Review the full upload-log ranking set."
       class="top-product-ranking-upload-log__dialog"
     >
 
@@ -160,7 +160,7 @@
       :breakpoints="dialogBreakpoints"
       fullscreenable
       title="Test Items Details"
-      description="Inspect the selected DUT record, save it, or compare it with iPLAS."
+      description="Inspect the selected DUT record and compare it with iPLAS."
       class="top-product-ranking-upload-log__dialog"
     >
       <template #header-actions>
@@ -332,7 +332,7 @@
       :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
       fullscreenable
       :title="selectedTestItem?.test_item || 'Score Breakdown'"
-      description="Review the applied scoring inputs and final score for this test item."
+      description="Review the scoring inputs and final score for this test item."
       class="top-product-ranking-upload-log__dialog"
     >
 
@@ -398,7 +398,7 @@
       width="min(92vw, 28rem)"
       :breakpoints="{ '640px': '100vw' }"
       title="Custom Items Per Page"
-      description="Choose how many ranking rows to show per page."
+      description="Choose how many ranking rows to show."
       class="top-product-ranking-upload-log__dialog"
     >
 
@@ -428,7 +428,7 @@
     <AppPanel
       eyebrow="Upload Log Ranking"
       title="Top Product Ranking By Overall Score"
-      description="Rank uploaded DUT logs, select the winners for database save, and drill into test-item details for iPLAS comparison."
+      description="Rank uploaded DUT logs, save winners, and drill into test-item details."
       splitHeader
       tone="warm"
     >
@@ -474,7 +474,7 @@
         <div class="top-product-ranking-upload-log__section-header">
           <div>
             <h3>Complete Ranking</h3>
-            <p>Rankings are based on overall scoring. Higher scores rise to the top.</p>
+            <p>Rankings are ordered by overall score.</p>
           </div>
 
           <button type="button" class="top-product-ranking-upload-log__ghost-button" @click="fullscreen = true">
@@ -1386,18 +1386,18 @@ function rankingRowClass(row: Record<string, unknown>) {
   display: grid;
   gap: 0.35rem;
   border: 1px solid var(--app-border);
-  border-radius: 1.1rem;
-  padding: 1rem;
+  border-radius: 0.85rem;
+  padding: 0.9rem;
   background: var(--app-panel);
 }
 
 .top-product-ranking-upload-log__stat-card--cool {
-  background: linear-gradient(145deg, rgba(40, 96, 163, 0.12), var(--app-panel));
+  background: rgba(40, 96, 163, 0.08);
 }
 
 .top-product-ranking-upload-log__stat-card--warm,
 .top-product-ranking-upload-log__summary-card--highlight {
-  background: linear-gradient(145deg, rgba(184, 118, 38, 0.12), var(--app-panel));
+  background: rgba(184, 118, 38, 0.1);
 }
 
 .top-product-ranking-upload-log__stat-card small,
@@ -1432,8 +1432,8 @@ function rankingRowClass(row: Record<string, unknown>) {
 
 .top-product-ranking-upload-log__info-icon {
   display: inline-flex;
-  width: 2.4rem;
-  height: 2.4rem;
+  width: 2.15rem;
+  height: 2.15rem;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
@@ -1508,8 +1508,8 @@ function rankingRowClass(row: Record<string, unknown>) {
 .top-product-ranking-upload-log__footer-group select {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
-  padding: 0.75rem 0.9rem;
+  border-radius: 0.75rem;
+  padding: 0.72rem 0.82rem;
   background: var(--app-panel);
   color: var(--app-ink);
 }
@@ -1533,7 +1533,7 @@ function rankingRowClass(row: Record<string, unknown>) {
   border: 1px solid var(--app-border);
   background: var(--app-panel);
   color: var(--app-ink);
-  padding: 0.65rem 0.95rem;
+  padding: 0.58rem 0.88rem;
 }
 
 .top-product-ranking-upload-log__station-tab--active {
@@ -1545,7 +1545,7 @@ function rankingRowClass(row: Record<string, unknown>) {
   border: 1px solid rgba(15, 118, 110, 0.1);
   background: linear-gradient(135deg, rgba(15, 118, 110, 0.95), rgba(40, 96, 163, 0.92));
   color: #fff;
-  padding: 0.65rem 1rem;
+  padding: 0.6rem 0.9rem;
 }
 
 .top-product-ranking-upload-log__score-button {
@@ -1588,7 +1588,7 @@ function rankingRowClass(row: Record<string, unknown>) {
 .top-product-ranking-upload-log__detail-table {
   display: grid;
   border: 1px solid var(--app-border);
-  border-radius: 1rem;
+  border-radius: 0.8rem;
   overflow: hidden;
 }
 
@@ -1596,7 +1596,7 @@ function rankingRowClass(row: Record<string, unknown>) {
   display: grid;
   grid-template-columns: minmax(10rem, 14rem) 1fr;
   gap: 1rem;
-  padding: 0.85rem 1rem;
+  padding: 0.75rem 0.9rem;
   border-top: 1px solid var(--app-border);
   background: var(--app-panel);
 }

@@ -8,7 +8,7 @@
       :breakpoints="dialogBreakpoints"
       fullscreenable
       title="Measurement Details"
-      description="Review the station result, compare scores, and inspect test items."
+      description="Review station measurements and scores."
       class="top-product-isn-results__dialog"
     >
 
@@ -181,34 +181,20 @@
 
           <label class="top-product-isn-results__field">
             <span>Score Filter</span>
-            <select v-model="scoreFilter">
-              <option :value="null">All Scores</option>
-              <option value="high">Score >= 9</option>
-              <option value="medium">Score 7-9</option>
-              <option value="low">Score < 7</option>
-            </select>
+            <AppSelect v-model="scoreFilter" :options="scoreFilterOptions" placeholder="All Scores"
+              :searchable="false" />
           </label>
 
           <label class="top-product-isn-results__field">
             <span>Limit Status</span>
-            <select v-model="limitFilter">
-              <option :value="null">All Results</option>
-              <option value="within">Within Limits</option>
-              <option value="out">Out Of Limits</option>
-            </select>
+            <AppSelect v-model="limitFilter" :options="limitFilterOptions" placeholder="All Results"
+              :searchable="false" />
           </label>
 
           <label class="top-product-isn-results__field top-product-isn-results__field--wide">
             <span>Pin Columns</span>
-            <select v-model="measurementLockedColumns" multiple size="4">
-              <option
-                v-for="option in measurementColumnOptions"
-                :key="option.value"
-                :value="option.value"
-              >
-                {{ option.title }}
-              </option>
-            </select>
+            <AppMultiSelect v-model="measurementLockedColumns" :options="measurementColumnSelectOptions"
+              placeholder="Pin columns" />
           </label>
         </section>
 
@@ -332,7 +318,7 @@
       width="96vw"
       :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
       :title="`Comparison: ${selectedCompareStation ? comparisonStationTitle : 'Select a Station'}`"
-      description="Compare measured values, deltas, and scores across every DUT in this run."
+      description="Compare measured values and scores across DUTs."
       class="top-product-isn-results__dialog"
     >
 
@@ -340,16 +326,8 @@
         <section class="top-product-isn-results__filter-grid">
           <label class="top-product-isn-results__field">
             <span>Station</span>
-            <select v-model="selectedCompareStation">
-              <option :value="null">Select a station</option>
-              <option
-                v-for="station in comparisonStations"
-                :key="station.value"
-                :value="station.value"
-              >
-                {{ station.title }}
-              </option>
-            </select>
+            <AppSelect v-model="selectedCompareStation" :options="comparisonStationOptions"
+              placeholder="Select a station" />
           </label>
 
           <label class="top-product-isn-results__field top-product-isn-results__field--wide">
@@ -359,34 +337,20 @@
 
           <label class="top-product-isn-results__field">
             <span>Score Filter</span>
-            <select v-model="comparisonScoreFilter">
-              <option :value="null">All Scores</option>
-              <option value="high">Score >= 9</option>
-              <option value="medium">Score 7-9</option>
-              <option value="low">Score < 7</option>
-            </select>
+            <AppSelect v-model="comparisonScoreFilter" :options="scoreFilterOptions" placeholder="All Scores"
+              :searchable="false" />
           </label>
 
           <label class="top-product-isn-results__field">
             <span>Limit Status</span>
-            <select v-model="comparisonLimitFilter">
-              <option :value="null">All Results</option>
-              <option value="within">Within Limits</option>
-              <option value="out">Out Of Limits</option>
-            </select>
+            <AppSelect v-model="comparisonLimitFilter" :options="limitFilterOptions" placeholder="All Results"
+              :searchable="false" />
           </label>
 
           <label class="top-product-isn-results__field top-product-isn-results__field--wide">
             <span>Pin Columns</span>
-            <select v-model="comparisonLockedColumns" multiple size="6">
-              <option
-                v-for="option in comparisonColumnOptions"
-                :key="option.value"
-                :value="option.value"
-              >
-                {{ option.title }}
-              </option>
-            </select>
+            <AppMultiSelect v-model="comparisonLockedColumns" :options="comparisonColumnSelectOptions"
+              placeholder="Pin columns" />
           </label>
         </section>
 
@@ -496,9 +460,9 @@
     />
 
     <AppPanel
-      eyebrow="Analysis Snapshot"
+      eyebrow="Results"
       title="Analysis Results"
-      :description="`${enhancedResults.length} DUT ${enhancedResults.length === 1 ? 'result' : 'results'} are ready for ranking, drilldown, and export.`"
+      :description="`${enhancedResults.length} DUT ${enhancedResults.length === 1 ? 'result' : 'results'} ready for ranking and drilldown.`"
       tone="cool"
       splitHeader
     >
@@ -545,9 +509,9 @@
 
     <AppPanel
       v-if="enhancedResults.length > 1"
-      eyebrow="Cross-DUT Comparison"
+      eyebrow="Comparison"
       title="Compare Test Results"
-      description="Choose a station shared by all DUTs, then compare measured values, deltas, and scores across the entire run."
+      description="Choose a shared station, then compare measured values and scores."
       splitHeader
       tone="warm"
     >
@@ -577,16 +541,8 @@
         <section class="top-product-isn-results__filter-grid">
           <label class="top-product-isn-results__field">
             <span>Station</span>
-            <select v-model="selectedCompareStation">
-              <option :value="null">Select a station</option>
-              <option
-                v-for="station in comparisonStations"
-                :key="station.value"
-                :value="station.value"
-              >
-                {{ station.title }}
-              </option>
-            </select>
+            <AppSelect v-model="selectedCompareStation" :options="comparisonStationOptions"
+              placeholder="Select a station" />
           </label>
 
           <label class="top-product-isn-results__field top-product-isn-results__field--wide">
@@ -596,21 +552,20 @@
 
           <label class="top-product-isn-results__field">
             <span>Score Filter</span>
-            <select v-model="comparisonScoreFilter">
-              <option :value="null">All Scores</option>
-              <option value="high">Score >= 9</option>
-              <option value="medium">Score 7-9</option>
-              <option value="low">Score < 7</option>
-            </select>
+            <AppSelect v-model="comparisonScoreFilter" :options="scoreFilterOptions" placeholder="All Scores"
+              :searchable="false" />
           </label>
 
           <label class="top-product-isn-results__field">
             <span>Limit Status</span>
-            <select v-model="comparisonLimitFilter">
-              <option :value="null">All Results</option>
-              <option value="within">Within Limits</option>
-              <option value="out">Out Of Limits</option>
-            </select>
+            <AppSelect v-model="comparisonLimitFilter" :options="limitFilterOptions" placeholder="All Results"
+              :searchable="false" />
+          </label>
+
+          <label class="top-product-isn-results__field top-product-isn-results__field--wide">
+            <span>Pin Columns</span>
+            <AppMultiSelect v-model="comparisonLockedColumns" :options="comparisonColumnSelectOptions"
+              placeholder="Pin columns" />
           </label>
         </section>
 
@@ -741,9 +696,9 @@
         </summary>
 
         <AppPanel
-          :eyebrow="index === 0 ? 'Primary DUT' : 'DUT Detail'"
+          :eyebrow="index === 0 ? 'Primary DUT' : 'DUT'"
           title="Station Results"
-          :description="`Inspect the station outcomes for ${result.dut_isn} and open the full measurement dialog when you need test-item detail.`"
+          :description="`Inspect the station outcomes for ${result.dut_isn} and open measurement detail when needed.`"
           tone="default"
         >
           <AppDataGrid
@@ -811,7 +766,7 @@
       v-else
       eyebrow="No Results"
       title="No successful analyses to display"
-      description="Run or retry a Top Product analysis to populate the DUT result surface."
+      description="Run or retry a Top Product analysis to populate this view."
       tone="default"
     >
       <div class="top-product-isn-results__empty-state">
@@ -828,7 +783,7 @@ import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
-import { AppDialog, AppPanel } from '@/shared/ui'
+import { AppDialog, AppMultiSelect, AppPanel, AppSelect } from '@/shared/ui'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import { formatDate } from '@/shared/utils/helpers'
 import ScoreBreakdownDialog from '@/features/dut-logs/components/ScoreBreakdownDialog.vue'
@@ -896,6 +851,19 @@ const measurementDialogWidth = computed(() =>
 )
 
 const measurementScrollHeight = computed(() => (isFullscreen.value ? 'calc(100vh - 25rem)' : '34rem'))
+
+const scoreFilterOptions = [
+  { label: 'All Scores', value: null },
+  { label: 'Score >= 9', value: 'high' },
+  { label: 'Score 7-9', value: 'medium' },
+  { label: 'Score < 7', value: 'low' },
+]
+
+const limitFilterOptions = [
+  { label: 'All Results', value: null },
+  { label: 'Within Limits', value: 'within' },
+  { label: 'Out Of Limits', value: 'out' },
+]
 
 const dialogBreakpoints = {
   '1200px': '94vw',
@@ -1057,6 +1025,14 @@ const comparisonStations = computed(() => {
   return stationOptions.sort((a, b) => a.title.localeCompare(b.title))
 })
 
+const comparisonStationOptions = computed(() => [
+  { label: 'Select a station', value: null },
+  ...comparisonStations.value.map((station) => ({
+    label: station.title,
+    value: station.value,
+  })),
+])
+
 watch(
   enhancedResults,
   (value) => {
@@ -1109,6 +1085,13 @@ const measurementColumnOptions = computed(() =>
   measurementHeaders.map((header) => ({
     title: header.title,
     value: header.key,
+  })),
+)
+
+const measurementColumnSelectOptions = computed(() =>
+  measurementColumnOptions.value.map((option) => ({
+    label: option.title,
+    value: option.value,
   })),
 )
 
@@ -1212,6 +1195,13 @@ const comparisonColumnOptions = computed(() =>
   comparisonHeaders.value.map((header) => ({
     title: header.title,
     value: header.key,
+  })),
+)
+
+const comparisonColumnSelectOptions = computed(() =>
+  comparisonColumnOptions.value.map((option) => ({
+    label: option.title,
+    value: option.value,
   })),
 )
 
@@ -1630,8 +1620,8 @@ function stationRowClass(row: Record<string, unknown>) {
   display: grid;
   gap: 0.65rem;
   border: 1px solid var(--app-border);
-  border-radius: 1.1rem;
-  padding: 1rem;
+  border-radius: 0.8rem;
+  padding: 0.9rem;
   background: var(--app-panel);
 }
 
@@ -1641,8 +1631,8 @@ function stationRowClass(row: Record<string, unknown>) {
 
 .top-product-isn-results__summary-icon {
   display: inline-flex;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.15rem;
+  height: 2.15rem;
   align-items: center;
   justify-content: center;
   border-radius: 999px;
@@ -1689,7 +1679,7 @@ function stationRowClass(row: Record<string, unknown>) {
   border-radius: 999px;
   background: var(--app-surface);
   color: var(--app-ink);
-  padding: 0.45rem 0.85rem;
+  padding: 0.35rem 0.75rem;
   cursor: pointer;
 }
 
@@ -1699,7 +1689,7 @@ function stationRowClass(row: Record<string, unknown>) {
 
 .top-product-isn-results__linked-details {
   border: 1px solid var(--app-border);
-  border-radius: 1rem;
+  border-radius: 0.8rem;
   padding: 0.55rem 0.8rem;
   background: var(--app-panel);
 }
@@ -1759,8 +1749,8 @@ function stationRowClass(row: Record<string, unknown>) {
 .top-product-isn-results__field select {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
-  padding: 0.75rem 0.9rem;
+  border-radius: 0.75rem;
+  padding: 0.72rem 0.82rem;
   background: var(--app-panel);
   color: var(--app-ink);
 }
@@ -1771,9 +1761,15 @@ function stationRowClass(row: Record<string, unknown>) {
 
 .top-product-isn-results__table-shell {
   border: 1px solid var(--app-border);
-  border-radius: 1.25rem;
+  border-radius: 0.9rem;
   overflow: hidden;
   background: var(--app-panel);
+}
+
+.top-product-isn-results__table-shell :deep(.p-datatable-wrapper),
+.top-product-isn-results__table-shell :deep(.p-datatable-table-container) {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .top-product-isn-results__data-table :deep(.p-datatable-table) {
@@ -1879,8 +1875,8 @@ function stationRowClass(row: Record<string, unknown>) {
 
 .top-product-isn-results__notice {
   border: 1px solid var(--app-border);
-  border-radius: 1.25rem;
-  padding: 1rem 1.1rem;
+  border-radius: 0.9rem;
+  padding: 0.9rem 1rem;
 }
 
 .top-product-isn-results__notice--error {
@@ -1906,7 +1902,7 @@ function stationRowClass(row: Record<string, unknown>) {
 
 .top-product-isn-results__dut-disclosure {
   border: 1px solid var(--app-border);
-  border-radius: 0.75rem;
+  border-radius: 0.7rem;
   background: var(--app-panel);
   overflow: hidden;
 }

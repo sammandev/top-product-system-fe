@@ -1,8 +1,8 @@
 <template>
   <AppPanel
-    eyebrow="Routing Context"
-    title="Site / Model / Station Selection"
-    description="Choose the site, device model, and station in order. Downstream options load only after the upstream selection is set."
+    eyebrow="Context"
+    title="Site / Model / Station"
+    description="Choose the site, model, and station in order. Downstream options load after the upstream selection is set."
     tone="cool"
   >
     <div class="site-model-station-selector__grid">
@@ -12,7 +12,7 @@
           <option value="">Select a site</option>
           <option v-for="site in siteItems" :key="site.value" :value="site.value">{{ site.title }}</option>
         </select>
-        <small>{{ loadingSites ? 'Loading sites...' : siteItems.length ? 'Available test sites from DUT master data.' : 'No sites available.' }}</small>
+        <small>{{ loadingSites ? 'Loading sites...' : siteItems.length ? 'Available DUT sites.' : 'No sites available.' }}</small>
         <small v-if="siteError" class="site-model-station-selector__error">{{ siteError }}</small>
       </label>
 
@@ -22,7 +22,7 @@
           <option value="">{{ selectedSiteId ? 'Select a model' : 'Select a site first' }}</option>
           <option v-for="model in modelItems" :key="model.value" :value="model.value">{{ model.title }}</option>
         </select>
-        <small>{{ loadingModels ? 'Loading models...' : selectedSiteId ? (modelItems.length ? 'Models available for the selected site.' : 'No models available for this site.') : 'Choose a site to load models.' }}</small>
+        <small>{{ loadingModels ? 'Loading models...' : selectedSiteId ? (modelItems.length ? 'Models available for this site.' : 'No models available for this site.') : 'Choose a site to load models.' }}</small>
         <small v-if="modelError" class="site-model-station-selector__error">{{ modelError }}</small>
       </label>
 
@@ -32,7 +32,7 @@
           <option value="">{{ selectedModelId ? 'Select a station' : 'Select a model first' }}</option>
           <option v-for="station in stationItems" :key="station.value" :value="station.value">{{ station.title }}</option>
         </select>
-        <small>{{ loadingStations ? 'Loading stations...' : selectedModelId ? (stationItems.length ? 'Stations available for the selected model.' : 'No stations available for this model.') : 'Choose a model to load stations.' }}</small>
+        <small>{{ loadingStations ? 'Loading stations...' : selectedModelId ? (stationItems.length ? 'Stations available for this model.' : 'No stations available for this model.') : 'Choose a model to load stations.' }}</small>
         <small v-if="stationError" class="site-model-station-selector__error">{{ stationError }}</small>
       </label>
     </div>
@@ -43,7 +43,7 @@
     </section>
 
     <section v-else-if="showValidation" class="site-model-station-selector__notice site-model-station-selector__notice--warning">
-      Please select Site, Model, and Station to continue.
+      Select site, model, and station to continue.
     </section>
 
     <section v-if="error" class="site-model-station-selector__notice site-model-station-selector__notice--danger">
@@ -337,10 +337,10 @@ onMounted(() => {
 .site-model-station-selector__field select {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
-  background: var(--app-panel);
+  border-radius: 0.75rem;
+  background: var(--app-panel-strong);
   color: var(--app-ink);
-  padding: 0.82rem 0.95rem;
+  padding: 0.72rem 0.82rem;
 }
 
 .site-model-station-selector__field select:focus {
@@ -369,8 +369,9 @@ onMounted(() => {
 
 .site-model-station-selector__notice {
   margin-top: 1rem;
-  border-radius: 1rem;
-  padding: 0.85rem 1rem;
+  border: 1px solid transparent;
+  border-radius: 0.8rem;
+  padding: 0.8rem 0.9rem;
   gap: 1rem;
   justify-content: space-between;
   align-items: center;
@@ -382,16 +383,19 @@ onMounted(() => {
 }
 
 .site-model-station-selector__notice--success {
+  border-color: rgba(15, 118, 110, 0.16);
   background: rgba(15, 118, 110, 0.12);
   color: var(--app-accent);
 }
 
 .site-model-station-selector__notice--warning {
+  border-color: rgba(184, 118, 38, 0.18);
   background: rgba(184, 118, 38, 0.16);
   color: #8f5314;
 }
 
 .site-model-station-selector__notice--danger {
+  border-color: rgba(189, 64, 64, 0.18);
   background: rgba(189, 64, 64, 0.14);
   color: #8f2020;
 }
@@ -400,11 +404,11 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   border: 1px solid currentColor;
-  border-radius: 999px;
+  border-radius: 0.75rem;
   background: transparent;
   color: inherit;
   cursor: pointer;
-  padding: 0.6rem 0.9rem;
+  padding: 0.58rem 0.82rem;
   font-weight: 700;
 }
 

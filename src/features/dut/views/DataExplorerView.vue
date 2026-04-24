@@ -9,9 +9,7 @@
                     <div>
                         <p class="data-explorer-header__eyebrow">DUT Workspace</p>
                         <h1>Data Explorer</h1>
-                        <p>
-                            Search and download DUT test data from iPLAS or internal sources.
-                        </p>
+                        <p>Search and download DUT test data from iPLAS or internal sources.</p>
                     </div>
                 </div>
             </header>
@@ -28,10 +26,7 @@
                         <div class="data-explorer-notice">
                             <div>
                                 <strong>Internal data snapshot</strong>
-                                <p>
-                                    Internal data is reshaped so the route can display all relevant station data for
-                                    the provided ISN. It may lag behind iPLAS recency.
-                                </p>
+                                <p>Internal data may lag behind iPLAS recency.</p>
                             </div>
                         </div>
                         <InternalDataContent v-if="activeTab === 'internal'" />
@@ -64,7 +59,7 @@ const tabItems = [
 <style scoped>
 .data-explorer-shell {
     display: grid;
-    gap: 1.5rem;
+    gap: 1.25rem;
 }
 
 .data-explorer-header {
@@ -76,7 +71,7 @@ const tabItems = [
 
 .data-explorer-header__copy {
     display: flex;
-    gap: 1rem;
+    gap: 0.85rem;
     align-items: flex-start;
 }
 
@@ -84,12 +79,12 @@ const tabItems = [
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 3.2rem;
-    height: 3.2rem;
-    border-radius: 1rem;
+    width: 2.7rem;
+    height: 2.7rem;
+    border-radius: 0.75rem;
     background: linear-gradient(135deg, rgba(15, 118, 110, 0.16), rgba(45, 212, 191, 0.16));
     color: var(--app-accent);
-    font-size: 1.5rem;
+    font-size: 1.3rem;
 }
 
 .data-explorer-header__eyebrow {
@@ -110,7 +105,7 @@ const tabItems = [
 .data-explorer-notice p {
     margin: 0.35rem 0 0;
     color: var(--app-muted);
-    line-height: 1.6;
+    line-height: 1.5;
 }
 
 .data-explorer-pane {
@@ -122,8 +117,8 @@ const tabItems = [
     display: flex;
     gap: 1rem;
     border: 1px solid rgba(36, 116, 184, 0.18);
-    border-radius: 0.75rem;
-    padding: 1rem 1.1rem;
+    border-radius: 0.7rem;
+    padding: 0.9rem 1rem;
     background: rgba(240, 249, 255, 0.92);
 }
 

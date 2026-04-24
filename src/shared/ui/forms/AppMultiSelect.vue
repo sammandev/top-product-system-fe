@@ -251,7 +251,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--app-border);
   border-radius: 0.5rem;
   background: var(--app-panel-strong);
-  box-shadow: var(--app-shadow);
+  box-shadow: none;
   overflow: hidden;
   display: flex;
   flex-direction: column;

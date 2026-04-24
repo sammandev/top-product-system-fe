@@ -2,7 +2,7 @@
   <AppDialog
     v-model="internalShow"
     title="Select & Configure Stations"
-    description="Pick the stations to include, then optionally narrow device IDs and status per station."
+    description="Pick the stations to include, then narrow device IDs and status if needed."
     width="min(96vw, 56rem)"
     persistent
   >
@@ -340,14 +340,14 @@ watch(
 .station-dialog__field select {
   min-height: 2.75rem;
   border: 1px solid var(--app-border);
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   background: rgba(255, 252, 249, 0.96);
   color: var(--app-ink);
   font: inherit;
 }
 
 .station-dialog__field select {
-  padding: 0.7rem 0.85rem;
+  padding: 0.65rem 0.8rem;
 }
 
 .station-dialog__field--compact {
@@ -361,7 +361,7 @@ watch(
   align-items: center;
   padding: 0.3rem 0.35rem 0.3rem 0.85rem;
   border: 1px solid var(--app-border);
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   background: rgba(255, 252, 249, 0.96);
 }
 
@@ -418,7 +418,7 @@ watch(
 
 .station-dialog__item {
   border: 1px solid var(--app-border);
-  border-radius: 1rem;
+  border-radius: 0.8rem;
   background: rgba(255, 252, 249, 0.96);
   overflow: hidden;
 }
@@ -427,7 +427,7 @@ watch(
   display: flex;
   gap: 0.85rem;
   align-items: flex-start;
-  padding: 0.9rem 1rem;
+  padding: 0.8rem 0.9rem;
   cursor: pointer;
 }
 
@@ -453,7 +453,7 @@ watch(
 .station-dialog__config {
   display: grid;
   gap: 0.85rem;
-  padding: 0 1rem 1rem;
+  padding: 0 0.9rem 0.9rem;
   background: rgba(245, 250, 247, 0.9);
 }
 
@@ -492,12 +492,12 @@ watch(
 .station-dialog__ghost-action,
 .station-dialog__primary-action {
   min-height: 2.7rem;
-  padding: 0.7rem 1rem;
+  padding: 0.62rem 0.9rem;
 }
 
 .station-dialog__primary-action {
   border-color: rgba(15, 118, 110, 0.32);
-  background: linear-gradient(135deg, rgba(15, 118, 110, 0.98), rgba(45, 212, 191, 0.92));
+  background: linear-gradient(135deg, rgba(15, 118, 110, 0.98), rgba(28, 124, 98, 0.92));
   color: #fff;
 }
 
@@ -511,7 +511,7 @@ watch(
   display: grid;
   justify-items: center;
   gap: 0.45rem;
-  padding: 1.5rem 1rem;
+  padding: 1.3rem 0.9rem;
   color: var(--app-muted);
   text-align: center;
 }

@@ -1,8 +1,8 @@
 <template>
   <AppPanel
-    eyebrow="Ranking"
-    :title="hasScores ? 'iPLAS Data Ranking by Test Station' : 'iPLAS Data Result'"
-    :description="hasScores ? 'Rankings are based on scoring. Higher scores indicate better performance.' : 'Calculate scores to rank records by performance score. Records with errors remain grouped at the bottom.'"
+    eyebrow="Results"
+    :title="hasScores ? 'Ranking by Station' : 'Station Results'"
+    :description="hasScores ? 'Review scored records by station.' : 'Calculate scores to rank records by station.'"
     tone="warm"
     split-header
   >
@@ -95,10 +95,8 @@
             <template v-if="hasScores">
               <label class="ranking-field">
                 <span>Score Filter</span>
-                <select v-model="scoreFilterType" @change="handleScoreFilterTypeChange">
-                  <option :value="null">No filter</option>
-                  <option v-for="option in scoreFilterTypeOptions" :key="option.value" :value="option.value">{{ option.title }}</option>
-                </select>
+                <AppSelect v-model="scoreFilterType" :options="scoreFilterTypeSelectOptions" placeholder="No filter"
+                  :searchable="false" @change="handleScoreFilterTypeChange" />
               </label>
 
               <label class="ranking-field">
@@ -227,7 +225,7 @@
 import { useDebounceFn } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
-import { AppPanel, AppTabs } from '@/shared/ui'
+import { AppPanel, AppSelect, AppTabs } from '@/shared/ui'
 import type { CsvTestItemData } from '@/features/dut-logs/composables/useIplasApi'
 import { adjustIplasDisplayTime, isStatusPass } from '@/shared/utils/helpers'
 import { getScoreColor } from '../types/scoring.types'
@@ -333,6 +331,14 @@ const scoreFilterTypeOptions = [
   { title: 'Lower Than', value: 'lt' },
   { title: 'Lower Than or Equal', value: 'lte' },
   { title: 'In Between', value: 'between' },
+]
+
+const scoreFilterTypeSelectOptions = [
+  { label: 'No filter', value: null },
+  ...scoreFilterTypeOptions.map((option) => ({
+    label: option.title,
+    value: option.value,
+  })),
 ]
 
 // Check if we have scores - must be defined before rankingHeaders
@@ -850,6 +856,10 @@ function scoreTone(score: number) {
   gap: 0.85rem;
 }
 
+.ranking-panel {
+  min-width: 0;
+}
+
 .ranking-actions,
 .ranking-token-row,
 .ranking-isn-cell,
@@ -866,7 +876,7 @@ function scoreTone(score: number) {
 }
 
 .ranking-filter-grid {
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 0.8fr) minmax(0, 0.8fr) auto;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
   margin-bottom: 1rem;
 }
 
@@ -882,10 +892,10 @@ function scoreTone(score: number) {
 .ranking-field select {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   background: var(--app-panel-strong);
   color: var(--app-ink);
-  padding: 0.8rem 0.9rem;
+  padding: 0.72rem 0.82rem;
   font: inherit;
 }
 
@@ -893,13 +903,13 @@ function scoreTone(score: number) {
 .ranking-token,
 .ranking-inline-icon {
   min-height: 2.6rem;
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--app-border);
   background: var(--app-panel);
   color: var(--app-ink);
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .ranking-button,
@@ -911,7 +921,7 @@ function scoreTone(score: number) {
 .ranking-button:hover,
 .ranking-token:hover,
 .ranking-inline-icon:hover {
-  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .ranking-button--primary {
@@ -1013,6 +1023,12 @@ function scoreTone(score: number) {
   color: var(--app-ink);
   font-family: var(--app-mono, 'Consolas', monospace);
   font-weight: 700;
+}
+
+.ranking-panel :deep(.p-datatable-table-container),
+.ranking-panel :deep(.p-datatable-wrapper) {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 @media (max-width: 1100px) {

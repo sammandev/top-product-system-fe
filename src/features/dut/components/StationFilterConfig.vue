@@ -1,7 +1,7 @@
 <template>
   <AppDialog v-model="testItemDialog" width="min(92vw, 64rem)" :breakpoints="{ '960px': '96vw', '640px': '98vw' }"
     :title="`${dialogFilterType === 'include' ? 'Include' : 'Exclude'} Test Items`"
-    description="Search, bulk-select, and review grouped test-item patterns before applying them to this station.">
+    description="Search and apply grouped test-item patterns for this station.">
 
     <div class="station-filter-config__dialog-body">
       <label class="station-filter-config__field">
@@ -56,7 +56,7 @@
     </template>
   </AppDialog>
 
-  <AppPanel eyebrow="Station Override" :title="stationName" :description="'Override the shared device and test-item filters for this station only.'"
+  <AppPanel eyebrow="Station Filters" :title="stationName" :description="'Set device and test-item rules for this station only.'"
     tone="cool" splitHeader class="station-filter-config">
     <template #header-aside>
       <div class="station-filter-config__header-meta">
@@ -92,7 +92,7 @@
           </div>
         </label>
 
-        <p class="station-filter-config__helper-copy">Override the universal device filters for this station. Click an item to toggle it.</p>
+        <p class="station-filter-config__helper-copy">Set station-specific device IDs. Click a chip to toggle it.</p>
 
         <div v-if="loading" class="station-filter-config__notice station-filter-config__notice--info">
           Loading device identifiers...
@@ -149,7 +149,7 @@
           </div>
         </label>
 
-        <p class="station-filter-config__helper-copy">Regex patterns here narrow this station to matching test items.</p>
+        <p class="station-filter-config__helper-copy">Keep only matching test items for this station.</p>
 
         <div v-if="filteredIncludeSuggestions.length > 0" class="station-filter-config__suggestion-list">
           <button v-for="item in filteredIncludeSuggestions" :key="`include-${item}`" type="button"
@@ -201,7 +201,7 @@
           </div>
         </label>
 
-        <p class="station-filter-config__helper-copy">Regex patterns here remove matching test items from this station analysis.</p>
+        <p class="station-filter-config__helper-copy">Remove matching test items from this station.</p>
 
         <div v-if="filteredExcludeSuggestions.length > 0" class="station-filter-config__suggestion-list">
           <button v-for="item in filteredExcludeSuggestions" :key="`exclude-${item}`" type="button"
@@ -227,10 +227,10 @@
       </section>
 
       <div v-if="!hasFilters" class="station-filter-config__notice station-filter-config__notice--info">
-        No station-specific filters configured. Universal filters will apply.
+        No station-specific filters are set. Shared filters still apply.
       </div>
       <div v-else class="station-filter-config__notice station-filter-config__notice--success">
-        <strong>{{ localDeviceIdentifiers.length }}</strong> device(s), <strong>{{ localTestItemFilters.length }}</strong> include pattern(s), and <strong>{{ localExcludeTestItemFilters.length }}</strong> exclude pattern(s) are active for this station.
+        <strong>{{ localDeviceIdentifiers.length }}</strong> device(s), <strong>{{ localTestItemFilters.length }}</strong> include pattern(s), and <strong>{{ localExcludeTestItemFilters.length }}</strong> exclude pattern(s) are active.
       </div>
     </div>
   </AppPanel>
@@ -831,7 +831,7 @@ function clearFilters() {
 
 <style scoped>
 .station-filter-config {
-  border-left: 4px solid rgba(40, 96, 163, 0.65);
+  border-left: 1px solid rgba(40, 96, 163, 0.18);
 }
 
 .station-filter-config__layout,
@@ -901,10 +901,10 @@ function clearFilters() {
 .station-filter-config__field input {
   flex: 1;
   border: 1px solid var(--app-border);
-  border-radius: 0.9rem;
-  background: var(--app-panel);
+  border-radius: 0.75rem;
+  background: var(--app-panel-strong);
   color: var(--app-ink);
-  padding: 0.8rem 0.95rem;
+  padding: 0.72rem 0.82rem;
 }
 
 .station-filter-config__button,
@@ -914,11 +914,11 @@ function clearFilters() {
 .station-filter-config__dialog-item,
 .station-filter-config__suggestion-row {
   border: 1px solid var(--app-border);
-  border-radius: 999px;
+  border-radius: 0.75rem;
   background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
-  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+  transition: border-color 140ms ease, background 140ms ease;
 }
 
 .station-filter-config__button:hover,
@@ -927,11 +927,11 @@ function clearFilters() {
 .station-filter-config__token:hover,
 .station-filter-config__dialog-item:hover,
 .station-filter-config__suggestion-row:hover {
-  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .station-filter-config__button {
-  padding: 0.7rem 0.95rem;
+  padding: 0.62rem 0.88rem;
   font-weight: 700;
 }
 
@@ -968,17 +968,19 @@ function clearFilters() {
 
 .station-filter-config__section {
   border: 1px solid var(--app-border);
-  border-radius: 1.15rem;
+  border-radius: 0.8rem;
   background: var(--app-panel);
-  padding: 1rem;
+  padding: 0.9rem;
 }
 
 .station-filter-config__section--success {
-  background: linear-gradient(145deg, rgba(15, 118, 110, 0.06), var(--app-panel));
+  background: var(--app-panel);
+  border-color: rgba(15, 118, 110, 0.16);
 }
 
 .station-filter-config__section--danger {
-  background: linear-gradient(145deg, rgba(189, 64, 64, 0.06), var(--app-panel));
+  background: var(--app-panel);
+  border-color: rgba(189, 64, 64, 0.16);
 }
 
 .station-filter-config__pill {
@@ -1027,7 +1029,7 @@ function clearFilters() {
 .station-filter-config__choice-chip,
 .station-filter-config__token,
 .station-filter-config__suggestion-row {
-  padding: 0.6rem 0.9rem;
+  padding: 0.58rem 0.82rem;
 }
 
 .station-filter-config__choice-chip.is-active,
@@ -1064,7 +1066,7 @@ function clearFilters() {
 .station-filter-config__dialog-item {
   justify-content: space-between;
   width: 100%;
-  border-radius: 1rem;
+  border-radius: 0.8rem;
 }
 
 .station-filter-config__suggestion-row.is-active,
@@ -1082,8 +1084,8 @@ function clearFilters() {
 
 .station-filter-config__notice,
 .station-filter-config__empty-state {
-  border-radius: 1rem;
-  padding: 0.85rem 1rem;
+  border-radius: 0.8rem;
+  padding: 0.8rem 0.9rem;
   font-size: 0.9rem;
 }
 

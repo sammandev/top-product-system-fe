@@ -1,9 +1,9 @@
 <template>
   <div class="iplas-isn-shell">
     <AppPanel
-      eyebrow="Selection Controls"
+      eyebrow="Controls"
       title="ISN Search"
-      description="Search by ISN, SSN, or MAC, optionally expand identifiers through SFISTSP, then review the existing grouped station results below."
+      description="Search by ISN, SSN, or MAC, optionally expand identifiers through SFISTSP, then review grouped station results."
       tone="cool"
       split-header
     >
@@ -43,7 +43,7 @@
             <input v-model="enableUnifiedSearch" type="checkbox">
             <div>
               <strong>Unified Search</strong>
-              <p>When enabled, SFISTSP reference lookup expands the search to related ISN, SSN, and MAC identifiers before requesting iPLAS data.</p>
+              <p>Expand the search to related ISN, SSN, and MAC identifiers before requesting iPLAS data.</p>
             </div>
           </label>
         </div>
@@ -82,7 +82,7 @@
               {{ isSearching || loadingIsnSearch ? 'Searching...' : 'Search' }}
             </button>
           </div>
-          <small>Press Enter or use Add to queue identifiers before launching reference lookup or the full iPLAS search.</small>
+          <small>Press Enter or use Add to queue identifiers before lookup or search.</small>
           <div v-if="selectedISNs.length > 0" class="iplas-isn-token-row">
             <button
               v-for="(isn, index) in selectedISNs"
@@ -130,8 +130,8 @@
         <section v-if="sfistspReferences.length > 0" class="iplas-isn-reference-panel">
           <div class="iplas-isn-reference-panel__header">
             <div>
-              <p class="iplas-isn-reference-panel__eyebrow">Reference Lookup</p>
-              <h3>SFISTSP Identifier Matches</h3>
+              <p class="iplas-isn-reference-panel__eyebrow">Lookup</p>
+              <h3>SFISTSP Matches</h3>
             </div>
             <button type="button" class="iplas-isn-button iplas-isn-button--ghost" @click="sfistspReferences = []">
               Dismiss
@@ -208,7 +208,7 @@
         <AppPanel
           v-if="groupedByISN.length > 0"
           eyebrow="Results"
-          title="Test Records Results"
+          title="Records"
           description="Review grouped iPLAS records per ISN, switch display modes, and drill into station-level histories."
           tone="warm"
           split-header
@@ -1593,11 +1593,11 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-token,
 .iplas-isn-reference-code {
   border: 1px solid var(--app-border);
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   background: var(--app-panel);
   color: var(--app-ink);
   font: inherit;
-  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .iplas-isn-toggle-chip,
@@ -1611,27 +1611,27 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-button:hover,
 .iplas-isn-token:hover,
 .iplas-isn-reference-code:hover {
-  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .iplas-isn-toggle-chip,
 .iplas-isn-button,
 .iplas-isn-token,
 .iplas-isn-reference-code {
-  padding: 0.72rem 0.95rem;
+  padding: 0.62rem 0.88rem;
 }
 
 .iplas-isn-toggle-chip.is-active,
 .iplas-isn-button--primary {
-  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  background: linear-gradient(135deg, #0f766e, #1c7c62);
   border-color: var(--app-accent);
   color: white;
 }
 
 .iplas-isn-button--secondary {
-  background: linear-gradient(135deg, #165d92, #1d7fb7);
-  border-color: #165d92;
-  color: white;
+  background: rgba(40, 96, 163, 0.08);
+  border-color: rgba(40, 96, 163, 0.16);
+  color: #1f4f89;
 }
 
 .iplas-isn-button--ghost {
@@ -1642,8 +1642,8 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-notice,
 .iplas-isn-reference-panel {
   border: 1px solid var(--app-border);
-  border-radius: 1.25rem;
-  background: var(--app-panel-strong);
+  border-radius: 0.8rem;
+  background: var(--app-panel);
 }
 
 .iplas-isn-toggle-card {
@@ -1651,7 +1651,7 @@ async function handleSearch(): Promise<void> {
   grid-template-columns: auto 1fr;
   gap: 0.85rem;
   align-items: start;
-  padding: 0.95rem 1rem;
+  padding: 0.82rem 0.9rem;
 }
 
 .iplas-isn-toggle-card input {
@@ -1680,10 +1680,10 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-field textarea {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   background: var(--app-panel-strong);
   color: var(--app-ink);
-  padding: 0.85rem 1rem;
+  padding: 0.72rem 0.82rem;
   font: inherit;
 }
 
@@ -1719,12 +1719,12 @@ async function handleSearch(): Promise<void> {
 }
 
 .iplas-isn-reference-panel {
-  padding: 1rem;
+  padding: 0.9rem;
 }
 
 .iplas-isn-reference-panel__header {
   justify-content: space-between;
-  margin-bottom: 1rem;
+  margin-bottom: 0.85rem;
 }
 
 .iplas-isn-reference-panel__eyebrow {
@@ -1744,7 +1744,7 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-reference-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
 .iplas-isn-results-actions {

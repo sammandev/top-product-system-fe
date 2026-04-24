@@ -1,15 +1,15 @@
 <template>
   <section class="top-products-isn-shell">
-    <AppPanel eyebrow="DUT Input" title="Analyze By DUT ISN"
-      description="Keep the existing DUT lookup workflow, then scope the analysis with optional stations, criteria, and universal filters."
+    <AppPanel eyebrow="Input" title="Analyze By DUT ISN"
+      description="Add DUTs, then narrow the run with optional station and criteria scope."
       tone="cool">
       <DUTISNInput ref="dutISNInputRef" v-model="dutISNs" v-model:site-identifiers="siteIdentifier"
         v-model:model-identifiers="modelIdentifier" :max-i-s-ns="20" />
     </AppPanel>
 
     <div class="top-products-isn-grid">
-      <AppPanel eyebrow="Station Scope" title="Station Selection"
-        description="Leave the selection empty to evaluate all available stations.">
+      <AppPanel eyebrow="Stations" title="Station Selection"
+        description="Optional. Leave empty to evaluate all available stations.">
         <div class="top-products-isn-input-row">
           <label class="top-products-isn-field">
             <span>Add station</span>
@@ -51,7 +51,7 @@
       </AppPanel>
 
       <AppPanel eyebrow="Criteria" title="Criteria Configuration"
-        description="Upload an optional JSON criteria file or download the starter template." tone="warm" splitHeader>
+      description="Optional JSON criteria file." tone="warm" splitHeader>
         <template #header-aside>
           <button type="button" class="top-products-isn-link" @click="downloadCriteriaTemplate">
             Download template
@@ -59,7 +59,7 @@
         </template>
 
         <AppFilePicker v-model="criteriaFile" label="Criteria JSON File" accept=".json,application/json"
-          helperText="Use a custom JSON criteria file or leave empty to apply the default rules."
+          helperText="Leave empty to use the default rules."
           placeholder="Drop a criteria file here or browse from disk." />
 
         <div v-if="criteriaFileActual" class="top-products-isn-file-summary">
@@ -73,7 +73,7 @@
       <summary>
         <div>
           <p>Universal Filters</p>
-          <span>Apply shared device and test-item filters across all stations.</span>
+          <span>Shared device and test-item filters for all stations.</span>
         </div>
       </summary>
 
@@ -82,19 +82,19 @@
           <label class="top-products-isn-field top-products-isn-field--full">
             <span>Device Identifiers</span>
             <textarea v-model="deviceIdentifiersText" rows="3" placeholder="e.g. 1351, 614670 or one value per line" />
-            <small>Applies to all stations unless overridden below.</small>
+            <small>Shared across all stations unless overridden.</small>
           </label>
 
           <label class="top-products-isn-field">
             <span>Include Test Items</span>
             <textarea v-model="testItemFiltersText" rows="4" placeholder="e.g. WiFi_TX_POW.*" />
-            <small>Provide regex patterns to include matching test items.</small>
+            <small>Regex patterns to include matching test items.</small>
           </label>
 
           <label class="top-products-isn-field">
             <span>Exclude Test Items</span>
             <textarea v-model="excludeTestItemFiltersText" rows="4" placeholder="e.g. WiFi_PA_POW_OLD.*" />
-            <small>Provide regex patterns to remove matching test items.</small>
+            <small>Regex patterns to remove matching test items.</small>
           </label>
         </div>
       </div>
@@ -104,13 +104,13 @@
       <summary>
         <div>
           <p>Per-Station Filter Configuration</p>
-          <span>Override the universal filters for specific stations when you need tighter control.</span>
+          <span>Override the shared filters for specific stations.</span>
         </div>
       </summary>
 
       <div class="top-products-isn-accordion__body top-products-isn-accordion__body--stacked">
         <div class="top-products-isn-notice">
-          Per-station filters override the universal filter set. Leave a station empty to inherit the global rules.
+          Leave a station empty to inherit the shared rules.
         </div>
 
         <div v-if="loadingTestItems || loadingDevices" class="top-products-isn-loading-bar" />
@@ -128,8 +128,8 @@
       </div>
     </details>
 
-    <AppPanel eyebrow="Run Analysis" title="Submit Top Product Analysis"
-      description="Run the current DUT selection through the existing Top Product analysis pipeline." tone="success"
+    <AppPanel eyebrow="Run" title="Top Product Analysis"
+      description="Run the current DUT set through the Top Product pipeline." tone="success"
       splitHeader>
       <template #header-aside>
         <div class="top-products-isn-stat-row">
@@ -1053,11 +1053,11 @@ function formatFileSize(bytes: number): string {
 }
 
 .top-products-isn-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
 }
 
 .top-products-isn-filter-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
 }
 
 .top-products-isn-field {
@@ -1089,8 +1089,8 @@ function formatFileSize(bytes: number): string {
 .top-products-isn-field textarea {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
-  padding: 0.82rem 0.95rem;
+  border-radius: 0.75rem;
+  padding: 0.74rem 0.85rem;
   font: inherit;
   color: var(--app-ink);
   background: rgba(255, 255, 255, 0.92);
@@ -1120,7 +1120,7 @@ function formatFileSize(bytes: number): string {
 .top-products-isn-entry-row button,
 .top-products-isn-primary-button {
   border: 1px solid transparent;
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   cursor: pointer;
 }
 
@@ -1148,14 +1148,14 @@ function formatFileSize(bytes: number): string {
   background: rgba(40, 96, 163, 0.07);
   color: #214d86;
   cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+  transition: border-color 0.18s ease, background 0.18s ease;
 }
 
 .top-products-isn-choice:hover,
 .top-products-isn-token:hover,
 .top-products-isn-primary-button:hover:not(:disabled),
 .top-products-isn-entry-row button:hover {
-  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .top-products-isn-choice.is-active {
@@ -1190,7 +1190,7 @@ function formatFileSize(bytes: number): string {
 .top-products-isn-stat-row span,
 .top-products-isn-results {
   border: 1px solid var(--app-border);
-  border-radius: 1rem;
+  border-radius: 0.8rem;
 }
 
 .top-products-isn-file-summary,
@@ -1226,11 +1226,8 @@ function formatFileSize(bytes: number): string {
 
 .top-products-isn-accordion {
   border: 1px solid var(--app-border);
-  border-radius: 1.35rem;
-  background:
-    radial-gradient(circle at top right, rgba(40, 96, 163, 0.08), transparent 30%),
-    var(--app-panel);
-  box-shadow: var(--app-shadow-soft);
+  border-radius: 0.9rem;
+  background: var(--app-panel);
   overflow: hidden;
 }
 
@@ -1278,13 +1275,13 @@ function formatFileSize(bytes: number): string {
 }
 
 .top-products-isn-station-config-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
 }
 
 .top-products-isn-station-config-card {
   border: 1px solid var(--app-border);
-  border-radius: 0.75rem;
-  padding: 1rem;
+  border-radius: 0.7rem;
+  padding: 0.9rem;
   background: rgba(255, 255, 255, 0.72);
 }
 
@@ -1298,7 +1295,6 @@ function formatFileSize(bytes: number): string {
   background: linear-gradient(135deg, #0f766e, #2860a3);
   color: white;
   font-weight: 700;
-  box-shadow: 0 16px 30px rgba(15, 118, 110, 0.18);
 }
 
 .top-products-isn-primary-button:disabled {
@@ -1318,6 +1314,7 @@ function formatFileSize(bytes: number): string {
 }
 
 .top-products-isn-results {
+  min-width: 0;
   padding: 1rem;
   background: var(--app-panel);
 }

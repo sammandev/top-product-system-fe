@@ -8,10 +8,7 @@
                 <div>
                     <p class="pa-trend-header__eyebrow">DUT Workspace</p>
                     <h1>PA Trend Analysis</h1>
-                    <p>
-                        Analyze PA trends across multiple DUTs and stations with auto, dex, and differential
-                        modes from one consolidated workflow.
-                    </p>
+                    <p>Analyze PA trends across DUTs and stations in auto, dex, and differential modes.</p>
                 </div>
             </div>
 
@@ -32,8 +29,8 @@
         <section class="pa-trend-panel pa-trend-panel--filters">
             <div class="pa-trend-panel__header">
                 <div>
-                    <p class="pa-trend-panel__eyebrow">Filter Parameters</p>
-                    <h2>Analysis Scope</h2>
+                    <p class="pa-trend-panel__eyebrow">Scope</p>
+                    <h2>Analysis</h2>
                 </div>
             </div>
 
@@ -47,8 +44,7 @@
                                 @keydown="handleTokenKeydown($event, 'dut')" @blur="commitPendingTokens('dut')">
                             <button type="button" @click="commitPendingTokens('dut')">Add</button>
                         </div>
-                        <small>Paste or type one or more DUT ISNs. Delimiters: Enter, comma, spaces, or new
-                            lines.</small>
+                        <small>Enter, comma, space, or paste a list.</small>
                         <div class="pa-trend-token-list">
                             <button v-for="dutIsn in selectedDutIsns" :key="dutIsn" type="button" class="pa-trend-token"
                                 @click="removeToken('dut', dutIsn)">
@@ -66,8 +62,7 @@
                                 @keydown="handleTokenKeydown($event, 'station')" @blur="commitPendingTokens('station')">
                             <button type="button" @click="commitPendingTokens('station')">Add</button>
                         </div>
-                        <small>Paste or type one or more station IDs. Delimiters: Enter, comma, spaces, or new
-                            lines.</small>
+                        <small>Enter, comma, space, or paste a list.</small>
                         <div class="pa-trend-token-list">
                             <button v-for="stationId in selectedStationIds" :key="stationId" type="button"
                                 class="pa-trend-token pa-trend-token--cool" @click="removeToken('station', stationId)">
@@ -333,12 +328,12 @@ function handleExport() {
     align-items: flex-start;
     justify-content: space-between;
     gap: 1rem;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1.25rem;
 }
 
 .pa-trend-header__copy {
     display: flex;
-    gap: 1rem;
+    gap: 0.85rem;
     align-items: flex-start;
 }
 
@@ -346,13 +341,12 @@ function handleExport() {
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 3rem;
-    height: 3rem;
-    border-radius: 1rem;
+    width: 2.7rem;
+    height: 2.7rem;
+    border-radius: 0.75rem;
     background: linear-gradient(135deg, #0f766e, #155e75);
     color: white;
-    font-size: 1.45rem;
-    box-shadow: 0 18px 32px rgb(15 118 110 / 0.22);
+    font-size: 1.3rem;
 }
 
 .pa-trend-header__eyebrow,
@@ -379,7 +373,7 @@ function handleExport() {
     max-width: 48rem;
     margin: 0.45rem 0 0;
     color: #475569;
-    line-height: 1.6;
+    line-height: 1.5;
 }
 
 .pa-trend-button {
@@ -409,7 +403,6 @@ function handleExport() {
 .pa-trend-button--primary {
     background: linear-gradient(135deg, #0f766e, #155e75);
     color: white;
-    box-shadow: 0 18px 32px rgb(15 118 110 / 0.22);
 }
 
 .pa-trend-button--ghost {
@@ -422,9 +415,8 @@ function handleExport() {
 .pa-trend-panel,
 .pa-trend-shell {
     border: 1px solid #dbe4ee;
-    border-radius: 1.25rem;
-    background: linear-gradient(180deg, #ffffff, #f8fafc);
-    box-shadow: 0 16px 36px rgb(15 23 42 / 0.06);
+    border-radius: 0.85rem;
+    background: var(--app-panel);
 }
 
 .pa-trend-notice {
@@ -462,7 +454,7 @@ function handleExport() {
 }
 
 .pa-trend-panel {
-    padding: 1.25rem;
+    padding: 1rem;
     margin-bottom: 1rem;
 }
 
@@ -482,11 +474,11 @@ function handleExport() {
 }
 
 .pa-trend-grid--two {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
 }
 
 .pa-trend-grid--three {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
 }
 
 .pa-trend-field {
@@ -502,8 +494,8 @@ function handleExport() {
 .pa-trend-field select {
     width: 100%;
     border: 1px solid #cbd5e1;
-    border-radius: 0.9rem;
-    padding: 0.78rem 0.95rem;
+    border-radius: 0.75rem;
+    padding: 0.72rem 0.82rem;
     font: inherit;
     color: #0f172a;
     background: white;
@@ -529,7 +521,7 @@ function handleExport() {
 .pa-trend-token-entry button {
     min-width: 4.5rem;
     border: 1px solid #cbd5e1;
-    border-radius: 0.9rem;
+    border-radius: 0.75rem;
     background: white;
     color: #0f172a;
     font: inherit;

@@ -199,22 +199,22 @@ function resolveFieldValue(row: GridRow, field?: string) {
 
 <style scoped>
 .app-data-grid :deep(.p-datatable) {
-  border-radius: 1.25rem;
+  border-radius: 0.625rem;
   overflow: hidden;
   border: 1px solid var(--app-border);
-  background: var(--app-panel);
-  box-shadow: var(--app-shadow-soft);
+  background: var(--app-panel-strong);
+  box-shadow: none;
 }
 
 .app-data-grid :deep(.p-datatable-header),
 .app-data-grid :deep(.p-datatable-footer) {
   border: 0;
-  background: rgba(15, 118, 110, 0.04);
+  background: rgba(15, 118, 110, 0.025);
 }
 
 .app-data-grid :deep(.p-datatable-thead > tr > th) {
   border-color: var(--app-border);
-  background: var(--app-surface);
+  background: rgba(15, 23, 42, 0.02);
   color: var(--app-ink);
   font-size: 0.76rem;
   font-weight: 700;
@@ -230,6 +230,6 @@ function resolveFieldValue(row: GridRow, field?: string) {
 .app-data-grid :deep(.p-paginator) {
   border: 0;
   border-top: 1px solid var(--app-border);
-  background: var(--app-surface);
+  background: rgba(15, 23, 42, 0.02);
 }
 </style>

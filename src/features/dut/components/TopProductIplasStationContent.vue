@@ -1,6 +1,6 @@
 <template>
   <div class="top-product-iplas-station-shell">
-    <AppPanel eyebrow="Selection Controls" title="Station Search" tone="cool" split-header>
+    <AppPanel eyebrow="Scope" title="Station Search" tone="cool" split-header>
       <template #header-aside>
         <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--ghost"
           @click="emit('show-settings')">
@@ -24,29 +24,22 @@
         <div class="top-product-iplas-station-grid top-product-iplas-station-grid--two">
           <label class="top-product-iplas-station-field">
             <span>Site</span>
-            <select v-model="selectedSite" :disabled="loading || loadingStations" @change="handleSiteChange">
-              <option :value="null">Select a site</option>
-              <option v-for="site in uniqueSites" :key="site" :value="site">{{ site }}</option>
-            </select>
+            <AppSelect v-model="selectedSite" :options="siteSelectOptions" placeholder="Select a site"
+              :disabled="loading || loadingStations" @change="handleSiteChange" />
           </label>
 
           <label class="top-product-iplas-station-field">
             <span>Project</span>
-            <select v-model="selectedProject" :disabled="!selectedSite || loading || loadingStations"
-              @change="handleProjectChange">
-              <option :value="null">Select a project</option>
-              <option v-for="project in projectsForSelectedSite" :key="project" :value="project">{{ project }}</option>
-            </select>
+            <AppSelect v-model="selectedProject" :options="projectSelectOptions" placeholder="Select a project"
+              :disabled="!selectedSite || loading || loadingStations" @change="handleProjectChange" />
           </label>
         </div>
 
         <div class="top-product-iplas-station-grid top-product-iplas-station-grid--three">
           <label class="top-product-iplas-station-field">
             <span>Date Range Preset</span>
-            <select v-model="dateRangePreset" @change="applyDateRangePreset()">
-              <option v-for="preset in dateRangePresets" :key="preset.value" :value="preset.value">{{ preset.title }}
-              </option>
-            </select>
+            <AppSelect v-model="dateRangePreset" :options="dateRangePresetOptions" :searchable="false"
+              @change="applyDateRangePreset()" />
           </label>
 
           <label class="top-product-iplas-station-field">
@@ -63,8 +56,7 @@
         <div class="top-product-iplas-station-action-card">
           <div>
             <strong>Configure Stations</strong>
-            <p>Use the migrated station dialogs to define device scope, selection rules, and scoring behavior per
-              station.</p>
+            <p>Set device scope and scoring for each station.</p>
           </div>
           <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--secondary"
             :disabled="!selectedSite || !selectedProject || loadingStations" @click="openStationSelectionDialog">
@@ -76,8 +68,8 @@
         <section v-if="configuredStationsCount > 0" class="top-product-iplas-station-summary-panel">
           <div class="top-product-iplas-station-summary-panel__header">
             <div>
-              <p class="top-product-iplas-station-summary-panel__eyebrow">Configured Stations</p>
-              <h3>Selection Summary</h3>
+              <p class="top-product-iplas-station-summary-panel__eyebrow">Configured</p>
+              <h3>Stations</h3>
             </div>
           </div>
 
@@ -128,7 +120,7 @@
       <div class="top-product-iplas-station-spinner"></div>
       <div>
         <strong>Fetching test data from iPLAS...</strong>
-        <p>The existing ranking pipeline will refresh as soon as the current station set finishes loading.</p>
+        <p>The ranking view updates when the current station set finishes loading.</p>
       </div>
     </div>
 
@@ -178,7 +170,7 @@ import {
   type TopProductMeasurementCreate,
 } from '@/features/top-products/api/topProducts.api'
 import { useNotification } from '@/shared/composables/useNotification'
-import { AppPanel } from '@/shared/ui'
+import { AppPanel, AppSelect } from '@/shared/ui'
 import { getErrorMessage } from '@/shared/utils'
 import { getApiErrorDetail } from '@/shared/utils/error'
 import { isStatusPass } from '@/shared/utils/helpers'
@@ -300,6 +292,21 @@ const projectsForSelectedSite = computed(() => {
   if (!selectedSite.value) return []
   return projectsBySite.value[selectedSite.value] || []
 })
+
+const siteSelectOptions = computed(() => uniqueSites.value.map((site) => ({
+  label: site,
+  value: site,
+})))
+
+const projectSelectOptions = computed(() => projectsForSelectedSite.value.map((project) => ({
+  label: project,
+  value: project,
+})))
+
+const dateRangePresetOptions = computed(() => dateRangePresets.map((preset) => ({
+  label: preset.title,
+  value: preset.value,
+})))
 
 const configuredStationsCount = computed(() => {
   return Object.keys(stationConfigs.value).length
@@ -1348,7 +1355,7 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-station-shell {
-  gap: 1rem;
+  gap: 0.9rem;
 }
 
 .top-product-iplas-station-summary-row,
@@ -1406,10 +1413,10 @@ onUnmounted(() => {
 .top-product-iplas-station-field input {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   background: var(--app-panel-strong);
   color: var(--app-ink);
-  padding: 0.8rem 0.9rem;
+  padding: 0.72rem 0.82rem;
   font: inherit;
 }
 
@@ -1417,35 +1424,35 @@ onUnmounted(() => {
 .top-product-iplas-station-token-card,
 .top-product-iplas-station-remove {
   min-height: 2.75rem;
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--app-border);
   background: var(--app-panel);
   color: var(--app-ink);
   font-weight: 700;
   cursor: pointer;
-  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .top-product-iplas-station-button {
-  padding: 0.7rem 1rem;
+  padding: 0.62rem 0.9rem;
 }
 
 .top-product-iplas-station-button:hover,
 .top-product-iplas-station-token-card:hover,
 .top-product-iplas-station-remove:hover {
-  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .top-product-iplas-station-button--primary {
-  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  background: linear-gradient(135deg, #0f766e, #1c7c62);
   border-color: var(--app-accent);
   color: white;
 }
 
 .top-product-iplas-station-button--secondary {
-  background: linear-gradient(135deg, #165d92, #1d7fb7);
-  border-color: #165d92;
-  color: white;
+  background: rgba(40, 96, 163, 0.08);
+  border-color: rgba(40, 96, 163, 0.16);
+  color: #1f4f89;
 }
 
 .top-product-iplas-station-button--ghost {
@@ -1457,7 +1464,7 @@ onUnmounted(() => {
   align-items: center;
   justify-content: center;
   min-height: 2.1rem;
-  padding: 0.45rem 0.75rem;
+  padding: 0.35rem 0.65rem;
   border-radius: 999px;
   border: 1px solid transparent;
   font-weight: 700;
@@ -1491,10 +1498,10 @@ onUnmounted(() => {
 .top-product-iplas-station-summary-panel,
 .top-product-iplas-station-loading-card,
 .top-product-iplas-station-notice {
-  padding: 1rem;
-  border-radius: 1rem;
+  padding: 0.9rem;
+  border-radius: 0.8rem;
   border: 1px solid rgba(15, 118, 110, 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--app-panel);
 }
 
 .top-product-iplas-station-action-card {
@@ -1515,7 +1522,7 @@ onUnmounted(() => {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   width: 100%;
-  padding: 0.95rem 1rem;
+  padding: 0.8rem 0.85rem;
   text-align: left;
 }
 

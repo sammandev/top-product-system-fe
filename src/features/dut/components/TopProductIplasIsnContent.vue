@@ -1,20 +1,10 @@
 <template>
   <div class="top-product-iplas-isn-shell">
-    <AppPanel
-      eyebrow="Selection Controls"
-      title="ISN Search"
-      description="Build an ISN batch, optionally expand the identifier search, then hand the resulting station set into the same migrated station-configuration workflow used by the station search pane."
-      tone="cool"
-      split-header
-    >
+    <AppPanel eyebrow="Controls" title="ISN Search" tone="cool" split-header>
       <template #header-aside>
-        <button
-          v-if="isnProjectInfo"
-          type="button"
-          class="top-product-iplas-isn-button top-product-iplas-isn-button--ghost"
-          :disabled="loadingTestItems"
-          @click="handleClearAll"
-        >
+        <button v-if="isnProjectInfo" type="button"
+          class="top-product-iplas-isn-button top-product-iplas-isn-button--ghost" :disabled="loadingTestItems"
+          @click="handleClearAll">
           Clear All
         </button>
       </template>
@@ -22,20 +12,12 @@
       <div class="top-product-iplas-isn-stack">
         <div class="top-product-iplas-isn-toolbar">
           <div class="top-product-iplas-isn-toggle-row">
-            <button
-              type="button"
-              class="top-product-iplas-isn-toggle-chip"
-              :class="{ 'is-active': inputMode === 'multiple' }"
-              @click="inputMode = 'multiple'"
-            >
+            <button type="button" class="top-product-iplas-isn-toggle-chip"
+              :class="{ 'is-active': inputMode === 'multiple' }" @click="inputMode = 'multiple'">
               Multiple ISNs
             </button>
-            <button
-              type="button"
-              class="top-product-iplas-isn-toggle-chip"
-              :class="{ 'is-active': inputMode === 'bulk' }"
-              @click="inputMode = 'bulk'"
-            >
+            <button type="button" class="top-product-iplas-isn-toggle-chip"
+              :class="{ 'is-active': inputMode === 'bulk' }" @click="inputMode = 'bulk'">
               Bulk Paste
             </button>
           </div>
@@ -44,7 +26,7 @@
             <input v-model="enableUnifiedSearch" type="checkbox">
             <div>
               <strong>Unified Search</strong>
-              <p>Search related identifiers through SFISTSP to pull DUT history even when different ISN, SSN, or MAC variants were used.</p>
+              <p>Search related identifiers through SFISTSP even when different ISN, SSN, or MAC variants were used.</p>
             </div>
           </label>
         </div>
@@ -52,28 +34,21 @@
         <label v-if="inputMode === 'multiple'" class="top-product-iplas-isn-field">
           <span>DUT ISNs</span>
           <div class="top-product-iplas-isn-entry-row">
-            <input
-              v-model="multipleIsnSearchText"
-              type="text"
-              placeholder="Type ISN and press Enter"
-              @keydown.enter.prevent="commitMultipleIdentifier"
-            >
-            <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--secondary" :disabled="!multipleIsnSearchText.trim()" @click="commitMultipleIdentifier">
+            <input v-model="multipleIsnSearchText" type="text" placeholder="Type ISN and press Enter"
+              @keydown.enter.prevent="commitMultipleIdentifier">
+            <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--secondary"
+              :disabled="!multipleIsnSearchText.trim()" @click="commitMultipleIdentifier">
               Add
             </button>
-            <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--primary" :disabled="multipleModeIdentifiers.length === 0" @click="handleLookupStations">
+            <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--primary"
+              :disabled="multipleModeIdentifiers.length === 0" @click="handleLookupStations">
               {{ loadingStationLookup ? 'Searching...' : 'Search' }}
             </button>
           </div>
           <small>Press Enter or use Add to queue identifiers, then Search to resolve site, project, and station coverage.</small>
           <div v-if="selectedISNs.length > 0" class="top-product-iplas-isn-token-row">
-            <button
-              v-for="(isn, index) in selectedISNs"
-              :key="`${isn}-${index}`"
-              type="button"
-              class="top-product-iplas-isn-token"
-              @click="removeSelectedISN(index)"
-            >
+            <button v-for="(isn, index) in selectedISNs" :key="`${isn}-${index}`" type="button"
+              class="top-product-iplas-isn-token" @click="removeSelectedISN(index)">
               <span>{{ isn }}</span>
               <span aria-hidden="true">x</span>
             </button>
@@ -82,14 +57,12 @@
 
         <label v-else class="top-product-iplas-isn-field">
           <span>Bulk ISN Input</span>
-          <textarea
-            v-model="searchIsn"
-            rows="4"
-            placeholder="Paste multiple ISNs, one per line, comma-separated, or space-separated"
-          />
+          <textarea v-model="searchIsn" rows="4"
+            placeholder="Paste multiple ISNs, one per line, comma-separated, or space-separated" />
           <div class="top-product-iplas-isn-entry-row top-product-iplas-isn-entry-row--end">
             <small>Paste ISNs separated by newlines, commas, or spaces.</small>
-            <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--primary" :disabled="!searchIsn.trim()" @click="handleLookupStations">
+            <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--primary"
+              :disabled="!searchIsn.trim()" @click="handleLookupStations">
               {{ loadingStationLookup ? 'Searching...' : 'Search' }}
             </button>
           </div>
@@ -97,25 +70,25 @@
 
         <section v-if="isnProjectInfo" class="top-product-iplas-isn-lookup-card">
           <div class="top-product-iplas-isn-chip-row">
-            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--primary">{{ parsedIsns.length }} ISN(s)</span>
-            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">Site: {{ isnProjectInfo.site }}</span>
-            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">Project: {{ isnProjectInfo.project }}</span>
-            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--success">{{ availableStations.length }} Stations</span>
+            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--primary">{{ parsedIsns.length }}
+              ISN(s)</span>
+            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">Site: {{ isnProjectInfo.site
+              }}</span>
+            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">Project: {{ isnProjectInfo.project
+              }}</span>
+            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--success">{{ availableStations.length }}
+              Stations</span>
           </div>
-          <p>The lookup has resolved a project scope. Configure stations next to refine device selection and scoring rules before ranking the returned records.</p>
+          <p>The lookup resolved a project scope. Configure stations next to refine device selection and scoring before ranking the returned records.</p>
         </section>
 
         <div v-if="isnProjectInfo" class="top-product-iplas-isn-action-card">
           <div>
             <strong>Configure Stations</strong>
-            <p>Use the shared station-selection and station-configuration dialogs to scope the resolved ISN history.</p>
+            <p>Use the shared station dialogs to scope the resolved ISN history.</p>
           </div>
-          <button
-            type="button"
-            class="top-product-iplas-isn-button top-product-iplas-isn-button--secondary"
-            :disabled="availableStations.length === 0"
-            @click="openStationSelectionDialog"
-          >
+          <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--secondary"
+            :disabled="availableStations.length === 0" @click="openStationSelectionDialog">
             {{ loadingStations ? 'Loading...' : 'Configure Stations' }}
             <strong v-if="configuredStationsCount > 0">{{ configuredStationsCount }}</strong>
           </button>
@@ -124,19 +97,14 @@
         <section v-if="configuredStationsCount > 0" class="top-product-iplas-isn-summary-panel">
           <div class="top-product-iplas-isn-summary-panel__header">
             <div>
-              <p class="top-product-iplas-isn-summary-panel__eyebrow">Configured Stations</p>
-              <h3>Selection Summary</h3>
+              <p class="top-product-iplas-isn-summary-panel__eyebrow">Configured</p>
+              <h3>Stations</h3>
             </div>
           </div>
 
           <div class="top-product-iplas-isn-token-grid">
-            <button
-              v-for="(config, displayName) in stationConfigs"
-              :key="displayName"
-              type="button"
-              class="top-product-iplas-isn-token-card"
-              @click="editStationConfig(displayName)"
-            >
+            <button v-for="(config, displayName) in stationConfigs" :key="displayName" type="button"
+              class="top-product-iplas-isn-token-card" @click="editStationConfig(displayName)">
               <div>
                 <strong>{{ displayName }}</strong>
                 <p>{{ config.deviceIds.length || config.totalDeviceCount || 'All' }} device(s)</p>
@@ -145,17 +113,14 @@
                 <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">
                   {{ config.deviceIds.length || config.totalDeviceCount || 'All' }} Device(s)
                 </span>
-                <span class="top-product-iplas-isn-pill" :class="(config.minimumItemScoreEnabled ?? true) ? 'top-product-iplas-isn-pill--warning' : 'top-product-iplas-isn-pill--muted'">
-                  {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` : 'Min Off' }}
+                <span class="top-product-iplas-isn-pill"
+                  :class="(config.minimumItemScoreEnabled ?? true) ? 'top-product-iplas-isn-pill--warning' : 'top-product-iplas-isn-pill--muted'">
+                  {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` : 'MinOff' }}
                 </span>
-                <span
-                  role="button"
-                  tabindex="0"
-                  class="top-product-iplas-isn-remove"
+                <span role="button" tabindex="0" class="top-product-iplas-isn-remove"
                   @click.stop="removeStationConfig(displayName)"
                   @keydown.enter.stop.prevent="removeStationConfig(displayName)"
-                  @keydown.space.stop.prevent="removeStationConfig(displayName)"
-                >
+                  @keydown.space.stop.prevent="removeStationConfig(displayName)">
                   Remove
                 </span>
               </div>
@@ -171,10 +136,9 @@
 
     <!-- UPDATED: Results Section with TopProductIplasRanking (like Station Search) -->
     <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
-      :forced-failures="forcedFailures"
-      :calculating-scores="calculatingScores" :exporting-all="exportingAll" @row-click="handleRowClick"
-      @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords"
-      @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores"
+      :forced-failures="forcedFailures" :calculating-scores="calculatingScores" :exporting-all="exportingAll"
+      @row-click="handleRowClick" @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords"
+      @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores"
       @save-to-db="handleSaveToDb" />
 
     <!-- Station Selection Dialog -->
@@ -188,10 +152,10 @@
       :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
       :loading-devices="loadingCurrentStationDevices" :device-error="deviceError"
       :available-test-items="currentStationTestItems" test-item-source="iplas"
-      :loading-test-items="loadingCurrentStationTestItems"
-      :test-items-error="testItemsError" @save="handleStationConfigSave" @remove="handleStationConfigRemove"
+      :loading-test-items="loadingCurrentStationTestItems" :test-items-error="testItemsError"
+      @save="handleStationConfigSave" @remove="handleStationConfigRemove"
       @refresh-devices="refreshCurrentStationDevices" @refresh-test-items="refreshCurrentStationTestItems"
-      @change-test-item-source="() => {}" />
+      @change-test-item-source="() => { }" />
 
     <!-- Details Dialog -->
     <TopProductIplasDetailsDialog v-model="showDetailsDialog" :record="detailsRecord" :downloading="detailsDownloading"
@@ -1678,10 +1642,10 @@ onUnmounted(() => {
 .top-product-iplas-isn-field textarea {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   background: var(--app-panel-strong);
   color: var(--app-ink);
-  padding: 0.8rem 0.9rem;
+  padding: 0.72rem 0.82rem;
   font: inherit;
 }
 
@@ -1695,7 +1659,7 @@ onUnmounted(() => {
 .top-product-iplas-isn-token-card,
 .top-product-iplas-isn-remove {
   min-height: 2.75rem;
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--app-border);
   background: var(--app-panel);
   color: var(--app-ink);
@@ -1707,7 +1671,7 @@ onUnmounted(() => {
 .top-product-iplas-isn-button,
 .top-product-iplas-isn-toggle-chip,
 .top-product-iplas-isn-token {
-  padding: 0.65rem 0.95rem;
+  padding: 0.6rem 0.88rem;
 }
 
 .top-product-iplas-isn-button:hover,
@@ -1720,15 +1684,15 @@ onUnmounted(() => {
 
 .top-product-iplas-isn-button--primary,
 .top-product-iplas-isn-toggle-chip.is-active {
-  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  background: linear-gradient(135deg, #0f766e, #1c7c62);
   border-color: var(--app-accent);
   color: white;
 }
 
 .top-product-iplas-isn-button--secondary {
-  background: linear-gradient(135deg, #165d92, #1d7fb7);
-  border-color: #165d92;
-  color: white;
+  background: rgba(40, 96, 163, 0.08);
+  border-color: rgba(40, 96, 163, 0.16);
+  color: #1f4f89;
 }
 
 .top-product-iplas-isn-button--ghost {
@@ -1740,10 +1704,10 @@ onUnmounted(() => {
 .top-product-iplas-isn-action-card,
 .top-product-iplas-isn-summary-panel,
 .top-product-iplas-isn-notice {
-  padding: 1rem;
-  border-radius: 1rem;
+  padding: 0.9rem;
+  border-radius: 0.8rem;
   border: 1px solid rgba(15, 118, 110, 0.12);
-  background: rgba(255, 255, 255, 0.72);
+  background: var(--app-panel);
 }
 
 .top-product-iplas-isn-toggle-card {
@@ -1818,7 +1782,7 @@ onUnmounted(() => {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   width: 100%;
-  padding: 0.95rem 1rem;
+  padding: 0.82rem 0.88rem;
   text-align: left;
 }
 
@@ -1834,6 +1798,7 @@ onUnmounted(() => {
 }
 
 @media (max-width: 840px) {
+
   .top-product-iplas-isn-action-card,
   .top-product-iplas-isn-token-card {
     grid-template-columns: minmax(0, 1fr);
@@ -1841,6 +1806,7 @@ onUnmounted(() => {
 }
 
 @media (max-width: 620px) {
+
   .top-product-iplas-isn-toolbar,
   .top-product-iplas-isn-toggle-row,
   .top-product-iplas-isn-entry-row,

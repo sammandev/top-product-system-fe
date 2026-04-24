@@ -1,9 +1,9 @@
 <template>
     <div class="internal-data-shell">
         <AppPanel
-            eyebrow="Identifier Search"
+            eyebrow="Search"
             title="DUT ISN Search"
-            description="Search internal DUT records by one or more ISNs, then pivot between grid, list, table, and compact station views while the deeper station internals remain intact."
+            description="Search internal DUT records by one or more ISNs, then pivot between grid, list, table, and compact views."
             tone="cool"
             split-header
             compact-header
@@ -72,7 +72,7 @@
                             <span>Search</span>
                         </button>
                     </div>
-                    <p class="internal-data-helper-copy">Press Enter or comma to commit an ISN. Press Enter again on an empty field to search the current set.</p>
+                    <p class="internal-data-helper-copy">Press Enter or comma to commit an ISN. Press Enter again on an empty field to search.</p>
                 </label>
 
                 <div v-if="selectedISNs.length > 0 || multipleIsnSearchText.trim()" class="internal-data-chip-list">
@@ -102,7 +102,7 @@
                         rows="6"
                         placeholder="Paste multiple ISNs (one per line, comma-separated, or space-separated)&#10;Example:&#10;260884980003907&#10;DM2527470036123&#10;260884980003908"
                     />
-                    <p class="internal-data-helper-copy">Paste ISNs separated by newlines, commas, or spaces. Duplicate values are collapsed automatically.</p>
+                    <p class="internal-data-helper-copy">Paste ISNs separated by newlines, commas, or spaces. Duplicates are collapsed automatically.</p>
                 </label>
 
                 <div class="internal-data-bulk-footer">
@@ -132,9 +132,9 @@
 
         <AppPanel
             v-if="groupedByISN.length > 0"
-            eyebrow="Internal Records"
-            title="Test Records Results"
-            :description="`${groupedByISN.length} ISN group${groupedByISN.length === 1 ? '' : 's'} loaded. The outer shell is migrated while the deeper station views remain intact for later passes.`"
+            eyebrow="Results"
+            title="Internal Records"
+            :description="`${groupedByISN.length} ISN group${groupedByISN.length === 1 ? '' : 's'} loaded.`"
             tone="warm"
             split-header
             compact-header
@@ -200,7 +200,7 @@
                                 <header class="internal-data-station-card__header">
                                     <div>
                                         <h3>{{ station.name }}</h3>
-                                        <p>{{ station.data.length }} record{{ station.data.length === 1 ? '' : 's' }} captured for {{ isnGroup.isn }}.</p>
+                                        <p>{{ station.data.length }} record{{ station.data.length === 1 ? '' : 's' }} for {{ isnGroup.isn }}.</p>
                                     </div>
                                     <span
                                         class="internal-data-badge"
@@ -978,8 +978,8 @@ const hasLatestError = (station: Station): boolean => {
     justify-content: space-between;
     gap: 1rem;
     align-items: flex-start;
-    border-radius: 0.75rem;
-    padding: 1rem 1.1rem;
+    border-radius: 0.7rem;
+    padding: 0.9rem 1rem;
 }
 
 .internal-data-notice--error {
@@ -1015,8 +1015,8 @@ const hasLatestError = (station: Station): boolean => {
     display: grid;
     gap: 0.85rem;
     border: 1px solid var(--app-border);
-    border-radius: 1.15rem;
-    padding: 1rem;
+    border-radius: 0.9rem;
+    padding: 0.9rem;
     background: var(--app-panel);
 }
 
@@ -1048,8 +1048,8 @@ const hasLatestError = (station: Station): boolean => {
 .internal-data-textarea {
     width: 100%;
     border: 1px solid rgba(15, 118, 110, 0.16);
-    border-radius: 0.95rem;
-    padding: 0.9rem 1rem;
+    border-radius: 0.75rem;
+    padding: 0.75rem 0.82rem;
     background: rgba(255, 255, 255, 0.94);
     color: var(--app-ink);
     font: inherit;
@@ -1135,8 +1135,8 @@ const hasLatestError = (station: Station): boolean => {
     display: grid;
     gap: 0.3rem;
     border: 1px solid var(--app-border);
-    border-radius: 1rem;
-    padding: 0.95rem 1rem;
+    border-radius: 0.8rem;
+    padding: 0.85rem 0.9rem;
     background: var(--app-panel);
 }
 
@@ -1193,8 +1193,8 @@ const hasLatestError = (station: Station): boolean => {
     display: grid;
     gap: 1rem;
     border: 1px solid var(--app-border);
-    border-radius: 1.25rem;
-    padding: 1rem;
+    border-radius: 0.9rem;
+    padding: 0.9rem;
     background: var(--app-panel);
 }
 
@@ -1277,8 +1277,8 @@ const hasLatestError = (station: Station): boolean => {
 .internal-data-record-card {
     display: grid;
     gap: 1rem;
-    border-radius: 1rem;
-    padding: 1rem;
+    border-radius: 0.8rem;
+    padding: 0.9rem;
 }
 
 .internal-data-record-card--success {
@@ -1343,8 +1343,8 @@ const hasLatestError = (station: Station): boolean => {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 0.85rem;
     align-items: center;
-    border-radius: 1rem;
-    padding: 0.9rem 1rem;
+    border-radius: 0.8rem;
+    padding: 0.8rem 0.9rem;
 }
 
 .internal-data-list-item--success {
@@ -1394,8 +1394,8 @@ const hasLatestError = (station: Station): boolean => {
 .internal-data-compact-card {
     display: grid;
     gap: 0.75rem;
-    border-radius: 1rem;
-    padding: 0.9rem;
+    border-radius: 0.8rem;
+    padding: 0.8rem;
 }
 
 .internal-data-compact-card--success {

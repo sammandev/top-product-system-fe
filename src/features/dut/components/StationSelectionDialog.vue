@@ -1,42 +1,33 @@
 <template>
-  <AppDialog
-    :model-value="internalShow"
-    width="min(96vw, 56rem)"
-    persistent
-    title="Select Stations"
-    description="Pick the stations you want to configure for the current site and project scope."
-    @update:modelValue="internalShow = $event"
-  >
+  <AppDialog :model-value="internalShow" width="min(96vw, 56rem)" persistent title="Select Stations"
+    description="Pick the stations to configure for the current site and project."
+    @update:modelValue="internalShow = $event">
 
     <div class="station-selection-dialog__stack">
       <label class="station-selection-dialog__field">
         <span>Search Stations</span>
         <div class="station-selection-dialog__search-input">
           <input v-model="searchQuery" type="text" placeholder="Search by station name or TSP name" />
-          <button v-if="searchQuery" type="button" class="station-selection-dialog__clear-button" @click="searchQuery = ''">
+          <button v-if="searchQuery" type="button" class="station-selection-dialog__clear-button"
+            @click="searchQuery = ''">
             Clear
           </button>
         </div>
       </label>
 
       <div class="station-selection-dialog__list">
-        <div
-          v-for="station in filteredStations"
-          :key="station.station_name"
-          class="station-item"
-          :class="{ 'station-configured': isStationConfigured(station.display_station_name) }"
-          role="button"
-          tabindex="0"
-          @click="handleStationClick(station)"
-          @keydown.enter.prevent="handleStationClick(station)"
-          @keydown.space.prevent="handleStationClick(station)"
-        >
-          <span class="station-selection-dialog__checkmark" :class="{ 'is-active': isStationConfigured(station.display_station_name) }"></span>
+        <div v-for="station in filteredStations" :key="station.station_name" class="station-item"
+          :class="{ 'station-configured': isStationConfigured(station.display_station_name) }" role="button"
+          tabindex="0" @click="handleStationClick(station)" @keydown.enter.prevent="handleStationClick(station)"
+          @keydown.space.prevent="handleStationClick(station)">
+          <span class="station-selection-dialog__checkmark"
+            :class="{ 'is-active': isStationConfigured(station.display_station_name) }"></span>
           <div class="station-selection-dialog__station-copy">
             <strong>{{ station.display_station_name }}</strong>
             <span>
               TSP: {{ station.station_name }}
-              <span v-if="station.order" class="station-selection-dialog__pill station-selection-dialog__pill--muted">#{{ station.order }}</span>
+              <span v-if="station.order"
+                class="station-selection-dialog__pill station-selection-dialog__pill--muted">#{{ station.order }}</span>
             </span>
           </div>
           <div class="station-selection-dialog__station-meta">
@@ -47,14 +38,11 @@
               <span class="station-selection-dialog__pill station-selection-dialog__pill--primary">
                 {{ getTestItemsLabel(station.display_station_name) }}
               </span>
-              <span
-                v-if="getScoringConfigsCount(station.display_station_name) > 0"
-                class="station-selection-dialog__pill station-selection-dialog__pill--warning"
-              >
+              <span v-if="getScoringConfigsCount(station.display_station_name) > 0"
+                class="station-selection-dialog__pill station-selection-dialog__pill--warning">
                 {{ getScoringConfigsCount(station.display_station_name) }} Scoring
               </span>
             </template>
-            <span class="station-selection-dialog__chevron" aria-hidden="true">></span>
           </div>
         </div>
 
@@ -66,24 +54,17 @@
 
     <template #footer>
       <div class="station-selection-dialog__footer">
-        <span v-if="configuredStationsCount > 0" class="station-selection-dialog__pill station-selection-dialog__pill--success">
+        <span v-if="configuredStationsCount > 0"
+          class="station-selection-dialog__pill station-selection-dialog__pill--success">
           {{ configuredStationsCount }} Station(s) Configured
         </span>
         <div class="station-selection-dialog__footer-spacer"></div>
-        <button
-          type="button"
-          class="station-selection-dialog__button station-selection-dialog__button--ghost"
-          :disabled="configuredStationsCount === 0"
-          @click="handleClearAll"
-        >
+        <button type="button" class="station-selection-dialog__button station-selection-dialog__button--ghost"
+          :disabled="configuredStationsCount === 0" @click="handleClearAll">
           Clear All
         </button>
-        <button
-          type="button"
-          class="station-selection-dialog__button station-selection-dialog__button--primary"
-          :disabled="configuredStationsCount === 0"
-          @click="handleConfirm"
-        >
+        <button type="button" class="station-selection-dialog__button station-selection-dialog__button--primary"
+          :disabled="configuredStationsCount === 0" @click="handleConfirm">
           Confirm Selection
         </button>
       </div>
@@ -273,7 +254,7 @@ watch(
 .station-selection-dialog__button,
 .station-selection-dialog__clear-button {
   min-height: 2.75rem;
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   border: 1px solid var(--app-border);
   background: var(--app-panel);
   color: var(--app-ink);
@@ -292,11 +273,11 @@ watch(
 .station-selection-dialog__icon-button,
 .station-selection-dialog__button,
 .station-selection-dialog__clear-button {
-  padding: 0.7rem 1rem;
+  padding: 0.65rem 0.9rem;
 }
 
 .station-selection-dialog__button--primary {
-  background: linear-gradient(135deg, #0f766e, #1b6c58);
+  background: linear-gradient(135deg, #0f766e, #1c7c62);
   border-color: var(--app-accent);
   color: white;
 }
@@ -327,10 +308,10 @@ watch(
 .station-selection-dialog__search-input input {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
+  border-radius: 0.75rem;
   background: var(--app-panel-strong);
   color: var(--app-ink);
-  padding: 0.8rem 0.9rem;
+  padding: 0.72rem 0.82rem;
   font: inherit;
 }
 
@@ -347,9 +328,9 @@ watch(
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 1rem;
   align-items: center;
-  padding: 1rem;
+  padding: 0.85rem 0.9rem;
   border: 1px solid rgba(15, 118, 110, 0.12);
-  border-radius: 1rem;
+  border-radius: 0.8rem;
   background: rgba(255, 255, 255, 0.72);
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
@@ -447,7 +428,7 @@ watch(
 }
 
 .station-selection-dialog__empty-state {
-  padding: 2rem 1rem;
+  padding: 1.5rem 1rem;
   text-align: center;
 }
 
@@ -462,6 +443,7 @@ watch(
 }
 
 @media (max-width: 700px) {
+
   .station-selection-dialog__header,
   .station-selection-dialog__footer,
   .station-selection-dialog__station-meta,

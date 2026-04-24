@@ -9,10 +9,7 @@
           <div>
             <p class="analysis-view-header__eyebrow">DUT Workspace</p>
             <h1>Multi-DUT Analysis</h1>
-            <p>
-              Start the multi-device workflow with a hierarchical score request panel, then review
-              per-DUT station summaries before the deeper comparison surfaces land.
-            </p>
+            <p>Query multiple DUTs, then open each station for grouped score review.</p>
           </div>
         </div>
         <div v-if="hasResults" class="analysis-view-header__actions">
@@ -23,8 +20,8 @@
         </div>
       </header>
 
-      <AppPanel eyebrow="Filter Parameters" title="Hierarchical Analysis Scope"
-        description="Seed the first real multi-DUT workflow with DUT identifiers, optional station scoping, and lightweight include or exclude filters."
+      <AppPanel eyebrow="Scope" title="Analysis"
+        description="Set DUTs, optional station scope, and include or exclude filters."
         tone="cool">
         <form class="analysis-view-form" @submit.prevent="handleAnalyze">
           <div class="analysis-view-grid analysis-view-grid--two">
@@ -36,7 +33,7 @@
                   @blur="commitPendingTokens('dut')">
                 <button type="button" @click="commitPendingTokens('dut')">Add</button>
               </div>
-              <small>Paste or type one or more DUT ISNs. Delimiters: Enter, comma, spaces, or new lines.</small>
+              <small>Enter, comma, space, or paste a list.</small>
               <div class="analysis-view-token-list">
                 <button v-for="dutIsn in selectedDutIsns" :key="dutIsn" type="button" class="analysis-view-token"
                   @click="removeToken('dut', dutIsn)">
@@ -54,7 +51,7 @@
                   @blur="commitPendingTokens('station')">
                 <button type="button" @click="commitPendingTokens('station')">Add</button>
               </div>
-              <small>Leave blank to let the API analyze all available stations for each DUT.</small>
+              <small>Optional. Leave blank to include all stations.</small>
               <div class="analysis-view-token-list">
                 <button v-for="station in selectedStations" :key="station" type="button"
                   class="analysis-view-token analysis-view-token--cool" @click="removeToken('station', station)">
@@ -216,9 +213,7 @@
                     <div>
                       <p class="analysis-view-station-focus__eyebrow">Per-Station Drilldown</p>
                       <h3>{{ getSelectedStation(result.dut_isn)?.station_name }}</h3>
-                      <p>
-                        Compare subgroup and hierarchical scoring for the selected station without leaving the multi-DUT route.
-                      </p>
+                      <p>Inspect subgroup and hierarchical scores for this station.</p>
                     </div>
                     <div class="analysis-view-station-focus__summary">
                       <span class="analysis-view-pill analysis-view-pill--cool">
@@ -261,15 +256,13 @@
       <section v-else class="analysis-view-empty-state">
         <Icon icon="mdi:chart-line-stacked" />
         <strong>No analysis results yet</strong>
-        <p>Seed the workflow with one or more DUT ISNs, then run hierarchical analysis to populate the first result
-          surface.
-        </p>
+        <p>Add one or more DUT ISNs, then run analysis.</p>
       </section>
 
       <AppDialog
         v-model="showExportDialog"
         title="Export Hierarchical Results"
-        description="Choose whether to export the full hierarchical payload or a flattened score comparison file."
+        description="Choose a full export or a flattened score file."
         width="min(92vw, 34rem)"
       >
         <div class="analysis-view-export-options">
@@ -677,7 +670,7 @@ function formatScore(score: number | null | undefined) {
 <style scoped>
 .analysis-view-shell {
   display: grid;
-  gap: 1.5rem;
+  gap: 1.25rem;
 }
 
 .analysis-view-header {
@@ -689,7 +682,7 @@ function formatScore(score: number | null | undefined) {
 
 .analysis-view-header__copy {
   display: flex;
-  gap: 1rem;
+  gap: 0.85rem;
   align-items: flex-start;
 }
 
@@ -703,12 +696,12 @@ function formatScore(score: number | null | undefined) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 3.2rem;
-  height: 3.2rem;
-  border-radius: 1rem;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 0.75rem;
   background: linear-gradient(135deg, rgba(15, 118, 110, 0.16), rgba(36, 116, 184, 0.16));
   color: var(--app-accent);
-  font-size: 1.5rem;
+  font-size: 1.3rem;
 }
 
 .analysis-view-header__eyebrow {
@@ -732,7 +725,7 @@ function formatScore(score: number | null | undefined) {
 .analysis-view-station-card p {
   margin: 0.35rem 0 0;
   color: var(--app-muted);
-  line-height: 1.6;
+  line-height: 1.5;
 }
 
 .analysis-view-form,
@@ -747,7 +740,7 @@ function formatScore(score: number | null | undefined) {
 }
 
 .analysis-view-grid--two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
 }
 
 .analysis-view-field {
@@ -767,8 +760,8 @@ function formatScore(score: number | null | undefined) {
 .analysis-view-field textarea {
   width: 100%;
   border: 1px solid rgba(15, 118, 110, 0.18);
-  border-radius: 1rem;
-  padding: 0.82rem 0.95rem;
+  border-radius: 0.75rem;
+  padding: 0.72rem 0.85rem;
   background: rgba(255, 255, 255, 0.92);
   color: var(--app-ink);
 }
@@ -851,8 +844,8 @@ function formatScore(score: number | null | undefined) {
   align-items: center;
   gap: 0.35rem;
   border-radius: 999px;
-  padding: 0.35rem 0.7rem;
-  font-size: 0.82rem;
+  padding: 0.28rem 0.62rem;
+  font-size: 0.78rem;
   font-weight: 700;
 }
 
@@ -889,6 +882,12 @@ function formatScore(score: number | null | undefined) {
   flex-wrap: wrap;
   gap: 0.65rem;
   align-items: center;
+}
+
+.analysis-view-results,
+.analysis-view-result-pane,
+.analysis-view-station-focus__panel {
+  min-width: 0;
 }
 
 .analysis-view-button:disabled,
@@ -975,16 +974,15 @@ function formatScore(score: number | null | undefined) {
 }
 
 .analysis-view-stat-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
 }
 
 .analysis-view-stat-card,
 .analysis-view-station-card {
   border: 1px solid var(--app-border);
-  border-radius: 1.25rem;
-  padding: 1rem 1.1rem;
+  border-radius: 0.85rem;
+  padding: 0.85rem 0.95rem;
   background: var(--app-panel);
-  box-shadow: var(--app-shadow-soft);
 }
 
 .analysis-view-stat-card--cool {
@@ -1016,7 +1014,7 @@ function formatScore(score: number | null | undefined) {
 }
 
 .analysis-view-station-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
 }
 
 .analysis-view-station-card {
@@ -1024,17 +1022,15 @@ function formatScore(score: number | null | undefined) {
   gap: 0.85rem;
   text-align: left;
   cursor: pointer;
-  transition: transform 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease;
+  transition: border-color 0.18s ease, background 0.18s ease;
 }
 
 .analysis-view-station-card:hover {
-  transform: translateY(-2px);
   border-color: rgba(15, 118, 110, 0.28);
 }
 
 .analysis-view-station-card--active {
   border-color: rgba(15, 118, 110, 0.42);
-  box-shadow: 0 18px 40px rgba(15, 118, 110, 0.12);
   background: linear-gradient(180deg, rgba(15, 118, 110, 0.09), var(--app-panel));
 }
 
@@ -1052,7 +1048,7 @@ function formatScore(score: number | null | undefined) {
 
 .analysis-view-station-card__metrics {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
   gap: 0.65rem;
   margin: 0;
 }
@@ -1080,9 +1076,9 @@ function formatScore(score: number | null | undefined) {
 .analysis-view-station-focus {
   margin-top: 1rem;
   border: 1px solid var(--app-border);
-  border-radius: 1.35rem;
-  padding: 1rem 1.1rem;
-  background: linear-gradient(180deg, var(--app-surface), rgba(255, 255, 255, 0.96));
+  border-radius: 0.9rem;
+  padding: 0.9rem 1rem;
+  background: var(--app-surface);
 }
 
 .analysis-view-station-focus__header,
@@ -1112,8 +1108,8 @@ function formatScore(score: number | null | undefined) {
   display: grid;
   gap: 0.35rem;
   border: 1px solid var(--app-border);
-  border-radius: 1.15rem;
-  padding: 1rem 1.05rem;
+  border-radius: 0.85rem;
+  padding: 0.9rem 0.95rem;
   background: var(--app-surface);
   color: var(--app-ink);
   text-align: left;
@@ -1132,7 +1128,6 @@ function formatScore(score: number | null | undefined) {
 .analysis-view-export-option--active {
   border-color: rgba(15, 118, 110, 0.42);
   background: rgba(15, 118, 110, 0.08);
-  box-shadow: 0 14px 28px rgba(15, 118, 110, 0.1);
 }
 
 @media (max-width: 960px) {

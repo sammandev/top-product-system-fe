@@ -11,7 +11,7 @@
     <template #header>
       <div class="iplas-details-dialog__header-copy">
         <h2>Test Items Details</h2>
-        <p v-if="record">Inspect test items, copy identifiers, and review score reasoning.</p>
+        <p v-if="record">Inspect test items, identifiers, and score details.</p>
       </div>
     </template>
     <template #header-actions>
@@ -190,10 +190,8 @@
         <div v-if="hasScores" class="iplas-details-dialog__score-filter-grid">
           <label class="iplas-details-dialog__field">
             <span>Score Filter</span>
-            <select v-model="scoreFilterType">
-              <option :value="null">No filter</option>
-              <option v-for="option in scoreFilterOptions" :key="option.value" :value="option.value">{{ option.title }}</option>
-            </select>
+            <AppSelect v-model="scoreFilterType" :options="scoreFilterSelectOptions" placeholder="No filter"
+              :searchable="false" />
           </label>
           <label class="iplas-details-dialog__field">
             <span>Value (0-10)</span>
@@ -257,7 +255,7 @@
   <AppDialog
     v-model="showForcedFailDialog"
     title="Forced Fail Items"
-    description="Review the scored items that fell below the minimum threshold."
+    description="Review items that fell below the minimum threshold."
     width="min(92vw, 56rem)"
   >
     <div v-if="record" class="iplas-details-subdialog">
@@ -314,7 +312,7 @@
   <AppDialog
     v-model="showBreakdownDialog"
     title="Score Breakdown"
-    description="Trace the selected test item's thresholds, target, and scoring method."
+    description="Review thresholds, target, and scoring method."
     width="min(92vw, 34rem)"
     persistent
   >
@@ -418,7 +416,7 @@
   <AppDialog
     v-model="showOverallScoreDialog"
     title="How This Score Is Calculated"
-    description="Review the aggregate weighting logic behind the displayed top-level score."
+    description="Review the aggregate weighting behind the displayed score."
     width="min(92vw, 40rem)"
   >
     <div v-if="record && scoreSummaryPrimary && overallScoreExplanation" class="iplas-details-subdialog">
@@ -506,6 +504,7 @@ import { computed, ref, watch } from 'vue'
 import { useNotification } from '@/shared/composables/useNotification'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
+import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 import {
   adjustIplasDisplayTime,
   getStatusColor,
@@ -599,6 +598,14 @@ const scoreFilterOptions: { title: string; value: ScoreFilterType }[] = [
   { title: '< Less than', value: 'lt' },
   { title: '≤ Less or equal', value: 'lte' },
   { title: '= Equals', value: 'eq' },
+]
+
+const scoreFilterSelectOptions = [
+  { label: 'No filter', value: null },
+  ...scoreFilterOptions.map((option) => ({
+    label: option.title,
+    value: option.value,
+  })),
 ]
 
 // Computed: check if scores are available
@@ -1441,12 +1448,12 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 0.95rem;
+  width: 2.35rem;
+  height: 2.35rem;
+  border-radius: 0.75rem;
   background: rgba(15, 118, 110, 0.12);
   color: var(--iplas-accent);
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   flex-shrink: 0;
 }
 
@@ -1478,9 +1485,8 @@ watch(
 .iplas-details-dialog__simple-list,
 .iplas-details-dialog__explanation-card {
   border: 1px solid var(--iplas-border);
-  border-radius: 1.25rem;
+  border-radius: 0.9rem;
   background: var(--iplas-panel);
-  box-shadow: var(--app-shadow-soft);
 }
 
 .iplas-details-dialog__summary-card,
@@ -1492,7 +1498,7 @@ watch(
 .iplas-details-dialog__metric-list,
 .iplas-details-dialog__simple-list,
 .iplas-details-dialog__table-shell {
-  padding: 1rem;
+  padding: 0.9rem;
 }
 
 .iplas-details-dialog__summary-card--highlight,
@@ -1605,15 +1611,14 @@ watch(
 .iplas-details-dialog__token-shell {
   width: 100%;
   border: 1px solid var(--iplas-border);
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   background: var(--iplas-panel-strong);
   color: var(--iplas-ink);
-  box-shadow: var(--app-shadow-soft);
 }
 
 .iplas-details-dialog__field input,
 .iplas-details-dialog__field select {
-  padding: 0.85rem 0.95rem;
+  padding: 0.72rem 0.82rem;
 }
 
 .iplas-details-dialog__search-shell,
@@ -1716,8 +1721,8 @@ watch(
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.85rem 0.95rem;
-  border-radius: 1rem;
+  padding: 0.75rem 0.85rem;
+  border-radius: 0.8rem;
   background: rgba(255, 255, 255, 0.55);
 }
 
@@ -1785,7 +1790,13 @@ watch(
 }
 
 .iplas-details-dialog__explanation-card {
-  padding: 1rem;
+  padding: 0.9rem;
+}
+
+.iplas-details-dialog__table-shell :deep(.p-datatable-wrapper),
+.iplas-details-dialog__table-shell :deep(.p-datatable-table-container) {
+  max-width: 100%;
+  overflow-x: auto;
 }
 
 .iplas-details-dialog__explanation-card summary {

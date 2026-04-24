@@ -9,10 +9,7 @@
                     <div>
                         <p class="top-product-db-header__eyebrow">Top Products Workspace</p>
                         <h1>Top Product Database</h1>
-                        <p>
-                            Browse, filter, and inspect top-performing DUT records across projects and stations
-                            from one database-backed workflow.
-                        </p>
+                        <p>Browse saved DUT records, filter quickly, and inspect details.</p>
                     </div>
                 </div>
 
@@ -56,8 +53,8 @@
                 </article>
             </section>
 
-            <AppPanel eyebrow="Filter Parameters" title="Analysis Scope"
-                description="Filter DUT records by identifier, project, station, and minimum score before reviewing details or exporting rows."
+            <AppPanel eyebrow="Scope" title="Filters"
+                description="Filter by DUT, project, station, and minimum score."
                 tone="warm" splitHeader>
                 <template #header-aside>
                     <button type="button" class="top-product-db-button top-product-db-button--ghost"
@@ -76,22 +73,14 @@
 
                     <label class="top-product-db-field">
                         <span>Projects</span>
-                        <select v-model="filters.projects" multiple size="5" @change="debouncedFetch">
-                            <option v-for="project in projectOptions" :key="project.value" :value="project.value">
-                                {{ project.title }}
-                            </option>
-                        </select>
-                        <small>{{ filters.projects?.length || 0 }} selected</small>
+                        <AppMultiSelect v-model="projectFilterModel" :options="projectFilterOptions"
+                            placeholder="Select projects..." @change="debouncedFetch" />
                     </label>
 
                     <label class="top-product-db-field">
                         <span>Stations</span>
-                        <select v-model="filters.stations" multiple size="5" @change="debouncedFetch">
-                            <option v-for="station in stationOptions" :key="station.value" :value="station.value">
-                                {{ station.stationName }}{{ station.project ? ` (${station.project})` : '' }}
-                            </option>
-                        </select>
-                        <small>{{ filters.stations?.length || 0 }} selected</small>
+                        <AppMultiSelect v-model="stationFilterModel" :options="stationFilterOptions"
+                            placeholder="Select stations..." @change="debouncedFetch" />
                     </label>
 
                     <label class="top-product-db-field">
@@ -103,14 +92,14 @@
 
                 <div class="top-product-db-filter-summary">
                     <span>{{ pagination.total.toLocaleString() }} total records</span>
-                    <span>{{ filters.projects?.length || 0 }} project filters</span>
-                    <span>{{ filters.stations?.length || 0 }} station filters</span>
+                    <span>{{ projectFilterModel.length }} project filters</span>
+                    <span>{{ stationFilterModel.length }} station filters</span>
                     <span>{{ filters.min_score ?? 'Any' }} minimum score</span>
                 </div>
             </AppPanel>
 
-            <AppPanel eyebrow="Database Records" title="Top Products"
-                description="Review the current result set, inspect individual rows, and queue export or deletion actions without leaving the page."
+            <AppPanel eyebrow="Records" title="Top Products"
+                description="Review rows, inspect details, export, or delete from one table."
                 splitHeader>
                 <template #header-aside>
                     <div class="top-product-db-toolbar">
@@ -128,11 +117,8 @@
                         </button>
                         <label class="top-product-db-page-size">
                             <span>Rows</span>
-                            <select v-model.number="pagination.page_size" @change="handlePageSizeChange">
-                                <option v-for="size in pageSizeOptions" :key="size" :value="size">
-                                    {{ size }} per page
-                                </option>
-                            </select>
+                            <AppSelect v-model="pagination.page_size" :options="pageSizeSelectOptions"
+                                :searchable="false" @change="handlePageSizeChange" />
                         </label>
                     </div>
                 </template>
@@ -252,7 +238,7 @@
             <AppDialog v-model="detailDialog" v-model:fullscreen="isFullscreen"
                 width="min(96vw, 88rem)" fullscreen-width="96vw" fullscreenable
                 :draggable="false" title="Product Details"
-                description="Inspect measurements, score breakdown, and record metadata before exporting or deleting."
+                description="Inspect measurements, scores, and metadata."
                 :class="{ 'top-product-db-detail-dialog--expanded': isFullscreen }">
 
                 <div v-if="selectedProduct" class="top-product-db-detail-stack">
@@ -368,7 +354,7 @@
             </AppDialog>
 
             <AppDialog v-model="deleteDialog" title="Confirm Delete"
-                description="Delete a single top-product record and all of its persisted measurements." width="min(92vw, 34rem)"
+                description="Delete one record and its measurements." width="min(92vw, 34rem)"
                 persistent>
                 <div class="top-product-db-confirm-stack">
                     <section class="top-product-db-confirm-card top-product-db-confirm-card--danger">
@@ -408,7 +394,7 @@
             </AppDialog>
 
             <AppDialog v-model="bulkDeleteDialog" title="Confirm Bulk Delete"
-                description="Delete the current selection of top-product records in one action." width="min(92vw, 40rem)"
+                description="Delete the current selection in one action." width="min(92vw, 40rem)"
                 persistent>
                 <div class="top-product-db-confirm-stack">
                     <p class="top-product-db-dialog-copy">
@@ -459,7 +445,7 @@
             </AppDialog>
 
             <AppDialog v-model="exportDialog" title="Export Product Data"
-                description="Export the selected product record into a portable report or clipboard snapshot." width="min(92vw, 34rem)">
+                description="Export the selected record as a report or clipboard snapshot." width="min(92vw, 34rem)">
                 <div class="top-product-db-confirm-stack">
                     <section class="top-product-db-confirm-card top-product-db-confirm-card--export">
                         <div><strong>ISN</strong><span>{{ productToExport?.dut_isn || 'N/A' }}</span></div>
@@ -506,6 +492,7 @@ import { formatDateTimeCompact } from '@/core/utils/dateTime'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
+import { AppMultiSelect, AppSelect } from '@/shared/ui/forms'
 import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import { getApiErrorDetail } from '@/shared/utils'
 import {
@@ -586,10 +573,36 @@ const filters = ref<TopProductListParams>({
     sort_desc: true,
 })
 
+const projectFilterModel = computed<string[]>({
+    get: () => filters.value.projects ?? [],
+    set: (value) => {
+        filters.value.projects = value
+    },
+})
+
+const stationFilterModel = computed<string[]>({
+    get: () => filters.value.stations ?? [],
+    set: (value) => {
+        filters.value.stations = value
+    },
+})
+
 const pageSizeOptions = [10, 20, 50, 100]
 
 // ===== Computed =====
 const isAdmin = computed(() => authStore.user?.is_admin || false)
+const projectFilterOptions = computed(() => projectOptions.value.map((project) => ({
+    label: project.title,
+    value: project.value,
+})))
+const stationFilterOptions = computed(() => stationOptions.value.map((station) => ({
+    label: station.project ? `${station.stationName} (${station.project})` : station.stationName,
+    value: station.value,
+})))
+const pageSizeSelectOptions = computed(() => pageSizeOptions.map((size) => ({
+    label: `${size} per page`,
+    value: size,
+})))
 
 /**
  * Whether the current user can perform bulk delete.
@@ -1006,7 +1019,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .top-product-db-shell {
     display: grid;
-    gap: 1.5rem;
+    gap: 1.25rem;
 }
 
 .top-product-db-header {
@@ -1018,7 +1031,7 @@ onBeforeUnmount(() => {
 
 .top-product-db-header__copy {
     display: flex;
-    gap: 1rem;
+    gap: 0.85rem;
     align-items: flex-start;
 }
 
@@ -1026,12 +1039,12 @@ onBeforeUnmount(() => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    width: 3.25rem;
-    height: 3.25rem;
-    border-radius: 1rem;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: 0.75rem;
     background: linear-gradient(135deg, rgba(15, 118, 110, 0.14), rgba(45, 212, 191, 0.16));
     color: var(--app-accent);
-    font-size: 1.5rem;
+    font-size: 1.3rem;
 }
 
 .top-product-db-header__eyebrow {
@@ -1052,7 +1065,7 @@ onBeforeUnmount(() => {
     margin: 0.35rem 0 0;
     color: var(--app-muted);
     max-width: 52rem;
-    line-height: 1.6;
+    line-height: 1.5;
 }
 
 .top-product-db-button {
@@ -1101,7 +1114,7 @@ onBeforeUnmount(() => {
 
 .top-product-db-stats {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(10rem, 1fr));
     gap: 1rem;
 }
 
@@ -1110,10 +1123,9 @@ onBeforeUnmount(() => {
     gap: 0.9rem;
     align-items: center;
     border: 1px solid var(--app-border);
-    border-radius: 0.75rem;
-    padding: 1rem 1.1rem;
+    border-radius: 0.7rem;
+    padding: 0.9rem 1rem;
     background: var(--app-panel);
-    box-shadow: var(--app-shadow-soft);
 }
 
 .top-product-db-stat-card--cool {
@@ -1157,7 +1169,7 @@ onBeforeUnmount(() => {
 
 .top-product-db-filter-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
     gap: 1rem;
 }
 
@@ -1178,8 +1190,8 @@ onBeforeUnmount(() => {
 .top-product-db-field select {
     width: 100%;
     border: 1px solid var(--app-border);
-    border-radius: 1rem;
-    padding: 0.78rem 0.95rem;
+    border-radius: 0.75rem;
+    padding: 0.72rem 0.85rem;
     background: rgba(255, 255, 255, 0.92);
     color: var(--app-ink);
 }
@@ -1204,13 +1216,13 @@ onBeforeUnmount(() => {
     flex-wrap: wrap;
     gap: 0.65rem;
     color: var(--app-muted);
-    font-size: 0.9rem;
+    font-size: 0.82rem;
 }
 
 .top-product-db-filter-summary span {
     border-radius: 999px;
     border: 1px solid var(--app-border);
-    padding: 0.4rem 0.75rem;
+    padding: 0.3rem 0.62rem;
     background: var(--app-panel);
 }
 
@@ -1267,6 +1279,20 @@ onBeforeUnmount(() => {
 
 .top-product-db-grid :deep(.p-datatable-tbody > tr:hover > td) {
     background: rgba(15, 118, 110, 0.04);
+}
+
+.top-product-db-grid,
+.top-product-db-detail-stack,
+.top-product-db-measurements {
+    min-width: 0;
+}
+
+.top-product-db-grid :deep(.p-datatable-table-container),
+.top-product-db-grid :deep(.p-datatable-wrapper),
+.top-product-db-detail-stack :deep(.p-datatable-table-container),
+.top-product-db-detail-stack :deep(.p-datatable-wrapper) {
+    max-width: 100%;
+    overflow-x: auto;
 }
 
 .top-product-db-cell {
@@ -1464,7 +1490,7 @@ onBeforeUnmount(() => {
 
 .top-product-db-detail-hero {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
     gap: 1rem;
 }
 
@@ -1507,7 +1533,7 @@ onBeforeUnmount(() => {
 
 .top-product-db-detail-meta-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
     gap: 1rem;
 }
 
@@ -1557,7 +1583,9 @@ onBeforeUnmount(() => {
     display: inline-flex;
     gap: 0.45rem;
     align-items: center;
-    min-width: 18rem;
+    flex: 1 1 16rem;
+    min-width: 0;
+    max-width: 24rem;
     border: 1px solid var(--app-border);
     border-radius: 999px;
     padding: 0.68rem 0.9rem;

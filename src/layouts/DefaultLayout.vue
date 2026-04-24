@@ -647,7 +647,11 @@ watch(
   --sidebar-collapsed-width: 4rem;
 
   display: flex;
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
   height: 100vh;
+  overflow: hidden;
   background: var(--shell-bg);
   color: var(--shell-ink);
 }
@@ -1316,10 +1320,18 @@ watch(
 /* ── Main content ── */
 .main-content {
   flex: 1;
+  min-width: 0;
+  min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   padding: 1rem 1.5rem;
   scrollbar-width: thin;
   scrollbar-color: rgba(120, 120, 120, 0.35) transparent;
+}
+
+.main-content > * {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .main-content::-webkit-scrollbar {
@@ -1335,12 +1347,32 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
   padding: 0.625rem 1.5rem;
   border-top: 1px solid var(--shell-border);
   font-size: 0.75rem;
   color: var(--shell-muted);
   flex-shrink: 0;
   min-height: 2.25rem;
+}
+
+@media (max-width: 767px) {
+  .topbar {
+    padding: 0.5rem 0.75rem;
+  }
+
+  .topbar__mobile-search {
+    margin: 0.5rem 0.75rem;
+  }
+
+  .main-content {
+    padding: 0.75rem;
+  }
+
+  .app-footer {
+    padding: 0.625rem 0.75rem;
+  }
 }
 
 /* ── Progress bar ── */

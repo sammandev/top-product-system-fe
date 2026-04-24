@@ -53,30 +53,24 @@ const hasHeader = computed(
 <style scoped>
 .app-panel {
   display: grid;
-  gap: 1rem;
+  gap: 0.875rem;
   border: 1px solid var(--app-border);
-  border-radius: 0.75rem;
-  padding: 1.25rem;
-  background: var(--app-panel);
-  box-shadow: var(--app-shadow-soft);
+  border-radius: 0.625rem;
+  padding: 1rem;
+  background: var(--app-panel-strong);
+  box-shadow: none;
 }
 
 .app-panel--warm {
-  background:
-    radial-gradient(circle at top right, rgba(217, 119, 6, 0.06), transparent 34%),
-    var(--app-panel);
+  background: linear-gradient(180deg, rgba(245, 158, 11, 0.035), rgba(245, 158, 11, 0.02)), var(--app-panel-strong);
 }
 
 .app-panel--cool {
-  background:
-    radial-gradient(circle at top right, rgba(2, 132, 199, 0.06), transparent 34%),
-    var(--app-panel);
+  background: linear-gradient(180deg, rgba(6, 182, 212, 0.035), rgba(6, 182, 212, 0.02)), var(--app-panel-strong);
 }
 
 .app-panel--success {
-  background:
-    radial-gradient(circle at top right, rgba(22, 163, 74, 0.06), transparent 34%),
-    var(--app-panel);
+  background: linear-gradient(180deg, rgba(34, 197, 94, 0.035), rgba(34, 197, 94, 0.02)), var(--app-panel-strong);
 }
 
 .app-panel__header {
@@ -115,7 +109,7 @@ const hasHeader = computed(
 .app-panel__description {
   margin: 0;
   color: var(--app-muted);
-  line-height: 1.55;
+  line-height: 1.45;
 }
 
 .app-panel__aside {

@@ -11,25 +11,21 @@
             <button type="button" @click="error = null">Dismiss</button>
           </div>
 
-          <AppPanel
-            eyebrow="Selection Controls"
-            title="Station Search"
-            description="Choose the site, project, time range, and configured stations before pulling iPLAS test data. The heavier result surfaces remain on the legacy internals for now."
-            tone="cool"
-          >
+          <AppPanel eyebrow="Controls" title="Station Search"
+            description="Choose the site, project, time range, and stations before pulling iPLAS data."
+            tone="cool">
             <div class="iplas-selection-shell">
               <div class="iplas-selection-shell__toolbar">
                 <div class="iplas-selection-shell__summary">
-                  <span class="iplas-pill">{{ selectedStations.length }} configured station{{ selectedStations.length === 1 ? '' : 's' }}</span>
-                  <span class="iplas-pill iplas-pill--cool">{{ totalDeviceCount }} device candidate{{ totalDeviceCount === 1 ? '' : 's' }}</span>
-                  <span class="iplas-pill iplas-pill--warm">{{ useIndexedDbMode ? 'Streaming to disk' : 'In-memory search' }}</span>
+                  <span class="iplas-pill">{{ selectedStations.length }} configured station{{ selectedStations.length
+                    === 1 ? '' : 's' }}</span>
+                  <span class="iplas-pill iplas-pill--cool">{{ totalDeviceCount }} device candidate{{ totalDeviceCount
+                    === 1 ? '' : 's' }}</span>
+                  <span class="iplas-pill iplas-pill--warm">{{ useIndexedDbMode ? 'Streaming to disk' : 
+                  'In-memory search' }}</span>
                 </div>
-                <button
-                  type="button"
-                  class="iplas-button iplas-button--ghost"
-                  :disabled="loading"
-                  @click="handleRefresh"
-                >
+                <button type="button" class="iplas-button iplas-button--ghost" :disabled="loading"
+                  @click="handleRefresh">
                   <Icon :icon="loading ? 'mdi:loading' : 'mdi:refresh'" :class="{ 'iplas-spin': loading }" />
                   <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
                 </button>
@@ -46,11 +42,8 @@
 
                 <label class="iplas-field">
                   <span>Project</span>
-                  <select
-                    v-model="selectedProject"
-                    :disabled="!selectedSite || loadingStations"
-                    @change="handleProjectChange"
-                  >
+                  <select v-model="selectedProject" :disabled="!selectedSite || loadingStations"
+                    @change="handleProjectChange">
                     <option :value="null">Select a project</option>
                     <option v-for="project in availableProjects" :key="project" :value="project">{{ project }}</option>
                   </select>
@@ -61,7 +54,8 @@
                 <label class="iplas-field">
                   <span>Date Range</span>
                   <select v-model="dateRangePreset" @change="applyDateRangePreset(dateRangePreset)">
-                    <option v-for="preset in dateRangePresets" :key="preset.value" :value="preset.value">{{ preset.title }}</option>
+                    <option v-for="preset in dateRangePresets" :key="preset.value" :value="preset.value">{{ preset.title
+                      }}</option>
                   </select>
                 </label>
 
@@ -77,26 +71,20 @@
               </div>
 
               <div class="iplas-selection-actions">
-                <button
-                  type="button"
-                  class="iplas-button iplas-button--secondary"
-                  :disabled="!selectedProject || loadingStations"
-                  @click="openStationSelectionDialog"
-                >
+                <button type="button" class="iplas-button iplas-button--secondary"
+                  :disabled="!selectedProject || loadingStations" @click="openStationSelectionDialog">
                   <Icon icon="mdi:tune-variant" />
                   <span>Configure Stations</span>
                   <strong v-if="selectedStations.length > 0">{{ selectedStations.length }}</strong>
                 </button>
-                <p>
-                  Station and device selection still uses the existing dialog so this slice can focus on the route shell and primary controls.
-                </p>
+                <p>Station and device selection still runs through the existing dialog.</p>
               </div>
 
               <section class="iplas-summary-panel">
                 <div class="iplas-summary-panel__header">
                   <div>
-                    <p class="iplas-summary-panel__eyebrow">Configured Stations</p>
-                    <h3>Selection summary</h3>
+                    <p class="iplas-summary-panel__eyebrow">Configured</p>
+                    <h3>Stations</h3>
                   </div>
                   <span class="iplas-pill iplas-pill--neutral">{{ configuredStations.length }} active</span>
                 </div>
@@ -105,7 +93,7 @@
                   <Icon icon="mdi:folder-search-outline" />
                   <div>
                     <strong>Select a project first</strong>
-                    <p>Projects drive the station options and device lookup for iPLAS search.</p>
+                    <p>Projects unlock the station and device options for iPLAS search.</p>
                   </div>
                 </div>
 
@@ -113,28 +101,23 @@
                   <Icon icon="mdi:router-wireless-off" />
                   <div>
                     <strong>No stations configured yet</strong>
-                    <p>Open the station dialog to choose one or more stations before searching.</p>
+                    <p>Open the station dialog to choose one or more stations.</p>
                   </div>
                 </div>
 
                 <div v-else class="iplas-summary-list">
-                  <article
-                    v-for="configuredStation in configuredStations"
-                    :key="configuredStation.stationValue"
-                    class="iplas-summary-item"
-                  >
+                  <article v-for="configuredStation in configuredStations" :key="configuredStation.stationValue"
+                    class="iplas-summary-item">
                     <div>
                       <h4>{{ configuredStation.displayName }}</h4>
                       <p>{{ configuredStation.deviceSummary }}</p>
                     </div>
                     <div class="iplas-summary-item__actions">
                       <span class="iplas-pill iplas-pill--cool">{{ configuredStation.deviceSummary }}</span>
-                      <span v-if="configuredStation.testStatus !== 'ALL'" class="iplas-pill iplas-pill--warm">{{ configuredStation.testStatus }}</span>
-                      <button
-                        type="button"
-                        class="iplas-summary-remove"
-                        @click="removeSelectedStation(configuredStation.stationValue)"
-                      >
+                      <span v-if="configuredStation.testStatus !== 'ALL'" class="iplas-pill iplas-pill--warm">{{
+                        configuredStation.testStatus }}</span>
+                      <button type="button" class="iplas-summary-remove"
+                        @click="removeSelectedStation(configuredStation.stationValue)">
                         <Icon icon="mdi:close" />
                       </button>
                     </div>
@@ -147,28 +130,21 @@
                   <input v-model="useIndexedDbMode" type="checkbox">
                   <div>
                     <span>Stream to Disk</span>
-                    <p>Enable IndexedDB streaming for long or high-volume searches. Searches over 7 days are forced to disk automatically.</p>
+                    <p>Use IndexedDB streaming for long or high-volume searches. Searches over 7 days switch automatically.</p>
                   </div>
                 </label>
 
                 <div class="iplas-fetch-panel__actions">
-                  <button
-                    type="button"
-                    class="iplas-button iplas-button--primary"
-                    :disabled="isStreaming"
-                    @click="fetchTestItems"
-                  >
-                    <Icon :icon="loadingTestItems || isStreaming ? 'mdi:loading' : 'mdi:database-search-outline'" :class="{ 'iplas-spin': loadingTestItems || isStreaming }" />
+                  <button type="button" class="iplas-button iplas-button--primary" :disabled="isStreaming"
+                    @click="fetchTestItems">
+                    <Icon :icon="loadingTestItems || isStreaming ? 'mdi:loading' : 'mdi:database-search-outline'"
+                      :class="{ 'iplas-spin': loadingTestItems || isStreaming }" />
                     <span>{{ useIndexedDbMode ? 'Stream' : 'Search' }} Test Data</span>
                     <strong>({{ selectedStations.length }} station{{ selectedStations.length > 1 ? 's' : '' }})</strong>
                   </button>
 
-                  <button
-                    v-if="isStreaming"
-                    type="button"
-                    class="iplas-button iplas-button--danger"
-                    @click="abortIndexedDbStream"
-                  >
+                  <button v-if="isStreaming" type="button" class="iplas-button iplas-button--danger"
+                    @click="abortIndexedDbStream">
                     <Icon icon="mdi:stop-circle-outline" />
                     <span>Stop Stream</span>
                   </button>
@@ -178,7 +154,7 @@
                   <div class="iplas-progress-card__spinner" />
                   <div>
                     <strong>Fetching chunk {{ chunkProgress.fetched }} of {{ chunkProgress.total }}</strong>
-                    <p>Regular mode is loading the current response set into memory.</p>
+                    <p>Regular mode is loading the current response into memory.</p>
                   </div>
                 </div>
 
@@ -210,7 +186,9 @@
                 <div>
                   <strong>5,000-row upstream limit reached</strong>
                   <p>
-                    Results may be incomplete because the upstream iPLAS API caps each response at 5,000 rows. Narrow the date range or keep Stream to Disk enabled for larger searches.
+                    Results may be incomplete because the upstream iPLAS API caps each response at 5,000 rows. Narrow
+                    the date range
+                    or keep Stream to Disk enabled for larger searches.
                   </p>
                 </div>
               </div>
@@ -218,59 +196,43 @@
           </AppPanel>
 
           <!-- Test Items Results (Regular Mode) -->
-          <AppPanel
-            v-if="!useIndexedDbMode && hasRegularModeData"
-            eyebrow="Regular Mode"
-            title="Test Results"
-            :description="`${regularModeRecordCount} records are loaded in memory. Use station tabs to narrow the current comparison slice before opening the legacy table internals below.`"
-            tone="cool"
-            split-header
-            compact-header
-          >
+          <AppPanel v-if="!useIndexedDbMode && hasRegularModeData" eyebrow="Regular Mode" title="Test Results"
+            :description="`${regularModeRecordCount} records are loaded in memory. Use station tabs to narrow the current result set.`"
+            tone="cool" split-header compact-header>
             <template #header-aside>
               <div class="iplas-result-toolbar">
                 <span class="iplas-pill iplas-pill--cool">{{ regularModeRecordCount }} records</span>
-                <button
-                  v-if="selectedRecordIndices.length > 0"
-                  type="button"
-                  class="iplas-button iplas-button--secondary"
-                  :disabled="downloading || downloadingCsv"
-                  @click="downloadAllSelectedRecords"
-                >
-                  <Icon :icon="downloading || downloadingCsv ? 'mdi:loading' : 'mdi:download-multiple'" :class="{ 'iplas-spin': downloading || downloadingCsv }" />
+                <button v-if="selectedRecordIndices.length > 0" type="button"
+                  class="iplas-button iplas-button--secondary" :disabled="downloading || downloadingCsv"
+                  @click="downloadAllSelectedRecords">
+                  <Icon :icon="downloading || downloadingCsv ? 'mdi:loading' : 'mdi:download-multiple'"
+                    :class="{ 'iplas-spin': downloading || downloadingCsv }" />
                   <span>Download All Logs ({{ selectedRecordIndices.length }})</span>
                 </button>
-                <button
-                  v-if="selectedRecordIndices.length > 0"
-                  type="button"
-                  class="iplas-button iplas-button--ghost"
-                  :disabled="downloading"
-                  @click="downloadSelectedRecords"
-                >
+                <button v-if="selectedRecordIndices.length > 0" type="button" class="iplas-button iplas-button--ghost"
+                  :disabled="downloading" @click="downloadSelectedRecords">
                   <Icon :icon="downloading ? 'mdi:loading' : 'mdi:download'" :class="{ 'iplas-spin': downloading }" />
                   <span>Download TXT ({{ selectedRecordIndices.length }})</span>
                 </button>
-                <button
-                  v-if="selectedRecordIndices.length > 0"
-                  type="button"
-                  class="iplas-button iplas-button--success"
-                  :disabled="downloadingCsv"
-                  @click="downloadSelectedRecordsCsv"
-                >
-                  <Icon :icon="downloadingCsv ? 'mdi:loading' : 'mdi:file-delimited'" :class="{ 'iplas-spin': downloadingCsv }" />
+                <button v-if="selectedRecordIndices.length > 0" type="button" class="iplas-button iplas-button--success"
+                  :disabled="downloadingCsv" @click="downloadSelectedRecordsCsv">
+                  <Icon :icon="downloadingCsv ? 'mdi:loading' : 'mdi:file-delimited'"
+                    :class="{ 'iplas-spin': downloadingCsv }" />
                   <span>Download CSV ({{ selectedRecordIndices.length }})</span>
                 </button>
               </div>
             </template>
 
             <AppTabs v-model="activeStationTabKey" :items="regularStationTabItems" scrollable>
-              <template v-for="(stationGroup, stationIndex) in groupedByStation" :key="stationGroup.stationName" #[`panel-station-${stationIndex}`]>
+              <template v-for="(stationGroup, stationIndex) in groupedByStation" :key="stationGroup.stationName"
+                #[`panel-station-${stationIndex}`]>
                 <div class="iplas-result-summary-card">
                   <div>
                     <strong>{{ stationGroup.displayName }}</strong>
-                    <p>{{ getFilteredStationRecords(stationGroup).length }} filtered records are ready for download or fullscreen review.</p>
+                    <p>{{ getFilteredStationRecords(stationGroup).length }} filtered records ready for download or review.</p>
                   </div>
-                  <span class="iplas-pill iplas-pill--cool">{{ getFilteredStationRecords(stationGroup).length }} visible</span>
+                  <span class="iplas-pill iplas-pill--cool">{{ getFilteredStationRecords(stationGroup).length }}
+                    visible</span>
                 </div>
               </template>
             </AppTabs>
@@ -281,21 +243,16 @@
                   <span>Search Records</span>
                   <div class="iplas-input-with-icon">
                     <Icon icon="mdi:magnify" />
-                    <input
-                      :value="recordSearchQueries[currentStationGroup.stationName] || ''"
-                      type="text"
+                    <input :value="recordSearchQueries[currentStationGroup.stationName] || ''" type="text"
                       placeholder="Search ISN, Device ID, Error Code, Error Name..."
-                      @input="handleStationSearchInput(currentStationGroup.stationName, $event)"
-                    >
+                      @input="handleStationSearchInput(currentStationGroup.stationName, $event)">
                   </div>
                 </label>
 
                 <label class="iplas-field">
                   <span>Status</span>
-                  <select
-                    :value="stationStatusFilters[currentStationGroup.stationName] || 'ALL'"
-                    @change="handleStationStatusChange(currentStationGroup.stationName, $event)"
-                  >
+                  <select :value="stationStatusFilters[currentStationGroup.stationName] || 'ALL'"
+                    @change="handleStationStatusChange(currentStationGroup.stationName, $event)">
                     <option value="ALL">All Results</option>
                     <option value="PASS">PASS</option>
                     <option value="FAIL">FAIL</option>
@@ -305,12 +262,9 @@
                 <div class="iplas-field iplas-field--device-filter">
                   <div class="iplas-field__row">
                     <span>Device Filter</span>
-                    <button
-                      v-if="(selectedFilterDeviceIds[currentStationGroup.stationName] || []).length > 0"
-                      type="button"
-                      class="iplas-inline-action"
-                      @click="clearStationDeviceFilters(currentStationGroup.stationName)"
-                    >
+                    <button v-if="(selectedFilterDeviceIds[currentStationGroup.stationName] || []).length > 0"
+                      type="button" class="iplas-inline-action"
+                      @click="clearStationDeviceFilters(currentStationGroup.stationName)">
                       Clear
                     </button>
                   </div>
@@ -320,17 +274,12 @@
                       {{ getUniqueDeviceIdsForStation(currentStationGroup).length }} devices.
                     </p>
                     <div class="iplas-device-filter-list">
-                      <button
-                        v-for="deviceId in getUniqueDeviceIdsForStation(currentStationGroup)"
-                        :key="deviceId"
-                        type="button"
-                        class="iplas-device-chip"
-                        :class="{
+                      <button v-for="deviceId in getUniqueDeviceIdsForStation(currentStationGroup)" :key="deviceId"
+                        type="button" class="iplas-device-chip" :class="{
                           'iplas-device-chip--active': isStationDeviceSelected(currentStationGroup.stationName, deviceId),
-                        }"
-                        @click="toggleStationDeviceFilter(currentStationGroup.stationName, deviceId)"
-                      >
-                        <Icon :icon="isStationDeviceSelected(currentStationGroup.stationName, deviceId) ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'" />
+                        }" @click="toggleStationDeviceFilter(currentStationGroup.stationName, deviceId)">
+                        <Icon
+                          :icon="isStationDeviceSelected(currentStationGroup.stationName, deviceId) ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'" />
                         <span>{{ deviceId }}</span>
                       </button>
                     </div>
@@ -349,37 +298,23 @@
           </AppPanel>
 
           <!-- IndexedDB Mode Results -->
-          <AppPanel
-            v-if="useIndexedDbMode && (indexedDbTotalItems > 0 || isStreaming)"
-            eyebrow="Disk Mode"
+          <AppPanel v-if="useIndexedDbMode && (indexedDbTotalItems > 0 || isStreaming)" eyebrow="Disk Mode"
             title="IndexedDB Results"
-            :description="`${indexedDbTotalItems.toLocaleString()} records currently live on disk${isStreaming ? ' while the stream is still running' : ''}. Use station tabs to scope the current result view before interacting with the existing paginated table.`"
-            tone="success"
-            split-header
-            compact-header
-          >
+            :description="`${indexedDbTotalItems.toLocaleString()} records currently live on disk${isStreaming ? ' while the stream is still running' : ''}. Use station tabs to scope the current result view.`"
+            tone="success" split-header compact-header>
             <template #header-aside>
               <div class="iplas-result-toolbar">
                 <span class="iplas-pill iplas-pill--success">{{ indexedDbTotalItems.toLocaleString() }} on disk</span>
                 <span v-if="isStreaming" class="iplas-pill iplas-pill--warm">Streaming in progress</span>
-                <button
-                  v-if="indexedDbSelectedKeys.length > 0"
-                  type="button"
-                  class="iplas-button iplas-button--ghost"
-                  :disabled="downloading"
-                  @click="downloadIndexedDbSelectedRecords"
-                >
+                <button v-if="indexedDbSelectedKeys.length > 0" type="button" class="iplas-button iplas-button--ghost"
+                  :disabled="downloading" @click="downloadIndexedDbSelectedRecords">
                   <Icon :icon="downloading ? 'mdi:loading' : 'mdi:download'" :class="{ 'iplas-spin': downloading }" />
                   <span>Download TXT ({{ indexedDbSelectedKeys.length }})</span>
                 </button>
-                <button
-                  v-if="indexedDbSelectedKeys.length > 0"
-                  type="button"
-                  class="iplas-button iplas-button--success"
-                  :disabled="downloadingCsv"
-                  @click="downloadIndexedDbSelectedRecordsCsv"
-                >
-                  <Icon :icon="downloadingCsv ? 'mdi:loading' : 'mdi:file-delimited'" :class="{ 'iplas-spin': downloadingCsv }" />
+                <button v-if="indexedDbSelectedKeys.length > 0" type="button" class="iplas-button iplas-button--success"
+                  :disabled="downloadingCsv" @click="downloadIndexedDbSelectedRecordsCsv">
+                  <Icon :icon="downloadingCsv ? 'mdi:loading' : 'mdi:file-delimited'"
+                    :class="{ 'iplas-spin': downloadingCsv }" />
                   <span>Download CSV ({{ indexedDbSelectedKeys.length }})</span>
                 </button>
               </div>
@@ -392,12 +327,13 @@
               </div>
             </div>
 
-            <AppTabs v-if="indexedDbStationList.length > 0 && !isStreaming" v-model="indexedDbActiveStationTabKey" :items="indexedDbTabItems" scrollable>
+            <AppTabs v-if="indexedDbStationList.length > 0 && !isStreaming" v-model="indexedDbActiveStationTabKey"
+              :items="indexedDbTabItems" scrollable>
               <template #panel-all>
                 <div class="iplas-result-summary-card">
                   <div>
                     <strong>All Stations</strong>
-                    <p>Browse the full disk-backed result set before narrowing to a single station.</p>
+                    <p>Browse the full disk-backed result set before narrowing to one station.</p>
                   </div>
                   <span class="iplas-pill iplas-pill--cool">{{ indexedDbTotalItems.toLocaleString() }} rows</span>
                 </div>
@@ -406,7 +342,7 @@
                 <div class="iplas-result-summary-card">
                   <div>
                     <strong>{{ panel.stationName }}</strong>
-                    <p>Use the server-side table below while the active station filter is applied.</p>
+                    <p>Use the server-side table below with the active station filter applied.</p>
                   </div>
                   <span class="iplas-pill iplas-pill--cool">Station filter active</span>
                 </div>
@@ -417,7 +353,8 @@
                 <strong>{{ isStreaming ? 'Streaming to disk' : 'Disk-backed result view' }}</strong>
                 <p>
                   <template v-if="isStreaming">
-                    Station sub-tabs will appear after the stream finishes and the station list can be derived from the stored payload.
+                    Station sub-tabs will appear after the stream finishes and the station list can be derived from the
+                    stored payload.
                   </template>
                   <template v-else>
                     Station sub-tabs will appear once disk-backed rows are available for at least one station.
@@ -428,13 +365,15 @@
 
             <div class="iplas-indexeddb-status-bar">
               <div>
-                <strong>{{ indexedDbSelectedKeys.length }} selected row{{ indexedDbSelectedKeys.length === 1 ? '' : 's' }}</strong>
+                <strong>{{ indexedDbSelectedKeys.length }} selected row{{ indexedDbSelectedKeys.length === 1 ? '' : 's'
+                  }}</strong>
                 <p>
                   <template v-if="indexedDbActiveStationTab === 0">
                     The disk-backed table is showing all stations.
                   </template>
                   <template v-else>
-                    Active station filter: {{ indexedDbStationList[indexedDbActiveStationTab - 1] || 'Unknown station' }}.
+                    Active station filter: {{ indexedDbStationList[indexedDbActiveStationTab - 1] || 'Unknown station'
+                    }}.
                   </template>
                 </p>
               </div>
@@ -451,42 +390,30 @@
               </div>
             </div>
 
-            <AppDataGrid
-              class="iplas-indexeddb-grid"
-              :columns="indexedDbGridColumns"
-              :rows="indexedDbGridRows"
-              data-key="recordKey"
-              :loading="indexedDbLoading || isStreaming"
-              paginator
-              :rows-per-page="indexedDbTableOptions.itemsPerPage"
-              :total-records="indexedDbTotalItems"
-              lazy
-              :selection="indexedDbSelectedRows"
-              selection-mode="multiple"
-              :show-selection-column="true"
-              :sort-field="indexedDbSortField"
-              :sort-order="indexedDbSortOrder"
-              scroll-height="640px"
-              :table-style="{ minWidth: '62rem' }"
-              :row-class="indexedDbRowClass"
-              @update:selection="handleIndexedDbSelectionChange"
-              @page="handleIndexedDbGridPage"
-              @sort="handleIndexedDbGridSort"
-              @row-click="handleIndexedDbRowClick"
-            >
+            <AppDataGrid class="iplas-indexeddb-grid" :columns="indexedDbGridColumns" :rows="indexedDbGridRows"
+              data-key="recordKey" :loading="indexedDbLoading || isStreaming" paginator
+              :rows-per-page="indexedDbTableOptions.itemsPerPage" :total-records="indexedDbTotalItems" lazy
+              :selection="indexedDbSelectedRows" selection-mode="multiple" :show-selection-column="true"
+              :sort-field="indexedDbSortField" :sort-order="indexedDbSortOrder" scroll-height="640px"
+              :table-style="{ minWidth: '62rem' }" :row-class="indexedDbRowClass"
+              @update:selection="handleIndexedDbSelectionChange" @page="handleIndexedDbGridPage"
+              @sort="handleIndexedDbGridSort" @row-click="handleIndexedDbRowClick">
               <template #cell-ISN="{ data }">
                 <div class="iplas-indexeddb-inline-cell">
-                  <button type="button" class="iplas-indexeddb-icon-button" title="Copy ISN" aria-label="Copy ISN" @click.stop="copyToClipboard(String(data.ISN || ''))">
+                  <button type="button" class="iplas-indexeddb-icon-button" title="Copy ISN" aria-label="Copy ISN"
+                    @click.stop="copyToClipboard(String(data.ISN || ''))">
                     <Icon icon="mdi:content-copy" />
                   </button>
-                  <button type="button" class="iplas-indexeddb-copy-value" :title="String(data.ISN || 'No ISN')" @click.stop="copyToClipboard(String(data.ISN || ''))">
+                  <button type="button" class="iplas-indexeddb-copy-value" :title="String(data.ISN || 'No ISN')"
+                    @click.stop="copyToClipboard(String(data.ISN || ''))">
                     {{ data.ISN || '-' }}
                   </button>
                 </div>
               </template>
 
               <template #cell-DeviceId="{ data }">
-                <button type="button" class="iplas-indexeddb-copy-pill" :title="String(data.DeviceId || 'No Device ID')" @click.stop="copyToClipboard(String(data.DeviceId || ''))">
+                <button type="button" class="iplas-indexeddb-copy-pill" :title="String(data.DeviceId || 'No Device ID')"
+                  @click.stop="copyToClipboard(String(data.DeviceId || ''))">
                   {{ data.DeviceId }}
                 </button>
               </template>
@@ -502,20 +429,16 @@
               </template>
 
               <template #cell-TestStatus="{ data }">
-                <span class="iplas-indexeddb-badge" :class="data.TestStatus === 'PASS' ? 'iplas-indexeddb-badge--success' : 'iplas-indexeddb-badge--error'">
+                <span class="iplas-indexeddb-badge"
+                  :class="data.TestStatus === 'PASS' ? 'iplas-indexeddb-badge--success' : 'iplas-indexeddb-badge--error'">
                   {{ data.TestStatus }}
                 </span>
               </template>
 
               <template #cell-actions="{ data }">
                 <div class="iplas-indexeddb-action-cell">
-                  <button
-                    type="button"
-                    class="iplas-indexeddb-action-button"
-                    :disabled="downloading"
-                    title="Download Test Log"
-                    @click.stop="downloadIndexedDbRecord(data.sourceRecord)"
-                  >
+                  <button type="button" class="iplas-indexeddb-action-button" :disabled="downloading"
+                    title="Download Test Log" @click.stop="downloadIndexedDbRecord(data.sourceRecord)">
                     <Icon :icon="downloading ? 'mdi:loading' : 'mdi:download'" :class="{ 'iplas-spin': downloading }" />
                     <span>TXT</span>
                   </button>
@@ -553,8 +476,8 @@
       </template>
     </AppTabs>
 
-    <DataExplorerStationSelectionDialog v-if="showStationSelectionDialog" v-model:show="showStationSelectionDialog" :stations="stationOptions"
-      :selected-stations="selectedStations" :device-ids-by-station="deviceIdsByStation"
+    <DataExplorerStationSelectionDialog v-if="showStationSelectionDialog" v-model:show="showStationSelectionDialog"
+      :stations="stationOptions" :selected-stations="selectedStations" :device-ids-by-station="deviceIdsByStation"
       :selected-device-ids="stationDeviceIds" :selected-test-status="stationTestStatus"
       :loading-device-ids-by-station="loadingDevicesByStation" :loading="loadingStations"
       @confirm="handleStationSelectionConfirm" @station-toggled="handleDialogStationToggle" />
@@ -2590,7 +2513,7 @@ onUnmounted(() => {
 .iplas-button,
 .iplas-notice button,
 .iplas-summary-remove {
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   font: inherit;
 }
 
@@ -2598,7 +2521,7 @@ onUnmounted(() => {
 .iplas-field input {
   width: 100%;
   border: 1px solid rgba(15, 118, 110, 0.18);
-  padding: 0.82rem 0.95rem;
+  padding: 0.74rem 0.82rem;
   background: rgba(255, 255, 255, 0.92);
   color: var(--app-ink);
 }
@@ -2616,7 +2539,7 @@ onUnmounted(() => {
   align-items: center;
   gap: 0.65rem;
   border: 1px solid rgba(15, 118, 110, 0.18);
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   padding: 0 0.95rem;
   background: rgba(255, 255, 255, 0.92);
 }
@@ -2645,7 +2568,7 @@ onUnmounted(() => {
   justify-content: center;
   gap: 0.5rem;
   border: 1px solid transparent;
-  padding: 0.82rem 1rem;
+  padding: 0.72rem 0.9rem;
   font-weight: 700;
   cursor: pointer;
 }
@@ -2746,8 +2669,8 @@ onUnmounted(() => {
   display: grid;
   gap: 1rem;
   border: 1px solid var(--app-border);
-  border-radius: 1.25rem;
-  padding: 1rem 1.1rem;
+  border-radius: 0.9rem;
+  padding: 0.9rem 1rem;
   background: var(--app-panel);
 }
 
@@ -2777,7 +2700,6 @@ onUnmounted(() => {
 .iplas-result-summary-card {
   grid-template-columns: 1fr auto;
   align-items: center;
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.06), rgba(255, 255, 255, 0.92));
 }
 
 .iplas-result-summary-card strong {
@@ -2789,8 +2711,8 @@ onUnmounted(() => {
   display: grid;
   gap: 0.85rem;
   border: 1px solid rgba(15, 118, 110, 0.12);
-  border-radius: 1rem;
-  padding: 0.9rem 1rem;
+  border-radius: 0.8rem;
+  padding: 0.85rem 0.9rem;
   background: rgba(255, 255, 255, 0.82);
 }
 
@@ -2828,7 +2750,6 @@ onUnmounted(() => {
 
 .iplas-indexeddb-status-bar {
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  background: linear-gradient(180deg, rgba(15, 118, 110, 0.06), rgba(255, 255, 255, 0.94));
 }
 
 .iplas-indexeddb-status-bar strong {
@@ -2837,8 +2758,8 @@ onUnmounted(() => {
 
 .iplas-summary-item {
   border: 1px solid rgba(15, 118, 110, 0.12);
-  border-radius: 1rem;
-  padding: 0.9rem 1rem;
+  border-radius: 0.8rem;
+  padding: 0.8rem 0.9rem;
   background: rgba(255, 255, 255, 0.82);
 }
 
@@ -2854,8 +2775,8 @@ onUnmounted(() => {
   gap: 0.85rem;
   align-items: flex-start;
   border: 1px solid rgba(15, 118, 110, 0.12);
-  border-radius: 1rem;
-  padding: 0.9rem 1rem;
+  border-radius: 0.8rem;
+  padding: 0.85rem 0.9rem;
   background: rgba(15, 118, 110, 0.05);
 }
 
@@ -2896,8 +2817,8 @@ onUnmounted(() => {
 }
 
 .iplas-notice {
-  border-radius: 0.75rem;
-  padding: 1rem 1.1rem;
+  border-radius: 0.7rem;
+  padding: 0.9rem 1rem;
 }
 
 .iplas-notice--error {
@@ -2959,6 +2880,7 @@ onUnmounted(() => {
 }
 
 @media (max-width: 960px) {
+
   .iplas-filter-grid,
   .iplas-control-grid--two,
   .iplas-control-grid--three {
@@ -2967,6 +2889,7 @@ onUnmounted(() => {
 }
 
 @media (max-width: 720px) {
+
   .iplas-selection-shell__toolbar,
   .iplas-selection-shell__summary,
   .iplas-selection-actions,
