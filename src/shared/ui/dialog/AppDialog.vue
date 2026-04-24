@@ -11,7 +11,7 @@
     :style="dialogStyle"
     :contentStyle="dialogContentStyle"
     :breakpoints="breakpoints"
-    :class="['app-dialog', { 'app-dialog--fullscreen': internalFullscreen }]"
+    :class="['app-dialog', { 'app-dialog--fullscreen': internalFullscreen, 'app-dialog--sticky-header': stickyHeader }]"
     @update:visible="handleVisibleUpdate"
     @show="emit('show')"
     @hide="emit('hide')"
@@ -85,6 +85,7 @@ const props = withDefaults(
     dismissableMask?: boolean
     closable?: boolean
     showFooter?: boolean
+    stickyHeader?: boolean
     closeOnEscape?: boolean
     draggable?: boolean
     maximizable?: boolean
@@ -101,6 +102,7 @@ const props = withDefaults(
     dismissableMask: true,
     closable: true,
     showFooter: true,
+    stickyHeader: false,
     closeOnEscape: true,
     draggable: false,
     maximizable: false,
@@ -218,6 +220,12 @@ function toggleFullscreen() {
 :deep(.app-dialog.app-dialog--fullscreen .p-dialog-header),
 :deep(.app-dialog.app-dialog--fullscreen .p-dialog-footer) {
   border-color: color-mix(in srgb, var(--app-border) 82%, transparent);
+}
+
+:deep(.app-dialog.app-dialog--fullscreen.app-dialog--sticky-header .p-dialog-header) {
+  position: sticky;
+  top: 0;
+  z-index: 12;
 }
 
 /* Header layout */

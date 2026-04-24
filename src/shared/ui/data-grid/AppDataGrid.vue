@@ -236,11 +236,14 @@ function resolveFieldValue(row: GridRow, field?: string) {
   letter-spacing: 0;
   text-transform: none;
   white-space: pre-line;
+  overflow-wrap: anywhere;
 }
 
 .app-data-grid :deep(.p-datatable-tbody > tr > td) {
   border: 0;
   border-bottom: 1px solid var(--app-border);
+  overflow-wrap: anywhere;
+  word-break: normal;
 }
 
 .app-data-grid :deep(.p-datatable-tbody > tr) {

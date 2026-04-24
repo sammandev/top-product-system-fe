@@ -62,7 +62,7 @@ const hasHeader = computed(
 }
 
 .app-panel--warm {
-  background: linear-gradient(180deg, rgba(245, 158, 11, 0.035), rgba(245, 158, 11, 0.02)), var(--app-panel-strong);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--app-info) 3%, transparent), color-mix(in srgb, var(--app-info) 1.5%, transparent)), var(--app-panel-strong);
 }
 
 .app-panel--cool {

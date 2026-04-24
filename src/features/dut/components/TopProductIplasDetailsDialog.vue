@@ -7,6 +7,7 @@
     :breakpoints="{ '1200px': '94vw', '768px': '98vw' }"
     fullscreenable
     :show-footer="false"
+    sticky-header
     class="iplas-details-dialog"
   >
     <template #header>
@@ -18,12 +19,13 @@
     <template #header-actions>
       <button
         type="button"
-        class="app-dialog__header-btn"
+        class="iplas-details-dialog__download-button"
         :disabled="downloading"
         :title="downloading ? 'Downloading...' : 'Download'"
         @click="handleDownload"
       >
         <Icon :icon="downloading ? 'mdi:loading' : 'solar:download-minimalistic-bold-duotone'" :class="{ 'iplas-details-dialog__spin': downloading }" />
+        <span>{{ downloading ? 'Downloading...' : 'Download' }}</span>
       </button>
     </template>
 
@@ -120,7 +122,7 @@
         <button
           v-if="forcedFailSummary"
           type="button"
-          class="iplas-details-dialog__pill iplas-details-dialog__pill--warning"
+          class="iplas-details-dialog__pill iplas-details-dialog__pill--danger"
           :class="{ 'iplas-details-dialog__pill--interactive': forcedFailSummary.clickable }"
           @click="openForcedFailDialog"
         >
@@ -350,38 +352,39 @@
         </div>
       </section>
 
-      <section class="iplas-details-dialog__data-grid-shell">
-        <AppDataGrid
-          :columns="breakdownColumns"
-          :rows="breakdownRows"
-          data-key="key"
-          :paginator="false"
-          :rows-per-page="10"
-          :table-style="{ minWidth: '32rem' }"
-        >
-          <template #cell-label="{ value }">
-            <span class="iplas-details-dialog__breakdown-label">{{ value }}</span>
-          </template>
-
-          <template #cell-value="{ data }">
+      <section class="iplas-details-dialog__breakdown-list">
+        <article v-for="row in breakdownRows" :key="row.key" class="iplas-details-dialog__breakdown-item">
+          <div class="iplas-details-dialog__breakdown-main">
+            <span class="iplas-details-dialog__breakdown-icon">
+              <Icon :icon="getBreakdownItemIcon(row.key, row.valueTone)" />
+            </span>
+            <div class="iplas-details-dialog__breakdown-copy">
+              <span class="iplas-details-dialog__breakdown-label">{{ row.label }}</span>
+              <span class="iplas-details-dialog__muted">{{ getBreakdownItemHint(row.key, row.valueTone) }}</span>
+            </div>
+          </div>
+          <div class="iplas-details-dialog__breakdown-value">
             <span
-              v-if="data.valueTone === 'score'"
+              v-if="row.valueTone === 'score'"
               class="iplas-details-dialog__score-chip"
               :class="`iplas-details-dialog__score-chip--${scoreTone(selectedTestItem.score ?? 0)}`"
             >
-              {{ data.value }}
+              {{ row.value }}
             </span>
-            <span v-else-if="data.valueTone === 'algorithm'" class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
-              {{ data.value }}
+            <span v-else-if="row.valueTone === 'algorithm'" class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
+              {{ row.value }}
             </span>
-            <span v-else-if="data.valueTone === 'policy'" class="iplas-details-dialog__pill iplas-details-dialog__pill--neutral">
-              {{ data.value }}
+            <span v-else-if="row.valueTone === 'policy'" class="iplas-details-dialog__pill iplas-details-dialog__pill--neutral">
+              {{ row.value }}
             </span>
-            <span v-else :class="data.valueTone === 'warning' ? 'text-warning font-weight-bold' : ''">
-              {{ data.value }}
+            <span v-else-if="row.valueTone === 'warning'" class="iplas-details-dialog__score-chip iplas-details-dialog__score-chip--danger">
+              {{ row.value }}
             </span>
-          </template>
-        </AppDataGrid>
+            <span v-else class="iplas-details-dialog__breakdown-text-value">
+              {{ row.value }}
+            </span>
+          </div>
+        </article>
       </section>
 
       <details class="iplas-details-dialog__explanation-card">
@@ -430,7 +433,7 @@
             </div>
             <div class="iplas-details-dialog__metric-caption">Weighted average of all scored test items.</div>
           </div>
-          <span v-if="record.isForcedFailure" class="iplas-details-dialog__pill iplas-details-dialog__pill--warning">Min. Score Fail</span>
+          <span v-if="record.isForcedFailure" class="iplas-details-dialog__pill iplas-details-dialog__pill--danger">Min. Score Fail</span>
         </div>
         <div v-if="scoreSummarySecondaryText" class="iplas-details-dialog__metric-secondary">
           {{ scoreSummarySecondaryText }}
@@ -747,7 +750,7 @@ const scoreSummaryIcon = computed(() => {
 
 const scoreSummaryIconColor = computed(() => {
   if (props.record?.isForcedFailure) {
-    return 'warning'
+    return 'danger'
   }
 
   if ((scoreSummaryPrimary.value?.score ?? 0) >= 0.9) {
@@ -970,6 +973,40 @@ function scoreTone(score: number): 'success' | 'primary' | 'warning' | 'danger' 
   if (score >= 0.7) return 'primary'
   if (score >= 0.5) return 'warning'
   return 'danger'
+}
+
+function getBreakdownItemIcon(key: string, valueTone?: BreakdownGridRow['valueTone']): string {
+  if (valueTone === 'score') return 'mdi:chart-line'
+  if (valueTone === 'algorithm') return 'mdi:function-variant'
+  if (valueTone === 'policy') return 'mdi:shield-check-outline'
+
+  const iconByKey: Record<string, string> = {
+    measuredValue: 'mdi:ruler-square-compass',
+    targetValue: 'mdi:target',
+    toleranceWindow: 'mdi:tune-variant',
+    deviation: 'mdi:delta',
+    unit: 'mdi:alpha-u-circle-outline',
+    weighting: 'mdi:scale-balance',
+  }
+
+  return iconByKey[key] ?? 'mdi:information-slab-circle-outline'
+}
+
+function getBreakdownItemHint(key: string, valueTone?: BreakdownGridRow['valueTone']): string {
+  if (valueTone === 'score') return 'The normalized contribution for this test item.'
+  if (valueTone === 'algorithm') return 'The scoring method used to transform the measured value.'
+  if (valueTone === 'policy') return 'The selection rule used when multiple targets exist.'
+
+  const hintByKey: Record<string, string> = {
+    measuredValue: 'Raw value captured from the station output.',
+    targetValue: 'Reference value used as the best-case point.',
+    toleranceWindow: 'Passing range derived from LCL and UCL.',
+    deviation: 'Distance between the measured value and the target.',
+    unit: 'Reported engineering unit from the original record.',
+    weighting: 'Relative importance used in the overall score.',
+  }
+
+  return hintByKey[key] ?? 'Supporting detail for how the final score was derived.'
 }
 
 function scoreTableRowClass(): string {
@@ -1533,6 +1570,7 @@ watch(
   font-size: 1.02rem;
   font-weight: 700;
   line-height: 1.2;
+  overflow-wrap: anywhere;
 }
 
 .iplas-details-dialog__dialog-title :deep(svg) {
@@ -1585,9 +1623,10 @@ watch(
   flex-shrink: 0;
 }
 
-.iplas-details-dialog__info-icon--warning {
-  background: var(--app-warning-soft);
-  color: var(--app-warning);
+.iplas-details-dialog__info-icon--warning,
+.iplas-details-dialog__info-icon--danger {
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
 }
 
 .iplas-details-dialog__info-icon--success {
@@ -1643,8 +1682,35 @@ watch(
 
 .iplas-details-dialog__summary-card--highlight,
 .iplas-details-dialog__summary-card--score {
-  border-color: var(--app-success-line);
+  border-color: color-mix(in srgb, var(--app-info) 18%, var(--iplas-border));
   background: var(--app-panel);
+}
+
+.iplas-details-dialog__download-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  min-height: 2.4rem;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--iplas-border);
+  border-radius: 0.75rem;
+  background: var(--iplas-panel);
+  color: var(--iplas-ink);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.iplas-details-dialog__download-button:hover {
+  border-color: var(--app-info-line);
+  background: var(--app-panel-strong);
+  transform: translateY(-1px);
+}
+
+.iplas-details-dialog__download-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .iplas-details-dialog__info-button,
@@ -1690,6 +1756,7 @@ watch(
 .iplas-details-dialog__metric-value {
   color: var(--iplas-ink);
   font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .iplas-details-dialog__metric-value,
@@ -1709,6 +1776,8 @@ watch(
   background: var(--app-surface);
   color: var(--iplas-ink);
   width: fit-content;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .iplas-details-dialog__pill--cool {
@@ -1730,9 +1799,9 @@ watch(
 }
 
 .iplas-details-dialog__pill--warning {
-  background: var(--app-warning-soft);
-  border-color: var(--app-warning-line);
-  color: var(--app-warning);
+  background: color-mix(in srgb, var(--app-danger) 8%, transparent);
+  border-color: color-mix(in srgb, var(--app-danger) 18%, transparent);
+  color: var(--app-danger);
 }
 
 .iplas-details-dialog__pill--danger {
@@ -1785,6 +1854,7 @@ watch(
   box-shadow: none;
   background: transparent;
   padding: 0;
+  min-width: 0;
 }
 
 .iplas-details-dialog__search-shell input:focus,
@@ -1935,8 +2005,56 @@ watch(
 }
 
 .iplas-details-dialog__score-chip--warning {
-  background: var(--app-warning-soft);
-  color: var(--app-warning);
+  background: color-mix(in srgb, var(--app-info) 10%, transparent);
+  color: var(--app-info);
+}
+
+.iplas-details-dialog__breakdown-list {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.iplas-details-dialog__breakdown-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.9rem;
+  border: 1px solid var(--iplas-border);
+  border-radius: 0.9rem;
+  background: var(--iplas-panel);
+}
+
+.iplas-details-dialog__breakdown-main,
+.iplas-details-dialog__breakdown-value {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.iplas-details-dialog__breakdown-copy {
+  display: grid;
+  gap: 0.24rem;
+  min-width: 0;
+}
+
+.iplas-details-dialog__breakdown-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.75rem;
+  background: var(--app-info-soft);
+  color: var(--app-info);
+  flex-shrink: 0;
+}
+
+.iplas-details-dialog__breakdown-text-value {
+  color: var(--iplas-ink);
+  font-weight: 700;
+  overflow-wrap: anywhere;
 }
 
 .iplas-details-dialog__score-chip--danger {
@@ -2272,6 +2390,19 @@ watch(
 .iplas-details-dialog__breakdown-label {
   font-weight: 700;
   color: var(--iplas-text-primary);
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 720px) {
+  .iplas-details-dialog__breakdown-item {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .iplas-details-dialog__breakdown-value {
+    width: 100%;
+    justify-content: flex-start;
+  }
 }
 
 .iplas-details-dialog__overall-grid {

@@ -138,3 +138,9 @@ body {
 .app-interactive-datatable .p-datatable-tbody > tr:hover {
   background: color-mix(in srgb, var(--app-accent) 4%, var(--app-panel-strong));
 }
+
+.app-interactive-datatable .p-datatable-thead > tr > th,
+.app-interactive-datatable .p-datatable-tbody > tr > td {
+  overflow-wrap: anywhere;
+  word-break: normal;
+}

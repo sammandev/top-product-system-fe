@@ -7,18 +7,20 @@
     :breakpoints="{ '1200px': '94vw', '768px': '98vw' }"
     fullscreenable
     :show-footer="false"
+    sticky-header
     class="fullscreen-dialog"
   >
     <template #header>
-      <div class="fullscreen-dialog__header-copy">
+      <div class="fullscreen-dialog__dialog-title">
+        <Icon icon="mdi:table-eye" />
         <h2>Test Items Details</h2>
-        <p v-if="record">Inspect this DUT record, filter test items, and copy identifiers.</p>
       </div>
     </template>
     <template #header-actions>
-      <button type="button" class="app-dialog__header-btn" :disabled="downloading"
+      <button type="button" class="fullscreen-dialog__download-button" :disabled="downloading"
         :title="downloading ? 'Downloading...' : 'Download'" @click="handleDownload">
         <Icon :icon="downloading ? 'mdi:loading' : 'solar:download-minimalistic-bold-duotone'" :class="{ 'fullscreen-dialog__spin': downloading }" />
+        <span>{{ downloading ? 'Downloading...' : 'Download' }}</span>
       </button>
     </template>
 
@@ -590,6 +592,26 @@ watch(
   align-items: start;
 }
 
+.fullscreen-dialog__dialog-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
+.fullscreen-dialog__dialog-title h2 {
+  margin: 0;
+  color: var(--app-ink);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.fullscreen-dialog__dialog-title :deep(svg) {
+  font-size: 1.18rem;
+  color: var(--app-info);
+  flex-shrink: 0;
+}
+
 .fullscreen-dialog__header-copy h2 {
   margin: 0.2rem 0;
   color: var(--app-ink);
@@ -633,7 +655,8 @@ watch(
 .fullscreen-dialog__option,
 .fullscreen-dialog__copy-row,
 .fullscreen-dialog__info-button,
-.fullscreen-dialog__pill {
+.fullscreen-dialog__pill,
+.fullscreen-dialog__download-button {
   border: 1px solid var(--app-border);
   border-radius: 1rem;
   background: var(--app-panel);
@@ -647,7 +670,8 @@ watch(
 .fullscreen-dialog__option,
 .fullscreen-dialog__copy-row,
 .fullscreen-dialog__info-button,
-.fullscreen-dialog__pill {
+.fullscreen-dialog__pill,
+.fullscreen-dialog__download-button {
   display: inline-flex;
   align-items: center;
   gap: 0.6rem;
@@ -659,7 +683,8 @@ watch(
 .fullscreen-dialog__token,
 .fullscreen-dialog__option,
 .fullscreen-dialog__copy-row,
-.fullscreen-dialog__info-button {
+.fullscreen-dialog__info-button,
+.fullscreen-dialog__download-button {
   cursor: pointer;
 }
 
@@ -668,7 +693,8 @@ watch(
 .fullscreen-dialog__token:hover,
 .fullscreen-dialog__option:hover,
 .fullscreen-dialog__copy-row:hover,
-.fullscreen-dialog__info-button:hover {
+.fullscreen-dialog__info-button:hover,
+.fullscreen-dialog__download-button:hover {
   transform: translateY(-1px);
 }
 
@@ -677,8 +703,14 @@ watch(
 .fullscreen-dialog__token,
 .fullscreen-dialog__option,
 .fullscreen-dialog__copy-row,
-.fullscreen-dialog__info-button {
+.fullscreen-dialog__info-button,
+.fullscreen-dialog__download-button {
   padding: 0.7rem 0.95rem;
+}
+
+.fullscreen-dialog__download-button {
+  font-weight: 700;
+  border-radius: 0.75rem;
 }
 
 .fullscreen-dialog__button--ghost {
@@ -698,7 +730,7 @@ watch(
 }
 
 .fullscreen-dialog__summary-card--highlight {
-  border-color: var(--app-success-line);
+  border-color: color-mix(in srgb, var(--app-info) 18%, var(--app-border));
   background: var(--app-panel);
 }
 
@@ -716,6 +748,7 @@ watch(
 .fullscreen-dialog__copy-row span {
   display: grid;
   gap: 0.2rem;
+  min-width: 0;
 }
 
 .fullscreen-dialog__info-button small {
@@ -737,6 +770,8 @@ watch(
 .fullscreen-dialog__pill {
   padding: 0.45rem 0.8rem;
   font-weight: 700;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .fullscreen-dialog__pill--cool {
