@@ -1,39 +1,24 @@
 <template>
   <AppDialog
     v-model="isOpen"
-    :width="dialogWidth"
-    :breakpoints="dialogBreakpoints"
-    :closable="false"
+    v-model:fullscreen="isFullscreen"
+    width="min(96vw, 78rem)"
+    fullscreen-width="98vw"
+    :breakpoints="{ '1200px': '94vw', '768px': '98vw' }"
+    fullscreenable
     class="fullscreen-dialog"
   >
     <template #header>
-      <div class="fullscreen-dialog__header">
-        <div class="fullscreen-dialog__header-copy">
-          <span class="fullscreen-dialog__header-icon">
-            <Icon icon="mdi:table-eye" />
-          </span>
-          <div>
-            <p class="fullscreen-dialog__eyebrow">Record Detail</p>
-            <h2>Test Items Details</h2>
-            <p v-if="record">Inspect this DUT record, filter test items, and copy identifiers without leaving the ranking flow.</p>
-          </div>
-        </div>
-
-        <div class="fullscreen-dialog__header-actions">
-          <button type="button" class="fullscreen-dialog__button fullscreen-dialog__button--ghost" :disabled="downloading" @click="handleDownload">
-            <Icon :icon="downloading ? 'mdi:loading' : 'mdi:download'" :class="{ 'fullscreen-dialog__spin': downloading }" />
-            <span>{{ downloading ? 'Downloading...' : 'Download' }}</span>
-          </button>
-          <button type="button" class="fullscreen-dialog__button fullscreen-dialog__button--ghost" @click="isFullscreen = !isFullscreen">
-            <Icon :icon="isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" />
-            <span>{{ isFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }}</span>
-          </button>
-          <button type="button" class="fullscreen-dialog__button fullscreen-dialog__button--ghost" @click="close">
-            <Icon icon="mdi:close" />
-            <span>Close</span>
-          </button>
-        </div>
+      <div class="fullscreen-dialog__header-copy">
+        <h2>Test Items Details</h2>
+        <p v-if="record">Inspect this DUT record, filter test items, and copy identifiers.</p>
       </div>
+    </template>
+    <template #header-actions>
+      <button type="button" class="app-dialog__header-btn" :disabled="downloading"
+        :title="downloading ? 'Downloading...' : 'Download'" @click="handleDownload">
+        <Icon :icon="downloading ? 'mdi:loading' : 'solar:download-minimalistic-bold-duotone'" :class="{ 'fullscreen-dialog__spin': downloading }" />
+      </button>
     </template>
 
     <div v-if="record" class="fullscreen-dialog__body" :class="{ 'fullscreen-dialog__body--fullscreen': isFullscreen }">

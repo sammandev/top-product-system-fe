@@ -4,46 +4,30 @@
     width="min(96vw, 88rem)"
     :breakpoints="{ '1200px': '96vw', '760px': '98vw' }"
     persistent
+    title="Spec Builder"
+    description="Create a custom JSON or INI specification for MasterControl analysis."
     @update:modelValue="emit('update:modelValue', $event)"
   >
-    <template #header>
-      <div class="spec-builder__header">
-        <div class="spec-builder__header-copy">
-          <div class="spec-builder__header-icon">
-            <Icon icon="mdi:file-cog-outline" />
-          </div>
-          <div>
-            <h2>Spec Builder</h2>
-            <p>Create a custom JSON or INI specification for MasterControl analysis.</p>
-          </div>
-        </div>
-
-        <div class="spec-builder__header-actions">
-          <div class="spec-builder__toggle-group" role="tablist" aria-label="Specification format">
-            <button
-              type="button"
-              class="spec-builder__toggle"
-              :class="{ 'spec-builder__toggle--active': specFormat === 'json' }"
-              @click="specFormat = 'json'"
-            >
-              <Icon icon="mdi:code-json" />
-              <span>JSON</span>
-            </button>
-            <button
-              type="button"
-              class="spec-builder__toggle"
-              :class="{ 'spec-builder__toggle--active': specFormat === 'ini' }"
-              @click="specFormat = 'ini'"
-            >
-              <Icon icon="mdi:file-document" />
-              <span>INI</span>
-            </button>
-          </div>
-
-          <button type="button" class="spec-builder__icon-button" aria-label="Close dialog" @click="handleClose">
-            <Icon icon="mdi:close" />
-          </button>
-        </div>
+    <template #header-actions>
+      <div class="spec-builder__toggle-group" role="tablist" aria-label="Specification format">
+        <button
+          type="button"
+          class="spec-builder__toggle"
+          :class="{ 'spec-builder__toggle--active': specFormat === 'json' }"
+          @click="specFormat = 'json'"
+        >
+          <Icon icon="mdi:code-json" />
+          <span>JSON</span>
+        </button>
+        <button
+          type="button"
+          class="spec-builder__toggle"
+          :class="{ 'spec-builder__toggle--active': specFormat === 'ini' }"
+          @click="specFormat = 'ini'"
+        >
+          <Icon icon="mdi:file-document" />
+          <span>INI</span>
+        </button>
       </div>
     </template>
 

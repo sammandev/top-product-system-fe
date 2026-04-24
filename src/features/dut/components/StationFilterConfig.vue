@@ -1,18 +1,7 @@
 <template>
   <AppDialog v-model="testItemDialog" width="min(92vw, 64rem)" :breakpoints="{ '960px': '96vw', '640px': '98vw' }"
-    :closable="false">
-    <template #header>
-      <div class="station-filter-config__dialog-header">
-        <div>
-          <p class="station-filter-config__eyebrow">Advanced Selection</p>
-          <h2>{{ dialogFilterType === 'include' ? 'Include' : 'Exclude' }} Test Items</h2>
-          <span>Search, bulk-select, and review grouped test-item patterns before applying them to this station.</span>
-        </div>
-        <button type="button" class="station-filter-config__icon-button" @click="testItemDialog = false">
-          <Icon icon="mdi:close" />
-        </button>
-      </div>
-    </template>
+    :title="`${dialogFilterType === 'include' ? 'Include' : 'Exclude'} Test Items`"
+    description="Search, bulk-select, and review grouped test-item patterns before applying them to this station.">
 
     <div class="station-filter-config__dialog-body">
       <label class="station-filter-config__field">

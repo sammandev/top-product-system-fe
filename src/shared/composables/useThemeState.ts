@@ -37,7 +37,7 @@ export const DEFAULT_THEME_PREFERENCES: ThemePreferences = {
   mode: 'system',
   preset: 'aura',
   primary: 'emerald',
-  surface: 'stone',
+  surface: 'zinc',
 }
 
 export const THEME_MODE_OPTIONS: ThemeOption<ThemeMode>[] = [

@@ -140,18 +140,7 @@
       </section>
     </AppPanel>
 
-    <AppDialog v-model="valueFullscreen" title="Value Items (Numeric Data)" description="Expanded comparison workspace for numeric measurements across ISNs." width="min(98vw, 120rem)" :breakpoints="dialogBreakpoints" :closable="false" maximizable>
-      <template #header>
-        <div class="result-surface-dialog-header">
-          <div>
-            <h2 class="result-surface-dialog-title">Value Items (Numeric Data)</h2>
-            <p class="result-surface-dialog-description">Review per-ISN values, deviations, and scores without the legacy fullscreen table shell.</p>
-          </div>
-          <button type="button" class="compare-result-view__icon-button" @click="valueFullscreen = false">
-            <Icon icon="mdi:close" />
-          </button>
-        </div>
-      </template>
+    <AppDialog v-model="valueFullscreen" title="Value Items (Numeric Data)" description="Expanded comparison workspace for numeric measurements across ISNs." width="min(98vw, 120rem)" :breakpoints="dialogBreakpoints">
 
       <div class="result-surface-filter-grid">
         <label class="result-surface-search result-surface-search--wide">
@@ -204,18 +193,7 @@
       </AppDataGrid>
     </AppDialog>
 
-    <AppDialog v-model="nonValueFullscreen" title="Non-Value Items (Status/Text Data)" description="Expanded comparison workspace for textual and status outputs." width="min(98vw, 120rem)" :breakpoints="dialogBreakpoints" :closable="false" maximizable>
-      <template #header>
-        <div class="result-surface-dialog-header">
-          <div>
-            <h2 class="result-surface-dialog-title">Non-Value Items (Status/Text Data)</h2>
-            <p class="result-surface-dialog-description">Inspect per-ISN statuses in the shared dialog surface.</p>
-          </div>
-          <button type="button" class="compare-result-view__icon-button" @click="nonValueFullscreen = false">
-            <Icon icon="mdi:close" />
-          </button>
-        </div>
-      </template>
+    <AppDialog v-model="nonValueFullscreen" title="Non-Value Items (Status/Text Data)" description="Expanded comparison workspace for textual and status outputs." width="min(98vw, 120rem)" :breakpoints="dialogBreakpoints">
 
       <label class="result-surface-search">
         <span>Search test items</span>

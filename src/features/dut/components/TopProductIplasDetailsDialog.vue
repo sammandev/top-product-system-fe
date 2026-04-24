@@ -1,49 +1,29 @@
 <template>
   <AppDialog
     v-model="isOpen"
-    :width="isFullscreen ? '98vw' : 'min(96vw, 78rem)'"
-    :breakpoints="isFullscreen ? { '960px': '98vw', '640px': '100vw' } : { '1200px': '94vw', '768px': '98vw' }"
-    maximizable
-    :closable="false"
+    v-model:fullscreen="isFullscreen"
+    width="min(96vw, 78rem)"
+    fullscreen-width="98vw"
+    :breakpoints="{ '1200px': '94vw', '768px': '98vw' }"
+    fullscreenable
     class="iplas-details-dialog"
   >
     <template #header>
-      <div class="iplas-details-dialog__header">
-        <div class="iplas-details-dialog__header-copy">
-          <span class="iplas-details-dialog__header-icon">
-            <Icon icon="mdi:table-eye" />
-          </span>
-          <div>
-            <p class="iplas-details-dialog__eyebrow">Record Detail</p>
-            <h2>Test Items Details</h2>
-            <p v-if="record">Inspect test items, copy identifiers, and review score reasoning for this DUT record.</p>
-          </div>
-        </div>
-
-        <div class="iplas-details-dialog__header-actions">
-          <button
-            type="button"
-            class="iplas-details-dialog__button iplas-details-dialog__button--ghost"
-            :disabled="downloading"
-            @click="handleDownload"
-          >
-            <Icon :icon="downloading ? 'mdi:loading' : 'mdi:download'" :class="{ 'iplas-details-dialog__spin': downloading }" />
-            <span>{{ downloading ? 'Downloading...' : 'Download' }}</span>
-          </button>
-          <button
-            type="button"
-            class="iplas-details-dialog__button iplas-details-dialog__button--ghost"
-            @click="isFullscreen = !isFullscreen"
-          >
-            <Icon :icon="isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" />
-            <span>{{ isFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }}</span>
-          </button>
-          <button type="button" class="iplas-details-dialog__button iplas-details-dialog__button--ghost" @click="close">
-            <Icon icon="mdi:close" />
-            <span>Close</span>
-          </button>
-        </div>
+      <div class="iplas-details-dialog__header-copy">
+        <h2>Test Items Details</h2>
+        <p v-if="record">Inspect test items, copy identifiers, and review score reasoning.</p>
       </div>
+    </template>
+    <template #header-actions>
+      <button
+        type="button"
+        class="app-dialog__header-btn"
+        :disabled="downloading"
+        :title="downloading ? 'Downloading...' : 'Download'"
+        @click="handleDownload"
+      >
+        <Icon :icon="downloading ? 'mdi:loading' : 'solar:download-minimalistic-bold-duotone'" :class="{ 'iplas-details-dialog__spin': downloading }" />
+      </button>
     </template>
 
     <div v-if="record" class="iplas-details-dialog__body" :class="{ 'iplas-details-dialog__body--fullscreen': isFullscreen }">

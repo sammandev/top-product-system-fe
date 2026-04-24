@@ -718,11 +718,12 @@ watch(
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 0.25rem;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.375rem;
+  background: var(--shell-accent-soft);
   color: var(--shell-accent);
-  font-size: 1.25rem;
+  font-size: 1.125rem;
   flex-shrink: 0;
 }
 
@@ -893,18 +894,20 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border: none;
+  width: 2.25rem;
+  height: 2.25rem;
+  border: 1px solid var(--shell-border);
   border-radius: 0.375rem;
   background: transparent;
   color: var(--shell-ink);
   font-size: 1.25rem;
   cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .topbar__menu-btn:hover {
   background: var(--shell-panel);
+  border-color: var(--shell-accent);
 }
 
 .topbar__search {
@@ -913,10 +916,11 @@ watch(
   gap: 0.5rem;
   flex: 1;
   max-width: 24rem;
-  padding: 0.375rem 0.75rem;
+  padding: 0.4375rem 0.75rem;
   border: 1px solid var(--shell-border);
   border-radius: 0.375rem;
   background: var(--shell-panel-strong);
+  min-height: 2.25rem;
 }
 
 @media (min-width: 1024px) {
@@ -982,8 +986,8 @@ watch(
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border: 1px solid var(--shell-border);
   border-radius: 0.375rem;
   background: transparent;

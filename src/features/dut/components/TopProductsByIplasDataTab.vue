@@ -16,13 +16,6 @@
     </div>
 
     <section class="top-products-iplas-panel">
-      <div class="top-products-iplas-panel__header">
-        <div>
-          <p class="top-products-iplas-panel__eyebrow">Search Modes</p>
-          <h2>iPLAS Lookup</h2>
-        </div>
-      </div>
-
       <AppTabs v-model="searchMode" :items="tabItems" scrollable>
         <template #panel-station>
           <section class="top-products-iplas-pane">

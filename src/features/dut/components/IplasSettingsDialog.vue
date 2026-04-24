@@ -1,49 +1,24 @@
 <template>
-  <AppDialog
-    :model-value="modelValue"
-    width="min(96vw, 44rem)"
-    persistent
-    :closable="false"
-    @update:modelValue="$emit('update:modelValue', $event)"
-  >
-    <template #header>
-      <div class="iplas-settings-dialog__header">
-        <div class="iplas-settings-dialog__header-copy">
-          <p class="iplas-settings-dialog__eyebrow">Connection Settings</p>
-          <h2>iPLAS API Settings</h2>
-          <span>Choose whether this workflow follows the system-managed token or a local override for the selected site.</span>
-        </div>
-        <button type="button" class="iplas-settings-dialog__icon-button" @click="handleCancel">
-          Close
-        </button>
-      </div>
-    </template>
+  <AppDialog :model-value="modelValue" width="min(96vw, 44rem)" persistent title="iPLAS API Settings"
+    @update:modelValue="$emit('update:modelValue', $event)">
 
     <div class="iplas-settings-dialog__stack">
       <section class="iplas-settings-dialog__section">
         <div class="iplas-settings-dialog__section-copy">
           <strong>Settings Mode</strong>
-          <span>Switch between centrally managed tokens and a custom local override for this browser session.</span>
         </div>
         <div class="iplas-settings-dialog__chip-row">
-          <button
-            type="button"
-            class="iplas-settings-dialog__toggle-chip"
-            :class="{ 'is-active': localSettingsMode === 'system' }"
-            @click="localSettingsMode = 'system'"
-          >
+          <button type="button" class="iplas-settings-dialog__toggle-chip"
+            :class="{ 'is-active': localSettingsMode === 'system' }" @click="localSettingsMode = 'system'">
             Use System Settings
           </button>
-          <button
-            type="button"
-            class="iplas-settings-dialog__toggle-chip"
-            :class="{ 'is-active': localSettingsMode === 'custom' }"
-            @click="localSettingsMode = 'custom'"
-          >
+          <button type="button" class="iplas-settings-dialog__toggle-chip"
+            :class="{ 'is-active': localSettingsMode === 'custom' }" @click="localSettingsMode = 'custom'">
             Customize Settings
           </button>
         </div>
-        <div v-if="localSettingsMode === 'system'" class="iplas-settings-dialog__notice iplas-settings-dialog__notice--info">
+        <div v-if="localSettingsMode === 'system'"
+          class="iplas-settings-dialog__notice iplas-settings-dialog__notice--info">
           iPLAS default system tokens are managed by the system administrator.
         </div>
       </section>
@@ -51,17 +26,10 @@
       <section class="iplas-settings-dialog__section">
         <div class="iplas-settings-dialog__section-copy">
           <strong>Select iPLAS Site</strong>
-          <span>Choose the site endpoint whose base IP and token configuration you want to review.</span>
         </div>
         <div class="iplas-settings-dialog__chip-row">
-          <button
-            v-for="server in servers"
-            :key="server.id"
-            type="button"
-            class="iplas-settings-dialog__site-chip"
-            :class="{ 'is-active': localSelectedServerId === server.id }"
-            @click="localSelectedServerId = server.id"
-          >
+          <button v-for="server in servers" :key="server.id" type="button" class="iplas-settings-dialog__site-chip"
+            :class="{ 'is-active': localSelectedServerId === server.id }" @click="localSelectedServerId = server.id">
             {{ server.name }}
           </button>
         </div>
@@ -75,34 +43,23 @@
 
         <label class="iplas-settings-dialog__field">
           <span>Server IP Address</span>
-          <input
-            :value="displayBaseIp"
-            type="text"
-            placeholder="e.g. 10.176.33.89"
-            :readonly="localSettingsMode === 'system'"
-            :class="{ 'is-readonly': localSettingsMode === 'system' }"
-            @input="localBaseIp = ($event.target as HTMLInputElement).value"
-          />
+          <input :value="displayBaseIp" type="text" placeholder="e.g. 10.176.33.89"
+            :readonly="localSettingsMode === 'system'" :class="{ 'is-readonly': localSettingsMode === 'system' }"
+            @input="localBaseIp = ($event.target as HTMLInputElement).value" />
           <small>Update the raw host or IP only when custom settings are enabled.</small>
         </label>
 
         <label class="iplas-settings-dialog__field">
           <span>Access Token</span>
-          <textarea
-            :value="displayToken"
-            rows="3"
-            :readonly="localSettingsMode === 'system'"
+          <textarea :value="displayToken" rows="3" :readonly="localSettingsMode === 'system'"
             :class="{ 'is-readonly': localSettingsMode === 'system' }"
-            @input="localToken = ($event.target as HTMLTextAreaElement).value"
-          />
-          <small v-if="localSettingsMode === 'custom'">Please generate and use your own iPLAS token to access the iPLAS server.</small>
+            @input="localToken = ($event.target as HTMLTextAreaElement).value" />
+          <small v-if="localSettingsMode === 'custom'">Please generate and use your own iPLAS token to access the iPLAS
+            server.</small>
         </label>
 
-        <div
-          v-if="localSettingsMode === 'system'"
-          class="iplas-settings-dialog__notice"
-          :class="currentSystemToken ? 'iplas-settings-dialog__notice--success' : 'iplas-settings-dialog__notice--warning'"
-        >
+        <div v-if="localSettingsMode === 'system'" class="iplas-settings-dialog__notice"
+          :class="currentSystemToken ? 'iplas-settings-dialog__notice--success' : 'iplas-settings-dialog__notice--warning'">
           <template v-if="currentSystemToken">
             System token configured.
           </template>
@@ -115,19 +72,17 @@
 
     <template #footer>
       <div class="iplas-settings-dialog__footer">
-        <button
-          v-if="localSettingsMode === 'custom'"
-          type="button"
-          class="iplas-settings-dialog__button iplas-settings-dialog__button--ghost"
-          @click="handleReset"
-        >
+        <button v-if="localSettingsMode === 'custom'" type="button"
+          class="iplas-settings-dialog__button iplas-settings-dialog__button--ghost" @click="handleReset">
           Reset to Defaults
         </button>
         <div class="iplas-settings-dialog__footer-spacer"></div>
-        <button type="button" class="iplas-settings-dialog__button iplas-settings-dialog__button--ghost" @click="handleCancel">
+        <button type="button" class="iplas-settings-dialog__button iplas-settings-dialog__button--ghost"
+          @click="handleCancel">
           Cancel
         </button>
-        <button type="button" class="iplas-settings-dialog__button iplas-settings-dialog__button--primary" @click="handleSave">
+        <button type="button" class="iplas-settings-dialog__button iplas-settings-dialog__button--primary"
+          @click="handleSave">
           Save Settings
         </button>
       </div>
@@ -427,6 +382,7 @@ function handleReset(): void {
 }
 
 @media (max-width: 680px) {
+
   .iplas-settings-dialog__header,
   .iplas-settings-dialog__footer {
     grid-template-columns: minmax(0, 1fr);

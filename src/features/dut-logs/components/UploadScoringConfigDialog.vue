@@ -4,24 +4,14 @@
     width="min(96vw, 70rem)"
     :breakpoints="{ '1100px': '94vw', '760px': '96vw' }"
     persistent
-    maximizable
+    title="Configure Scoring"
+    description="Filter, select, and adjust upload-log scoring rules without leaving the comparison workflow."
     @update:modelValue="dialogOpen = $event"
   >
-    <template #header>
-      <div class="upload-scoring-dialog__header">
-        <div class="upload-scoring-dialog__header-copy">
-          <h2>Configure Scoring</h2>
-          <p>Filter, select, and adjust upload-log scoring rules without leaving the comparison workflow.</p>
-        </div>
-        <div class="upload-scoring-dialog__header-meta">
-          <span class="upload-scoring-dialog__pill upload-scoring-dialog__pill--muted">
-            {{ scoringConfigCount }} items
-          </span>
-          <button type="button" class="upload-scoring-dialog__ghost-button" @click="handleCancel">
-            Close
-          </button>
-        </div>
-      </div>
+    <template #header-actions>
+      <span class="upload-scoring-dialog__pill upload-scoring-dialog__pill--muted">
+        {{ scoringConfigCount }} items
+      </span>
     </template>
 
     <div class="upload-scoring-dialog">

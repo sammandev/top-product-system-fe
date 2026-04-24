@@ -2,41 +2,15 @@
   <div class="top-product-isn-results">
     <AppDialog
       v-model="measurementDialog"
-      :width="measurementDialogWidth"
+      v-model:fullscreen="isFullscreen"
+      width="min(96vw, 72rem)"
+      fullscreen-width="98vw"
       :breakpoints="dialogBreakpoints"
-      :closable="false"
+      fullscreenable
+      title="Measurement Details"
+      description="Review the station result, compare scores, and inspect test items."
       class="top-product-isn-results__dialog"
     >
-      <template #header>
-        <div class="top-product-isn-results__dialog-header">
-          <div>
-            <p class="top-product-isn-results__eyebrow">Measurement Review</p>
-            <h2>Measurement Details</h2>
-            <p v-if="selectedMeasurement">
-              Review the station result, compare scores, and inspect test items without leaving the Top Product workflow.
-            </p>
-          </div>
-
-          <div class="top-product-isn-results__dialog-actions">
-            <button
-              type="button"
-              class="top-product-isn-results__ghost-button"
-              @click="isFullscreen = !isFullscreen"
-            >
-              <Icon :icon="isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" />
-              <span>{{ isFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }}</span>
-            </button>
-            <button
-              type="button"
-              class="top-product-isn-results__ghost-button"
-              @click="measurementDialog = false"
-            >
-              <Icon icon="mdi:close" />
-              <span>Close</span>
-            </button>
-          </div>
-        </div>
-      </template>
 
       <div
         v-if="selectedMeasurement"
@@ -357,29 +331,10 @@
       v-model="comparisonFullscreen"
       width="96vw"
       :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
-      :closable="false"
+      :title="`Comparison: ${selectedCompareStation ? comparisonStationTitle : 'Select a Station'}`"
+      description="Compare measured values, deltas, and scores across every DUT in this run."
       class="top-product-isn-results__dialog"
     >
-      <template #header>
-        <div class="top-product-isn-results__dialog-header">
-          <div>
-            <p class="top-product-isn-results__eyebrow">Cross-DUT Review</p>
-            <h2>Comparison: {{ selectedCompareStation ? comparisonStationTitle : 'Select a Station' }}</h2>
-            <p>Compare measured values, deltas, and scores across every DUT in this run.</p>
-          </div>
-
-          <div class="top-product-isn-results__dialog-actions">
-            <button
-              type="button"
-              class="top-product-isn-results__ghost-button"
-              @click="comparisonFullscreen = false"
-            >
-              <Icon icon="mdi:close" />
-              <span>Close</span>
-            </button>
-          </div>
-        </div>
-      </template>
 
       <div class="top-product-isn-results__comparison-shell top-product-isn-results__comparison-shell--fullscreen">
         <section class="top-product-isn-results__filter-grid">

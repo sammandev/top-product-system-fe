@@ -249,27 +249,11 @@
                 </AppDataGrid>
             </AppPanel>
 
-            <AppDialog v-model="detailDialog" :width="isFullscreen ? '96vw' : 'min(96vw, 88rem)'"
-                :closable="false" :draggable="false" :class="{ 'top-product-db-detail-dialog--expanded': isFullscreen }">
-                <template #header>
-                    <div class="top-product-db-dialog-header">
-                        <div>
-                            <p class="top-product-db-dialog-header__eyebrow">Record Detail</p>
-                            <h2>Product Details</h2>
-                            <p>Inspect measurements, score breakdown, and record metadata before exporting or deleting.</p>
-                        </div>
-                        <div class="top-product-db-dialog-header__actions">
-                            <button type="button" class="top-product-db-icon-button"
-                                :title="isFullscreen ? 'Return to windowed dialog' : 'Expand dialog'"
-                                @click="isFullscreen = !isFullscreen">
-                                <Icon :icon="isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" />
-                            </button>
-                            <button type="button" class="top-product-db-icon-button" @click="detailDialog = false">
-                                <Icon icon="mdi:close" />
-                            </button>
-                        </div>
-                    </div>
-                </template>
+            <AppDialog v-model="detailDialog" v-model:fullscreen="isFullscreen"
+                width="min(96vw, 88rem)" fullscreen-width="96vw" fullscreenable
+                :draggable="false" title="Product Details"
+                description="Inspect measurements, score breakdown, and record metadata before exporting or deleting."
+                :class="{ 'top-product-db-detail-dialog--expanded': isFullscreen }">
 
                 <div v-if="selectedProduct" class="top-product-db-detail-stack">
                     <section class="top-product-db-detail-hero">
@@ -385,7 +369,7 @@
 
             <AppDialog v-model="deleteDialog" title="Confirm Delete"
                 description="Delete a single top-product record and all of its persisted measurements." width="min(92vw, 34rem)"
-                persistent :closable="false">
+                persistent>
                 <div class="top-product-db-confirm-stack">
                     <section class="top-product-db-confirm-card top-product-db-confirm-card--danger">
                         <div><strong>ISN</strong><span>{{ productToDelete?.dut_isn || 'N/A' }}</span></div>
@@ -425,7 +409,7 @@
 
             <AppDialog v-model="bulkDeleteDialog" title="Confirm Bulk Delete"
                 description="Delete the current selection of top-product records in one action." width="min(92vw, 40rem)"
-                persistent :closable="false">
+                persistent>
                 <div class="top-product-db-confirm-stack">
                     <p class="top-product-db-dialog-copy">
                         You are about to delete <strong>{{ selectedProducts.length }}</strong> top-product record(s).

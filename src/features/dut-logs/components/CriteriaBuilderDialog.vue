@@ -1,23 +1,8 @@
 <template>
   <AppDialog :model-value="modelValue" width="min(94vw, 76rem)" :breakpoints="{ '1100px': '96vw', '760px': '98vw' }"
-    persistent :closable="false" @update:modelValue="emit('update:modelValue', $event)">
-    <template #header>
-      <div class="criteria-builder-dialog__header">
-        <div class="criteria-builder-dialog__header-copy">
-          <span class="criteria-builder-dialog__header-icon">
-            <Icon icon="mdi:cog-outline" />
-          </span>
-          <div>
-            <p class="criteria-builder-dialog__eyebrow">Criteria Authoring</p>
-            <h2>Criteria Builder</h2>
-            <span>Build upload-log criteria rules, preview the JSON output, and immediately reuse the generated file.</span>
-          </div>
-        </div>
-        <button type="button" class="criteria-builder-dialog__icon-button" @click="handleClose">
-          <Icon icon="mdi:close" />
-        </button>
-      </div>
-    </template>
+    persistent title="Criteria Builder"
+    description="Build upload-log criteria rules, preview the JSON output, and immediately reuse the generated file."
+    @update:modelValue="emit('update:modelValue', $event)">
 
     <div class="criteria-builder-dialog__grid">
       <div class="criteria-builder-dialog__stack">

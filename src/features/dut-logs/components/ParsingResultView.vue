@@ -160,18 +160,7 @@
       </section>
     </AppPanel>
 
-    <AppDialog v-model="fullscreenValue" title="Value Items (Numeric Data)" description="Expanded parsing result view for numeric measurements." width="min(98vw, 112rem)" :breakpoints="dialogBreakpoints" :closable="false" maximizable>
-      <template #header>
-        <div class="result-surface-dialog-header">
-          <div>
-            <h2 class="result-surface-dialog-title">Value Items (Numeric Data)</h2>
-            <p class="result-surface-dialog-description">Search, score, and inspect numeric parsing results in the wider workspace.</p>
-          </div>
-          <button type="button" class="parsing-result-view__icon-button" @click="fullscreenValue = false">
-            <Icon icon="mdi:close" />
-          </button>
-        </div>
-      </template>
+    <AppDialog v-model="fullscreenValue" title="Value Items (Numeric Data)" description="Expanded parsing result view for numeric measurements." width="min(98vw, 112rem)" :breakpoints="dialogBreakpoints">
 
       <label class="result-surface-search">
         <span>Search value items</span>
@@ -211,18 +200,7 @@
       </AppDataGrid>
     </AppDialog>
 
-    <AppDialog v-model="fullscreenNonValue" title="Non-Value Items (Status/Text Data)" description="Expanded parsing result view for status and text fields." width="min(98vw, 112rem)" :breakpoints="dialogBreakpoints" :closable="false" maximizable>
-      <template #header>
-        <div class="result-surface-dialog-header">
-          <div>
-            <h2 class="result-surface-dialog-title">Non-Value Items (Status/Text Data)</h2>
-            <p class="result-surface-dialog-description">Inspect textual results and adjusted power values without the legacy fullscreen dialog shell.</p>
-          </div>
-          <button type="button" class="parsing-result-view__icon-button" @click="fullscreenNonValue = false">
-            <Icon icon="mdi:close" />
-          </button>
-        </div>
-      </template>
+    <AppDialog v-model="fullscreenNonValue" title="Non-Value Items (Status/Text Data)" description="Expanded parsing result view for status and text fields." width="min(98vw, 112rem)" :breakpoints="dialogBreakpoints">
 
       <label class="result-surface-search">
         <span>Search non-value items</span>

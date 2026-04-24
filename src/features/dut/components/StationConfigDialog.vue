@@ -1,24 +1,8 @@
 <template>
-  <AppDialog :model-value="internalShow" :width="dialogWidth" :breakpoints="{ '1200px': '96vw', '760px': '98vw' }"
-    persistent :closable="false" @update:modelValue="internalShow = $event">
-    <template #header>
-      <div class="station-config-dialog__header">
-        <div class="station-config-dialog__header-copy">
-          <p class="station-config-dialog__eyebrow">Station Configuration</p>
-          <h2>Configure Station: {{ station?.display_station_name }}</h2>
-          <span>Refine device scope, analyzable items, and scoring rules for this iPLAS station.</span>
-        </div>
-        <div class="station-config-dialog__header-actions">
-          <button type="button" class="station-config-dialog__icon-button"
-            :aria-label="isFullscreen ? 'Exit expanded mode' : 'Expand dialog'" @click="toggleFullscreen">
-            {{ isFullscreen ? 'Collapse' : 'Expand' }}
-          </button>
-          <button type="button" class="station-config-dialog__icon-button" @click="handleClose">
-            Close
-          </button>
-        </div>
-      </div>
-    </template>
+  <AppDialog :model-value="internalShow" v-model:fullscreen="isFullscreen" width="min(96vw, 72rem)"
+    fullscreen-width="98vw" :breakpoints="{ '1200px': '96vw', '760px': '98vw' }" fullscreenable persistent
+    :title="`Configure Station: ${station?.display_station_name ?? ''}`" description="Station Configuration"
+    @update:modelValue="internalShow = $event" @hide="handleClose">
 
     <section class="station-config-body" :class="{ 'station-config-body--fullscreen': isFullscreen }">
       <div class="station-config-shell">
@@ -48,10 +32,6 @@
           <div class="station-config-dialog__section-stack">
             <div class="station-config-dialog__toolbar-row">
               <button type="button" class="station-config-dialog__button station-config-dialog__button--ghost"
-                @click="toggleSelectAllDevices">
-                {{ allDevicesSelected ? 'Deselect All Devices' : 'Select All Devices' }}
-              </button>
-              <button type="button" class="station-config-dialog__button station-config-dialog__button--ghost"
                 :disabled="loadingDevices" @click="handleRefreshDevices">
                 {{ loadingDevices ? 'Refreshing...' : 'Refresh Devices' }}
               </button>
@@ -64,21 +44,8 @@
               class="station-config-dialog__notice station-config-dialog__notice--info">
               No devices available yet. Refresh after station data is ready.
             </div>
-            <div v-else class="station-config-dialog__chip-grid">
-              <button v-for="deviceId in availableDeviceIds" :key="deviceId" type="button"
-                class="station-config-dialog__choice-chip"
-                :class="{ 'is-active': localConfig.deviceIds.includes(deviceId) }" @click="toggleDeviceId(deviceId)">
-                {{ deviceId }}
-              </button>
-            </div>
-
-            <div v-if="localConfig.deviceIds.length > 0" class="station-config-dialog__token-row">
-              <button v-for="deviceId in localConfig.deviceIds" :key="deviceId" type="button"
-                class="station-config-dialog__token" @click="toggleDeviceId(deviceId)">
-                <span>{{ deviceId }}</span>
-                <span aria-hidden="true">x</span>
-              </button>
-            </div>
+            <AppMultiSelect v-else v-model="localConfig.deviceIds" :options="deviceSelectOptions"
+              placeholder="Select devices..." />
           </div>
         </AppPanel>
 
@@ -258,7 +225,7 @@
   </AppDialog>
 
   <AppDialog :model-value="scoringConfigDialog" title="Configure Scoring" :description="scoringConfigItem ?? ''"
-    width="min(92vw, 34rem)" persistent :closable="false" @update:modelValue="handleScoringDialogVisibility">
+    width="min(92vw, 34rem)" persistent @update:modelValue="handleScoringDialogVisibility">
     <div v-if="scoringConfigItem" class="station-config-dialog__modal-stack">
       <label class="station-config-dialog__field">
         <span>Scoring Algorithm</span>
@@ -315,7 +282,7 @@
 
   <AppDialog :model-value="bulkScoringDialog" title="Bulk Configure Scoring"
     :description="`Apply to ${selectedCriteriaCount} selected criteria test item(s).`" width="min(92vw, 36rem)"
-    persistent :closable="false" @update:modelValue="bulkScoringDialog = $event">
+    persistent @update:modelValue="bulkScoringDialog = $event">
     <div class="station-config-dialog__modal-stack">
       <div class="station-config-dialog__notice station-config-dialog__notice--info">
         This applies the selected scoring algorithm and weight to all {{ selectedCriteriaCount }} selected criteria
@@ -377,7 +344,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { AppDialog, AppPanel } from '@/shared/ui'
+import { AppDialog, AppPanel, AppMultiSelect } from '@/shared/ui'
 import {
   SCORING_POLICIES,
   SCORING_TYPE_INFO,
@@ -460,7 +427,9 @@ const internalShow = computed({
   set: (value: boolean) => emit('update:show', value),
 })
 
-const dialogWidth = computed(() => (isFullscreen.value ? '98vw' : 'min(96vw, 72rem)'))
+const deviceSelectOptions = computed(() =>
+  props.availableDeviceIds.map((id) => ({ value: id, label: id })),
+)
 
 const localConfig = ref<StationConfig>({
   displayName: '',
@@ -1639,9 +1608,8 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 
 .station-config-dialog__item-name {
   color: var(--app-ink);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 .station-config-dialog__helper-copy--footnote {

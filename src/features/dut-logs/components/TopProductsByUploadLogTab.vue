@@ -466,25 +466,14 @@
 
   <AppDialog
     v-model="showBreakdownDialog"
-    :width="breakdownFullscreen ? '96vw' : 'min(92vw, 40rem)'"
-    :maximizable="false"
+    v-model:fullscreen="breakdownFullscreen"
+    width="min(92vw, 40rem)"
+    fullscreen-width="96vw"
+    fullscreenable
+    title="Score Breakdown"
+    description="Universal Scoring"
     class="upload-log-breakdown-dialog"
   >
-    <template #header>
-      <div class="upload-log-breakdown__header">
-        <div>
-          <p class="upload-log-breakdown__eyebrow">Universal Scoring</p>
-          <h2>Score Breakdown</h2>
-        </div>
-        <button
-          type="button"
-          class="upload-log-comparison__ghost-button"
-          @click="breakdownFullscreen = !breakdownFullscreen"
-        >
-          {{ breakdownFullscreen ? 'Windowed' : 'Expand' }}
-        </button>
-      </div>
-    </template>
 
     <div v-if="breakdownItem" class="upload-log-breakdown">
       <section class="upload-log-breakdown__summary-card">

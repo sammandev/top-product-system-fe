@@ -4,30 +4,10 @@
       v-model="fullscreen"
       width="98vw"
       :breakpoints="dialogBreakpoints"
-      maximizable
-      :closable="false"
+      title="Complete Ranking"
+      description="Review the full upload-log ranking set without leaving the Top Product workspace."
       class="top-product-ranking-upload-log__dialog"
     >
-      <template #header>
-        <div class="top-product-ranking-upload-log__dialog-header">
-          <div>
-            <p class="top-product-ranking-upload-log__eyebrow">Expanded Ranking</p>
-            <h2>Complete Ranking</h2>
-            <p>Review the full upload-log ranking set without leaving the Top Product workspace.</p>
-          </div>
-
-          <div class="top-product-ranking-upload-log__dialog-actions">
-            <button
-              type="button"
-              class="top-product-ranking-upload-log__ghost-button"
-              @click="fullscreen = false"
-            >
-              <Icon icon="mdi:close" />
-              <span>Close</span>
-            </button>
-          </div>
-        </div>
-      </template>
 
       <div class="top-product-ranking-upload-log__workspace top-product-ranking-upload-log__workspace--fullscreen">
         <section class="top-product-ranking-upload-log__station-tabs">
@@ -174,57 +154,34 @@
 
     <AppDialog
       v-model="showTestItemsDialog"
-      :width="testItemsFullscreen ? '98vw' : 'min(96vw, 84rem)'"
+      v-model:fullscreen="testItemsFullscreen"
+      width="min(96vw, 84rem)"
+      fullscreen-width="98vw"
       :breakpoints="dialogBreakpoints"
-      maximizable
-      :closable="false"
+      fullscreenable
+      title="Test Items Details"
+      description="Inspect the selected DUT record, save it, or compare it with iPLAS."
       class="top-product-ranking-upload-log__dialog"
     >
-      <template #header>
-        <div class="top-product-ranking-upload-log__dialog-header">
-          <div>
-            <p class="top-product-ranking-upload-log__eyebrow">Detail Review</p>
-            <h2>Test Items Details</h2>
-            <p v-if="selectedRankingItem">Inspect the selected DUT record, save it, or compare it with iPLAS.</p>
-          </div>
-
-          <div class="top-product-ranking-upload-log__dialog-actions">
-            <button
-              type="button"
-              class="top-product-ranking-upload-log__ghost-button"
-              :disabled="savingToDb"
-              @click="saveSingleToDatabase"
-            >
-              <Icon :icon="savingToDb ? 'mdi:loading' : 'mdi:database-plus'" :class="{ 'top-product-ranking-upload-log__spin': savingToDb }" />
-              <span>{{ savingToDb ? 'Saving...' : 'Save to DB' }}</span>
-            </button>
-            <button
-              v-if="selectedRankingItem?.isn"
-              type="button"
-              class="top-product-ranking-upload-log__ghost-button"
-              @click="openIplasCompare"
-            >
-              <Icon icon="mdi:compare-horizontal" />
-              <span>Compare iPLAS</span>
-            </button>
-            <button
-              type="button"
-              class="top-product-ranking-upload-log__ghost-button"
-              @click="testItemsFullscreen = !testItemsFullscreen"
-            >
-              <Icon :icon="testItemsFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" />
-              <span>{{ testItemsFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }}</span>
-            </button>
-            <button
-              type="button"
-              class="top-product-ranking-upload-log__ghost-button"
-              @click="showTestItemsDialog = false"
-            >
-              <Icon icon="mdi:close" />
-              <span>Close</span>
-            </button>
-          </div>
-        </div>
+      <template #header-actions>
+        <button
+          type="button"
+          class="app-dialog__header-btn"
+          :disabled="savingToDb"
+          :title="savingToDb ? 'Saving...' : 'Save to DB'"
+          @click="saveSingleToDatabase"
+        >
+          <Icon :icon="savingToDb ? 'mdi:loading' : 'solar:database-bold-duotone'" :class="{ 'top-product-ranking-upload-log__spin': savingToDb }" />
+        </button>
+        <button
+          v-if="selectedRankingItem?.isn"
+          type="button"
+          class="app-dialog__header-btn"
+          title="Compare iPLAS"
+          @click="openIplasCompare"
+        >
+          <Icon icon="solar:transfer-horizontal-bold-duotone" />
+        </button>
       </template>
 
       <div v-if="selectedRankingItem" class="top-product-ranking-upload-log__details-shell">
@@ -369,39 +326,15 @@
 
     <AppDialog
       v-model="showBreakdownDialog"
-      :width="breakdownFullscreen ? '96vw' : 'min(94vw, 44rem)'"
+      v-model:fullscreen="breakdownFullscreen"
+      width="min(94vw, 44rem)"
+      fullscreen-width="96vw"
       :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
-      :closable="false"
+      fullscreenable
+      :title="selectedTestItem?.test_item || 'Score Breakdown'"
+      description="Review the applied scoring inputs and final score for this test item."
       class="top-product-ranking-upload-log__dialog"
     >
-      <template #header>
-        <div class="top-product-ranking-upload-log__dialog-header">
-          <div>
-            <p class="top-product-ranking-upload-log__eyebrow">Score Breakdown</p>
-            <h2>{{ selectedTestItem?.test_item || 'Score Breakdown' }}</h2>
-            <p v-if="selectedTestItem">Review the applied scoring inputs and final score for this test item.</p>
-          </div>
-
-          <div class="top-product-ranking-upload-log__dialog-actions">
-            <button
-              type="button"
-              class="top-product-ranking-upload-log__ghost-button"
-              @click="breakdownFullscreen = !breakdownFullscreen"
-            >
-              <Icon :icon="breakdownFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" />
-              <span>{{ breakdownFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }}</span>
-            </button>
-            <button
-              type="button"
-              class="top-product-ranking-upload-log__ghost-button"
-              @click="showBreakdownDialog = false"
-            >
-              <Icon icon="mdi:close" />
-              <span>Close</span>
-            </button>
-          </div>
-        </div>
-      </template>
 
       <div v-if="selectedTestItem?.score_breakdown" class="top-product-ranking-upload-log__breakdown-shell">
         <section class="top-product-ranking-upload-log__summary-grid">
@@ -464,18 +397,10 @@
       v-model="showCustomInput"
       width="min(92vw, 28rem)"
       :breakpoints="{ '640px': '100vw' }"
-      :closable="false"
+      title="Custom Items Per Page"
+      description="Choose how many ranking rows to show per page."
       class="top-product-ranking-upload-log__dialog"
     >
-      <template #header>
-        <div class="top-product-ranking-upload-log__dialog-header">
-          <div>
-            <p class="top-product-ranking-upload-log__eyebrow">Pagination</p>
-            <h2>Custom Items Per Page</h2>
-            <p>Choose how many ranking rows to show per page.</p>
-          </div>
-        </div>
-      </template>
 
       <div class="top-product-ranking-upload-log__custom-dialog">
         <label class="top-product-ranking-upload-log__field">

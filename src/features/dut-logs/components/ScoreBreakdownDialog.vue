@@ -3,32 +3,10 @@
     v-model="dialogOpen"
     width="min(94vw, 56rem)"
     :breakpoints="dialogBreakpoints"
-    :closable="false"
+    title="Score Breakdown"
+    description="Inspect the active formula, thresholds, and calculation inputs for this test item."
     class="score-breakdown-dialog"
   >
-    <template #header>
-      <div class="score-breakdown-dialog__header">
-        <div class="score-breakdown-dialog__header-copy">
-          <span class="score-breakdown-dialog__header-icon">
-            <Icon icon="mdi:calculator" />
-          </span>
-          <div>
-            <p class="score-breakdown-dialog__eyebrow">Scoring Detail</p>
-            <h2>Score Breakdown</h2>
-            <p v-if="item && item.score_breakdown">Inspect the active formula, thresholds, and calculation inputs for this test item.</p>
-          </div>
-        </div>
-
-        <button
-          type="button"
-          class="score-breakdown-dialog__button score-breakdown-dialog__button--ghost"
-          @click="dialogOpen = false"
-        >
-          <Icon icon="mdi:close" />
-          <span>Close</span>
-        </button>
-      </div>
-    </template>
 
     <div v-if="item && item.score_breakdown" class="score-breakdown-dialog__body">
       <section class="score-breakdown-dialog__summary-grid">

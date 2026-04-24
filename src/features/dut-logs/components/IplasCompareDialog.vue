@@ -1,45 +1,15 @@
 <template>
   <AppDialog
     v-model="dialogOpen"
-    :width="isFullscreen ? '98vw' : 'min(96vw, 88rem)'"
+    v-model:fullscreen="isFullscreen"
+    width="min(96vw, 88rem)"
+    fullscreen-width="98vw"
     :breakpoints="dialogBreakpoints"
-    maximizable
-    :closable="false"
+    fullscreenable
+    :title="`Compare With iPLAS${isn ? ` - ${isn}` : ''}`"
+    description="Review uploaded measurements against iPLAS values, re-score both sides with the same rules, and export the aligned result set."
     class="iplas-compare-dialog"
   >
-    <template #header>
-      <div class="iplas-compare-dialog__header">
-        <div class="iplas-compare-dialog__header-copy">
-          <span class="iplas-compare-dialog__header-icon">
-            <Icon icon="mdi:compare-horizontal" />
-          </span>
-          <div>
-            <p class="iplas-compare-dialog__eyebrow">Upload Log Cross-Check</p>
-            <h2>Compare With iPLAS{{ isn ? ` - ${isn}` : '' }}</h2>
-            <p>Review uploaded measurements against iPLAS values, re-score both sides with the same rules, and export the aligned result set.</p>
-          </div>
-        </div>
-
-        <div class="iplas-compare-dialog__header-actions">
-          <button
-            type="button"
-            class="iplas-compare-dialog__button iplas-compare-dialog__button--ghost"
-            @click="isFullscreen = !isFullscreen"
-          >
-            <Icon :icon="isFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" />
-            <span>{{ isFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }}</span>
-          </button>
-          <button
-            type="button"
-            class="iplas-compare-dialog__button iplas-compare-dialog__button--ghost"
-            @click="dialogOpen = false"
-          >
-            <Icon icon="mdi:close" />
-            <span>Close</span>
-          </button>
-        </div>
-      </div>
-    </template>
 
     <div class="iplas-compare-dialog__body" :class="{ 'iplas-compare-dialog__body--fullscreen': isFullscreen }">
       <div v-if="loading" class="iplas-compare-dialog__empty-state">
@@ -206,44 +176,15 @@
 
   <AppDialog
     v-model="showBreakdownDialog"
-    :width="breakdownFullscreen ? '96vw' : 'min(94vw, 42rem)'"
+    v-model:fullscreen="breakdownFullscreen"
+    width="min(94vw, 42rem)"
+    fullscreen-width="96vw"
     :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
-    :closable="false"
+    fullscreenable
+    :title="`${breakdownSource === 'upload' ? 'Uploaded' : 'iPLAS'} Score`"
+    :description="breakdownItem?.test_item ?? 'Score Breakdown'"
     class="iplas-compare-dialog__breakdown-dialog"
   >
-    <template #header>
-      <div class="iplas-compare-dialog__header">
-        <div class="iplas-compare-dialog__header-copy">
-          <span class="iplas-compare-dialog__header-icon">
-            <Icon icon="mdi:calculator-variant" />
-          </span>
-          <div>
-            <p class="iplas-compare-dialog__eyebrow">Score Breakdown</p>
-            <h2>{{ breakdownSource === 'upload' ? 'Uploaded' : 'iPLAS' }} Score</h2>
-            <p v-if="breakdownItem">{{ breakdownItem.test_item }}</p>
-          </div>
-        </div>
-
-        <div class="iplas-compare-dialog__header-actions">
-          <button
-            type="button"
-            class="iplas-compare-dialog__button iplas-compare-dialog__button--ghost"
-            @click="breakdownFullscreen = !breakdownFullscreen"
-          >
-            <Icon :icon="breakdownFullscreen ? 'mdi:fullscreen-exit' : 'mdi:fullscreen'" />
-            <span>{{ breakdownFullscreen ? 'Exit Fullscreen' : 'Fullscreen' }}</span>
-          </button>
-          <button
-            type="button"
-            class="iplas-compare-dialog__button iplas-compare-dialog__button--ghost"
-            @click="showBreakdownDialog = false"
-          >
-            <Icon icon="mdi:close" />
-            <span>Close</span>
-          </button>
-        </div>
-      </div>
-    </template>
 
     <div v-if="breakdownItem" class="iplas-compare-dialog__breakdown-grid">
       <article class="iplas-compare-dialog__summary-card">

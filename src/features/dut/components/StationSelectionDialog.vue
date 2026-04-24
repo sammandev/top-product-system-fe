@@ -3,21 +3,10 @@
     :model-value="internalShow"
     width="min(96vw, 56rem)"
     persistent
-    :closable="false"
+    title="Select Stations"
+    description="Pick the stations you want to configure for the current site and project scope."
     @update:modelValue="internalShow = $event"
   >
-    <template #header>
-      <div class="station-selection-dialog__header">
-        <div class="station-selection-dialog__header-copy">
-          <p class="station-selection-dialog__eyebrow">Station Selection</p>
-          <h2>Select Stations</h2>
-          <span>Pick the stations you want to configure for the current site and project scope.</span>
-        </div>
-        <button type="button" class="station-selection-dialog__icon-button" @click="handleClose">
-          Close
-        </button>
-      </div>
-    </template>
 
     <div class="station-selection-dialog__stack">
       <label class="station-selection-dialog__field">

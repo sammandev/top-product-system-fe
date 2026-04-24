@@ -1,14 +1,9 @@
 <template>
   <div class="top-product-iplas-station-shell">
-    <AppPanel
-      eyebrow="Selection Controls"
-      title="Station Search"
-      description="Choose the site, project, time range, and configured stations before sending the Top Products lookup into the existing scoring and ranking pipeline."
-      tone="cool"
-      split-header
-    >
+    <AppPanel eyebrow="Selection Controls" title="Station Search" tone="cool" split-header>
       <template #header-aside>
-        <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--ghost" @click="emit('show-settings')">
+        <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--ghost"
+          @click="emit('show-settings')">
           iPLAS Settings
         </button>
       </template>
@@ -37,7 +32,8 @@
 
           <label class="top-product-iplas-station-field">
             <span>Project</span>
-            <select v-model="selectedProject" :disabled="!selectedSite || loading || loadingStations" @change="handleProjectChange">
+            <select v-model="selectedProject" :disabled="!selectedSite || loading || loadingStations"
+              @change="handleProjectChange">
               <option :value="null">Select a project</option>
               <option v-for="project in projectsForSelectedSite" :key="project" :value="project">{{ project }}</option>
             </select>
@@ -48,7 +44,8 @@
           <label class="top-product-iplas-station-field">
             <span>Date Range Preset</span>
             <select v-model="dateRangePreset" @change="applyDateRangePreset()">
-              <option v-for="preset in dateRangePresets" :key="preset.value" :value="preset.value">{{ preset.title }}</option>
+              <option v-for="preset in dateRangePresets" :key="preset.value" :value="preset.value">{{ preset.title }}
+              </option>
             </select>
           </label>
 
@@ -66,14 +63,11 @@
         <div class="top-product-iplas-station-action-card">
           <div>
             <strong>Configure Stations</strong>
-            <p>Use the migrated station dialogs to define device scope, selection rules, and scoring behavior per station.</p>
+            <p>Use the migrated station dialogs to define device scope, selection rules, and scoring behavior per
+              station.</p>
           </div>
-          <button
-            type="button"
-            class="top-product-iplas-station-button top-product-iplas-station-button--secondary"
-            :disabled="!selectedSite || !selectedProject || loadingStations"
-            @click="openStationSelectionDialog"
-          >
+          <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--secondary"
+            :disabled="!selectedSite || !selectedProject || loadingStations" @click="openStationSelectionDialog">
             {{ loadingStations ? 'Loading...' : 'Configure Stations' }}
             <strong v-if="configuredStationsCount > 0">{{ configuredStationsCount }}</strong>
           </button>
@@ -88,13 +82,8 @@
           </div>
 
           <div class="top-product-iplas-station-token-grid">
-            <button
-              v-for="(config, displayName) in stationConfigs"
-              :key="displayName"
-              type="button"
-              class="top-product-iplas-station-token-card"
-              @click="editStationConfig(displayName)"
-            >
+            <button v-for="(config, displayName) in stationConfigs" :key="displayName" type="button"
+              class="top-product-iplas-station-token-card" @click="editStationConfig(displayName)">
               <div>
                 <strong>{{ displayName }}</strong>
                 <p>{{ config.deviceIds.length || config.totalDeviceCount || 'All' }} device(s)</p>
@@ -103,17 +92,16 @@
                 <span class="top-product-iplas-station-pill top-product-iplas-station-pill--info">
                   {{ config.deviceIds.length || config.totalDeviceCount || 'All' }} Device(s)
                 </span>
-                <span class="top-product-iplas-station-pill" :class="(config.minimumItemScoreEnabled ?? true) ? 'top-product-iplas-station-pill--warning' : 'top-product-iplas-station-pill--muted'">
-                  {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` : 'Min Off' }}
+                <span class="top-product-iplas-station-pill"
+                  :class="(config.minimumItemScoreEnabled ?? true) ? 'top-product-iplas-station-pill--warning' : 'top-product-iplas-station-pill--muted'">
+                  {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` :
+                  'Min
+                  Off' }}
                 </span>
-                <span
-                  role="button"
-                  tabindex="0"
-                  class="top-product-iplas-station-remove"
+                <span role="button" tabindex="0" class="top-product-iplas-station-remove"
                   @click.stop="removeStationConfig(displayName)"
                   @keydown.enter.stop.prevent="removeStationConfig(displayName)"
-                  @keydown.space.stop.prevent="removeStationConfig(displayName)"
-                >
+                  @keydown.space.stop.prevent="removeStationConfig(displayName)">
                   Remove
                 </span>
               </div>
@@ -122,10 +110,12 @@
         </section>
 
         <div class="top-product-iplas-station-footer-actions">
-          <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--ghost" :disabled="loading" @click="handleClearAll">
+          <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--ghost"
+            :disabled="loading" @click="handleClearAll">
             Clear All
           </button>
-          <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--primary" :disabled="!canFetchData" @click="fetchTestItems">
+          <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--primary"
+            :disabled="!canFetchData" @click="fetchTestItems">
             {{ loadingTestItems ? 'Searching...' : 'Search' }}
           </button>
         </div>
@@ -146,11 +136,10 @@
 
     <!-- Results Section with Ranking Table -->
     <TopProductIplasRanking v-if="testItemData.length > 0" :records="testItemData" :scores="recordScores"
-      :forced-failures="forcedFailures"
-      :calculating-scores="calculatingScores" :loading="loadingTestItems" :exporting-all="exportingAll"
-      @row-click="handleRowClick" @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords"
-      @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores"
-      @save-to-db="handleSaveToDb" />
+      :forced-failures="forcedFailures" :calculating-scores="calculatingScores" :loading="loadingTestItems"
+      :exporting-all="exportingAll" @row-click="handleRowClick" @download="handleDownloadRecord"
+      @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords" @export-all="handleExportAllRecords"
+      @calculate-scores="handleCalculateScores" @save-to-db="handleSaveToDb" />
 
     <!-- Station Selection Dialog -->
     <StationSelectionDialog v-model:show="showStationSelectionDialog" :site="selectedSite || ''"
@@ -163,8 +152,8 @@
       :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
       :loading-devices="loadingCurrentStationDevices" :device-error="deviceError"
       :available-test-items="currentStationTestItems" :test-item-source="currentStationTestItemSource"
-      :loading-test-items="loadingCurrentStationTestItems"
-      :test-items-error="testItemsError" @save="handleStationConfigSave" @remove="handleStationConfigRemove"
+      :loading-test-items="loadingCurrentStationTestItems" :test-items-error="testItemsError"
+      @save="handleStationConfigSave" @remove="handleStationConfigRemove"
       @refresh-devices="refreshCurrentStationDevices" @refresh-test-items="refreshCurrentStationTestItems"
       @change-test-item-source="handleTestItemSourceChange" />
   </div>
@@ -1569,6 +1558,7 @@ onUnmounted(() => {
 }
 
 @media (max-width: 840px) {
+
   .top-product-iplas-station-grid--two,
   .top-product-iplas-station-grid--three,
   .top-product-iplas-station-action-card,
