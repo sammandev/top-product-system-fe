@@ -20,7 +20,7 @@
       <button type="button" class="fullscreen-dialog__download-button" :disabled="downloading"
         :title="downloading ? 'Downloading...' : 'Download'" @click="handleDownload">
         <Icon :icon="downloading ? 'mdi:loading' : 'solar:download-minimalistic-bold-duotone'" :class="{ 'fullscreen-dialog__spin': downloading }" />
-        <span>{{ downloading ? 'Downloading...' : 'Download' }}</span>
+        <span>{{ downloading ? 'DOWNLOADING...' : 'DOWNLOAD' }}</span>
       </button>
     </template>
 
@@ -612,6 +612,42 @@ watch(
   flex-shrink: 0;
 }
 
+/* ── Blue header ── */
+:deep(.fullscreen-dialog .p-dialog-header) {
+  background: #2196f3;
+  border-bottom-color: #1e88e5;
+}
+
+:deep(.fullscreen-dialog .app-dialog__header) {
+  color: #fff;
+}
+
+.fullscreen-dialog .fullscreen-dialog__dialog-title h2 {
+  color: #fff;
+}
+
+.fullscreen-dialog .fullscreen-dialog__dialog-title :deep(svg) {
+  color: #fff;
+}
+
+:deep(.fullscreen-dialog .app-dialog__header-btn) {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+:deep(.fullscreen-dialog .app-dialog__header-btn:hover) {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+}
+
+:deep(.fullscreen-dialog .app-dialog__header-btn--close:hover) {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+}
+
 .fullscreen-dialog__header-copy h2 {
   margin: 0.2rem 0;
   color: var(--app-ink);
@@ -710,7 +746,12 @@ watch(
 
 .fullscreen-dialog__download-button {
   font-weight: 700;
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
+  border: 1.5px solid #fff;
+  background: transparent;
+  color: #fff;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
 }
 
 .fullscreen-dialog__button--ghost {

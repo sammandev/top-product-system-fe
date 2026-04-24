@@ -25,7 +25,7 @@
         @click="handleDownload"
       >
         <Icon :icon="downloading ? 'mdi:loading' : 'solar:download-minimalistic-bold-duotone'" :class="{ 'iplas-details-dialog__spin': downloading }" />
-        <span>{{ downloading ? 'Downloading...' : 'Download' }}</span>
+        <span>{{ downloading ? 'DOWNLOADING...' : 'DOWNLOAD' }}</span>
       </button>
     </template>
 
@@ -328,7 +328,7 @@
     v-model="showBreakdownDialog"
     width="min(92vw, 34rem)"
     persistent
-    :show-footer="false"
+    class="iplas-details-dialog iplas-breakdown-dialog"
   >
     <template #header>
       <div class="iplas-details-dialog__dialog-title">
@@ -338,32 +338,19 @@
     </template>
 
     <div v-if="selectedTestItem" class="iplas-details-subdialog">
-      <section class="iplas-details-dialog__breakdown-hero">
-        <div>
-          <p class="iplas-details-dialog__eyebrow">Selected Test Item</p>
-          <h3>{{ selectedTestItem.NAME }}</h3>
-          <p class="iplas-details-dialog__muted">Thresholds, target selection, and weighted score are shown below.</p>
-        </div>
-        <div class="iplas-details-dialog__breakdown-hero-score">
-          <span class="iplas-details-dialog__metric-label">Final Score</span>
-          <span class="iplas-details-dialog__score-chip" :class="`iplas-details-dialog__score-chip--${scoreTone(selectedTestItem.score ?? 0)}`">
-            {{ selectedTestItem.score !== undefined ? formatScoreValue(selectedTestItem.score) : '-' }}
-          </span>
-        </div>
+      <section class="iplas-breakdown__name-card">
+        <span class="iplas-breakdown__name-text">{{ selectedTestItem.NAME }}</span>
       </section>
 
-      <section class="iplas-details-dialog__breakdown-list">
-        <article v-for="row in breakdownRows" :key="row.key" class="iplas-details-dialog__breakdown-item">
-          <div class="iplas-details-dialog__breakdown-main">
-            <span class="iplas-details-dialog__breakdown-icon">
-              <Icon :icon="getBreakdownItemIcon(row.key, row.valueTone)" />
+      <section class="iplas-breakdown__rows-container">
+        <div v-for="row in breakdownRows" :key="row.key" class="iplas-breakdown__row">
+          <div class="iplas-breakdown__row-left">
+            <span class="iplas-breakdown__row-icon" :class="getBreakdownIconClass(row)">
+              <Icon :icon="getBreakdownRowIcon(row)" />
             </span>
-            <div class="iplas-details-dialog__breakdown-copy">
-              <span class="iplas-details-dialog__breakdown-label">{{ row.label }}</span>
-              <span class="iplas-details-dialog__muted">{{ getBreakdownItemHint(row.key, row.valueTone) }}</span>
-            </div>
+            <span class="iplas-breakdown__row-label">{{ row.label }}</span>
           </div>
-          <div class="iplas-details-dialog__breakdown-value">
+          <div class="iplas-breakdown__row-right">
             <span
               v-if="row.valueTone === 'score'"
               class="iplas-details-dialog__score-chip"
@@ -371,20 +358,17 @@
             >
               {{ row.value }}
             </span>
-            <span v-else-if="row.valueTone === 'algorithm'" class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
+            <span v-else-if="row.valueTone === 'algorithm'" class="iplas-breakdown__value-pill iplas-breakdown__value-pill--cool">
               {{ row.value }}
             </span>
-            <span v-else-if="row.valueTone === 'policy'" class="iplas-details-dialog__pill iplas-details-dialog__pill--neutral">
+            <span v-else-if="row.valueTone === 'policy'" class="iplas-breakdown__value-pill iplas-breakdown__value-pill--neutral">
               {{ row.value }}
             </span>
-            <span v-else-if="row.valueTone === 'warning'" class="iplas-details-dialog__score-chip iplas-details-dialog__score-chip--danger">
-              {{ row.value }}
-            </span>
-            <span v-else class="iplas-details-dialog__breakdown-text-value">
+            <span v-else :class="[row.valueTone === 'warning' ? 'iplas-breakdown__value--warning' : '', 'iplas-breakdown__value-text']">
               {{ row.value }}
             </span>
           </div>
-        </article>
+        </div>
       </section>
 
       <details class="iplas-details-dialog__explanation-card">
@@ -393,28 +377,24 @@
         </summary>
         <div class="iplas-details-dialog__explanation-body">
           <p>{{ getScoringExplanation(selectedTestItem.scoringType) }}</p>
-          <div class="iplas-details-dialog__notice iplas-details-dialog__notice--info">
-            <strong>Formula</strong>
-            <code>{{ getScoringFormula(selectedTestItem.scoringType) }}</code>
-          </div>
-          <div class="iplas-details-dialog__range-copy">
-            <strong>Score Range:</strong> 0.00 - 10.00
-            <ul>
-              <li><strong>10.00</strong> = At target (best possible)</li>
-              <li><strong>1.00</strong> = At UCL/LCL boundary (limit score)</li>
-              <li><strong>0.00</strong> = Outside limits (failed)</li>
-            </ul>
-          </div>
         </div>
       </details>
     </div>
 
+    <template #footer>
+      <div class="iplas-details-dialog__footer-actions">
+        <button type="button" class="iplas-details-dialog__button iplas-details-dialog__button--ghost" @click="showBreakdownDialog = false">
+          CLOSE
+        </button>
+      </div>
+    </template>
   </AppDialog>
 
   <AppDialog
     v-model="showOverallScoreDialog"
     width="min(92vw, 40rem)"
     :show-footer="false"
+    class="iplas-details-dialog"
   >
     <template #header>
       <div class="iplas-details-dialog__dialog-title">
@@ -425,61 +405,53 @@
 
     <div v-if="record && scoreSummaryPrimary && overallScoreExplanation" class="iplas-details-subdialog">
       <div class="score-explanation-primary">
-        <div class="iplas-details-dialog__score-overview">
-          <div>
-            <div class="iplas-details-dialog__metric-label">{{ scoreSummaryLabel }}</div>
-            <div class="score-explanation-primary__score" :class="getScoreColorClass(scoreSummaryPrimary.score)">
-              {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}
-            </div>
-            <div class="iplas-details-dialog__metric-caption">Weighted average of all scored test items.</div>
+        <div>
+          <div class="iplas-details-dialog__metric-label">{{ scoreSummaryLabel }}</div>
+          <div class="score-explanation-primary__score" :class="getScoreColorClass(scoreSummaryPrimary.score)">
+            {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}
           </div>
-          <span v-if="record.isForcedFailure" class="iplas-details-dialog__pill iplas-details-dialog__pill--danger">Min. Score Fail</span>
-        </div>
-        <div v-if="scoreSummarySecondaryText" class="iplas-details-dialog__metric-secondary">
-          {{ scoreSummarySecondaryText }}
+          <div class="iplas-details-dialog__metric-caption">Weighted average of all scored test items.</div>
         </div>
       </div>
 
-      <div class="iplas-details-dialog__overall-grid">
-        <div class="score-formula-panel">
-          <div class="iplas-details-dialog__metric-label">Formula</div>
-          <div class="score-formula-equation">Aggregate = sum(item score × effective weight) / sum(effective weight)</div>
-          <div class="score-formula-steps">
-            <div class="score-formula-step">
-              <div class="score-formula-step__index">1</div>
-              <div>
-                <div>Convert each configured weight into an effective weight.</div>
-                <div class="iplas-details-dialog__muted">Effective weight = configured weight × configured weight.</div>
-              </div>
+      <div class="score-formula-panel">
+        <div class="iplas-details-dialog__metric-label">Formula</div>
+        <div class="score-formula-equation">Aggregate = sum(item score × effective weight) / sum(effective weight)</div>
+        <div class="score-formula-steps">
+          <div class="score-formula-step">
+            <div class="score-formula-step__index">1</div>
+            <div>
+              <div>Convert each configured weight into an effective weight.</div>
+              <div class="iplas-details-dialog__muted">Effective weight = configured weight × configured weight.</div>
             </div>
-            <div class="score-formula-step">
-              <div class="score-formula-step__index">2</div>
-              <div>
-                <div>Use only test items that actually have a score.</div>
-                <div class="iplas-details-dialog__muted">Each scored item contributes score × effective weight to the numerator.</div>
-              </div>
+          </div>
+          <div class="score-formula-step">
+            <div class="score-formula-step__index">2</div>
+            <div>
+              <div>Use only test items that actually have a score.</div>
+              <div class="iplas-details-dialog__muted">Each scored item contributes score × effective weight to the numerator.</div>
             </div>
-            <div class="score-formula-step">
-              <div class="score-formula-step__index">3</div>
-              <div>
-                <div>Divide by the total effective weight, then display the result on a /10 scale.</div>
-                <div class="iplas-details-dialog__muted">The backend stores and averages scores on a 0-1 scale before the UI formats them as /10.</div>
-              </div>
+          </div>
+          <div class="score-formula-step">
+            <div class="score-formula-step__index">3</div>
+            <div>
+              <div>Divide by the total effective weight, then display the result on a /10 scale.</div>
+              <div class="iplas-details-dialog__muted">The backend stores and averages scores on a 0-1 scale before the UI formats them as /10.</div>
             </div>
           </div>
         </div>
+      </div>
 
-        <div class="iplas-details-dialog__stats-grid">
-          <div class="score-explanation-stat">
-            <div class="iplas-details-dialog__metric-label">Scored Test Items</div>
-            <div class="iplas-details-dialog__stat-value">{{ overallScoreExplanation.scoredItemCount }}</div>
-            <div class="iplas-details-dialog__muted">{{ overallScoreExplanation.valueItemCount }} value, {{ overallScoreExplanation.binaryItemCount }} binary</div>
-          </div>
-          <div class="score-explanation-stat">
-            <div class="iplas-details-dialog__metric-label">Total Effective Weight</div>
-            <div class="iplas-details-dialog__stat-value">{{ formatCompactNumber(overallScoreExplanation.totalEffectiveWeight) }}</div>
-            <div class="iplas-details-dialog__muted">Based on squared per-item weights.</div>
-          </div>
+      <div class="iplas-details-dialog__stats-row">
+        <div class="score-explanation-stat">
+          <div class="iplas-details-dialog__metric-label">Scored Test Items</div>
+          <div class="iplas-details-dialog__stat-value">{{ overallScoreExplanation.scoredItemCount }}</div>
+          <div class="iplas-details-dialog__muted">{{ overallScoreExplanation.valueItemCount }} value, {{ overallScoreExplanation.binaryItemCount }} binary</div>
+        </div>
+        <div class="score-explanation-stat">
+          <div class="iplas-details-dialog__metric-label">Total Effective Weight</div>
+          <div class="iplas-details-dialog__stat-value">{{ formatCompactNumber(overallScoreExplanation.totalEffectiveWeight) }}</div>
+          <div class="iplas-details-dialog__muted">Based on squared per-item weights.</div>
         </div>
       </div>
 
@@ -861,6 +833,26 @@ const breakdownRows = computed<BreakdownGridRow[]>(() => {
 
   const rows: BreakdownGridRow[] = [
     {
+      key: 'ucl',
+      label: 'Upper Criteria Limit (UCL)',
+      value: item.UCL || '-',
+    },
+    {
+      key: 'lcl',
+      label: 'Lower Criteria Limit (LCL)',
+      value: item.LCL || '-',
+    },
+    {
+      key: 'actual',
+      label: 'Measured Value',
+      value: item.VALUE || '-',
+    },
+    {
+      key: 'target',
+      label: `Target (${getTargetLabel(item)})`,
+      value: computeTarget(item),
+    },
+    {
       key: 'scoringType',
       label: 'Scoring Algorithm',
       value: formatScoringType(item.scoringType),
@@ -871,41 +863,12 @@ const breakdownRows = computed<BreakdownGridRow[]>(() => {
       label: 'Score Weight',
       value: formatWeight(item.weight),
     },
-    {
-      key: 'target',
-      label: `Target (${getTargetLabel(item)})`,
-      value: computeTarget(item),
-    },
-    {
-      key: 'actual',
-      label: 'Measured Value',
-      value: item.VALUE || '-',
-    },
-    {
-      key: 'ucl',
-      label: 'Upper Criteria Limit (UCL)',
-      value: item.UCL || '-',
-    },
-    {
-      key: 'lcl',
-      label: 'Lower Criteria Limit (LCL)',
-      value: item.LCL || '-',
-    },
   ]
-
-  if (item.policy) {
-    rows.push({
-      key: 'policy',
-      label: 'Policy',
-      value: formatPolicyLabel(item.policy),
-      valueTone: 'policy',
-    })
-  }
 
   if (item.deviation !== undefined) {
     rows.push({
       key: 'deviation',
-      label: 'Deviation From Target',
+      label: 'Deviation from Target',
       value: item.deviation.toFixed(2),
       valueTone: Math.abs(item.deviation) > 1 ? 'warning' : undefined,
     })
@@ -917,6 +880,15 @@ const breakdownRows = computed<BreakdownGridRow[]>(() => {
     value: item.score !== undefined ? formatScoreValue(item.score) : '-',
     valueTone: 'score',
   })
+
+  if (item.policy) {
+    rows.splice(rows.length - 1, 0, {
+      key: 'policy',
+      label: 'Policy',
+      value: formatPolicyLabel(item.policy),
+      valueTone: 'policy',
+    })
+  }
 
   return rows
 })
@@ -975,38 +947,34 @@ function scoreTone(score: number): 'success' | 'primary' | 'warning' | 'danger' 
   return 'danger'
 }
 
-function getBreakdownItemIcon(key: string, valueTone?: BreakdownGridRow['valueTone']): string {
-  if (valueTone === 'score') return 'mdi:chart-line'
-  if (valueTone === 'algorithm') return 'mdi:function-variant'
-  if (valueTone === 'policy') return 'mdi:shield-check-outline'
-
-  const iconByKey: Record<string, string> = {
-    measuredValue: 'mdi:ruler-square-compass',
-    targetValue: 'mdi:target',
-    toleranceWindow: 'mdi:tune-variant',
+function getBreakdownRowIcon(row: BreakdownGridRow): string {
+  const iconMap: Record<string, string> = {
+    ucl: 'mdi:arrow-up-bold',
+    lcl: 'mdi:arrow-down-bold',
+    actual: 'mdi:speedometer',
+    target: 'mdi:crosshairs-gps',
+    scoringType: 'mdi:function-variant',
+    weight: 'mdi:weight',
     deviation: 'mdi:delta',
-    unit: 'mdi:alpha-u-circle-outline',
-    weighting: 'mdi:scale-balance',
+    score: 'mdi:star',
+    policy: 'mdi:shield-check-outline',
   }
-
-  return iconByKey[key] ?? 'mdi:information-slab-circle-outline'
+  return iconMap[row.key] ?? 'mdi:information-outline'
 }
 
-function getBreakdownItemHint(key: string, valueTone?: BreakdownGridRow['valueTone']): string {
-  if (valueTone === 'score') return 'The normalized contribution for this test item.'
-  if (valueTone === 'algorithm') return 'The scoring method used to transform the measured value.'
-  if (valueTone === 'policy') return 'The selection rule used when multiple targets exist.'
-
-  const hintByKey: Record<string, string> = {
-    measuredValue: 'Raw value captured from the station output.',
-    targetValue: 'Reference value used as the best-case point.',
-    toleranceWindow: 'Passing range derived from LCL and UCL.',
-    deviation: 'Distance between the measured value and the target.',
-    unit: 'Reported engineering unit from the original record.',
-    weighting: 'Relative importance used in the overall score.',
+function getBreakdownIconClass(row: BreakdownGridRow): string {
+  const classMap: Record<string, string> = {
+    ucl: 'iplas-breakdown__row-icon--red',
+    lcl: 'iplas-breakdown__row-icon--orange',
+    actual: 'iplas-breakdown__row-icon--blue',
+    target: 'iplas-breakdown__row-icon--green',
+    scoringType: 'iplas-breakdown__row-icon--purple',
+    weight: 'iplas-breakdown__row-icon--muted',
+    deviation: 'iplas-breakdown__row-icon--amber',
+    score: 'iplas-breakdown__row-icon--star',
+    policy: 'iplas-breakdown__row-icon--muted',
   }
-
-  return hintByKey[key] ?? 'Supporting detail for how the final score was derived.'
+  return classMap[row.key] ?? ''
 }
 
 function scoreTableRowClass(): string {
@@ -1579,6 +1547,42 @@ watch(
   flex-shrink: 0;
 }
 
+/* ── Blue header for all iPLAS dialogs ── */
+:deep(.iplas-details-dialog .p-dialog-header) {
+  background: #2196f3;
+  border-bottom-color: #1e88e5;
+}
+
+:deep(.iplas-details-dialog .app-dialog__header) {
+  color: #fff;
+}
+
+.iplas-details-dialog .iplas-details-dialog__dialog-title h2 {
+  color: #fff;
+}
+
+.iplas-details-dialog .iplas-details-dialog__dialog-title :deep(svg) {
+  color: #fff;
+}
+
+:deep(.iplas-details-dialog .app-dialog__header-btn) {
+  border-color: rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+:deep(.iplas-details-dialog .app-dialog__header-btn:hover) {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+}
+
+:deep(.iplas-details-dialog .app-dialog__header-btn--close:hover) {
+  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.55);
+  color: #fff;
+}
+
 .iplas-details-dialog__header-copy p,
 .iplas-details-dialog__metric-caption,
 .iplas-details-dialog__metric-secondary,
@@ -1690,21 +1694,22 @@ watch(
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  min-height: 2.4rem;
-  padding: 0.55rem 0.85rem;
-  border: 1px solid var(--iplas-border);
-  border-radius: 0.75rem;
-  background: var(--iplas-panel);
-  color: var(--iplas-ink);
+  min-height: 2.2rem;
+  padding: 0.4rem 0.9rem;
+  border: 1.5px solid #fff;
+  border-radius: 0.5rem;
+  background: transparent;
+  color: #fff;
   font: inherit;
+  font-size: 0.78rem;
   font-weight: 700;
+  letter-spacing: 0.04em;
   cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+  transition: background-color 0.15s ease, transform 0.15s ease;
 }
 
 .iplas-details-dialog__download-button:hover {
-  border-color: var(--app-info-line);
-  background: var(--app-panel-strong);
+  background: rgba(255, 255, 255, 0.15);
   transform: translateY(-1px);
 }
 
@@ -2009,52 +2014,106 @@ watch(
   color: var(--app-info);
 }
 
-.iplas-details-dialog__breakdown-list {
-  display: grid;
-  gap: 0.75rem;
-}
-
-.iplas-details-dialog__breakdown-item {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.9rem;
+/* ── Score Breakdown bordered-list ── */
+.iplas-breakdown__name-card {
+  padding: 0.9rem 1rem;
   border: 1px solid var(--iplas-border);
   border-radius: 0.9rem;
   background: var(--iplas-panel);
 }
 
-.iplas-details-dialog__breakdown-main,
-.iplas-details-dialog__breakdown-value {
+.iplas-breakdown__name-text {
+  color: var(--app-info);
+  font-weight: 700;
+  font-size: 0.95rem;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.iplas-breakdown__rows-container {
+  border: 1px solid var(--iplas-border);
+  border-radius: 0.9rem;
+  background: var(--iplas-panel);
+  overflow: hidden;
+}
+
+.iplas-breakdown__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--iplas-border);
+}
+
+.iplas-breakdown__row:last-child {
+  border-bottom: 0;
+}
+
+.iplas-breakdown__row-left {
   display: flex;
   align-items: center;
   gap: 0.85rem;
   min-width: 0;
 }
 
-.iplas-details-dialog__breakdown-copy {
-  display: grid;
-  gap: 0.24rem;
-  min-width: 0;
-}
-
-.iplas-details-dialog__breakdown-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.25rem;
-  height: 2.25rem;
-  border-radius: 0.75rem;
-  background: var(--app-info-soft);
-  color: var(--app-info);
+.iplas-breakdown__row-right {
   flex-shrink: 0;
 }
 
-.iplas-details-dialog__breakdown-text-value {
+.iplas-breakdown__row-label {
+  color: var(--iplas-ink);
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+
+.iplas-breakdown__row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex-shrink: 0;
+  font-size: 1.05rem;
+  color: var(--app-muted);
+}
+
+.iplas-breakdown__row-icon--red { color: #ef4444; }
+.iplas-breakdown__row-icon--orange { color: #f97316; }
+.iplas-breakdown__row-icon--blue { color: #2196f3; }
+.iplas-breakdown__row-icon--green { color: #22c55e; }
+.iplas-breakdown__row-icon--purple { color: #8b5cf6; }
+.iplas-breakdown__row-icon--amber { color: #eab308; }
+.iplas-breakdown__row-icon--muted { color: var(--app-muted); }
+.iplas-breakdown__row-icon--star { color: #2196f3; }
+
+.iplas-breakdown__value-text {
   color: var(--iplas-ink);
   font-weight: 700;
-  overflow-wrap: anywhere;
+  font-variant-numeric: tabular-nums;
+}
+
+.iplas-breakdown__value--warning {
+  color: var(--app-danger);
+}
+
+.iplas-breakdown__value-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.iplas-breakdown__value-pill--cool {
+  background: var(--app-info-soft);
+  color: var(--app-info);
+}
+
+.iplas-breakdown__value-pill--neutral {
+  background: rgba(95, 103, 122, 0.1);
+  color: var(--app-muted);
 }
 
 .iplas-details-dialog__score-chip--danger {
@@ -2393,23 +2452,10 @@ watch(
   overflow-wrap: anywhere;
 }
 
-@media (max-width: 720px) {
-  .iplas-details-dialog__breakdown-item {
-    align-items: flex-start;
-    flex-direction: column;
-  }
-
-  .iplas-details-dialog__breakdown-value {
-    width: 100%;
-    justify-content: flex-start;
-  }
-}
-
-.iplas-details-dialog__overall-grid {
+.iplas-details-dialog__stats-row {
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.85fr);
-  align-items: start;
 }
 
 @media (max-width: 840px) {
@@ -2430,7 +2476,7 @@ watch(
   .iplas-details-dialog__metadata-grid,
   .iplas-details-dialog__stats-grid,
   .iplas-details-dialog__score-filter-grid,
-  .iplas-details-dialog__overall-grid {
+  .iplas-details-dialog__stats-row {
     grid-template-columns: 1fr;
   }
 
