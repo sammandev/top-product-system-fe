@@ -93,117 +93,136 @@
         </article>
       </section>
 
-      <section class="iplas-details-dialog__meta-pills">
-        <span class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
-          <Icon icon="mdi:calendar-clock" />
-          <strong>Start:</strong>
-          <span>{{ formatTime(record.testStartTime) }}</span>
-        </span>
-        <span class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
-          <Icon icon="mdi:calendar-check" />
-          <strong>End:</strong>
-          <span>{{ formatTime(record.testEndTime) }}</span>
-        </span>
-        <span class="iplas-details-dialog__pill iplas-details-dialog__pill--neutral">
-          <Icon icon="mdi:timer" />
-          <strong>Duration:</strong>
-          <span>{{ calculateDuration(record.testStartTime, record.testEndTime) }}</span>
-        </span>
-        <span class="iplas-details-dialog__pill iplas-details-dialog__pill--neutral">
-          <Icon icon="mdi:list-box" />
-          <strong>Test Items:</strong>
-          <span>{{ record.testItems?.length || 0 }}</span>
-        </span>
-        <button type="button" class="iplas-details-dialog__pill" :class="statusPillClass(record.errorCode)" @click="copyToClipboard(record.errorCode)">
-          <Icon :icon="isStatusPass(record.errorCode) ? 'mdi:check-circle' : 'mdi:alert-circle'" />
-          <strong>Status:</strong>
-          <span>{{ record.errorCode }}</span>
-        </button>
-        <button
-          v-if="forcedFailSummary"
-          type="button"
-          class="iplas-details-dialog__pill iplas-details-dialog__pill--danger"
-          :class="{ 'iplas-details-dialog__pill--interactive': forcedFailSummary.clickable }"
-          @click="openForcedFailDialog"
-        >
-          <Icon icon="mdi:alert-octagon" />
-          <strong>Forced Fail:</strong>
-          <span>{{ forcedFailSummary.detailText }}</span>
-        </button>
-        <button
-          v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)"
-          type="button"
-          class="iplas-details-dialog__pill iplas-details-dialog__pill--danger"
-          @click="copyToClipboard(record.errorName)"
-        >
-          <Icon icon="mdi:alert-octagon" />
-          <strong>Error:</strong>
-          <span>{{ record.errorName }}</span>
-        </button>
-      </section>
-
-      <section class="iplas-details-dialog__filters">
-        <label class="iplas-details-dialog__field">
-          <span>Search Test Items (Regex)</span>
-          <div class="iplas-details-dialog__token-shell">
-            <div v-if="searchTerms.length > 0" class="iplas-details-dialog__token-list">
-              <button
-                v-for="term in searchTerms"
-                :key="term"
-                type="button"
-                class="iplas-details-dialog__token"
-                @click="removeSearchTerm(term)"
-              >
-                <span>{{ term }}</span>
-                <Icon icon="mdi:close" />
-              </button>
-            </div>
-            <div class="iplas-details-dialog__search-shell">
-              <Icon icon="mdi:magnify" />
-              <input
-                v-model="pendingSearchTerm"
-                type="text"
-                placeholder="Type and press Enter (AND logic)..."
-                @keydown="handleSearchTermKeydown"
-                @blur="commitSearchTerms()"
-              />
-              <button v-if="searchTerms.length > 0 || pendingSearchTerm" type="button" class="iplas-details-dialog__ghost-action" @click="clearSearchTerms">
-                Clear
-              </button>
-            </div>
-          </div>
-        </label>
-
-        <label class="iplas-details-dialog__field">
-          <span>Data Type</span>
-          <div class="iplas-details-dialog__chip-select">
-            <button
-              v-for="option in testItemFilterOptions"
-              :key="option.value"
-              type="button"
-              class="iplas-details-dialog__chip-option"
-              :class="{ 'iplas-details-dialog__chip-option--active': testItemFilter.includes(option.value) }"
-              @click="toggleTestItemFilter(option.value)"
-            >
-              {{ option.title }}
-            </button>
-          </div>
-        </label>
-
-        <div v-if="hasScores" class="iplas-details-dialog__score-filter-grid">
-          <label class="iplas-details-dialog__field">
-            <span>Score Filter</span>
-            <AppSelect v-model="scoreFilterType" :options="scoreFilterSelectOptions" placeholder="No filter"
-              :searchable="false" />
-          </label>
-          <label class="iplas-details-dialog__field">
-            <span>Value (0-10)</span>
-            <input v-model.number="scoreFilterValue" type="number" min="0" max="10" step="0.1" :disabled="!scoreFilterType" placeholder="0.00" />
-          </label>
+      <section class="iplas-details-dialog__results">
+        <div>
+          <p class="iplas-details-dialog__section-eyebrow">Test Results</p>
+          <h3>Execution Summary</h3>
+        </div>
+        <div class="iplas-details-dialog__results-chips">
+          <span class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
+            <Icon icon="mdi:calendar-clock" />
+            <strong>Start:</strong>
+            <span>{{ formatTime(record.testStartTime) }}</span>
+          </span>
+          <span class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
+            <Icon icon="mdi:calendar-check" />
+            <strong>End:</strong>
+            <span>{{ formatTime(record.testEndTime) }}</span>
+          </span>
+          <span class="iplas-details-dialog__pill iplas-details-dialog__pill--neutral">
+            <Icon icon="mdi:timer" />
+            <strong>Duration:</strong>
+            <span>{{ calculateDuration(record.testStartTime, record.testEndTime) }}</span>
+          </span>
+          <span class="iplas-details-dialog__pill iplas-details-dialog__pill--neutral">
+            <Icon icon="mdi:list-box" />
+            <strong>Test Items:</strong>
+            <span>{{ record.testItems?.length || 0 }}</span>
+          </span>
+          <button type="button" class="iplas-details-dialog__pill" :class="statusPillClass(record.errorCode)" @click="copyToClipboard(record.errorCode)">
+            <Icon :icon="isStatusPass(record.errorCode) ? 'mdi:check-circle' : 'mdi:alert-circle'" />
+            <strong>Status:</strong>
+            <span>{{ record.errorCode }}</span>
+          </button>
+          <button
+            v-if="forcedFailSummary"
+            type="button"
+            class="iplas-details-dialog__pill iplas-details-dialog__pill--danger"
+            :class="{ 'iplas-details-dialog__pill--interactive': forcedFailSummary.clickable }"
+            @click="openForcedFailDialog"
+          >
+            <Icon icon="mdi:alert-octagon" />
+            <strong>Forced Fail:</strong>
+            <span>{{ forcedFailSummary.detailText }}</span>
+          </button>
+          <button
+            v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)"
+            type="button"
+            class="iplas-details-dialog__pill iplas-details-dialog__pill--danger"
+            @click="copyToClipboard(record.errorName)"
+          >
+            <Icon icon="mdi:alert-octagon" />
+            <strong>Error:</strong>
+            <span>{{ record.errorName }}</span>
+          </button>
         </div>
       </section>
 
-      <section class="iplas-details-dialog__table-shell">
+      <section class="iplas-details-dialog__measurements">
+        <div class="iplas-details-dialog__measurements-header">
+          <div>
+            <p class="iplas-details-dialog__section-eyebrow">Measurement Breakdown</p>
+            <h3>Test Items</h3>
+          </div>
+          <div class="iplas-details-dialog__measurements-tools">
+            <span class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
+              {{ tableTestItems.length }} of {{ record.testItems?.length || 0 }}
+            </span>
+          </div>
+        </div>
+
+        <section class="iplas-details-dialog__filters">
+          <label class="iplas-details-dialog__field">
+            <span>Search Test Items (Regex)</span>
+            <div class="iplas-details-dialog__token-shell">
+              <div v-if="searchTerms.length > 0" class="iplas-details-dialog__token-list">
+                <button
+                  v-for="term in searchTerms"
+                  :key="term"
+                  type="button"
+                  class="iplas-details-dialog__token"
+                  @click="removeSearchTerm(term)"
+                >
+                  <span>{{ term }}</span>
+                  <Icon icon="mdi:close" />
+                </button>
+              </div>
+              <div class="iplas-details-dialog__search-shell">
+                <Icon icon="mdi:magnify" />
+                <input
+                  v-model="pendingSearchTerm"
+                  type="text"
+                  placeholder="Type and press Enter (AND logic)..."
+                  @keydown="handleSearchTermKeydown"
+                  @blur="commitSearchTerms()"
+                />
+                <button v-if="searchTerms.length > 0 || pendingSearchTerm" type="button" class="iplas-details-dialog__ghost-action" @click="clearSearchTerms">
+                  Clear
+                </button>
+              </div>
+            </div>
+          </label>
+
+          <label class="iplas-details-dialog__field">
+            <span>Data Type</span>
+            <div class="iplas-details-dialog__chip-select">
+              <button
+                v-for="option in testItemFilterOptions"
+                :key="option.value"
+                type="button"
+                class="iplas-details-dialog__chip-option"
+                :class="{ 'iplas-details-dialog__chip-option--active': testItemFilter.includes(option.value) }"
+                @click="toggleTestItemFilter(option.value)"
+              >
+                {{ option.title }}
+              </button>
+            </div>
+          </label>
+
+          <div v-if="hasScores" class="iplas-details-dialog__score-filter-grid">
+            <label class="iplas-details-dialog__field">
+              <span>Score Filter</span>
+              <AppSelect v-model="scoreFilterType" :options="scoreFilterSelectOptions" placeholder="No filter"
+                :searchable="false" />
+            </label>
+            <label class="iplas-details-dialog__field">
+              <span>Value (0-10)</span>
+              <input v-model.number="scoreFilterValue" type="number" min="0" max="10" step="0.1" :disabled="!scoreFilterType" placeholder="0.00" />
+            </label>
+          </div>
+        </section>
+
+        <section class="iplas-details-dialog__table-shell">
         <div v-if="loadingTestItems" class="iplas-details-dialog__loading-state">
           <Icon icon="mdi:loading" class="iplas-details-dialog__spin" />
           <div>
@@ -251,6 +270,7 @@
             <span v-else class="iplas-details-dialog__muted">-</span>
           </template>
         </AppDataGrid>
+      </section>
       </section>
     </div>
   </AppDialog>
@@ -1630,6 +1650,8 @@ watch(
 
 .iplas-details-dialog__summary-card,
 .iplas-details-dialog__metadata-card,
+.iplas-details-dialog__results,
+.iplas-details-dialog__measurements,
 .score-explanation-stat,
 .score-explanation-primary,
 .score-formula-panel,
@@ -1645,6 +1667,8 @@ watch(
 
 .iplas-details-dialog__summary-card,
 .iplas-details-dialog__metadata-card,
+.iplas-details-dialog__results,
+.iplas-details-dialog__measurements,
 .iplas-details-dialog__notice,
 .score-explanation-stat,
 .score-explanation-primary,
@@ -1658,6 +1682,62 @@ watch(
 .iplas-details-dialog__table-shell {
   padding: 0.55rem 0.55rem 0;
   overflow: hidden;
+}
+
+.iplas-details-dialog__results,
+.iplas-details-dialog__measurements {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.iplas-details-dialog__results {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.iplas-details-dialog__section-eyebrow {
+  margin: 0 0 0.3rem;
+  color: var(--app-info);
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.iplas-details-dialog__results h3,
+.iplas-details-dialog__measurements-header h3 {
+  margin: 0;
+  color: var(--iplas-ink);
+  font-size: 1.02rem;
+}
+
+.iplas-details-dialog__results-chips,
+.iplas-details-dialog__measurements-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  align-items: center;
+}
+
+.iplas-details-dialog__measurements {
+  flex: 1;
+  min-height: 0;
+}
+
+.iplas-details-dialog__measurements-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  gap: 1rem;
+}
+
+.iplas-details-dialog__measurements .iplas-details-dialog__filters {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
 }
 
 .iplas-details-dialog__summary-card--highlight,
@@ -2481,6 +2561,18 @@ watch(
   .iplas-details-dialog__score-filter-grid,
   .iplas-details-dialog__stats-row {
     grid-template-columns: 1fr;
+  }
+
+  .iplas-details-dialog__results,
+  .iplas-details-dialog__measurements-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .iplas-details-dialog__results-chips,
+  .iplas-details-dialog__measurements-tools,
+  .iplas-details-dialog__header-actions {
+    justify-content: flex-start;
   }
 
   .summary-stat-button {
