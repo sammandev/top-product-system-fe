@@ -31,12 +31,7 @@
       </header>
 
       <section class="dashboard-stats-grid" aria-label="Dashboard statistics">
-        <article
-          v-for="stat in decoratedStats"
-          :key="stat.title"
-          class="dashboard-stat-card"
-          :style="stat.cardVars"
-        >
+        <article v-for="stat in decoratedStats" :key="stat.title" class="dashboard-stat-card" :style="stat.cardVars">
           <div class="dashboard-stat-card__top">
             <div>
               <p class="dashboard-section-label">{{ stat.title }}</p>
@@ -66,21 +61,11 @@
                 <p class="dashboard-section-label">Quick Actions</p>
                 <h2 class="dashboard-panel__title">Fast paths into the core workflows</h2>
               </div>
-
-              <span class="dashboard-panel__eyebrow">
-                <Icon icon="mdi:lightning-bolt" />
-                Jump in
-              </span>
             </div>
 
             <div class="dashboard-actions-grid">
-              <RouterLink
-                v-for="action in decoratedQuickActions"
-                :key="action.title"
-                :to="action.path"
-                class="dashboard-action-card"
-                :style="action.cardVars"
-              >
+              <RouterLink v-for="action in decoratedQuickActions" :key="action.title" :to="action.path"
+                class="dashboard-action-card" :style="action.cardVars">
                 <span class="dashboard-icon-badge dashboard-icon-badge--sm">
                   <Icon :icon="action.iconName" />
                 </span>
@@ -89,10 +74,6 @@
                   <h3>{{ action.title }}</h3>
                   <p>{{ action.subtitle }}</p>
                 </div>
-
-                <span class="dashboard-action-card__arrow">
-                  <Icon icon="mdi:arrow-right" />
-                </span>
               </RouterLink>
             </div>
           </article>
@@ -108,12 +89,8 @@
             </div>
 
             <ol class="dashboard-activity-list">
-              <li
-                v-for="(activity, index) in decoratedActivities"
-                :key="`${activity.title}-${index}`"
-                class="dashboard-activity-item"
-                :style="activity.cardVars"
-              >
+              <li v-for="(activity, index) in decoratedActivities" :key="`${activity.title}-${index}`"
+                class="dashboard-activity-item" :style="activity.cardVars">
                 <span class="dashboard-activity-item__marker">
                   <Icon :icon="activity.iconName" />
                 </span>
@@ -140,12 +117,8 @@
             </div>
 
             <ul class="dashboard-status-list">
-              <li
-                v-for="status in decoratedSystemStatus"
-                :key="status.label"
-                class="dashboard-status-item"
-                :style="status.cardVars"
-              >
+              <li v-for="status in decoratedSystemStatus" :key="status.label" class="dashboard-status-item"
+                :style="status.cardVars">
                 <div class="dashboard-status-item__copy">
                   <span class="dashboard-icon-badge dashboard-icon-badge--sm">
                     <Icon :icon="status.iconName" />
@@ -731,6 +704,7 @@ function formatStorageAmount(amount: number) {
 }
 
 @media (max-width: 1200px) {
+
   .dashboard-stats-grid,
   .dashboard-actions-grid,
   .dashboard-main-grid {
@@ -744,6 +718,7 @@ function formatStorageAmount(amount: number) {
 }
 
 @media (max-width: 860px) {
+
   .dashboard-hero,
   .dashboard-panel,
   .dashboard-stat-card {

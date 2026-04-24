@@ -1,21 +1,12 @@
 <template>
   <div class="default-layout" :data-shell-theme="shellTheme">
     <!-- Mobile overlay -->
-    <button
-      v-if="drawer && !isDesktop"
-      aria-label="Close navigation"
-      class="fixed inset-0 z-30 bg-black/40 backdrop-blur-[2px] lg:hidden"
-      type="button"
-      @click="drawer = false"
-    />
+    <button v-if="drawer && !isDesktop" aria-label="Close navigation"
+      class="fixed inset-0 z-30 bg-black/40 backdrop-blur-[2px] lg:hidden" type="button" @click="drawer = false" />
 
     <!-- Sidebar -->
-    <aside
-      class="sidebar"
-      :class="sidebarClasses"
-      @mouseenter="handleSidebarMouseEnter"
-      @mouseleave="handleSidebarMouseLeave"
-    >
+    <aside class="sidebar" :class="sidebarClasses" @mouseenter="handleSidebarMouseEnter"
+      @mouseleave="handleSidebarMouseLeave">
       <div class="sidebar__header">
         <div class="sidebar__logo">
           <Icon icon="solar:atom-bold-duotone" />
@@ -33,32 +24,18 @@
           <template v-for="item in section.items" :key="item.path || item.title">
             <!-- Group with children -->
             <div v-if="item.children">
-              <button
-                class="sidebar__item"
-                :class="{ 'sidebar__item--active': isGroupActive(item) }"
-                type="button"
-                :title="sidebarExpanded ? undefined : item.title"
-                @click="toggleGroup(item)"
-              >
+              <button class="sidebar__item" :class="{ 'sidebar__item--active': isGroupActive(item) }" type="button"
+                :title="sidebarExpanded ? undefined : item.title" @click="toggleGroup(item)">
                 <Icon class="sidebar__item-icon" :icon="normalizeIcon(item.icon)" />
                 <span v-if="sidebarExpanded" class="sidebar__item-label">{{ item.title }}</span>
-                <Icon
-                  v-if="sidebarExpanded"
-                  class="sidebar__item-chevron"
-                  :class="{ 'rotate-180': isGroupOpen(item) }"
-                  icon="solar:alt-arrow-down-linear"
-                />
+                <Icon v-if="sidebarExpanded" class="sidebar__item-chevron" :class="{ 'rotate-180': isGroupOpen(item) }"
+                  icon="solar:alt-arrow-down-linear" />
               </button>
 
               <div v-if="sidebarExpanded && isGroupOpen(item)" class="sidebar__children">
-                <router-link
-                  v-for="child in item.children"
-                  :key="child.path"
-                  class="sidebar__item sidebar__item--child"
-                  :class="{ 'sidebar__item--active': isItemActive(child) }"
-                  :to="child.path || '/'"
-                  @click="handleNavigationSelection"
-                >
+                <router-link v-for="child in item.children" :key="child.path" class="sidebar__item sidebar__item--child"
+                  :class="{ 'sidebar__item--active': isItemActive(child) }" :to="child.path || '/'"
+                  @click="handleNavigationSelection">
                   <Icon class="sidebar__item-icon sidebar__item-icon--sm" :icon="normalizeIcon(child.icon)" />
                   <span class="sidebar__item-label">{{ child.title }}</span>
                 </router-link>
@@ -66,14 +43,9 @@
             </div>
 
             <!-- Single item -->
-            <router-link
-              v-else
-              class="sidebar__item"
-              :class="{ 'sidebar__item--active': isItemActive(item) }"
-              :title="sidebarExpanded ? undefined : item.title"
-              :to="item.path || '/'"
-              @click="handleNavigationSelection"
-            >
+            <router-link v-else class="sidebar__item" :class="{ 'sidebar__item--active': isItemActive(item) }"
+              :title="sidebarExpanded ? undefined : item.title" :to="item.path || '/'"
+              @click="handleNavigationSelection">
               <Icon class="sidebar__item-icon" :icon="normalizeIcon(item.icon)" />
               <span v-if="sidebarExpanded" class="sidebar__item-label">{{ item.title }}</span>
             </router-link>
@@ -82,12 +54,8 @@
       </nav>
 
       <div class="sidebar__footer">
-        <button
-          class="sidebar__collapse-btn"
-          type="button"
-          :title="rail ? 'Expand sidebar' : 'Collapse sidebar'"
-          @click="rail = !rail"
-        >
+        <button class="sidebar__collapse-btn" type="button" :title="rail ? 'Expand sidebar' : 'Collapse sidebar'"
+          @click="rail = !rail">
           <Icon :icon="rail ? 'solar:alt-arrow-right-linear' : 'solar:alt-arrow-left-linear'" />
           <span v-if="sidebarExpanded">Collapse</span>
         </button>
@@ -97,46 +65,28 @@
     <!-- Main area -->
     <div class="main-area">
       <header class="topbar">
-        <button
-          aria-label="Toggle navigation"
-          class="topbar__menu-btn lg:hidden"
-          type="button"
-          @click="drawer = !drawer"
-        >
+        <button aria-label="Toggle navigation" class="topbar__menu-btn lg:hidden" type="button"
+          @click="drawer = !drawer">
           <Icon icon="solar:hamburger-menu-line-duotone" />
         </button>
 
         <!-- Search -->
         <div class="topbar__search">
           <Icon class="topbar__search-icon" icon="solar:magnifer-linear" />
-          <input
-            v-model="searchQuery"
-            class="topbar__search-input"
-            placeholder="Search..."
-            type="text"
-          />
+          <input v-model="searchQuery" class="topbar__search-input" placeholder="Search..." type="text" />
           <kbd v-if="!searchQuery" class="topbar__search-kbd">⌘K</kbd>
         </div>
 
         <div class="topbar__actions">
           <!-- Theme toggle -->
-          <button
-            :aria-label="quickThemeToggleLabel"
-            class="topbar__icon-btn"
-            type="button"
-            @click="toggleTheme"
-          >
+          <button :aria-label="quickThemeToggleLabel" class="topbar__icon-btn" type="button" @click="toggleTheme">
             <Icon :icon="isDark ? 'solar:sun-bold-duotone' : 'solar:moon-stars-bold-duotone'" />
           </button>
 
           <!-- Theme settings -->
           <div class="topbar__dropdown" ref="themeDropdownRef">
-            <button
-              class="topbar__icon-btn"
-              type="button"
-              :title="'Appearance: ' + themeSummaryLabel"
-              @click="themeDropdownOpen = !themeDropdownOpen"
-            >
+            <button class="topbar__icon-btn" type="button" :title="'Appearance: ' + themeSummaryLabel"
+              @click="themeDropdownOpen = !themeDropdownOpen">
               <Icon icon="solar:palette-round-bold-duotone" />
             </button>
 
@@ -145,14 +95,9 @@
                 <div class="dropdown-section">
                   <p class="dropdown-label">Mode</p>
                   <div class="theme-mode-grid">
-                    <button
-                      v-for="option in THEME_MODE_OPTIONS"
-                      :key="option.value"
-                      class="theme-mode-btn"
-                      :class="{ 'theme-mode-btn--active': themePreferences.mode === option.value }"
-                      type="button"
-                      @click="setThemePreference({ mode: option.value })"
-                    >
+                    <button v-for="option in THEME_MODE_OPTIONS" :key="option.value" class="theme-mode-btn"
+                      :class="{ 'theme-mode-btn--active': themePreferences.mode === option.value }" type="button"
+                      @click="setThemePreference({ mode: option.value })">
                       <span class="theme-mode-preview" :style="{ background: option.preview }" />
                       <span>{{ option.label }}</span>
                     </button>
@@ -162,14 +107,9 @@
                 <div class="dropdown-section">
                   <p class="dropdown-label">Preset</p>
                   <div class="theme-preset-grid">
-                    <button
-                      v-for="option in THEME_PRESET_OPTIONS"
-                      :key="option.value"
-                      class="theme-option-btn"
-                      :class="{ 'theme-option-btn--active': themePreferences.preset === option.value }"
-                      type="button"
-                      @click="setThemePreference({ preset: option.value })"
-                    >
+                    <button v-for="option in THEME_PRESET_OPTIONS" :key="option.value" class="theme-option-btn"
+                      :class="{ 'theme-option-btn--active': themePreferences.preset === option.value }" type="button"
+                      @click="setThemePreference({ preset: option.value })">
                       <span class="theme-swatch" :style="{ background: option.preview }" />
                       <span>{{ option.label }}</span>
                     </button>
@@ -179,15 +119,9 @@
                 <div class="dropdown-section">
                   <p class="dropdown-label">Primary Color</p>
                   <div class="theme-color-grid">
-                    <button
-                      v-for="option in THEME_PRIMARY_OPTIONS"
-                      :key="option.value"
-                      class="theme-color-btn"
+                    <button v-for="option in THEME_PRIMARY_OPTIONS" :key="option.value" class="theme-color-btn"
                       :class="{ 'theme-color-btn--active': themePreferences.primary === option.value }"
-                      :title="option.label"
-                      type="button"
-                      @click="setThemePreference({ primary: option.value })"
-                    >
+                      :title="option.label" type="button" @click="setThemePreference({ primary: option.value })">
                       <span class="theme-color-dot" :style="{ background: option.preview }" />
                     </button>
                   </div>
@@ -196,15 +130,9 @@
                 <div class="dropdown-section">
                   <p class="dropdown-label">Surface</p>
                   <div class="theme-color-grid">
-                    <button
-                      v-for="option in THEME_SURFACE_OPTIONS"
-                      :key="option.value"
-                      class="theme-color-btn"
+                    <button v-for="option in THEME_SURFACE_OPTIONS" :key="option.value" class="theme-color-btn"
                       :class="{ 'theme-color-btn--active': themePreferences.surface === option.value }"
-                      :title="option.label"
-                      type="button"
-                      @click="setThemePreference({ surface: option.value })"
-                    >
+                      :title="option.label" type="button" @click="setThemePreference({ surface: option.value })">
                       <span class="theme-color-dot" :style="{ background: option.preview }" />
                     </button>
                   </div>
@@ -215,15 +143,9 @@
 
           <!-- User menu -->
           <div class="topbar__dropdown" ref="userDropdownRef">
-            <button
-              class="topbar__user-btn"
-              type="button"
-              @click="userDropdownOpen = !userDropdownOpen"
-            >
-              <span
-                class="topbar__avatar"
-                :class="authStore.isGuest ? 'topbar__avatar--guest' : ''"
-              >{{ userInitial }}</span>
+            <button class="topbar__user-btn" type="button" @click="userDropdownOpen = !userDropdownOpen">
+              <span class="topbar__avatar" :class="authStore.isGuest ? 'topbar__avatar--guest' : ''">{{ userInitial
+                }}</span>
               <span class="topbar__user-name hidden sm:block">{{ authStore.displayName }}</span>
               <Icon class="topbar__user-chevron hidden sm:block" icon="solar:alt-arrow-down-linear" />
             </button>
@@ -231,10 +153,9 @@
             <Transition name="dropdown">
               <div v-if="userDropdownOpen" class="topbar__dropdown-panel topbar__dropdown-panel--user">
                 <div class="user-panel__header">
-                  <span
-                    class="user-panel__avatar"
-                    :class="authStore.isGuest ? 'topbar__avatar--guest' : ''"
-                  >{{ userInitial }}</span>
+                  <span class="user-panel__avatar" :class="authStore.isGuest ? 'topbar__avatar--guest' : ''">{{
+                    userInitial
+                    }}</span>
                   <div class="user-panel__info">
                     <p class="user-panel__name">{{ authStore.displayName }}</p>
                     <p class="user-panel__role">{{ authStore.displayRole }}</p>
@@ -247,10 +168,9 @@
                       <p class="user-panel__session-label">{{ accessLabel }}</p>
                       <p class="user-panel__session-desc">{{ accessDescription }}</p>
                     </div>
-                    <span
-                      class="user-panel__badge"
-                      :class="authStore.isGuest ? 'user-panel__badge--guest' : authStore.hasDUTAccess ? 'user-panel__badge--connected' : 'user-panel__badge--standard'"
-                    >{{ accessBadge }}</span>
+                    <span class="user-panel__badge"
+                      :class="authStore.isGuest ? 'user-panel__badge--guest' : authStore.hasDUTAccess ? 'user-panel__badge--connected' : 'user-panel__badge--standard'">{{
+                      accessBadge }}</span>
                   </div>
                 </div>
 
@@ -269,12 +189,7 @@
       <!-- Mobile search -->
       <div class="topbar__mobile-search lg:hidden">
         <Icon class="topbar__search-icon" icon="solar:magnifer-linear" />
-        <input
-          v-model="searchQuery"
-          class="topbar__search-input"
-          placeholder="Search..."
-          type="text"
-        />
+        <input v-model="searchQuery" class="topbar__search-input" placeholder="Search..." type="text" />
       </div>
 
       <main class="main-content">
@@ -795,20 +710,19 @@ watch(
   align-items: center;
   gap: 0.625rem;
   padding: 0.5rem;
-  margin-bottom: 0.75rem;
-  min-height: 2.5rem;
+  margin-bottom: 0.5rem;
+  min-height: 2rem;
 }
 
 .sidebar__logo {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 2rem;
-  height: 2rem;
-  border-radius: 0.5rem;
-  background: var(--shell-accent-soft);
+  width: 1.25rem;
+  height: 1.25rem;
+  border-radius: 0.25rem;
   color: var(--shell-accent);
-  font-size: 1.125rem;
+  font-size: 1.25rem;
   flex-shrink: 0;
 }
 
@@ -919,8 +833,8 @@ watch(
 
 .sidebar__footer {
   border-top: 1px solid var(--shell-border);
-  padding-top: 0.5rem;
-  margin-top: 0.5rem;
+  padding-top: 0.375rem;
+  margin-top: 0.25rem;
 }
 
 .sidebar__collapse-btn {
@@ -972,6 +886,7 @@ watch(
   min-height: 3rem;
   flex-shrink: 0;
   position: relative;
+  z-index: 10;
 }
 
 .topbar__menu-btn {
@@ -1069,18 +984,19 @@ watch(
   justify-content: center;
   width: 2rem;
   height: 2rem;
-  border: none;
+  border: 1px solid var(--shell-border);
   border-radius: 0.375rem;
   background: transparent;
   color: var(--shell-muted);
   font-size: 1.125rem;
   cursor: pointer;
-  transition: color 0.15s, background 0.15s;
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
 }
 
 .topbar__icon-btn:hover {
   background: var(--shell-panel);
   color: var(--shell-ink);
+  border-color: var(--shell-accent);
 }
 
 .topbar__dropdown {
@@ -1111,7 +1027,7 @@ watch(
   padding: 0.5rem 0;
 }
 
-.dropdown-section + .dropdown-section {
+.dropdown-section+.dropdown-section {
   border-top: 1px solid var(--shell-border);
 }
 
@@ -1237,18 +1153,19 @@ watch(
   gap: 0.5rem;
   padding: 0.25rem;
   padding-right: 0.5rem;
-  border: none;
+  border: 1px solid var(--shell-border);
   border-radius: 0.375rem;
   background: transparent;
   color: var(--shell-ink);
   cursor: pointer;
   font-size: 0.8125rem;
   font-weight: 500;
-  transition: background 0.15s;
+  transition: background 0.15s, border-color 0.15s;
 }
 
 .topbar__user-btn:hover {
   background: var(--shell-panel);
+  border-color: var(--shell-accent);
 }
 
 .topbar__avatar {
@@ -1414,11 +1331,12 @@ watch(
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.5rem 1.5rem;
+  padding: 0.625rem 1.5rem;
   border-top: 1px solid var(--shell-border);
-  font-size: 0.6875rem;
+  font-size: 0.75rem;
   color: var(--shell-muted);
   flex-shrink: 0;
+  min-height: 2.25rem;
 }
 
 /* ── Progress bar ── */
@@ -1457,7 +1375,12 @@ watch(
 }
 
 @keyframes progress-slide {
-  from { transform: translateX(0); }
-  to { transform: translateX(400%); }
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(400%);
+  }
 }
 </style>
