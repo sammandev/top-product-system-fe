@@ -156,7 +156,7 @@ function toggleFullscreen() {
 }
 </script>
 
-<style scoped>
+<style>
 :deep(.app-dialog) {
   overflow: hidden;
   border: 1px solid var(--app-border);
@@ -177,20 +177,17 @@ function toggleFullscreen() {
   align-items: stretch;
 }
 
-:deep(.p-dialog.app-dialog > .p-dialog-header) {
-  border-bottom: 1px solid color-mix(in srgb, var(--app-info-strong) 60%, transparent) !important;
-  background: linear-gradient(
-    180deg,
-    color-mix(in srgb, var(--app-info-strong) 72%, var(--app-info)) 0%,
-    var(--app-info) 100%
-  ) !important;
-  color: #fff !important;
+:deep(.app-dialog .p-dialog-header) {
+  border-bottom: 1px solid color-mix(in srgb, var(--app-info-strong) 60%, transparent);
+  background:
+    linear-gradient(
+      180deg,
+      color-mix(in srgb, var(--app-info-strong) 72%, var(--app-info)) 0%,
+      var(--app-info) 100%
+    );
+  color: #fff;
   flex-shrink: 0;
   padding: 0;
-}
-
-:deep(.p-dialog.app-dialog > .p-dialog-header .app-dialog__header) {
-  color: #fff !important;
 }
 
 :deep(.app-dialog .p-dialog-content) {
@@ -203,7 +200,7 @@ function toggleFullscreen() {
   scrollbar-color: rgba(120, 120, 120, 0.3) transparent;
 }
 
-:deep(.p-dialog.app-dialog > .p-dialog-footer) {
+:deep(.app-dialog .p-dialog-footer) {
   border-top: 1px solid var(--app-border);
   background: var(--app-panel-strong);
   flex-shrink: 0;
@@ -226,12 +223,12 @@ function toggleFullscreen() {
   padding: 1rem 1.25rem 1.25rem;
 }
 
-:deep(.p-dialog.app-dialog.app-dialog--fullscreen > .p-dialog-header),
-:deep(.p-dialog.app-dialog.app-dialog--fullscreen > .p-dialog-footer) {
+:deep(.app-dialog.app-dialog--fullscreen .p-dialog-header),
+:deep(.app-dialog.app-dialog--fullscreen .p-dialog-footer) {
   border-color: color-mix(in srgb, var(--app-border) 82%, transparent);
 }
 
-:deep(.p-dialog.app-dialog.app-dialog--fullscreen.app-dialog--sticky-header > .p-dialog-header) {
+:deep(.app-dialog.app-dialog--fullscreen.app-dialog--sticky-header .p-dialog-header) {
   position: sticky;
   top: 0;
   z-index: 12;
@@ -295,13 +292,9 @@ function toggleFullscreen() {
   transition: color 0.15s, background 0.15s, border-color 0.15s, transform 0.15s;
 }
 
-:deep(.p-dialog.app-dialog .app-dialog__header-btn),
-:deep(.p-dialog.app-dialog .app-dialog__header-btn svg) {
-  color: #fff !important;
-}
-
-:deep(.p-dialog.app-dialog .app-dialog__header-btn svg) {
-  font-size: 1rem;
+.app-dialog__header-btn svg {
+  width: 1rem;
+  height: 1rem;
 }
 
 .app-dialog__header-btn:hover {
@@ -317,17 +310,17 @@ function toggleFullscreen() {
   background: rgba(255, 255, 255, 0.22);
 }
 
-:deep(.p-dialog.app-dialog > .p-dialog-header .app-dialog__header-left h1),
-:deep(.p-dialog.app-dialog > .p-dialog-header .app-dialog__header-left h2),
-:deep(.p-dialog.app-dialog > .p-dialog-header .app-dialog__header-left h3) {
+:deep(.app-dialog .p-dialog-header .app-dialog__header-left h1),
+:deep(.app-dialog .p-dialog-header .app-dialog__header-left h2),
+:deep(.app-dialog .p-dialog-header .app-dialog__header-left h3) {
   margin: 0;
-  color: inherit !important;
+  color: inherit;
   font-size: 1.16rem;
   line-height: 1.15;
 }
 
-:deep(.p-dialog.app-dialog > .p-dialog-header .app-dialog__header-left svg) {
-  color: currentColor !important;
+:deep(.app-dialog .p-dialog-header .app-dialog__header-left svg) {
+  color: currentColor;
 }
 
 .app-dialog__body {

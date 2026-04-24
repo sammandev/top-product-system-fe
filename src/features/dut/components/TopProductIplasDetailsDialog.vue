@@ -1,15 +1,7 @@
 <template>
-  <AppDialog
-    v-model="isOpen"
-    v-model:fullscreen="isFullscreen"
-    width="min(96vw, 78rem)"
-    fullscreen-width="98vw"
-    :breakpoints="{ '1200px': '94vw', '768px': '98vw' }"
-    fullscreenable
-    :show-footer="false"
-    sticky-header
-    class="iplas-details-dialog"
-  >
+  <AppDialog v-model="isOpen" v-model:fullscreen="isFullscreen" width="min(96vw, 78rem)" fullscreen-width="98vw"
+    :breakpoints="{ '1200px': '94vw', '768px': '98vw' }" fullscreenable :show-footer="false" sticky-header
+    class="iplas-details-dialog">
     <template #header>
       <div class="iplas-details-dialog__dialog-title">
         <Icon icon="mdi:table-eye" />
@@ -17,23 +9,22 @@
       </div>
     </template>
     <template #header-actions>
-      <button
-        type="button"
-        class="iplas-details-dialog__download-button"
-        :disabled="downloading"
-        :title="downloading ? 'Downloading...' : 'Download'"
-        @click="handleDownload"
-      >
-        <Icon :icon="downloading ? 'mdi:loading' : 'solar:download-minimalistic-bold-duotone'" :class="{ 'iplas-details-dialog__spin': downloading }" />
+      <button type="button" class="iplas-details-dialog__download-button" :disabled="downloading"
+        :title="downloading ? 'Downloading...' : 'Download'" @click="handleDownload">
+        <Icon :icon="downloading ? 'mdi:loading' : 'solar:download-minimalistic-bold-duotone'"
+          :class="{ 'iplas-details-dialog__spin': downloading }" />
         <span>{{ downloading ? 'DOWNLOADING...' : 'DOWNLOAD' }}</span>
       </button>
     </template>
 
-    <div v-if="record" class="iplas-details-dialog__body" :class="{ 'iplas-details-dialog__body--fullscreen': isFullscreen }">
+    <div v-if="record" class="iplas-details-dialog__body"
+      :class="{ 'iplas-details-dialog__body--fullscreen': isFullscreen }">
       <section class="iplas-details-dialog__summary-grid">
         <article class="iplas-details-dialog__summary-card iplas-details-dialog__summary-card--highlight">
           <button type="button" class="iplas-details-dialog__info-button" @click="copyToClipboard(record.isn)">
-            <span class="iplas-details-dialog__info-icon"><Icon icon="mdi:barcode" /></span>
+            <span class="iplas-details-dialog__info-icon">
+              <Icon icon="mdi:barcode" />
+            </span>
             <span>
               <small>DUT ISN</small>
               <strong>{{ record.isn || '-' }}</strong>
@@ -43,7 +34,9 @@
 
         <article class="iplas-details-dialog__summary-card">
           <div class="iplas-details-dialog__info-button iplas-details-dialog__info-button--static">
-            <span class="iplas-details-dialog__info-icon"><Icon icon="mdi:factory" /></span>
+            <span class="iplas-details-dialog__info-icon">
+              <Icon icon="mdi:factory" />
+            </span>
             <span>
               <small>Station</small>
               <strong>{{ record.displayStationName || record.stationName }}</strong>
@@ -51,10 +44,12 @@
           </div>
         </article>
 
-        <article v-if="scoreSummaryPrimary" class="iplas-details-dialog__summary-card iplas-details-dialog__summary-card--score">
+        <article v-if="scoreSummaryPrimary"
+          class="iplas-details-dialog__summary-card iplas-details-dialog__summary-card--score">
           <button type="button" class="summary-stat-button" @click="openOverallScoreDialog">
             <div class="iplas-details-dialog__score-button-layout">
-              <span class="iplas-details-dialog__info-icon" :class="`iplas-details-dialog__info-icon--${scoreSummaryIconColor}`">
+              <span class="iplas-details-dialog__info-icon"
+                :class="`iplas-details-dialog__info-icon--${scoreSummaryIconColor}`">
                 <Icon :icon="scoreSummaryIcon" />
               </span>
               <div class="summary-stat-button__content">
@@ -93,136 +88,92 @@
         </article>
       </section>
 
-      <section class="iplas-details-dialog__results">
-        <div>
-          <p class="iplas-details-dialog__section-eyebrow">Test Results</p>
-          <h3>Execution Summary</h3>
-        </div>
-        <div class="iplas-details-dialog__results-chips">
-          <span class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
-            <Icon icon="mdi:calendar-clock" />
-            <strong>Start:</strong>
-            <span>{{ formatTime(record.testStartTime) }}</span>
-          </span>
-          <span class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
-            <Icon icon="mdi:calendar-check" />
-            <strong>End:</strong>
-            <span>{{ formatTime(record.testEndTime) }}</span>
-          </span>
-          <span class="iplas-details-dialog__pill iplas-details-dialog__pill--neutral">
-            <Icon icon="mdi:timer" />
-            <strong>Duration:</strong>
-            <span>{{ calculateDuration(record.testStartTime, record.testEndTime) }}</span>
-          </span>
-          <span class="iplas-details-dialog__pill iplas-details-dialog__pill--neutral">
-            <Icon icon="mdi:list-box" />
-            <strong>Test Items:</strong>
-            <span>{{ record.testItems?.length || 0 }}</span>
-          </span>
-          <button type="button" class="iplas-details-dialog__pill" :class="statusPillClass(record.errorCode)" @click="copyToClipboard(record.errorCode)">
-            <Icon :icon="isStatusPass(record.errorCode) ? 'mdi:check-circle' : 'mdi:alert-circle'" />
-            <strong>Status:</strong>
-            <span>{{ record.errorCode }}</span>
-          </button>
-          <button
-            v-if="forcedFailSummary"
-            type="button"
-            class="iplas-details-dialog__pill iplas-details-dialog__pill--danger"
-            :class="{ 'iplas-details-dialog__pill--interactive': forcedFailSummary.clickable }"
-            @click="openForcedFailDialog"
-          >
-            <Icon icon="mdi:alert-octagon" />
-            <strong>Forced Fail:</strong>
-            <span>{{ forcedFailSummary.detailText }}</span>
-          </button>
-          <button
-            v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)"
-            type="button"
-            class="iplas-details-dialog__pill iplas-details-dialog__pill--danger"
-            @click="copyToClipboard(record.errorName)"
-          >
-            <Icon icon="mdi:alert-octagon" />
-            <strong>Error:</strong>
-            <span>{{ record.errorName }}</span>
-          </button>
-        </div>
+      <section class="iplas-details-dialog__meta-pills">
+        <span class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
+          <Icon icon="mdi:calendar-clock" />
+          <strong>Start:</strong>
+          <span>{{ formatTime(record.testStartTime) }}</span>
+        </span>
+        <span class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
+          <Icon icon="mdi:calendar-check" />
+          <strong>End:</strong>
+          <span>{{ formatTime(record.testEndTime) }}</span>
+        </span>
+        <span class="iplas-details-dialog__pill iplas-details-dialog__pill--neutral">
+          <Icon icon="mdi:timer" />
+          <strong>Duration:</strong>
+          <span>{{ calculateDuration(record.testStartTime, record.testEndTime) }}</span>
+        </span>
+        <span class="iplas-details-dialog__pill iplas-details-dialog__pill--neutral">
+          <Icon icon="mdi:list-box" />
+          <strong>Test Items:</strong>
+          <span>{{ record.testItems?.length || 0 }}</span>
+        </span>
+        <button type="button" class="iplas-details-dialog__pill" :class="statusPillClass(record.errorCode)"
+          @click="copyToClipboard(record.errorCode)">
+          <Icon :icon="isStatusPass(record.errorCode) ? 'mdi:check-circle' : 'mdi:alert-circle'" />
+          <strong>Status:</strong>
+          <span>{{ record.errorCode }}</span>
+        </button>
+        <button v-if="forcedFailSummary" type="button"
+          class="iplas-details-dialog__pill iplas-details-dialog__pill--danger"
+          :class="{ 'iplas-details-dialog__pill--interactive': forcedFailSummary.clickable }"
+          @click="openForcedFailDialog">
+          <Icon icon="mdi:alert-octagon" />
+          <strong>Forced Fail:</strong>
+          <span>{{ forcedFailSummary.detailText }}</span>
+        </button>
+        <button v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)" type="button"
+          class="iplas-details-dialog__pill iplas-details-dialog__pill--danger"
+          @click="copyToClipboard(record.errorName)">
+          <Icon icon="mdi:alert-octagon" />
+          <strong>Error:</strong>
+          <span>{{ record.errorName }}</span>
+        </button>
       </section>
 
-      <section class="iplas-details-dialog__measurements">
-        <div class="iplas-details-dialog__measurements-header">
-          <div>
-            <p class="iplas-details-dialog__section-eyebrow">Measurement Breakdown</p>
-            <h3>Test Items</h3>
-          </div>
-          <div class="iplas-details-dialog__measurements-tools">
-            <span class="iplas-details-dialog__pill iplas-details-dialog__pill--cool">
-              {{ tableTestItems.length }} of {{ record.testItems?.length || 0 }}
-            </span>
-          </div>
-        </div>
-
-        <section class="iplas-details-dialog__filters">
-          <label class="iplas-details-dialog__field">
-            <span>Search Test Items (Regex)</span>
-            <div class="iplas-details-dialog__token-shell">
-              <div v-if="searchTerms.length > 0" class="iplas-details-dialog__token-list">
-                <button
-                  v-for="term in searchTerms"
-                  :key="term"
-                  type="button"
-                  class="iplas-details-dialog__token"
-                  @click="removeSearchTerm(term)"
-                >
-                  <span>{{ term }}</span>
-                  <Icon icon="mdi:close" />
-                </button>
-              </div>
-              <div class="iplas-details-dialog__search-shell">
-                <Icon icon="mdi:magnify" />
-                <input
-                  v-model="pendingSearchTerm"
-                  type="text"
-                  placeholder="Type and press Enter (AND logic)..."
-                  @keydown="handleSearchTermKeydown"
-                  @blur="commitSearchTerms()"
-                />
-                <button v-if="searchTerms.length > 0 || pendingSearchTerm" type="button" class="iplas-details-dialog__ghost-action" @click="clearSearchTerms">
-                  Clear
-                </button>
-              </div>
-            </div>
-          </label>
-
-          <label class="iplas-details-dialog__field">
-            <span>Data Type</span>
-            <div class="iplas-details-dialog__chip-select">
-              <button
-                v-for="option in testItemFilterOptions"
-                :key="option.value"
-                type="button"
-                class="iplas-details-dialog__chip-option"
-                :class="{ 'iplas-details-dialog__chip-option--active': testItemFilter.includes(option.value) }"
-                @click="toggleTestItemFilter(option.value)"
-              >
-                {{ option.title }}
+      <section class="iplas-details-dialog__filters" :class="{ 'iplas-details-dialog__filters--has-scores': hasScores }">
+        <label class="iplas-details-dialog__field">
+          <span>Search Test Items (Regex)</span>
+          <div class="iplas-details-dialog__token-shell">
+            <div v-if="searchTerms.length > 0" class="iplas-details-dialog__token-list">
+              <button v-for="term in searchTerms" :key="term" type="button" class="iplas-details-dialog__token"
+                @click="removeSearchTerm(term)">
+                <span>{{ term }}</span>
+                <Icon icon="mdi:close" />
               </button>
             </div>
-          </label>
-
-          <div v-if="hasScores" class="iplas-details-dialog__score-filter-grid">
-            <label class="iplas-details-dialog__field">
-              <span>Score Filter</span>
-              <AppSelect v-model="scoreFilterType" :options="scoreFilterSelectOptions" placeholder="No filter"
-                :searchable="false" />
-            </label>
-            <label class="iplas-details-dialog__field">
-              <span>Value (0-10)</span>
-              <input v-model.number="scoreFilterValue" type="number" min="0" max="10" step="0.1" :disabled="!scoreFilterType" placeholder="0.00" />
-            </label>
+            <div class="iplas-details-dialog__search-shell">
+              <Icon icon="mdi:magnify" />
+              <input v-model="pendingSearchTerm" type="text" placeholder="Type and press Enter (AND logic)..."
+                @keydown="handleSearchTermKeydown" @blur="commitSearchTerms()" />
+              <button v-if="searchTerms.length > 0 || pendingSearchTerm" type="button"
+                class="iplas-details-dialog__ghost-action" @click="clearSearchTerms">
+                Clear
+              </button>
+            </div>
           </div>
-        </section>
+        </label>
 
-        <section class="iplas-details-dialog__table-shell">
+        <label class="iplas-details-dialog__field">
+          <span>Data Type</span>
+          <AppSelect v-model="testItemFilter" :options="testItemFilterSelectOptions" placeholder="Show All"
+            :searchable="false" />
+        </label>
+
+        <label v-if="hasScores" class="iplas-details-dialog__field">
+          <span>Score Filter</span>
+          <AppSelect v-model="scoreFilterType" :options="scoreFilterSelectOptions" placeholder="No filter"
+            :searchable="false" />
+        </label>
+        <label v-if="hasScores" class="iplas-details-dialog__field">
+          <span>Value (0-10)</span>
+          <input v-model.number="scoreFilterValue" type="number" min="0" max="10" step="0.1"
+            :disabled="!scoreFilterType" placeholder="0.00" />
+        </label>
+      </section>
+
+      <section class="iplas-details-dialog__table-shell">
         <div v-if="loadingTestItems" class="iplas-details-dialog__loading-state">
           <Icon icon="mdi:loading" class="iplas-details-dialog__spin" />
           <div>
@@ -231,25 +182,17 @@
           </div>
         </div>
 
-        <AppDataGrid
-          :columns="testItemColumns"
-          :rows="tableTestItems"
-          data-key="NAME"
-          :paginator="true"
-          :rows-per-page="50"
-          :loading="loadingTestItems"
-          scroll-height="flex"
-          :table-style="{ minWidth: '56rem' }"
-          :row-class="hasScores ? scoreTableRowClass : undefined"
-          @row-click="handleRowClick"
-        >
+        <AppDataGrid :columns="testItemColumns" :rows="tableTestItems" data-key="NAME" :paginator="true"
+          :rows-per-page="50" :loading="loadingTestItems" scroll-height="flex" :table-style="{ minWidth: '56rem' }"
+          :row-class="hasScores ? scoreTableRowClass : undefined" @row-click="handleRowClick">
           <template #cell-statusSort="{ data }">
             <span class="status-text" :class="getStatusTextClass(String(data.statusDisplay || ''))">
               {{ data.statusDisplay }}
             </span>
           </template>
           <template #cell-VALUE="{ data }">
-            <span class="table-value" :class="getValueClass(data as NormalizedTestItem)">{{ formatTableValue(data as NormalizedTestItem) }}</span>
+            <span class="table-value" :class="getValueClass(data as NormalizedTestItem)">{{ formatTableValue(data as
+              NormalizedTestItem) }}</span>
           </template>
           <template #cell-UCL="{ value }">
             <span class="table-limit">{{ value || '-' }}</span>
@@ -258,29 +201,21 @@
             <span class="table-limit">{{ value || '-' }}</span>
           </template>
           <template #cell-scoreSort="{ data }">
-            <button
-              v-if="data.score !== undefined && data.score !== null"
-              type="button"
+            <button v-if="data.score !== undefined && data.score !== null" type="button"
               class="iplas-details-dialog__score-chip"
               :class="`iplas-details-dialog__score-chip--${scoreTone(data.score)}`"
-              @click.stop="showScoreBreakdown(data as NormalizedTestItem)"
-            >
+              @click.stop="showScoreBreakdown(data as NormalizedTestItem)">
               {{ formatScoreValue(data.score) }}
             </button>
             <span v-else class="iplas-details-dialog__muted">-</span>
           </template>
         </AppDataGrid>
       </section>
-      </section>
     </div>
   </AppDialog>
 
-  <AppDialog
-    v-model="showForcedFailDialog"
-    title="Forced Fail Items"
-    description="Review items that fell below the minimum threshold."
-    width="min(92vw, 56rem)"
-  >
+  <AppDialog v-model="showForcedFailDialog" title="Forced Fail Items"
+    description="Review items that fell below the minimum threshold." width="min(92vw, 56rem)">
     <div v-if="record" class="iplas-details-subdialog">
       <section class="iplas-details-dialog__notice iplas-details-dialog__notice--warning">
         <strong>
@@ -298,24 +233,20 @@
       </label>
 
       <section v-if="forcedFailRows.length > 0" class="iplas-details-dialog__data-grid-shell">
-        <AppDataGrid
-          :columns="forcedFailColumns"
-          :rows="forcedFailRows"
-          data-key="rowKey"
-          :paginator="false"
-          :rows-per-page="25"
-          scroll-height="22rem"
-          :table-style="{ minWidth: '38rem' }"
-        >
+        <AppDataGrid :columns="forcedFailColumns" :rows="forcedFailRows" data-key="rowKey" :paginator="false"
+          :rows-per-page="25" scroll-height="22rem" :table-style="{ minWidth: '38rem' }">
           <template #cell-name="{ data }">
             <button type="button" class="iplas-details-dialog__row-copy" @click="copyToClipboard(String(data.name))">
-              <span class="forced-fail-item__icon"><Icon icon="mdi:alert-circle" /></span>
+              <span class="forced-fail-item__icon">
+                <Icon icon="mdi:alert-circle" />
+              </span>
               <span class="forced-fail-item-title" :title="String(data.name)">{{ data.name }}</span>
             </button>
           </template>
 
           <template #cell-score="{ data }">
-            <span class="iplas-details-dialog__score-chip" :class="`iplas-details-dialog__score-chip--${scoreTone(data.score)}`">
+            <span class="iplas-details-dialog__score-chip"
+              :class="`iplas-details-dialog__score-chip--${scoreTone(data.score)}`">
               {{ (data.score * 10).toFixed(2) }} / 10
             </span>
           </template>
@@ -337,19 +268,16 @@
 
     <template #footer>
       <div class="iplas-details-dialog__footer-actions">
-        <button type="button" class="iplas-details-dialog__button iplas-details-dialog__button--ghost" @click="showForcedFailDialog = false">
+        <button type="button" class="iplas-details-dialog__button iplas-details-dialog__button--ghost"
+          @click="showForcedFailDialog = false">
           Close
         </button>
       </div>
     </template>
   </AppDialog>
 
-  <AppDialog
-    v-model="showBreakdownDialog"
-    width="min(92vw, 34rem)"
-    persistent
-    class="iplas-details-dialog iplas-breakdown-dialog"
-  >
+  <AppDialog v-model="showBreakdownDialog" width="min(92vw, 34rem)" persistent
+    class="iplas-details-dialog iplas-breakdown-dialog">
     <template #header>
       <div class="iplas-details-dialog__dialog-title">
         <Icon icon="mdi:table-search" />
@@ -371,20 +299,20 @@
             <span class="iplas-breakdown__row-label">{{ row.label }}</span>
           </div>
           <div class="iplas-breakdown__row-right">
-            <span
-              v-if="row.valueTone === 'score'"
-              class="iplas-details-dialog__score-chip"
-              :class="`iplas-details-dialog__score-chip--${scoreTone(selectedTestItem.score ?? 0)}`"
-            >
+            <span v-if="row.valueTone === 'score'" class="iplas-details-dialog__score-chip"
+              :class="`iplas-details-dialog__score-chip--${scoreTone(selectedTestItem.score ?? 0)}`">
               {{ row.value }}
             </span>
-            <span v-else-if="row.valueTone === 'algorithm'" class="iplas-breakdown__value-pill iplas-breakdown__value-pill--cool">
+            <span v-else-if="row.valueTone === 'algorithm'"
+              class="iplas-breakdown__value-pill iplas-breakdown__value-pill--cool">
               {{ row.value }}
             </span>
-            <span v-else-if="row.valueTone === 'policy'" class="iplas-breakdown__value-pill iplas-breakdown__value-pill--neutral">
+            <span v-else-if="row.valueTone === 'policy'"
+              class="iplas-breakdown__value-pill iplas-breakdown__value-pill--neutral">
               {{ row.value }}
             </span>
-            <span v-else :class="[row.valueTone === 'warning' ? 'iplas-breakdown__value--warning' : '', 'iplas-breakdown__value-text']">
+            <span v-else
+              :class="[row.valueTone === 'warning' ? 'iplas-breakdown__value--warning' : '', 'iplas-breakdown__value-text']">
               {{ row.value }}
             </span>
           </div>
@@ -393,7 +321,9 @@
 
       <details class="iplas-details-dialog__explanation-card">
         <summary>
-          <span><Icon icon="mdi:help-circle-outline" /> How is this score calculated?</span>
+          <span>
+            <Icon icon="mdi:help-circle-outline" /> How is this score calculated?
+          </span>
         </summary>
         <div class="iplas-details-dialog__explanation-body">
           <p>{{ getScoringExplanation(selectedTestItem.scoringType) }}</p>
@@ -403,19 +333,16 @@
 
     <template #footer>
       <div class="iplas-details-dialog__footer-actions">
-        <button type="button" class="iplas-details-dialog__button iplas-details-dialog__button--ghost" @click="showBreakdownDialog = false">
+        <button type="button" class="iplas-details-dialog__button iplas-details-dialog__button--ghost"
+          @click="showBreakdownDialog = false">
           CLOSE
         </button>
       </div>
     </template>
   </AppDialog>
 
-  <AppDialog
-    v-model="showOverallScoreDialog"
-    width="min(92vw, 40rem)"
-    :show-footer="false"
-    class="iplas-details-dialog"
-  >
+  <AppDialog v-model="showOverallScoreDialog" width="min(92vw, 40rem)" :show-footer="false"
+    class="iplas-details-dialog">
     <template #header>
       <div class="iplas-details-dialog__dialog-title">
         <Icon icon="mdi:chart-line" />
@@ -449,14 +376,17 @@
             <div class="score-formula-step__index">2</div>
             <div>
               <div>Use only test items that actually have a score.</div>
-              <div class="iplas-details-dialog__muted">Each scored item contributes score × effective weight to the numerator.</div>
+              <div class="iplas-details-dialog__muted">Each scored item contributes score × effective weight to the
+                numerator.</div>
             </div>
           </div>
           <div class="score-formula-step">
             <div class="score-formula-step__index">3</div>
             <div>
               <div>Divide by the total effective weight, then display the result on a /10 scale.</div>
-              <div class="iplas-details-dialog__muted">The backend stores and averages scores on a 0-1 scale before the UI formats them as /10.</div>
+              <div class="iplas-details-dialog__muted">The backend stores and averages scores on a 0-1 scale before the
+                UI
+                formats them as /10.</div>
             </div>
           </div>
         </div>
@@ -466,11 +396,13 @@
         <div class="score-explanation-stat">
           <div class="iplas-details-dialog__metric-label">Scored Test Items</div>
           <div class="iplas-details-dialog__stat-value">{{ overallScoreExplanation.scoredItemCount }}</div>
-          <div class="iplas-details-dialog__muted">{{ overallScoreExplanation.valueItemCount }} value, {{ overallScoreExplanation.binaryItemCount }} binary</div>
+          <div class="iplas-details-dialog__muted">{{ overallScoreExplanation.valueItemCount }} value, {{
+            overallScoreExplanation.binaryItemCount }} binary</div>
         </div>
         <div class="score-explanation-stat">
           <div class="iplas-details-dialog__metric-label">Total Effective Weight</div>
-          <div class="iplas-details-dialog__stat-value">{{ formatCompactNumber(overallScoreExplanation.totalEffectiveWeight) }}</div>
+          <div class="iplas-details-dialog__stat-value">{{
+            formatCompactNumber(overallScoreExplanation.totalEffectiveWeight) }}</div>
           <div class="iplas-details-dialog__muted">Based on squared per-item weights.</div>
         </div>
       </div>
@@ -569,7 +501,7 @@ const isFullscreen = ref(false)
 
 // Filter controls
 // UPDATED: Default to 'all' (Show All) instead of 'value'
-const testItemFilter = ref<TestItemFilter[]>(['all'])
+const testItemFilter = ref<TestItemFilter>('all')
 const searchTerms = ref<string[]>([])
 const pendingSearchTerm = ref('')
 const { showInfo: showInfoNotification } = useNotification()
@@ -589,11 +521,16 @@ const forcedFailSearch = ref('')
 
 // Filter options for dropdown
 const testItemFilterOptions: { title: string; value: TestItemFilter }[] = [
-  { title: 'Criteria Data ★', value: 'value' },
   { title: 'Show All', value: 'all' },
+  { title: 'Criteria Data ★', value: 'value' },
   { title: 'Non-Criteria', value: 'non-value' },
   { title: 'Bin Data', value: 'bin' },
 ]
+
+const testItemFilterSelectOptions = testItemFilterOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
 
 // UPDATED: Score filter options
 const scoreFilterOptions: { title: string; value: ScoreFilterType }[] = [
@@ -1001,22 +938,6 @@ function scoreTableRowClass(): string {
   return hasScores.value ? 'iplas-details-dialog__table-row--clickable' : ''
 }
 
-function toggleTestItemFilter(filterType: TestItemFilter): void {
-  if (filterType === 'all') {
-    testItemFilter.value = ['all']
-    return
-  }
-
-  const currentFilters = testItemFilter.value.filter((value) => value !== 'all')
-  if (currentFilters.includes(filterType)) {
-    const nextFilters = currentFilters.filter((value) => value !== filterType)
-    testItemFilter.value = nextFilters.length > 0 ? nextFilters : ['all']
-    return
-  }
-
-  testItemFilter.value = [...currentFilters, filterType]
-}
-
 function commitSearchTerms(rawInput: string = pendingSearchTerm.value): void {
   const values = rawInput
     .split(/[,\n]+/)
@@ -1211,21 +1132,18 @@ const filteredTestItems = computed(() => {
 
   let items = [...props.record.testItems]
 
-  // Apply test item type filter (supports multiple selections)
-  if (testItemFilter.value.length > 0 && !testItemFilter.value.includes('all')) {
+  if (testItemFilter.value !== 'all') {
     items = items.filter((item: NormalizedTestItem) => {
-      return testItemFilter.value.some((filterType: TestItemFilter) => {
-        switch (filterType) {
-          case 'value':
-            return isValueData(item)
-          case 'non-value':
-            return isNonValueData(item)
-          case 'bin':
-            return isBinData(item)
-          default:
-            return true
-        }
-      })
+      switch (testItemFilter.value) {
+        case 'value':
+          return isValueData(item)
+        case 'non-value':
+          return isNonValueData(item)
+        case 'bin':
+          return isBinData(item)
+        default:
+          return true
+      }
     })
   }
 
@@ -1487,7 +1405,7 @@ watch(
   () => props.record,
   () => {
     // UPDATED: Always default to Show All
-    testItemFilter.value = ['all']
+    testItemFilter.value = 'all'
     searchTerms.value = []
     pendingSearchTerm.value = ''
     // Clear score filter
@@ -1585,7 +1503,7 @@ watch(
 
 .iplas-details-dialog__eyebrow,
 .iplas-details-dialog__metric-label,
-.iplas-details-dialog__field > span,
+.iplas-details-dialog__field>span,
 .iplas-details-dialog__range-copy strong,
 .iplas-details-dialog__metric-row small {
   margin: 0;
@@ -1650,8 +1568,6 @@ watch(
 
 .iplas-details-dialog__summary-card,
 .iplas-details-dialog__metadata-card,
-.iplas-details-dialog__results,
-.iplas-details-dialog__measurements,
 .score-explanation-stat,
 .score-explanation-primary,
 .score-formula-panel,
@@ -1667,8 +1583,6 @@ watch(
 
 .iplas-details-dialog__summary-card,
 .iplas-details-dialog__metadata-card,
-.iplas-details-dialog__results,
-.iplas-details-dialog__measurements,
 .iplas-details-dialog__notice,
 .score-explanation-stat,
 .score-explanation-primary,
@@ -1684,70 +1598,19 @@ watch(
   overflow: hidden;
 }
 
-.iplas-details-dialog__results,
-.iplas-details-dialog__measurements {
-  display: grid;
-  gap: 0.9rem;
-}
-
-.iplas-details-dialog__results {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
-.iplas-details-dialog__section-eyebrow {
-  margin: 0 0 0.3rem;
-  color: var(--app-info);
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.iplas-details-dialog__results h3,
-.iplas-details-dialog__measurements-header h3 {
-  margin: 0;
-  color: var(--iplas-ink);
-  font-size: 1.02rem;
-}
-
-.iplas-details-dialog__results-chips,
-.iplas-details-dialog__measurements-tools {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  align-items: center;
-}
-
-.iplas-details-dialog__measurements {
-  flex: 1;
-  min-height: 0;
-}
-
-.iplas-details-dialog__measurements-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 1rem;
-}
-
-.iplas-details-dialog__measurements .iplas-details-dialog__filters {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
 .iplas-details-dialog__summary-card--highlight,
 .iplas-details-dialog__summary-card--score {
   border-color: color-mix(in srgb, var(--app-info) 18%, var(--iplas-border));
   background: var(--app-panel);
 }
 
+.iplas-details-dialog__summary-card {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-info) 6%, transparent);
+}
+
 .iplas-details-dialog__metadata-card {
   background: var(--iplas-panel-strong);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-info) 4%, transparent);
 }
 
 .iplas-details-dialog__download-button {
@@ -1853,12 +1716,16 @@ watch(
 }
 
 .iplas-details-dialog__filters {
-  grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr) minmax(0, 1.05fr);
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 0.95fr);
   align-items: end;
   padding: 0.82rem 0.9rem;
   border: 1px solid var(--iplas-border);
   border-radius: 0.82rem;
   background: var(--iplas-panel);
+}
+
+.iplas-details-dialog__filters--has-scores {
+  grid-template-columns: minmax(0, 1.9fr) minmax(0, 0.95fr) minmax(0, 0.95fr) minmax(0, 0.8fr);
 }
 
 .iplas-details-dialog__pill--cool {
@@ -1900,7 +1767,7 @@ watch(
   gap: 0.45rem;
 }
 
-.iplas-details-dialog__field > span {
+.iplas-details-dialog__field>span {
   color: var(--iplas-ink);
   font-size: 0.74rem;
 }
@@ -1910,7 +1777,7 @@ watch(
 .iplas-details-dialog__search-shell,
 .iplas-details-dialog__token-shell {
   width: 100%;
-  border: 1px solid var(--iplas-border);
+  border: 1px solid color-mix(in srgb, var(--app-info) 16%, var(--iplas-border));
   border-radius: 0.7rem;
   background: var(--iplas-panel-strong);
   color: var(--iplas-ink);
@@ -1981,6 +1848,13 @@ watch(
   display: flex;
   flex-wrap: wrap;
   gap: 0.45rem;
+}
+
+.iplas-details-dialog__score-button-layout {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-width: 0;
 }
 
 .iplas-details-dialog__chip-option--active {
@@ -2160,14 +2034,37 @@ watch(
   color: var(--app-muted);
 }
 
-.iplas-breakdown__row-icon--red { color: #ef4444; }
-.iplas-breakdown__row-icon--orange { color: #f97316; }
-.iplas-breakdown__row-icon--blue { color: #2196f3; }
-.iplas-breakdown__row-icon--green { color: #22c55e; }
-.iplas-breakdown__row-icon--purple { color: #8b5cf6; }
-.iplas-breakdown__row-icon--amber { color: #eab308; }
-.iplas-breakdown__row-icon--muted { color: var(--app-muted); }
-.iplas-breakdown__row-icon--star { color: #2196f3; }
+.iplas-breakdown__row-icon--red {
+  color: #ef4444;
+}
+
+.iplas-breakdown__row-icon--orange {
+  color: #f97316;
+}
+
+.iplas-breakdown__row-icon--blue {
+  color: #2196f3;
+}
+
+.iplas-breakdown__row-icon--green {
+  color: #22c55e;
+}
+
+.iplas-breakdown__row-icon--purple {
+  color: #8b5cf6;
+}
+
+.iplas-breakdown__row-icon--amber {
+  color: #eab308;
+}
+
+.iplas-breakdown__row-icon--muted {
+  color: var(--app-muted);
+}
+
+.iplas-breakdown__row-icon--star {
+  color: #2196f3;
+}
 
 .iplas-breakdown__value-text {
   color: var(--iplas-ink);
@@ -2225,7 +2122,7 @@ watch(
   min-height: 0;
 }
 
-.iplas-details-dialog__table-shell > .app-data-grid {
+.iplas-details-dialog__table-shell>.app-data-grid {
   display: flex;
   flex: 1;
   min-height: 0;
@@ -2541,6 +2438,7 @@ watch(
 }
 
 @media (max-width: 840px) {
+
   .iplas-details-dialog__header,
   .iplas-details-dialog__score-overview,
   .forced-fail-item,
@@ -2558,21 +2456,10 @@ watch(
   .iplas-details-dialog__metadata-grid,
   .iplas-details-dialog__stats-grid,
   .iplas-details-dialog__filters,
+  .iplas-details-dialog__filters--has-scores,
   .iplas-details-dialog__score-filter-grid,
   .iplas-details-dialog__stats-row {
     grid-template-columns: 1fr;
-  }
-
-  .iplas-details-dialog__results,
-  .iplas-details-dialog__measurements-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
-  .iplas-details-dialog__results-chips,
-  .iplas-details-dialog__measurements-tools,
-  .iplas-details-dialog__header-actions {
-    justify-content: flex-start;
   }
 
   .summary-stat-button {

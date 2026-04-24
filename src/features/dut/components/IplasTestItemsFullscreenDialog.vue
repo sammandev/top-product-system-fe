@@ -68,119 +68,87 @@
         </article>
       </section>
 
-      <section class="fullscreen-dialog__results">
-        <div>
-          <p class="fullscreen-dialog__section-eyebrow">Test Results</p>
-          <h3>Execution Summary</h3>
-        </div>
-        <div class="fullscreen-dialog__results-chips">
-          <span class="fullscreen-dialog__pill fullscreen-dialog__pill--cool">
-            <Icon icon="mdi:calendar-clock" />
-            <strong>Start:</strong>
-            <span>{{ formatTime(record.testStartTime) }}</span>
-          </span>
-          <span class="fullscreen-dialog__pill fullscreen-dialog__pill--cool">
-            <Icon icon="mdi:calendar-check" />
-            <strong>End:</strong>
-            <span>{{ formatTime(record.testEndTime) }}</span>
-          </span>
-          <span class="fullscreen-dialog__pill fullscreen-dialog__pill--neutral">
-            <Icon icon="mdi:timer" />
-            <strong>Duration:</strong>
-            <span>{{ calculateDuration(record.testStartTime, record.testEndTime) }}</span>
-          </span>
-          <span class="fullscreen-dialog__pill fullscreen-dialog__pill--neutral">
-            <Icon icon="mdi:list-box" />
-            <strong>Test Items:</strong>
-            <span>{{ record.testItems?.length || 0 }}</span>
-          </span>
-          <button type="button" class="fullscreen-dialog__pill" :class="statusPillClass(record.errorCode)" @click="copyToClipboard(record.errorCode)">
-            <Icon :icon="isStatusPass(record.errorCode) ? 'mdi:check-circle' : 'mdi:alert-circle'" />
-            <strong>Status:</strong>
-            <span>{{ record.errorCode }}</span>
-          </button>
-          <button
-            v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)"
-            type="button"
-            class="fullscreen-dialog__pill fullscreen-dialog__pill--danger"
-            @click="copyToClipboard(record.errorName)"
-          >
-            <Icon icon="mdi:alert-octagon" />
-            <strong>Error:</strong>
-            <span>{{ record.errorName }}</span>
+      <section class="fullscreen-dialog__meta-pills">
+        <span class="fullscreen-dialog__pill fullscreen-dialog__pill--cool">
+          <Icon icon="mdi:calendar-clock" />
+          <strong>Start:</strong>
+          <span>{{ formatTime(record.testStartTime) }}</span>
+        </span>
+        <span class="fullscreen-dialog__pill fullscreen-dialog__pill--cool">
+          <Icon icon="mdi:calendar-check" />
+          <strong>End:</strong>
+          <span>{{ formatTime(record.testEndTime) }}</span>
+        </span>
+        <span class="fullscreen-dialog__pill fullscreen-dialog__pill--neutral">
+          <Icon icon="mdi:timer" />
+          <strong>Duration:</strong>
+          <span>{{ calculateDuration(record.testStartTime, record.testEndTime) }}</span>
+        </span>
+        <span class="fullscreen-dialog__pill fullscreen-dialog__pill--neutral">
+          <Icon icon="mdi:list-box" />
+          <strong>Test Items:</strong>
+          <span>{{ record.testItems?.length || 0 }}</span>
+        </span>
+        <button type="button" class="fullscreen-dialog__pill" :class="statusPillClass(record.errorCode)" @click="copyToClipboard(record.errorCode)">
+          <Icon :icon="isStatusPass(record.errorCode) ? 'mdi:check-circle' : 'mdi:alert-circle'" />
+          <strong>Status:</strong>
+          <span>{{ record.errorCode }}</span>
+        </button>
+        <button
+          v-if="record.errorName && record.errorName !== 'N/A' && !isStatusPass(record.errorCode)"
+          type="button"
+          class="fullscreen-dialog__pill fullscreen-dialog__pill--danger"
+          @click="copyToClipboard(record.errorName)"
+        >
+          <Icon icon="mdi:alert-octagon" />
+          <strong>Error:</strong>
+          <span>{{ record.errorName }}</span>
+        </button>
+      </section>
+
+      <section class="fullscreen-dialog__filters">
+        <label class="fullscreen-dialog__field">
+          <span>Search Test Items (Regex)</span>
+          <div class="fullscreen-dialog__search-shell">
+            <input
+              v-model="searchEntry"
+              type="text"
+              placeholder="Type regex or text and press Enter"
+              @keydown.enter.prevent="commitSearchEntry"
+              @blur="commitSearchEntry"
+            >
+            <button v-if="searchEntry" type="button" class="fullscreen-dialog__inline-button" @click="commitSearchEntry">
+              Add
+            </button>
+          </div>
+          <div v-if="searchTerms.length > 0" class="fullscreen-dialog__token-row">
+            <button v-for="term in searchTerms" :key="term" type="button" class="fullscreen-dialog__token" @click="removeSearchTerm(term)">
+              <span>{{ term }}</span>
+              <span aria-hidden="true">x</span>
+            </button>
+          </div>
+        </label>
+
+        <label class="fullscreen-dialog__field">
+          <span>Data Type</span>
+          <AppSelect v-model="testItemFilter" :options="testItemFilterSelectOptions" placeholder="Show All"
+            :searchable="false" />
+        </label>
+
+        <label class="fullscreen-dialog__field">
+          <span>Status</span>
+          <AppSelect v-model="testStatusFilter" :options="testStatusFilterOptions" placeholder="All statuses"
+            :searchable="false" />
+        </label>
+
+        <div class="fullscreen-dialog__filter-actions">
+          <button v-if="hasActiveFilters" type="button" class="fullscreen-dialog__button fullscreen-dialog__button--ghost" @click="clearFilters">
+            Clear Filters
           </button>
         </div>
       </section>
 
-      <section class="fullscreen-dialog__measurements">
-        <div class="fullscreen-dialog__measurements-header">
-          <div>
-            <p class="fullscreen-dialog__section-eyebrow">Measurement Breakdown</p>
-            <h3>Test Items</h3>
-          </div>
-          <div class="fullscreen-dialog__measurements-tools">
-            <span class="fullscreen-dialog__pill fullscreen-dialog__pill--cool">
-              {{ filteredTestItems.length }} of {{ record.testItems?.length || 0 }}
-            </span>
-          </div>
-        </div>
-
-        <section class="fullscreen-dialog__filters">
-          <label class="fullscreen-dialog__field">
-            <span>Search Test Items</span>
-            <div class="fullscreen-dialog__search-shell">
-              <input
-                v-model="searchEntry"
-                type="text"
-                placeholder="Type regex or text and press Enter"
-                @keydown.enter.prevent="commitSearchEntry"
-                @blur="commitSearchEntry"
-              >
-              <button v-if="searchEntry" type="button" class="fullscreen-dialog__inline-button" @click="commitSearchEntry">
-                Add
-              </button>
-            </div>
-            <div v-if="searchTerms.length > 0" class="fullscreen-dialog__token-row">
-              <button v-for="term in searchTerms" :key="term" type="button" class="fullscreen-dialog__token" @click="removeSearchTerm(term)">
-                <span>{{ term }}</span>
-                <span aria-hidden="true">x</span>
-              </button>
-            </div>
-          </label>
-
-          <label class="fullscreen-dialog__field">
-            <span>Data Type</span>
-            <div class="fullscreen-dialog__option-row">
-              <button
-                v-for="option in testItemFilterOptions"
-                :key="option.value"
-                type="button"
-                class="fullscreen-dialog__option"
-                :class="{ 'fullscreen-dialog__option--active': testItemFilter.includes(option.value) }"
-                @click="toggleTestItemFilter(option.value)"
-              >
-                {{ option.title }}
-              </button>
-            </div>
-          </label>
-
-          <label class="fullscreen-dialog__field">
-            <span>Status</span>
-            <select v-model="testStatusFilter">
-              <option value="ALL">All statuses</option>
-              <option value="PASS">Pass</option>
-              <option value="FAIL">Fail</option>
-            </select>
-          </label>
-
-          <div class="fullscreen-dialog__filter-actions">
-            <button v-if="hasActiveFilters" type="button" class="fullscreen-dialog__button fullscreen-dialog__button--ghost" @click="clearFilters">
-              Clear Filters
-            </button>
-          </div>
-        </section>
-
-        <section class="fullscreen-dialog__table-shell">
+      <section class="fullscreen-dialog__table-shell">
         <AppDataGrid
           :columns="testItemColumns"
           :rows="filteredTestItems"
@@ -206,7 +174,6 @@
           </template>
         </AppDataGrid>
       </section>
-      </section>
     </div>
   </AppDialog>
 </template>
@@ -216,6 +183,7 @@ import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import { AppDialog } from '@/shared/ui'
+import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 import { useNotification } from '@/shared/composables/useNotification'
 import {
   adjustIplasDisplayTime,
@@ -306,7 +274,7 @@ const isOpen = computed({
 })
 
 // Filter controls
-const testItemFilter = ref<TestItemFilterValue[]>(['all'])
+const testItemFilter = ref<TestItemFilterValue>('all')
 const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
 const searchTerms = ref<string[]>([])
 const searchEntry = ref('')
@@ -315,10 +283,21 @@ const { showInfo: showInfoNotification } = useNotification()
 
 // Filter options for dropdown (Criteria Data is default)
 const testItemFilterOptions: Array<{ title: string; value: TestItemFilterValue }> = [
-  { title: 'Criteria Data ★', value: 'value' },
   { title: 'Show All', value: 'all' },
+  { title: 'Criteria Data ★', value: 'value' },
   { title: 'Non-Criteria', value: 'non-value' },
   { title: 'Bin Data', value: 'bin' },
+]
+
+const testItemFilterSelectOptions = testItemFilterOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+
+const testStatusFilterOptions: Array<{ label: string; value: 'ALL' | 'PASS' | 'FAIL' }> = [
+  { label: 'All statuses', value: 'ALL' },
+  { label: 'Pass', value: 'PASS' },
+  { label: 'Fail', value: 'FAIL' },
 ]
 
 const testItemColumns = [
@@ -345,7 +324,7 @@ const dialogBreakpoints = computed<Record<string, string>>(() =>
 )
 
 const hasActiveFilters = computed(() => {
-  return searchTerms.value.length > 0 || testStatusFilter.value !== 'ALL' || !testItemFilter.value.includes('all')
+  return searchTerms.value.length > 0 || testStatusFilter.value !== 'ALL' || testItemFilter.value !== 'all'
 })
 
 // Helper functions
@@ -463,26 +442,11 @@ function removeSearchTerm(term: string): void {
   searchTerms.value = searchTerms.value.filter((value) => value !== term)
 }
 
-function toggleTestItemFilter(value: TestItemFilterValue): void {
-  if (value === 'all') {
-    testItemFilter.value = ['all']
-    return
-  }
-
-  const next = testItemFilter.value.filter((item) => item !== 'all')
-  const exists = next.includes(value)
-  testItemFilter.value = exists ? next.filter((item) => item !== value) : [...next, value]
-
-  if (testItemFilter.value.length === 0) {
-    testItemFilter.value = ['all']
-  }
-}
-
 function clearFilters(): void {
   searchEntry.value = ''
   searchTerms.value = []
   testStatusFilter.value = 'ALL'
-  testItemFilter.value = ['all']
+  testItemFilter.value = 'all'
 }
 
 function statusPillClass(status: string): string {
@@ -497,21 +461,18 @@ const filteredTestItems = computed(() => {
 
   let items = [...props.record.testItems]
 
-  // Apply test item type filter (supports multiple selections)
-  if (testItemFilter.value.length > 0 && !testItemFilter.value.includes('all')) {
+  if (testItemFilter.value !== 'all') {
     items = items.filter((item) => {
-      return testItemFilter.value.some((filterType) => {
-        switch (filterType) {
-          case 'value':
-            return isValueData(item)
-          case 'non-value':
-            return isNonValueData(item)
-          case 'bin':
-            return isBinData(item)
-          default:
-            return true
-        }
-      })
+      switch (testItemFilter.value) {
+        case 'value':
+          return isValueData(item)
+        case 'non-value':
+          return isNonValueData(item)
+        case 'bin':
+          return isBinData(item)
+        default:
+          return true
+      }
     })
   }
 
@@ -561,9 +522,9 @@ watch(
   (newRecord) => {
     // If record has error (errorCode !== 'PASS'), show all data by default
     if (newRecord && !isStatusPass(newRecord.errorCode)) {
-      testItemFilter.value = ['all']
+      testItemFilter.value = 'all'
     } else {
-      testItemFilter.value = ['value']
+      testItemFilter.value = 'value'
     }
     testStatusFilter.value = 'ALL'
     searchTerms.value = []
@@ -755,17 +716,14 @@ watch(
   padding: 0.32rem;
 }
 
-.fullscreen-dialog__results,
-.fullscreen-dialog__measurements {
-  border: 1px solid var(--app-border);
-  border-radius: 0.82rem;
-  background: var(--app-panel);
-  padding: 0.82rem;
-}
-
 .fullscreen-dialog__summary-card--highlight {
   border-color: color-mix(in srgb, var(--app-info) 18%, var(--app-border));
   background: var(--app-panel);
+}
+
+.fullscreen-dialog__summary-card,
+.fullscreen-dialog__metadata-card {
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-info) 4%, transparent);
 }
 
 .fullscreen-dialog__info-button {
@@ -794,55 +752,6 @@ watch(
 
 .fullscreen-dialog__metadata-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.fullscreen-dialog__results,
-.fullscreen-dialog__measurements {
-  display: grid;
-  gap: 0.9rem;
-}
-
-.fullscreen-dialog__results {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 1rem;
-}
-
-.fullscreen-dialog__section-eyebrow {
-  margin: 0 0 0.3rem;
-  color: var(--app-info);
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.fullscreen-dialog__results h3,
-.fullscreen-dialog__measurements-header h3 {
-  margin: 0;
-  color: var(--app-ink);
-  font-size: 1.02rem;
-}
-
-.fullscreen-dialog__results-chips,
-.fullscreen-dialog__measurements-tools {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.6rem;
-  align-items: center;
-}
-
-.fullscreen-dialog__measurements {
-  flex: 1;
-  min-height: 0;
-}
-
-.fullscreen-dialog__measurements-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-  gap: 1rem;
 }
 
 .fullscreen-dialog__meta-pills {
@@ -892,13 +801,6 @@ watch(
   background: var(--app-panel);
 }
 
-.fullscreen-dialog__measurements .fullscreen-dialog__filters {
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-}
-
 .fullscreen-dialog__field {
   display: grid;
   gap: 0.55rem;
@@ -915,7 +817,7 @@ watch(
 .fullscreen-dialog__field input,
 .fullscreen-dialog__field select {
   width: 100%;
-  border: 1px solid var(--app-border);
+  border: 1px solid color-mix(in srgb, var(--app-info) 16%, var(--app-border));
   border-radius: 0.72rem;
   background: var(--app-panel-strong);
   color: var(--app-ink);
@@ -925,6 +827,11 @@ watch(
 
 .fullscreen-dialog__search-shell {
   grid-template-columns: minmax(0, 1fr) auto;
+  border: 1px solid color-mix(in srgb, var(--app-info) 16%, var(--app-border));
+  border-radius: 0.72rem;
+  background: var(--app-panel-strong);
+  padding: 0.24rem;
+  align-items: center;
 }
 
 .fullscreen-dialog__token-row,
@@ -1009,19 +916,12 @@ watch(
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .fullscreen-dialog__results,
-  .fullscreen-dialog__measurements-header {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
   .fullscreen-dialog__header {
     flex-direction: column;
   }
 
   .fullscreen-dialog__header-actions,
-  .fullscreen-dialog__filter-actions,
-  .fullscreen-dialog__measurements-tools {
+  .fullscreen-dialog__filter-actions {
     justify-content: flex-start;
   }
 }
