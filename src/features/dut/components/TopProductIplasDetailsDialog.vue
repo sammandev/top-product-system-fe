@@ -1499,8 +1499,8 @@ watch(
 <style scoped>
 .iplas-details-dialog {
   --iplas-border: var(--app-border);
-  --iplas-border-strong: #94a3b8;
-  --iplas-border-accent: #38bdf8;
+  --iplas-border-strong: var(--app-border);
+  --iplas-border-accent: var(--app-info-line);
   --iplas-panel: var(--app-panel);
   --iplas-panel-strong: var(--app-panel-strong);
   --iplas-muted: var(--app-muted);
@@ -1509,8 +1509,8 @@ watch(
 }
 
 :global(.app-dark) .iplas-details-dialog {
-  --iplas-border-strong: #64748b;
-  --iplas-border-accent: #0ea5e9;
+  --iplas-border-strong: var(--app-border);
+  --iplas-border-accent: var(--app-info-line);
 }
 
 .iplas-details-dialog__header,
