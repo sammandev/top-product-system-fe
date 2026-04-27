@@ -1,27 +1,14 @@
 <template>
-  <AppDialog
-    v-model="internalShow"
-    title="Select & Configure Stations"
-    description="Pick the stations to include, then narrow device IDs and status if needed."
-    width="min(96vw, 56rem)"
-    persistent
-  >
+  <AppDialog v-model="internalShow" title="Select & Configure Stations"
+    description="Pick the stations to include, then narrow device IDs and status if needed." width="min(96vw, 56rem)"
+    persistent>
     <div class="station-dialog">
       <label class="station-dialog__field">
         <span>Search Stations</span>
         <div class="station-dialog__search-shell">
           <Icon icon="mdi:magnify" />
-          <input
-            v-model="searchQuery"
-            type="search"
-            placeholder="Search by station name..."
-          />
-          <button
-            v-if="searchQuery"
-            type="button"
-            class="station-dialog__ghost-action"
-            @click="searchQuery = ''"
-          >
+          <input v-model="searchQuery" type="search" placeholder="Search by station name..." />
+          <button v-if="searchQuery" type="button" class="station-dialog__ghost-action" @click="searchQuery = ''">
             Clear
           </button>
         </div>
@@ -36,18 +23,16 @@
         </div>
 
         <button type="button" class="station-dialog__ghost-action" @click="toggleSelectAllFiltered">
-          {{ allFilteredSelected ? 'Deselect filtered stations' : someFilteredSelected ? 'Select remaining filtered stations' : 'Select filtered stations' }}
+          {{ allFilteredSelected ? 'Deselect filtered stations' : someFilteredSelected ? 
+          'Select remaining filtered stations' : 'Select filtered stations' }}
         </button>
       </div>
 
       <div class="station-dialog__list">
         <article v-for="station in filteredStations" :key="station.value" class="station-dialog__item">
           <label class="station-dialog__item-toggle">
-            <input
-              type="checkbox"
-              :checked="localSelectedStations.includes(station.value)"
-              @change="toggleStation(station.value)"
-            />
+            <input type="checkbox" :checked="localSelectedStations.includes(station.value)"
+              @change="toggleStation(station.value)" />
 
             <div class="station-dialog__item-copy">
               <strong>{{ station.displayName }}</strong>
@@ -58,12 +43,8 @@
           <div v-if="localSelectedStations.includes(station.value)" class="station-dialog__config">
             <div class="station-dialog__config-header">
               <p>Device IDs</p>
-              <button
-                v-if="(localDeviceIds[station.value] || []).length > 0"
-                type="button"
-                class="station-dialog__ghost-action"
-                @click="clearStationDeviceIds(station.value)"
-              >
+              <button v-if="(localDeviceIds[station.value] || []).length > 0" type="button"
+                class="station-dialog__ghost-action" @click="clearStationDeviceIds(station.value)">
                 Clear devices
               </button>
             </div>
@@ -73,19 +54,17 @@
               <span>Loading device IDs...</span>
             </div>
             <div v-else-if="(deviceIdsByStation[station.value] || []).length > 0" class="station-dialog__device-list">
-              <button
-                v-for="deviceId in deviceIdsByStation[station.value] || []"
-                :key="deviceId"
-                type="button"
+              <button v-for="deviceId in deviceIdsByStation[station.value] || []" :key="deviceId" type="button"
                 class="station-dialog__device-chip"
                 :class="{ 'station-dialog__device-chip--active': isStationDeviceSelected(station.value, deviceId) }"
-                @click="toggleStationDeviceId(station.value, deviceId)"
-              >
-                <Icon :icon="isStationDeviceSelected(station.value, deviceId) ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'" />
+                @click="toggleStationDeviceId(station.value, deviceId)">
+                <Icon
+                  :icon="isStationDeviceSelected(station.value, deviceId) ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'" />
                 <span>{{ deviceId }}</span>
               </button>
             </div>
-            <p v-else class="station-dialog__subtle-copy">No device IDs available yet. Empty selection keeps all devices.</p>
+            <p v-else class="station-dialog__subtle-copy">No device IDs available yet. Empty selection keeps all
+              devices.</p>
 
             <label class="station-dialog__field station-dialog__field--compact">
               <span>Test Status</span>
@@ -108,21 +87,13 @@
         <button type="button" class="station-dialog__ghost-action" @click="handleClose">
           Cancel
         </button>
-        <button
-          type="button"
-          class="station-dialog__ghost-action"
-          :disabled="localSelectedStations.length === 0"
-          @click="clearSelection"
-        >
+        <button type="button" class="station-dialog__ghost-action" :disabled="localSelectedStations.length === 0"
+          @click="clearSelection">
           Clear All
         </button>
-        <button
-          type="button"
-          class="station-dialog__primary-action"
-          :disabled="loading"
-          @click="handleConfirm"
-        >
-          <Icon :icon="loading ? 'mdi:loading' : 'mdi:check-circle-outline'" :class="{ 'station-dialog__spin': loading }" />
+        <button type="button" class="station-dialog__primary-action" :disabled="loading" @click="handleConfirm">
+          <Icon :icon="loading ? 'mdi:loading' : 'mdi:check-circle-outline'"
+            :class="{ 'station-dialog__spin': loading }" />
           <span>{{ loading ? 'Saving...' : 'Confirm Selection' }}</span>
         </button>
       </div>
@@ -537,6 +508,7 @@ watch(
 }
 
 @media (max-width: 720px) {
+
   .station-dialog__toolbar,
   .station-dialog__footer,
   .station-dialog__config-header {

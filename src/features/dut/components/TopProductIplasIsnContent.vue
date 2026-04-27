@@ -97,8 +97,7 @@
         <section v-if="configuredStationsCount > 0" class="top-product-iplas-isn-summary-panel">
           <div class="top-product-iplas-isn-summary-panel__header">
             <div>
-              <p class="top-product-iplas-isn-summary-panel__eyebrow">Configured</p>
-              <h3>Stations</h3>
+              <p class="top-product-iplas-isn-summary-panel__eyebrow">Selected Station(s)</p>
             </div>
           </div>
 

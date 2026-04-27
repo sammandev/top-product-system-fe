@@ -75,38 +75,55 @@ function panelSlotName(value: string | number) {
 </script>
 
 <style scoped>
+.app-tabs {
+  display: block;
+}
+
+.app-tabs :deep(.p-tabs) {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.app-tabs :deep(.p-tablist) {
+  margin: 0 0.2rem;
+  padding: 0.35rem;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--app-panel-strong) 94%, transparent), var(--app-panel));
+}
+
 .app-tabs :deep(.p-tablist-tab-list) {
-  gap: 0.85rem;
-  border-bottom: 1px solid var(--app-border);
+  gap: 0.5rem;
+  border-bottom: 0;
   background: transparent;
   padding: 0;
 }
 
 .app-tabs :deep(.p-tab) {
-  border: 0;
-  border-bottom: 2px solid transparent;
-  border-radius: 0;
+  border: 1px solid transparent;
+  border-bottom: 1px solid transparent;
+  border-radius: 0.85rem;
   background: transparent;
   color: var(--app-muted);
   font-weight: 600;
-  padding: 0.75rem 0.125rem 0.65rem;
+  padding: 0.72rem 0.95rem;
 }
 
 .app-tabs :deep(.p-tab-active) {
-  border-color: var(--app-accent);
-  background: transparent;
+  border-color: var(--app-info-line);
+  background: var(--app-panel-strong);
   color: var(--app-accent);
 }
 
 .app-tabs :deep(.p-tab:hover) {
-  background: transparent;
+  background: color-mix(in srgb, var(--app-panel-strong) 88%, transparent);
   color: var(--app-ink);
 }
 
 .app-tabs :deep(.p-tabpanels) {
   border-radius: 0;
   background: transparent;
-  padding: 0.875rem 0 0;
+  padding: 0.15rem 0 0;
 }
 
 .app-tabs :deep(.p-tabpanel) {

@@ -1409,8 +1409,8 @@ watch(
 <style scoped>
 .iplas-details-dialog {
   --iplas-border: var(--app-border);
-  --iplas-border-strong: var(--app-border);
-  --iplas-border-accent: var(--app-info-line);
+  --iplas-border-strong: color-mix(in srgb, var(--app-ink) 16%, transparent);
+  --iplas-border-accent: color-mix(in srgb, var(--app-info) 26%, var(--iplas-border-strong));
   --iplas-panel: var(--app-panel);
   --iplas-panel-strong: var(--app-panel-strong);
   --iplas-muted: var(--app-muted);
@@ -1557,6 +1557,7 @@ watch(
 
 .iplas-details-dialog__body--fullscreen {
   flex: 1;
+  overflow: hidden;
 }
 
 .iplas-details-dialog__summary-card,
@@ -1572,6 +1573,15 @@ watch(
   border: 1px solid var(--iplas-border-strong);
   border-radius: 1rem;
   background: var(--iplas-panel);
+}
+
+.iplas-details-dialog__summary-card,
+.iplas-details-dialog__metadata-card,
+.iplas-details-dialog__filters,
+.iplas-breakdown__name-card,
+.iplas-breakdown__rows-container,
+.iplas-details-dialog__explanation-card {
+  border-color: var(--iplas-border-strong);
 }
 
 .iplas-details-dialog__summary-card,
@@ -1602,6 +1612,7 @@ watch(
 }
 
 .iplas-details-dialog__metadata-card {
+  border-color: color-mix(in srgb, var(--app-info) 12%, var(--iplas-border-strong));
   background: var(--iplas-panel-strong);
   box-shadow: none;
 }
@@ -1612,22 +1623,22 @@ watch(
   gap: 0.45rem;
   min-height: 2.2rem;
   padding: 0.4rem 0.9rem;
-  border: 1px solid rgba(255, 255, 255, 0.82);
+  border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.58) 60%, var(--app-border));
   border-radius: 0.5rem;
-  background: rgba(248, 250, 252, 0.96);
-  color: var(--app-info-strong);
+  background: color-mix(in srgb, var(--app-panel-strong) 90%, rgba(255, 255, 255, 0.14));
+  color: var(--app-ink);
   font: inherit;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 8px 18px rgba(2, 132, 199, 0.14);
+  box-shadow: none;
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .iplas-details-dialog__download-button:hover {
-  background: #fff;
-  border-color: #fff;
+  background: color-mix(in srgb, var(--app-panel-strong) 82%, rgba(255, 255, 255, 0.18));
+  border-color: color-mix(in srgb, rgba(255, 255, 255, 0.82) 50%, var(--app-border));
   transform: translateY(-1px);
 }
 
@@ -1683,12 +1694,12 @@ watch(
 }
 
 .iplas-details-dialog__summary-card .iplas-details-dialog__info-button small {
-  font-size: 0.86rem;
+  font-size: 0.92rem;
 }
 
 .iplas-details-dialog__summary-card .iplas-details-dialog__info-button strong {
-  font-size: clamp(1.2rem, 1rem + 0.55vw, 1.55rem);
-  line-height: 1.2;
+  font-size: clamp(1.4rem, 1.15rem + 0.75vw, 1.85rem);
+  line-height: 1.15;
 }
 
 .iplas-details-dialog__metric-value,
@@ -1991,7 +2002,7 @@ watch(
 /* ── Score Breakdown bordered-list ── */
 .iplas-breakdown__name-card {
   padding: 0.9rem 1rem;
-  border: 1px solid var(--iplas-border);
+  border: 1px solid var(--iplas-border-strong);
   border-radius: 0.9rem;
   background: var(--iplas-panel);
 }
@@ -2005,7 +2016,7 @@ watch(
 }
 
 .iplas-breakdown__rows-container {
-  border: 1px solid var(--iplas-border);
+  border: 1px solid var(--iplas-border-strong);
   border-radius: 0.9rem;
   background: var(--iplas-panel);
   overflow: hidden;
@@ -2017,7 +2028,7 @@ watch(
   justify-content: space-between;
   gap: 1rem;
   padding: 0.85rem 1rem;
-  border-bottom: 1px solid var(--iplas-border);
+  border-bottom: 1px solid var(--iplas-border-strong);
 }
 
 .iplas-breakdown__row:last-child {
@@ -2120,6 +2131,7 @@ watch(
 
 .iplas-details-dialog__explanation-card {
   padding: 0.9rem;
+  border: 1px solid var(--iplas-border-strong);
 }
 
 .iplas-details-dialog__table-shell :deep(.p-datatable-wrapper),
@@ -2133,11 +2145,13 @@ watch(
   display: flex;
   flex-direction: column;
   min-height: 0;
+  overflow: hidden;
 }
 
 :deep(.iplas-details-dialog.app-dialog--fullscreen .app-dialog__body) {
   flex: 1;
   min-height: 0;
+  overflow: hidden;
 }
 
 .iplas-details-dialog__table-shell>.app-data-grid {
@@ -2163,6 +2177,10 @@ watch(
 
 .iplas-details-dialog__table-shell :deep(.p-datatable-table-container) {
   overflow-y: auto;
+}
+
+.iplas-details-dialog__table-shell :deep(.app-data-grid__table--sticky-header .p-datatable-thead > tr > th) {
+  z-index: 4;
 }
 
 .iplas-details-dialog__explanation-card summary {

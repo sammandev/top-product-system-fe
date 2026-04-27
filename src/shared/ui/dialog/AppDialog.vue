@@ -282,10 +282,10 @@ function toggleFullscreen() {
 }
 
 .app-dialog__header-actions > button:not(.app-dialog__header-btn) {
-  border-color: rgba(255, 255, 255, 0.82) !important;
-  background: rgba(248, 250, 252, 0.96) !important;
-  color: var(--app-info-strong) !important;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 8px 18px rgba(2, 132, 199, 0.14);
+  border-color: color-mix(in srgb, rgba(255, 255, 255, 0.58) 60%, var(--app-border)) !important;
+  background: color-mix(in srgb, var(--app-panel-strong) 90%, rgba(255, 255, 255, 0.14)) !important;
+  color: var(--app-ink) !important;
+  box-shadow: none !important;
 }
 
 .app-dialog__header-btn {
@@ -294,12 +294,12 @@ function toggleFullscreen() {
   justify-content: center;
   width: 2.1rem;
   height: 2.1rem;
-  border: 1px solid rgba(255, 255, 255, 0.82);
+  border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.58) 60%, var(--app-border));
   border-radius: 0.65rem;
-  background: rgba(248, 250, 252, 0.96);
-  color: var(--app-info-strong);
+  background: color-mix(in srgb, var(--app-panel-strong) 90%, rgba(255, 255, 255, 0.14));
+  color: var(--app-ink);
   font-size: 1rem;
-  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 8px 18px rgba(2, 132, 199, 0.14);
+  box-shadow: none;
   cursor: pointer;
   transition: color 0.15s, background 0.15s, border-color 0.15s, transform 0.15s;
 }
@@ -310,16 +310,16 @@ function toggleFullscreen() {
 }
 
 .app-dialog__header-btn:hover {
-  background: #fff;
-  color: var(--app-info-strong);
-  border-color: #fff;
+  background: color-mix(in srgb, var(--app-panel-strong) 82%, rgba(255, 255, 255, 0.18));
+  color: var(--app-ink);
+  border-color: color-mix(in srgb, rgba(255, 255, 255, 0.82) 50%, var(--app-border));
   transform: translateY(-1px);
 }
 
 .app-dialog__header-btn--close:hover {
   color: var(--app-danger);
-  border-color: rgba(255, 255, 255, 0.92);
-  background: #fff;
+  border-color: color-mix(in srgb, var(--app-danger-line) 60%, rgba(255, 255, 255, 0.36));
+  background: color-mix(in srgb, var(--app-danger-soft) 44%, var(--app-panel-strong));
 }
 
 :deep(.app-dialog .p-dialog-header .app-dialog__header-left h1),

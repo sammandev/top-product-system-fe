@@ -90,8 +90,7 @@
               <section class="iplas-summary-panel">
                 <div class="iplas-summary-panel__header">
                   <div>
-                    <p class="iplas-summary-panel__eyebrow">Configured</p>
-                    <h3>Stations</h3>
+                    <p class="iplas-summary-panel__eyebrow">Selected Station(s)</p>
                   </div>
                   <span class="iplas-pill iplas-pill--neutral">{{ configuredStations.length }} active</span>
                 </div>
