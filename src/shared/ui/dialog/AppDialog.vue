@@ -277,17 +277,22 @@ function toggleFullscreen() {
   flex-shrink: 0;
 }
 
+.app-dialog__header-actions > * {
+  flex-shrink: 0;
+}
+
 .app-dialog__header-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 2.1rem;
   height: 2.1rem;
-  border: 1px solid rgba(255, 255, 255, 0.28);
+  border: 1px solid rgba(255, 255, 255, 0.56);
   border-radius: 0.65rem;
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.18);
   color: #fff;
   font-size: 1rem;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   cursor: pointer;
   transition: color 0.15s, background 0.15s, border-color 0.15s, transform 0.15s;
 }
@@ -298,16 +303,16 @@ function toggleFullscreen() {
 }
 
 .app-dialog__header-btn:hover {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.28);
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.52);
+  border-color: rgba(255, 255, 255, 0.8);
   transform: translateY(-1px);
 }
 
 .app-dialog__header-btn--close:hover {
   color: #fff;
-  border-color: rgba(255, 255, 255, 0.52);
-  background: rgba(255, 255, 255, 0.22);
+  border-color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.28);
 }
 
 :deep(.app-dialog .p-dialog-header .app-dialog__header-left h1),

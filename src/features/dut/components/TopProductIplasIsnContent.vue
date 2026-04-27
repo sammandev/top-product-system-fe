@@ -103,28 +103,28 @@
           </div>
 
           <div class="top-product-iplas-isn-token-grid">
-            <button v-for="(config, displayName) in stationConfigs" :key="displayName" type="button"
-              class="top-product-iplas-isn-token-card" @click="editStationConfig(displayName)">
-              <div>
+            <article v-for="(config, displayName) in stationConfigs" :key="displayName"
+              class="top-product-iplas-isn-token-card" role="button" tabindex="0"
+              @click="editStationConfig(displayName)" @keydown.enter.prevent="editStationConfig(displayName)"
+              @keydown.space.prevent="editStationConfig(displayName)">
+              <div class="top-product-iplas-isn-token-card__copy">
                 <strong>{{ displayName }}</strong>
-                <p>{{ config.deviceIds.length || config.totalDeviceCount || 'All' }} device(s)</p>
+                <p>{{ config.deviceIds.length || config.totalDeviceCount || 'All' }} device(s) scoped</p>
               </div>
               <div class="top-product-iplas-isn-token-card__meta">
                 <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">
-                  {{ config.deviceIds.length || config.totalDeviceCount || 'All' }} Device(s)
+                  {{ getConfiguredItemCountLabel(config) }}
                 </span>
                 <span class="top-product-iplas-isn-pill"
                   :class="(config.minimumItemScoreEnabled ?? true) ? 'top-product-iplas-isn-pill--warning' : 'top-product-iplas-isn-pill--muted'">
                   {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` : 'MinOff' }}
                 </span>
-                <span role="button" tabindex="0" class="top-product-iplas-isn-remove"
-                  @click.stop="removeStationConfig(displayName)"
-                  @keydown.enter.stop.prevent="removeStationConfig(displayName)"
-                  @keydown.space.stop.prevent="removeStationConfig(displayName)">
-                  Remove
-                </span>
+                <button type="button" class="top-product-iplas-isn-icon-button"
+                  title="Delete station configuration" @click.stop="removeStationConfig(displayName)">
+                  <Icon icon="mdi:delete-outline" />
+                </button>
               </div>
-            </button>
+            </article>
           </div>
         </section>
       </div>
@@ -172,6 +172,7 @@
 
 <script setup lang="ts">
 // UPDATED: Complete rewrite of script section for new UX flow
+import { Icon } from '@iconify/vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useScoring } from '@/features/dut/composables/useScoring'
 import { evaluateForcedFailure } from '@/features/dut/utils/iplasForcedFailure'
@@ -316,6 +317,23 @@ const exportingAll = ref(false)
 const configuredStationsCount = computed(() => {
   return Object.keys(stationConfigs.value).length
 })
+
+function getConfiguredItemCount(config: StationConfig): number {
+  const includeCount = config.includedTestItems?.length ?? 0
+  const excludeCount = config.excludedTestItems?.length ?? 0
+  const legacyCount = config.selectedTestItems?.length ?? 0
+
+  if (includeCount === 0 && excludeCount === 0) {
+    return legacyCount
+  }
+
+  return includeCount + excludeCount
+}
+
+function getConfiguredItemCountLabel(config: StationConfig): string {
+  const count = getConfiguredItemCount(config)
+  return count > 0 ? `${count} Item(s)` : 'All Items'
+}
 
 const multipleModeIdentifiers = computed(() =>
   normalizeIdentifierList([...selectedISNs.value.map((value) => String(value)), multipleIsnSearchText.value]),
@@ -1689,6 +1707,11 @@ onUnmounted(() => {
   padding: 0.6rem 0.88rem;
 }
 
+.top-product-iplas-isn-button--secondary {
+  min-width: 15rem;
+  justify-content: center;
+}
+
 .top-product-iplas-isn-button:hover,
 .top-product-iplas-isn-toggle-chip:hover,
 .top-product-iplas-isn-token:hover,
@@ -1790,15 +1813,48 @@ onUnmounted(() => {
 
 .top-product-iplas-isn-token-grid {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
   gap: 0.75rem;
 }
 
 .top-product-iplas-isn-token-card {
   grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center;
+  align-items: start;
   width: 100%;
-  padding: 0.82rem 0.88rem;
+  min-height: 0;
+  padding: 0.72rem 0.8rem;
   text-align: left;
+}
+
+.top-product-iplas-isn-token-card__copy {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.top-product-iplas-isn-token-card__meta {
+  gap: 0.45rem;
+  align-self: start;
+  justify-content: flex-end;
+}
+
+.top-product-iplas-isn-icon-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.2rem;
+  height: 2.2rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.7rem;
+  background: var(--app-panel-strong);
+  color: var(--app-danger);
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
+}
+
+.top-product-iplas-isn-icon-button:hover {
+  border-color: var(--app-danger-line);
+  background: var(--app-danger-soft);
+  transform: translateY(-1px);
 }
 
 .top-product-iplas-isn-remove {

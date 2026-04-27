@@ -23,7 +23,7 @@
       :rowClass="rowClass ?? undefined"
       removableSort
       stripedRows
-      class="app-data-grid__table"
+      :class="['app-data-grid__table', { 'app-data-grid__table--sticky-header': stickyHeader }]"
       @update:selection="onSelectionChange"
       @row-click="emit('row-click', $event)"
       @page="emit('page', $event)"
@@ -131,6 +131,7 @@ const props = withDefaults(
     stateStorage?: 'local' | 'session'
     stateKey?: string
     emptyMessage?: string
+    stickyHeader?: boolean
     rowClass?: (row: GridRow) => string | Record<string, boolean> | undefined
   }>(),
   {
@@ -147,6 +148,7 @@ const props = withDefaults(
     sortOrder: undefined,
     tableStyle: () => ({ minWidth: '100%' }),
     emptyMessage: 'No records found.',
+    stickyHeader: false,
   },
 )
 
@@ -220,6 +222,10 @@ function resolveFieldValue(row: GridRow, field?: string) {
   touch-action: pan-x pan-y;
 }
 
+.app-data-grid :deep(.app-data-grid__table--sticky-header .p-datatable-table-container) {
+  position: relative;
+}
+
 .app-data-grid :deep(.p-datatable-header),
 .app-data-grid :deep(.p-datatable-footer) {
   border: 0;
@@ -237,6 +243,13 @@ function resolveFieldValue(row: GridRow, field?: string) {
   text-transform: none;
   white-space: pre-line;
   overflow-wrap: anywhere;
+}
+
+.app-data-grid :deep(.app-data-grid__table--sticky-header .p-datatable-thead > tr > th) {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  box-shadow: inset 0 -1px 0 var(--app-border);
 }
 
 .app-data-grid :deep(.p-datatable-tbody > tr > td) {

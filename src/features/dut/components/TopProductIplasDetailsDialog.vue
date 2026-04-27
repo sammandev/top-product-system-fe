@@ -183,8 +183,8 @@
         </div>
 
         <AppDataGrid :columns="testItemColumns" :rows="tableTestItems" data-key="NAME" :paginator="true"
-          :rows-per-page="50" :loading="loadingTestItems" scroll-height="flex" :table-style="{ minWidth: '56rem' }"
-          :row-class="hasScores ? scoreTableRowClass : undefined" @row-click="handleRowClick">
+          :rows-per-page="25" :loading="loadingTestItems" scroll-height="flex" :table-style="{ minWidth: '56rem' }"
+          sticky-header :row-class="hasScores ? scoreTableRowClass : undefined" @row-click="handleRowClick">
           <template #cell-statusSort="{ data }">
             <span class="status-text" :class="getStatusTextClass(String(data.statusDisplay || ''))">
               {{ data.statusDisplay }}
@@ -1418,6 +1418,8 @@ watch(
 <style scoped>
 .iplas-details-dialog {
   --iplas-border: var(--app-border);
+  --iplas-border-strong: color-mix(in srgb, var(--app-ink) 14%, transparent);
+  --iplas-border-accent: color-mix(in srgb, var(--app-info) 24%, var(--iplas-border-strong));
   --iplas-panel: var(--app-panel);
   --iplas-panel-strong: var(--app-panel-strong);
   --iplas-muted: var(--app-muted);
@@ -1576,7 +1578,7 @@ watch(
 .iplas-details-dialog__metric-list,
 .iplas-details-dialog__simple-list,
 .iplas-details-dialog__explanation-card {
-  border: 1px solid var(--iplas-border);
+  border: 1px solid var(--iplas-border-strong);
   border-radius: 0.82rem;
   background: var(--iplas-panel);
 }
@@ -1600,17 +1602,17 @@ watch(
 
 .iplas-details-dialog__summary-card--highlight,
 .iplas-details-dialog__summary-card--score {
-  border-color: color-mix(in srgb, var(--app-info) 18%, var(--iplas-border));
+  border-color: var(--iplas-border-accent);
   background: var(--app-panel);
 }
 
 .iplas-details-dialog__summary-card {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-info) 6%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-info) 8%, transparent);
 }
 
 .iplas-details-dialog__metadata-card {
   background: var(--iplas-panel-strong);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-info) 4%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-info) 6%, transparent);
 }
 
 .iplas-details-dialog__download-button {
@@ -1619,20 +1621,22 @@ watch(
   gap: 0.45rem;
   min-height: 2.2rem;
   padding: 0.4rem 0.9rem;
-  border: 1.5px solid #fff;
+  border: 1px solid rgba(255, 255, 255, 0.72);
   border-radius: 0.5rem;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.16);
   color: #fff;
   font: inherit;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.04em;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
   cursor: pointer;
-  transition: background-color 0.15s ease, transform 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .iplas-details-dialog__download-button:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.26);
+  border-color: #fff;
   transform: translateY(-1px);
 }
 
@@ -1687,6 +1691,15 @@ watch(
   overflow-wrap: anywhere;
 }
 
+.iplas-details-dialog__summary-card .iplas-details-dialog__info-button small {
+  font-size: 0.82rem;
+}
+
+.iplas-details-dialog__summary-card .iplas-details-dialog__info-button strong {
+  font-size: clamp(1.02rem, 0.95rem + 0.35vw, 1.22rem);
+  line-height: 1.25;
+}
+
 .iplas-details-dialog__metric-value,
 .score-explanation-primary__score {
   font-size: clamp(1.3rem, 2vw, 2rem);
@@ -1719,7 +1732,7 @@ watch(
   grid-template-columns: minmax(0, 1.9fr) minmax(0, 0.95fr);
   align-items: end;
   padding: 0.82rem 0.9rem;
-  border: 1px solid var(--iplas-border);
+  border: 1px solid var(--iplas-border-strong);
   border-radius: 0.82rem;
   background: var(--iplas-panel);
 }
@@ -1777,7 +1790,7 @@ watch(
 .iplas-details-dialog__search-shell,
 .iplas-details-dialog__token-shell {
   width: 100%;
-  border: 1px solid color-mix(in srgb, var(--app-info) 16%, var(--iplas-border));
+  border: 1px solid var(--iplas-border-accent);
   border-radius: 0.7rem;
   background: var(--iplas-panel-strong);
   color: var(--iplas-ink);
