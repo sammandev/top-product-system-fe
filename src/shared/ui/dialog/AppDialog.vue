@@ -187,6 +187,7 @@ function toggleFullscreen() {
 
 .app-dialog .p-dialog-content {
   padding: 1rem 1.125rem 1.125rem;
+  background: var(--app-panel-strong);
   color: var(--app-ink);
   overflow-y: auto;
   flex: 1;

@@ -4,6 +4,7 @@
   --app-canvas-strong: #e5e7eb;
   --app-panel: #ffffff;
   --app-panel-strong: #ffffff;
+  --app-surface: #f8fafc;
 
   /* Typography */
   --app-ink: #18181b;
@@ -60,6 +61,7 @@
   --app-canvas-strong: #18181b;
   --app-panel: #18181b;
   --app-panel-strong: #18181b;
+  --app-surface: #0f0f11;
   --app-ink: #f4f4f5;
   --app-muted: #d4d4d8;
   --app-accent: #34d399;

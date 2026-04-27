@@ -1503,7 +1503,6 @@ watch(
   --iplas-border-accent: #0f766e;
   --iplas-panel: #f8fafc;
   --iplas-panel-strong: #ffffff;
-  --iplas-divider-shadow: #475569;
   --iplas-muted: var(--app-muted);
   --iplas-ink: var(--app-ink);
   --iplas-accent: var(--app-accent);
@@ -1514,7 +1513,6 @@ watch(
   --iplas-border-accent: #67e8f9;
   --iplas-panel: #111827;
   --iplas-panel-strong: #18181b;
-  --iplas-divider-shadow: #cbd5e1;
 }
 
 .iplas-details-dialog__header,
@@ -1671,7 +1669,6 @@ watch(
   border: 1px solid var(--iplas-border-strong);
   border-radius: 1rem;
   background: var(--iplas-panel);
-  box-shadow: inset 0 0 0 1px var(--iplas-divider-shadow);
 }
 
 .iplas-details-dialog__summary-card,
@@ -1704,7 +1701,6 @@ watch(
 .iplas-details-dialog__summary-card--score {
   border-color: var(--iplas-border-accent);
   background: var(--iplas-panel-strong);
-  box-shadow: inset 0 0 0 1px var(--iplas-border-accent);
 }
 
 .iplas-details-dialog__summary-card {
@@ -1714,7 +1710,6 @@ watch(
 .iplas-details-dialog__metadata-card {
   border-color: var(--iplas-border-strong);
   background: var(--iplas-panel-strong);
-  box-shadow: inset 0 0 0 1px var(--iplas-divider-shadow);
 }
 
 .iplas-details-dialog__download-button {
@@ -1837,7 +1832,6 @@ watch(
   border: 1px solid var(--iplas-border-strong);
   border-radius: 1rem;
   background: var(--iplas-panel);
-  box-shadow: inset 0 0 0 1px var(--iplas-divider-shadow);
 }
 
 .iplas-details-dialog__filters--has-scores {
@@ -2106,7 +2100,6 @@ watch(
   border: 1px solid var(--iplas-border-strong);
   border-radius: 0.9rem;
   background: var(--iplas-panel-strong);
-  box-shadow: inset 0 0 0 1px var(--iplas-divider-shadow);
 }
 
 .iplas-breakdown__name-text {
@@ -2121,7 +2114,6 @@ watch(
   border: 1px solid var(--iplas-border-strong);
   border-radius: 0.9rem;
   background: var(--iplas-panel);
-  box-shadow: inset 0 0 0 1px var(--iplas-divider-shadow);
   overflow: hidden;
 }
 
@@ -2237,7 +2229,6 @@ watch(
   padding: 0.9rem;
   border: 1px solid var(--iplas-border-strong);
   background: var(--iplas-panel-strong);
-  box-shadow: inset 0 0 0 1px var(--iplas-divider-shadow);
 }
 
 .iplas-details-dialog__table-shell :deep(.p-datatable-wrapper),
