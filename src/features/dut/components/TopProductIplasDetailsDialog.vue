@@ -1497,7 +1497,7 @@ watch(
 </script>
 
 <style scoped>
-.iplas-details-dialog {
+:global(.iplas-details-dialog) {
   --iplas-border: var(--app-border);
   --iplas-border-strong: #475569;
   --iplas-border-accent: #0f766e;
@@ -1508,7 +1508,7 @@ watch(
   --iplas-accent: var(--app-accent);
 }
 
-:global(.app-dark) .iplas-details-dialog {
+:global(.app-dark .iplas-details-dialog) {
   --iplas-border-strong: #cbd5e1;
   --iplas-border-accent: #67e8f9;
   --iplas-panel: #111827;

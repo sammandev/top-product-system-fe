@@ -727,11 +727,6 @@ watch(
   background: var(--app-panel);
 }
 
-.fullscreen-dialog__summary-card,
-.fullscreen-dialog__metadata-card {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-info) 4%, transparent);
-}
-
 .fullscreen-dialog__info-button {
   width: 100%;
   justify-content: flex-start;
