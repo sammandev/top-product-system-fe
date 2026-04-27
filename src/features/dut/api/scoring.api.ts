@@ -21,6 +21,8 @@ function toSnakeCase(config: ScoringConfig): Record<string, unknown> {
     weight: config.weight,
     alpha: config.alpha,
     target: config.target,
+    policy: config.policy,
+    limit_score: config.limitScore,
     target_score: config.targetScore,
     target_deviation: config.targetDeviation,
     min_score: config.minScore,
@@ -52,6 +54,9 @@ function fromSnakeCaseRecord(data: Record<string, unknown>): RecordScoreResult {
         deviation: item.deviation as number | undefined,
         weight: (item.weight as number) ?? 1.0,
         target: item.target as number | null | undefined,
+        maxDeviation: item.max_deviation as number | null | undefined,
+        exceedsMaxDeviation: Boolean(item.exceeds_max_deviation),
+        belowMinScore: Boolean(item.below_min_score),
       }
     }),
     totalItems: data.total_items as number,

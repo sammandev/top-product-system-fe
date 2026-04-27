@@ -1,7 +1,7 @@
 <template>
   <AppDialog :model-value="internalShow" v-model:fullscreen="isFullscreen" width="min(96vw, 72rem)"
     fullscreen-width="98vw" :breakpoints="{ '1200px': '96vw', '760px': '98vw' }" fullscreenable persistent
-    :title="`Configure Station: ${station?.display_station_name ?? ''}`" description="Configure device scope and test items."
+    :title="`Configure Station: ${station?.display_station_name ?? ''}`"
     @update:modelValue="internalShow = $event" @hide="handleClose">
 
     <section class="station-config-body" :class="{ 'station-config-body--fullscreen': isFullscreen }">
@@ -252,6 +252,14 @@
         <small>Weight for this test item in the overall score calculation.</small>
       </label>
 
+      <label class="station-config-dialog__field">
+        <span>Maximum Deviation</span>
+        <input :value="getTestItemScoringConfig(scoringConfigItem).maxDeviation ?? ''" type="number" min="0" step="0.01"
+          placeholder="Leave empty to disable deviation fail"
+          @input="updateTestItemMaxDeviation(scoringConfigItem, toOptionalNumber(($event.target as HTMLInputElement).value))" />
+        <small>If the measured deviation exceeds this value, the DUT is marked as Deviation Fail.</small>
+      </label>
+
       <div class="station-config-dialog__notice station-config-dialog__notice--info">
         <strong>Formula:</strong>
         <span>{{ getScoringTypeInfo(getTestItemScoringConfig(scoringConfigItem).scoringType).description }}</span>
@@ -299,6 +307,13 @@
         <span>Weight</span>
         <input v-model.number="bulkWeight" type="number" min="0" step="0.1" />
         <small>Weight for these test items in the overall score calculation.</small>
+      </label>
+
+      <label class="station-config-dialog__field">
+        <span>Maximum Deviation</span>
+        <input v-model.number="bulkMaxDeviation" type="number" min="0" step="0.01"
+          placeholder="Leave empty to disable deviation fail" />
+        <small>Applies the same maximum deviation threshold to all selected criteria items.</small>
       </label>
 
       <div class="station-config-dialog__notice station-config-dialog__notice--info">
@@ -450,6 +465,7 @@ const bulkScoringType = ref<ScoringType>('symmetrical')
 const bulkTarget = ref<number | undefined>(undefined)
 const bulkPolicy = ref<ScoringPolicy>('symmetrical') // UPDATED: Add policy for bulk config
 const bulkWeight = ref<number>(1.0)
+const bulkMaxDeviation = ref<number | undefined>(undefined)
 
 const isExistingConfig = computed(() => !!props.existingConfig)
 const testItemListHeight = computed(() => (isFullscreen.value ? 480 : 320))
@@ -951,6 +967,18 @@ function updateTestItemTarget(testItemName: string, target: number | undefined):
   localConfig.value.testItemScoringConfigs[testItemName].target = target
 }
 
+function updateTestItemMaxDeviation(testItemName: string, maxDeviation: number | undefined): void {
+  if (!localConfig.value.testItemScoringConfigs) {
+    localConfig.value.testItemScoringConfigs = {}
+  }
+
+  if (!localConfig.value.testItemScoringConfigs[testItemName]) {
+    localConfig.value.testItemScoringConfigs[testItemName] = { scoringType: 'symmetrical' }
+  }
+
+  localConfig.value.testItemScoringConfigs[testItemName].maxDeviation = maxDeviation
+}
+
 // UPDATED: Add function to update test item policy
 function updateTestItemPolicy(testItemName: string, policy: ScoringPolicy): void {
   if (!localConfig.value.testItemScoringConfigs) {
@@ -974,6 +1002,7 @@ function openBulkScoringConfig(): void {
   bulkTarget.value = undefined
   bulkPolicy.value = 'symmetrical' // UPDATED: Reset policy
   bulkWeight.value = 1.0
+  bulkMaxDeviation.value = undefined
   bulkScoringDialog.value = true
 }
 
@@ -1008,6 +1037,10 @@ function applyBulkScoringConfig(): void {
     // UPDATED: Add policy for asymmetrical scoring
     if (bulkScoringType.value === 'asymmetrical') {
       config.policy = bulkPolicy.value
+    }
+
+    if (bulkMaxDeviation.value !== undefined) {
+      config.maxDeviation = bulkMaxDeviation.value
     }
 
     localConfig.value.testItemScoringConfigs[item.name] = config
@@ -1076,7 +1109,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 
 <style scoped>
 .border {
-  border: 1px solid rgba(0, 0, 0, 0.12);
+  border: 1px solid var(--app-border);
 }
 
 .station-config-title {
@@ -1171,7 +1204,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 
 .station-config-dialog__button:hover,
 .station-config-dialog__icon-button:hover {
-  border-color: rgba(15, 118, 110, 0.24);
+  border-color: var(--app-accent);
 }
 
 .station-config-dialog__button {
@@ -1290,7 +1323,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-dialog__action-tile,
 .station-config-dialog__toggle-pill {
   border-radius: 999px;
-  border: 1px solid transparent;
+  border: 1px solid var(--app-border);
   font-weight: 700;
 }
 
@@ -1312,7 +1345,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-dialog__action-tile:hover,
 .station-config-dialog__toggle-pill:hover,
 .test-item-row:hover {
-  border-color: rgba(15, 118, 110, 0.24);
+  border-color: var(--app-accent);
 }
 
 .station-config-dialog__choice-chip,
@@ -1340,7 +1373,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-dialog__toggle-chip.is-active,
 .station-config-dialog__toggle-pill.is-active {
   background: var(--app-accent-soft);
-  border-color: rgba(15, 118, 110, 0.24);
+  border-color: var(--app-accent);
   color: var(--app-accent);
 }
 
@@ -1352,15 +1385,15 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 .station-config-dialog__pill--muted {
-  background: rgba(95, 103, 122, 0.1);
-  border-color: rgba(95, 103, 122, 0.16);
+  background: var(--app-panel-strong);
+  border-color: var(--app-border);
   color: var(--app-muted);
 }
 
 .station-config-dialog__pill--success,
 .station-config-dialog__pill-button--success {
-  background: rgba(15, 118, 110, 0.1);
-  border-color: rgba(15, 118, 110, 0.16);
+  background: var(--app-accent-soft);
+  border-color: var(--app-accent);
   color: var(--app-accent);
 }
 
@@ -1397,7 +1430,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   min-height: 5.25rem;
   padding: 0.8rem 0.9rem;
   border-radius: 0.8rem;
-  border-color: rgba(15, 118, 110, 0.12);
+  border-color: var(--app-border);
   background: var(--app-panel);
   color: var(--app-ink);
   text-align: left;
@@ -1423,7 +1456,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  border: 3px solid rgba(15, 118, 110, 0.16);
+  border: 3px solid var(--app-border);
   border-top-color: var(--app-accent);
   animation: station-config-spin 0.9s linear infinite;
 }
@@ -1454,11 +1487,11 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 
 .test-item-row--disabled {
   cursor: not-allowed;
-  opacity: 0.58;
+  color: var(--app-muted);
 }
 
 .test-item-row--disabled:hover {
-  background-color: transparent;
+  background-color: var(--app-panel);
 }
 
 .scoring-config-btn {
@@ -1490,7 +1523,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 :deep(.test-item-source-toggle .v-btn) {
   min-width: 84px;
   color: var(--app-muted) !important;
-  border-color: transparent !important;
+  border-color: var(--app-border) !important;
   font-weight: 600;
   letter-spacing: 0.01em;
 }
@@ -1577,13 +1610,13 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   width: 100%;
   padding: 0.85rem 0.95rem;
   border-radius: 0.9rem;
-  border: 1px solid transparent;
-  background: transparent;
+  border: 1px solid var(--app-border);
+  background: var(--app-panel);
   text-align: left;
 }
 
 .test-item-row.is-active {
-  border-color: rgba(15, 118, 110, 0.18);
+  border-color: var(--app-accent);
 }
 
 .test-item-row-actions {
@@ -1596,8 +1629,8 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   width: 1.1rem;
   height: 1.1rem;
   border-radius: 0.3rem;
-  border: 1px solid rgba(15, 118, 110, 0.24);
-  background: white;
+  border: 1px solid var(--app-accent);
+  background: var(--app-canvas);
 }
 
 .station-config-dialog__checkmark.is-active {

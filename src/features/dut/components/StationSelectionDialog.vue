@@ -1,6 +1,5 @@
 <template>
   <AppDialog :model-value="internalShow" width="min(96vw, 56rem)" persistent title="Select Stations"
-    description="Pick the stations to configure for the current site and project."
     @update:modelValue="internalShow = $event">
 
     <div class="station-selection-dialog__stack">
@@ -84,6 +83,7 @@ export interface TestItemScoringConfig {
   target?: number // Required for asymmetrical
   policy?: ScoringPolicy // Policy for asymmetrical (symmetrical/higher/lower)
   weight?: number // Weight for scoring (default: 1.0)
+  maxDeviation?: number // Optional maximum allowed deviation before DUT is marked failed
 }
 
 export interface StationConfig {

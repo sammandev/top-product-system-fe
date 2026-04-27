@@ -78,7 +78,7 @@ export interface ScoringConfig {
   targetScore?: number // Legacy: Score at target deviation (deprecated)
   targetDeviation?: number // Legacy: Deviation for target_score (deprecated)
   minScore?: number // Legacy: Minimum score (deprecated)
-  maxDeviation?: number // Legacy: Max deviation (deprecated)
+  maxDeviation?: number // Maximum allowed deviation before the DUT is marked as failed
 }
 
 // Score result for a single test item
@@ -94,6 +94,9 @@ export interface TestItemScoreResult {
   deviation?: number
   weight: number // Weight used for this test item in scoring (default 1.0)
   target?: number | null // Target value used for scoring
+  maxDeviation?: number | null
+  exceedsMaxDeviation?: boolean
+  belowMinScore?: boolean
 }
 
 // Score result for a single test record
@@ -153,12 +156,12 @@ export interface ScoringTypeInfo {
 export type ScoringConfigParameterKey =
   | 'target'
   | 'limitScore'
+  | 'maxDeviation'
   // Legacy keys
   | 'alpha'
   | 'targetScore'
   | 'targetDeviation'
   | 'minScore'
-  | 'maxDeviation'
 
 export interface ScoringParameter {
   key: ScoringConfigParameterKey

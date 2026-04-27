@@ -4,6 +4,10 @@ import type { StationConfig } from '../components/StationSelectionDialog.vue'
 export interface ForcedFailureItemDetail {
   name: string
   score: number
+  deviation?: number
+  scoreFail: boolean
+  deviationFail: boolean
+  reasonLabel: string
 }
 
 export interface ForcedFailureInfo {
@@ -20,29 +24,40 @@ export function evaluateForcedFailure(
   scoredRecord: RecordScoreResult,
   stationConfig?: StationConfig,
 ): ForcedFailureInfo {
-  // If minimum item score check is disabled, never flag as forced failure
   const minimumItemScoreEnabled = stationConfig?.minimumItemScoreEnabled ?? true
-  if (!minimumItemScoreEnabled) {
-    return {
-      isForcedFailure: false,
-      minimumItemScore: null,
-      failingItems: [],
-    }
-  }
-
   const minimumItemScore = stationConfig?.minimumItemScore ?? 6.5
   const threshold = minimumItemScore / 10
+  const scoringConfigs = stationConfig?.testItemScoringConfigs ?? {}
 
   const failingItems = scoredRecord.testItemScores
-    .filter((item) => isNumericScoredItem(item) && item.score < threshold)
-    .map((item) => ({
-      name: item.testItemName,
-      score: item.score,
-    }))
+    .filter((item) => isNumericScoredItem(item))
+    .flatMap((item) => {
+      const scoreFail = minimumItemScoreEnabled && item.score < threshold
+      const configuredMaxDeviation = scoringConfigs[item.testItemName]?.maxDeviation
+      const deviationFail = Boolean(
+        item.exceedsMaxDeviation ||
+          (configuredMaxDeviation !== undefined &&
+            item.deviation !== undefined &&
+            Math.abs(item.deviation) > configuredMaxDeviation),
+      )
+
+      if (!scoreFail && !deviationFail) {
+        return []
+      }
+
+      return [{
+        name: item.testItemName,
+        score: item.score,
+        deviation: item.deviation,
+        scoreFail,
+        deviationFail,
+        reasonLabel: scoreFail && deviationFail ? 'Dev./Score Fail' : deviationFail ? 'Deviation Fail' : 'Score Fail',
+      }]
+    })
 
   return {
     isForcedFailure: failingItems.length > 0,
-    minimumItemScore,
+    minimumItemScore: minimumItemScoreEnabled ? minimumItemScore : null,
     failingItems,
   }
 }

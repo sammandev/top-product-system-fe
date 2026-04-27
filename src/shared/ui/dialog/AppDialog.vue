@@ -178,13 +178,8 @@ function toggleFullscreen() {
 }
 
 :deep(.app-dialog .p-dialog-header) {
-  border-bottom: 1px solid color-mix(in srgb, var(--app-info-strong) 90%, transparent);
-  background:
-    linear-gradient(
-      180deg,
-      color-mix(in srgb, var(--app-info-strong) 72%, var(--app-info)) 0%,
-      var(--app-info) 100%
-    );
+  border-bottom: 1px solid var(--app-info-line);
+  background: var(--app-info);
   color: #fff;
   flex-shrink: 0;
   padding: 0;
@@ -197,7 +192,7 @@ function toggleFullscreen() {
   flex: 1;
   min-height: 0;
   scrollbar-width: thin;
-  scrollbar-color: rgba(120, 120, 120, 0.3) transparent;
+  scrollbar-color: var(--app-border) var(--app-panel-strong);
 }
 
 :deep(.app-dialog .p-dialog-footer) {
@@ -225,7 +220,7 @@ function toggleFullscreen() {
 
 :deep(.app-dialog.app-dialog--fullscreen .p-dialog-header),
 :deep(.app-dialog.app-dialog--fullscreen .p-dialog-footer) {
-  border-color: color-mix(in srgb, var(--app-border) 82%, transparent);
+  border-color: var(--app-border);
 }
 
 :deep(.app-dialog.app-dialog--fullscreen.app-dialog--sticky-header .p-dialog-header) {
@@ -265,7 +260,7 @@ function toggleFullscreen() {
 
 .app-dialog__description {
   margin: 0;
-  color: rgba(255, 255, 255, 0.82);
+  color: #ecfeff;
   font-size: 0.76rem;
   line-height: 1.4;
 }
@@ -282,8 +277,8 @@ function toggleFullscreen() {
 }
 
 .app-dialog__header-actions > button:not(.app-dialog__header-btn) {
-  border-color: color-mix(in srgb, rgba(255, 255, 255, 0.58) 60%, var(--app-border)) !important;
-  background: color-mix(in srgb, var(--app-panel-strong) 90%, rgba(255, 255, 255, 0.14)) !important;
+  border-color: var(--app-border) !important;
+  background: var(--app-panel-strong) !important;
   color: var(--app-ink) !important;
   box-shadow: none !important;
 }
@@ -294,9 +289,9 @@ function toggleFullscreen() {
   justify-content: center;
   width: 1.95rem;
   height: 1.95rem;
-  border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.58) 60%, var(--app-border));
+  border: 1px solid var(--app-border);
   border-radius: 0.65rem;
-  background: color-mix(in srgb, var(--app-panel-strong) 90%, rgba(255, 255, 255, 0.14));
+  background: var(--app-panel-strong);
   color: var(--app-ink);
   font-size: 0.95rem;
   box-shadow: none;
@@ -310,16 +305,16 @@ function toggleFullscreen() {
 }
 
 .app-dialog__header-btn:hover {
-  background: color-mix(in srgb, var(--app-panel-strong) 82%, rgba(255, 255, 255, 0.18));
+  background: var(--app-panel);
   color: var(--app-ink);
-  border-color: color-mix(in srgb, rgba(255, 255, 255, 0.82) 50%, var(--app-border));
+  border-color: var(--app-info-line);
   transform: translateY(-1px);
 }
 
 .app-dialog__header-btn--close:hover {
   color: var(--app-danger);
-  border-color: color-mix(in srgb, var(--app-danger-line) 60%, rgba(255, 255, 255, 0.36));
-  background: color-mix(in srgb, var(--app-danger-soft) 44%, var(--app-panel-strong));
+  border-color: var(--app-danger-line);
+  background: var(--app-danger-soft);
 }
 
 :deep(.app-dialog .p-dialog-header .app-dialog__header-left h1),

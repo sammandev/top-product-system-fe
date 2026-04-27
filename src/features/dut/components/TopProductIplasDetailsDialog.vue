@@ -215,12 +215,11 @@
   </AppDialog>
 
   <AppDialog v-model="showForcedFailDialog" title="Forced Fail Items"
-    description="Review items that fell below the minimum threshold." width="min(92vw, 56rem)">
+    description="Review items that fell below the minimum score or exceeded the configured deviation." width="min(92vw, 56rem)">
     <div v-if="record" class="iplas-details-subdialog">
       <section class="iplas-details-dialog__notice iplas-details-dialog__notice--warning">
         <strong>
-          {{ record.forcedFailureDetails?.length || 0 }} scored item(s) fell below the minimum score of
-          {{ record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5' }} / 10
+          {{ record.forcedFailureDetails?.length || 0 }} scored item(s) triggered a forced-fail rule.
         </strong>
       </section>
 
@@ -248,6 +247,12 @@
             <span class="iplas-details-dialog__score-chip"
               :class="`iplas-details-dialog__score-chip--${scoreTone(data.score)}`">
               {{ (data.score * 10).toFixed(2) }} / 10
+            </span>
+          </template>
+
+          <template #cell-reasonLabel="{ value }">
+            <span class="status-text" :class="getStatusTextClass(String(value || ''))">
+              {{ value }}
             </span>
           </template>
 
@@ -401,9 +406,7 @@
       <section v-if="record.isForcedFailure" class="iplas-details-dialog__notice iplas-details-dialog__notice--warning">
         <strong>Forced Fail Override</strong>
         <p>
-          This record is marked as forced fail because {{ overallScoreExplanation.failingItemCount }}
-          {{ overallScoreExplanation.failingItemCount === 1 ? 'item fell' : 'items fell' }} below the minimum score of
-          {{ overallScoreExplanation.forcedFailureThreshold }} / 10.
+          {{ forcedFailureNoticeText }}
         </p>
         <p>That threshold rule is separate from the aggregate weighted-average score shown above.</p>
       </section>
@@ -451,13 +454,13 @@ interface OverallScoreExplanation {
   binaryItemCount: number
   totalEffectiveWeight: number
   failingItemCount: number
-  forcedFailureThreshold: string
 }
 
 interface ForcedFailGridRow {
   rowKey: string
   name: string
   score: number
+  reasonLabel: string
 }
 
 interface BreakdownGridRow {
@@ -543,6 +546,7 @@ const scoreFilterSelectOptions = [
 const forcedFailColumns = [
   { key: 'name', field: 'name', header: 'Failed Test Item', sortable: true, style: { width: '34rem' } },
   { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '10rem' } },
+  { key: 'reasonLabel', field: 'reasonLabel', header: 'Rule', sortable: true, style: { width: '12rem' } },
   { key: 'actions', header: 'Actions', sortable: false, style: { width: '6rem' } },
 ]
 
@@ -566,6 +570,71 @@ function areDisplayedScoresEqual(left: number | null | undefined, right: number 
   }
 
   return formatScoreValue(left) === formatScoreValue(right)
+}
+
+function getForcedFailureRuleFlags(record: NormalizedRecord | null): { scoreFail: boolean; deviationFail: boolean } {
+  const details = record?.forcedFailureDetails ?? []
+
+  return details.reduce<{ scoreFail: boolean; deviationFail: boolean }>(
+    (flags, detail) => {
+      if (detail.reasonLabel === 'Deviation Fail' || detail.reasonLabel === 'Dev./Score Fail') {
+        flags.deviationFail = true
+      }
+
+      if (detail.reasonLabel === 'Score Fail' || detail.reasonLabel === 'SCORE FAIL' || detail.reasonLabel === 'Dev./Score Fail') {
+        flags.scoreFail = true
+      }
+
+      return flags
+    },
+    { scoreFail: false, deviationFail: false },
+  )
+}
+
+function getForcedFailureDetailText(record: NormalizedRecord | null, compact = false): string {
+  const details = record?.forcedFailureDetails ?? []
+  const failingItemCount = details.length
+  const itemLabel = failingItemCount === 1 ? 'item' : 'items'
+  const threshold = record?.forcedFailureMinimumScore
+  const { scoreFail, deviationFail } = getForcedFailureRuleFlags(record)
+
+  if (compact) {
+    if (scoreFail && deviationFail) {
+      return threshold !== null && threshold !== undefined
+        ? `${failingItemCount} ${itemLabel} below ${threshold.toFixed(1)} / 10 or beyond max deviation`
+        : `${failingItemCount} ${itemLabel} beyond max deviation`
+    }
+
+    if (scoreFail) {
+      return threshold !== null && threshold !== undefined
+        ? `${failingItemCount} ${itemLabel} below ${threshold.toFixed(1)} / 10`
+        : `${failingItemCount} ${itemLabel} failed the configured score rule`
+    }
+
+    if (deviationFail) {
+      return `${failingItemCount} ${itemLabel} beyond max deviation`
+    }
+
+    return failingItemCount > 0 ? `${failingItemCount} ${itemLabel} failed a scoring rule` : 'Scoring rule triggered'
+  }
+
+  if (scoreFail && deviationFail) {
+    return threshold !== null && threshold !== undefined
+      ? `This record is marked as forced fail because ${failingItemCount} ${itemLabel} fell below the minimum score of ${threshold.toFixed(1)} / 10 or exceeded the configured deviation.`
+      : `This record is marked as forced fail because ${failingItemCount} ${itemLabel} exceeded the configured deviation.`
+  }
+
+  if (scoreFail) {
+    return threshold !== null && threshold !== undefined
+      ? `This record is marked as forced fail because ${failingItemCount} ${itemLabel} fell below the minimum score of ${threshold.toFixed(1)} / 10.`
+      : `This record is marked as forced fail because ${failingItemCount} ${itemLabel} failed the configured score rule.`
+  }
+
+  if (deviationFail) {
+    return `This record is marked as forced fail because ${failingItemCount} ${itemLabel} exceeded the configured deviation.`
+  }
+
+  return 'This record is marked as forced fail because one or more scoring rules were triggered.'
 }
 
 const scoreSummaryPrimary = computed<ScoreSummaryMetric | null>(() => {
@@ -632,19 +701,15 @@ const forcedFailSummary = computed<ForcedFailSummary | null>(() => {
   if (!record?.isForcedFailure) {
     return null
   }
-
-  const threshold = record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5'
   const failingItemCount = record.forcedFailureDetails?.length ?? 0
-  const itemLabel = failingItemCount === 1 ? 'item' : 'items'
 
   return {
-    detailText:
-      failingItemCount > 0
-        ? `${failingItemCount} ${itemLabel} below ${threshold} / 10`
-        : `Below ${threshold} / 10`,
+    detailText: getForcedFailureDetailText(record, true),
     clickable: failingItemCount > 0,
   }
 })
+
+const forcedFailureNoticeText = computed(() => getForcedFailureDetailText(props.record))
 
 const scoreSummaryLabel = computed(() => {
   if (props.record?.isForcedFailure) {
@@ -713,7 +778,6 @@ const overallScoreExplanation = computed<OverallScoreExplanation | null>(() => {
     binaryItemCount,
     totalEffectiveWeight,
     failingItemCount: record.forcedFailureDetails?.length ?? 0,
-    forcedFailureThreshold: record.forcedFailureMinimumScore?.toFixed(1) ?? '6.5',
   }
 })
 
@@ -769,6 +833,7 @@ const forcedFailRows = computed<ForcedFailGridRow[]>(() => {
     rowKey: `${item.name}-${index}`,
     name: item.name,
     score: item.score,
+    reasonLabel: item.reasonLabel || 'Forced Fail',
   }))
 })
 
@@ -874,8 +939,9 @@ function isNonValueData(item: NormalizedTestItem): boolean {
 
 function getValueClass(item: NormalizedTestItem): string {
   const value = item.VALUE?.toUpperCase() || ''
-  if (value === 'PASS' || value === '1') return 'text-success font-weight-medium'
-  if (value === 'FAIL' || value === '0') return 'text-error font-weight-medium'
+  const isBinaryValue = item.scoringType === 'binary' || isBinData(item)
+  if (value === 'PASS' || (isBinaryValue && value === '1')) return 'text-success font-weight-medium'
+  if (value === 'FAIL' || (isBinaryValue && value === '0')) return 'text-error font-weight-medium'
   if (value === '-999') return 'text-medium-emphasis'
   return 'text-high-emphasis'
 }
@@ -975,7 +1041,18 @@ function isItemBelowScoreThreshold(item: NormalizedTestItem): boolean {
 }
 
 function getItemStatusLabel(item: NormalizedTestItem): string {
-  if (isItemBelowScoreThreshold(item)) {
+  const scoreFail = isItemBelowScoreThreshold(item)
+  const deviationFail = Boolean(item.exceedsMaxDeviation)
+
+  if (scoreFail && deviationFail) {
+    return 'Dev./Score Fail'
+  }
+
+  if (deviationFail) {
+    return 'Deviation Fail'
+  }
+
+  if (scoreFail) {
     return 'SCORE FAIL'
   }
 
@@ -989,18 +1066,28 @@ function getItemStatusSortValue(item: NormalizedTestItem): string {
     return '0_PASS'
   }
 
+  if (statusLabel === 'Dev./Score Fail') {
+    return '1_DEV_SCORE_FAIL'
+  }
+
+  if (statusLabel === 'Deviation Fail') {
+    return '2_DEVIATION_FAIL'
+  }
+
   if (statusLabel === 'SCORE FAIL') {
-    return '1_SCORE FAIL'
+    return '3_SCORE FAIL'
   }
 
   if (statusLabel === 'FAIL') {
-    return '2_FAIL'
+    return '4_FAIL'
   }
 
-  return `3_${statusLabel}`
+  return `5_${statusLabel}`
 }
 
 function getStatusTextClass(status: string | undefined): string {
+  if ((status ?? '').toUpperCase() === 'DEV./SCORE FAIL') return 'text-warning'
+  if ((status ?? '').toUpperCase() === 'DEVIATION FAIL') return 'text-warning'
   if ((status ?? '').toUpperCase() === 'SCORE FAIL') return 'text-warning'
   if (isStatusPass(status ?? '')) return 'text-success'
   if (isStatusFail(status ?? '')) return 'text-error'
@@ -1019,9 +1106,12 @@ function formatScoreOutOfTen(score: number | null | undefined): string {
 
 function formatTableValue(item: NormalizedTestItem): string {
   const rawValue = item.VALUE?.trim() || ''
+  const isBinaryValue = item.scoringType === 'binary' || isBinData(item)
   if (!rawValue || rawValue === '-999') return '-'
-  if (rawValue.toUpperCase() === 'PASS' || rawValue === '1') return 'PASS'
-  if (rawValue.toUpperCase() === 'FAIL' || rawValue === '0') return 'FAIL'
+  if (rawValue.toUpperCase() === 'PASS') return 'PASS'
+  if (isBinaryValue && rawValue === '1') return 'PASS'
+  if (isBinaryValue && rawValue === '0') return 'FAIL'
+  if (rawValue.toUpperCase() === 'FAIL') return 'FAIL'
   return rawValue
 }
 
@@ -1409,8 +1499,8 @@ watch(
 <style scoped>
 .iplas-details-dialog {
   --iplas-border: var(--app-border);
-  --iplas-border-strong: rgba(15, 23, 42, 0.18);
-  --iplas-border-accent: rgba(14, 165, 233, 0.24);
+  --iplas-border-strong: #94a3b8;
+  --iplas-border-accent: #38bdf8;
   --iplas-panel: var(--app-panel);
   --iplas-panel-strong: var(--app-panel-strong);
   --iplas-muted: var(--app-muted);
@@ -1419,8 +1509,8 @@ watch(
 }
 
 :global(.app-dark) .iplas-details-dialog {
-  --iplas-border-strong: rgba(241, 245, 249, 0.2);
-  --iplas-border-accent: rgba(56, 189, 248, 0.32);
+  --iplas-border-strong: #64748b;
+  --iplas-border-accent: #0ea5e9;
 }
 
 .iplas-details-dialog__header,
@@ -1570,7 +1660,6 @@ watch(
 .score-explanation-stat,
 .score-explanation-primary,
 .score-formula-panel,
-.iplas-details-dialog__table-shell,
 .iplas-details-dialog__notice,
 .iplas-details-dialog__metric-list,
 .iplas-details-dialog__simple-list,
@@ -1596,14 +1685,14 @@ watch(
 .score-explanation-primary,
 .score-formula-panel,
 .iplas-details-dialog__metric-list,
-.iplas-details-dialog__simple-list,
-.iplas-details-dialog__table-shell {
+.iplas-details-dialog__simple-list {
   padding: 1rem 1.1rem;
 }
 
 .iplas-details-dialog__table-shell {
-  padding: 0.55rem 0.55rem 0;
-  overflow: hidden;
+  padding: 0;
+  border: 0;
+  background: var(--iplas-panel);
 }
 
 .iplas-details-dialog__summary-card--highlight,
@@ -1628,9 +1717,9 @@ watch(
   gap: 0.45rem;
   min-height: 2.2rem;
   padding: 0.4rem 0.9rem;
-  border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.58) 60%, var(--app-border));
+  border: 1px solid var(--app-border);
   border-radius: 0.5rem;
-  background: color-mix(in srgb, var(--app-panel-strong) 90%, rgba(255, 255, 255, 0.14));
+  background: var(--app-panel-strong);
   color: var(--app-ink);
   font: inherit;
   font-size: 0.78rem;
@@ -1642,14 +1731,14 @@ watch(
 }
 
 .iplas-details-dialog__download-button:hover {
-  background: color-mix(in srgb, var(--app-panel-strong) 82%, rgba(255, 255, 255, 0.18));
-  border-color: color-mix(in srgb, rgba(255, 255, 255, 0.82) 50%, var(--app-border));
+  background: var(--app-panel);
+  border-color: var(--app-info-line);
   transform: translateY(-1px);
 }
 
 .iplas-details-dialog__download-button:disabled {
   cursor: wait;
-  opacity: 0.7;
+  color: var(--app-muted);
 }
 
 .iplas-details-dialog__info-button,
@@ -1755,8 +1844,8 @@ watch(
 }
 
 .iplas-details-dialog__pill--neutral {
-  background: rgba(95, 103, 122, 0.1);
-  border-color: rgba(95, 103, 122, 0.16);
+  background: var(--app-panel-strong);
+  border-color: var(--app-border);
   color: var(--app-muted);
 }
 
@@ -1767,8 +1856,8 @@ watch(
 }
 
 .iplas-details-dialog__pill--warning {
-  background: color-mix(in srgb, var(--app-danger) 8%, transparent);
-  border-color: color-mix(in srgb, var(--app-danger) 18%, transparent);
+  background: var(--app-danger-soft);
+  border-color: var(--app-danger-line);
   color: var(--app-danger);
 }
 
@@ -1807,7 +1896,7 @@ watch(
 .iplas-details-dialog__field select:focus,
 .iplas-details-dialog__search-shell:focus-within,
 .iplas-details-dialog__token-shell:focus-within {
-  border-color: rgba(15, 118, 110, 0.4);
+  border-color: var(--app-accent);
 }
 
 .iplas-details-dialog__field input,
@@ -1890,7 +1979,7 @@ watch(
 }
 
 .iplas-details-dialog__button {
-  border: 1px solid transparent;
+  border: 1px solid var(--app-border);
   font-weight: 700;
 }
 
@@ -2000,7 +2089,7 @@ watch(
 }
 
 .iplas-details-dialog__score-chip--warning {
-  background: color-mix(in srgb, var(--app-info) 10%, transparent);
+  background: var(--app-info-soft);
   color: var(--app-info);
 }
 
@@ -2125,7 +2214,7 @@ watch(
 }
 
 .iplas-breakdown__value-pill--neutral {
-  background: rgba(95, 103, 122, 0.1);
+  background: var(--app-panel-strong);
   color: var(--app-muted);
 }
 
@@ -2182,6 +2271,12 @@ watch(
 
 .iplas-details-dialog__table-shell :deep(.p-datatable-table-container) {
   overflow-y: auto;
+}
+
+.iplas-details-dialog__table-shell :deep(.app-data-grid),
+.iplas-details-dialog__table-shell :deep(.app-data-grid__table) {
+  min-height: 0;
+  height: 100%;
 }
 
 .iplas-details-dialog__table-shell :deep(.app-data-grid__table--sticky-header .p-datatable-thead > tr > th) {
@@ -2269,7 +2364,7 @@ watch(
 }
 
 .summary-stat-button:focus-visible {
-  outline: 2px solid rgba(15, 118, 110, 0.32);
+  outline: 2px solid var(--app-accent);
   outline-offset: 4px;
   border-radius: 10px;
 }
@@ -2353,11 +2448,15 @@ watch(
   min-width: 84px;
   font-weight: 600;
   letter-spacing: 0.01em;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .table-value {
   font-variant-numeric: tabular-nums;
   letter-spacing: 0.01em;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
 .table-limit {

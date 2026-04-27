@@ -174,7 +174,7 @@
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useScoring } from '@/features/dut/composables/useScoring'
-import { evaluateForcedFailure } from '@/features/dut/utils/iplasForcedFailure'
+import { evaluateForcedFailure, type ForcedFailureItemDetail } from '@/features/dut/utils/iplasForcedFailure'
 import type { IplasDownloadCsvLogInfo } from '@/features/dut-logs/api/iplasProxyApi'
 import {
   type ExportRecord,
@@ -295,7 +295,7 @@ const {
   setScoringType,
 } = useScoring()
 const recordScores = ref<Record<string, number>>({})
-const forcedFailures = ref<Record<string, { minimumItemScore: number; failingItems: { name: string; score: number }[] }>>({})
+const forcedFailures = ref<Record<string, { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }>>({})
 const calculatingScores = ref(false)
 
 // ============================================================================
@@ -1241,7 +1241,7 @@ async function handleCalculateScores(): Promise<void> {
 
     // Map scored records back to score map
     const newScores: Record<string, number> = {}
-    const nextForcedFailures: Record<string, { minimumItemScore: number; failingItems: { name: string; score: number }[] }> =
+    const nextForcedFailures: Record<string, { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }> =
       {}
     testItemData.value.forEach((record, index) => {
       const isn = record.ISN || record.DeviceId || '-'
@@ -1254,7 +1254,7 @@ async function handleCalculateScores(): Promise<void> {
         const stationConfig = stationConfigs.value[record.TSP || record.station]
         const forcedFailure = evaluateForcedFailure(scoredRecord, stationConfig)
 
-        if (forcedFailure.isForcedFailure && forcedFailure.minimumItemScore !== null) {
+        if (forcedFailure.isForcedFailure) {
           nextForcedFailures[key] = {
             minimumItemScore: forcedFailure.minimumItemScore,
             failingItems: forcedFailure.failingItems,
@@ -1283,12 +1283,15 @@ function applyUserScoringConfigs(): void {
     for (const [testItemName, scoringConfig] of Object.entries(config.testItemScoringConfigs)) {
       setScoringType(testItemName, scoringConfig.scoringType)
 
-      const updates: { target?: number; weight?: number } = {}
+      const updates: { target?: number; weight?: number; maxDeviation?: number } = {}
       if (scoringConfig.target !== undefined) {
         updates.target = scoringConfig.target
       }
       if (scoringConfig.weight !== undefined) {
         updates.weight = scoringConfig.weight
+      }
+      if (scoringConfig.maxDeviation !== undefined) {
+        updates.maxDeviation = scoringConfig.maxDeviation
       }
       if (Object.keys(updates).length > 0) {
         updateScoringConfig(testItemName, updates)
@@ -1327,7 +1330,9 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
         policy: itemScore?.policy ?? undefined,
         target: itemScore?.target ?? undefined,
         weight: itemScore?.weight ?? 1.0,
-        forcedFailureThreshold: forcedFailure?.minimumItemScore,
+        forcedFailureThreshold: forcedFailure?.minimumItemScore ?? undefined,
+        maxDeviation: itemScore?.maxDeviation ?? undefined,
+        exceedsMaxDeviation: itemScore?.exceedsMaxDeviation ?? false,
       }
     },
   )
@@ -1351,11 +1356,11 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
     binItemsScore: scoredRecord?.binItemsScore,
     isForcedFailure: !!forcedFailure,
     forcedFailureReason: forcedFailure
-      ? `Forced failure: one or more scored numeric items are below ${forcedFailure.minimumItemScore.toFixed(1)} / 10`
+      ? 'Forced failure: one or more scored items fell below the minimum score or exceeded the configured deviation.'
       : undefined,
     forcedFailureItems: forcedFailure?.failingItems.map((item) => item.name),
     forcedFailureDetails: forcedFailure?.failingItems,
-    forcedFailureMinimumScore: forcedFailure?.minimumItemScore,
+    forcedFailureMinimumScore: forcedFailure?.minimumItemScore ?? undefined,
   }
 }
 

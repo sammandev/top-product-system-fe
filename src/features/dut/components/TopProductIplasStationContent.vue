@@ -171,7 +171,7 @@ import { getApiErrorDetail } from '@/shared/utils/error'
 import { isStatusPass } from '@/shared/utils/helpers'
 import { dutApi } from '../api/dut.api'
 import { useScoring } from '../composables/useScoring'
-import { evaluateForcedFailure } from '../utils/iplasForcedFailure'
+import { evaluateForcedFailure, type ForcedFailureItemDetail } from '../utils/iplasForcedFailure'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
 import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
@@ -205,7 +205,7 @@ const {
 
 // Scoring state
 const recordScores = ref<Record<string, number>>({})
-const forcedFailures = ref<Record<string, { minimumItemScore: number; failingItems: { name: string; score: number }[] }>>({})
+const forcedFailures = ref<Record<string, { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }>>({})
 const calculatingScores = ref(false)
 const exportingAll = ref(false)
 
@@ -492,7 +492,9 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
         policy: itemScore?.policy ?? undefined,
         target: itemScore?.target ?? undefined,
         weight: itemScore?.weight ?? 1.0,
-        forcedFailureThreshold: forcedFailure?.minimumItemScore,
+        forcedFailureThreshold: forcedFailure?.minimumItemScore ?? undefined,
+        maxDeviation: itemScore?.maxDeviation ?? undefined,
+        exceedsMaxDeviation: itemScore?.exceedsMaxDeviation ?? false,
       }
     },
   )
@@ -517,11 +519,11 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
     binItemsScore: scoredRecord?.binItemsScore,
     isForcedFailure: !!forcedFailure,
     forcedFailureReason: forcedFailure
-      ? `Forced failure: one or more scored numeric items are below ${forcedFailure.minimumItemScore.toFixed(1)} / 10`
+      ? 'Forced failure: one or more scored items fell below the minimum score or exceeded the configured deviation.'
       : undefined,
     forcedFailureItems: forcedFailure?.failingItems.map((item) => item.name),
     forcedFailureDetails: forcedFailure?.failingItems,
-    forcedFailureMinimumScore: forcedFailure?.minimumItemScore,
+    forcedFailureMinimumScore: forcedFailure?.minimumItemScore ?? undefined,
   }
 }
 
@@ -836,7 +838,7 @@ async function handleCalculateScores(): Promise<void> {
     // We need to match scored records back to original records by index
     // since scoring order is preserved
     const newScores: Record<string, number> = {}
-    const nextForcedFailures: Record<string, { minimumItemScore: number; failingItems: { name: string; score: number }[] }> =
+    const nextForcedFailures: Record<string, { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }> =
       {}
 
     testItemData.value.forEach((record, index) => {
@@ -851,7 +853,7 @@ async function handleCalculateScores(): Promise<void> {
         const stationConfig = stationConfigs.value[record.TSP || record.station]
         const forcedFailure = evaluateForcedFailure(scoredRecord, stationConfig)
 
-        if (forcedFailure.isForcedFailure && forcedFailure.minimumItemScore !== null) {
+        if (forcedFailure.isForcedFailure) {
           nextForcedFailures[key] = {
             minimumItemScore: forcedFailure.minimumItemScore,
             failingItems: forcedFailure.failingItems,
@@ -884,7 +886,7 @@ function applyUserScoringConfigs(): void {
       setScoringType(testItemName, scoringConfig.scoringType)
 
       // Build update object with target and weight if specified
-      const updates: { target?: number; weight?: number } = {}
+      const updates: { target?: number; weight?: number; maxDeviation?: number } = {}
 
       // If target is specified (for asymmetrical or throughput), add to updates
       if (scoringConfig.target !== undefined) {
@@ -894,6 +896,10 @@ function applyUserScoringConfigs(): void {
       // If weight is specified, add to updates
       if (scoringConfig.weight !== undefined) {
         updates.weight = scoringConfig.weight
+      }
+
+      if (scoringConfig.maxDeviation !== undefined) {
+        updates.maxDeviation = scoringConfig.maxDeviation
       }
 
       // Apply updates if any

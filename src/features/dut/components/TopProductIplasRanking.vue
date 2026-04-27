@@ -178,7 +178,7 @@ interface Props {
   records: CsvTestItemData[]
   stationDisplayNames?: Record<string, string>
   scores?: Record<string, number> // Map of ISN+station+time to score
-  forcedFailures?: Record<string, { minimumItemScore: number; failingItems: { name: string; score: number }[] }>
+  forcedFailures?: Record<string, { minimumItemScore: number | null; failingItems: { name: string; score: number; reasonLabel?: string }[] }>
   calculatingScores?: boolean
   loading?: boolean // Whether data is still being fetched
   exportingAll?: boolean // Whether export all is in progress (controlled by parent)
@@ -354,6 +354,11 @@ const rankingByStation = computed(() => {
     const scoreKey = `${record.ISN || record.DeviceId}_${stationName}_${record['Test end Time']}`
     const score = props.scores?.[scoreKey] ?? null
     const forcedFailure = props.forcedFailures?.[scoreKey]
+    const forcedFailureLabel = forcedFailure?.failingItems.some((item) => item.reasonLabel === 'Dev./Score Fail')
+      ? 'Dev./Score Fail'
+      : forcedFailure?.failingItems.some((item) => item.reasonLabel === 'Deviation Fail')
+        ? 'Deviation Fail'
+        : 'Min. Score Fail'
 
     // Calculate duration from start and end times
     const startTime = record['Test Start Time']
@@ -373,12 +378,14 @@ const rankingByStation = computed(() => {
       testEndTime: record['Test end Time'] || '',
       duration: duration,
       score: hasError ? (forcedFailure ? score : 0) : score,
-      status: forcedFailure ? 'Min. Score Fail' : (hasError ? (record.ErrorCode || '-') : 'PASS'),
+      status: forcedFailure ? forcedFailureLabel : (hasError ? (record.ErrorCode || '-') : 'PASS'),
       hasError: hasError || !!forcedFailure,
       isForcedFailure: !!forcedFailure,
-      errorCode: forcedFailure ? 'MIN_SCORE_FAIL' : record.ErrorCode || '-',
+      errorCode: forcedFailure ? forcedFailureLabel.toUpperCase().replace(/[^A-Z0-9]+/g, '_') : record.ErrorCode || '-',
       errorName: forcedFailure
-        ? `One or more scored numeric items are below ${forcedFailure.minimumItemScore.toFixed(1)} / 10`
+        ? forcedFailure.minimumItemScore !== null
+          ? `One or more scored items fell below ${forcedFailure.minimumItemScore.toFixed(1)} / 10 or exceeded the configured deviation.`
+          : 'One or more scored items exceeded the configured deviation.'
         : record.ErrorName || '',
       originalRecord: record,
     })

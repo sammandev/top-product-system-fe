@@ -184,6 +184,7 @@ export function useScoring() {
     if (existing) {
       newConfig.enabled = existing.enabled
       newConfig.weight = existing.weight
+      newConfig.maxDeviation = existing.maxDeviation
     }
     scoringConfigs.value.set(testItemName, newConfig)
   }

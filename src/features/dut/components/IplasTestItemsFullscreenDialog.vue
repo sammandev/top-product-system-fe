@@ -213,11 +213,17 @@ export interface NormalizedTestItem {
   target?: number
   weight?: number // Weight used for this test item in scoring (default 1.0)
   forcedFailureThreshold?: number
+  maxDeviation?: number | null
+  exceedsMaxDeviation?: boolean
 }
 
 export interface ForcedFailureItemDetail {
   name: string
   score: number
+  deviation?: number
+  scoreFail?: boolean
+  deviationFail?: boolean
+  reasonLabel?: string
 }
 
 // Normalized record interface that works for both Station Search and ISN Search
