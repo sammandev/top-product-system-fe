@@ -281,18 +281,25 @@ function toggleFullscreen() {
   flex-shrink: 0;
 }
 
+.app-dialog__header-actions > button:not(.app-dialog__header-btn) {
+  border-color: rgba(255, 255, 255, 0.82) !important;
+  background: rgba(248, 250, 252, 0.96) !important;
+  color: var(--app-info-strong) !important;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 8px 18px rgba(2, 132, 199, 0.14);
+}
+
 .app-dialog__header-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   width: 2.1rem;
   height: 2.1rem;
-  border: 1px solid rgba(255, 255, 255, 0.56);
+  border: 1px solid rgba(255, 255, 255, 0.82);
   border-radius: 0.65rem;
-  background: rgba(255, 255, 255, 0.18);
-  color: #fff;
+  background: rgba(248, 250, 252, 0.96);
+  color: var(--app-info-strong);
   font-size: 1rem;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 8px 18px rgba(2, 132, 199, 0.14);
   cursor: pointer;
   transition: color 0.15s, background 0.15s, border-color 0.15s, transform 0.15s;
 }
@@ -303,16 +310,16 @@ function toggleFullscreen() {
 }
 
 .app-dialog__header-btn:hover {
-  background: rgba(255, 255, 255, 0.28);
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.8);
+  background: #fff;
+  color: var(--app-info-strong);
+  border-color: #fff;
   transform: translateY(-1px);
 }
 
 .app-dialog__header-btn--close:hover {
-  color: #fff;
-  border-color: rgba(255, 255, 255, 0.8);
-  background: rgba(255, 255, 255, 0.28);
+  color: var(--app-danger);
+  border-color: rgba(255, 255, 255, 0.92);
+  background: #fff;
 }
 
 :deep(.app-dialog .p-dialog-header .app-dialog__header-left h1),

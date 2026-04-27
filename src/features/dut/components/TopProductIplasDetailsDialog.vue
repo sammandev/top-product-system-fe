@@ -276,7 +276,7 @@
     </template>
   </AppDialog>
 
-  <AppDialog v-model="showBreakdownDialog" width="min(92vw, 34rem)" persistent
+  <AppDialog v-model="showBreakdownDialog" width="min(92vw, 34rem)" persistent :show-footer="false"
     class="iplas-details-dialog iplas-breakdown-dialog">
     <template #header>
       <div class="iplas-details-dialog__dialog-title">
@@ -330,15 +330,6 @@
         </div>
       </details>
     </div>
-
-    <template #footer>
-      <div class="iplas-details-dialog__footer-actions">
-        <button type="button" class="iplas-details-dialog__button iplas-details-dialog__button--ghost"
-          @click="showBreakdownDialog = false">
-          CLOSE
-        </button>
-      </div>
-    </template>
   </AppDialog>
 
   <AppDialog v-model="showOverallScoreDialog" width="min(92vw, 40rem)" :show-footer="false"
@@ -1418,8 +1409,8 @@ watch(
 <style scoped>
 .iplas-details-dialog {
   --iplas-border: var(--app-border);
-  --iplas-border-strong: color-mix(in srgb, var(--app-ink) 14%, transparent);
-  --iplas-border-accent: color-mix(in srgb, var(--app-info) 24%, var(--iplas-border-strong));
+  --iplas-border-strong: var(--app-border);
+  --iplas-border-accent: var(--app-info-line);
   --iplas-panel: var(--app-panel);
   --iplas-panel-strong: var(--app-panel-strong);
   --iplas-muted: var(--app-muted);
@@ -1579,7 +1570,7 @@ watch(
 .iplas-details-dialog__simple-list,
 .iplas-details-dialog__explanation-card {
   border: 1px solid var(--iplas-border-strong);
-  border-radius: 0.82rem;
+  border-radius: 1rem;
   background: var(--iplas-panel);
 }
 
@@ -1592,7 +1583,7 @@ watch(
 .iplas-details-dialog__metric-list,
 .iplas-details-dialog__simple-list,
 .iplas-details-dialog__table-shell {
-  padding: 0.82rem;
+  padding: 1rem 1.1rem;
 }
 
 .iplas-details-dialog__table-shell {
@@ -1607,12 +1598,12 @@ watch(
 }
 
 .iplas-details-dialog__summary-card {
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-info) 8%, transparent);
+  box-shadow: none;
 }
 
 .iplas-details-dialog__metadata-card {
   background: var(--iplas-panel-strong);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--app-info) 6%, transparent);
+  box-shadow: none;
 }
 
 .iplas-details-dialog__download-button {
@@ -1621,21 +1612,21 @@ watch(
   gap: 0.45rem;
   min-height: 2.2rem;
   padding: 0.4rem 0.9rem;
-  border: 1px solid rgba(255, 255, 255, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.82);
   border-radius: 0.5rem;
-  background: rgba(255, 255, 255, 0.16);
-  color: #fff;
+  background: rgba(248, 250, 252, 0.96);
+  color: var(--app-info-strong);
   font: inherit;
   font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.04em;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.14), 0 8px 18px rgba(2, 132, 199, 0.14);
   cursor: pointer;
   transition: background-color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
 }
 
 .iplas-details-dialog__download-button:hover {
-  background: rgba(255, 255, 255, 0.26);
+  background: #fff;
   border-color: #fff;
   transform: translateY(-1px);
 }
@@ -1692,12 +1683,12 @@ watch(
 }
 
 .iplas-details-dialog__summary-card .iplas-details-dialog__info-button small {
-  font-size: 0.82rem;
+  font-size: 0.86rem;
 }
 
 .iplas-details-dialog__summary-card .iplas-details-dialog__info-button strong {
-  font-size: clamp(1.02rem, 0.95rem + 0.35vw, 1.22rem);
-  line-height: 1.25;
+  font-size: clamp(1.2rem, 1rem + 0.55vw, 1.55rem);
+  line-height: 1.2;
 }
 
 .iplas-details-dialog__metric-value,
@@ -1714,7 +1705,7 @@ watch(
   padding: 0.42rem 0.72rem;
   border-radius: 999px;
   border: 1px solid var(--iplas-border);
-  background: var(--app-surface);
+  background: var(--iplas-panel-strong);
   color: var(--iplas-ink);
   width: fit-content;
   max-width: 100%;
@@ -1733,7 +1724,7 @@ watch(
   align-items: end;
   padding: 0.82rem 0.9rem;
   border: 1px solid var(--iplas-border-strong);
-  border-radius: 0.82rem;
+  border-radius: 1rem;
   background: var(--iplas-panel);
 }
 
@@ -1790,10 +1781,17 @@ watch(
 .iplas-details-dialog__search-shell,
 .iplas-details-dialog__token-shell {
   width: 100%;
-  border: 1px solid var(--iplas-border-accent);
+  border: 1px solid var(--app-border);
   border-radius: 0.7rem;
   background: var(--iplas-panel-strong);
   color: var(--iplas-ink);
+}
+
+.iplas-details-dialog__field input:focus,
+.iplas-details-dialog__field select:focus,
+.iplas-details-dialog__search-shell:focus-within,
+.iplas-details-dialog__token-shell:focus-within {
+  border-color: rgba(15, 118, 110, 0.4);
 }
 
 .iplas-details-dialog__field input,
@@ -1897,10 +1895,17 @@ watch(
 .iplas-details-dialog__table-shell {
   flex: 1;
   min-height: 23rem;
+  max-height: min(58vh, 36rem);
 }
 
 .iplas-details-dialog__body--fullscreen .iplas-details-dialog__table-shell {
   min-height: 0;
+  max-height: none;
+}
+
+.iplas-details-dialog__notice--warning {
+  border-color: var(--app-warning-line);
+  background: var(--app-warning-soft);
 }
 
 .iplas-details-dialog__loading-state,
@@ -2139,12 +2144,14 @@ watch(
   display: flex;
   flex: 1;
   min-height: 0;
+  height: 100%;
 }
 
 .iplas-details-dialog__table-shell :deep(.p-datatable) {
   display: flex;
   flex: 1;
   min-height: 0;
+  height: 100%;
   flex-direction: column;
 }
 
@@ -2152,6 +2159,10 @@ watch(
 .iplas-details-dialog__table-shell :deep(.p-datatable-table-container) {
   flex: 1 1 auto;
   min-height: 0;
+}
+
+.iplas-details-dialog__table-shell :deep(.p-datatable-table-container) {
+  overflow-y: auto;
 }
 
 .iplas-details-dialog__explanation-card summary {
@@ -2244,7 +2255,7 @@ watch(
   height: 100%;
   padding: 0.9rem 1rem;
   border-radius: 12px;
-  border: 1px solid var(--iplas-border);
+  border: 1px solid var(--app-border);
   background: var(--iplas-panel);
 }
 
@@ -2269,7 +2280,7 @@ watch(
 .score-formula-panel {
   padding: 1rem;
   border-radius: 14px;
-  border: 1px solid var(--iplas-border);
+  border: 1px solid var(--app-border);
   background: var(--iplas-panel);
 }
 
@@ -2277,9 +2288,16 @@ watch(
   padding: 0.85rem 1rem;
   border-radius: 12px;
   background: var(--iplas-panel-strong);
-  border: 1px solid var(--iplas-border);
+  border: 1px solid var(--app-border);
   font-family: Consolas, 'Courier New', monospace;
   overflow-wrap: anywhere;
+}
+
+.score-formula-step {
+  padding: 0.8rem 0.9rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  background: var(--iplas-panel-strong);
 }
 
 .score-formula-steps {
@@ -2374,7 +2392,7 @@ watch(
 
 .iplas-details-dialog__data-grid-shell {
   min-width: 0;
-  border: 1px solid var(--iplas-border);
+  border: 1px solid var(--app-border);
   border-radius: 1rem;
   background: var(--iplas-panel);
   overflow: hidden;
@@ -2401,17 +2419,17 @@ watch(
   justify-content: center;
   width: 2.5rem;
   height: 2.5rem;
-  border: 1px solid var(--iplas-border);
+  border: 1px solid var(--app-border);
   border-radius: 0.75rem;
   background: var(--iplas-panel-strong);
-  color: var(--iplas-text-primary);
+  color: var(--iplas-ink);
   cursor: pointer;
   transition: border-color 0.15s ease, background-color 0.15s ease, transform 0.15s ease;
 }
 
 .iplas-details-dialog__icon-action:hover {
   border-color: var(--iplas-accent);
-  background: var(--iplas-panel-muted);
+  background: var(--iplas-panel);
   transform: translateY(-1px);
 }
 
@@ -2420,14 +2438,14 @@ watch(
   justify-content: space-between;
   gap: 1rem;
   padding: 1rem 1.1rem;
-  border: 1px solid var(--iplas-border);
+  border: 1px solid var(--app-border);
   border-radius: 1rem;
   background: linear-gradient(180deg, var(--iplas-panel-strong), var(--iplas-panel));
 }
 
 .iplas-details-dialog__breakdown-hero h3 {
   margin: 0;
-  color: var(--iplas-text-primary);
+  color: var(--iplas-ink);
   font-size: 1rem;
 }
 
@@ -2440,7 +2458,7 @@ watch(
 
 .iplas-details-dialog__breakdown-label {
   font-weight: 700;
-  color: var(--iplas-text-primary);
+  color: var(--iplas-ink);
   overflow-wrap: anywhere;
 }
 

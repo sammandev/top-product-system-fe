@@ -224,6 +224,21 @@ function resolveFieldValue(row: GridRow, field?: string) {
 
 .app-data-grid :deep(.app-data-grid__table--sticky-header .p-datatable-table-container) {
   position: relative;
+  overflow: auto;
+  min-height: 0;
+}
+
+.app-data-grid :deep(.app-data-grid__table--sticky-header) {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: 100%;
+}
+
+.app-data-grid :deep(.app-data-grid__table--sticky-header .p-datatable-wrapper) {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .app-data-grid :deep(.p-datatable-header),
