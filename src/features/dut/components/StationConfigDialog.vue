@@ -27,14 +27,14 @@
         </AppPanel>
 
         <AppPanel title="Device Scope" tone="cool" compact-header>
-          <div class="station-config-dialog__section-stack">
-            <div class="station-config-dialog__toolbar-row">
-              <button type="button" class="station-config-dialog__button station-config-dialog__button--ghost"
-                :disabled="loadingDevices" @click="handleRefreshDevices">
-                {{ loadingDevices ? 'Refreshing...' : 'Refresh Devices' }}
-              </button>
-            </div>
+          <template #header-aside>
+            <button type="button" class="station-config-dialog__button station-config-dialog__button--ghost"
+              :disabled="loadingDevices" @click="handleRefreshDevices">
+              {{ loadingDevices ? 'Refreshing...' : 'Refresh Devices' }}
+            </button>
+          </template>
 
+          <div class="station-config-dialog__section-stack">
             <div v-if="loadingDevices" class="station-config-dialog__notice station-config-dialog__notice--info">
               Loading devices for the selected station...
             </div>
@@ -44,6 +44,10 @@
             </div>
             <AppMultiSelect v-else v-model="localConfig.deviceIds" :options="deviceSelectOptions"
               placeholder="Select devices..." />
+            <p v-if="!loadingDevices && availableDeviceIds.length > 0 && localConfig.deviceIds.length === 0"
+              class="station-config-dialog__helper-copy station-config-dialog__helper-copy--footnote">
+              Leave empty to use all devices.
+            </p>
           </div>
         </AppPanel>
 
@@ -175,6 +179,7 @@
                     <button v-if="entry.canConfigureScoring && entry.scoringLabel" type="button"
                       class="station-config-dialog__pill-button" :class="getScoringColorClass(entry.scoringColor)"
                       @click.stop="openScoringConfig(entry.name)">
+                      <Icon icon="mdi:cog-outline" />
                       {{ entry.scoringLabel }}
                     </button>
                     <span class="station-config-dialog__pill" :class="getTestItemTypeClass(entry.typeColor)">{{
@@ -319,6 +324,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 import { AppDialog, AppPanel, AppMultiSelect, AppSelect } from '@/shared/ui'
 import {

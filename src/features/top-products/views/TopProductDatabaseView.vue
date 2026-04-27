@@ -238,7 +238,6 @@
             <AppDialog v-model="detailDialog" v-model:fullscreen="isFullscreen"
                 width="min(96vw, 88rem)" fullscreen-width="96vw" fullscreenable
                 :draggable="false" title="Product Details"
-                description="Inspect measurements, scores, and metadata."
                 :show-footer="false"
                 :class="{ 'top-product-db-detail-dialog--expanded': isFullscreen }">
 

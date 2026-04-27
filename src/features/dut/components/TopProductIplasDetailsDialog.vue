@@ -1409,13 +1409,18 @@ watch(
 <style scoped>
 .iplas-details-dialog {
   --iplas-border: var(--app-border);
-  --iplas-border-strong: color-mix(in srgb, var(--app-ink) 16%, transparent);
-  --iplas-border-accent: color-mix(in srgb, var(--app-info) 26%, var(--iplas-border-strong));
+  --iplas-border-strong: rgba(15, 23, 42, 0.18);
+  --iplas-border-accent: rgba(14, 165, 233, 0.24);
   --iplas-panel: var(--app-panel);
   --iplas-panel-strong: var(--app-panel-strong);
   --iplas-muted: var(--app-muted);
   --iplas-ink: var(--app-ink);
   --iplas-accent: var(--app-accent);
+}
+
+:global(.app-dark) .iplas-details-dialog {
+  --iplas-border-strong: rgba(241, 245, 249, 0.2);
+  --iplas-border-accent: rgba(56, 189, 248, 0.32);
 }
 
 .iplas-details-dialog__header,
@@ -1466,9 +1471,9 @@ watch(
 .iplas-details-dialog__dialog-title h2 {
   margin: 0;
   color: inherit;
-  font-size: 1.18rem;
+  font-size: 1.34rem;
   font-weight: 700;
-  line-height: 1.2;
+  line-height: 1.1;
   overflow-wrap: anywhere;
 }
 
@@ -1612,7 +1617,7 @@ watch(
 }
 
 .iplas-details-dialog__metadata-card {
-  border-color: color-mix(in srgb, var(--app-info) 12%, var(--iplas-border-strong));
+  border-color: var(--iplas-border-strong);
   background: var(--iplas-panel-strong);
   box-shadow: none;
 }

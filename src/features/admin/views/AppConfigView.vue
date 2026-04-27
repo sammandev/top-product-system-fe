@@ -1563,7 +1563,7 @@ onMounted(async () => {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
-  padding: 1.25rem;
+  padding: 1rem 1.25rem;
   border-radius: 1rem;
   background: linear-gradient(145deg, var(--app-config-accent-strong), var(--app-config-info));
   color: white;

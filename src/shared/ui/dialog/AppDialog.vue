@@ -178,7 +178,7 @@ function toggleFullscreen() {
 }
 
 :deep(.app-dialog .p-dialog-header) {
-  border-bottom: 1px solid color-mix(in srgb, var(--app-info-strong) 60%, transparent);
+  border-bottom: 1px solid color-mix(in srgb, var(--app-info-strong) 90%, transparent);
   background:
     linear-gradient(
       180deg,
@@ -241,8 +241,8 @@ function toggleFullscreen() {
   justify-content: space-between;
   gap: 0.85rem;
   width: 100%;
-  min-height: 3.35rem;
-  padding: 0.72rem 1rem;
+  min-height: 1rem;
+  padding: 0.5rem 0.5rem;
 }
 
 .app-dialog__header-left {
@@ -257,16 +257,16 @@ function toggleFullscreen() {
 
 .app-dialog__title {
   margin: 0;
-  font-size: 1.16rem;
+  font-size: 1.5rem;
   font-weight: 700;
-  line-height: 1.15;
+  line-height: 1;
   color: inherit;
 }
 
 .app-dialog__description {
   margin: 0;
   color: rgba(255, 255, 255, 0.82);
-  font-size: 0.8rem;
+  font-size: 0.76rem;
   line-height: 1.4;
 }
 
@@ -292,13 +292,13 @@ function toggleFullscreen() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.1rem;
-  height: 2.1rem;
+  width: 1.95rem;
+  height: 1.95rem;
   border: 1px solid color-mix(in srgb, rgba(255, 255, 255, 0.58) 60%, var(--app-border));
   border-radius: 0.65rem;
   background: color-mix(in srgb, var(--app-panel-strong) 90%, rgba(255, 255, 255, 0.14));
   color: var(--app-ink);
-  font-size: 1rem;
+  font-size: 0.95rem;
   box-shadow: none;
   cursor: pointer;
   transition: color 0.15s, background 0.15s, border-color 0.15s, transform 0.15s;
@@ -327,8 +327,8 @@ function toggleFullscreen() {
 :deep(.app-dialog .p-dialog-header .app-dialog__header-left h3) {
   margin: 0;
   color: inherit;
-  font-size: 1.16rem;
-  line-height: 1.15;
+  font-size: 1.28rem;
+  line-height: 1.1;
 }
 
 :deep(.app-dialog .p-dialog-header .app-dialog__header-left svg) {
@@ -368,12 +368,12 @@ function toggleFullscreen() {
 
 @media (max-width: 640px) {
   .app-dialog__header {
-    min-height: 3rem;
-    padding: 0.68rem 0.9rem;
+    min-height: 2.65rem;
+    padding: 0.42rem 0.8rem;
   }
 
   .app-dialog__title {
-    font-size: 1.08rem;
+    font-size: 1.18rem;
   }
 
   .app-dialog__footer {
