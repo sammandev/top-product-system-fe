@@ -1,8 +1,14 @@
+import {
+  definePreset,
+  palette,
+  updatePrimaryPalette,
+  updateSurfacePalette,
+  usePreset,
+} from '@primeuix/themes'
 import Aura from '@primeuix/themes/aura'
 import Lara from '@primeuix/themes/lara'
 import Material from '@primeuix/themes/material'
 import Nora from '@primeuix/themes/nora'
-import { definePreset, palette, updatePrimaryPalette, updateSurfacePalette, usePreset } from '@primeuix/themes'
 import { ref } from 'vue'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
@@ -25,7 +31,15 @@ export type ThemePrimaryName =
   | 'fuchsia'
   | 'pink'
   | 'rose'
-export type ThemeSurfaceName = 'preset' | 'slate' | 'gray' | 'zinc' | 'neutral' | 'stone' | 'sand' | 'silver'
+export type ThemeSurfaceName =
+  | 'preset'
+  | 'slate'
+  | 'gray'
+  | 'zinc'
+  | 'neutral'
+  | 'stone'
+  | 'sand'
+  | 'silver'
 export type ResolvedThemeMode = Exclude<ThemeMode, 'system'>
 
 export interface ThemePreferences {
@@ -135,34 +149,184 @@ export const THEME_PRESET_OPTIONS: ThemeOption<ThemePresetName>[] = [
 ]
 
 export const THEME_PRIMARY_OPTIONS: ThemeOption<ThemePrimaryName>[] = [
-  { value: 'preset', label: 'Preset', description: 'Use the active preset accent colors.', icon: 'solar:dropper-bold-duotone', preview: '#334155' },
-  { value: 'emerald', label: 'Emerald', description: 'Emerald accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#10b981' },
-  { value: 'green', label: 'Green', description: 'Green accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#22c55e' },
-  { value: 'lime', label: 'Lime', description: 'Lime accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#84cc16' },
-  { value: 'orange', label: 'Orange', description: 'Orange accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#f97316' },
-  { value: 'amber', label: 'Amber', description: 'Warm amber accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#f59e0b' },
-  { value: 'yellow', label: 'Yellow', description: 'Yellow accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#eab308' },
-  { value: 'teal', label: 'Teal', description: 'Teal accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#14b8a6' },
-  { value: 'cyan', label: 'Cyan', description: 'Cool cyan accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#06b6d4' },
-  { value: 'sky', label: 'Sky', description: 'Sky accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#0ea5e9' },
-  { value: 'blue', label: 'Blue', description: 'Blue accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#3b82f6' },
-  { value: 'indigo', label: 'Indigo', description: 'Indigo accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#6366f1' },
-  { value: 'violet', label: 'Violet', description: 'Violet accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#8b5cf6' },
-  { value: 'purple', label: 'Purple', description: 'Purple accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#a855f7' },
-  { value: 'fuchsia', label: 'Fuchsia', description: 'Fuchsia accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#d946ef' },
-  { value: 'pink', label: 'Pink', description: 'Pink accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#ec4899' },
-  { value: 'rose', label: 'Rose', description: 'Rose accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#f43f5e' },
+  {
+    value: 'preset',
+    label: 'Preset',
+    description: 'Use the active preset accent colors.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#334155',
+  },
+  {
+    value: 'emerald',
+    label: 'Emerald',
+    description: 'Emerald accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#10b981',
+  },
+  {
+    value: 'green',
+    label: 'Green',
+    description: 'Green accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#22c55e',
+  },
+  {
+    value: 'lime',
+    label: 'Lime',
+    description: 'Lime accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#84cc16',
+  },
+  {
+    value: 'orange',
+    label: 'Orange',
+    description: 'Orange accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#f97316',
+  },
+  {
+    value: 'amber',
+    label: 'Amber',
+    description: 'Warm amber accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#f59e0b',
+  },
+  {
+    value: 'yellow',
+    label: 'Yellow',
+    description: 'Yellow accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#eab308',
+  },
+  {
+    value: 'teal',
+    label: 'Teal',
+    description: 'Teal accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#14b8a6',
+  },
+  {
+    value: 'cyan',
+    label: 'Cyan',
+    description: 'Cool cyan accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#06b6d4',
+  },
+  {
+    value: 'sky',
+    label: 'Sky',
+    description: 'Sky accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#0ea5e9',
+  },
+  {
+    value: 'blue',
+    label: 'Blue',
+    description: 'Blue accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#3b82f6',
+  },
+  {
+    value: 'indigo',
+    label: 'Indigo',
+    description: 'Indigo accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#6366f1',
+  },
+  {
+    value: 'violet',
+    label: 'Violet',
+    description: 'Violet accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#8b5cf6',
+  },
+  {
+    value: 'purple',
+    label: 'Purple',
+    description: 'Purple accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#a855f7',
+  },
+  {
+    value: 'fuchsia',
+    label: 'Fuchsia',
+    description: 'Fuchsia accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#d946ef',
+  },
+  {
+    value: 'pink',
+    label: 'Pink',
+    description: 'Pink accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#ec4899',
+  },
+  {
+    value: 'rose',
+    label: 'Rose',
+    description: 'Rose accent scale.',
+    icon: 'solar:dropper-bold-duotone',
+    preview: '#f43f5e',
+  },
 ]
 
 export const THEME_SURFACE_OPTIONS: ThemeOption<ThemeSurfaceName>[] = [
-  { value: 'preset', label: 'Preset', description: 'Use the active preset surface tokens.', icon: 'solar:pallete-2-bold-duotone', preview: '#334155' },
-  { value: 'slate', label: 'Slate', description: 'Cool blue-grey surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#64748b' },
-  { value: 'gray', label: 'Gray', description: 'Balanced gray surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#6b7280' },
-  { value: 'zinc', label: 'Zinc', description: 'Neutral graphite surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#71717a' },
-  { value: 'neutral', label: 'Neutral', description: 'Pure neutral surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#737373' },
-  { value: 'stone', label: 'Stone', description: 'Warm neutral surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#78716c' },
-  { value: 'sand', label: 'Sand', description: 'Soft sand surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#b8a58d' },
-  { value: 'silver', label: 'Silver', description: 'Cool silver surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#94a3b8' },
+  {
+    value: 'preset',
+    label: 'Preset',
+    description: 'Use the active preset surface tokens.',
+    icon: 'solar:pallete-2-bold-duotone',
+    preview: '#334155',
+  },
+  {
+    value: 'slate',
+    label: 'Slate',
+    description: 'Cool blue-grey surfaces.',
+    icon: 'solar:pallete-2-bold-duotone',
+    preview: '#64748b',
+  },
+  {
+    value: 'gray',
+    label: 'Gray',
+    description: 'Balanced gray surfaces.',
+    icon: 'solar:pallete-2-bold-duotone',
+    preview: '#6b7280',
+  },
+  {
+    value: 'zinc',
+    label: 'Zinc',
+    description: 'Neutral graphite surfaces.',
+    icon: 'solar:pallete-2-bold-duotone',
+    preview: '#71717a',
+  },
+  {
+    value: 'neutral',
+    label: 'Neutral',
+    description: 'Pure neutral surfaces.',
+    icon: 'solar:pallete-2-bold-duotone',
+    preview: '#737373',
+  },
+  {
+    value: 'stone',
+    label: 'Stone',
+    description: 'Warm neutral surfaces.',
+    icon: 'solar:pallete-2-bold-duotone',
+    preview: '#78716c',
+  },
+  {
+    value: 'sand',
+    label: 'Sand',
+    description: 'Soft sand surfaces.',
+    icon: 'solar:pallete-2-bold-duotone',
+    preview: '#b8a58d',
+  },
+  {
+    value: 'silver',
+    label: 'Silver',
+    description: 'Cool silver surfaces.',
+    icon: 'solar:pallete-2-bold-duotone',
+    preview: '#94a3b8',
+  },
 ]
 
 const PRIMEVUE_PRESETS = {
@@ -436,6 +600,25 @@ const PRIMARY_PALETTE_SOURCES: Record<Exclude<ThemePrimaryName, 'preset'>, strin
   rose: '{rose}',
 }
 
+const PRIMARY_COLOR_SOURCES: Record<Exclude<ThemePrimaryName, 'preset'>, string> = {
+  emerald: '#10b981',
+  green: '#22c55e',
+  lime: '#84cc16',
+  orange: '#f97316',
+  amber: '#f59e0b',
+  yellow: '#eab308',
+  teal: '#14b8a6',
+  cyan: '#06b6d4',
+  sky: '#0ea5e9',
+  blue: '#3b82f6',
+  indigo: '#6366f1',
+  violet: '#8b5cf6',
+  purple: '#a855f7',
+  fuchsia: '#d946ef',
+  pink: '#ec4899',
+  rose: '#f43f5e',
+}
+
 const SURFACE_PALETTE_SOURCES: Record<Exclude<ThemeSurfaceName, 'preset'>, string> = {
   slate: '{slate}',
   gray: '{gray}',
@@ -446,8 +629,28 @@ const SURFACE_PALETTE_SOURCES: Record<Exclude<ThemeSurfaceName, 'preset'>, strin
   silver: '#94a3b8',
 }
 
+const SURFACE_COLOR_SOURCES: Record<Exclude<ThemeSurfaceName, 'preset'>, string> = {
+  slate: '#64748b',
+  gray: '#6b7280',
+  zinc: '#71717a',
+  neutral: '#737373',
+  stone: '#78716c',
+  sand: '#bea78d',
+  silver: '#94a3b8',
+}
+
 const PRIMARY_PALETTES = Object.fromEntries(
-  Object.entries(PRIMARY_PALETTE_SOURCES).map(([name, source]) => [name, palette(source) as Record<string, string>]),
+  Object.entries(PRIMARY_PALETTE_SOURCES).map(([name, source]) => [
+    name,
+    palette(source) as Record<string, string>,
+  ]),
+) as Record<Exclude<ThemePrimaryName, 'preset'>, Record<string, string>>
+
+const PRIMARY_COLOR_PALETTES = Object.fromEntries(
+  Object.entries(PRIMARY_COLOR_SOURCES).map(([name, source]) => [
+    name,
+    palette(source) as Record<string, string>,
+  ]),
 ) as Record<Exclude<ThemePrimaryName, 'preset'>, Record<string, string>>
 
 const SURFACE_PALETTES = Object.fromEntries(
@@ -462,21 +665,45 @@ const SURFACE_PALETTES = Object.fromEntries(
       },
     ]
   }),
-) as unknown as Record<Exclude<ThemeSurfaceName, 'preset'>, { light: Record<string, string>; dark: Record<string, string> }>
+) as unknown as Record<
+  Exclude<ThemeSurfaceName, 'preset'>,
+  { light: Record<string, string>; dark: Record<string, string> }
+>
 
-function resolvePrimaryTone(preference: ThemePrimaryName, mode: ResolvedThemeMode): ResolvedPrimaryTone {
+const SURFACE_COLOR_PALETTES = Object.fromEntries(
+  Object.entries(SURFACE_COLOR_SOURCES).map(([name, source]) => {
+    const tones = palette(source) as Record<string, string>
+
+    return [
+      name,
+      {
+        light: { 0: '#ffffff', ...tones },
+        dark: { 0: '#ffffff', ...tones },
+      },
+    ]
+  }),
+) as unknown as Record<
+  Exclude<ThemeSurfaceName, 'preset'>,
+  { light: Record<string, string>; dark: Record<string, string> }
+>
+
+function resolvePrimaryTone(
+  preference: ThemePrimaryName,
+  mode: ResolvedThemeMode,
+): ResolvedPrimaryTone {
   if (preference === 'preset') {
     return {
       accent: `var(--p-primary-color, ${mode === 'dark' ? '#34d399' : '#047857'})`,
-      accentStrong: mode === 'dark'
-        ? 'color-mix(in srgb, var(--p-primary-color, #34d399) 72%, white)'
-        : 'color-mix(in srgb, var(--p-primary-color, #047857) 86%, black)',
+      accentStrong:
+        mode === 'dark'
+          ? 'color-mix(in srgb, var(--p-primary-color, #34d399) 72%, white)'
+          : 'color-mix(in srgb, var(--p-primary-color, #047857) 86%, black)',
       accentSoft: `color-mix(in srgb, var(--p-primary-color, ${mode === 'dark' ? '#34d399' : '#047857'}) 16%, transparent)`,
       ring: `var(--p-primary-color, ${mode === 'dark' ? '#34d399' : '#047857'})`,
     }
   }
 
-  const resolvedPalette = PRIMARY_PALETTES[preference]
+  const resolvedPalette = PRIMARY_COLOR_PALETTES[preference]
 
   return mode === 'dark'
     ? {
@@ -493,7 +720,10 @@ function resolvePrimaryTone(preference: ThemePrimaryName, mode: ResolvedThemeMod
       }
 }
 
-function resolveSurfaceTone(preference: ThemeSurfaceName, mode: ResolvedThemeMode): ResolvedSurfaceTone {
+function resolveSurfaceTone(
+  preference: ThemeSurfaceName,
+  mode: ResolvedThemeMode,
+): ResolvedSurfaceTone {
   if (preference === 'preset') {
     return mode === 'dark'
       ? {
@@ -506,9 +736,11 @@ function resolveSurfaceTone(preference: ThemeSurfaceName, mode: ResolvedThemeMod
           border: 'var(--p-content-border-color, var(--p-surface-700, #3f3f46))',
           shadow: 'none',
           shadowSoft: 'none',
-          shellBg: 'color-mix(in srgb, var(--p-primary-color, #34d399) 5%, var(--p-surface-950, #09090b))',
+          shellBg:
+            'color-mix(in srgb, var(--p-primary-color, #34d399) 5%, var(--p-surface-950, #09090b))',
           shellHeader: 'var(--p-surface-900, #18181b)',
-          shellSidebar: 'color-mix(in srgb, var(--p-primary-color, #34d399) 7%, var(--p-surface-900, #18181b))',
+          shellSidebar:
+            'color-mix(in srgb, var(--p-primary-color, #34d399) 7%, var(--p-surface-900, #18181b))',
         }
       : {
           canvas: 'var(--p-surface-50, #fafafa)',
@@ -520,13 +752,15 @@ function resolveSurfaceTone(preference: ThemeSurfaceName, mode: ResolvedThemeMod
           border: 'var(--p-content-border-color, var(--p-surface-200, #e4e4e7))',
           shadow: 'none',
           shadowSoft: 'none',
-          shellBg: 'color-mix(in srgb, var(--p-primary-color, #047857) 4%, var(--p-surface-50, #fafafa))',
+          shellBg:
+            'color-mix(in srgb, var(--p-primary-color, #047857) 4%, var(--p-surface-50, #fafafa))',
           shellHeader: 'var(--p-surface-0, #ffffff)',
-          shellSidebar: 'color-mix(in srgb, var(--p-primary-color, #047857) 6%, var(--p-surface-100, #f4f4f5))',
+          shellSidebar:
+            'color-mix(in srgb, var(--p-primary-color, #047857) 6%, var(--p-surface-100, #f4f4f5))',
         }
   }
 
-  const resolvedPalette = SURFACE_PALETTES[preference][mode]
+  const resolvedPalette = SURFACE_COLOR_PALETTES[preference][mode]
   const isLight = mode === 'light'
 
   return {
@@ -545,7 +779,10 @@ function resolveSurfaceTone(preference: ThemeSurfaceName, mode: ResolvedThemeMod
   }
 }
 
-const DANGER_TONES: Record<ResolvedThemeMode, { danger: string; dangerSoft: string; dangerLine: string }> = {
+const DANGER_TONES: Record<
+  ResolvedThemeMode,
+  { danger: string; dangerSoft: string; dangerLine: string }
+> = {
   dark: {
     danger: '#fda4af',
     dangerSoft: '#7f1d1d',
@@ -558,11 +795,14 @@ const DANGER_TONES: Record<ResolvedThemeMode, { danger: string; dangerSoft: stri
   },
 }
 
-const SEMANTIC_TONES: Record<ResolvedThemeMode, {
-  info: { solid: string; strong: string; soft: string; line: string }
-  success: { solid: string; strong: string; soft: string; line: string }
-  warning: { solid: string; strong: string; soft: string; line: string }
-}> = {
+const SEMANTIC_TONES: Record<
+  ResolvedThemeMode,
+  {
+    info: { solid: string; strong: string; soft: string; line: string }
+    success: { solid: string; strong: string; soft: string; line: string }
+    warning: { solid: string; strong: string; soft: string; line: string }
+  }
+> = {
   dark: {
     info: {
       solid: '#67e8f9',
@@ -642,7 +882,8 @@ function readLegacyThemePreference() {
 
   const legacyTheme = window.localStorage.getItem(LEGACY_STORAGE_KEY)
   if (legacyTheme === 'customDarkTheme') return { mode: 'dark' } satisfies Partial<ThemePreferences>
-  if (legacyTheme === 'customLightTheme') return { mode: 'light' } satisfies Partial<ThemePreferences>
+  if (legacyTheme === 'customLightTheme')
+    return { mode: 'light' } satisfies Partial<ThemePreferences>
   return null
 }
 
@@ -672,7 +913,9 @@ export function getStoredThemePreferences(): ThemePreferences {
   try {
     const rawValue = window.localStorage.getItem(STORAGE_KEY)
     if (rawValue) {
-      themePreferences.value = normalizeThemePreferences(JSON.parse(rawValue) as Partial<ThemePreferences>)
+      themePreferences.value = normalizeThemePreferences(
+        JSON.parse(rawValue) as Partial<ThemePreferences>,
+      )
       return themePreferences.value
     }
   } catch (error) {
@@ -772,7 +1015,10 @@ export function applyPrimeVueThemePreferences(preferences: ThemePreferences) {
   return normalizedPreferences
 }
 
-function applyThemeController(preferences: ThemePreferences, themeController?: ThemeControllerBridge) {
+function applyThemeController(
+  preferences: ThemePreferences,
+  themeController?: ThemeControllerBridge,
+) {
   if (!themeController) return
 
   const resolvedMode = resolveThemeMode(preferences.mode)
@@ -817,15 +1063,18 @@ export function useThemeState() {
     ).preferences
   }
 
-  function cycleThemeMode(options: { persist?: boolean; themeController?: ThemeControllerBridge } = {}) {
+  function cycleThemeMode(
+    options: { persist?: boolean; themeController?: ThemeControllerBridge } = {},
+  ) {
     const resolvedMode = resolveThemeMode(themePreferences.value.mode)
-    const nextMode: ThemeMode = themePreferences.value.mode === 'light'
-      ? 'dark'
-      : themePreferences.value.mode === 'dark'
-        ? 'light'
-        : resolvedMode === 'dark'
+    const nextMode: ThemeMode =
+      themePreferences.value.mode === 'light'
+        ? 'dark'
+        : themePreferences.value.mode === 'dark'
           ? 'light'
-          : 'dark'
+          : resolvedMode === 'dark'
+            ? 'light'
+            : 'dark'
 
     return setThemePreferences({ mode: nextMode }, options)
   }
