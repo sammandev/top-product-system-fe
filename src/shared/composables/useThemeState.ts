@@ -2,13 +2,30 @@ import Aura from '@primeuix/themes/aura'
 import Lara from '@primeuix/themes/lara'
 import Material from '@primeuix/themes/material'
 import Nora from '@primeuix/themes/nora'
-import { updatePrimaryPalette, updateSurfacePalette, usePreset } from '@primeuix/themes'
+import { palette, updatePrimaryPalette, updateSurfacePalette, usePreset } from '@primeuix/themes'
 import { ref } from 'vue'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
 export type ThemePresetName = 'aura' | 'lara' | 'material' | 'nora'
-export type ThemePrimaryName = 'amber' | 'cyan' | 'emerald' | 'rose'
-export type ThemeSurfaceName = 'slate' | 'stone' | 'zinc'
+export type ThemePrimaryName =
+  | 'preset'
+  | 'emerald'
+  | 'green'
+  | 'lime'
+  | 'orange'
+  | 'amber'
+  | 'yellow'
+  | 'teal'
+  | 'cyan'
+  | 'sky'
+  | 'blue'
+  | 'indigo'
+  | 'violet'
+  | 'purple'
+  | 'fuchsia'
+  | 'pink'
+  | 'rose'
+export type ThemeSurfaceName = 'preset' | 'slate' | 'gray' | 'zinc' | 'neutral' | 'stone' | 'sand' | 'silver'
 export type ResolvedThemeMode = Exclude<ThemeMode, 'system'>
 
 export interface ThemePreferences {
@@ -30,14 +47,36 @@ interface ThemeControllerBridge {
   change: (themeName: string) => void
 }
 
+interface ResolvedPrimaryTone {
+  accent: string
+  accentStrong: string
+  accentSoft: string
+  ring: string
+}
+
+interface ResolvedSurfaceTone {
+  canvas: string
+  canvasStrong: string
+  panel: string
+  panelStrong: string
+  ink: string
+  muted: string
+  border: string
+  shadow: string
+  shadowSoft: string
+  shellBg: string
+  shellHeader: string
+  shellSidebar: string
+}
+
 const STORAGE_KEY = 'app_theme_preferences'
 const LEGACY_STORAGE_KEY = 'app_theme'
 
 export const DEFAULT_THEME_PREFERENCES: ThemePreferences = {
   mode: 'system',
   preset: 'aura',
-  primary: 'emerald',
-  surface: 'zinc',
+  primary: 'preset',
+  surface: 'preset',
 }
 
 export const THEME_MODE_OPTIONS: ThemeOption<ThemeMode>[] = [
@@ -96,58 +135,34 @@ export const THEME_PRESET_OPTIONS: ThemeOption<ThemePresetName>[] = [
 ]
 
 export const THEME_PRIMARY_OPTIONS: ThemeOption<ThemePrimaryName>[] = [
-  {
-    value: 'emerald',
-    label: 'Emerald',
-    description: 'Green accent scale.',
-    icon: 'solar:dropper-bold-duotone',
-    preview: '#10b981',
-  },
-  {
-    value: 'amber',
-    label: 'Amber',
-    description: 'Warm amber accent scale.',
-    icon: 'solar:dropper-bold-duotone',
-    preview: '#f59e0b',
-  },
-  {
-    value: 'cyan',
-    label: 'Cyan',
-    description: 'Cool cyan accent scale.',
-    icon: 'solar:dropper-bold-duotone',
-    preview: '#06b6d4',
-  },
-  {
-    value: 'rose',
-    label: 'Rose',
-    description: 'Rose accent scale.',
-    icon: 'solar:dropper-bold-duotone',
-    preview: '#f43f5e',
-  },
+  { value: 'preset', label: 'Preset', description: 'Use the active preset accent colors.', icon: 'solar:dropper-bold-duotone', preview: '#334155' },
+  { value: 'emerald', label: 'Emerald', description: 'Emerald accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#10b981' },
+  { value: 'green', label: 'Green', description: 'Green accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#22c55e' },
+  { value: 'lime', label: 'Lime', description: 'Lime accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#84cc16' },
+  { value: 'orange', label: 'Orange', description: 'Orange accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#f97316' },
+  { value: 'amber', label: 'Amber', description: 'Warm amber accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#f59e0b' },
+  { value: 'yellow', label: 'Yellow', description: 'Yellow accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#eab308' },
+  { value: 'teal', label: 'Teal', description: 'Teal accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#14b8a6' },
+  { value: 'cyan', label: 'Cyan', description: 'Cool cyan accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#06b6d4' },
+  { value: 'sky', label: 'Sky', description: 'Sky accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#0ea5e9' },
+  { value: 'blue', label: 'Blue', description: 'Blue accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#3b82f6' },
+  { value: 'indigo', label: 'Indigo', description: 'Indigo accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#6366f1' },
+  { value: 'violet', label: 'Violet', description: 'Violet accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#8b5cf6' },
+  { value: 'purple', label: 'Purple', description: 'Purple accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#a855f7' },
+  { value: 'fuchsia', label: 'Fuchsia', description: 'Fuchsia accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#d946ef' },
+  { value: 'pink', label: 'Pink', description: 'Pink accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#ec4899' },
+  { value: 'rose', label: 'Rose', description: 'Rose accent scale.', icon: 'solar:dropper-bold-duotone', preview: '#f43f5e' },
 ]
 
 export const THEME_SURFACE_OPTIONS: ThemeOption<ThemeSurfaceName>[] = [
-  {
-    value: 'stone',
-    label: 'Stone',
-    description: 'Warm neutral surfaces.',
-    icon: 'solar:pallete-2-bold-duotone',
-    preview: 'linear-gradient(135deg, #f5f5f4 0%, #d6d3d1 100%)',
-  },
-  {
-    value: 'slate',
-    label: 'Slate',
-    description: 'Cool blue-grey surfaces.',
-    icon: 'solar:pallete-2-bold-duotone',
-    preview: 'linear-gradient(135deg, #e2e8f0 0%, #64748b 100%)',
-  },
-  {
-    value: 'zinc',
-    label: 'Zinc',
-    description: 'Neutral graphite surfaces.',
-    icon: 'solar:pallete-2-bold-duotone',
-    preview: 'linear-gradient(135deg, #f4f4f5 0%, #71717a 100%)',
-  },
+  { value: 'preset', label: 'Preset', description: 'Use the active preset surface tokens.', icon: 'solar:pallete-2-bold-duotone', preview: '#334155' },
+  { value: 'slate', label: 'Slate', description: 'Cool blue-grey surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#64748b' },
+  { value: 'gray', label: 'Gray', description: 'Balanced gray surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#6b7280' },
+  { value: 'zinc', label: 'Zinc', description: 'Neutral graphite surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#71717a' },
+  { value: 'neutral', label: 'Neutral', description: 'Pure neutral surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#737373' },
+  { value: 'stone', label: 'Stone', description: 'Warm neutral surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#78716c' },
+  { value: 'sand', label: 'Sand', description: 'Soft sand surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#b8a58d' },
+  { value: 'silver', label: 'Silver', description: 'Cool silver surfaces.', icon: 'solar:pallete-2-bold-duotone', preview: '#94a3b8' },
 ]
 
 const PRIMEVUE_PRESETS = {
@@ -157,316 +172,132 @@ const PRIMEVUE_PRESETS = {
   nora: Nora,
 } as const
 
-const PRIMARY_PALETTES: Record<ThemePrimaryName, Record<string, string>> = {
-  amber: {
-    50: '#fffbeb',
-    100: '#fef3c7',
-    200: '#fde68a',
-    300: '#fcd34d',
-    400: '#fbbf24',
-    500: '#f59e0b',
-    600: '#d97706',
-    700: '#b45309',
-    800: '#92400e',
-    900: '#78350f',
-    950: '#451a03',
-  },
-  cyan: {
-    50: '#ecfeff',
-    100: '#cffafe',
-    200: '#a5f3fc',
-    300: '#67e8f9',
-    400: '#22d3ee',
-    500: '#06b6d4',
-    600: '#0891b2',
-    700: '#0e7490',
-    800: '#155e75',
-    900: '#164e63',
-    950: '#083344',
-  },
-  emerald: {
-    50: '#ecfdf5',
-    100: '#d1fae5',
-    200: '#a7f3d0',
-    300: '#6ee7b7',
-    400: '#34d399',
-    500: '#10b981',
-    600: '#059669',
-    700: '#047857',
-    800: '#065f46',
-    900: '#064e3b',
-    950: '#022c22',
-  },
-  rose: {
-    50: '#fff1f2',
-    100: '#ffe4e6',
-    200: '#fecdd3',
-    300: '#fda4af',
-    400: '#fb7185',
-    500: '#f43f5e',
-    600: '#e11d48',
-    700: '#be123c',
-    800: '#9f1239',
-    900: '#881337',
-    950: '#4c0519',
-  },
+const PRIMARY_PALETTE_SOURCES: Record<Exclude<ThemePrimaryName, 'preset'>, string> = {
+  emerald: '{emerald}',
+  green: '{green}',
+  lime: '{lime}',
+  orange: '{orange}',
+  amber: '{amber}',
+  yellow: '{yellow}',
+  teal: '{teal}',
+  cyan: '{cyan}',
+  sky: '{sky}',
+  blue: '{blue}',
+  indigo: '{indigo}',
+  violet: '{violet}',
+  purple: '{purple}',
+  fuchsia: '{fuchsia}',
+  pink: '{pink}',
+  rose: '{rose}',
 }
 
-const SURFACE_PALETTES: Record<ThemeSurfaceName, { light: Record<string, string>; dark: Record<string, string> }> = {
-  slate: {
-    light: {
-      0: '#ffffff',
-      50: '#f8fafc',
-      100: '#f1f5f9',
-      200: '#e2e8f0',
-      300: '#cbd5e1',
-      400: '#94a3b8',
-      500: '#64748b',
-      600: '#475569',
-      700: '#334155',
-      800: '#1e293b',
-      900: '#0f172a',
-      950: '#020617',
-    },
-    dark: {
-      0: '#ffffff',
-      50: '#f8fafc',
-      100: '#e2e8f0',
-      200: '#cbd5e1',
-      300: '#94a3b8',
-      400: '#64748b',
-      500: '#475569',
-      600: '#334155',
-      700: '#1e293b',
-      800: '#0f172a',
-      900: '#020617',
-      950: '#01040b',
-    },
-  },
-  stone: {
-    light: {
-      0: '#ffffff',
-      50: '#fafaf9',
-      100: '#f5f5f4',
-      200: '#e7e5e4',
-      300: '#d6d3d1',
-      400: '#a8a29e',
-      500: '#78716c',
-      600: '#57534e',
-      700: '#44403c',
-      800: '#292524',
-      900: '#1c1917',
-      950: '#0c0a09',
-    },
-    dark: {
-      0: '#ffffff',
-      50: '#fafaf9',
-      100: '#f5f5f4',
-      200: '#e7e5e4',
-      300: '#d6d3d1',
-      400: '#a8a29e',
-      500: '#78716c',
-      600: '#57534e',
-      700: '#44403c',
-      800: '#292524',
-      900: '#1c1917',
-      950: '#0c0a09',
-    },
-  },
-  zinc: {
-    light: {
-      0: '#ffffff',
-      50: '#fafafa',
-      100: '#f4f4f5',
-      200: '#e4e4e7',
-      300: '#d4d4d8',
-      400: '#a1a1aa',
-      500: '#71717a',
-      600: '#52525b',
-      700: '#3f3f46',
-      800: '#27272a',
-      900: '#18181b',
-      950: '#09090b',
-    },
-    dark: {
-      0: '#ffffff',
-      50: '#fafafa',
-      100: '#f4f4f5',
-      200: '#e4e4e7',
-      300: '#d4d4d8',
-      400: '#a1a1aa',
-      500: '#71717a',
-      600: '#52525b',
-      700: '#3f3f46',
-      800: '#27272a',
-      900: '#18181b',
-      950: '#09090b',
-    },
-  },
+const SURFACE_PALETTE_SOURCES: Record<Exclude<ThemeSurfaceName, 'preset'>, string> = {
+  slate: '{slate}',
+  gray: '{gray}',
+  zinc: '{zinc}',
+  neutral: '{neutral}',
+  stone: '{stone}',
+  sand: '#bea78d',
+  silver: '#94a3b8',
 }
 
-const PRIMARY_TONES: Record<ResolvedThemeMode, Record<ThemePrimaryName, {
-  accent: string
-  accentStrong: string
-  accentSoft: string
-  ring: string
-}>> = {
-  dark: {
-    amber: {
-      accent: '#fbbf24',
-      accentStrong: '#fcd34d',
-      accentSoft: '#78350f',
-      ring: '#fcd34d',
-    },
-    cyan: {
-      accent: '#22d3ee',
-      accentStrong: '#67e8f9',
-      accentSoft: '#164e63',
-      ring: '#67e8f9',
-    },
-    emerald: {
-      accent: '#34d399',
-      accentStrong: '#6ee7b7',
-      accentSoft: '#14532d',
-      ring: '#6ee7b7',
-    },
-    rose: {
-      accent: '#fb7185',
-      accentStrong: '#fda4af',
-      accentSoft: '#881337',
-      ring: '#fda4af',
-    },
-  },
-  light: {
-    amber: {
-      accent: '#b45309',
-      accentStrong: '#92400e',
-      accentSoft: '#fef3c7',
-      ring: '#92400e',
-    },
-    cyan: {
-      accent: '#0e7490',
-      accentStrong: '#155e75',
-      accentSoft: '#cffafe',
-      ring: '#155e75',
-    },
-    emerald: {
-      accent: '#047857',
-      accentStrong: '#065f46',
-      accentSoft: '#d1fae5',
-      ring: '#065f46',
-    },
-    rose: {
-      accent: '#be123c',
-      accentStrong: '#9f1239',
-      accentSoft: '#ffe4e6',
-      ring: '#9f1239',
-    },
-  },
+const PRIMARY_PALETTES = Object.fromEntries(
+  Object.entries(PRIMARY_PALETTE_SOURCES).map(([name, source]) => [name, palette(source) as Record<string, string>]),
+) as Record<Exclude<ThemePrimaryName, 'preset'>, Record<string, string>>
+
+const SURFACE_PALETTES = Object.fromEntries(
+  Object.entries(SURFACE_PALETTE_SOURCES).map(([name, source]) => {
+    const tones = palette(source) as Record<string, string>
+
+    return [
+      name,
+      {
+        light: { 0: '#ffffff', ...tones },
+        dark: { 0: '#ffffff', ...tones },
+      },
+    ]
+  }),
+) as unknown as Record<Exclude<ThemeSurfaceName, 'preset'>, { light: Record<string, string>; dark: Record<string, string> }>
+
+function resolvePrimaryTone(preference: ThemePrimaryName, mode: ResolvedThemeMode): ResolvedPrimaryTone {
+  if (preference === 'preset') {
+    return {
+      accent: `var(--p-primary-color, ${mode === 'dark' ? '#34d399' : '#047857'})`,
+      accentStrong: mode === 'dark'
+        ? 'color-mix(in srgb, var(--p-primary-color, #34d399) 72%, white)'
+        : 'color-mix(in srgb, var(--p-primary-color, #047857) 86%, black)',
+      accentSoft: `color-mix(in srgb, var(--p-primary-color, ${mode === 'dark' ? '#34d399' : '#047857'}) 16%, transparent)`,
+      ring: `var(--p-primary-color, ${mode === 'dark' ? '#34d399' : '#047857'})`,
+    }
+  }
+
+  const resolvedPalette = PRIMARY_PALETTES[preference]
+
+  return mode === 'dark'
+    ? {
+        accent: resolvedPalette['400']!,
+        accentStrong: resolvedPalette['300']!,
+        accentSoft: `color-mix(in srgb, ${resolvedPalette['500']!} 24%, transparent)`,
+        ring: resolvedPalette['300']!,
+      }
+    : {
+        accent: resolvedPalette['700']!,
+        accentStrong: resolvedPalette['800']!,
+        accentSoft: resolvedPalette['100']!,
+        ring: resolvedPalette['500']!,
+      }
 }
 
-const SURFACE_TONES: Record<ResolvedThemeMode, Record<ThemeSurfaceName, {
-  canvas: string
-  canvasStrong: string
-  panel: string
-  panelStrong: string
-  ink: string
-  muted: string
-  border: string
-  shadow: string
-  shadowSoft: string
-  shellBg: string
-  shellHeader: string
-  shellSidebar: string
-}>> = {
-  dark: {
-    slate: {
-      canvas: '#08111d',
-      canvasStrong: '#0f172a',
-      panel: '#0f172a',
-      panelStrong: '#0f172a',
-      ink: '#e2e8f0',
-      muted: '#94a3b8',
-      border: '#cbd5e1',
-      shadow: 'none',
-      shadowSoft: 'none',
-      shellBg: '#09121f',
-      shellHeader: '#09121f',
-      shellSidebar: '#0a121f',
-    },
-    stone: {
-      canvas: '#141110',
-      canvasStrong: '#1c1917',
-      panel: '#1c1917',
-      panelStrong: '#1c1917',
-      ink: '#f5f5f4',
-      muted: '#d6d3d1',
-      border: '#e7e5e4',
-      shadow: 'none',
-      shadowSoft: 'none',
-      shellBg: '#12100f',
-      shellHeader: '#12100f',
-      shellSidebar: '#12100f',
-    },
-    zinc: {
-      canvas: '#101012',
-      canvasStrong: '#18181b',
-      panel: '#18181b',
-      panelStrong: '#18181b',
-      ink: '#f4f4f5',
-      muted: '#d4d4d8',
-      border: '#d4d4d8',
-      shadow: 'none',
-      shadowSoft: 'none',
-      shellBg: '#0f0f11',
-      shellHeader: '#0f0f11',
-      shellSidebar: '#0f0f11',
-    },
-  },
-  light: {
-    slate: {
-      canvas: '#edf4fb',
-      canvasStrong: '#dbe7f3',
-      panel: '#ffffff',
-      panelStrong: '#ffffff',
-      ink: '#0f172a',
-      muted: '#64748b',
-      border: '#64748b',
-      shadow: 'none',
-      shadowSoft: 'none',
-      shellBg: '#e9f1fa',
-      shellHeader: '#ffffff',
-      shellSidebar: '#f1f5f9',
-    },
-    stone: {
-      canvas: '#f2ede5',
-      canvasStrong: '#e4d7c6',
-      panel: '#fff8f0',
-      panelStrong: '#fff8f0',
-      ink: '#18120d',
-      muted: '#685f56',
-      border: '#78716c',
-      shadow: 'none',
-      shadowSoft: 'none',
-      shellBg: '#efe6db',
-      shellHeader: '#fff9f1',
-      shellSidebar: '#faf4ec',
-    },
-    zinc: {
-      canvas: '#f3f4f6',
-      canvasStrong: '#e5e7eb',
-      panel: '#ffffff',
-      panelStrong: '#ffffff',
-      ink: '#18181b',
-      muted: '#52525b',
-      border: '#71717a',
-      shadow: 'none',
-      shadowSoft: 'none',
-      shellBg: '#efeff2',
-      shellHeader: '#ffffff',
-      shellSidebar: '#f4f4f5',
-    },
-  },
+function resolveSurfaceTone(preference: ThemeSurfaceName, mode: ResolvedThemeMode): ResolvedSurfaceTone {
+  if (preference === 'preset') {
+    return mode === 'dark'
+      ? {
+          canvas: 'var(--p-surface-950, #09090b)',
+          canvasStrong: 'var(--p-surface-900, #18181b)',
+          panel: 'var(--p-surface-900, #18181b)',
+          panelStrong: 'var(--p-surface-900, #18181b)',
+          ink: 'var(--p-text-color, #f4f4f5)',
+          muted: 'var(--p-text-muted-color, #a1a1aa)',
+          border: 'var(--p-content-border-color, var(--p-surface-700, #3f3f46))',
+          shadow: 'none',
+          shadowSoft: 'none',
+          shellBg: 'color-mix(in srgb, var(--p-primary-color, #34d399) 5%, var(--p-surface-950, #09090b))',
+          shellHeader: 'var(--p-surface-900, #18181b)',
+          shellSidebar: 'color-mix(in srgb, var(--p-primary-color, #34d399) 7%, var(--p-surface-900, #18181b))',
+        }
+      : {
+          canvas: 'var(--p-surface-50, #fafafa)',
+          canvasStrong: 'var(--p-surface-100, #f4f4f5)',
+          panel: 'var(--p-surface-0, #ffffff)',
+          panelStrong: 'var(--p-surface-0, #ffffff)',
+          ink: 'var(--p-text-color, #18181b)',
+          muted: 'var(--p-text-muted-color, #71717a)',
+          border: 'var(--p-content-border-color, var(--p-surface-200, #e4e4e7))',
+          shadow: 'none',
+          shadowSoft: 'none',
+          shellBg: 'color-mix(in srgb, var(--p-primary-color, #047857) 4%, var(--p-surface-50, #fafafa))',
+          shellHeader: 'var(--p-surface-0, #ffffff)',
+          shellSidebar: 'color-mix(in srgb, var(--p-primary-color, #047857) 6%, var(--p-surface-100, #f4f4f5))',
+        }
+  }
+
+  const resolvedPalette = SURFACE_PALETTES[preference][mode]
+  const isLight = mode === 'light'
+
+  return {
+    canvas: resolvedPalette[isLight ? '50' : '950']!,
+    canvasStrong: resolvedPalette[isLight ? '100' : '900']!,
+    panel: (isLight ? resolvedPalette['0'] : resolvedPalette['900'])!,
+    panelStrong: (isLight ? resolvedPalette['0'] : resolvedPalette['900'])!,
+    ink: resolvedPalette[isLight ? '950' : '50']!,
+    muted: resolvedPalette[isLight ? '600' : '300']!,
+    border: resolvedPalette[isLight ? '200' : '700']!,
+    shadow: 'none',
+    shadowSoft: 'none',
+    shellBg: resolvedPalette[isLight ? '50' : '950']!,
+    shellHeader: (isLight ? resolvedPalette['0'] : resolvedPalette['900'])!,
+    shellSidebar: resolvedPalette[isLight ? '100' : '900']!,
+  }
 }
 
 const DANGER_TONES: Record<ResolvedThemeMode, { danger: string; dangerSoft: string; dangerLine: string }> = {
@@ -618,8 +449,8 @@ function applyDocumentThemeVariables(preferences: ThemePreferences) {
 
   const resolvedMode = resolveThemeMode(preferences.mode)
   const root = document.documentElement
-  const primaryTone = PRIMARY_TONES[resolvedMode][preferences.primary]
-  const surfaceTone = SURFACE_TONES[resolvedMode][preferences.surface]
+  const primaryTone = resolvePrimaryTone(preferences.primary, resolvedMode)
+  const surfaceTone = resolveSurfaceTone(preferences.surface, resolvedMode)
   const dangerTone = DANGER_TONES[resolvedMode]
   const semanticTone = SEMANTIC_TONES[resolvedMode]
 
@@ -628,6 +459,7 @@ function applyDocumentThemeVariables(preferences: ThemePreferences) {
     '--app-canvas-strong': surfaceTone.canvasStrong,
     '--app-panel': surfaceTone.panel,
     '--app-panel-strong': surfaceTone.panelStrong,
+    '--app-surface': surfaceTone.canvas,
     '--app-ink': surfaceTone.ink,
     '--app-muted': surfaceTone.muted,
     '--app-accent': primaryTone.accent,
@@ -681,11 +513,16 @@ export function applyDocumentThemePreferences(preferences: ThemePreferences) {
 
 export function applyPrimeVueThemePreferences(preferences: ThemePreferences) {
   const normalizedPreferences = normalizeThemePreferences(preferences)
-  const resolvedMode = resolveThemeMode(normalizedPreferences.mode)
 
   usePreset(PRIMEVUE_PRESETS[normalizedPreferences.preset])
-  updatePrimaryPalette(PRIMARY_PALETTES[normalizedPreferences.primary])
-  updateSurfacePalette(SURFACE_PALETTES[normalizedPreferences.surface][resolvedMode])
+
+  if (normalizedPreferences.primary !== 'preset') {
+    updatePrimaryPalette(PRIMARY_PALETTES[normalizedPreferences.primary])
+  }
+
+  if (normalizedPreferences.surface !== 'preset') {
+    updateSurfacePalette(SURFACE_PALETTES[normalizedPreferences.surface] as never)
+  }
 
   return normalizedPreferences
 }

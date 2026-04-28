@@ -93,35 +93,13 @@
             <Transition name="dropdown">
               <div v-if="themeDropdownOpen" class="topbar__dropdown-panel topbar__dropdown-panel--theme">
                 <div class="dropdown-section">
-                  <p class="dropdown-label">Mode</p>
-                  <div class="theme-mode-grid">
-                    <button v-for="option in THEME_MODE_OPTIONS" :key="option.value" class="theme-mode-btn"
-                      :class="{ 'theme-mode-btn--active': themePreferences.mode === option.value }" type="button"
-                      @click="setThemePreference({ mode: option.value })">
-                      <span class="theme-mode-preview" :style="{ background: option.preview }" />
-                      <span>{{ option.label }}</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="dropdown-section">
-                  <p class="dropdown-label">Preset</p>
-                  <div class="theme-preset-grid">
-                    <button v-for="option in THEME_PRESET_OPTIONS" :key="option.value" class="theme-option-btn"
-                      :class="{ 'theme-option-btn--active': themePreferences.preset === option.value }" type="button"
-                      @click="setThemePreference({ preset: option.value })">
-                      <span class="theme-swatch" :style="{ background: option.preview }" />
-                      <span>{{ option.label }}</span>
-                    </button>
-                  </div>
-                </div>
-
-                <div class="dropdown-section">
-                  <p class="dropdown-label">Primary Color</p>
-                  <div class="theme-color-grid">
+                  <p class="dropdown-label">Primary</p>
+                  <div class="theme-color-grid theme-color-grid--primary">
                     <button v-for="option in THEME_PRIMARY_OPTIONS" :key="option.value" class="theme-color-btn"
-                      :class="{ 'theme-color-btn--active': themePreferences.primary === option.value }"
-                      :title="option.label" type="button" @click="setThemePreference({ primary: option.value })">
+                      :class="{
+                        'theme-color-btn--active': themePreferences.primary === option.value,
+                        'theme-color-btn--preset': option.value === 'preset',
+                      }" :title="option.label" type="button" @click="setPrimaryPreference(option.value)">
                       <span class="theme-color-dot" :style="{ background: option.preview }" />
                     </button>
                   </div>
@@ -131,11 +109,20 @@
                   <p class="dropdown-label">Surface</p>
                   <div class="theme-color-grid">
                     <button v-for="option in THEME_SURFACE_OPTIONS" :key="option.value" class="theme-color-btn"
-                      :class="{ 'theme-color-btn--active': themePreferences.surface === option.value }"
-                      :title="option.label" type="button" @click="setThemePreference({ surface: option.value })">
+                      :class="{
+                        'theme-color-btn--active': themePreferences.surface === option.value,
+                        'theme-color-btn--preset': option.value === 'preset',
+                      }" :title="option.label" type="button" @click="setSurfacePreference(option.value)">
                       <span class="theme-color-dot" :style="{ background: option.preview }" />
                     </button>
                   </div>
+                </div>
+
+                <div class="dropdown-section">
+                  <p class="dropdown-label">Theme</p>
+                  <SelectButton :modelValue="themePreferences.preset" :options="THEME_PRESET_OPTIONS"
+                    class="theme-preset-switch" optionLabel="label" optionValue="value"
+                    @update:modelValue="setPresetPreference" />
                 </div>
               </div>
             </Transition>
@@ -207,16 +194,19 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
+import SelectButton from 'primevue/selectbutton'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useMenuAccessStore } from '@/features/admin/stores/menuAccess.store'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
 import {
-  THEME_MODE_OPTIONS,
   THEME_PRESET_OPTIONS,
   THEME_PRIMARY_OPTIONS,
   THEME_SURFACE_OPTIONS,
+  type ThemePresetName,
+  type ThemePrimaryName,
+  type ThemeSurfaceName,
   resolveThemeMode,
   useDrawerState,
   useThemeState,
@@ -542,6 +532,18 @@ function toggleTheme() {
 
 function setThemePreference(nextPreferences: Partial<typeof themePreferences.value>) {
   setThemePreferences(nextPreferences)
+}
+
+function setPresetPreference(preset: ThemePresetName) {
+  setThemePreference({ preset })
+}
+
+function setPrimaryPreference(primary: ThemePrimaryName) {
+  setThemePreference({ primary })
+}
+
+function setSurfacePreference(surface: ThemeSurfaceName) {
+  setThemePreference({ surface })
 }
 
 function syncThemeState() {
@@ -1024,7 +1026,7 @@ watch(
 }
 
 .topbar__dropdown-panel--theme {
-  width: 18rem;
+  width: 20.75rem;
 }
 
 .topbar__dropdown-panel--user {
@@ -1046,112 +1048,58 @@ watch(
   margin-bottom: 0.375rem;
 }
 
-.theme-mode-grid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.375rem;
-}
-
-.theme-mode-btn {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.25rem;
-  padding: 0.375rem;
-  border: 1px solid var(--shell-border);
-  border-radius: 0.375rem;
-  background: var(--shell-panel);
-  color: var(--shell-muted);
-  font-size: 0.6875rem;
-  cursor: pointer;
-  transition: border-color 0.15s, color 0.15s;
-}
-
-.theme-mode-btn:hover {
-  border-color: var(--shell-accent);
-  color: var(--shell-ink);
-}
-
-.theme-mode-btn--active {
-  border-color: var(--shell-accent);
-  background: var(--shell-accent-soft);
-  color: var(--shell-accent);
-}
-
-.theme-mode-preview {
-  display: block;
-  width: 100%;
-  height: 1.5rem;
-  border-radius: 0.25rem;
-}
-
-.theme-preset-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 0.375rem;
-}
-
-.theme-option-btn {
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.375rem;
-  border: 1px solid var(--shell-border);
-  border-radius: 0.375rem;
-  background: var(--shell-panel);
-  color: var(--shell-muted);
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: border-color 0.15s;
-}
-
-.theme-option-btn:hover {
-  border-color: var(--shell-accent);
-}
-
-.theme-option-btn--active {
-  border-color: var(--shell-accent);
-  background: var(--shell-accent-soft);
-  color: var(--shell-accent);
-}
-
-.theme-swatch {
-  width: 1.25rem;
-  height: 1.25rem;
-  border-radius: 0.25rem;
-  flex-shrink: 0;
-}
-
 .theme-color-grid {
-  display: flex;
-  gap: 0.375rem;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(8, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.theme-color-grid--primary {
+  grid-template-columns: repeat(9, minmax(0, 1fr));
 }
 
 .theme-color-btn {
-  width: 1.75rem;
-  height: 1.75rem;
-  padding: 0.1875rem;
-  border: 2px solid transparent;
+  width: 1.58rem;
+  height: 1.58rem;
+  padding: 0.14rem;
+  border: 1px solid transparent;
   border-radius: 50%;
   background: transparent;
   cursor: pointer;
-  transition: border-color 0.15s;
+  justify-self: center;
+  transition: border-color 0.15s, transform 0.15s, box-shadow 0.15s;
 }
 
 .theme-color-btn:hover {
-  border-color: var(--shell-muted);
+  border-color: color-mix(in srgb, var(--shell-ink) 18%, transparent);
+  transform: translateY(-1px);
 }
 
 .theme-color-btn--active {
-  border-color: var(--shell-accent);
+  border-color: color-mix(in srgb, var(--shell-ink) 88%, white);
+  box-shadow: 0 0 0 1px var(--shell-panel-strong);
+}
+
+.theme-color-btn--preset .theme-color-dot {
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.5);
 }
 
 .theme-color-dot {
   display: block;
   width: 100%;
   height: 100%;
-  border-radius: 50%;
+  border-radius: inherit;
+}
+
+.theme-preset-switch :deep(.p-selectbutton) {
+  display: flex;
+  width: 100%;
+}
+
+.theme-preset-switch :deep(.p-selectbutton .p-togglebutton),
+.theme-preset-switch :deep(.p-selectbutton .p-button) {
+  flex: 1 1 0;
+  justify-content: center;
 }
 
 /* ── User dropdown ── */

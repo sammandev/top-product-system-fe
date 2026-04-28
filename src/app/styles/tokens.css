@@ -14,7 +14,7 @@
   --app-accent: #047857;
   --app-accent-strong: #065f46;
   --app-accent-soft: #d1fae5;
-  --app-border: #71717a;
+  --app-border: #d4d4d8;
   --app-ring: #065f46;
 
   /* Status — info */
@@ -67,7 +67,7 @@
   --app-accent: #34d399;
   --app-accent-strong: #6ee7b7;
   --app-accent-soft: #14532d;
-  --app-border: #d4d4d8;
+  --app-border: #3f3f46;
   --app-ring: #6ee7b7;
   --app-danger: #fda4af;
   --app-danger-soft: #7f1d1d;

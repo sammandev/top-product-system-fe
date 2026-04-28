@@ -114,7 +114,7 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 
 ### User Experience
 - **Responsive Design**: Mobile, tablet, and desktop layouts
-- **Adaptive Theming**: 4 PrimeVue presets × 4 primary colors × 3 surface palettes × 3 modes (light/dark/system)
+- **Adaptive Theming**: 4 PrimeVue presets × 17 primary swatches × 8 surface swatches × 3 modes (light/dark/system)
 - **Custom `--app-*` Token System**: Runtime CSS variable theming independent of Tailwind's dark: variants
 
 ---
@@ -451,7 +451,7 @@ The app uses a `--app-*` CSS token system layered over PrimeVue's `--p-*` preset
 
 - **Mode**: Light / Dark / System — toggled via `.app-dark` class on `<html>`
 - **Preset**: Aura / Material / Lara / Nora — switched at runtime via `usePreset()`
-- **Primary color** and **surface palette** — updated via `updatePrimaryPalette()` / `updateSurfacePalette()`
+- **Primary swatches** and **surface swatches** — default to preset tokens, with optional runtime overrides via `updatePrimaryPalette()` / `updateSurfacePalette()`
 - **Tailwind dark: variant** — aligned to `.app-dark` via `@variant dark` in `index.css`
 
 ---

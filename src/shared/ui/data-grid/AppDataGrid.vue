@@ -208,8 +208,6 @@ function resolveFieldValue(row: GridRow, field?: string) {
   width: 100%;
   min-width: 0;
   overflow: hidden;
-  border: 1px solid var(--app-border);
-  background: var(--app-panel-strong);
 }
 
 .app-data-grid :deep(.p-datatable-wrapper),
@@ -239,17 +237,7 @@ function resolveFieldValue(row: GridRow, field?: string) {
   overflow: hidden;
 }
 
-.app-data-grid :deep(.p-datatable-header),
-.app-data-grid :deep(.p-datatable-footer) {
-  border: 0;
-  background: var(--app-panel);
-}
-
 .app-data-grid :deep(.p-datatable-thead > tr > th) {
-  border: 0;
-  border-bottom: 1px solid var(--app-border);
-  background: var(--app-panel);
-  color: var(--app-ink);
   font-size: 0.76rem;
   font-weight: 700;
   letter-spacing: 0;
@@ -262,12 +250,9 @@ function resolveFieldValue(row: GridRow, field?: string) {
   position: sticky;
   top: 0;
   z-index: 3;
-  box-shadow: inset 0 -1px 0 var(--app-border);
 }
 
 .app-data-grid :deep(.p-datatable-tbody > tr > td) {
-  border: 0;
-  border-bottom: 1px solid var(--app-border);
   overflow-wrap: anywhere;
   word-break: normal;
 }
@@ -278,16 +263,6 @@ function resolveFieldValue(row: GridRow, field?: string) {
 }
 
 .app-data-grid :deep(.p-datatable-tbody > tr:hover) {
-  background: color-mix(in srgb, var(--app-accent) 4%, var(--app-panel-strong));
-}
-
-.app-data-grid :deep(.p-datatable-tbody > tr:last-child > td) {
-  border-bottom: 0;
-}
-
-.app-data-grid :deep(.p-paginator) {
-  border: 0;
-  border-top: 1px solid var(--app-border);
-  background: var(--app-panel);
+  background: color-mix(in srgb, var(--app-accent) 5%, transparent);
 }
 </style>

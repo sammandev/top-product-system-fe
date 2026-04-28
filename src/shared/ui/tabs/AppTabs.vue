@@ -86,41 +86,13 @@ function panelSlotName(value: string | number) {
 
 .app-tabs :deep(.p-tablist) {
   margin: 0;
-  padding: 0.4rem;
-  border: 1px solid var(--app-border);
-  box-sizing: border-box;
 }
 
 .app-tabs :deep(.p-tablist-tab-list) {
-  gap: 0.5rem;
-  border-bottom: 0;
-  background: transparent;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-.app-tabs :deep(.p-tab) {
-  border: 1px solid transparent;
-  background: transparent;
-  color: var(--app-muted);
-  font-weight: 600;
-  padding: 0.72rem 0.95rem;
-}
-
-.app-tabs :deep(.p-tab-active) {
-  border-color: transparent;
-  background: var(--app-panel-strong);
-  color: var(--app-accent);
-}
-
-.app-tabs :deep(.p-tab:hover) {
-  background: color-mix(in srgb, var(--app-panel-strong) 88%, transparent);
-  color: var(--app-ink);
+  gap: 0.4rem;
 }
 
 .app-tabs :deep(.p-tabpanels) {
-  border-radius: 0;
-  background: transparent;
   padding: 0.3rem 0 0;
 }
 

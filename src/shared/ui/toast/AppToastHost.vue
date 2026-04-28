@@ -11,10 +11,4 @@ import Toast from 'primevue/toast'
 :deep(.p-toast) {
   max-width: min(92vw, 28rem);
 }
-
-:deep(.p-toast-message) {
-  border: 1px solid var(--app-border);
-  background: var(--app-panel-strong);
-  box-shadow: var(--app-shadow-soft);
-}
 </style>

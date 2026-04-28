@@ -1,7 +1,7 @@
 <template>
   <section
     v-bind="attrs"
-    class="grid gap-3.5 border border-app-border rounded-[0.625rem] p-4 bg-app-panel-strong"
+    class="grid gap-3.5 rounded-[0.625rem] p-4 bg-app-panel-strong"
     :class="[`app-panel--${tone}`]"
   >
     <div
