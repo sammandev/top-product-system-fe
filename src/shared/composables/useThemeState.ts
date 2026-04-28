@@ -2,7 +2,7 @@ import Aura from '@primeuix/themes/aura'
 import Lara from '@primeuix/themes/lara'
 import Material from '@primeuix/themes/material'
 import Nora from '@primeuix/themes/nora'
-import { palette, updatePrimaryPalette, updateSurfacePalette, usePreset } from '@primeuix/themes'
+import { definePreset, palette, updatePrimaryPalette, updateSurfacePalette, usePreset } from '@primeuix/themes'
 import { ref } from 'vue'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
@@ -166,10 +166,255 @@ export const THEME_SURFACE_OPTIONS: ThemeOption<ThemeSurfaceName>[] = [
 ]
 
 const PRIMEVUE_PRESETS = {
-  aura: Aura,
-  lara: Lara,
-  material: Material,
-  nora: Nora,
+  aura: definePreset(Aura, {
+    components: {
+      select: {
+        root: {
+          borderRadius: '{border.radius.xl}',
+          shadow: '0 10px 30px -18px rgba(15, 23, 42, 0.28)',
+        },
+        overlay: {
+          borderRadius: '{border.radius.xl}',
+          shadow: '0 24px 48px -30px rgba(15, 23, 42, 0.35)',
+        },
+        option: {
+          borderRadius: '{border.radius.md}',
+        },
+      },
+      multiselect: {
+        root: {
+          borderRadius: '{border.radius.xl}',
+          shadow: '0 10px 30px -18px rgba(15, 23, 42, 0.28)',
+        },
+        overlay: {
+          borderRadius: '{border.radius.xl}',
+          shadow: '0 24px 48px -30px rgba(15, 23, 42, 0.35)',
+        },
+        option: {
+          borderRadius: '{border.radius.md}',
+        },
+        chip: {
+          borderRadius: '999px',
+        },
+      },
+      dialog: {
+        root: {
+          borderRadius: '{border.radius.xl}',
+          shadow: '0 30px 60px -35px rgba(15, 23, 42, 0.4)',
+        },
+        title: {
+          fontWeight: '700',
+        },
+      },
+      tabs: {
+        tab: {
+          padding: '1rem 1.25rem',
+          activeColor: '{primary.color}',
+          activeBorderColor: '{primary.color}',
+        },
+        activeBar: {
+          height: '2px',
+          bottom: '-1px',
+        },
+      },
+    },
+  }),
+  lara: definePreset(Lara, {
+    components: {
+      select: {
+        root: {
+          borderRadius: '{border.radius.xl}',
+          shadow: 'none',
+        },
+        overlay: {
+          borderRadius: '{border.radius.xl}',
+          shadow: '0 18px 42px -30px rgba(15, 23, 42, 0.22)',
+        },
+        option: {
+          borderRadius: '{border.radius.lg}',
+        },
+      },
+      multiselect: {
+        root: {
+          borderRadius: '{border.radius.xl}',
+          shadow: 'none',
+        },
+        overlay: {
+          borderRadius: '{border.radius.xl}',
+          shadow: '0 18px 42px -30px rgba(15, 23, 42, 0.22)',
+        },
+        option: {
+          borderRadius: '{border.radius.lg}',
+        },
+        chip: {
+          borderRadius: '999px',
+        },
+      },
+      dialog: {
+        root: {
+          borderRadius: '{border.radius.xl}',
+          shadow: '0 20px 44px -28px rgba(15, 23, 42, 0.24)',
+        },
+        title: {
+          fontWeight: '700',
+        },
+      },
+      tabs: {
+        tab: {
+          borderWidth: '2px 0 0 0',
+          activeBorderColor: '{primary.color}',
+          activeColor: '{primary.color}',
+          padding: '0.95rem 1.25rem',
+        },
+        activeBar: {
+          height: '0',
+        },
+        colorScheme: {
+          light: {
+            tab: {
+              background: '{surface.50}',
+              hoverBackground: '{surface.100}',
+              activeBackground: '{surface.0}',
+            },
+          },
+          dark: {
+            tab: {
+              background: '{surface.800}',
+              hoverBackground: '{surface.700}',
+              activeBackground: '{surface.900}',
+            },
+          },
+        },
+      },
+    },
+  }),
+  material: definePreset(Material, {
+    components: {
+      select: {
+        root: {
+          borderRadius: '{border.radius.none}',
+          shadow: 'none',
+        },
+        option: {
+          borderRadius: '{border.radius.none}',
+          padding: '0.75rem 1rem',
+        },
+      },
+      multiselect: {
+        root: {
+          borderRadius: '{border.radius.none}',
+          shadow: 'none',
+        },
+        option: {
+          borderRadius: '{border.radius.none}',
+          padding: '0.75rem 1rem',
+        },
+        chip: {
+          borderRadius: '{border.radius.sm}',
+        },
+      },
+      dialog: {
+        root: {
+          borderRadius: '{border.radius.sm}',
+          shadow: '0 24px 48px -28px rgba(0, 0, 0, 0.35)',
+        },
+        title: {
+          fontWeight: '700',
+        },
+      },
+      tabs: {
+        tab: {
+          borderWidth: '0 0 2px 0',
+          margin: '0 0 -1px 0',
+          fontWeight: '700',
+          activeBorderColor: '{primary.color}',
+          activeColor: '{primary.color}',
+        },
+        activeBar: {
+          height: '2px',
+          bottom: '-1px',
+        },
+      },
+    },
+  }),
+  nora: definePreset(Nora, {
+    components: {
+      select: {
+        root: {
+          borderRadius: '{border.radius.xs}',
+          borderColor: '{surface.400}',
+          shadow: 'none',
+        },
+        overlay: {
+          borderRadius: '{border.radius.xs}',
+          borderColor: '{surface.500}',
+          shadow: '0 16px 30px -24px rgba(15, 23, 42, 0.28)',
+        },
+        option: {
+          borderRadius: '0',
+          padding: '0.625rem 0.875rem',
+        },
+      },
+      multiselect: {
+        root: {
+          borderRadius: '{border.radius.xs}',
+          borderColor: '{surface.400}',
+          shadow: 'none',
+        },
+        overlay: {
+          borderRadius: '{border.radius.xs}',
+          borderColor: '{surface.500}',
+          shadow: '0 16px 30px -24px rgba(15, 23, 42, 0.28)',
+        },
+        option: {
+          borderRadius: '0',
+          padding: '0.625rem 0.875rem',
+        },
+        chip: {
+          borderRadius: '{border.radius.xs}',
+        },
+      },
+      dialog: {
+        root: {
+          borderRadius: '{border.radius.xs}',
+          borderColor: '{surface.400}',
+          shadow: '0 24px 48px -32px rgba(15, 23, 42, 0.32)',
+        },
+        title: {
+          fontWeight: '700',
+        },
+      },
+      tabs: {
+        tab: {
+          activeBackground: '{primary.color}',
+          activeColor: '{primary.contrast.color}',
+          activeBorderColor: '{primary.color}',
+          padding: '0.95rem 1.1rem',
+          fontWeight: '700',
+        },
+        activeBar: {
+          height: '0',
+          background: 'transparent',
+        },
+        colorScheme: {
+          light: {
+            tab: {
+              background: '{surface.50}',
+              hoverBackground: '{surface.100}',
+              activeBackground: '{primary.color}',
+            },
+          },
+          dark: {
+            tab: {
+              background: '{surface.800}',
+              hoverBackground: '{surface.700}',
+              activeBackground: '{primary.color}',
+            },
+          },
+        },
+      },
+    },
+  }),
 } as const
 
 const PRIMARY_PALETTE_SOURCES: Record<Exclude<ThemePrimaryName, 'preset'>, string> = {

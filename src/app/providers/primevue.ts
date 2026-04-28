@@ -8,7 +8,6 @@ const initialThemePreferences = getStoredThemePreferences()
 
 export const primeVueOptions = {
   ripple: true,
-  inputVariant: 'filled' as const,
   theme: {
     preset: getPrimeVuePreset(initialThemePreferences) ?? Aura,
     options: {
