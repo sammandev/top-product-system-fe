@@ -66,8 +66,8 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, useAttrs } from 'vue'
 import Dialog from 'primevue/dialog'
+import { computed, useAttrs } from 'vue'
 
 defineOptions({ inheritAttrs: false })
 
@@ -222,7 +222,7 @@ function toggleFullscreen() {
   gap: 0.85rem;
   width: 100%;
   min-height: 1rem;
-  padding: 0.5rem 0.5rem;
+  padding: 1rem 1.125rem 0.75rem;
 }
 
 .app-dialog__header-left {
@@ -342,7 +342,7 @@ function toggleFullscreen() {
 @media (max-width: 640px) {
   .app-dialog__header {
     min-height: 2.65rem;
-    padding: 0.42rem 0.8rem;
+    padding: 0.85rem 1rem 0.65rem;
   }
 
   .app-dialog__title {
