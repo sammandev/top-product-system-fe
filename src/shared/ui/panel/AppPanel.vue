@@ -1,18 +1,26 @@
 <template>
-  <section v-bind="attrs" class="app-panel" :class="[`app-panel--${tone}`]">
-    <div v-if="hasHeader" class="app-panel__header" :class="{ 'app-panel__header--compact': compactHeader, 'app-panel__header--split': splitHeader }">
-      <div class="app-panel__copy">
-        <p v-if="eyebrow" class="app-panel__eyebrow">{{ eyebrow }}</p>
-        <h2 v-if="title" class="app-panel__title">{{ title }}</h2>
-        <p v-if="description" class="app-panel__description">{{ description }}</p>
+  <section
+    v-bind="attrs"
+    class="grid gap-3.5 border border-app-border rounded-[0.625rem] p-4 bg-app-panel-strong"
+    :class="[`app-panel--${tone}`]"
+  >
+    <div
+      v-if="hasHeader"
+      class="flex justify-between gap-4"
+      :class="compactHeader || splitHeader ? 'items-center' : 'items-start'"
+    >
+      <div class="grid gap-[0.35rem]">
+        <p v-if="eyebrow" class="m-0 text-app-accent text-[0.8125rem] font-semibold tracking-normal normal-case">{{ eyebrow }}</p>
+        <h2 v-if="title" class="m-0 text-app-ink text-lg font-semibold">{{ title }}</h2>
+        <p v-if="description" class="m-0 text-app-muted leading-[1.45]">{{ description }}</p>
       </div>
 
-      <div v-if="$slots['header-aside']" class="app-panel__aside">
+      <div v-if="$slots['header-aside']" class="flex flex-wrap justify-end gap-[0.6rem] items-center">
         <slot name="header-aside" />
       </div>
     </div>
 
-    <div class="app-panel__body">
+    <div class="grid gap-4">
       <slot />
     </div>
   </section>
@@ -51,16 +59,6 @@ const hasHeader = computed(
 </script>
 
 <style scoped>
-.app-panel {
-  display: grid;
-  gap: 0.875rem;
-  border: 1px solid var(--app-border);
-  border-radius: 0.625rem;
-  padding: 1rem;
-  background: var(--app-panel-strong);
-  box-shadow: none;
-}
-
 .app-panel--warm {
   background: linear-gradient(180deg, color-mix(in srgb, var(--app-info) 3%, transparent), color-mix(in srgb, var(--app-info) 1.5%, transparent)), var(--app-panel-strong);
 }
@@ -71,57 +69,5 @@ const hasHeader = computed(
 
 .app-panel--success {
   background: linear-gradient(180deg, rgba(34, 197, 94, 0.035), rgba(34, 197, 94, 0.02)), var(--app-panel-strong);
-}
-
-.app-panel__header {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: flex-start;
-}
-
-.app-panel__header--compact,
-.app-panel__header--split {
-  align-items: center;
-}
-
-.app-panel__copy {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.app-panel__eyebrow {
-  margin: 0;
-  color: var(--app-accent);
-  font-size: 0.8125rem;
-  font-weight: 600;
-  letter-spacing: 0;
-  text-transform: none;
-}
-
-.app-panel__title {
-  margin: 0;
-  color: var(--app-ink);
-  font-size: 1.125rem;
-  font-weight: 600;
-}
-
-.app-panel__description {
-  margin: 0;
-  color: var(--app-muted);
-  line-height: 1.45;
-}
-
-.app-panel__aside {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.6rem;
-  align-items: center;
-}
-
-.app-panel__body {
-  display: grid;
-  gap: 1rem;
 }
 </style>

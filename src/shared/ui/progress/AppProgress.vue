@@ -1,9 +1,9 @@
 <template>
-  <section v-bind="attrs" class="app-progress">
-    <div class="app-progress__track">
-      <div class="app-progress__bar" :style="{ width: `${displayWidth}%` }" />
+  <section v-bind="attrs" class="grid gap-[0.4rem]">
+    <div class="relative overflow-hidden h-2 rounded-full app-progress__track">
+      <div class="h-full rounded-[inherit] app-progress__bar" :style="{ width: `${displayWidth}%` }" />
     </div>
-    <span v-if="showLabel">{{ Math.round(clampedValue) }}%</span>
+    <span v-if="showLabel" class="text-app-muted text-[0.78rem] font-semibold">{{ Math.round(clampedValue) }}%</span>
   </section>
 </template>
 
@@ -31,29 +31,13 @@ const displayWidth = computed(() => Math.max(clampedValue.value, props.minVisibl
 </script>
 
 <style scoped>
-.app-progress {
-  display: grid;
-  gap: 0.4rem;
-}
-
 .app-progress__track {
-  position: relative;
-  overflow: hidden;
-  height: 0.5rem;
-  border-radius: 999px;
+  /* TODO: needs --app-accent-tint-10 token in tokens.css */
   background: rgba(15, 118, 110, 0.1);
 }
 
 .app-progress__bar {
-  height: 100%;
-  border-radius: inherit;
   background: linear-gradient(90deg, var(--app-accent), rgba(45, 212, 191, 0.8));
   transition: width 0.2s ease;
-}
-
-.app-progress span {
-  color: var(--app-muted);
-  font-size: 0.78rem;
-  font-weight: 600;
 }
 </style>

@@ -1,13 +1,13 @@
 <template>
-  <div class="notfound-page">
-    <div class="notfound-card">
-      <div class="notfound-icon">
+  <div class="grid place-items-center min-h-screen p-6 bg-app-canvas">
+    <div class="text-center max-w-sm">
+      <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-app-warning-soft text-app-warning text-2xl mb-4">
         <Icon icon="solar:danger-triangle-bold-duotone" />
       </div>
-      <h1 class="notfound-code">404</h1>
-      <p class="notfound-title">Page not found</p>
-      <p class="notfound-desc">The page you're looking for doesn't exist or may have been moved.</p>
-      <div class="notfound-actions">
+      <h1 class="m-0 text-5xl font-bold text-app-ink leading-none">404</h1>
+      <p class="mt-2 text-lg font-semibold text-app-ink">Page not found</p>
+      <p class="mt-2 text-sm text-app-muted leading-normal">The page you're looking for doesn't exist or may have been moved.</p>
+      <div class="flex gap-3 justify-center mt-6">
         <RouterLink class="notfound-btn notfound-btn--primary" to="/dashboard">
           Go to Dashboard
         </RouterLink>
@@ -25,61 +25,6 @@ import { RouterLink } from 'vue-router'
 </script>
 
 <style scoped>
-.notfound-page {
-  display: grid;
-  place-items: center;
-  min-height: 100vh;
-  padding: 1.5rem;
-  background: var(--app-canvas);
-}
-
-.notfound-card {
-  text-align: center;
-  max-width: 24rem;
-}
-
-.notfound-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 0.75rem;
-  background: var(--app-warning-soft);
-  color: var(--app-warning);
-  font-size: 1.5rem;
-  margin-bottom: 1rem;
-}
-
-.notfound-code {
-  margin: 0;
-  font-size: 3rem;
-  font-weight: 700;
-  color: var(--app-ink);
-  line-height: 1;
-}
-
-.notfound-title {
-  margin: 0.5rem 0 0;
-  font-size: 1.125rem;
-  font-weight: 600;
-  color: var(--app-ink);
-}
-
-.notfound-desc {
-  margin: 0.5rem 0 0;
-  font-size: 0.875rem;
-  color: var(--app-muted);
-  line-height: 1.5;
-}
-
-.notfound-actions {
-  display: flex;
-  gap: 0.75rem;
-  justify-content: center;
-  margin-top: 1.5rem;
-}
-
 .notfound-btn {
   padding: 0.5rem 1.25rem;
   border-radius: 0.375rem;

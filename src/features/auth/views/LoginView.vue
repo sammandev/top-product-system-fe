@@ -1,16 +1,16 @@
 <template>
-    <div class="login-page">
-        <div class="login-card">
-            <div class="login-header">
-                <div class="login-logo">
+    <div class="grid place-items-center min-h-screen p-6 bg-app-canvas">
+        <div class="w-full max-w-sm">
+            <div class="text-center mb-8">
+                <div class="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-app-accent text-white text-2xl mb-4">
                     <Icon icon="solar:atom-bold-duotone" />
                 </div>
-                <h1 class="login-title">{{ appName }}</h1>
-                <p class="login-subtitle">Sign in to continue</p>
+                <h1 class="m-0 text-2xl font-semibold text-app-ink">{{ appName }}</h1>
+                <p class="mt-1 text-sm text-app-muted">Sign in to continue</p>
             </div>
 
-            <form class="login-form" @submit.prevent="handleLogin">
-                <div class="login-field">
+            <form class="flex flex-col gap-5 bg-app-panel-strong border border-app-border rounded-xl p-6" @submit.prevent="handleLogin">
+                <div class="login-field flex flex-col gap-1.5">
                     <label for="username">Username</label>
                     <input
                         id="username"
@@ -22,13 +22,13 @@
                         type="text"
                         @input="clearError"
                     />
-                    <p v-if="usernameError" class="login-error">{{ usernameError }}</p>
+                    <p v-if="usernameError" class="m-0 text-[0.8125rem] text-app-danger">{{ usernameError }}</p>
                 </div>
 
-                <div class="login-field">
-                    <div class="login-field__row">
+                <div class="login-field flex flex-col gap-1.5">
+                    <div class="flex items-center justify-between">
                         <label for="password">Password</label>
-                        <button class="login-toggle" type="button" @click="showPassword = !showPassword">
+                        <button class="border-0 bg-transparent text-xs font-medium text-app-accent cursor-pointer p-0" type="button" @click="showPassword = !showPassword">
                             {{ showPassword ? 'Hide' : 'Show' }}
                         </button>
                     </div>
@@ -42,18 +42,18 @@
                         :type="showPassword ? 'text' : 'password'"
                         @input="clearError"
                     />
-                    <p v-if="passwordError" class="login-error">{{ passwordError }}</p>
+                    <p v-if="passwordError" class="m-0 text-[0.8125rem] text-app-danger">{{ passwordError }}</p>
                 </div>
 
-                <label class="login-remember">
-                    <input v-model="rememberMe" type="checkbox" />
+                <label class="flex items-center gap-2 text-[0.8125rem] text-app-muted cursor-pointer">
+                    <input v-model="rememberMe" class="w-4 h-4 accent-app-accent" type="checkbox" />
                     <span>Remember me</span>
                 </label>
 
                 <div v-if="error" class="login-alert">{{ error }}</div>
 
                 <Button
-                    class="login-submit"
+                    class="login-submit w-full"
                     :disabled="!canSubmit"
                     :loading="loading"
                     type="submit"
@@ -61,12 +61,12 @@
                     Sign in
                 </Button>
 
-                <div class="login-divider">
+                <div class="login-divider flex items-center gap-3 text-app-muted text-xs">
                     <span>or</span>
                 </div>
 
                 <Button
-                    class="login-guest"
+                    class="w-full border border-app-border rounded-lg bg-transparent text-app-ink py-[0.625rem] px-4 text-sm font-medium cursor-pointer"
                     :loading="guestLoading"
                     severity="secondary"
                     type="button"
@@ -76,7 +76,7 @@
                 </Button>
             </form>
 
-            <p class="login-footer">{{ currentYear }} {{ appName }}</p>
+            <p class="text-center mt-6 text-xs text-app-muted">{{ currentYear }} {{ appName }}</p>
         </div>
     </div>
 </template>
@@ -154,66 +154,6 @@ async function handleGuestLogin() {
 </script>
 
 <style scoped>
-.login-page {
-    display: grid;
-    place-items: center;
-    min-height: 100vh;
-    padding: 1.5rem;
-    background: var(--app-canvas);
-}
-
-.login-card {
-    width: 100%;
-    max-width: 24rem;
-}
-
-.login-header {
-    text-align: center;
-    margin-bottom: 2rem;
-}
-
-.login-logo {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 3rem;
-    height: 3rem;
-    border-radius: 0.75rem;
-    background: var(--app-accent);
-    color: #fff;
-    font-size: 1.5rem;
-    margin-bottom: 1rem;
-}
-
-.login-title {
-    margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: var(--app-ink);
-}
-
-.login-subtitle {
-    margin: 0.25rem 0 0;
-    color: var(--app-muted);
-    font-size: 0.875rem;
-}
-
-.login-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.25rem;
-    background: var(--app-panel-strong);
-    border: 1px solid var(--app-border);
-    border-radius: 0.75rem;
-    padding: 1.5rem;
-}
-
-.login-field {
-    display: flex;
-    flex-direction: column;
-    gap: 0.375rem;
-}
-
 .login-field label {
     font-size: 0.8125rem;
     font-weight: 500;
@@ -237,43 +177,6 @@ async function handleGuestLogin() {
     box-shadow: 0 0 0 3px var(--app-ring);
 }
 
-.login-field__row {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-}
-
-.login-toggle {
-    border: 0;
-    background: none;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: var(--app-accent);
-    cursor: pointer;
-    padding: 0;
-}
-
-.login-remember {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    font-size: 0.8125rem;
-    color: var(--app-muted);
-    cursor: pointer;
-}
-
-.login-remember input {
-    width: 1rem;
-    height: 1rem;
-    accent-color: var(--app-accent);
-}
-
-.login-error {
-    margin: 0;
-    font-size: 0.8125rem;
-    color: var(--app-danger);
-}
-
 .login-alert {
     border: 1px solid rgba(220, 38, 38, 0.2);
     background: var(--app-danger-soft);
@@ -287,50 +190,11 @@ async function handleGuestLogin() {
     width: 100%;
 }
 
-.login-submit {
-    width: 100%;
-    border: 0;
-    border-radius: 0.5rem;
-    background: var(--app-accent);
-    color: #fff;
-    padding: 0.625rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 600;
-    cursor: pointer;
-}
-
-.login-divider {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    color: var(--app-muted);
-    font-size: 0.75rem;
-}
-
 .login-divider::before,
 .login-divider::after {
     content: '';
     flex: 1;
     height: 1px;
     background: var(--app-border);
-}
-
-.login-guest {
-    width: 100%;
-    border: 1px solid var(--app-border);
-    border-radius: 0.5rem;
-    background: transparent;
-    color: var(--app-ink);
-    padding: 0.625rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    cursor: pointer;
-}
-
-.login-footer {
-    text-align: center;
-    margin-top: 1.5rem;
-    font-size: 0.75rem;
-    color: var(--app-muted);
 }
 </style>

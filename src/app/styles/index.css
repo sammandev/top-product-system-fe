@@ -4,6 +4,67 @@
 @import 'tailwindcss/utilities.css' layer(utilities);
 @import './tokens.css';
 
+/* ── Tailwind token bridge ─────────────────────────────────────────────────
+   @theme inline: preserves var() references so .app-dark switching works at
+   runtime. Generates bg-app-*, text-app-*, border-app-* utilities for every
+   --color-* entry. Only classes actually written in templates appear in build.
+   Never use dark: variants for --app-* tokens — the CSS variable already
+   handles dark mode.
+── */
+@theme inline {
+  /* Canvas & surfaces */
+  --color-app-canvas:        var(--app-canvas);
+  --color-app-canvas-strong: var(--app-canvas-strong);
+  --color-app-panel:         var(--app-panel);
+  --color-app-panel-strong:  var(--app-panel-strong);
+  --color-app-surface:       var(--app-surface);
+
+  /* Typography */
+  --color-app-ink:   var(--app-ink);
+  --color-app-muted: var(--app-muted);
+
+  /* Accent */
+  --color-app-accent:        var(--app-accent);
+  --color-app-accent-strong: var(--app-accent-strong);
+  --color-app-accent-soft:   var(--app-accent-soft);
+
+  /* Border & ring */
+  --color-app-border: var(--app-border);
+  --color-app-ring:   var(--app-ring);
+
+  /* Status — info */
+  --color-app-info:        var(--app-info);
+  --color-app-info-strong: var(--app-info-strong);
+  --color-app-info-soft:   var(--app-info-soft);
+  --color-app-info-line:   var(--app-info-line);
+
+  /* Status — success */
+  --color-app-success:        var(--app-success);
+  --color-app-success-strong: var(--app-success-strong);
+  --color-app-success-soft:   var(--app-success-soft);
+  --color-app-success-line:   var(--app-success-line);
+
+  /* Status — warning */
+  --color-app-warning:        var(--app-warning);
+  --color-app-warning-strong: var(--app-warning-strong);
+  --color-app-warning-soft:   var(--app-warning-soft);
+  --color-app-warning-line:   var(--app-warning-line);
+
+  /* Status — danger */
+  --color-app-danger:      var(--app-danger);
+  --color-app-danger-soft: var(--app-danger-soft);
+  --color-app-danger-line: var(--app-danger-line);
+
+  /* Shell */
+  --color-app-shell-bg:      var(--app-shell-bg);
+  --color-app-shell-header:  var(--app-shell-header);
+  --color-app-shell-sidebar: var(--app-shell-sidebar);
+
+  /* Font families */
+  --font-display: var(--app-display);
+  --font-body:    var(--app-body);
+}
+
 @layer base {
   html,
   body,
