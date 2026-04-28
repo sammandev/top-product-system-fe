@@ -8,13 +8,9 @@ import { AppToastHost } from '@/shared'
 </script>
 
 <style>
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
-}
-
-#app {
-  min-height: 100vh;
+@layer base {
+  #app {
+    min-height: 100vh;
+  }
 }
 </style>
