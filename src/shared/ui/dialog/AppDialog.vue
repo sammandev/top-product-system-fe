@@ -160,7 +160,6 @@ function toggleFullscreen() {
 .app-dialog {
   overflow: hidden;
   border: 1px solid var(--app-border);
-  border-radius: 1rem;
   background: var(--app-panel-strong);
   box-shadow: none;
   display: flex;

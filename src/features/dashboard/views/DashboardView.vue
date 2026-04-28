@@ -18,7 +18,7 @@
           </div>
 
           <div class="dashboard-hero__actions">
-            <p class="dashboard-hero__meta">{{ loading ? 'Refreshing snapshot...' : 'Cache window: 60 seconds' }}</p>
+            <p class="dashboard-hero__meta">{{ loading ? 'Refreshing snapshot...' : 'Auto-cached · refreshes in background' }}</p>
 
             <Button :disabled="loading" :loading="loading" severity="secondary" @click="refreshStats">
               <span class="dashboard-button__content">

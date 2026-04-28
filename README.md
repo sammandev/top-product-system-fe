@@ -1,12 +1,11 @@
-# AST Parser Frontend
+# AST Tools Frontend
 
-Modern Vue 3 single-page application (SPA) for wireless test data analysis, file parsing, and DUT (Device Under Test) management. Built with TypeScript, Vite, PrimeVue, and scaffold-era shared UI components.
+Modern Vue 3 single-page application (SPA) for wireless test data analysis, file parsing, and DUT (Device Under Test) management. Built with TypeScript, Vite, PrimeVue, and Tailwind CSS v4.
 
 [![Vue.js](https://img.shields.io/badge/Vue.js-3.5+-4FC08D.svg?logo=vue.js)](https://vuejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9+-3178C6.svg?logo=typescript)](https://www.typescriptlang.org/)
-[![Vite](https://img.shields.io/badge/Vite-7.x-646CFF.svg?logo=vite)](https://vitejsP.dev/)
+[![Vite](https://img.shields.io/badge/Vite-7.x-646CFF.svg?logo=vite)](https://vitejs.dev/)
 [![PrimeVue](https://img.shields.io/badge/PrimeVue-4.5+-10B981.svg)](https://primevue.org/)
-[![Tests](https://img.shields.io/badge/tests-65%20passing-brightgreen.svg)](./src/)
 
 ---
 
@@ -19,18 +18,13 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 - [Setup & Installation](#-setup--installation)
 - [Development](#-development)
 - [Testing](#-testing)
-  - [Unit Tests](#unit-tests)
-  - [E2E Tests](#e2e-tests)
 - [Configuration](#-configuration)
-  - [Environment Variables](#environment-variables)
-  - [API Proxy](#api-proxy)
 - [Authentication](#-authentication)
 - [API Usage](#-api-usage)
-- [Routing](#-routes)
+- [Routes](#-routes)
 - [UI Components](#-ui-components)
 - [Code Style & Formatting](#-code-style--formatting)
 - [Troubleshooting](#-troubleshooting)
-- [Documentation](#-documentation)
 - [Development Guidelines](#-development-guidelines)
 - [Contributing](#-contributing)
 
@@ -39,58 +33,57 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 ## 🚀 Tech Stack
 
 ### Core Framework
-- **Vue 3.5.25** - Progressive JavaScript framework with Composition API (`<script setup>`)
-- **TypeScript 5.9.3** - Type-safe JavaScript with strict mode enabled
-- **Vite 7.2.7** - Next-generation frontend build tool with HMR
+- **Vue 3.5.30** — Progressive JavaScript framework with Composition API (`<script setup>`)
+- **TypeScript 5.9.3** — Type-safe JavaScript with strict mode enabled
+- **Vite 7.3.1** — Next-generation frontend build tool with HMR
 
 ### UI & Styling
-- **PrimeVue 4.5.5** - Component foundation for shared app primitives
-- **@primeuix/themes 2.0.3** - Runtime theme presets and palette integration
-- **@iconify/vue 5.0.0** - Icon system used across scaffold-era surfaces
-- **Tailwind CSS 4.2.3** + **tailwindcss-primeui 0.6.1** - Utility styling and PrimeVue tokens
-- **Sass 1.98.0** - CSS preprocessor for custom styling where needed
+- **PrimeVue 4.5.5** — Component foundation with four built-in presets (Aura, Material, Lara, Nora)
+- **@primeuix/themes 2.0.3** — Runtime theme presets, `usePreset()`, palette integration
+- **@iconify/vue 5.0.0** — Icon system used across navigation and result states
+- **Tailwind CSS 4.2.3** + **tailwindcss-primeui 0.6.1** — Utility-first styling with PrimeVue token bridge
+- **Sass 1.98.0** — CSS preprocessor for custom styling where needed
 
 ### State & Routing
-- **Vue Router 4.6.3** - Official routing solution with navigation guards
-- **Pinia 3.0.4** - Official state management with TypeScript support
+- **Vue Router 4.6.4** — Official routing solution with navigation guards
+- **Pinia 3.0.4** — Official state management with TypeScript support
 
 ### HTTP & Data
-- **Axios 1.13.2** - HTTP client with request/response interceptors
-- **Day.js 1.11.19** - Lightweight date manipulation (2KB vs Moment.js 67KB)
-- **Zod 4.1.13** - Schema validation and type inference
+- **Axios 1.13.6** — HTTP client with request/response interceptors and automatic token refresh
+- **@tanstack/vue-query 5.99.2** — Server state management
+- **Day.js 1.11.20** — Lightweight date manipulation
+- **Zod 4.3.6** — Schema validation and type inference
+- **vee-validate 4.15.1** — Form validation composables
 
 ### Visualization & Utilities
-- **ECharts 6.0.0** - Professional data visualization library
-- **vue-echarts 8.0.1** - Vue bindings for the shared charting path
-- **VueUse 14.1.0** - Collection of composition utilities
-  - **@vueuse/core** - Essential Vue composition functions
-  - **@vueuse/motion 3.0.3** - Animation and motion utilities
-- **KaTeX 0.16.27** - Fast LaTeX math rendering
+- **ECharts 6.0.0** + **vue-echarts 8.0.1** — Professional data visualization
+- **VueUse 14.2.1** — Essential Vue composition utilities (`@vueuse/core`, `@vueuse/motion 3.0.3`)
+- **KaTeX 0.16.40** — Fast LaTeX math rendering
+- **lodash-es 4.17.23** — Tree-shakeable utility functions
+- **idb 8.0.3** — IndexedDB wrapper for client-side storage
 
-### Excel & Document Processing
-- **ExcelJS 4.4.0** - Excel file creation and manipulation
-- **xlsx 0.18.5** - Excel file parsing and generation
-- **jsPDF 3.0.4** + **jspdf-autotable 5.0.2** - PDF generation with tables
-- **JSZip 3.10.1** - ZIP file handling
+### Document & Excel Processing
+- **ExcelJS 4.4.0** — Excel file creation and manipulation
+- **jsPDF 4.2.1** + **jspdf-autotable 5.0.7** — PDF generation with tables
+- **JSZip 3.10.1** — ZIP file handling
 
-### Testing & Development Tools
-- **Vitest 4.0.15** - Unit testing framework (Vite-native)
-  - **@vitest/ui 4.0.15** - Interactive test UI
-  - **@vitest/coverage-v8 4.0.15** - Coverage reporting with V8
-- **Playwright 1.57.0** - End-to-end testing across browsers
-- **@vue/test-utils 2.4.6** - Official Vue component testing utilities
-- **Happy-DOM 20.0.11** - Lightweight DOM implementation for unit tests
-- **MSW 2.12.4** - Mock Service Worker for API mocking
+### Monitoring
+- **@sentry/vue 10.45.0** — Error monitoring and performance tracing
+
+### Testing
+- **Vitest 4.1.0** — Unit testing framework (Vite-native)
+  - **@vitest/ui 4.1.0** — Interactive test UI
+  - **@vitest/coverage-v8 4.1.0** — Coverage reporting with V8
+- **Playwright 1.58.2** — End-to-end testing across browsers
+- **@vue/test-utils 2.4.6** — Official Vue component testing utilities
+- **Happy-DOM 20.8.4** — Lightweight DOM implementation for unit tests
+- **MSW 2.12.14** — Mock Service Worker for API mocking in tests
 
 ### Code Quality
-- **ESLint 9.39.1** - JavaScript/TypeScript linting
-  - **@typescript-eslint 8.49.0** - TypeScript ESLint rules
-  - **eslint-plugin-vue 10.6.2** - Vue-specific linting rules
-- **Prettier 3.7.4** - Code formatting
-- **vue-tsc 3.1.8** - Vue TypeScript compiler
+- **Biome 2.4.8** — Fast, unified linter and formatter (replaces ESLint + Prettier)
 
 ### Build & Package Management
-- **pnpm 10.25.0** - Fast, disk space efficient package manager (recommended)
+- **pnpm 10.32.1** — Fast, disk space efficient package manager (required)
 
 ---
 
@@ -101,6 +94,7 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 - **JWT Token Management**: Automatic token refresh on 401 responses
 - **Token Versioning**: Instant token revocation capability
 - **Secure Storage**: Tokens stored in localStorage with automatic cleanup
+- **Guest Access**: Limited read-only mode for unauthenticated users
 
 ### File Processing
 - **CSV/Excel Parsing**: Upload and parse wireless test data files
@@ -112,36 +106,16 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 - **Site/Model/Station Navigation**: Hierarchical DUT data browsing
 - **Top Products Analysis**: Score-based product ranking with date ranges
   - **Standard Analysis**: Fast analysis without PA trend data
-  - **PA Trends Analysis** ⭐ NEW: Includes Power Amplifier trend measurements with adjusted power calculations
+  - **PA Trends Analysis**: Includes Power Amplifier trend measurements with adjusted power calculations
   - **Hierarchical Analysis**: 4-level breakdown (Group → Subgroup → Antenna → Category)
-- **PA Trends Feature (December 2025)** ⭐:
-  - **Button**: "Analyze with PA Trends" (renamed from "Analyze with Hierarchical Scoring")
-  - **Endpoint**: `/api/dut/top-product/with-pa-trends`
-  - **Performance**: 3-5x faster with parallel ISN processing (asyncio.gather)
-  - **Cache**: 300-second cache for optimal performance
-  - **Scoring**: Specialized logic for PA-adjusted measurements
-- **Score Breakdown Dialog** ⭐ ENHANCED:
-  - Supports both standard and PA-adjusted measurement types
-  - **Standard Fields**: USL, LSL, actual, deviation (traditional measurements)
-  - **PA-Adjusted Fields**: comparison, threshold, current_value, trend_mean, deviation_from_mean, interpretation
-  - **Conditional Rendering**: Adapts to data structure automatically
-  - **Fixed Lifecycle**: Resolved Vue component lifecycle issues for stable behavior
-  - **Type Safety**: Synchronized ScoreBreakdown interfaces across multiple files
-- **Scoring Model (2025 update)**:
-  - Standard rows now rely on `score = 10 * min(|MeasuredValue|, |TargetValue|) / max(|MeasuredValue|, |TargetValue|)` with a USL/LSL-span fallback for near-zero targets and a hard `0` whenever the reading falls outside the declared spec window.
-  - `FIXTURE_OR_DUT_PROBLEM_POW` runs `((1 - |MeasuredPower - TargetPower|) / TargetPower) * 10`, while PER relies on the USL-driven ratio `(USL - actual) / USL` (clamped to `[0, 10]`).
-  - Extremely small positive scores are clamped to `0.01` before rounding so UI charts never flatten acceptable-but-small contributions to zero.
-- **Flexible Identifiers**: Every `site_*`, `model_*`, `station_*`, `device_*`, and `dut_*` parameter accepts either a numeric ID or a descriptive string (name/ISN). The backend resolves and cross-checks these hints automatically, so the frontend can always send whichever identifier it has available.
-- **Latest Test Items API**: `/api/dut/test-items/latest/batch` now returns `value_test_items` and `nonvalue_test_items` (each entry contains `name`, `usl`, `lsl`, `status`) sourced strictly from `/api/dut/records/latest/{station_id}/{dut_id}` and `/api/dut/records/nonvalue/latest/{station_id}/{dut_id}`.
 - **Multi-DUT Comparison**: Analyze multiple devices simultaneously
 - **Real-time Data**: Direct integration with intranet DUT API
+- **Flexible Identifiers**: Every `site_*`, `model_*`, `station_*` parameter accepts numeric ID or descriptive string
 
 ### User Experience
-- **Scaffold-First UI**: Shared PrimeVue-backed surfaces plus native controls and Iconify icons
-- **Responsive Design**: Mobile, tablet, and desktop support
-- **Dark/Light Themes**: Customizable theme support
-- **Progressive Web App**: Installable on devices
-- **Offline Capability**: Service worker for offline functionality (planned)
+- **Responsive Design**: Mobile, tablet, and desktop layouts
+- **Adaptive Theming**: 4 PrimeVue presets × 4 primary colors × 3 surface palettes × 3 modes (light/dark/system)
+- **Custom `--app-*` Token System**: Runtime CSS variable theming independent of Tailwind's dark: variants
 
 ---
 
@@ -149,106 +123,75 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 
 ```
 src/
-├── app/                    # App bootstrap, providers, and styles
-│   ├── providers/         # PrimeVue, Pinia, and query provider setup
-│   └── styles/            # App-level stylesheet entry points
-├── assets/                # Static assets (images, global CSS)
-│   └── main.css          # Global styles and utilities
-├── core/                  # Core application functionality
-│   ├── api/              # API utilities
-│   ├── config/           # App configuration
-│   ├── plugins/          # Core plugin exports
-│   ├── router/           # Route definitions
-│   ├── stores/           # Cross-feature stores
-│   └── types/            # Core TypeScript types
-├── features/              # Feature modules (new structure)
-│   ├── auth/             # Authentication feature
-│   │   ├── views/        # Login page
-│   │   ├── store/        # Auth Pinia store
-│   │   └── composables/  # Auth composables
-│   ├── comparison/       # File comparison feature
-│   │   └── views/        # Compare page
-│   ├── dashboard/        # Dashboard feature
-│   │   └── views/        # Dashboard page
-│   ├── dut/              # DUT management feature
-│   │   ├── views/        # Top products, Analysis pages
-│   │   └── store/        # DUT Pinia store
-│   └── parsing/          # File parsing feature
-│       └── views/        # Parsing page
-├── layouts/               # Layout components
-│   └── DefaultLayout.vue # Main app layout
-├── router/                # Vue Router
-│   └── index.ts          # Route definitions with guards
-├── shared/                # Shared utilities
-│   ├── components/       # Legacy shared components
-│   ├── composables/      # Shared composables
-│   ├── constants/        # Shared constants
-│   ├── ui/               # AppPanel, AppDialog, AppDataGrid, AppTabs, and peers
-│   └── utils/            # Utility functions
-├── test/                  # Test setup and helpers
-│   ├── setup.ts          # Vitest global setup
-│   └── utils.ts          # Shared mount and test helpers
-├── types/                 # TypeScript type definitions
-│   └── api.ts            # API response/request types
-├── App.vue                # Root component
-├── main.ts                # Application entry point
-└── style.css              # Base global stylesheet
+├── app/                        # App bootstrap, providers, and styles
+│   ├── providers/
+│   │   ├── primevue.ts         # PrimeVue plugin config (preset, cssLayer, darkModeSelector)
+│   │   ├── query-client.ts     # TanStack Query QueryClient setup
+│   │   └── index.ts            # Aggregated provider installer
+│   └── styles/
+│       ├── index.css           # Main stylesheet: @theme inline, tokens, Tailwind layers
+│       └── tokens.css          # --app-* CSS custom property definitions
+├── assets/
+│   └── main.css                # Global utility classes and scrollbar styles
+├── core/                       # Cross-cutting application concerns
+│   ├── api/                    # Axios instance and interceptors
+│   ├── config/                 # App-wide configuration constants
+│   ├── plugins/                # Core plugin exports
+│   ├── router/                 # Route definitions and navigation guards
+│   ├── stores/                 # Cross-feature Pinia stores
+│   └── types/                  # Core TypeScript types
+├── features/                   # Feature modules (primary code location)
+│   ├── auth/                   # Authentication
+│   │   ├── views/              # LoginView.vue
+│   │   ├── stores/             # Auth Pinia store
+│   │   └── composables/        # useAuth, login helpers
+│   ├── comparison/             # File comparison feature
+│   ├── dashboard/              # Dashboard feature
+│   ├── dut/                    # DUT management (Top Products, Analysis)
+│   │   ├── api/                # dutTopProduct.api.ts, dutStation.api.ts
+│   │   ├── components/         # TopProductsByISNTab, TopProductISNResults, etc.
+│   │   ├── stores/             # DUT Pinia store
+│   │   ├── types/              # dutTopProduct.types.ts (ScoreBreakdown, etc.)
+│   │   └── views/              # TopProductsView.vue
+│   └── parsing/                # File parsing feature
+├── layouts/
+│   └── DefaultLayout.vue       # Main app shell (sidebar + topbar + content)
+├── shared/                     # Cross-feature shared resources
+│   ├── components/             # Shared presentational components
+│   ├── composables/            # useThemeState, useDrawerState, useAuth, etc.
+│   ├── constants/              # Shared constants
+│   ├── ui/                     # Shared UI primitives
+│   │   ├── data-grid/          # AppDataGrid
+│   │   ├── charts/             # Chart wrappers
+│   │   ├── dialog/             # AppDialog
+│   │   ├── forms/              # AppSelect and form primitives
+│   │   ├── panel/              # AppPanel
+│   │   ├── progress/           # AppProgress
+│   │   ├── tabs/               # AppTabs
+│   │   └── toast/              # Toast wrappers
+│   └── utils/                  # Utility functions
+├── test/
+│   ├── setup.ts                # Vitest global setup
+│   └── utils.ts                # Shared mount helpers (includes QueryClient wrapper)
+├── types/
+│   └── api.ts                  # API response/request type definitions
+├── App.vue                     # Root component
+└── main.ts                     # Application entry point
 ```
 
 ### Architecture Notes
 
-- **Feature-First Organization**: New code should go in `features/` directory
-- **Domain Separation**: Each feature has its own views, stores, and composables
-- **Shared Resources**: Common components, utilities, and types in `shared/`
-- **Legacy Structure**: `views/`, `components/`, `stores/` at root are being phased out
-
-### Key Components for PA Trends Feature ⭐
-
-**Frontend Components:**
-- [TopProductsByISNTab.vue](src/features/dut/components/TopProductsByISNTab.vue) (960→977 lines)
-  - Main tab for Top Products Analysis
-  - "Analyze with PA Trends" button implementation
-  - Calls `analyzeWithPATrends()` API method
-- [TopProductISNResults.vue](src/features/dut/components/TopProductISNResults.vue) (2121 lines)
-  - Displays analysis results with Score Breakdown dialog
-  - Fixed component lifecycle (always mounted, visibility-controlled)
-  - Handles both standard and PA-adjusted measurements
-- [ScoreBreakdownDialog.vue](src/features/dut-logs/components/ScoreBreakdownDialog.vue) (442 lines)
-  - Modal dialog showing score calculation details
-  - Conditional rendering for standard vs PA-adjusted fields
-  - Safe number formatting with `formatNumberSafe()` helper
-- [DUTISNInput.vue](src/features/dut/components/DUTISNInput.vue) (364→288 lines)
-  - Reusable ISN input component (Single ISN mode removed)
-  - Supports multiple and bulk input modes
-  - Validation and formatting
-
-**API Layer:**
-- [dutTopProduct.api.ts](src/features/dut/api/dutTopProduct.api.ts) (292 lines)
-  - `analyzeWithPATrends()` method: Calls `/api/dut/top-product/with-pa-trends`
-  - `analyzeHierarchical()` method: Calls `/api/dut/top-product/hierarchical`
-  - Full TypeScript support with proper typing
-
-**Type Definitions:**
-- [dutTopProduct.types.ts](src/features/dut/types/dutTopProduct.types.ts) (219 lines)
-  - `ScoreBreakdown` interface: Supports both standard and PA fields
-  - Optional standard fields: `usl?`, `lsl?`, `actual?`, `deviation?`
-  - Optional PA fields: `comparison?`, `threshold?`, `current_value?`, `trend_mean?`, `deviation_from_mean?`
-- [useTestLogUpload.ts](src/features/dut-logs/composables/useTestLogUpload.ts) (198 lines)
-  - Synchronized `ScoreBreakdown` interface for consistency
-  - Composable for test log upload functionality
-
-**Backend Integration:**
-- [external_api_client.py](backend_fastapi/src/app/routers/external_api_client.py) (lines 4114-4172)
-  - Parallel ISN processing with `asyncio.gather()`
-  - 3-5x performance improvement over sequential processing
-  - 300-second cache for PA trends endpoint
+- **Feature-First**: New code belongs in `features/`. Each feature owns its views, stores, composables, and types.
+- **Shared UI Primitives**: `AppPanel`, `AppDialog`, `AppDataGrid`, `AppTabs`, `AppProgress`, `AppSelect` in `shared/ui/` cover repeated app surfaces.
+- **Styling Approach**: Tailwind v4 utilities for structure/layout; `var(--app-*)` CSS tokens for all colors. The `@theme inline` block in `index.css` bridges the two systems.
+- **TanStack Query**: `QueryClient` is registered and available. Data fetching currently uses Pinia stores + Axios directly; migration to `useQuery`/`useMutation` is a planned improvement.
 
 ---
 
 ## 🔧 Prerequisites
 
-- **Node.js** 22+ (LTS recommended)
-- **npm** 9+ or **pnpm** 8+ (package manager)
+- **Node.js 22+** (LTS recommended)
+- **pnpm 10+** (required)
 - **Backend API** running at `http://127.0.0.1:8001`
 - **Git** for version control
 
@@ -257,8 +200,7 @@ src/
 - **VS Code** with extensions:
   - Vue - Official (Volar)
   - TypeScript Vue Plugin (Volar)
-  - ESLint
-  - Prettier
+  - Biome (`biomejs.biome`)
   - EditorConfig
 
 ---
@@ -275,38 +217,33 @@ cd top-product-system-fe
 ### 2. Install Dependencies
 
 ```bash
-# Using pnpm (recommended)
 corepack enable
 pnpm install
 ```
 
 ### 3. Configure Environment
 
-Create `.env.local` file for local development:
+Create `.env.local` for local development:
 
 ```env
 VITE_API_BASE_URL=http://127.0.0.1:8001
 VITE_APP_TITLE=AST Tools
 ```
 
-See [Configuration](#-configuration) section for all available options.
-
 ### 4. Start Backend API
 
-**Required**: The backend must be running before starting the frontend.
-
 ```bash
-cd ../backend_fastapi
-make dev  # Starts backend at http://127.0.0.1:8001
+cd ../top-product-system-be
+make dev   # starts backend at http://127.0.0.1:8001
 ```
 
 ### 5. Start Development Server
 
 ```bash
-pnpm run dev
+pnpm dev
 ```
 
-Application will be available at `http://localhost:3000`
+Application available at `http://localhost:3000`.
 
 ---
 
@@ -314,209 +251,91 @@ Application will be available at `http://localhost:3000`
 
 ### Available Scripts
 
-| Command | Description | Usage |
-|---------|-------------|-------|
-| `pnpm run dev` | Start dev server with HMR | Development |
-| `pnpm run build` | Build for production | Deployment |
-| `pnpm run preview` | Preview production build | Testing |
-| `pnpm run lint` | Run Biome lint checks | Code quality |
-| `pnpm run lint:fix` | Apply Biome auto-fixes | Auto-fix |
-| `pnpm run format` | Check formatting with Biome | Code style |
-| `pnpm run type-check` | TypeScript validation | Type safety |
-| `pnpm run test:run` | Run unit tests (single run) | Testing |
-| `pnpm run test:ui` | Unit tests with UI | Interactive |
-| `pnpm run test:e2e` | Run E2E tests | Integration |
-| `pnpm run test:e2e:ui` | E2E tests with UI | Interactive |
+| Command | Description |
+|---------|-------------|
+| `pnpm dev` | Start dev server with HMR |
+| `pnpm build` | Type-check + build for production |
+| `pnpm preview` | Preview production build locally |
+| `pnpm lint` | Run Biome lint checks |
+| `pnpm lint:fix` | Apply Biome auto-fixes |
+| `pnpm format` | Check formatting with Biome |
+| `pnpm format:fix` | Apply Biome format fixes |
+| `pnpm type-check` | TypeScript validation (`vue-tsc --noEmit`) |
+| `pnpm test` | Run unit tests in watch mode |
+| `pnpm test:run` | Run unit tests once |
+| `pnpm test:ui` | Interactive test UI |
+| `pnpm test:coverage` | Unit tests with V8 coverage |
+| `pnpm test:e2e` | Run Playwright E2E tests |
+| `pnpm test:e2e:ui` | E2E tests with interactive UI |
 
 ### Development Workflow
 
-1. **Start Services**:
-   ```bash
-   # Terminal 1: Backend
-   cd backend_fastapi && make dev
-   
-   # Terminal 2: Frontend
-  cd top-product-system-fe && pnpm run dev
-   ```
+```bash
+# Terminal 1: Backend
+cd top-product-system-be && make dev
 
-2. **Make Changes**: Edit files in `src/` directory
-
-3. **Hot Module Replacement**: Changes auto-reload in browser
-
-4. **Type Checking**: Run `pnpm run type-check` to validate TypeScript
-
-5. **Linting**: Run `pnpm run lint` to check code quality
-
-6. **Testing**: Run tests before committing (see [Testing](#-testing))
+# Terminal 2: Frontend
+cd top-product-system-fe && pnpm dev
+```
 
 ### Build for Production
 
 ```bash
-# Type check + build
-pnpm run type-check && pnpm run build
-
-# Output: dist/ directory
-
-# Preview production build locally
-pnpm run preview
+pnpm type-check && pnpm build
+# Output: dist/
+pnpm preview
 ```
 
 ---
 
 ## 🧪 Testing
 
-### Testing
+### Unit Tests
 
-**Framework**: Vitest 4.0.15 + @vue/test-utils 2.4.6 + Happy-DOM 20.0.11
-
-**Test Suite Status (December 2025)**:
-- ✅ **65 passing** unit tests (100% success rate)
-- ❌ **0 failures**
-- 🎯 **Production ready**
-
-**Test Coverage**:
-- ✅ **Auth Store**: 26 tests (JWT management, login flows, token refresh, dual auth system)
-- ✅ **Error Interceptor**: 21 tests (401 handling, token refresh with retry, error propagation)
-- ✅ **useAuth Composable**: 18 tests (authentication helpers, state management, computed properties)
-- **Total**: 65 unit tests, comprehensive coverage of critical authentication flows
-
-**Run Unit Tests**:
+**Framework**: Vitest 4.1.0 + @vue/test-utils 2.4.6 + Happy-DOM
 
 ```bash
-# Run all unit tests
-pnpm run test:run
-
-# Run with coverage
-pnpm run test:coverage
-
-# Run specific test file
-pnpm run test:run src/features/auth/store/__tests__/auth.store.spec.ts
-
-# Watch mode for TDD
-pnpm run test
-
-# Interactive UI
-pnpm run test:ui
+pnpm test:run                                              # all tests
+pnpm test:run src/features/auth/stores/__tests__/         # specific file
+pnpm test:coverage                                        # with V8 coverage
+pnpm test:ui                                              # interactive UI
 ```
 
-**Unit Test Structure**:
-```
-src/
-└── features/
-    └── auth/
-        └── store/
-            ├── auth.ts                    # Pinia store
-            └── __tests__/
-                └── auth.store.spec.ts     # Unit tests
-```
+**Coverage**:
 
-**Example Unit Test**:
-```typescript
-import { describe, it, expect, beforeEach } from 'vitest'
-import { setActivePinia, createPinia } from 'pinia'
-import { useAuthStore } from '../auth'
-
-describe('Auth Store', () => {
-  beforeEach(() => {
-    setActivePinia(createPinia())
-  })
-
-  it('should login successfully', async () => {
-    const store = useAuthStore()
-    await store.login({ username: 'test', password: 'test' })
-    expect(store.isAuthenticated).toBe(true)
-  })
-})
-```
+| Suite | Tests | Status |
+|-------|-------|--------|
+| Auth Store | 26 | ✅ |
+| Error Interceptor | 21 | ✅ |
+| useAuth Composable | 18 | ✅ |
+| **Total** | **65** | ✅ |
 
 ### E2E Tests
 
-**Framework**: Playwright 1.58+ (multi-browser testing)
+**Framework**: Playwright 1.58.2 (Chromium, Firefox, WebKit, Mobile Chrome, Mobile Safari)
 
-- ✅ **Authentication Flows**: Login, logout, and token management coverage
-- ✅ **Navigation & Routing**: Route guards and protected-route coverage
-- ✅ **Critical Regression Checks**: Targeted auth regression protection
-
-**Run E2E Tests**:
+**Prerequisites**: backend running + test user exists.
 
 ```bash
-# Run all E2E tests
-pnpm run test:e2e
-
-# Run a specific browser project
-pnpm run test:e2e -- --project=chromium
-pnpm run test:e2e -- --project=firefox
-pnpm run test:e2e -- --project=webkit
-
-# Run a specific test file
-pnpm run test:e2e e2e/auth.spec.ts
-
-# Run tests matching a title pattern
-pnpm run test:e2e -- -g "login"
-
-# Interactive UI mode
-pnpm run test:e2e:ui
-
-# Debug and headed modes
-pnpm run test:e2e -- --debug
-pnpm run test:e2e -- --headed
-
-# Generate the HTML report
-npx playwright show-report
-```
-
-**Supported Browsers**:
-- ✅ Chromium (Chrome, Edge)
-- ✅ Firefox
-- ✅ WebKit (Safari)
-- ✅ Mobile Chrome (Pixel 5)
-- ✅ Mobile Safari (iPhone 13)
-
-**E2E Test Structure**:
-```
-e2e/
-├── auth.spec.ts           # Authentication tests (24 tests)
-├── navigation.spec.ts     # Navigation tests (30+ tests)
-├── helpers.ts             # Test utilities and helpers
-└── .gitignore            # Exclude test artifacts
-```
-
-**Test Prerequisites**:
-1. Backend running at `http://127.0.0.1:8001`
-2. Test user exists: `testuser` / `testpassword`
-3. Frontend dev server auto-starts (configured in `playwright.config.ts`)
-
-**Create Test User**:
-```bash
-cd backend_fastapi
+# Create test user
+cd top-product-system-be
 uv run python scripts/create_user.py --username testuser --password testpassword
 ```
 
-**Example E2E Test**:
-```typescript
-import { test, expect } from '@playwright/test'
-
-test('should login successfully', async ({ page }) => {
-  await page.goto('/login')
-  await page.getByLabel('Username').fill('testuser')
-  await page.locator('input[type="password"]').fill('testpassword')
-  await page.getByRole('button', { name: /login/i }).click()
-  
-  await expect(page).toHaveURL('/dashboard')
-})
+```bash
+pnpm test:e2e                                 # all browsers
+pnpm test:e2e -- --project=chromium           # single browser
+pnpm test:e2e -- -g "login"                   # by test title
+pnpm test:e2e:ui                              # interactive
+npx playwright show-report                    # HTML report
 ```
 
-**Test Artifacts**:
-- Screenshots: `test-results/**/test-failed-*.png`
-- Videos: `test-results/**/video.webm`
-- Traces: `test-results/**/trace.zip`
-- HTML Report: `playwright-report/index.html`
-
-**CI/CD Integration**:
-```yaml
-# .github/workflows/test.yml
-- name: Run E2E tests
-  run: pnpm run test:e2e -- --project=chromium
+**Test structure**:
+```
+e2e/
+├── auth.spec.ts         # 24 authentication flow tests
+├── navigation.spec.ts   # 30+ navigation and guard tests
+└── helpers.ts           # shared utilities
 ```
 
 ---
@@ -525,730 +344,322 @@ test('should login successfully', async ({ page }) => {
 
 ### Environment Variables
 
-- `.env` - Default configuration
-- `.env.development` - Development settings
-- `.env.production` - Production settings
-- `.env.local` - Local overrides (gitignored)
+| Variable | Default | Description |
+|----------|---------|-------------|
+| `VITE_API_BASE_URL` | `http://127.0.0.1:8001` | Backend API base URL |
+| `VITE_APP_TITLE` | `AST Tools` | Application name shown in UI |
 
-```env
-VITE_API_BASE_URL=http://127.0.0.1:8001
-VITE_APP_TITLE=AST Parser
-```
+Files: `.env`, `.env.development`, `.env.production`, `.env.local` (gitignored).
 
 ### API Proxy
 
-Vite dev server proxies `/api` requests to backend (configured in `vite.config.ts`).
+`vite.config.ts` proxies `/api/*` to `VITE_API_BASE_URL` to avoid CORS in development.
+
+---
 
 ## 🔐 Authentication
 
-JWT-based authentication with automatic token refresh:
+JWT-based dual-auth system with automatic token refresh:
 
 ```typescript
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from '@/features/auth/stores'
 
 const authStore = useAuthStore()
 
-// Login
-await authStore.login({ username, password })
-
-// Check auth status
+await authStore.login({ username, password })   // local login
 if (authStore.isAuthenticated) { /* ... */ }
-
-// Logout
 authStore.logout()
 ```
+
+Token refresh is handled automatically in the Axios response interceptor (`src/core/api/`). On 401, the interceptor refreshes the token and retries the original request.
+
+---
 
 ## 📡 API Usage
 
 ```typescript
 import { dutTopProductApi } from '@/features/dut/api/dutTopProduct.api'
-import { useDUTStore } from '@/stores/dut'
 
-// Direct API call - Standard Analysis
-const sites = await dutApi.getSites()
+// Standard analysis
+const results = await dutTopProductApi.analyze({ dut_isns, stations })
 
-// PA Trends Analysis (NEW - December 2025) ⭐
-const paTrendsResults = await dutTopProductApi.analyzeWithPATrends({
-  dut_isns: ['DM2520270073965', 'DM2524470055736'],
-  stations: ['Wireless_Test_6G', 'Wireless_Test_2_5G'],
+// PA Trends analysis (parallel ISN processing, 300s cache)
+const paTrends = await dutTopProductApi.analyzeWithPATrends({
+  dut_isns: ['DM2520270073965'],
+  stations: ['Wireless_Test_6G'],
   site_identifier: 'PTB',
   model_identifier: 'HH5K',
-  criteria_file: criteriaFile // optional
 })
 
-// Hierarchical Analysis
-const hierarchicalResults = await dutTopProductApi.analyzeHierarchical({
-  dut_isns: ['DM2520270073965'],
-  stations: ['Wireless_Test_6G']
-})
+// Hierarchical analysis
+const hierarchical = await dutTopProductApi.analyzeHierarchical({ dut_isns, stations })
+```
 
-// Using store (recommended)
+**Store-based pattern** (preferred in components):
+
+```typescript
 const dutStore = useDUTStore()
 await dutStore.fetchSites()
 console.log(dutStore.sites)
 ```
 
-**Key API Methods** ⭐:
-- `analyzeWithPATrends()`: Analyze with PA trend measurements (3-5x faster with parallel processing)
-- `analyzeHierarchical()`: Deep hierarchical scoring analysis
-- `getSites()`: Fetch available test sites
-- `getModels()`: Fetch models for a site
-- `getStations()`: Fetch stations for a model
+---
 
 ## 🧭 Routes
 
-- `/` → Dashboard (redirects)
-- `/login` → Login page (public)
-- `/dashboard` → Main dashboard (protected)
-- `/parsing` → File upload/parsing (protected)
-- `/compare` → File comparison (protected)
-- `/dut/top-products` → Top products view (protected)
-- `/dut/analysis` → DUT analysis (protected)
+| Path | View | Access |
+|------|------|--------|
+| `/login` | LoginView | Public |
+| `/dashboard` | DashboardView | Authenticated |
+| `/parsing` | ParseView | User+ |
+| `/parsing/download-format` | DownloadFormatView | User+ |
+| `/compare` | CompareView | User+ |
+| `/compare/dvt-mc2` | DVTCompareView | User+ |
+| `/dut/top-products/analysis` | TopProductsView | Guest+ |
+| `/dut/top-products/data` | TopProductDatabaseView | User+ |
+| `/dut/data-explorer` | DataExplorerView | Guest+ |
+| `/admin/*` | Admin views | Admin+ |
 
-Protected routes require authentication via route guards.
+Route guards enforce authentication and role checks via `meta.requiresAuth`.
+
+---
 
 ## 🎨 UI Components
 
-The current UI layer is scaffold-first and combines shared wrappers with native controls:
-- `AppDataGrid`, `AppDialog`, `AppPanel`, `AppProgress`, and `AppTabs` cover repeated app surfaces
-- PrimeVue provides the underlying dialog, table, theme, and toast primitives
-- Iconify supplies the icon layer used across navigation and result states
-- Native buttons, inputs, and semantic layout markup are preferred for local feature controls
+Shared primitives in `src/shared/ui/`:
 
-## 🐛 Troubleshooting
+| Component | Purpose |
+|-----------|---------|
+| `AppPanel` | Titled section card with optional tone (warm/cool/success) |
+| `AppDialog` | Modal wrapper around PrimeVue Dialog |
+| `AppDataGrid` | Table with sorting, pagination, and column config |
+| `AppTabs` | Tab interface with lazy slot loading |
+| `AppProgress` | Themed progress bar with label |
+| `AppSelect` | Custom dropdown with Teleport-based overlay |
 
-**Port in use:**
-```typescript
-// Change port in vite.config.ts
-server: { port: 3001 }
+Usage:
+
+```vue
+<AppPanel title="Results" eyebrow="Analysis" tone="cool">
+  <AppDataGrid :columns="columns" :rows="rows" />
+</AppPanel>
 ```
 
-**API connection issues:**
-1. Verify backend is running
-2. Check CORS settings
-3. Verify proxy configuration
+### Theming
 
-**Module errors:**
-```bash
-rm -rf node_modules package-lock.json
-pnpm install
-```
+The app uses a `--app-*` CSS token system layered over PrimeVue's `--p-*` preset tokens:
+
+- **Mode**: Light / Dark / System — toggled via `.app-dark` class on `<html>`
+- **Preset**: Aura / Material / Lara / Nora — switched at runtime via `usePreset()`
+- **Primary color** and **surface palette** — updated via `updatePrimaryPalette()` / `updateSurfacePalette()`
+- **Tailwind dark: variant** — aligned to `.app-dark` via `@variant dark` in `index.css`
 
 ---
 
 ## 📝 Code Style & Formatting
 
+**Linter + Formatter: [Biome](https://biomejs.dev/)** (single tool, replaces ESLint + Prettier)
+
+```bash
+pnpm lint          # check lint issues
+pnpm lint:fix      # auto-fix lint
+pnpm format        # check formatting
+pnpm format:fix    # auto-format
+```
+
 ### TypeScript Guidelines
 
-**Strict Mode**: Enabled in `tsconfig.json`
-- No implicit `any`
-- Strict null checks
-- Strict function types
-
-**Type Conventions**:
-```typescript
-// Use interface for object shapes
-interface User {
-  id: number
-  username: string
-}
-
-// Use type for unions/intersections
-type Status = 'idle' | 'loading' | 'success' | 'error'
-type ApiResponse<T> = { data: T } | { error: string }
-
-// Prefer const over let, never use var
-const items = ref<Item[]>([])
-
-// Use optional chaining and nullish coalescing
-const username = user?.profile?.username ?? 'Anonymous'
-```
+- Strict mode enabled — no implicit `any`
+- Use `interface` for object shapes, `type` for unions/intersections
+- `const` over `let`, never `var`
+- Optional chaining and nullish coalescing preferred
 
 ### Vue Component Style
 
-**Always use Composition API** with `<script setup>`:
+Always use Composition API with `<script setup lang="ts">`:
 
 ```vue
-<template>
-  <section class="card">
-    <h2>{{ title }}</h2>
-    <p>{{ message }}</p>
-  </section>
-</template>
-
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { ref, computed } from 'vue'
 
-// Props
-interface Props {
-  title: string
-  initialCount?: number
-}
-
-const props = withDefaults(defineProps<Props>(), {
-  initialCount: 0
-})
-
-// Emits
-interface Emits {
-  (e: 'update', value: number): void
-}
-
-const emit = defineEmits<Emits>()
-
-// State
-const count = ref(props.initialCount)
-
-// Computed
-const message = computed(() => `Count is ${count.value}`)
-
-// Methods
-function increment() {
-  count.value++
-  emit('update', count.value)
-}
-
-// Lifecycle
-onMounted(() => {
-  console.log('Component mounted')
-})
+interface Props { title: string }
+const props = defineProps<Props>()
+const count = ref(0)
+const label = computed(() => `${props.title}: ${count.value}`)
 </script>
-
-<style scoped>
-.card {
-  display: grid;
-  gap: 0.75rem;
-}
-</style>
 ```
 
 ### Path Aliases
 
-**Always use `@/` prefix** for imports:
+Always use `@/` for absolute imports:
 
 ```typescript
-// ✅ Correct
-import { useAuthStore } from '@/features/auth/store'
-import type { User } from '@/shared/types/api'
-import { formatDate } from '@/shared/utils/helpers'
+// ✅
+import { useAuthStore } from '@/features/auth/stores'
 
-// ❌ Wrong
-import { useAuthStore } from '../../../features/auth/store'
-import type { User } from '../../shared/types/api'
+// ❌
+import { useAuthStore } from '../../../features/auth/stores'
 ```
 
 ### Naming Conventions
 
 | Type | Convention | Example |
 |------|------------|---------|
-| Components | PascalCase | `UserProfile.vue`, `DataTable.vue` |
-| Composables | camelCase with `use` prefix | `useAuth`, `useDataFetching` |
+| Components | PascalCase | `AppPanel.vue`, `TopProductsView.vue` |
+| Composables | `use` prefix | `useAuth`, `useThemeState` |
 | Stores | camelCase | `authStore`, `dutStore` |
 | Constants | UPPER_SNAKE_CASE | `API_BASE_URL`, `MAX_FILE_SIZE` |
-| Functions | camelCase | `fetchData`, `handleSubmit` |
-| Variables | camelCase | `userData`, `isLoading` |
-| Types/Interfaces | PascalCase | `User`, `ApiResponse` |
-
-### ESLint & Prettier Configuration
-
-**ESLint** (`eslintrc.cjs`):
-- Vue 3 recommended rules
-- TypeScript strict rules
-- Prettier integration
-
-**Prettier** (`.prettierrc.json`):
-- Single quotes
-- No semicolons
-- 100-character line width
-- LF line endings
-- Trailing comma: none
-
-**Auto-format before commits**:
-```bash
-pnpm run format && pnpm run lint:fix
-```
+| Types/Interfaces | PascalCase | `User`, `ScoreBreakdown` |
 
 ---
 
 ## 🎯 Development Guidelines
 
-### Feature Development Process
+### Feature Structure
 
-1. **Create Feature Branch**:
-   ```bash
-   git checkout -b feature/new-feature-name
-   ```
+New features go in `src/features/<feature-name>/`:
 
-2. **Follow Feature-First Structure**:
-   ```
-   src/features/new-feature/
-   ├── views/
-   │   └── NewFeatureView.vue
-   ├── components/
-   │   └── FeatureComponent.vue
-   ├── store/
-   │   └── newFeature.ts
-   ├── composables/
-   │   └── useNewFeature.ts
-   └── types/
-       └── index.ts
-   ```
-
-3. **Add Route** in `src/router/index.ts`:
-   ```typescript
-   {
-     path: '/new-feature',
-     name: 'NewFeature',
-     component: () => import('@/features/new-feature/views/NewFeatureView.vue'),
-     meta: { requiresAuth: true }
-   }
-   ```
-
-4. **Write Tests**:
-   - Unit tests for stores and composables
-   - E2E tests for user flows
-   - Aim for >80% coverage on new code
-
-5. **Type Safety**:
-   - No `any` types
-   - Define interfaces for API responses
-   - Use Zod for runtime validation if needed
-
-6. **Document Changes**:
-   - Update README if adding new features
-   - Add JSDoc comments for complex functions
-   - Update API types in `types/api.ts`
-
-### API Integration Pattern
-
-**Always use stores for data fetching**:
-
-```typescript
-// ✅ Recommended: Using store
-const dutStore = useDUTStore()
-await dutStore.fetchSites()
-console.log(dutStore.sites)
-
-// ❌ Avoid: Direct API calls in components
-const sites = await dutApi.getSites()
+```
+src/features/my-feature/
+├── views/          # Route-level page components
+├── components/     # Feature-specific components
+├── stores/         # Pinia store
+├── composables/    # Composable logic
+├── api/            # API call functions
+└── types/          # TypeScript types
 ```
 
-**Error Handling**:
+### Adding a Route
 
 ```typescript
-import { useErrorHandler } from '@/shared/composables/useErrorHandler'
-
-const { handleError } = useErrorHandler()
-
-try {
-  await authStore.login({ username, password })
-} catch (error) {
-  handleError(error, 'Failed to login')
+// src/core/router/index.ts
+{
+  path: '/my-feature',
+  component: () => import('@/features/my-feature/views/MyFeatureView.vue'),
+  meta: { requiresAuth: true }
 }
 ```
+
+### Data Fetching Patterns
+
+**Current pattern** (Pinia store + Axios):
+```typescript
+const dutStore = useDUTStore()
+await dutStore.fetchSites()
+```
+
+**Planned pattern** (TanStack Query — `@tanstack/vue-query` is installed):
+```typescript
+const { data, isLoading } = useQuery({
+  queryKey: ['sites'],
+  queryFn: () => dutApi.getSites(),
+})
+```
+
+Migrate toward `useQuery`/`useMutation` when touching data-fetching composables.
 
 ### Scaffold UI Best Practices
 
-**Use shared UI primitives for repeated app surfaces**:
+Use shared primitives for standard surfaces:
 
 ```vue
-<AppPanel title="Results" description="Review the latest parsed records">
-  <AppDataGrid :columns="columns" :rows="rows" />
+<AppPanel title="Results">
+  <AppDataGrid :columns="cols" :rows="rows" />
 </AppPanel>
 ```
 
-**Prefer native controls for local interactions**:
-
-```vue
-<label class="field">
-  <span>Email</span>
-  <input v-model="email" type="email" required />
-</label>
-
-<button :disabled="!email" type="submit">Submit</button>
-```
-
-### Performance Optimization
-
-**Code Splitting**:
-```typescript
-// Lazy load routes
-const DashboardView = () => import('@/features/dashboard/views/DashboardView.vue')
-
-// Lazy load components
-const DataTable = defineAsyncComponent(() => import('@/shared/components/DataTable.vue'))
-```
-
-**Computed Properties**:
-```typescript
-// ✅ Use computed for derived state
-const filteredItems = computed(() => 
-  items.value.filter(item => item.status === 'active')
-)
-
-// ❌ Don't use methods for derived state
-function getFilteredItems() {
-  return items.value.filter(item => item.status === 'active')
-}
-```
-
----
-
-## 🤝 Contributing
-
-### Getting Started
-
-1. Fork the repository
-2. Create feature branch: `git checkout -b feature/amazing-feature`
-3. Make changes and commit: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
-5. Open Pull Request
-
-### Pull Request Guidelines
-
-**Before Submitting**:
-- ✅ Run `pnpm run type-check` - No TypeScript errors
-- ✅ Run `pnpm run lint` - No Biome errors
-- ✅ Run `pnpm run test:run` - All unit tests passing
-- ✅ Run `pnpm run test:e2e -- --project=chromium` - Critical E2E tests passing
-- ✅ Run `pnpm run format` - Code formatted
-- ✅ Update README if adding features
-- ✅ Add/update tests for new functionality
-
-**PR Title Format**:
-```
-feat: Add new feature
-fix: Fix bug in component
-docs: Update documentation
-test: Add missing tests
-refactor: Improve code structure
-style: Format code
-chore: Update dependencies
-```
-
-**PR Description Template**:
-```markdown
-## Description
-Brief description of changes
-
-## Type of Change
-- [ ] Bug fix
-- [ ] New feature
-- [ ] Breaking change
-- [ ] Documentation update
-
-## Testing
-- [ ] Unit tests added/updated
-- [ ] E2E tests added/updated
-- [ ] Manual testing completed
-
-## Screenshots (if applicable)
-Add screenshots for UI changes
-
-## Related Issues
-Closes #123
-```
-
-### Commit Message Guidelines
-
-Follow [Conventional Commits](https://www.conventionalcommits.org/):
-
-```
-<type>(<scope>): <subject>
-
-<body>
-
-<footer>
-```
-
-**Examples**:
-```
-feat(auth): add password reset functionality
-fix(dashboard): correct chart rendering issue
-docs(readme): update installation instructions
-test(e2e): add navigation test cases
-```
-
----
-
-## 📚 Documentation
-
-### Official Documentation
-
-- **[Vue 3 Documentation](https://vuejs.org/)** - Core framework guide
-- **[Vue 3 Composition API](https://vuejs.org/guide/extras/composition-api-faq.html)** - API reference
-- **[PrimeVue Documentation](https://primevue.org/)** - UI components and theme guides
-- **[PrimeVue DataTable](https://primevue.org/datatable/)** - Data grid reference
-- **[Iconify for Vue](https://iconify.design/docs/icon-components/vue/)** - Icon component usage
-- **[Vite Documentation](https://vitejs.dev/)** - Build tool
-- **[Pinia Documentation](https://pinia.vuejs.org/)** - State management
-- **[Vue Router Documentation](https://router.vuejs.org/)** - Routing
-- **[VueUse Documentation](https://vueuse.org/)** - Composition utilities
-- **[Vitest Documentation](https://vitest.dev/)** - Unit testing
-- **[Playwright Documentation](https://playwright.dev/)** - E2E testing
+Use native elements for local interactions — don't wrap a `<button>` in a PrimeVue component if a plain button works.
 
 ---
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+### Port in use
 
-#### Port Already in Use
-
-```bash
-# Change port in vite.config.ts
-export default defineConfig({
-  server: {
-    port: 3001  // Use different port
-  }
-})
+```typescript
+// vite.config.ts
+server: { port: 3001 }
 ```
 
-#### Backend Connection Failed
+### Backend not reachable
 
 1. Verify backend is running at `http://127.0.0.1:8001`
-2. Check backend logs for errors
-3. Verify CORS settings in backend allow frontend origin
-4. Check API proxy configuration in `vite.config.ts`
+2. Check `.env.local` has correct `VITE_API_BASE_URL`
+3. Inspect proxy config in `vite.config.ts`
 
-#### Module Resolution Errors
+### Module resolution errors
 
 ```bash
-# Clear cache and reinstall
 rm -rf node_modules pnpm-lock.yaml
 pnpm install
 ```
 
-#### TypeScript Errors
+### TypeScript errors
 
 ```bash
-# Restart TypeScript server in VS Code
-# Command Palette: "TypeScript: Restart TS Server"
-
-# Check for type errors
-pnpm run type-check
+pnpm type-check
+# In VS Code: Command Palette → "TypeScript: Restart TS Server"
 ```
 
-#### Hot Module Replacement Not Working
+### Vite cache stale
 
 ```bash
-# Restart dev server
-pnpm run dev
-
-# Clear Vite cache
 rm -rf node_modules/.vite
+pnpm dev
 ```
 
-#### Test Failures
+### Test failures
 
 ```bash
-# Clear test cache
-pnpm exec vitest --clearCache
-
-# Playwright browser issues
-npx playwright install
-npx playwright install-deps
+pnpm exec vitest --clearCache    # clear Vitest cache
+npx playwright install           # reinstall Playwright browsers
 ```
 
-### Environment Issues
+### Windows-specific
 
-**Windows-specific**:
 - Use PowerShell or Git Bash
-- Ensure line endings are LF (not CRLF)
-- Check `core.autocrlf=input` in Git config
-
-**Path Alias Issues**:
-- Verify `tsconfig.app.json` has `"@/*": ["./src/*"]`
-- Verify `vite.config.ts` has alias configured
-- Restart TypeScript server after changes
+- Ensure line endings are LF: `git config core.autocrlf input`
+- Path alias issues: verify `tsconfig.app.json` has `"@/*": ["./src/*"]`
 
 ---
 
-## 🎯 Next Steps
+## 🤝 Contributing
 
-### For New Developers
+### Before Submitting a PR
 
-1. **Setup Environment**:
-   ```bash
-  pnpm install
-   cp .env.example .env.local
-   ```
+- `pnpm type-check` — no TypeScript errors
+- `pnpm lint` — no Biome errors
+- `pnpm test:run` — all unit tests passing
+- `pnpm test:e2e -- --project=chromium` — critical E2E tests passing
+- Update README if adding or changing features
 
-2. **Start Services**:
-   ```bash
-   # Terminal 1: Backend
-   cd ../backend_fastapi && make dev
-   
-   # Terminal 2: Frontend
-  pnpm run dev
-   ```
+### Commit Message Format
 
-3. **Verify Setup**:
-   - Open `http://localhost:3000`
-   - Login with test credentials
-   - Check DevTools Console for errors
+Follow [Conventional Commits](https://www.conventionalcommits.org/):
 
-### For Contributors
-
-1. **Review Guidelines**: Read [Contributing](#-contributing) section
-2. **Setup Dev Tools**: Install recommended VS Code extensions
-3. **Run Tests**: Ensure `pnpm run test:run` passes
-4. **Create Feature Branch**: Follow branching strategy
-5. **Write Tests**: Add tests for new functionality
-
-### Planned Features
-
-- [ ] File upload drag-and-drop enhancement
-- [ ] Real-time data refresh for DUT analysis
-- [ ] Export functionality for all data views
-- [ ] Advanced filtering and search
-- [ ] User preferences and settings page
-- [ ] Offline mode with service worker
-- [ ] Multi-language support (i18n)
-- [ ] Advanced charting options
+```
+feat(dut): add station filter to top products view
+fix(auth): handle expired refresh token edge case
+docs(readme): update tech stack versions
+test(auth): add token refresh retry coverage
+refactor(panel): migrate AppPanel to Tailwind utilities
+```
 
 ---
 
-## 📊 Project Status
+## 📚 Official Documentation
 
-### Current Phase (December 2025)
-
-**Phase 6: Testing & Quality Assurance** ✅ Complete
-
-**Test Metrics**:
-- ✅ **Unit Tests**: 65/65 passing (100% success rate)
-- ✅ **Type Safety**: Full TypeScript strict mode compliance
-- ✅ **Code Quality**: ESLint + Prettier configured
-- ✅ **Production Ready**: All critical flows tested
-
-**Key Achievements**:
-- Complete authentication flow coverage (login, token refresh, dual auth)
-- Robust error handling with automatic retry logic
-- 401 response interceptor with token refresh
-- Comprehensive state management testing
-- Mock service worker setup for API testing
-
-### Recent Updates (December 2025)
-
-**PA Trends Feature** ⭐ NEW:
-- ✅ Renamed "Analyze with Hierarchical Scoring" → "Analyze with PA Trends"
-- ✅ Implemented `analyzeWithPATrends()` API method in `dutTopProduct.api.ts`
-- ✅ Added PA trend measurements with adjusted power calculations
-- ✅ Performance: 3-5x faster with parallel ISN processing
-- ✅ Backend cache increased from 60s to 300s
-- ✅ Icon updated: `mdi-file-tree` → `mdi-chart-timeline-variant`
-
-**Score Breakdown Dialog Enhancements** ⭐:
-- ✅ Fixed Vue component lifecycle issues (no more crashes)
-- ✅ Added support for PA-adjusted measurement breakdowns
-- ✅ Conditional rendering for both standard and PA measurement types
-- ✅ Updated ScoreBreakdown interface in `dutTopProduct.types.ts`
-- ✅ Synchronized type definitions in `useTestLogUpload.ts`
-- ✅ Standard fields (USL, LSL, actual, deviation) now optional
-- ✅ Added PA-specific fields: comparison, threshold, current_value, trend_mean, deviation_from_mean, interpretation
-- ✅ Component stays mounted (visibility-controlled) for stable transitions
-- ✅ Added `formatNumberSafe()` helper for safe number formatting
-
-**Type System Improvements**:
-- ✅ ScoreBreakdown interface extended to support both measurement types
-- ✅ Made standard fields optional: `usl?`, `lsl?`, `actual?`, `deviation?`
-- ✅ Added PA fields as optional: `comparison?`, `threshold?`, `current_value?`, etc.
-- ✅ All TypeScript compilation errors resolved
-- ✅ Type safety maintained across component boundaries
-
-**Frontend Improvements**:
-- Updated to Vitest 4.0.15 with enhanced test UI
-- Upgraded Playwright to 1.57.0 for E2E testing
-- Full Vue 3.5.25 Composition API migration
-- Enhanced TypeScript strict mode compliance
-- Improved test coverage for auth flows
-
-**Backend Integration**:
-- Synchronized with backend test suite improvements (239 passing tests)
-- Updated API client to handle new scoring breakdown format
-- Enhanced error handling for hierarchical grouping endpoints
-- Improved token refresh logic with proper error propagation
-- Parallel ISN processing with asyncio.gather() (backend optimization)
-
-**Dependencies**:
-- Vite 7.3.1
-- PrimeVue 4.5.5 with shared scaffold wrappers
-- Vue Router 4.6.4 with enhanced navigation guards
-- Pinia 3.0.4 for state management
-- Axios 1.13.6 with request/response interceptors
-
-### Quality Standards
-
-**Code Quality**:
-- ✅ ESLint configured with TypeScript rules
-- ✅ Prettier for consistent formatting
-- ✅ Strict TypeScript mode enabled
-- ✅ No implicit `any` types
-- ✅ Vue 3 Composition API best practices
-
-**Testing Standards**:
-- ✅ Unit tests for all stores and composables
-- ✅ E2E tests for critical user flows
-- ✅ Mock service worker for API testing
-- ✅ Coverage reports via Vitest
-- ✅ Playwright for cross-browser testing
-
-**Performance**:
-- ✅ Code splitting with lazy-loaded routes
-- ✅ Optimized bundle size with tree shaking
-- ✅ Vite HMR for fast development
-- ✅ Production build optimization
-
-### Upcoming Work
-
-**Planned Features**:
-- [ ] Advanced data visualization enhancements
-- [ ] Real-time WebSocket integration for live data
-- [ ] Enhanced export functionality (PDF reports)
-- [ ] Offline mode with service worker
-- [ ] Multi-language support (i18n)
-- [ ] User preferences persistence
-- [ ] Advanced filtering and search capabilities
-
-**Technical Debt**:
-- [ ] Migrate remaining components to Composition API
-- [ ] Enhance E2E test coverage (target: 80%+)
-- [ ] Add visual regression testing
-- [ ] Implement component documentation with Storybook
-- [ ] Add performance monitoring
-
----
-- ✅ E2E Tests: 25/43 passing (58%)
-- ✅ CRITICAL Issue #9 Test: Passing
-- ⏳ CI/CD Integration: Pending
-
-### Test Coverage
-
-| Category | Coverage | Status |
-|----------|----------|--------|
-| Auth Store | 26 tests | ✅ 100% |
-| Error Interceptor | 21 tests | ✅ 100% |
-| useAuth Composable | 18 tests | ✅ 100% |
-| E2E Authentication | 11 tests | ✅ 100% |
-| E2E Navigation | 16 tests | ⚠️ 55% |
-| **Total** | **90+ tests** | **✅ 85%** |
-
-### Technology Versions
-
-- Vue: 3.5.30
-- TypeScript: 5.9.3
-- Vite: 7.3.1
-- PrimeVue: 4.5.5
-- Pinia: 3.0.4
-- Playwright: 1.58.2
-- Vitest: 4.1.0
+- [Vue 3](https://vuejs.org/)
+- [PrimeVue](https://primevue.org/)
+- [Tailwind CSS v4](https://tailwindcss.com/)
+- [Pinia](https://pinia.vuejs.org/)
+- [Vue Router](https://router.vuejs.org/)
+- [TanStack Query (Vue)](https://tanstack.com/query/latest/docs/framework/vue/overview)
+- [VueUse](https://vueuse.org/)
+- [Biome](https://biomejs.dev/)
+- [Vitest](https://vitest.dev/)
+- [Playwright](https://playwright.dev/)
 
 ---
 
-## 📝 License
-
-See `LICENSE` file for details.
-
-
-**Built with ❤️ using Vue 3 + TypeScript + Vite + PrimeVue**
+**Built with Vue 3 + TypeScript + Vite + PrimeVue + Tailwind CSS v4**

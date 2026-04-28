@@ -838,7 +838,7 @@ watch(
 
 .sidebar__footer {
   border-top: 1px solid var(--shell-border);
-  padding-top: 0.375rem;
+  padding-top: 0.35rem;
   margin-top: 0.25rem;
 }
 
@@ -848,7 +848,7 @@ watch(
   justify-content: center;
   gap: 0.5rem;
   width: 100%;
-  padding: 0.5rem;
+  padding: 0.1rem;
   border: none;
   border-radius: 0.375rem;
   background: transparent;

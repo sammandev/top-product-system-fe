@@ -1,8 +1,10 @@
-@layer theme, base, components, utilities;
+@layer theme, base, components, primevue, utilities;
 @import 'tailwindcss/theme.css' layer(theme);
 @import 'tailwindcss-primeui';
-@import 'tailwindcss/utilities.css' layer(utilities);
 @import './tokens.css';
+
+/* Align Tailwind's dark: variant with PrimeVue's darkModeSelector */
+@variant dark (&:where(.app-dark, .app-dark *));
 
 /* ── Tailwind token bridge ─────────────────────────────────────────────────
    @theme inline: preserves var() references so .app-dark switching works at
@@ -64,6 +66,8 @@
   --font-display: var(--app-display);
   --font-body:    var(--app-body);
 }
+
+@import 'tailwindcss/utilities.css' layer(utilities);
 
 @layer base {
   html,

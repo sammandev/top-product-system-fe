@@ -1,15 +1,9 @@
-import { computed, onMounted, ref } from 'vue'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
+import { computed } from 'vue'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
 import { getErrorMessage } from '@/shared/utils'
 import type { DashboardResponse } from '../api/dashboard.api'
 import { dashboardApi } from '../api/dashboard.api'
-
-// Cache dashboard data at module level to persist between navigation
-// This prevents re-fetching on every page visit
-let cachedDashboardData: DashboardResponse | null = null
-let cachedStorageUsed = 0
-let cacheTimestamp = 0
-const CACHE_TTL_MS = 60000 // 1 minute cache TTL
 
 /**
  * Dashboard Statistics
@@ -64,6 +58,9 @@ interface StatusItem {
  * - System status
  * - Storage information
  *
+ * Uses TanStack Query for automatic caching, background refetching,
+ * and deduplication of requests.
+ *
  * @example
  * ```typescript
  * const {
@@ -77,13 +74,29 @@ interface StatusItem {
  */
 export function useDashboard() {
   const authStore = useAuthStore()
+  const queryClient = useQueryClient()
 
-  // Loading state
-  const loading = ref(false)
-  const error = ref<string | null>(null)
+  const statsQuery = useQuery({
+    queryKey: ['dashboard', 'stats'],
+    queryFn: () => dashboardApi.getStats(),
+    staleTime: 60_000,
+  })
+
+  const uploadsQuery = useQuery({
+    queryKey: ['dashboard', 'uploads'],
+    queryFn: () => dashboardApi.getUploadStats(),
+    staleTime: 60_000,
+  })
+
+  // Loading & error — same external API as before
+  const loading = computed(() => statsQuery.isPending.value || uploadsQuery.isPending.value)
+  const error = computed(() => {
+    const e = statsQuery.error.value || uploadsQuery.error.value
+    return e ? getErrorMessage(e) : null
+  })
 
   // Dashboard data from API
-  const dashboardData = ref<DashboardResponse | null>(null)
+  const dashboardData = computed<DashboardResponse | null>(() => statsQuery.data.value ?? null)
 
   // Stats Data
   const stats = computed<DashboardStat[]>(() => {
@@ -351,9 +364,15 @@ export function useDashboard() {
     return statusItems
   })
 
-  // Storage
-  const storageUsed = ref(0)
-  const storageTotal = ref(100)
+  // Storage — derived from uploads query
+  const storageUsed = computed(() => {
+    const uploads = uploadsQuery.data.value
+    return uploads?.upload_dir_exists ? uploads.total_size_mb : 0
+  })
+  const storageTotal = computed(() => {
+    const uploads = uploadsQuery.data.value
+    return uploads?.upload_dir_exists ? 1000 : 100
+  })
   const storagePercentage = computed(() =>
     Math.round((storageUsed.value / storageTotal.value) * 100),
   )
@@ -365,65 +384,12 @@ export function useDashboard() {
   const userName = computed(() => (isGuest.value ? 'Guest' : currentUser.value?.username || 'User'))
 
   /**
-   * Check if cache is still valid
+   * Refresh dashboard statistics — invalidates both queries,
+   * triggering immediate background refetch.
    */
-  function isCacheValid(): boolean {
-    return cachedDashboardData !== null && Date.now() - cacheTimestamp < CACHE_TTL_MS
+  function refreshStats() {
+    queryClient.invalidateQueries({ queryKey: ['dashboard'] })
   }
-
-  /**
-   * Fetch dashboard data from API with caching
-   * Uses module-level cache to prevent re-fetching on navigation
-   */
-  async function fetchDashboardData(forceRefresh = false) {
-    // Use cached data if valid and not forcing refresh
-    if (!forceRefresh && isCacheValid()) {
-      dashboardData.value = cachedDashboardData
-      storageUsed.value = cachedStorageUsed
-      return
-    }
-
-    loading.value = true
-    error.value = null
-
-    try {
-      const [stats, uploadStats] = await Promise.all([
-        dashboardApi.getStats(),
-        dashboardApi.getUploadStats(),
-      ])
-
-      // Update cache
-      cachedDashboardData = stats
-      cacheTimestamp = Date.now()
-
-      dashboardData.value = stats
-
-      // Update storage info
-      if (uploadStats.upload_dir_exists) {
-        storageUsed.value = uploadStats.total_size_mb
-        cachedStorageUsed = uploadStats.total_size_mb
-        // Assuming 1GB = 1000MB max storage for now
-        storageTotal.value = 1000
-      }
-    } catch (err: unknown) {
-      console.error('Failed to fetch dashboard data:', err)
-      error.value = getErrorMessage(err) || 'Failed to load dashboard data'
-    } finally {
-      loading.value = false
-    }
-  }
-
-  /**
-   * Refresh dashboard statistics (force refresh bypasses cache)
-   */
-  async function refreshStats() {
-    await fetchDashboardData(true) // Force refresh
-  }
-
-  // Fetch data on mount (uses cache if available)
-  onMounted(() => {
-    fetchDashboardData()
-  })
 
   return {
     // State

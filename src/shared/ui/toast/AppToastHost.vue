@@ -13,7 +13,6 @@ import Toast from 'primevue/toast'
 }
 
 :deep(.p-toast-message) {
-  border-radius: 1.25rem;
   border: 1px solid var(--app-border);
   background: var(--app-panel-strong);
   box-shadow: var(--app-shadow-soft);

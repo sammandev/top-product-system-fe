@@ -14,7 +14,10 @@ export const primeVueOptions = {
     options: {
       prefix: 'p',
       darkModeSelector: '.app-dark',
-      cssLayer: false,
+      cssLayer: {
+        name: 'primevue',
+        order: 'theme, base, components, primevue, utilities',
+      },
     },
   },
   zIndex: {

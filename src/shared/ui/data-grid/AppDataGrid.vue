@@ -207,11 +207,9 @@ function resolveFieldValue(row: GridRow, field?: string) {
 .app-data-grid :deep(.p-datatable) {
   width: 100%;
   min-width: 0;
-  border-radius: 0.625rem;
   overflow: hidden;
   border: 1px solid var(--app-border);
   background: var(--app-panel-strong);
-  box-shadow: none;
 }
 
 .app-data-grid :deep(.p-datatable-wrapper),
