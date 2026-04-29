@@ -553,17 +553,12 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import { useAuthStore } from '@/features/auth/stores/auth.store'
-import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
-import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
-import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
-import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
-import { useTabPersistence } from '@/shared/composables/useTabPersistence'
-import { useNotification } from '@/shared/composables/useNotification'
 import { appConfigApi } from '@/core/api/appConfigApi'
+import { queryKeys } from '@/core/query'
+import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import type {
   AppConfigUpdateRequest,
   GuestCredential,
@@ -576,7 +571,14 @@ import type {
   SfistspConfigItem,
   SfistspConfigUpdateRequest,
 } from '@/core/types'
-import { useAppConfigStore } from '@/core/stores/appConfig.store'
+import { useAuthStore } from '@/features/auth/stores/auth.store'
+import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import { useNotification } from '@/shared/composables/useNotification'
+import { useTabPersistence } from '@/shared/composables/useTabPersistence'
+import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
+import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
+import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
+import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 
 type ConfigTab = 'general' | 'branding' | 'iplas' | 'sfistsp' | 'guest'
 type DeleteTarget = 'iplas' | 'sfistsp' | 'guest' | null
@@ -614,6 +616,7 @@ const configTabs: Array<{ label: string; value: ConfigTab }> = [
 const notify = useNotification()
 const appConfigStore = useAppConfigStore()
 const authStore = useAuthStore()
+const queryClient = useQueryClient()
 const { config } = storeToRefs(appConfigStore)
 
 const generalLoading = ref(false)
@@ -630,7 +633,6 @@ const faviconError = ref('')
 const faviconSuccess = ref('')
 const faviconFile = ref<File | File[] | null>(null)
 
-const iplasLoading = ref(false)
 const iplasError = ref('')
 const iplasTokens = ref<IplasToken[]>([])
 const iplasDialogOpen = ref(false)
@@ -644,7 +646,6 @@ const iplasForm = reactive<IplasFormState>({
   label: '',
 })
 
-const sfistspLoading = ref(false)
 const sfistspError = ref('')
 const sfistspConfigs = ref<SfistspConfigItem[]>([])
 const sfistspDialogOpen = ref(false)
@@ -660,7 +661,6 @@ const sfistspForm = reactive<SfistspFormState>({
 })
 const showSfistspPassword = ref(false)
 
-const guestLoading = ref(false)
 const guestError = ref('')
 const guestCredentials = ref<GuestCredential[]>([])
 const guestDialogOpen = ref(false)
@@ -707,6 +707,28 @@ const guestGridColumns = [
   { key: 'updated_at', field: 'updated_at', header: 'Updated' },
   { key: 'actions', field: 'actions', header: 'Actions', sortable: false },
 ]
+
+const iplasTokensQuery = useQuery({
+  queryKey: queryKeys.appConfig.iplasTokens(),
+  queryFn: appConfigApi.getIplasTokens,
+  enabled: computed(() => activeTab.value === 'iplas'),
+})
+
+const sfistspConfigsQuery = useQuery({
+  queryKey: queryKeys.appConfig.sfistspConfigs(),
+  queryFn: appConfigApi.getSfistspConfigs,
+  enabled: computed(() => activeTab.value === 'sfistsp'),
+})
+
+const guestCredentialsQuery = useQuery({
+  queryKey: queryKeys.appConfig.guestCredentials(),
+  queryFn: appConfigApi.getGuestCredentials,
+  enabled: computed(() => activeTab.value === 'guest'),
+})
+
+const iplasLoading = computed(() => iplasTokensQuery.isFetching.value)
+const sfistspLoading = computed(() => sfistspConfigsQuery.isFetching.value)
+const guestLoading = computed(() => guestCredentialsQuery.isFetching.value)
 
 const appName = computed(() => config.value?.name || 'Top Product System')
 const appVersion = computed(() => config.value?.version || '')
@@ -787,6 +809,7 @@ async function handleGeneralSave() {
 
     const updatedConfig = await appConfigApi.update(payload)
     appConfigStore.config = updatedConfig
+    await queryClient.invalidateQueries({ queryKey: queryKeys.appConfig.general() })
     populateGeneralForm()
     showSnackbar('Application configuration updated successfully.', 'success')
   } catch (error) {
@@ -813,6 +836,7 @@ async function handleUploadFavicon() {
       ...(appConfigStore.config || {}),
       favicon_url: response.favicon_url,
     }
+    await queryClient.invalidateQueries({ queryKey: queryKeys.appConfig.general() })
     faviconFile.value = null
     faviconSuccess.value = 'Favicon uploaded successfully.'
     showSnackbar('Favicon uploaded successfully.', 'success')
@@ -834,6 +858,7 @@ async function handleDeleteFavicon() {
       ...(appConfigStore.config || {}),
       favicon_url: null,
     }
+    await queryClient.invalidateQueries({ queryKey: queryKeys.appConfig.general() })
     faviconSuccess.value = 'Favicon removed successfully.'
     showSnackbar('Favicon removed successfully.', 'success')
   } catch (error) {
@@ -844,15 +869,10 @@ async function handleDeleteFavicon() {
 }
 
 async function fetchIplasTokens() {
-  iplasLoading.value = true
   iplasError.value = ''
-  try {
-    const response = await appConfigApi.getIplasTokens()
-    iplasTokens.value = response.tokens
-  } catch (error) {
-    iplasError.value = getErrorMessage(error, 'Failed to load iPLAS tokens.')
-  } finally {
-    iplasLoading.value = false
+  const result = await iplasTokensQuery.refetch()
+  if (result.error) {
+    iplasError.value = getErrorMessage(result.error, 'Failed to load iPLAS tokens.')
   }
 }
 
@@ -917,7 +937,7 @@ async function handleSaveIplas() {
     }
 
     closeIplasDialog()
-    await fetchIplasTokens()
+    await queryClient.invalidateQueries({ queryKey: queryKeys.appConfig.iplasTokens() })
   } catch (error) {
     iplasFormError.value = getErrorMessage(error, 'Failed to save iPLAS token.')
   } finally {
@@ -929,7 +949,7 @@ async function handleActivateIplas(id: number) {
   try {
     await appConfigApi.activateIplasToken(id)
     showSnackbar('iPLAS token activated.', 'success')
-    await fetchIplasTokens()
+    await queryClient.invalidateQueries({ queryKey: queryKeys.appConfig.iplasTokens() })
   } catch (error) {
     iplasError.value = getErrorMessage(error, 'Failed to activate iPLAS token.')
   }
@@ -943,16 +963,10 @@ function confirmDeleteIplas(token: IplasToken) {
 }
 
 async function fetchSfistspConfigs() {
-  sfistspLoading.value = true
   sfistspError.value = ''
-  try {
-    const response = await appConfigApi.getSfistspConfigs()
-    const configs: SfistspConfigItem[] = response.configs
-    sfistspConfigs.value = configs
-  } catch (error) {
-    sfistspError.value = getErrorMessage(error, 'Failed to load SFISTSP configurations.')
-  } finally {
-    sfistspLoading.value = false
+  const result = await sfistspConfigsQuery.refetch()
+  if (result.error) {
+    sfistspError.value = getErrorMessage(result.error, 'Failed to load SFISTSP configurations.')
   }
 }
 
@@ -1029,7 +1043,7 @@ async function handleSaveSfistsp() {
     }
 
     closeSfistspDialog()
-    await fetchSfistspConfigs()
+    await queryClient.invalidateQueries({ queryKey: queryKeys.appConfig.sfistspConfigs() })
   } catch (error) {
     sfistspFormError.value = getErrorMessage(error, 'Failed to save SFISTSP configuration.')
   } finally {
@@ -1041,7 +1055,7 @@ async function handleActivateSfistsp(id: number) {
   try {
     await appConfigApi.activateSfistspConfig(id)
     showSnackbar('SFISTSP configuration activated.', 'success')
-    await fetchSfistspConfigs()
+    await queryClient.invalidateQueries({ queryKey: queryKeys.appConfig.sfistspConfigs() })
   } catch (error) {
     sfistspError.value = getErrorMessage(error, 'Failed to activate SFISTSP configuration.')
   }
@@ -1055,15 +1069,10 @@ function confirmDeleteSfistsp(configItem: SfistspConfigItem) {
 }
 
 async function fetchGuestCredentials() {
-  guestLoading.value = true
   guestError.value = ''
-  try {
-    const response = await appConfigApi.getGuestCredentials()
-    guestCredentials.value = response.credentials
-  } catch (error) {
-    guestError.value = getErrorMessage(error, 'Failed to load guest credentials.')
-  } finally {
-    guestLoading.value = false
+  const result = await guestCredentialsQuery.refetch()
+  if (result.error) {
+    guestError.value = getErrorMessage(result.error, 'Failed to load guest credentials.')
   }
 }
 
@@ -1121,7 +1130,7 @@ async function handleSaveGuest() {
     }
 
     closeGuestDialog()
-    await fetchGuestCredentials()
+    await queryClient.invalidateQueries({ queryKey: queryKeys.appConfig.guestCredentials() })
   } catch (error) {
     guestFormError.value = getErrorMessage(error, 'Failed to save guest credential.')
   } finally {
@@ -1133,7 +1142,7 @@ async function handleActivateGuest(id: number) {
   try {
     await appConfigApi.activateGuestCredential(id)
     showSnackbar('Guest credential activated.', 'success')
-    await fetchGuestCredentials()
+    await queryClient.invalidateQueries({ queryKey: queryKeys.appConfig.guestCredentials() })
   } catch (error) {
     guestError.value = getErrorMessage(error, 'Failed to activate guest credential.')
   }
@@ -1164,19 +1173,19 @@ async function handleConfirmDelete() {
     if (deleteTarget.value === 'iplas') {
       await appConfigApi.deleteIplasToken(deleteTargetId.value)
       showSnackbar('iPLAS token deleted.', 'success')
-      await fetchIplasTokens()
+      await queryClient.invalidateQueries({ queryKey: queryKeys.appConfig.iplasTokens() })
     }
 
     if (deleteTarget.value === 'sfistsp') {
       await appConfigApi.deleteSfistspConfig(deleteTargetId.value)
       showSnackbar('SFISTSP configuration deleted.', 'success')
-      await fetchSfistspConfigs()
+      await queryClient.invalidateQueries({ queryKey: queryKeys.appConfig.sfistspConfigs() })
     }
 
     if (deleteTarget.value === 'guest') {
       await appConfigApi.deleteGuestCredential(deleteTargetId.value)
       showSnackbar('Guest credential deleted.', 'success')
-      await fetchGuestCredentials()
+      await queryClient.invalidateQueries({ queryKey: queryKeys.appConfig.guestCredentials() })
     }
 
     closeDeleteDialog()
@@ -1231,6 +1240,36 @@ function formatDate(value: string | null | undefined) {
     return value
   }
 }
+
+watch(
+  () => iplasTokensQuery.data.value,
+  (response) => {
+    if (response) {
+      iplasTokens.value = response.tokens
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => sfistspConfigsQuery.data.value,
+  (response) => {
+    if (response) {
+      sfistspConfigs.value = response.configs
+    }
+  },
+  { immediate: true },
+)
+
+watch(
+  () => guestCredentialsQuery.data.value,
+  (response) => {
+    if (response) {
+      guestCredentials.value = response.credentials
+    }
+  },
+  { immediate: true },
+)
 
 watch(
   activeTab,

@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
 import { computed, ref, watch } from 'vue'
+import { queryClient } from '@/app/providers/query-client'
 import { appConfigApi } from '@/core/api/appConfigApi'
 import { APP_CONFIG } from '@/core/config'
 import { envConfig } from '@/core/config/env.config'
+import { queryKeys } from '@/core/query'
 import type { AppConfig, AppConfigUpdateRequest } from '@/core/types'
 
 const fallbackConfig: AppConfig = {
@@ -70,21 +72,32 @@ export const useAppConfigStore = defineStore('appConfig', () => {
   const faviconUrl = computed(() => config.value.favicon_url || null)
 
   // Live-update browser tab title whenever config changes
-  watch(tabTitle, (title) => {
-    document.title = title
-  }, { immediate: true })
+  watch(
+    tabTitle,
+    (title) => {
+      document.title = title
+    },
+    { immediate: true },
+  )
 
   // Live-update favicon whenever config changes
-  watch(faviconUrl, (url) => {
-    _applyFavicon(url)
-  }, { immediate: true })
+  watch(
+    faviconUrl,
+    (url) => {
+      _applyFavicon(url)
+    },
+    { immediate: true },
+  )
 
   async function fetchConfig(): Promise<void> {
     loading.value = true
     error.value = null
 
     try {
-      const data = await appConfigApi.get()
+      const data = await queryClient.fetchQuery({
+        queryKey: queryKeys.appConfig.general(),
+        queryFn: appConfigApi.get,
+      })
       config.value = { ...fallbackConfig, ...data }
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to load app configuration'
@@ -101,6 +114,7 @@ export const useAppConfigStore = defineStore('appConfig', () => {
     try {
       const data = await appConfigApi.update(payload)
       config.value = { ...fallbackConfig, ...data }
+      queryClient.setQueryData(queryKeys.appConfig.general(), data)
     } catch (err: unknown) {
       error.value =
         getErrorDetail(err) || getErrorMessage(err) || 'Failed to update app configuration'

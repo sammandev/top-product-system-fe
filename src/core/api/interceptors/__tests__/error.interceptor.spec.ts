@@ -322,7 +322,7 @@ describe('Error Interceptor', () => {
       await expect(interceptor(error)).rejects.toThrow()
 
       // Should have redirected to login
-      expect(mockLocation.href).toBe('/login')
+      expect(mockLocation.href).toBe('/login?reason=session_expired')
 
       // Restore original location
       Object.defineProperty(window, 'location', {

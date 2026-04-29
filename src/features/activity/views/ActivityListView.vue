@@ -186,9 +186,12 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { keepPreviousData, useQuery } from '@tanstack/vue-query'
 import Button from 'primevue/button'
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref } from 'vue'
 import apiClient from '@/core/api/client'
+import { queryKeys } from '@/core/query'
+import { getApiErrorDetail } from '@/shared/utils'
 
 interface Activity {
   id: number
@@ -213,13 +216,7 @@ interface ActivityListResponse {
   total_pages: number
 }
 
-// State
-const loading = ref(false)
-const error = ref<string | null>(null)
-const activities = ref<Activity[]>([])
-const total = ref(0)
 const currentPage = ref(1)
-const totalPages = ref(0)
 const pageSize = ref(20)
 
 // Time range filters
@@ -254,6 +251,48 @@ const pageSizeOptions = [
   { title: '50', value: 50 },
   { title: '100', value: 100 },
 ]
+
+const activityParams = computed(() => {
+  const params: Record<string, string | number> = {
+    page: currentPage.value,
+    page_size: pageSize.value,
+    sort_order: sortOrder.value,
+  }
+
+  if (timeRangeType.value === 'custom' && customStartDate.value && customEndDate.value) {
+    params.start_date = new Date(customStartDate.value).toISOString()
+    params.end_date = new Date(`${customEndDate.value}T23:59:59`).toISOString()
+  } else if (typeof timeRangeType.value === 'number') {
+    params.days = timeRangeType.value
+  }
+
+  if (searchQuery.value.trim()) {
+    params.search = searchQuery.value.trim()
+  }
+
+  return params
+})
+
+const activitiesQuery = useQuery({
+  queryKey: computed(() => queryKeys.activity.list({ ...activityParams.value })),
+  queryFn: async () => {
+    const response = await apiClient.get<ActivityListResponse>('/api/dashboard/activity/list', {
+      params: activityParams.value,
+    })
+    return response.data
+  },
+  placeholderData: keepPreviousData,
+})
+
+const loading = computed(() => activitiesQuery.isFetching.value)
+const error = computed(() =>
+  activitiesQuery.error.value
+    ? getApiErrorDetail(activitiesQuery.error.value, 'Failed to load activities')
+    : null,
+)
+const activities = computed<Activity[]>(() => activitiesQuery.data.value?.activities ?? [])
+const total = computed(() => activitiesQuery.data.value?.total ?? 0)
+const totalPages = computed(() => activitiesQuery.data.value?.total_pages ?? 0)
 
 const visiblePages = computed(() => {
   const pageWindow = 7
@@ -294,59 +333,15 @@ function onSearchChange() {
 }
 
 async function loadActivities(page?: number) {
-  loading.value = true
-  error.value = null
-
   if (page !== undefined) {
+    const previousPage = currentPage.value
     currentPage.value = page
+    if (page !== previousPage) {
+      return
+    }
   }
 
-  try {
-    const params: Record<string, string | number> = {
-      page: currentPage.value,
-      page_size: pageSize.value,
-      sort_order: sortOrder.value,
-    }
-
-    // Add time range parameters
-    if (timeRangeType.value === 'custom' && customStartDate.value && customEndDate.value) {
-      params.start_date = new Date(customStartDate.value).toISOString()
-      params.end_date = new Date(`${customEndDate.value}T23:59:59`).toISOString()
-    } else if (typeof timeRangeType.value === 'number') {
-      params.days = timeRangeType.value
-    }
-
-    // Add search parameter
-    if (searchQuery.value) {
-      params.search = searchQuery.value
-    }
-
-    const response = await apiClient.get<ActivityListResponse>('/api/dashboard/activity/list', {
-      params,
-    })
-
-    activities.value = response.data.activities
-    total.value = response.data.total
-    totalPages.value = response.data.total_pages
-  } catch (err: unknown) {
-    console.error('Failed to load activities:', err)
-    if (err && typeof err === 'object' && 'response' in err) {
-      const response = (err as { response?: unknown }).response
-      if (response && typeof response === 'object' && 'data' in response) {
-        const data = (response as { data?: unknown }).data
-        if (data && typeof data === 'object' && 'detail' in data) {
-          const detail = (data as { detail?: unknown }).detail
-          if (typeof detail === 'string') {
-            error.value = detail
-            return
-          }
-        }
-      }
-    }
-    error.value = 'Failed to load activities'
-  } finally {
-    loading.value = false
-  }
+  await activitiesQuery.refetch()
 }
 
 function getActivityIcon(activity: Activity): string {
@@ -372,7 +367,11 @@ function activityVars(activity: Activity) {
   const palette = {
     success: { solid: '#2f7f59', soft: 'rgba(47, 127, 89, 0.14)', line: 'rgba(47, 127, 89, 0.24)' },
     error: { solid: '#a33d2d', soft: 'rgba(163, 61, 45, 0.14)', line: 'rgba(163, 61, 45, 0.24)' },
-    primary: { solid: '#0f766e', soft: 'rgba(15, 118, 110, 0.14)', line: 'rgba(15, 118, 110, 0.24)' },
+    primary: {
+      solid: '#0f766e',
+      soft: 'rgba(15, 118, 110, 0.14)',
+      line: 'rgba(15, 118, 110, 0.24)',
+    },
     info: { solid: '#2b6a88', soft: 'rgba(43, 106, 136, 0.14)', line: 'rgba(43, 106, 136, 0.24)' },
   } as const
   const resolved = palette[color as keyof typeof palette] ?? palette.primary
@@ -426,11 +425,6 @@ function formatTime(timestamp: string): string {
     minute: '2-digit',
   })
 }
-
-// Lifecycle
-onMounted(() => {
-  loadActivities()
-})
 </script>
 
 <style scoped>
@@ -451,7 +445,7 @@ onMounted(() => {
 .activity-hero,
 .activity-panel,
 .activity-item__card {
-  border-radius: 1.75rem;
+  border-radius: 0.5rem;
 }
 
 .activity-hero,
@@ -557,7 +551,7 @@ onMounted(() => {
 .activity-field select {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 1rem;
+  border-radius: 0.5rem;
   background: var(--app-panel);
   padding: 0.85rem 0.95rem;
   color: var(--app-ink);
@@ -576,7 +570,7 @@ onMounted(() => {
   align-items: center;
   gap: 0.6rem;
   border: 1px solid rgba(163, 61, 45, 0.24);
-  border-radius: 1rem;
+  border-radius: 0.5rem;
   background: var(--app-danger-soft);
   padding: 0.85rem 1rem;
   color: var(--app-danger);
@@ -601,7 +595,7 @@ onMounted(() => {
 .activity-empty {
   gap: 0.9rem;
   border: 1px dashed var(--app-border);
-  border-radius: 1.25rem;
+  border-radius: 0.5rem;
   padding: 1.1rem;
   color: var(--app-muted);
 }
@@ -679,7 +673,7 @@ onMounted(() => {
 
 .activity-item__badge,
 .activity-chip {
-  border-radius: 999px;
+  border-radius: 0.5rem;
   padding: 0.4rem 0.65rem;
   background: var(--activity-accent-soft);
   color: var(--activity-accent);
@@ -725,7 +719,7 @@ onMounted(() => {
 
 .activity-pagination button {
   border: 1px solid var(--app-border);
-  border-radius: 999px;
+  border-radius: 0.5rem;
   background: var(--app-panel);
   padding: 0.65rem 0.95rem;
   color: var(--app-ink);

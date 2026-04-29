@@ -163,26 +163,6 @@
           </div>
         </section>
 
-        <section class="menu-access-sidebar-panel menu-access-sidebar-panel--cool">
-          <div class="menu-access-sidebar-panel__header">
-            <p class="menu-access-sidebar-panel__eyebrow">Guidance</p>
-            <h2>How To Use It</h2>
-          </div>
-          <ol class="menu-access-playbook">
-            <li>
-              <strong>Start with the active role tab.</strong>
-              <span>Each tab reflects the current menu exposure for that role only.</span>
-            </li>
-            <li>
-              <strong>Use section toggles carefully.</strong>
-              <span>Bulk actions speed up setup, but protected menus remain locked.</span>
-            </li>
-            <li>
-              <strong>Save only after reviewing the summary.</strong>
-              <span>The sidebar helps catch accidental over-exposure before the rules are persisted.</span>
-            </li>
-          </ol>
-        </section>
       </aside>
     </div>
     </section>
@@ -191,7 +171,9 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, onMounted, ref } from 'vue'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { computed, ref, watch } from 'vue'
+import { queryKeys } from '@/core/query'
 import { AppTabs } from '@/shared'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import { getApiErrorDetail } from '@/shared/utils'
@@ -200,7 +182,6 @@ import type { MenuItemData } from '../types/menuAccess.types'
 
 type MenuSection = 'main' | 'tools' | 'system'
 
-const loading = ref(true)
 const saving = ref(false)
 const initializing = ref(false)
 const error = ref<string | null>(null)
@@ -217,6 +198,24 @@ const roleMenuAccess = ref<Record<string, string[]>>({
 })
 
 const originalRoleMenuAccess = ref<Record<string, string[]>>({})
+const queryClient = useQueryClient()
+
+const menusQuery = useQuery({
+  queryKey: queryKeys.admin.menuAccess(),
+  queryFn: menuAccessApi.getAllMenus,
+})
+
+const loading = computed(() => menusQuery.isFetching.value)
+
+const initializeMenusMutation = useMutation({
+  mutationFn: menuAccessApi.initializeMenus,
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.admin.menuAccess() }),
+})
+
+const saveMenuAccessMutation = useMutation({
+  mutationFn: menuAccessApi.bulkUpdateMenuAccess,
+  onSuccess: () => queryClient.invalidateQueries({ queryKey: queryKeys.admin.menuAccess() }),
+})
 
 const sectionDefinitions: Array<{
   key: MenuSection
@@ -233,7 +232,8 @@ const sectionDefinitions: Array<{
   {
     key: 'tools',
     title: 'Tools Section',
-    description: 'Operational utilities such as parsing, comparison, conversion, and related workflows.',
+    description:
+      'Operational utilities such as parsing, comparison, conversion, and related workflows.',
     icon: 'mdi:tools',
   },
   {
@@ -352,31 +352,11 @@ function countMenusForRole(role: string, section: MenuSection): number {
 }
 
 async function fetchMenus(): Promise<void> {
-  loading.value = true
   error.value = null
 
-  try {
-    const response = await menuAccessApi.getAllMenus()
-    menus.value = response.menus
-    availableRoles.value = response.available_roles
-
-    const access: Record<string, string[]> = {}
-    for (const role of availableRoles.value) {
-      access[role] = response.menus
-        .filter((menu) => menu.role_access.includes(role))
-        .map((menu) => menu.menu_key)
-    }
-
-    roleMenuAccess.value = access
-    originalRoleMenuAccess.value = JSON.parse(JSON.stringify(access))
-
-    if (!availableRoles.value.includes(activeTab.value)) {
-      activeTab.value = availableRoles.value[0] ?? 'guest'
-    }
-  } catch (err: unknown) {
-    error.value = getApiErrorDetail(err, 'Failed to load menu definitions')
-  } finally {
-    loading.value = false
+  const result = await menusQuery.refetch()
+  if (result.error) {
+    error.value = getApiErrorDetail(result.error, 'Failed to load menu definitions')
   }
 }
 
@@ -385,9 +365,8 @@ async function handleInitialize(): Promise<void> {
   error.value = null
 
   try {
-    const result = await menuAccessApi.initializeMenus()
+    const result = await initializeMenusMutation.mutateAsync()
     successMessage.value = result.message
-    await fetchMenus()
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err, 'Failed to initialize menu definitions')
   } finally {
@@ -420,7 +399,7 @@ async function handleSave(): Promise<void> {
     }
 
     if (updates.length > 0) {
-      await menuAccessApi.bulkUpdateMenuAccess({ updates })
+      await saveMenuAccessMutation.mutateAsync({ updates })
     }
 
     successMessage.value = `Successfully updated ${updates.length} menu access entr${updates.length === 1 ? 'y' : 'ies'}`
@@ -432,9 +411,29 @@ async function handleSave(): Promise<void> {
   }
 }
 
-onMounted(() => {
-  fetchMenus()
-})
+watch(
+  () => menusQuery.data.value,
+  (response) => {
+    if (!response) return
+    menus.value = response.menus
+    availableRoles.value = response.available_roles
+
+    const access: Record<string, string[]> = {}
+    for (const role of availableRoles.value) {
+      access[role] = response.menus
+        .filter((menu) => menu.role_access.includes(role))
+        .map((menu) => menu.menu_key)
+    }
+
+    roleMenuAccess.value = access
+    originalRoleMenuAccess.value = JSON.parse(JSON.stringify(access))
+
+    if (!availableRoles.value.includes(activeTab.value)) {
+      activeTab.value = availableRoles.value[0] ?? 'guest'
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <style scoped>
@@ -507,7 +506,7 @@ onMounted(() => {
   justify-content: center;
   gap: 0.55rem;
   border: 0;
-  border-radius: 999px;
+  border-radius: 0.5rem;
   padding: 0.9rem 1.25rem;
   font-weight: 700;
   cursor: pointer;
@@ -548,7 +547,7 @@ onMounted(() => {
 .menu-access-option,
 .menu-access-summary-card {
   border: 1px solid var(--app-border);
-  border-radius: 1.35rem;
+  border-radius: 0.5rem;
   background: var(--app-panel-strong);
   box-shadow: var(--app-shadow-soft);
 }
@@ -697,7 +696,7 @@ onMounted(() => {
 .menu-access-badge {
   display: inline-flex;
   align-items: center;
-  border-radius: 999px;
+  border-radius: 0.5rem;
   padding: 0.2rem 0.55rem;
   background: var(--menu-access-accent-soft);
   color: var(--menu-access-accent);

@@ -487,48 +487,50 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { keepPreviousData, useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { computed, onBeforeUnmount, ref, watch } from 'vue'
+import { queryKeys } from '@/core/query'
 import { formatDateTimeCompact } from '@/core/utils/dateTime'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
+import { useNotification } from '@/shared/composables'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
 import { AppMultiSelect, AppSelect } from '@/shared/ui/forms'
 import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import { getApiErrorDetail } from '@/shared/utils'
 import {
-    bulkDeleteTopProducts,
-    deleteTopProduct,
-    getTopProductDetail,
-    getTopProductsList,
-    getTopProductsStats,
-    getUniqueProjects,
-    getUniqueStations,
-    type TopProductDetail,
-    type TopProductItem,
-    type TopProductListParams,
-    type TopProductMeasurement,
-    type TopProductStats,
+  bulkDeleteTopProducts,
+  deleteTopProduct,
+  getTopProductDetail,
+  getTopProductsList,
+  getTopProductsStats,
+  getUniqueProjects,
+  getUniqueStations,
+  type TopProductDetail,
+  type TopProductItem,
+  type TopProductListParams,
+  type TopProductMeasurement,
+  type TopProductStats,
 } from '../api/topProducts.api'
 import { useTopProductExport } from '../composables/useTopProductExport'
 
 // ===== State =====
 const authStore = useAuthStore()
 const { exportToExcel, exportToPDF, copyToClipboard } = useTopProductExport()
-const loading = ref(false)
-const statsLoading = ref(false)
-const products = ref<TopProductItem[]>([])
-const stats = ref<TopProductStats>({
-    total_products: 0,
-    total_unique_isns: 0,
-    total_projects: 0,
-    avg_score: null,
-    max_score: null,
-    min_score: null,
-    total_pass: 0,
-    total_fail: 0,
-    recent_products_24h: 0,
-    recent_products_7d: 0,
-})
+const queryClient = useQueryClient()
+const { showError, showSuccess } = useNotification()
+const defaultStats: TopProductStats = {
+  total_products: 0,
+  total_unique_isns: 0,
+  total_projects: 0,
+  avg_score: null,
+  max_score: null,
+  min_score: null,
+  total_pass: 0,
+  total_fail: 0,
+  recent_products_24h: 0,
+  recent_products_7d: 0,
+}
 const selectedProduct = ref<TopProductDetail | null>(null)
 const detailDialog = ref(false)
 const isFullscreen = ref(false)
@@ -543,476 +545,504 @@ const exporting = ref(false)
 const deleteDialog = ref(false)
 const productToDelete = ref<TopProductItem | null>(null)
 const deleteConfirmation = ref('')
-const deleting = ref(false)
 
 // Bulk delete state
 const selectedProducts = ref<TopProductItem[]>([])
 const bulkDeleteDialog = ref(false)
 const bulkDeleteConfirmation = ref('')
-const bulkDeleting = ref(false)
-
-// Filter options
-const projectOptions = ref<{ title: string; value: string }[]>([])
-const stationOptions = ref<
-    { title: string; value: string; stationName: string; project: string | null }[]
->([])
 
 const pagination = ref({
-    page: 1,
-    page_size: 20,
-    total: 0,
-    total_pages: 0,
+  page: 1,
+  page_size: 20,
+  total: 0,
+  total_pages: 0,
 })
 
 const filters = ref<TopProductListParams>({
-    dut_isn: undefined,
-    projects: [],
-    stations: [],
-    min_score: undefined,
-    sort_by: 'created_at',
-    sort_desc: true,
+  dut_isn: undefined,
+  projects: [],
+  stations: [],
+  min_score: undefined,
+  sort_by: 'created_at',
+  sort_desc: true,
 })
 
 const projectFilterModel = computed<string[]>({
-    get: () => filters.value.projects ?? [],
-    set: (value) => {
-        filters.value.projects = value
-    },
+  get: () => filters.value.projects ?? [],
+  set: (value) => {
+    filters.value.projects = value
+  },
 })
 
 const stationFilterModel = computed<string[]>({
-    get: () => filters.value.stations ?? [],
-    set: (value) => {
-        filters.value.stations = value
-    },
+  get: () => filters.value.stations ?? [],
+  set: (value) => {
+    filters.value.stations = value
+  },
 })
 
 const pageSizeOptions = [10, 20, 50, 100]
 
+const listParams = computed<TopProductListParams>(() => ({
+  page: pagination.value.page,
+  page_size: pagination.value.page_size,
+  ...filters.value,
+}))
+
+const productsQuery = useQuery({
+  queryKey: computed(() => queryKeys.topProducts.list({ ...listParams.value })),
+  queryFn: () => getTopProductsList(listParams.value),
+  placeholderData: keepPreviousData,
+})
+
+const statsQuery = useQuery({
+  queryKey: queryKeys.topProducts.stats(),
+  queryFn: getTopProductsStats,
+})
+
+const projectsQuery = useQuery({
+  queryKey: queryKeys.topProducts.projects(),
+  queryFn: getUniqueProjects,
+  staleTime: 5 * 60_000,
+})
+
+const stationsQuery = useQuery({
+  queryKey: queryKeys.topProducts.stations(),
+  queryFn: getUniqueStations,
+  staleTime: 5 * 60_000,
+})
+
+const deleteMutation = useMutation({
+  mutationFn: deleteTopProduct,
+  onSuccess: async () => {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.topProducts.all })
+  },
+})
+
+const bulkDeleteMutation = useMutation({
+  mutationFn: bulkDeleteTopProducts,
+  onSuccess: async () => {
+    await queryClient.invalidateQueries({ queryKey: queryKeys.topProducts.all })
+  },
+})
+
 // ===== Computed =====
+const loading = computed(() => productsQuery.isFetching.value)
+const statsLoading = computed(() => statsQuery.isFetching.value)
+const products = computed(() => productsQuery.data.value?.top_products ?? [])
+const stats = computed(() => statsQuery.data.value ?? defaultStats)
 const isAdmin = computed(() => authStore.user?.is_admin || false)
-const projectFilterOptions = computed(() => projectOptions.value.map((project) => ({
-    label: project.title,
+const projectFilterOptions = computed(() =>
+  (projectsQuery.data.value ?? []).map((project) => ({
+    label: project.label,
     value: project.value,
-})))
-const stationFilterOptions = computed(() => stationOptions.value.map((station) => ({
-    label: station.project ? `${station.stationName} (${station.project})` : station.stationName,
+  })),
+)
+const stationFilterOptions = computed(() =>
+  (stationsQuery.data.value ?? []).map((station) => ({
+    label: station.project ? `${station.label} (${station.project})` : station.label,
     value: station.value,
-})))
-const pageSizeSelectOptions = computed(() => pageSizeOptions.map((size) => ({
+  })),
+)
+const pageSizeSelectOptions = computed(() =>
+  pageSizeOptions.map((size) => ({
     label: `${size} per page`,
     value: size,
-})))
+  })),
+)
 
 /**
  * Whether the current user can perform bulk delete.
  * Only available to superadmin and developer roles, or users with explicit delete permission.
  */
 const canBulkDelete = computed(() => {
-    return authStore.isSuperAdmin || authStore.hasMenuPermission('top_product_database', 'delete')
+  return authStore.isSuperAdmin || authStore.hasMenuPermission('top_product_database', 'delete')
 })
 
 /**
  * Dynamic headers — same base headers for all users.
  */
 const gridSortOrder = computed(() => (filters.value.sort_desc ? -1 : 1))
+const deleting = computed(() => deleteMutation.isPending.value)
+const bulkDeleting = computed(() => bulkDeleteMutation.isPending.value)
 
 const hasActiveFilters = computed(() => {
-    return !!(
-        filters.value.dut_isn ||
-        (filters.value.projects && filters.value.projects.length > 0) ||
-        (filters.value.stations && filters.value.stations.length > 0) ||
-        filters.value.min_score
-    )
+  return !!(
+    filters.value.dut_isn ||
+    (filters.value.projects && filters.value.projects.length > 0) ||
+    (filters.value.stations && filters.value.stations.length > 0) ||
+    filters.value.min_score
+  )
 })
 
 const filteredMeasurements = computed(() => {
-    if (!selectedProduct.value?.measurements) return []
-    if (!measurementSearch.value) return selectedProduct.value.measurements
+  if (!selectedProduct.value?.measurements) return []
+  if (!measurementSearch.value) return selectedProduct.value.measurements
 
-    const search = measurementSearch.value.toLowerCase()
-    return selectedProduct.value.measurements.filter((m) =>
-        m.test_item.toLowerCase().includes(search),
-    )
+  const search = measurementSearch.value.toLowerCase()
+  return selectedProduct.value.measurements.filter((m) =>
+    m.test_item.toLowerCase().includes(search),
+  )
 })
 
 // ===== Table Headers =====
 const gridColumns = [
-    { key: 'dut_isn', field: 'dut_isn', header: 'DUT ISN', sortable: true, style: { minWidth: '12rem' } },
-    { key: 'project_name', field: 'project_name', header: 'Project', sortable: true, style: { minWidth: '10rem' } },
-    { key: 'station_name', field: 'station_name', header: 'Station', sortable: true, style: { minWidth: '10rem' } },
-    { key: 'score', field: 'score', header: 'Score', sortable: true, style: { minWidth: '8rem' } },
-    { key: 'pass_count', field: 'pass_count', header: 'Passed', sortable: true, style: { minWidth: '7rem' } },
-    { key: 'fail_count', field: 'fail_count', header: 'Failed', sortable: true, style: { minWidth: '7rem' } },
-    { key: 'pass_rate', header: 'Pass Rate', sortable: false, style: { minWidth: '10rem' } },
-    { key: 'test_date', field: 'test_date', header: 'Test Date', sortable: true, style: { minWidth: '11rem' } },
-    { key: 'measurements_count', field: 'measurements_count', header: 'Measurements', sortable: false, style: { minWidth: '10rem' } },
-    { key: 'actions', header: 'Actions', sortable: false, style: { minWidth: '14rem' } },
+  {
+    key: 'dut_isn',
+    field: 'dut_isn',
+    header: 'DUT ISN',
+    sortable: true,
+    style: { minWidth: '12rem' },
+  },
+  {
+    key: 'project_name',
+    field: 'project_name',
+    header: 'Project',
+    sortable: true,
+    style: { minWidth: '10rem' },
+  },
+  {
+    key: 'station_name',
+    field: 'station_name',
+    header: 'Station',
+    sortable: true,
+    style: { minWidth: '10rem' },
+  },
+  { key: 'score', field: 'score', header: 'Score', sortable: true, style: { minWidth: '8rem' } },
+  {
+    key: 'pass_count',
+    field: 'pass_count',
+    header: 'Passed',
+    sortable: true,
+    style: { minWidth: '7rem' },
+  },
+  {
+    key: 'fail_count',
+    field: 'fail_count',
+    header: 'Failed',
+    sortable: true,
+    style: { minWidth: '7rem' },
+  },
+  { key: 'pass_rate', header: 'Pass Rate', sortable: false, style: { minWidth: '10rem' } },
+  {
+    key: 'test_date',
+    field: 'test_date',
+    header: 'Test Date',
+    sortable: true,
+    style: { minWidth: '11rem' },
+  },
+  {
+    key: 'measurements_count',
+    field: 'measurements_count',
+    header: 'Measurements',
+    sortable: false,
+    style: { minWidth: '10rem' },
+  },
+  { key: 'actions', header: 'Actions', sortable: false, style: { minWidth: '14rem' } },
 ]
 
 const measurementGridColumns = [
-    { key: 'test_item', field: 'test_item', header: 'Test Item', sortable: true, style: { minWidth: '16rem' } },
-    { key: 'pass_status', header: 'Status', sortable: false, style: { minWidth: '9rem' } },
-    { key: 'usl', field: 'usl', header: 'USL', sortable: true, style: { minWidth: '8rem' } },
-    { key: 'lsl', field: 'lsl', header: 'LSL', sortable: true, style: { minWidth: '8rem' } },
-    { key: 'target_value', field: 'target_value', header: 'Target', sortable: true, style: { minWidth: '8rem' } },
-    { key: 'actual_value', field: 'actual_value', header: 'Actual', sortable: true, style: { minWidth: '8rem' } },
-    { key: 'deviation', field: 'deviation', header: 'Deviation', sortable: true, style: { minWidth: '8rem' } },
+  {
+    key: 'test_item',
+    field: 'test_item',
+    header: 'Test Item',
+    sortable: true,
+    style: { minWidth: '16rem' },
+  },
+  { key: 'pass_status', header: 'Status', sortable: false, style: { minWidth: '9rem' } },
+  { key: 'usl', field: 'usl', header: 'USL', sortable: true, style: { minWidth: '8rem' } },
+  { key: 'lsl', field: 'lsl', header: 'LSL', sortable: true, style: { minWidth: '8rem' } },
+  {
+    key: 'target_value',
+    field: 'target_value',
+    header: 'Target',
+    sortable: true,
+    style: { minWidth: '8rem' },
+  },
+  {
+    key: 'actual_value',
+    field: 'actual_value',
+    header: 'Actual',
+    sortable: true,
+    style: { minWidth: '8rem' },
+  },
+  {
+    key: 'deviation',
+    field: 'deviation',
+    header: 'Deviation',
+    sortable: true,
+    style: { minWidth: '8rem' },
+  },
 ]
 
 // ===== Methods =====
-async function fetchProducts() {
-    loading.value = true
-    try {
-        const params: TopProductListParams = {
-            page: pagination.value.page,
-            page_size: pagination.value.page_size,
-            ...filters.value,
-        }
-
-        console.log('🔍 Fetching products with params:', params)
-        console.log('  - Projects filter:', filters.value.projects)
-        console.log('  - Stations filter:', filters.value.stations)
-
-        const response = await getTopProductsList(params)
-
-        console.log('✅ Received products:', response.top_products.length, 'total:', response.total)
-
-        products.value = response.top_products
-        pagination.value.total = response.total
-        pagination.value.total_pages = response.total_pages
-        // Clear selection when data changes
-        selectedProducts.value = []
-    } catch (error) {
-        console.error('❌ Failed to fetch products:', error)
-    } finally {
-        loading.value = false
-    }
-}
-
-async function fetchStats() {
-    statsLoading.value = true
-    try {
-        const result = await getTopProductsStats()
-        stats.value = result
-    } catch (error) {
-        console.error('Failed to fetch stats:', error)
-        // Stats already has default values from initialization
-    } finally {
-        statsLoading.value = false
-    }
-}
-
 async function viewDetail(productId: number) {
-    try {
-        selectedProduct.value = await getTopProductDetail(productId)
-        measurementSearch.value = '' // Reset search when opening dialog
-        detailDialog.value = true
-    } catch (error) {
-        console.error('Failed to fetch product detail:', error)
-    }
-}
-
-async function loadFilterOptions() {
-    try {
-        // Load projects
-        const projects = await getUniqueProjects()
-        projectOptions.value = projects.map((p) => ({
-            title: p.label,
-            value: p.value,
-        }))
-
-        // Load stations
-        const stations = await getUniqueStations()
-        stationOptions.value = stations.map((s) => ({
-            title: s.label,
-            value: s.value,
-            stationName: s.value,
-            project: s.project,
-        }))
-    } catch (error) {
-        console.error('Failed to load filter options:', error)
-    }
+  try {
+    selectedProduct.value = await queryClient.fetchQuery({
+      queryKey: queryKeys.topProducts.detail(productId),
+      queryFn: () => getTopProductDetail(productId),
+    })
+    measurementSearch.value = '' // Reset search when opening dialog
+    detailDialog.value = true
+  } catch (error) {
+    showError(getApiErrorDetail(error, 'Failed to load product details'))
+  }
 }
 
 function clearFilters() {
-    filters.value = {
-        dut_isn: undefined,
-        projects: [],
-        stations: [],
-        min_score: undefined,
-        sort_by: 'created_at',
-        sort_desc: true,
-    }
-    pagination.value.page = 1
-    fetchProducts()
+  filters.value = {
+    dut_isn: undefined,
+    projects: [],
+    stations: [],
+    min_score: undefined,
+    sort_by: 'created_at',
+    sort_desc: true,
+  }
+  pagination.value.page = 1
 }
 
 function refreshData() {
-    fetchStats()
-    fetchProducts()
-    loadFilterOptions()
+  queryClient.invalidateQueries({ queryKey: queryKeys.topProducts.all })
 }
 
 function handlePageSizeChange() {
-    pagination.value.page = 1
-    fetchProducts()
+  pagination.value.page = 1
 }
 
 function handleGridPage(event: unknown) {
-    const pageEvent = event as { page?: number; rows?: number } | null
-    if (!pageEvent) {
-        return
-    }
+  const pageEvent = event as { page?: number; rows?: number } | null
+  if (!pageEvent) {
+    return
+  }
 
-    pagination.value.page = (pageEvent.page ?? 0) + 1
-    if (pageEvent.rows && pageEvent.rows !== pagination.value.page_size) {
-        pagination.value.page_size = pageEvent.rows
-    }
-    fetchProducts()
+  pagination.value.page = (pageEvent.page ?? 0) + 1
+  if (pageEvent.rows && pageEvent.rows !== pagination.value.page_size) {
+    pagination.value.page_size = pageEvent.rows
+  }
 }
 
 // Debounce helper
 let debounceTimer: number | undefined
 function debouncedFetch() {
-    clearTimeout(debounceTimer)
-    debounceTimer = setTimeout(() => {
-        pagination.value.page = 1
-        fetchProducts()
-    }, 500) as unknown as number
+  clearTimeout(debounceTimer)
+  debounceTimer = setTimeout(() => {
+    pagination.value.page = 1
+  }, 500) as unknown as number
 }
 
 // ===== Computed & Helpers =====
 function formatDate(dateString: string | null): string {
-    // Convert UTC to user's local timezone
-    return formatDateTimeCompact(dateString)
+  // Convert UTC to user's local timezone
+  return formatDateTimeCompact(dateString)
 }
 
 function getPassRate(item: TopProductItem): string {
-    const total = item.pass_count + item.fail_count
-    if (total === 0) return '0.00'
-    return ((item.pass_count / total) * 100).toFixed(2)
+  const total = item.pass_count + item.fail_count
+  if (total === 0) return '0.00'
+  return ((item.pass_count / total) * 100).toFixed(2)
 }
 
 function getPassRateValue(item: TopProductItem): number {
-    const total = item.pass_count + item.fail_count
-    if (total === 0) return 0
-    return (item.pass_count / total) * 100
+  const total = item.pass_count + item.fail_count
+  if (total === 0) return 0
+  return (item.pass_count / total) * 100
 }
 
 function getPassRateColor(passRate: number): string {
-    if (passRate >= 95) return 'success'
-    if (passRate >= 80) return 'warning'
-    return 'error'
+  if (passRate >= 95) return 'success'
+  if (passRate >= 80) return 'warning'
+  return 'error'
 }
 
 function passRateToneClass(passRate: number): string {
-    if (passRate >= 95) return 'top-product-db-progress__value--success'
-    if (passRate >= 80) return 'top-product-db-progress__value--warning'
-    return 'top-product-db-progress__value--danger'
+  if (passRate >= 95) return 'top-product-db-progress__value--success'
+  if (passRate >= 80) return 'top-product-db-progress__value--warning'
+  return 'top-product-db-progress__value--danger'
 }
 
 function getScoreColor(score: number | null | undefined): string {
-    if (!score) return 'error'
-    if (score >= 8) return 'success'
-    if (score >= 6) return 'warning'
-    return 'error'
+  if (!score) return 'error'
+  if (score >= 8) return 'success'
+  if (score >= 6) return 'warning'
+  return 'error'
 }
 
 function getScoreIcon(score: number | null | undefined): string {
-    if (!score) return 'mdi-alert-circle'
-    if (score >= 8) return 'mdi-check-circle'
-    if (score >= 6) return 'mdi-alert'
-    return 'mdi-close-circle'
+  if (!score) return 'mdi-alert-circle'
+  if (score >= 8) return 'mdi-check-circle'
+  if (score >= 6) return 'mdi-alert'
+  return 'mdi-close-circle'
 }
 
 function scoreToneClass(score: number | null | undefined): string {
-    if (!score) return 'top-product-db-pill--danger'
-    if (score >= 8) return 'top-product-db-pill--success'
-    if (score >= 6) return 'top-product-db-pill--warning'
-    return 'top-product-db-pill--danger'
+  if (!score) return 'top-product-db-pill--danger'
+  if (score >= 8) return 'top-product-db-pill--success'
+  if (score >= 6) return 'top-product-db-pill--warning'
+  return 'top-product-db-pill--danger'
 }
 
 function isWithinLimits(measurement: TopProductMeasurement): boolean {
-    if (measurement.actual_value === null) return false
-    const withinLSL = measurement.lsl === null || measurement.actual_value >= measurement.lsl
-    const withinUSL = measurement.usl === null || measurement.actual_value <= measurement.usl
-    return withinLSL && withinUSL
+  if (measurement.actual_value === null) return false
+  const withinLSL = measurement.lsl === null || measurement.actual_value >= measurement.lsl
+  const withinUSL = measurement.usl === null || measurement.actual_value <= measurement.usl
+  return withinLSL && withinUSL
 }
 
 function handleGridSort(event: unknown) {
-    const sortEvent = event as { sortField?: string; sortOrder?: -1 | 0 | 1 | null } | null
-    if (!sortEvent?.sortField || sortEvent.sortField === 'pass_rate' || sortEvent.sortField === 'actions') {
-        return
-    }
+  const sortEvent = event as { sortField?: string; sortOrder?: -1 | 0 | 1 | null } | null
+  if (
+    !sortEvent?.sortField ||
+    sortEvent.sortField === 'pass_rate' ||
+    sortEvent.sortField === 'actions'
+  ) {
+    return
+  }
 
-    filters.value.sort_by = sortEvent.sortField
-    filters.value.sort_desc = sortEvent.sortOrder !== 1
-    pagination.value.page = 1
-    fetchProducts()
+  filters.value.sort_by = sortEvent.sortField
+  filters.value.sort_desc = sortEvent.sortOrder !== 1
+  pagination.value.page = 1
 }
 
 function handleGridRowClick(event: unknown) {
-    const rowEvent = event as { data?: TopProductItem } | null
-    if (!rowEvent?.data?.id) {
-        return
-    }
+  const rowEvent = event as { data?: TopProductItem } | null
+  if (!rowEvent?.data?.id) {
+    return
+  }
 
-    viewDetail(rowEvent.data.id)
+  viewDetail(rowEvent.data.id)
 }
 
 // ===== Delete Handlers =====
 function confirmDelete(product: TopProductItem) {
-    productToDelete.value = product
-    deleteConfirmation.value = ''
-    deleteDialog.value = true
+  productToDelete.value = product
+  deleteConfirmation.value = ''
+  deleteDialog.value = true
 }
 
 function cancelDelete() {
-    deleteDialog.value = false
-    productToDelete.value = null
-    deleteConfirmation.value = ''
+  deleteDialog.value = false
+  productToDelete.value = null
+  deleteConfirmation.value = ''
 }
 
 async function handleDelete() {
-    if (deleteConfirmation.value !== 'DELETE' || !productToDelete.value || deleting.value) {
-        return
-    }
+  if (deleteConfirmation.value !== 'DELETE' || !productToDelete.value || deleting.value) {
+    return
+  }
 
-    deleting.value = true
-    try {
-        await deleteTopProduct(productToDelete.value.id)
-
-        // Show success message
-        console.log('Product deleted successfully')
-
-        // Close dialog
-        cancelDelete()
-
-        // Refresh the data
-        await fetchProducts()
-        await fetchStats()
-    } catch (error: unknown) {
-        console.error('Failed to delete product:', error)
-        const errorMessage = getApiErrorDetail(error, 'Failed to delete product. Please try again.')
-        alert(errorMessage)
-    } finally {
-        deleting.value = false
-    }
+  try {
+    const deletedIsn = productToDelete.value.dut_isn
+    await deleteMutation.mutateAsync(productToDelete.value.id)
+    cancelDelete()
+    showSuccess(`Product "${deletedIsn}" deleted`)
+  } catch (error: unknown) {
+    showError(getApiErrorDetail(error, 'Failed to delete product. Please try again.'))
+  }
 }
 
 // ===== Bulk Delete Handlers =====
 function confirmBulkDelete() {
-    if (selectedProducts.value.length === 0) return
-    bulkDeleteConfirmation.value = ''
-    bulkDeleteDialog.value = true
+  if (selectedProducts.value.length === 0) return
+  bulkDeleteConfirmation.value = ''
+  bulkDeleteDialog.value = true
 }
 
 function cancelBulkDelete() {
-    bulkDeleteDialog.value = false
-    bulkDeleteConfirmation.value = ''
+  bulkDeleteDialog.value = false
+  bulkDeleteConfirmation.value = ''
 }
 
 async function handleBulkDelete() {
-    if (
-        bulkDeleteConfirmation.value !== 'DELETE' ||
-        selectedProducts.value.length === 0 ||
-        bulkDeleting.value
-    ) {
-        return
-    }
+  if (
+    bulkDeleteConfirmation.value !== 'DELETE' ||
+    selectedProducts.value.length === 0 ||
+    bulkDeleting.value
+  ) {
+    return
+  }
 
-    bulkDeleting.value = true
-    try {
-        const ids = selectedProducts.value.map((p) => p.id)
-        console.log('🗑️ Bulk deleting products with ids:', ids, 'from selected:', selectedProducts.value.map((p) => ({ id: p.id, isn: p.dut_isn })))
-        const result = await bulkDeleteTopProducts(ids)
-
-        console.log(`Bulk deleted ${result.deleted_count} products`)
-
-        // Clear selection and close dialog
-        selectedProducts.value = []
-        cancelBulkDelete()
-
-        // Refresh the data
-        await fetchProducts()
-        await fetchStats()
-    } catch (error: unknown) {
-        console.error('Failed to bulk delete products:', error)
-        const errorMessage = getApiErrorDetail(
-            error,
-            'Failed to delete selected products. Please try again.',
-        )
-        alert(errorMessage)
-    } finally {
-        bulkDeleting.value = false
-    }
+  try {
+    const ids = selectedProducts.value.map((p) => p.id)
+    const result = await bulkDeleteMutation.mutateAsync(ids)
+    selectedProducts.value = []
+    cancelBulkDelete()
+    showSuccess(`Deleted ${result.deleted_count} products`)
+  } catch (error: unknown) {
+    showError(getApiErrorDetail(error, 'Failed to delete selected products. Please try again.'))
+  }
 }
 
 // ===== Export Handlers =====
 function handleExport(product: TopProductItem) {
-    productToExport.value = product
-    exportDialog.value = true
+  productToExport.value = product
+  exportDialog.value = true
 }
 
 async function exportProduct(format: 'excel' | 'pdf' | 'clipboard') {
-    if (!productToExport.value || exporting.value) return
+  if (!productToExport.value || exporting.value) return
 
-    exporting.value = true
-    try {
-        // Fetch full product details including measurements
-        const details = await getTopProductDetail(productToExport.value.id)
+  exporting.value = true
+  try {
+    const exportProductId = productToExport.value.id
+    // Fetch full product details including measurements
+    const details = await queryClient.fetchQuery({
+      queryKey: queryKeys.topProducts.detail(exportProductId),
+      queryFn: () => getTopProductDetail(exportProductId),
+    })
 
-        const exportData = {
-            dut_isn: details.dut_isn,
-            project_name: details.project_name,
-            station_name: details.station_name,
-            device_name: details.device_name,
-            score: details.score,
-            test_date: details.test_date,
-            pass_count: details.pass_count,
-            fail_count: details.fail_count,
-            retest_count: details.retest_count,
-            test_duration: details.test_duration,
-            measurements: details.measurements?.map((m) => ({
-                test_item: m.test_item,
-                usl: m.usl,
-                lsl: m.lsl,
-                actual_value: m.actual_value,
-                deviation: m.deviation,
-            })),
-        }
-
-        if (format === 'excel') {
-            await exportToExcel(exportData)
-        } else if (format === 'pdf') {
-            await exportToPDF(exportData)
-        } else if (format === 'clipboard') {
-            await copyToClipboard(exportData)
-        }
-
-        exportDialog.value = false
-        productToExport.value = null
-    } catch (error: unknown) {
-        console.error('Export failed:', error)
-        alert('Export failed. Please try again.')
-    } finally {
-        exporting.value = false
+    const exportData = {
+      dut_isn: details.dut_isn,
+      project_name: details.project_name,
+      station_name: details.station_name,
+      device_name: details.device_name,
+      score: details.score,
+      test_date: details.test_date,
+      pass_count: details.pass_count,
+      fail_count: details.fail_count,
+      retest_count: details.retest_count,
+      test_duration: details.test_duration,
+      measurements: details.measurements?.map((m) => ({
+        test_item: m.test_item,
+        usl: m.usl,
+        lsl: m.lsl,
+        actual_value: m.actual_value,
+        deviation: m.deviation,
+      })),
     }
+
+    if (format === 'excel') {
+      await exportToExcel(exportData)
+    } else if (format === 'pdf') {
+      await exportToPDF(exportData)
+    } else if (format === 'clipboard') {
+      await copyToClipboard(exportData)
+    }
+
+    exportDialog.value = false
+    productToExport.value = null
+  } catch (error: unknown) {
+    showError(getApiErrorDetail(error, 'Export failed. Please try again.'))
+  } finally {
+    exporting.value = false
+  }
 }
 
-// ===== Lifecycle =====
-onMounted(() => {
-    fetchStats()
-    fetchProducts()
-    loadFilterOptions()
-})
+watch(
+  () => productsQuery.data.value,
+  (response) => {
+    if (!response) return
+    pagination.value.total = response.total
+    pagination.value.total_pages = response.total_pages
+    selectedProducts.value = []
+  },
+  { immediate: true },
+)
 
 onBeforeUnmount(() => {
-    // Clear debounce timer
-    if (debounceTimer) {
-        clearTimeout(debounceTimer)
-    }
+  // Clear debounce timer
+  if (debounceTimer) {
+    clearTimeout(debounceTimer)
+  }
 })
 </script>
 
@@ -1081,7 +1111,7 @@ onBeforeUnmount(() => {
     align-items: center;
     justify-content: center;
     gap: 0.55rem;
-    border-radius: 999px;
+    border-radius: 0.5rem;
     border: 1px solid transparent;
     padding: 0.8rem 1.15rem;
     font-weight: 700;
@@ -1270,7 +1300,7 @@ onBeforeUnmount(() => {
     display: flex;
     justify-content: space-between;
     gap: 1rem;
-    border-radius: 1.1rem;
+    border-radius: 0.5rem;
     padding: 0.95rem 1rem;
 }
 
@@ -1331,7 +1361,7 @@ onBeforeUnmount(() => {
     display: inline-flex;
     align-items: center;
     gap: 0.4rem;
-    border-radius: 999px;
+    border-radius: 0.5rem;
     padding: 0.28rem 0.65rem;
     font-size: 0.82rem;
     font-weight: 700;
@@ -1412,7 +1442,7 @@ onBeforeUnmount(() => {
     align-items: center;
     gap: 0.35rem;
     border: 1px solid var(--app-border);
-    border-radius: 999px;
+    border-radius: 0.5rem;
     padding: 0.38rem 0.7rem;
     background: var(--app-panel);
     color: var(--app-ink);
@@ -1493,7 +1523,7 @@ onBeforeUnmount(() => {
     width: 2.8rem;
     height: 2.8rem;
     border: 1px solid var(--app-border);
-    border-radius: 999px;
+    border-radius: 0.5rem;
     background: var(--app-panel);
     color: var(--app-ink);
     cursor: pointer;
@@ -1516,7 +1546,7 @@ onBeforeUnmount(() => {
 .top-product-db-detail-results,
 .top-product-db-confirm-card {
     border: 1px solid var(--app-border);
-    border-radius: 1.25rem;
+    border-radius: 0.5rem;
     padding: 1rem 1.1rem;
     background: var(--app-panel);
 }
@@ -1604,7 +1634,7 @@ onBeforeUnmount(() => {
     min-width: 0;
     max-width: 24rem;
     border: 1px solid var(--app-border);
-    border-radius: 999px;
+    border-radius: 0.5rem;
     padding: 0.68rem 0.9rem;
     background: var(--app-panel-strong);
 }
@@ -1626,7 +1656,7 @@ onBeforeUnmount(() => {
     display: inline-flex;
     align-items: center;
     gap: 0.35rem;
-    border-radius: 999px;
+    border-radius: 0.5rem;
     padding: 0.28rem 0.65rem;
     font-size: 0.8rem;
     font-weight: 700;
@@ -1697,7 +1727,7 @@ onBeforeUnmount(() => {
     justify-content: center;
     gap: 0.65rem;
     border: 1px solid transparent;
-    border-radius: 1rem;
+    border-radius: 0.5rem;
     padding: 0.95rem 1rem;
     font-weight: 700;
     cursor: pointer;

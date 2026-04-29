@@ -547,12 +547,14 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { AppDataGrid, AppDialog, AppTabs } from '@/shared'
+import { queryKeys } from '@/core/query'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
+import { AppDataGrid, AppDialog, AppTabs } from '@/shared'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import { getApiErrorDetail } from '@/shared/utils'
 import {
@@ -568,12 +570,12 @@ type UserDraft = Partial<User> & { password?: string }
 
 const router = useRouter()
 const authStore = useAuthStore()
+const queryClient = useQueryClient()
 
 const activeTab = useTabPersistence<'users' | 'roles'>('tab', 'users')
 const error = ref('')
 const success = ref('')
 
-const loading = ref(false)
 const search = ref('')
 const dialog = ref(false)
 const editMode = ref(false)
@@ -581,14 +583,13 @@ const editMode = ref(false)
 const detailsDialog = ref(false)
 const selectedUser = ref<User | null>(null)
 
-const stats = ref<UserStats>({
+const defaultStats: UserStats = {
   total_users: 0,
   active_users: 0,
   online_users: 0,
   new_users: 0,
-})
+}
 
-const users = ref<User[]>([])
 const currentUser = ref<UserDraft>({
   username: '',
   email: '',
@@ -611,13 +612,8 @@ const passwordResetForm = ref({
   confirmPassword: '',
 })
 
-const acLoading = ref(false)
 const acSaving = ref(false)
 const acSearch = ref('')
-const acUsers = ref<AccessControlUser[]>([])
-const acAvailableResources = ref<string[]>([])
-const acAvailableActions = ref<string[]>([])
-const acDefaultPermissions = ref<Record<string, string[]>>({})
 
 const acEditDialog = ref(false)
 const acEditingUser = ref<AccessControlUser | null>(null)
@@ -632,6 +628,70 @@ const permissionsUser = ref<AccessControlUser | null>(null)
 const permissionsForm = ref<Record<string, string[]>>({})
 
 const loggedInUser = computed(() => authStore.user)
+
+const usersQuery = useQuery({
+  queryKey: queryKeys.admin.users(),
+  queryFn: adminApi.getUsers,
+})
+
+const accessControlQuery = useQuery({
+  queryKey: queryKeys.admin.accessControl(),
+  queryFn: async () => {
+    const [usersResponse, resourcesResponse] = await Promise.all([
+      adminApi.getAccessControlUsers(),
+      adminApi.getMenuResources(),
+    ])
+
+    return { usersResponse, resourcesResponse }
+  },
+  enabled: computed(() => authStore.isSuperAdmin),
+})
+
+const loading = computed(() => usersQuery.isFetching.value)
+const users = computed(() => usersQuery.data.value?.users ?? [])
+const stats = computed(() => usersQuery.data.value?.stats ?? defaultStats)
+const acLoading = computed(() => accessControlQuery.isFetching.value)
+const acUsers = computed(() => accessControlQuery.data.value?.usersResponse.users ?? [])
+const acAvailableResources = computed(
+  () => accessControlQuery.data.value?.resourcesResponse.resources ?? [],
+)
+const acAvailableActions = computed(
+  () => accessControlQuery.data.value?.resourcesResponse.actions ?? [],
+)
+const acDefaultPermissions = computed(
+  () => accessControlQuery.data.value?.resourcesResponse.default_permissions ?? {},
+)
+
+const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: queryKeys.admin.users() })
+const invalidateAccessControl = () =>
+  queryClient.invalidateQueries({ queryKey: queryKeys.admin.accessControl() })
+
+const deleteUserMutation = useMutation({
+  mutationFn: adminApi.deleteUser,
+  onSuccess: invalidateUsers,
+})
+
+const updateUserMutation = useMutation({
+  mutationFn: ({ id, data }: { id: number; data: UpdateUserRequest }) =>
+    adminApi.updateUser(id, data),
+  onSuccess: invalidateUsers,
+})
+
+const createUserMutation = useMutation({
+  mutationFn: adminApi.createUser,
+  onSuccess: invalidateUsers,
+})
+
+const updateAccessMutation = useMutation({
+  mutationFn: ({
+    id,
+    data,
+  }: {
+    id: number
+    data: Parameters<typeof adminApi.updateUserAccess>[1]
+  }) => adminApi.updateUserAccess(id, data),
+  onSuccess: invalidateAccessControl,
+})
 
 const tabItems = computed(() => {
   const items = [{ value: 'users', label: 'Users', icon: 'mdi-account-group' }]
@@ -691,7 +751,9 @@ const filteredUsers = computed(() => {
     return (
       user.username.toLowerCase().includes(query) ||
       email.includes(query) ||
-      String(user.role || 'user').toLowerCase().includes(query)
+      String(user.role || 'user')
+        .toLowerCase()
+        .includes(query)
     )
   })
 })
@@ -730,15 +792,9 @@ const passwordResetValid = computed(() => {
 })
 
 async function loadUsers() {
-  loading.value = true
-  try {
-    const response = await adminApi.getUsers()
-    users.value = response.users
-    stats.value = response.stats
-  } catch (err: unknown) {
-    error.value = getApiErrorDetail(err, 'Failed to load users')
-  } finally {
-    loading.value = false
+  const result = await usersQuery.refetch()
+  if (result.error) {
+    error.value = getApiErrorDetail(result.error, 'Failed to load users')
   }
 }
 
@@ -794,10 +850,9 @@ async function handleDeleteUser() {
   deleting.value = true
   try {
     error.value = ''
-    await adminApi.deleteUser(userToDelete.value.id)
+    await deleteUserMutation.mutateAsync(userToDelete.value.id)
     success.value = `User "${userToDelete.value.username}" deleted successfully`
     cancelDelete()
-    await loadUsers()
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err, 'Failed to delete user')
   } finally {
@@ -821,8 +876,7 @@ async function toggleUserStatus(user: User) {
 
   try {
     const updateData: UpdateUserRequest = { is_active: newStatus }
-    await adminApi.updateUser(user.id, updateData)
-    user.is_active = newStatus
+    await updateUserMutation.mutateAsync({ id: user.id, data: updateData })
     success.value = `User "${user.username}" ${action} successfully`
 
     if (!newStatus && loggedInUser.value && user.id === loggedInUser.value.id) {
@@ -833,7 +887,7 @@ async function toggleUserStatus(user: User) {
     }
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err, `Failed to ${action} user`)
-    await loadUsers()
+    await usersQuery.refetch()
   } finally {
     togglingUserId.value = null
   }
@@ -841,7 +895,6 @@ async function toggleUserStatus(user: User) {
 
 async function saveUser() {
   try {
-    loading.value = true
     error.value = ''
 
     if (editMode.value) {
@@ -855,7 +908,10 @@ async function saveUser() {
         updateData.password = currentUser.value.password
       }
 
-      await adminApi.updateUser(currentUser.value.id as number, updateData)
+      await updateUserMutation.mutateAsync({
+        id: currentUser.value.id as number,
+        data: updateData,
+      })
       success.value = 'User updated successfully'
     } else {
       const createData: CreateUserRequest = {
@@ -866,16 +922,13 @@ async function saveUser() {
         is_active: currentUser.value.is_active,
       }
 
-      await adminApi.createUser(createData)
+      await createUserMutation.mutateAsync(createData)
       success.value = 'User created successfully'
     }
 
     dialog.value = false
-    await loadUsers()
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err, 'Failed to save user')
-  } finally {
-    loading.value = false
   }
 }
 
@@ -915,23 +968,9 @@ async function submitPasswordReset() {
 }
 
 async function loadAccessControlData() {
-  acLoading.value = true
-  error.value = ''
-
-  try {
-    const [usersResponse, resourcesResponse] = await Promise.all([
-      adminApi.getAccessControlUsers(),
-      adminApi.getMenuResources(),
-    ])
-
-    acUsers.value = usersResponse.users
-    acAvailableResources.value = resourcesResponse.resources
-    acAvailableActions.value = resourcesResponse.actions
-    acDefaultPermissions.value = resourcesResponse.default_permissions
-  } catch (err: unknown) {
-    error.value = getApiErrorDetail(err, 'Failed to load access control data')
-  } finally {
-    acLoading.value = false
+  const result = await accessControlQuery.refetch()
+  if (result.error) {
+    error.value = getApiErrorDetail(result.error, 'Failed to load access control data')
   }
 }
 
@@ -952,15 +991,17 @@ async function saveUserAccess() {
   error.value = ''
 
   try {
-    await adminApi.updateUserAccess(acEditingUser.value.id, {
-      role: acEditForm.value.role,
-      is_active: acEditForm.value.is_active,
-      is_ptb_admin: acEditForm.value.is_ptb_admin,
+    await updateAccessMutation.mutateAsync({
+      id: acEditingUser.value.id,
+      data: {
+        role: acEditForm.value.role,
+        is_active: acEditForm.value.is_active,
+        is_ptb_admin: acEditForm.value.is_ptb_admin,
+      },
     })
 
     success.value = `Access settings updated for ${acEditingUser.value.username}`
     acEditDialog.value = false
-    await loadAccessControlData()
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err, 'Failed to update access settings')
   } finally {
@@ -992,7 +1033,9 @@ function togglePermission(resource: string, action: string, checked: unknown) {
     return
   }
 
-  permissionsForm.value[resource] = permissionsForm.value[resource].filter((entry) => entry !== action)
+  permissionsForm.value[resource] = permissionsForm.value[resource].filter(
+    (entry) => entry !== action,
+  )
   if (permissionsForm.value[resource].length === 0) {
     delete permissionsForm.value[resource]
   }
@@ -1021,13 +1064,15 @@ async function savePermissions() {
   error.value = ''
 
   try {
-    await adminApi.updateUserAccess(permissionsUser.value.id, {
-      menu_permissions: permissionsForm.value,
+    await updateAccessMutation.mutateAsync({
+      id: permissionsUser.value.id,
+      data: {
+        menu_permissions: permissionsForm.value,
+      },
     })
 
     success.value = `Menu permissions updated for ${permissionsUser.value.username}`
     permissionsDialog.value = false
-    await loadAccessControlData()
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err, 'Failed to update menu permissions')
   } finally {

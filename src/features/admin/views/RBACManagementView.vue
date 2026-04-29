@@ -567,12 +567,14 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, onMounted, reactive, ref } from 'vue'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
+import { computed, reactive, ref } from 'vue'
+import { queryKeys } from '@/core/query'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
+import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
-import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
 import type { Permission, PermissionDetail, RBACStats, Role, RoleDetail } from '../api/admin.api'
 import { adminApi } from '../api/admin.api'
@@ -586,20 +588,78 @@ const tabItems = [
   { label: 'Permissions', value: 'permissions' },
 ]
 
-const loading = ref(false)
 const error = ref('')
 const success = ref('')
 
 const roleSearch = ref('')
 const permissionSearch = ref('')
 
-const roles = ref<Role[]>([])
-const permissions = ref<Permission[]>([])
-const stats = ref<RBACStats>({
+const queryClient = useQueryClient()
+
+const defaultStats: RBACStats = {
   total_roles: 0,
   total_permissions: 0,
   users_with_roles: 0,
   active_sessions: 0,
+}
+
+const rbacQuery = useQuery({
+  queryKey: queryKeys.admin.rbac(),
+  queryFn: async () => {
+    const [rolesResponse, permissionsResponse] = await Promise.all([
+      adminApi.getRoles(),
+      adminApi.getPermissions(),
+    ])
+
+    return {
+      roles: rolesResponse.roles || [],
+      permissions: permissionsResponse.permissions || [],
+      stats: rolesResponse.stats || defaultStats,
+    }
+  },
+})
+
+const loading = computed(() => rbacQuery.isFetching.value)
+const roles = computed(() => rbacQuery.data.value?.roles ?? [])
+const permissions = computed(() => rbacQuery.data.value?.permissions ?? [])
+const stats = computed(() => rbacQuery.data.value?.stats ?? defaultStats)
+
+const invalidateRbac = () => queryClient.invalidateQueries({ queryKey: queryKeys.admin.rbac() })
+const createRoleMutation = useMutation({
+  mutationFn: adminApi.createRole,
+  onSuccess: invalidateRbac,
+})
+const updateRoleMutation = useMutation({
+  mutationFn: ({ id, data }: { id: number; data: Parameters<typeof adminApi.updateRole>[1] }) =>
+    adminApi.updateRole(id, data),
+  onSuccess: invalidateRbac,
+})
+const deleteRoleMutation = useMutation({
+  mutationFn: adminApi.deleteRole,
+  onSuccess: invalidateRbac,
+})
+const createPermissionMutation = useMutation({
+  mutationFn: adminApi.createPermission,
+  onSuccess: invalidateRbac,
+})
+const updatePermissionMutation = useMutation({
+  mutationFn: ({
+    id,
+    data,
+  }: {
+    id: number
+    data: Parameters<typeof adminApi.updatePermission>[1]
+  }) => adminApi.updatePermission(id, data),
+  onSuccess: invalidateRbac,
+})
+const deletePermissionMutation = useMutation({
+  mutationFn: adminApi.deletePermission,
+  onSuccess: invalidateRbac,
+})
+const grantPermissionMutation = useMutation({
+  mutationFn: ({ roleId, permissionId }: { roleId: number; permissionId: number }) =>
+    adminApi.grantPermissionToRole(roleId, permissionId),
+  onSuccess: invalidateRbac,
 })
 
 const roleDialogOpen = ref(false)
@@ -718,25 +778,10 @@ const deleteDialogMessage = computed(() => {
 })
 
 async function loadData() {
-  loading.value = true
-  error.value = ''
-
-  try {
-    const [rolesResponse, permissionsResponse] = await Promise.all([
-      adminApi.getRoles(),
-      adminApi.getPermissions(),
-    ])
-
-    roles.value = rolesResponse.roles || []
-    permissions.value = permissionsResponse.permissions || []
-
-    if (rolesResponse.stats) {
-      stats.value = rolesResponse.stats
-    }
-  } catch (err: unknown) {
-    error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Failed to load RBAC data'
-  } finally {
-    loading.value = false
+  const result = await rbacQuery.refetch()
+  if (result.error) {
+    error.value =
+      getApiErrorDetail(result.error) || getErrorMessage(result.error) || 'Failed to load RBAC data'
   }
 }
 
@@ -834,7 +879,7 @@ async function saveRole() {
 
   try {
     if (roleDialogMode.value === 'create') {
-      const createdRole = await adminApi.createRole({
+      const createdRole = await createRoleMutation.mutateAsync({
         name: roleForm.name.trim(),
         description: roleForm.description.trim() || undefined,
       })
@@ -842,24 +887,29 @@ async function saveRole() {
       if (roleForm.permissions.length > 0) {
         for (const permissionItem of permissions.value) {
           if (roleForm.permissions.includes(permissionItem.name)) {
-            await adminApi.grantPermissionToRole(createdRole.id, permissionItem.id)
+            await grantPermissionMutation.mutateAsync({
+              roleId: createdRole.id,
+              permissionId: permissionItem.id,
+            })
           }
         }
       }
 
       success.value = `Role "${roleForm.name.trim()}" created successfully`
     } else {
-      await adminApi.updateRole(roleForm.id, {
-        name: roleForm.name.trim(),
-        description: roleForm.description.trim() || '',
-        permissions: [...roleForm.permissions],
+      await updateRoleMutation.mutateAsync({
+        id: roleForm.id,
+        data: {
+          name: roleForm.name.trim(),
+          description: roleForm.description.trim() || '',
+          permissions: [...roleForm.permissions],
+        },
       })
 
       success.value = `Role "${roleForm.name.trim()}" updated successfully`
     }
 
     closeRoleDialog()
-    await loadData()
   } catch (err: unknown) {
     dialogError.value = getApiErrorDetail(err, 'Failed to save role')
   } finally {
@@ -878,21 +928,23 @@ async function savePermission() {
 
   try {
     if (permissionDialogMode.value === 'create') {
-      await adminApi.createPermission({
+      await createPermissionMutation.mutateAsync({
         name: permissionForm.name.trim(),
         description: permissionForm.description.trim() || undefined,
       })
       success.value = `Permission "${permissionForm.name.trim()}" created successfully`
     } else {
-      await adminApi.updatePermission(permissionForm.id, {
-        name: permissionForm.name.trim(),
-        description: permissionForm.description.trim() || '',
+      await updatePermissionMutation.mutateAsync({
+        id: permissionForm.id,
+        data: {
+          name: permissionForm.name.trim(),
+          description: permissionForm.description.trim() || '',
+        },
       })
       success.value = `Permission "${permissionForm.name.trim()}" updated successfully`
     }
 
     closePermissionDialog()
-    await loadData()
   } catch (err: unknown) {
     dialogError.value = getApiErrorDetail(err, 'Failed to save permission')
   } finally {
@@ -901,30 +953,30 @@ async function savePermission() {
 }
 
 async function showRoleDetails(id: number) {
-  loading.value = true
   error.value = ''
 
   try {
-    selectedRoleDetails.value = await adminApi.getRoleDetails(id)
+    selectedRoleDetails.value = await queryClient.fetchQuery({
+      queryKey: queryKeys.admin.roleDetail(id),
+      queryFn: () => adminApi.getRoleDetails(id),
+    })
     roleDetailsDialogOpen.value = true
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err, 'Failed to load role details')
-  } finally {
-    loading.value = false
   }
 }
 
 async function showPermissionDetails(id: number) {
-  loading.value = true
   error.value = ''
 
   try {
-    selectedPermissionDetails.value = await adminApi.getPermissionDetails(id)
+    selectedPermissionDetails.value = await queryClient.fetchQuery({
+      queryKey: queryKeys.admin.permissionDetail(id),
+      queryFn: () => adminApi.getPermissionDetails(id),
+    })
     permissionDetailsDialogOpen.value = true
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err, 'Failed to load permission details')
-  } finally {
-    loading.value = false
   }
 }
 
@@ -972,17 +1024,16 @@ async function handleConfirmDelete() {
 
   try {
     if (deleteTarget.value === 'role' && deleteRole.value) {
-      await adminApi.deleteRole(deleteRole.value.id)
+      await deleteRoleMutation.mutateAsync(deleteRole.value.id)
       success.value = `Role "${deleteRole.value.name}" deleted successfully`
     }
 
     if (deleteTarget.value === 'permission' && deletePermission.value) {
-      await adminApi.deletePermission(deletePermission.value.id)
+      await deletePermissionMutation.mutateAsync(deletePermission.value.id)
       success.value = `Permission "${deletePermission.value.name}" deleted successfully`
     }
 
     closeDeleteDialog()
-    await loadData()
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err, 'Failed to delete item')
   } finally {
@@ -1005,10 +1056,6 @@ function formatDate(dateString: string) {
     return dateString
   }
 }
-
-onMounted(() => {
-  loadData()
-})
 </script>
 
 <style scoped>

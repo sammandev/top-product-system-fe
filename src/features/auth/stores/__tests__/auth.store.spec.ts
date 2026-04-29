@@ -181,7 +181,7 @@ describe('Auth Store', () => {
 
       await expect(store.login({ username: 'test', password: 'test' })).rejects.toThrow()
 
-      expect(store.error).toBe('Login failed')
+      expect(store.error).toBe('Network error')
     })
 
     it('should clear error on successful login after failed attempt', async () => {

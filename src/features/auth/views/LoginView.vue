@@ -9,6 +9,10 @@
                 <p class="mt-1 text-sm text-app-muted">Sign in to continue</p>
             </div>
 
+            <div v-if="appConfigError" class="login-config-alert" role="status">
+                Using fallback app settings. {{ appConfigError }}
+            </div>
+
             <form class="flex flex-col gap-5 bg-app-panel-strong border border-app-border rounded-xl p-6" @submit.prevent="handleLogin">
                 <div class="login-field flex flex-col gap-1.5">
                     <label for="username">Username</label>
@@ -83,8 +87,8 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import Button from 'primevue/button'
 import { storeToRefs } from 'pinia'
+import Button from 'primevue/button'
 import { computed, ref } from 'vue'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useAuth } from '../composables'
@@ -93,7 +97,7 @@ import { useAuthStore } from '../stores'
 const { externalLogin, guestLogin, loading, error } = useAuth()
 const authStore = useAuthStore()
 const appConfigStore = useAppConfigStore()
-const { appName } = storeToRefs(appConfigStore)
+const { appName, error: appConfigError } = storeToRefs(appConfigStore)
 
 const currentYear = new Date().getFullYear()
 const guestLoading = ref(false)
@@ -105,51 +109,51 @@ const rememberMe = ref(localStorage.getItem('remember_me') === 'true')
 
 const canSubmit = computed(() => username.value.trim().length > 0 && password.value.length > 0)
 const usernameError = computed(() =>
-    submitAttempted.value && username.value.trim().length === 0 ? 'Username is required.' : '',
+  submitAttempted.value && username.value.trim().length === 0 ? 'Username is required.' : '',
 )
 const passwordError = computed(() =>
-    submitAttempted.value && password.value.length === 0 ? 'Password is required.' : '',
+  submitAttempted.value && password.value.length === 0 ? 'Password is required.' : '',
 )
 
 if (rememberMe.value) {
-    const rememberedUsername = localStorage.getItem('remember_username')
-    if (rememberedUsername) {
-        username.value = rememberedUsername
-    }
+  const rememberedUsername = localStorage.getItem('remember_username')
+  if (rememberedUsername) {
+    username.value = rememberedUsername
+  }
 }
 
 function clearError() {
-    authStore.error = null
+  authStore.error = null
 }
 
 async function handleLogin() {
-    submitAttempted.value = true
-    if (!canSubmit.value) return
-    clearError()
-    try {
-        await externalLogin({ username: username.value, password: password.value })
-        if (rememberMe.value) {
-            localStorage.setItem('remember_me', 'true')
-            localStorage.setItem('remember_username', username.value)
-        } else {
-            localStorage.removeItem('remember_me')
-            localStorage.removeItem('remember_username')
-        }
-    } catch (loginError) {
-        console.error('Login failed:', loginError)
+  submitAttempted.value = true
+  if (!canSubmit.value) return
+  clearError()
+  try {
+    await externalLogin({ username: username.value, password: password.value })
+    if (rememberMe.value) {
+      localStorage.setItem('remember_me', 'true')
+      localStorage.setItem('remember_username', username.value)
+    } else {
+      localStorage.removeItem('remember_me')
+      localStorage.removeItem('remember_username')
     }
+  } catch (loginError) {
+    console.error('Login failed:', loginError)
+  }
 }
 
 async function handleGuestLogin() {
-    clearError()
-    guestLoading.value = true
-    try {
-        await guestLogin()
-    } catch (guestError) {
-        console.error('Guest login failed:', guestError)
-    } finally {
-        guestLoading.value = false
-    }
+  clearError()
+  guestLoading.value = true
+  try {
+    await guestLogin()
+  } catch (guestError) {
+    console.error('Guest login failed:', guestError)
+  } finally {
+    guestLoading.value = false
+  }
 }
 </script>
 
@@ -184,6 +188,16 @@ async function handleGuestLogin() {
     padding: 0.625rem 0.75rem;
     font-size: 0.8125rem;
     color: var(--app-danger);
+}
+
+.login-config-alert {
+    border: 1px solid var(--app-warning-line);
+    background: var(--app-warning-soft);
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    margin-bottom: 1rem;
+    font-size: 0.8125rem;
+    color: var(--app-warning);
 }
 
 .login-submit :deep(.p-button) {

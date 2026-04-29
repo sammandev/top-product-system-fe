@@ -73,8 +73,8 @@
         <!-- Search -->
         <div class="topbar__search">
           <Icon class="topbar__search-icon" icon="solar:magnifer-linear" />
-          <input v-model="searchQuery" class="topbar__search-input" placeholder="Search..." type="text" />
-          <kbd v-if="!searchQuery" class="topbar__search-kbd">⌘K</kbd>
+          <input v-model="searchQuery" aria-label="Filter navigation" class="topbar__search-input" placeholder="Filter navigation" type="text" />
+          <kbd v-if="!searchQuery" class="topbar__search-kbd">Nav</kbd>
         </div>
 
         <div class="topbar__actions">
@@ -85,7 +85,8 @@
 
           <!-- Theme settings -->
           <div class="topbar__dropdown" ref="themeDropdownRef">
-            <button class="topbar__icon-btn" type="button" :title="'Appearance: ' + themeSummaryLabel"
+            <button class="topbar__icon-btn" type="button" :aria-expanded="themeDropdownOpen"
+              :aria-label="'Appearance settings, current: ' + themeSummaryLabel" :title="'Appearance: ' + themeSummaryLabel"
               @click="themeDropdownOpen = !themeDropdownOpen">
               <Icon icon="solar:palette-round-bold-duotone" />
             </button>
@@ -130,7 +131,8 @@
 
           <!-- User menu -->
           <div class="topbar__dropdown" ref="userDropdownRef">
-            <button class="topbar__user-btn" type="button" @click="userDropdownOpen = !userDropdownOpen">
+            <button class="topbar__user-btn" type="button" :aria-expanded="userDropdownOpen"
+              aria-label="Open user menu" @click="userDropdownOpen = !userDropdownOpen">
               <span class="topbar__avatar" :class="authStore.isGuest ? 'topbar__avatar--guest' : ''">{{ userInitial
                 }}</span>
               <span class="topbar__user-name hidden sm:block">{{ authStore.displayName }}</span>
@@ -176,7 +178,11 @@
       <!-- Mobile search -->
       <div class="topbar__mobile-search lg:hidden">
         <Icon class="topbar__search-icon" icon="solar:magnifer-linear" />
-        <input v-model="searchQuery" class="topbar__search-input" placeholder="Search..." type="text" />
+        <input v-model="searchQuery" aria-label="Filter navigation" class="topbar__search-input" placeholder="Filter navigation" type="text" />
+      </div>
+
+      <div v-if="appConfigError" class="shell-config-alert" role="status">
+        Using fallback app settings. {{ appConfigError }}
       </div>
 
       <main class="main-content">
@@ -201,13 +207,13 @@ import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useMenuAccessStore } from '@/features/admin/stores/menuAccess.store'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
 import {
+  resolveThemeMode,
   THEME_PRESET_OPTIONS,
   THEME_PRIMARY_OPTIONS,
   THEME_SURFACE_OPTIONS,
   type ThemePresetName,
   type ThemePrimaryName,
   type ThemeSurfaceName,
-  resolveThemeMode,
   useDrawerState,
   useThemeState,
 } from '@/shared/composables'
@@ -237,7 +243,7 @@ const {
   setThemePreferences,
   themePreferences,
 } = useThemeState()
-const { appName, appVersion } = storeToRefs(appConfigStore)
+const { appName, appVersion, error: appConfigError } = storeToRefs(appConfigStore)
 const { drawer, rail } = useDrawerState(true, false)
 
 const searchQuery = ref('')
@@ -510,7 +516,11 @@ function handleSidebarMouseLeave() {
 
 function handleClickOutside(event: MouseEvent) {
   const target = event.target as Node
-  if (themeDropdownOpen.value && themeDropdownRef.value && !themeDropdownRef.value.contains(target)) {
+  if (
+    themeDropdownOpen.value &&
+    themeDropdownRef.value &&
+    !themeDropdownRef.value.contains(target)
+  ) {
     themeDropdownOpen.value = false
   }
   if (userDropdownOpen.value && userDropdownRef.value && !userDropdownRef.value.contains(target)) {
@@ -602,9 +612,13 @@ onBeforeUnmount(() => {
   window.removeEventListener('resize', handleResize)
 })
 
-watch(isDark, () => {
-  applyShellTheme()
-}, { immediate: true })
+watch(
+  isDark,
+  () => {
+    applyShellTheme()
+  },
+  { immediate: true },
+)
 
 watch(
   () => route.path,
@@ -973,6 +987,16 @@ watch(
   border: 1px solid var(--shell-border);
   border-radius: 0.375rem;
   background: var(--shell-panel-strong);
+}
+
+.shell-config-alert {
+  margin: 0.5rem 1.5rem 0;
+  border: 1px solid var(--app-warning-line);
+  border-radius: 0.5rem;
+  background: var(--app-warning-soft);
+  color: var(--app-warning);
+  padding: 0.625rem 0.75rem;
+  font-size: 0.8125rem;
 }
 
 @media (min-width: 1024px) {
