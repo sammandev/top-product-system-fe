@@ -12,9 +12,7 @@
 
     <label v-if="availableGroups.length > 1" class="category-heatmap__field">
       <span>Group</span>
-      <select v-model="selectedGroup" class="category-heatmap__select">
-        <option v-for="group in availableGroups" :key="group" :value="group">{{ group }}</option>
-      </select>
+      <AppSelect v-model="selectedGroup" :options="groupSelectOptions" />
     </label>
 
     <div v-if="!heatmapData || heatmapData.data.length === 0" class="category-heatmap__empty">
@@ -35,7 +33,7 @@
 import type { EChartsOption } from 'echarts'
 import { computed, type PropType, ref, watch } from 'vue'
 import type { GroupScores } from '@/core/types'
-import { AppPanel, VChart } from '@/shared/ui'
+import { AppPanel, AppSelect, VChart } from '@/shared/ui'
 
 const props = defineProps({
   groupScores: {
@@ -55,6 +53,13 @@ interface HeatmapData {
 const availableGroups = computed(() => {
   return Object.keys(props.groupScores || {})
 })
+
+const groupSelectOptions = computed(() =>
+  availableGroups.value.map((group) => ({
+    label: group,
+    value: group,
+  })),
+)
 
 const heatmapData = computed<HeatmapData | null>(() => {
   if (!props.groupScores || !selectedGroup.value) return null

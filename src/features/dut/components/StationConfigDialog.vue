@@ -341,7 +341,6 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
-import { AppDialog, AppPanel, AppMultiSelect, AppSelect } from '@/shared/ui'
 import {
   SCORING_POLICIES,
   SCORING_TYPE_INFO,
@@ -352,6 +351,7 @@ import {
   UI_SCORING_TYPES,
 } from '@/features/dut/types/scoring.types'
 import type { Station } from '@/features/dut-logs/composables/useIplasApi'
+import { AppDialog, AppMultiSelect, AppPanel, AppSelect } from '@/shared/ui'
 import type { StationConfig, TestItemScoringConfig } from './StationSelectionDialog.vue'
 
 export interface TestItemInfo {
@@ -539,7 +539,9 @@ const activeSelectionSet = computed(() =>
 const oppositeSelectionSet = computed(() =>
   selectionTarget.value === 'include' ? excludedSet.value : includedSet.value,
 )
-const activeSelectionLabel = computed(() => (selectionTarget.value === 'include' ? 'Include' : 'Exclude'))
+const activeSelectionLabel = computed(() =>
+  selectionTarget.value === 'include' ? 'Include' : 'Exclude',
+)
 const activeSelectionCount = computed(() => activeSelectionSet.value.size)
 const overlapItems = computed(() => {
   return includedTestItems.value.filter((itemName: string) => excludedSet.value.has(itemName))
@@ -588,7 +590,9 @@ function normalizeSelectionState(
 ): { includedItems: string[]; excludedItems: string[] } {
   const normalizedExcluded = normalizeTestItemNames(excludedItems)
   const excludedLookup = new Set(normalizedExcluded)
-  const normalizedIncluded = normalizeTestItemNames(includedItems).filter((item) => !excludedLookup.has(item))
+  const normalizedIncluded = normalizeTestItemNames(includedItems).filter(
+    (item) => !excludedLookup.has(item),
+  )
 
   return {
     includedItems: normalizedIncluded,
@@ -646,9 +650,13 @@ function getSelectionItems(target: 'include' | 'exclude'): string[] {
 function setSelectionItems(target: 'include' | 'exclude', items: string[]): void {
   const normalized = normalizeTestItemNames(items)
   if (target === 'include') {
-    localConfig.value.includedTestItems = normalized.filter((item: string) => !excludedSet.value.has(item))
+    localConfig.value.includedTestItems = normalized.filter(
+      (item: string) => !excludedSet.value.has(item),
+    )
   } else {
-    localConfig.value.excludedTestItems = normalized.filter((item: string) => !includedSet.value.has(item))
+    localConfig.value.excludedTestItems = normalized.filter(
+      (item: string) => !includedSet.value.has(item),
+    )
   }
 }
 
@@ -663,7 +671,10 @@ function commitTestItemSearchInput(): void {
     return
   }
 
-  testItemSearchTerms.value = normalizeSearchKeywords([...testItemSearchTerms.value, ...normalizedInput])
+  testItemSearchTerms.value = normalizeSearchKeywords([
+    ...testItemSearchTerms.value,
+    ...normalizedInput,
+  ])
   testItemSearchInput.value = ''
 }
 
@@ -711,7 +722,9 @@ function toggleSelectAllDevices(): void {
 
 function toggleDeviceId(deviceId: string): void {
   if (localConfig.value.deviceIds.includes(deviceId)) {
-    localConfig.value.deviceIds = localConfig.value.deviceIds.filter((id: string) => id !== deviceId)
+    localConfig.value.deviceIds = localConfig.value.deviceIds.filter(
+      (id: string) => id !== deviceId,
+    )
     return
   }
 
@@ -1018,9 +1031,7 @@ function applyBulkScoringConfig(): void {
   // Apply to all selected criteria test items (has VALUE + UCL or LCL)
   const criteriaItems = uniqueAvailableTestItems.value.filter(
     (item: TestItemInfo) =>
-      item.isValue &&
-      (item.hasUcl || item.hasLcl) &&
-      includedTestItems.value.includes(item.name),
+      item.isValue && (item.hasUcl || item.hasLcl) && includedTestItems.value.includes(item.name),
   )
 
   for (const item of criteriaItems) {
@@ -1054,9 +1065,7 @@ const selectedCriteriaCount = computed(() => {
   // CRITERIA: has VALUE + (UCL or LCL)
   return uniqueAvailableTestItems.value.filter(
     (item: TestItemInfo) =>
-      item.isValue &&
-      (item.hasUcl || item.hasLcl) &&
-      includedSet.value.has(item.name),
+      item.isValue && (item.hasUcl || item.hasLcl) && includedSet.value.has(item.name),
   ).length
 })
 

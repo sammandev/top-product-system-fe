@@ -29,11 +29,7 @@
         <div class="activity-filters__grid">
           <label class="activity-field">
             <span>Time range</span>
-            <select v-model="timeRangeType" @change="onTimeRangeChange">
-              <option v-for="option in timeRangeOptions" :key="String(option.value)" :value="option.value">
-                {{ option.title }}
-              </option>
-            </select>
+            <AppSelect v-model="timeRangeType" :options="timeRangeSelectOptions" :searchable="false" @change="onTimeRangeChange" />
           </label>
 
           <label v-if="timeRangeType === 'custom'" class="activity-field">
@@ -53,20 +49,12 @@
 
           <label class="activity-field">
             <span>Sort</span>
-            <select v-model="sortOrder" @change="loadActivities(1)">
-              <option v-for="option in sortOptions" :key="option.value" :value="option.value">
-                {{ option.title }}
-              </option>
-            </select>
+            <AppSelect v-model="sortOrder" :options="sortSelectOptions" :searchable="false" @change="loadActivities(1)" />
           </label>
 
           <label class="activity-field">
             <span>Items per page</span>
-            <select v-model="pageSize" @change="loadActivities(1)">
-              <option v-for="option in pageSizeOptions" :key="option.value" :value="option.value">
-                {{ option.title }}
-              </option>
-            </select>
+            <AppSelect v-model="pageSize" :options="pageSizeSelectOptions" :searchable="false" @change="loadActivities(1)" />
           </label>
         </div>
       </section>
@@ -191,6 +179,7 @@ import Button from 'primevue/button'
 import { computed, ref } from 'vue'
 import apiClient from '@/core/api/client'
 import { queryKeys } from '@/core/query'
+import { AppSelect } from '@/shared/ui'
 import { getApiErrorDetail } from '@/shared/utils'
 
 interface Activity {
@@ -251,6 +240,21 @@ const pageSizeOptions = [
   { title: '50', value: 50 },
   { title: '100', value: 100 },
 ]
+
+const timeRangeSelectOptions = timeRangeOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+
+const sortSelectOptions = sortOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+
+const pageSizeSelectOptions = pageSizeOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
 
 const activityParams = computed(() => {
   const params: Record<string, string | number> = {

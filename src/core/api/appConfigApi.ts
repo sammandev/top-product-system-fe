@@ -99,17 +99,12 @@ export const appConfigApi = {
 
   // ===== Guest Credentials =====
   async getGuestCredentials(): Promise<GuestCredentialListResponse> {
-    const { data } = await apiClient.get<GuestCredentialListResponse>(
-      `${BASE}/guest-credentials`,
-    )
+    const { data } = await apiClient.get<GuestCredentialListResponse>(`${BASE}/guest-credentials`)
     return data
   },
 
   async createGuestCredential(payload: GuestCredentialCreateRequest): Promise<GuestCredential> {
-    const { data } = await apiClient.post<GuestCredential>(
-      `${BASE}/guest-credentials`,
-      payload,
-    )
+    const { data } = await apiClient.post<GuestCredential>(`${BASE}/guest-credentials`, payload)
     return data
   },
 
@@ -125,9 +120,7 @@ export const appConfigApi = {
   },
 
   async deleteGuestCredential(id: number): Promise<{ message: string }> {
-    const { data } = await apiClient.delete<{ message: string }>(
-      `${BASE}/guest-credentials/${id}`,
-    )
+    const { data } = await apiClient.delete<{ message: string }>(`${BASE}/guest-credentials/${id}`)
     return data
   },
 

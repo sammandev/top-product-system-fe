@@ -60,20 +60,11 @@
           </label>
           <label class="result-surface-search">
             <span>Score Filter</span>
-            <select v-model="valueScoreFilter">
-              <option value="all">All Scores</option>
-              <option value="high">Score >= 9</option>
-              <option value="medium">Score 7-9</option>
-              <option value="low">Score < 7</option>
-            </select>
+            <AppSelect v-model="valueScoreFilter" :options="valueScoreFilterOptions" :searchable="false" />
           </label>
           <label class="result-surface-search">
             <span>Limit Status</span>
-            <select v-model="valueLimitFilter">
-              <option value="all">All</option>
-              <option value="within">Within Limits</option>
-              <option value="out">Out of Limits</option>
-            </select>
+            <AppSelect v-model="valueLimitFilter" :options="valueLimitFilterOptions" :searchable="false" />
           </label>
         </div>
 
@@ -149,20 +140,11 @@
         </label>
         <label class="result-surface-search">
           <span>Score Filter</span>
-          <select v-model="valueScoreFilter">
-            <option value="all">All Scores</option>
-            <option value="high">Score >= 9</option>
-            <option value="medium">Score 7-9</option>
-            <option value="low">Score < 7</option>
-          </select>
+          <AppSelect v-model="valueScoreFilter" :options="valueScoreFilterOptions" :searchable="false" />
         </label>
         <label class="result-surface-search">
           <span>Limit Status</span>
-          <select v-model="valueLimitFilter">
-            <option value="all">All</option>
-            <option value="within">Within Limits</option>
-            <option value="out">Out of Limits</option>
-          </select>
+          <AppSelect v-model="valueLimitFilter" :options="valueLimitFilterOptions" :searchable="false" />
         </label>
       </div>
 
@@ -223,13 +205,13 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
-import { AppDataGrid, AppDialog, AppPanel } from '@/shared'
 import type {
   CompareItemEnhanced,
   CompareResponseEnhanced,
   ParsedTestItemEnhanced,
 } from '@/features/dut-logs/composables/useTestLogUpload'
 import { sortTestItems } from '@/features/dut-logs/utils/sorting'
+import { AppDataGrid, AppDialog, AppPanel, AppSelect } from '@/shared'
 import ScoreBreakdownDialog from './ScoreBreakdownDialog.vue'
 
 const props = defineProps<{
@@ -253,6 +235,17 @@ const selectedItemForScore = ref<ParsedTestItemEnhanced | null>(null)
 
 const gridRowsPerPageOptions = [10, 25, 50, 100, 200]
 const dialogBreakpoints = { '1400px': '96vw', '960px': '98vw' }
+const valueScoreFilterOptions = [
+  { label: 'All Scores', value: 'all' },
+  { label: 'Score >= 9', value: 'high' },
+  { label: 'Score 7-9', value: 'medium' },
+  { label: 'Score < 7', value: 'low' },
+]
+const valueLimitFilterOptions = [
+  { label: 'All', value: 'all' },
+  { label: 'Within Limits', value: 'within' },
+  { label: 'Out of Limits', value: 'out' },
+]
 
 const reclassifiedValueItems = computed(() =>
   props.result.comparison_value_items.filter((item) => !item.test_item.includes('ADJUSTED_POW')),
@@ -424,7 +417,9 @@ function getMinMeasurement(item: CompareItemEnhanced): string {
 }
 
 function openScoreBreakdown(testItem: string, isnIndex: number) {
-  const compareItem = props.result.comparison_value_items.find((item) => item.test_item === testItem)
+  const compareItem = props.result.comparison_value_items.find(
+    (item) => item.test_item === testItem,
+  )
   if (!compareItem || !compareItem.per_isn_data[isnIndex]) return
 
   const isnData = compareItem.per_isn_data[isnIndex]

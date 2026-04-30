@@ -43,14 +43,14 @@ import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 
 const IplasDataContent = defineAsyncComponent(() => import('../components/IplasDataContent.vue'))
 const InternalDataContent = defineAsyncComponent(
-    () => import('../components/InternalDataContent.vue'),
+  () => import('../components/InternalDataContent.vue'),
 )
 
 const activeTab = useTabPersistence<'iplas' | 'internal'>('tab', 'iplas')
 
 const tabItems = [
-    { value: 'iplas', label: 'iPLAS Data', icon: 'mdi:cloud-download-outline' },
-    { value: 'internal', label: 'Internal Data', icon: 'mdi:database-outline' },
+  { value: 'iplas', label: 'iPLAS Data', icon: 'mdi:cloud-download-outline' },
+  { value: 'internal', label: 'Internal Data', icon: 'mdi:database-outline' },
 ]
 </script>
 

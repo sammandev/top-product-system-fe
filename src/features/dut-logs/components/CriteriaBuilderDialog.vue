@@ -99,10 +99,7 @@
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
 import { AppDialog, AppPanel } from '@/shared'
-import {
-  buildUploadLogCriteriaJson,
-  type UploadLogCriteriaRule,
-} from '../utils/criteriaTemplate'
+import { buildUploadLogCriteriaJson, type UploadLogCriteriaRule } from '../utils/criteriaTemplate'
 
 const props = defineProps<{
   modelValue: boolean

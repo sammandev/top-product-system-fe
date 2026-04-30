@@ -59,7 +59,8 @@
                             v-model="multipleIsnSearchText"
                             class="internal-data-text-input"
                             type="text"
-                            placeholder="Type an ISN, press Enter or comma to add, then search"
+                            placeholder="Type ISNs, then press Enter to search"
+                            @input="handleMultipleIdentifierInput"
                             @keydown="handleMultipleInputKeydown"
                         >
                         <button
@@ -72,7 +73,7 @@
                             <span>Search</span>
                         </button>
                     </div>
-                    <p class="internal-data-helper-copy">Press Enter or comma to commit an ISN. Press Enter again on an empty field to search.</p>
+                    <p class="internal-data-helper-copy">Space, comma, or new line automatically queues multiple ISNs. Press Enter to search.</p>
                 </label>
 
                 <div v-if="selectedISNs.length > 0 || multipleIsnSearchText.trim()" class="internal-data-chip-list">
@@ -488,59 +489,59 @@ const carouselModels = ref<Record<number, number>>({})
 const { showSuccess: showSuccessNotification } = useNotification()
 
 const activeISNTabKey = computed({
-    get: () => `isn-${activeISNTab.value}`,
-    set: (value: string) => {
-        const match = value.match(/^isn-(\d+)$/)
-        activeISNTab.value = match ? Number(match[1]) : 0
-    },
+  get: () => `isn-${activeISNTab.value}`,
+  set: (value: string) => {
+    const match = value.match(/^isn-(\d+)$/)
+    activeISNTab.value = match ? Number(match[1]) : 0
+  },
 })
 
 const isnTabItems = computed(() => {
-    return groupedByISN.value.map((group, index) => ({
-        value: `isn-${index}`,
-        label: group.isn,
-        icon: 'mdi:barcode',
-    }))
+  return groupedByISN.value.map((group, index) => ({
+    value: `isn-${index}`,
+    label: group.isn,
+    icon: 'mdi:barcode',
+  }))
 })
 
 const viewModeOptions = [
-    { value: 'grid' as const, label: 'Grid', icon: 'mdi:view-grid' },
-    { value: 'list' as const, label: 'List', icon: 'mdi:view-list' },
-    { value: 'table' as const, label: 'Table', icon: 'mdi:table' },
-    { value: 'compact' as const, label: 'Compact', icon: 'mdi:view-compact' },
+  { value: 'grid' as const, label: 'Grid', icon: 'mdi:view-grid' },
+  { value: 'list' as const, label: 'List', icon: 'mdi:view-list' },
+  { value: 'table' as const, label: 'Table', icon: 'mdi:table' },
+  { value: 'compact' as const, label: 'Compact', icon: 'mdi:view-compact' },
 ]
 
 const activeViewModeDescription = computed(() => {
-    switch (viewMode.value) {
-        case 'grid':
-            return 'Grid mode highlights one active record per station.'
-        case 'list':
-            return 'List mode keeps every record visible without collapsible shells.'
-        case 'table':
-            return 'Table mode uses the shared grid wrapper for requirement comparison.'
-        case 'compact':
-            return 'Compact mode scans dense station cards without expansion panels.'
-        default:
-            return ''
-    }
+  switch (viewMode.value) {
+    case 'grid':
+      return 'Grid mode highlights one active record per station.'
+    case 'list':
+      return 'List mode keeps every record visible without collapsible shells.'
+    case 'table':
+      return 'Table mode uses the shared grid wrapper for requirement comparison.'
+    case 'compact':
+      return 'Compact mode scans dense station cards without expansion panels.'
+    default:
+      return ''
+  }
 })
 
 const bulkModeIdentifiers = computed(() => parseBulkIdentifiers(dutIsn.value))
 
 const multipleModeIdentifiers = computed(() =>
-    normalizeIdentifierList([
-        ...selectedISNs.value.map((value) => String(value)),
-        multipleIsnSearchText.value,
-    ]),
+  normalizeIdentifierList([
+    ...selectedISNs.value.map((value) => String(value)),
+    multipleIsnSearchText.value,
+  ]),
 )
 
 const hasSearchState = computed(() => {
-    return (
-        groupedByISN.value.length > 0 ||
-        testRecords.value !== null ||
-        multipleModeIdentifiers.value.length > 0 ||
-        parseBulkIdentifiers(dutIsn.value).length > 0
-    )
+  return (
+    groupedByISN.value.length > 0 ||
+    testRecords.value !== null ||
+    multipleModeIdentifiers.value.length > 0 ||
+    parseBulkIdentifiers(dutIsn.value).length > 0
+  )
 })
 
 // Table headers for table view
@@ -555,110 +556,124 @@ const tableHeaders = [
 ]
 
 const internalTableColumns = [
-    { key: 'record_number', header: 'Record', field: 'record_number' },
-    { key: 'device_id__name', header: 'Device', field: 'device_id__name' },
-    { key: 'dut_id__isn', header: 'DUT ISN', field: 'dut_id__isn' },
-    { key: 'status', header: 'Status', field: 'status' },
-    { key: 'test_duration', header: 'Duration', field: 'test_duration' },
-    { key: 'test_date', header: 'Test Date', field: 'test_date' },
-    { key: 'actions', header: 'Actions', field: 'actions' },
+  { key: 'record_number', header: 'Record', field: 'record_number' },
+  { key: 'device_id__name', header: 'Device', field: 'device_id__name' },
+  { key: 'dut_id__isn', header: 'DUT ISN', field: 'dut_id__isn' },
+  { key: 'status', header: 'Status', field: 'status' },
+  { key: 'test_duration', header: 'Duration', field: 'test_duration' },
+  { key: 'test_date', header: 'Test Date', field: 'test_date' },
+  { key: 'actions', header: 'Actions', field: 'actions' },
 ]
 
 const normalizeIdentifierList = (values: string[]): string[] => {
-    const identifiers = new Set<string>()
+  const identifiers = new Set<string>()
 
-    for (const value of values) {
-        const trimmed = value.trim()
-        if (trimmed) {
-            identifiers.add(trimmed)
-        }
+  for (const value of values) {
+    for (const part of value.split(/[\n,\s]+/)) {
+      const trimmed = part.trim()
+      if (trimmed) {
+        identifiers.add(trimmed)
+      }
     }
+  }
 
-    return Array.from(identifiers)
+  return Array.from(identifiers)
 }
 
 const parseBulkIdentifiers = (input: string): string[] => {
-    return normalizeIdentifierList(input.split(/[\n,\s]+/))
+  return normalizeIdentifierList(input.split(/[\n,\s]+/))
 }
 
 const getCurrentInputIdentifiers = (): string[] => {
-    if (inputMode.value === 'multiple') {
-        return multipleModeIdentifiers.value
-    }
+  if (inputMode.value === 'multiple') {
+    return multipleModeIdentifiers.value
+  }
 
-    return parseBulkIdentifiers(dutIsn.value)
+  return parseBulkIdentifiers(dutIsn.value)
 }
 
 const commitPendingMultipleIdentifier = () => {
-    const candidate = multipleIsnSearchText.value.trim()
+  const nextIdentifiers = normalizeIdentifierList([
+    ...selectedISNs.value,
+    multipleIsnSearchText.value,
+  ])
 
-    if (!candidate) {
-        return
-    }
+  if (nextIdentifiers.length === selectedISNs.value.length && !multipleIsnSearchText.value.trim()) {
+    return
+  }
 
-    if (!selectedISNs.value.includes(candidate)) {
-        selectedISNs.value = [...selectedISNs.value, candidate]
-    }
+  selectedISNs.value = nextIdentifiers
+  multipleIsnSearchText.value = ''
+}
 
-    multipleIsnSearchText.value = ''
+const handleMultipleIdentifierInput = () => {
+  if (!/[\n,\s]/.test(multipleIsnSearchText.value)) {
+    return
+  }
+
+  commitPendingMultipleIdentifier()
 }
 
 const removeSelectedISN = (identifier: string) => {
-    selectedISNs.value = selectedISNs.value.filter((value) => value !== identifier)
+  selectedISNs.value = selectedISNs.value.filter((value) => value !== identifier)
 }
 
 const submitMultipleSearch = async () => {
-    if (multipleIsnSearchText.value.trim()) {
-        commitPendingMultipleIdentifier()
-    }
+  if (multipleIsnSearchText.value.trim()) {
+    commitPendingMultipleIdentifier()
+  }
 
-    await fetchTestRecords()
+  await fetchTestRecords()
 }
 
 const handleMultipleInputKeydown = async (event: KeyboardEvent) => {
-    if (event.key === ',' || event.key === 'Enter') {
-        if (loading.value) {
-            event.preventDefault()
-            return
-        }
-
-        if (multipleIsnSearchText.value.trim()) {
-            event.preventDefault()
-            commitPendingMultipleIdentifier()
-            return
-        }
-    }
-
-    if (event.key === 'Backspace' && !multipleIsnSearchText.value.trim() && selectedISNs.value.length > 0) {
-        selectedISNs.value = selectedISNs.value.slice(0, -1)
-    }
-
-    if (event.key === 'Enter' && multipleModeIdentifiers.value.length > 0) {
-        event.preventDefault()
-        await fetchTestRecords()
-    }
-}
-
-const handleMultipleIsnsEnter = async (event: KeyboardEvent) => {
+  if (event.key === ',' || event.key === 'Enter') {
     if (loading.value) {
-        event.preventDefault()
-        return
+      event.preventDefault()
+      return
     }
 
     if (multipleIsnSearchText.value.trim()) {
-        return
+      event.preventDefault()
+      commitPendingMultipleIdentifier()
+      return
     }
+  }
 
-    if (multipleModeIdentifiers.value.length === 0) {
-        return
-    }
+  if (
+    event.key === 'Backspace' &&
+    !multipleIsnSearchText.value.trim() &&
+    selectedISNs.value.length > 0
+  ) {
+    selectedISNs.value = selectedISNs.value.slice(0, -1)
+  }
 
+  if (event.key === 'Enter' && multipleModeIdentifiers.value.length > 0) {
     event.preventDefault()
     await fetchTestRecords()
+  }
+}
+
+const handleMultipleIsnsEnter = async (event: KeyboardEvent) => {
+  if (loading.value) {
+    event.preventDefault()
+    return
+  }
+
+  if (multipleIsnSearchText.value.trim()) {
+    return
+  }
+
+  if (multipleModeIdentifiers.value.length === 0) {
+    return
+  }
+
+  event.preventDefault()
+  await fetchTestRecords()
 }
 
 const fetchTestRecords = async () => {
-    const isnList = getCurrentInputIdentifiers()
+  const isnList = getCurrentInputIdentifiers()
 
   if (isnList.length === 0) {
     error.value = 'Please enter at least one valid ISN'
@@ -763,7 +778,7 @@ const handleDownload = async (downloadInfo: { station: Station; record: TestReco
     link.remove()
     window.URL.revokeObjectURL(url)
 
-        showSuccessNotification('Test log downloaded successfully!')
+    showSuccessNotification('Test log downloaded successfully!')
   } catch (err: unknown) {
     // Show user-friendly error message
     if (getErrorStatus(err) === 404) {
@@ -803,7 +818,7 @@ const formatDate = (isoDate: string): string => {
 const clearAll = () => {
   dutIsn.value = ''
   selectedISNs.value = []
-    multipleIsnSearchText.value = ''
+  multipleIsnSearchText.value = ''
   testRecords.value = null
   groupedByISN.value = []
   fetchedISNs.value = []
@@ -816,20 +831,20 @@ const getSortedStations = (isnGroup: ISNGroupedRecords) => {
 }
 
 const getGroupRecordCount = (isnGroup: ISNGroupedRecords): number => {
-    return isnGroup.record_data.reduce((total, station) => total + station.data.length, 0)
+  return isnGroup.record_data.reduce((total, station) => total + station.data.length, 0)
 }
 
 const getGroupErrorCount = (isnGroup: ISNGroupedRecords): number => {
-    return isnGroup.record_data.reduce((total, station) => total + getErrorCount(station), 0)
+  return isnGroup.record_data.reduce((total, station) => total + getErrorCount(station), 0)
 }
 
 const getStationTableRows = (station: Station) => {
-    return getReversedData(station.data).map((record, idx) => ({
-        ...record,
-        record_number: station.data.length - idx,
-        status: record.test_result === 1 ? 'PASS' : (record.error_item || 'FAIL'),
-        actions: 'download',
-    }))
+  return getReversedData(station.data).map((record, idx) => ({
+    ...record,
+    record_number: station.data.length - idx,
+    status: record.test_result === 1 ? 'PASS' : record.error_item || 'FAIL',
+    actions: 'download',
+  }))
 }
 
 // Helper to get the latest record from a station
@@ -846,33 +861,35 @@ const initializeCarousel = (stationId: number, dataLength: number) => {
 }
 
 const getStationCarouselIndex = (station: Station): number => {
-    if (station.data.length <= 1) {
-        return 0
-    }
+  if (station.data.length <= 1) {
+    return 0
+  }
 
-    const currentIndex = carouselModels.value[station.id]
+  const currentIndex = carouselModels.value[station.id]
 
-    if (typeof currentIndex !== 'number') {
-        return station.data.length - 1
-    }
+  if (typeof currentIndex !== 'number') {
+    return station.data.length - 1
+  }
 
-    return Math.min(Math.max(currentIndex, 0), station.data.length - 1)
+  return Math.min(Math.max(currentIndex, 0), station.data.length - 1)
 }
 
 const setStationCarouselIndex = (station: Station, index: number) => {
-    if (station.data.length === 0) {
-        return
-    }
+  if (station.data.length === 0) {
+    return
+  }
 
-    carouselModels.value[station.id] = Math.min(Math.max(index, 0), station.data.length - 1)
+  carouselModels.value[station.id] = Math.min(Math.max(index, 0), station.data.length - 1)
 }
 
 const getActiveStationRecord = (station: Station): TestRecord | null => {
-    if (station.data.length === 0) {
-        return null
-    }
+  if (station.data.length === 0) {
+    return null
+  }
 
-    return station.data[getStationCarouselIndex(station)] || station.data[station.data.length - 1] || null
+  return (
+    station.data[getStationCarouselIndex(station)] || station.data[station.data.length - 1] || null
+  )
 }
 
 // Helper to get reversed data (latest first) for list and table views

@@ -120,11 +120,7 @@
 
                 <label class="dvt-compare-field">
                     <span>Output Format</span>
-                    <select v-model="outputFormat">
-                        <option v-for="option in outputFormatOptions" :key="option.value" :value="option.value">
-                            {{ option.title }}
-                        </option>
-                    </select>
+                    <AppSelect v-model="outputFormat" :options="outputFormatSelectOptions" :searchable="false" />
                     <small>JSON stays in-browser. CSV and XLSX trigger downloads.</small>
                 </label>
             </div>
@@ -208,7 +204,7 @@
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
 import { comparisonApi } from '@/features/comparison/api/comparison.api'
-import { AppDataGrid, AppFilePicker, AppPanel, AppProgress } from '@/shared'
+import { AppDataGrid, AppFilePicker, AppPanel, AppProgress, AppSelect } from '@/shared'
 import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
 
 // State
@@ -238,18 +234,23 @@ const outputFormatOptions = [
   { title: 'XLSX', value: 'xlsx' },
 ]
 
+const outputFormatSelectOptions = outputFormatOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+
 const isBusy = computed(() => processing.value || downloading.value)
 
 // Computed
 const canCompare = computed(() => {
-    const master = getSelectedFile(masterFile.value)
-    const dvt = getSelectedFile(dvtFile.value)
+  const master = getSelectedFile(masterFile.value)
+  const dvt = getSelectedFile(dvtFile.value)
   return master && dvt && !processing.value && outputFormat.value === 'json'
 })
 
 const canDownload = computed(() => {
-    const master = getSelectedFile(masterFile.value)
-    const dvt = getSelectedFile(dvtFile.value)
+  const master = getSelectedFile(masterFile.value)
+  const dvt = getSelectedFile(dvtFile.value)
   return (
     master &&
     dvt &&
@@ -261,27 +262,27 @@ const canDownload = computed(() => {
 const hasComparisonResult = computed(() => comparisonResult.value !== null)
 
 const resultGridColumns = computed(() => [
-    { key: 'antenna_dvt', field: 'antenna_dvt', header: 'Antenna', sortable: true },
-    { key: 'metric', field: 'metric', header: 'Metric', sortable: true },
-    { key: 'freq', field: 'freq', header: 'Freq', sortable: true },
-    { key: 'standard', field: 'standard', header: 'Standard', sortable: true },
-    { key: 'datarate', field: 'datarate', header: 'Data Rate', sortable: true },
-    { key: 'bandwidth', field: 'bandwidth', header: 'BW', sortable: true },
-    { key: 'mc2_value', field: 'mc2_value', header: 'MC2 Value', sortable: true },
-    { key: 'mc2_result', field: 'mc2_result', header: 'MC2 Result', sortable: true },
-    { key: 'dvt_value', field: 'dvt_value', header: 'DVT Value', sortable: true },
-    { key: 'dvt_result', field: 'dvt_result', header: 'DVT Result', sortable: true },
-    { key: 'mc2_dvt_diff', field: 'mc2_dvt_diff', header: 'Diff', sortable: true },
+  { key: 'antenna_dvt', field: 'antenna_dvt', header: 'Antenna', sortable: true },
+  { key: 'metric', field: 'metric', header: 'Metric', sortable: true },
+  { key: 'freq', field: 'freq', header: 'Freq', sortable: true },
+  { key: 'standard', field: 'standard', header: 'Standard', sortable: true },
+  { key: 'datarate', field: 'datarate', header: 'Data Rate', sortable: true },
+  { key: 'bandwidth', field: 'bandwidth', header: 'BW', sortable: true },
+  { key: 'mc2_value', field: 'mc2_value', header: 'MC2 Value', sortable: true },
+  { key: 'mc2_result', field: 'mc2_result', header: 'MC2 Result', sortable: true },
+  { key: 'dvt_value', field: 'dvt_value', header: 'DVT Value', sortable: true },
+  { key: 'dvt_result', field: 'dvt_result', header: 'DVT Result', sortable: true },
+  { key: 'mc2_dvt_diff', field: 'mc2_dvt_diff', header: 'Diff', sortable: true },
 ])
 
 // Methods
 function getFileName(file: File | File[] | null): string {
-    return getSelectedFile(file)?.name || ''
+  return getSelectedFile(file)?.name || ''
 }
 
 function getSelectedFile(file: File | File[] | null) {
-    if (!file) return null
-    return Array.isArray(file) ? (file[0] ?? null) : file
+  if (!file) return null
+  return Array.isArray(file) ? (file[0] ?? null) : file
 }
 
 function getResultColor(result: string): string {
@@ -293,11 +294,11 @@ function getResultColor(result: string): string {
 }
 
 function resultPillClass(result: string): string {
-    const tone = getResultColor(result)
-    if (tone === 'success') return 'dvt-compare-pill--success'
-    if (tone === 'error') return 'dvt-compare-pill--danger'
-    if (tone === 'info') return 'dvt-compare-pill--info'
-    return 'dvt-compare-pill--neutral'
+  const tone = getResultColor(result)
+  if (tone === 'success') return 'dvt-compare-pill--success'
+  if (tone === 'error') return 'dvt-compare-pill--danger'
+  if (tone === 'info') return 'dvt-compare-pill--info'
+  return 'dvt-compare-pill--neutral'
 }
 
 async function handleCompare() {
@@ -307,18 +308,18 @@ async function handleCompare() {
   progress.value = 0
   error.value = ''
   comparisonResult.value = null
-    const progressInterval = startProgressTicker()
+  const progressInterval = startProgressTicker()
 
   try {
     const formData = new FormData()
-        const master = getSelectedFile(masterFile.value) as File
-        const dvt = getSelectedFile(dvtFile.value) as File
+    const master = getSelectedFile(masterFile.value) as File
+    const dvt = getSelectedFile(dvtFile.value) as File
 
     formData.append('master_file', master)
     formData.append('dvt_file', dvt)
 
     if (specFile.value) {
-            const spec = getSelectedFile(specFile.value) as File
+      const spec = getSelectedFile(specFile.value) as File
       formData.append('spec_file', spec)
     }
 
@@ -340,7 +341,7 @@ async function handleCompare() {
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Comparison failed'
   } finally {
-        clearInterval(progressInterval)
+    clearInterval(progressInterval)
     processing.value = false
   }
 }
@@ -352,18 +353,18 @@ async function handleDownload() {
   progress.value = 0
   error.value = ''
   downloadCompleted.value = false
-    const progressInterval = startProgressTicker()
+  const progressInterval = startProgressTicker()
 
   try {
     const formData = new FormData()
-        const master = getSelectedFile(masterFile.value) as File
-        const dvt = getSelectedFile(dvtFile.value) as File
+    const master = getSelectedFile(masterFile.value) as File
+    const dvt = getSelectedFile(dvtFile.value) as File
 
     formData.append('master_file', master)
     formData.append('dvt_file', dvt)
 
     if (specFile.value) {
-            const spec = getSelectedFile(specFile.value) as File
+      const spec = getSelectedFile(specFile.value) as File
       formData.append('spec_file', spec)
     }
 
@@ -398,17 +399,17 @@ async function handleDownload() {
   } catch (err: unknown) {
     error.value = getApiErrorDetail(err) || getErrorMessage(err) || 'Download failed'
   } finally {
-        clearInterval(progressInterval)
+    clearInterval(progressInterval)
     downloading.value = false
   }
 }
 
 function startProgressTicker() {
-    return window.setInterval(() => {
-        if (progress.value < 90) {
-            progress.value += 10
-        }
-    }, 100)
+  return window.setInterval(() => {
+    if (progress.value < 90) {
+      progress.value += 10
+    }
+  }, 100)
 }
 
 function handleReset() {

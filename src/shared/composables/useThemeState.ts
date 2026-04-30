@@ -687,6 +687,14 @@ const SURFACE_COLOR_PALETTES = Object.fromEntries(
   { light: Record<string, string>; dark: Record<string, string> }
 >
 
+function getPaletteTone(
+  paletteValues: Record<string, string>,
+  tone: string,
+  fallback: string,
+): string {
+  return paletteValues[tone] ?? fallback
+}
+
 function resolvePrimaryTone(
   preference: ThemePrimaryName,
   mode: ResolvedThemeMode,
@@ -707,16 +715,16 @@ function resolvePrimaryTone(
 
   return mode === 'dark'
     ? {
-        accent: resolvedPalette['400']!,
-        accentStrong: resolvedPalette['300']!,
-        accentSoft: `color-mix(in srgb, ${resolvedPalette['500']!} 24%, transparent)`,
-        ring: resolvedPalette['300']!,
+        accent: getPaletteTone(resolvedPalette, '400', '#34d399'),
+        accentStrong: getPaletteTone(resolvedPalette, '300', '#6ee7b7'),
+        accentSoft: `color-mix(in srgb, ${getPaletteTone(resolvedPalette, '500', '#10b981')} 24%, transparent)`,
+        ring: getPaletteTone(resolvedPalette, '300', '#6ee7b7'),
       }
     : {
-        accent: resolvedPalette['700']!,
-        accentStrong: resolvedPalette['800']!,
-        accentSoft: resolvedPalette['100']!,
-        ring: resolvedPalette['500']!,
+        accent: getPaletteTone(resolvedPalette, '700', '#047857'),
+        accentStrong: getPaletteTone(resolvedPalette, '800', '#065f46'),
+        accentSoft: getPaletteTone(resolvedPalette, '100', '#d1fae5'),
+        ring: getPaletteTone(resolvedPalette, '500', '#10b981'),
       }
 }
 
@@ -764,18 +772,50 @@ function resolveSurfaceTone(
   const isLight = mode === 'light'
 
   return {
-    canvas: resolvedPalette[isLight ? '50' : '950']!,
-    canvasStrong: resolvedPalette[isLight ? '100' : '900']!,
-    panel: (isLight ? resolvedPalette['0'] : resolvedPalette['900'])!,
-    panelStrong: (isLight ? resolvedPalette['0'] : resolvedPalette['900'])!,
-    ink: resolvedPalette[isLight ? '950' : '50']!,
-    muted: resolvedPalette[isLight ? '600' : '300']!,
-    border: resolvedPalette[isLight ? '200' : '700']!,
+    canvas: getPaletteTone(
+      resolvedPalette,
+      isLight ? '50' : '950',
+      isLight ? '#fafafa' : '#09090b',
+    ),
+    canvasStrong: getPaletteTone(
+      resolvedPalette,
+      isLight ? '100' : '900',
+      isLight ? '#f4f4f5' : '#18181b',
+    ),
+    panel: getPaletteTone(resolvedPalette, isLight ? '0' : '900', isLight ? '#ffffff' : '#18181b'),
+    panelStrong: getPaletteTone(
+      resolvedPalette,
+      isLight ? '0' : '900',
+      isLight ? '#ffffff' : '#18181b',
+    ),
+    ink: getPaletteTone(resolvedPalette, isLight ? '950' : '50', isLight ? '#18181b' : '#f4f4f5'),
+    muted: getPaletteTone(
+      resolvedPalette,
+      isLight ? '600' : '300',
+      isLight ? '#71717a' : '#a1a1aa',
+    ),
+    border: getPaletteTone(
+      resolvedPalette,
+      isLight ? '200' : '700',
+      isLight ? '#e4e4e7' : '#3f3f46',
+    ),
     shadow: 'none',
     shadowSoft: 'none',
-    shellBg: resolvedPalette[isLight ? '50' : '950']!,
-    shellHeader: (isLight ? resolvedPalette['0'] : resolvedPalette['900'])!,
-    shellSidebar: resolvedPalette[isLight ? '100' : '900']!,
+    shellBg: getPaletteTone(
+      resolvedPalette,
+      isLight ? '50' : '950',
+      isLight ? '#fafafa' : '#09090b',
+    ),
+    shellHeader: getPaletteTone(
+      resolvedPalette,
+      isLight ? '0' : '900',
+      isLight ? '#ffffff' : '#18181b',
+    ),
+    shellSidebar: getPaletteTone(
+      resolvedPalette,
+      isLight ? '100' : '900',
+      isLight ? '#f4f4f5' : '#18181b',
+    ),
   }
 }
 

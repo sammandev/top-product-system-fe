@@ -277,11 +277,7 @@ function normalizeDraft(value: string): string {
 }
 
 function commitArrayDraft(
-  key:
-    | 'stations'
-    | 'device_identifiers'
-    | 'test_item_filters'
-    | 'exclude_test_item_filters',
+  key: 'stations' | 'device_identifiers' | 'test_item_filters' | 'exclude_test_item_filters',
 ) {
   const source =
     key === 'stations'
@@ -307,11 +303,7 @@ function commitArrayDraft(
 }
 
 function removeArrayValue(
-  key:
-    | 'stations'
-    | 'device_identifiers'
-    | 'test_item_filters'
-    | 'exclude_test_item_filters',
+  key: 'stations' | 'device_identifiers' | 'test_item_filters' | 'exclude_test_item_filters',
   value: string,
 ) {
   filters.value[key] = (filters.value[key] || []).filter((entry) => entry !== value)

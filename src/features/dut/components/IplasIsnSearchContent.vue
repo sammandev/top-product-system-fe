@@ -54,17 +54,10 @@
             <input
               v-model="multipleIsnSearchText"
               type="text"
-              placeholder="Type an identifier and press Enter"
+              placeholder="Type identifiers, then press Enter"
+              @input="handleMultipleIdentifierInput"
               @keydown.enter.prevent="commitMultipleIdentifier"
             >
-            <button
-              type="button"
-              class="iplas-isn-button iplas-isn-button--secondary"
-              :disabled="!multipleIsnSearchText.trim()"
-              @click="commitMultipleIdentifier"
-            >
-              Add
-            </button>
             <button
               type="button"
               class="iplas-isn-button iplas-isn-button--ghost"
@@ -82,7 +75,7 @@
               {{ isSearching || loadingIsnSearch ? 'Searching...' : 'Search' }}
             </button>
           </div>
-          <small>Press Enter or use Add to queue identifiers before lookup or search.</small>
+          <small>Space, comma, or new line automatically queues multiple identifiers before lookup or search.</small>
           <div v-if="selectedISNs.length > 0" class="iplas-isn-token-row">
             <button
               v-for="(isn, index) in selectedISNs"
@@ -566,8 +559,8 @@ import {
   useIplasApi,
 } from '@/features/dut-logs/composables/useIplasApi'
 import { useNotification } from '@/shared/composables/useNotification'
-import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import { AppPanel, AppTabs } from '@/shared/ui'
+import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import { isStatusPass } from '@/shared/utils/helpers'
 import IplasTestItemsFullscreenDialog, {
   type NormalizedRecord,
@@ -729,7 +722,12 @@ function getDisplayLimit(isn: string): number {
 
 function normalizeIdentifierList(values: string[]): string[] {
   return Array.from(
-    new Set(values.map((value) => value.trim()).filter((value) => value.length > 0)),
+    new Set(
+      values
+        .flatMap((value) => value.split(/[\n,\s]+/))
+        .map((value) => value.trim())
+        .filter((value) => value.length > 0),
+    ),
   )
 }
 
@@ -773,11 +771,24 @@ function getCurrentInputIdentifiers(): string[] {
 }
 
 function commitMultipleIdentifier(): void {
-  const entry = multipleIsnSearchText.value.trim()
-  if (!entry) return
+  const nextIdentifiers = normalizeIdentifierList([
+    ...selectedISNs.value,
+    multipleIsnSearchText.value,
+  ])
+  if (nextIdentifiers.length === selectedISNs.value.length && !multipleIsnSearchText.value.trim()) {
+    return
+  }
 
-  selectedISNs.value = normalizeIdentifierList([...selectedISNs.value, entry])
+  selectedISNs.value = nextIdentifiers
   multipleIsnSearchText.value = ''
+}
+
+function handleMultipleIdentifierInput(): void {
+  if (!/[\n,\s]/.test(multipleIsnSearchText.value)) {
+    return
+  }
+
+  commitMultipleIdentifier()
 }
 
 function removeSelectedISN(index: number): void {
@@ -818,12 +829,42 @@ const downloadingKey = ref<string | null>(null)
 // ]
 
 const recordTableColumns = [
-  { key: 'record_number', field: 'record_number', header: '#', sortable: true, style: { width: '5rem' } },
-  { key: 'test_end_time', field: 'test_end_time', header: 'Test Time', sortable: true, style: { width: '12rem' } },
-  { key: 'device_id', field: 'device_id', header: 'Device ID', sortable: true, style: { width: '10rem' } },
+  {
+    key: 'record_number',
+    field: 'record_number',
+    header: '#',
+    sortable: true,
+    style: { width: '5rem' },
+  },
+  {
+    key: 'test_end_time',
+    field: 'test_end_time',
+    header: 'Test Time',
+    sortable: true,
+    style: { width: '12rem' },
+  },
+  {
+    key: 'device_id',
+    field: 'device_id',
+    header: 'Device ID',
+    sortable: true,
+    style: { width: '10rem' },
+  },
   { key: 'status', field: 'status', header: 'Status', style: { width: '10rem' } },
-  { key: 'error_name', field: 'error_name', header: 'Error Name', sortable: true, style: { width: '18rem' } },
-  { key: 'duration', field: 'duration', header: 'Duration', sortable: true, style: { width: '8rem' } },
+  {
+    key: 'error_name',
+    field: 'error_name',
+    header: 'Error Name',
+    sortable: true,
+    style: { width: '18rem' },
+  },
+  {
+    key: 'duration',
+    field: 'duration',
+    header: 'Duration',
+    sortable: true,
+    style: { width: '8rem' },
+  },
   { key: 'actions', field: 'actions', header: 'Actions', style: { width: '10rem' } },
 ]
 

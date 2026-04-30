@@ -1,7 +1,7 @@
 import Aura from '@primeuix/themes/aura'
-import type { App } from 'vue'
 import PrimeVue from 'primevue/config'
 import ToastService from 'primevue/toastservice'
+import type { App } from 'vue'
 import { getPrimeVuePreset, getStoredThemePreferences } from '@/shared/composables'
 
 const initialThemePreferences = getStoredThemePreferences()

@@ -26,15 +26,13 @@
           <input
             v-model="isnEntry"
             type="text"
-            placeholder="Type ISN and press Enter"
+            placeholder="Type ISNs and press Enter"
+            @input="handleISNEntryInput"
             @keydown.enter.prevent="commitISNEntry"
             @blur="commitISNEntry"
           />
-          <button type="button" class="dut-isn-input__button dut-isn-input__button--primary" @click="commitISNEntry">
-            Add
-          </button>
         </div>
-        <small>Type an ISN and press Enter to add multiple serials to the analysis queue.</small>
+        <small>Space, comma, or new line automatically queues multiple serials.</small>
       </label>
 
       <label v-else class="dut-isn-input__field">
@@ -193,14 +191,14 @@ function addUniqueValue(items: string[], value: string): string[] {
 }
 
 function commitISNEntry() {
-  const nextValue = sanitizeToken(isnEntry.value)
+  const nextValues = parseISNText(isnEntry.value)
   isnEntry.value = ''
 
-  if (!nextValue) {
+  if (nextValues.length === 0) {
     return
   }
 
-  const nextISNs = addUniqueValue(selectedISNs.value, nextValue)
+  const nextISNs = [...new Set([...selectedISNs.value, ...nextValues])]
   if (nextISNs.length > props.maxISNs) {
     validationMessage.value = `ISN limit is ${props.maxISNs}.`
     validationType.value = 'warning'
@@ -210,15 +208,26 @@ function commitISNEntry() {
   selectedISNs.value = nextISNs
 }
 
+function handleISNEntryInput() {
+  if (!/[\n,\s]/.test(isnEntry.value)) {
+    return
+  }
+
+  commitISNEntry()
+}
+
+function parseISNText(value: string): string[] {
+  return value
+    .split(/[\n,\s]+/)
+    .map((isn) => sanitizeToken(isn))
+    .filter((isn) => isn.length > 0)
+}
+
 function parseBulkISNs() {
   if (!bulkText.value) return
 
   // Parse ISNs from bulk text (support newlines, commas, spaces)
-  const separators = /[\n,\s]+/
-  const isns = bulkText.value
-    .split(separators)
-    .map((isn) => isn.trim())
-    .filter((isn) => isn.length > 0 && /^[A-Za-z0-9]+$/.test(isn)) // Accept alphanumeric ISNs
+  const isns = parseISNText(bulkText.value)
 
   // Remove duplicates
   const uniqueISNs = [...new Set([...selectedISNs.value, ...isns])]

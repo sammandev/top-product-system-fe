@@ -33,7 +33,7 @@ import {
 } from '../stores/iplasData.store'
 
 // Re-export types for convenience
-export type { RecordFilter, SortOptions, IplasDbRecord, RecordStatistics }
+export type { IplasDbRecord, RecordFilter, RecordStatistics, SortOptions }
 
 // ============================================================================
 // Types
@@ -228,7 +228,7 @@ export function useIplasLocalData(options: UseIplasLocalDataOptions = {}): UseIp
   /**
    * Load ALL items from IndexedDB for client-side pagination.
    *
-    * Use this for client-side tables instead of server-driven pagination.
+   * Use this for client-side tables instead of server-driven pagination.
    * Loads all matching records from IndexedDB into the items array.
    *
    * UPDATED: Added for client-side table pagination support

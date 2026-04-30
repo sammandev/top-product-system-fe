@@ -341,7 +341,11 @@ async function performAnalysis() {
   await hierarchicalStore.fetchHierarchicalAnalysis(request)
 
   // Auto-select first tab if results available
-  if (results.value.length > 0 && (!selectedTab.value || !results.value.some((result) => result.dut_isn === selectedTab.value)) && results.value[0]) {
+  if (
+    results.value.length > 0 &&
+    (!selectedTab.value || !results.value.some((result) => result.dut_isn === selectedTab.value)) &&
+    results.value[0]
+  ) {
     selectedTab.value = results.value[0].dut_isn
   }
 

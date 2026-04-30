@@ -186,9 +186,7 @@ export function useIplasSettings() {
 
   // UPDATED: Get system token info for the selected server (if available)
   const selectedSystemToken = computed<IplasToken | undefined>(() => {
-    return systemTokens.value.find(
-      (t) => t.site === selectedServerId.value && t.is_active,
-    )
+    return systemTokens.value.find((t) => t.site === selectedServerId.value && t.is_active)
   })
 
   const v1ApiBaseUrl = computed(() => {

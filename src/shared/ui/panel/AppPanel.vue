@@ -53,8 +53,8 @@ const props = withDefaults(
 const attrs = useAttrs()
 const slots = useSlots()
 
-const hasHeader = computed(
-  () => Boolean(props.eyebrow || props.title || props.description || slots['header-aside']),
+const hasHeader = computed(() =>
+  Boolean(props.eyebrow || props.title || props.description || slots['header-aside']),
 )
 </script>
 

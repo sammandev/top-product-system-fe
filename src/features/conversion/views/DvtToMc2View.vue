@@ -258,8 +258,8 @@ async function handleDvtFilesChange() {
 }
 
 function handleDvtFilesSelection(value: File | File[] | null) {
-    dvtFiles.value = Array.isArray(value) ? value : value ? [value] : []
-    void handleDvtFilesChange()
+  dvtFiles.value = Array.isArray(value) ? value : value ? [value] : []
+  void handleDvtFilesChange()
 }
 
 async function handleConvert() {
@@ -290,14 +290,14 @@ async function handleConvert() {
     if (failedCount > 0) {
       errorMessage.value = `${failedCount} file(s) failed to convert. See results for details.`
       showError.value = true
-            showErrorNotification(errorMessage.value)
+      showErrorNotification(errorMessage.value)
     }
   } catch (error) {
     console.error('Batch conversion failed:', error)
     errorMessage.value =
       error instanceof Error ? error.message : 'Conversion failed. Please try again.'
     showError.value = true
-        showErrorNotification(errorMessage.value)
+    showErrorNotification(errorMessage.value)
   } finally {
     converting.value = false
   }
@@ -315,8 +315,8 @@ function resetForm() {
   conversionProgress.value = []
   conversionResults.value = []
   filePreviews.value = []
-    showError.value = false
-    errorMessage.value = ''
+  showError.value = false
+  errorMessage.value = ''
 }
 </script>
 

@@ -177,13 +177,16 @@ import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vu
 import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
 
-const props = withDefaults(defineProps<{
-  rankingTarget?: string
-  isActive?: boolean
-}>(), {
-  rankingTarget: '',
-  isActive: false,
-})
+const props = withDefaults(
+  defineProps<{
+    rankingTarget?: string
+    isActive?: boolean
+  }>(),
+  {
+    rankingTarget: '',
+    isActive: false,
+  },
+)
 
 // Emits
 const emit = defineEmits<{
@@ -205,7 +208,9 @@ const {
 
 // Scoring state
 const recordScores = ref<Record<string, number>>({})
-const forcedFailures = ref<Record<string, { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }>>({})
+const forcedFailures = ref<
+  Record<string, { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }>
+>({})
 const calculatingScores = ref(false)
 const exportingAll = ref(false)
 
@@ -296,20 +301,26 @@ const projectsForSelectedSite = computed(() => {
   return projectsBySite.value[selectedSite.value] || []
 })
 
-const siteSelectOptions = computed(() => uniqueSites.value.map((site) => ({
-  label: site,
-  value: site,
-})))
+const siteSelectOptions = computed(() =>
+  uniqueSites.value.map((site) => ({
+    label: site,
+    value: site,
+  })),
+)
 
-const projectSelectOptions = computed(() => projectsForSelectedSite.value.map((project) => ({
-  label: project,
-  value: project,
-})))
+const projectSelectOptions = computed(() =>
+  projectsForSelectedSite.value.map((project) => ({
+    label: project,
+    value: project,
+  })),
+)
 
-const dateRangePresetOptions = computed(() => dateRangePresets.map((preset) => ({
-  label: preset.title,
-  value: preset.value,
-})))
+const dateRangePresetOptions = computed(() =>
+  dateRangePresets.map((preset) => ({
+    label: preset.title,
+    value: preset.value,
+  })),
+)
 
 const configuredStationsCount = computed(() => {
   return Object.keys(stationConfigs.value).length
@@ -838,8 +849,10 @@ async function handleCalculateScores(): Promise<void> {
     // We need to match scored records back to original records by index
     // since scoring order is preserved
     const newScores: Record<string, number> = {}
-    const nextForcedFailures: Record<string, { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }> =
-      {}
+    const nextForcedFailures: Record<
+      string,
+      { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }
+    > = {}
 
     testItemData.value.forEach((record, index) => {
       const isn = record.ISN || record.DeviceId || '-'
@@ -1072,7 +1085,9 @@ async function loadDefaultTestItemsForStation(
     currentStationDefaultTestItems.value = testItemInfos
     defaultLatestTestItemsCache.value.set(cacheKey, testItemInfos)
     if (response.source === 'fallback_station_items') {
-      console.warn('[TestItems] Latest endpoint unavailable, loaded broader station test item list instead')
+      console.warn(
+        '[TestItems] Latest endpoint unavailable, loaded broader station test item list instead',
+      )
     } else {
       console.log('[TestItems] Loaded fast default test items from external DUT latest endpoint')
     }

@@ -189,7 +189,10 @@ const {
 
 type AccentKey = 'primary' | 'success' | 'warning' | 'info' | 'error'
 
-const accentPalettes: Record<AccentKey, { solid: string; strong: string; soft: string; line: string }> = {
+const accentPalettes: Record<
+  AccentKey,
+  { solid: string; strong: string; soft: string; line: string }
+> = {
   primary: {
     solid: 'var(--app-accent)',
     strong: 'var(--app-accent-strong)',
@@ -223,7 +226,9 @@ const accentPalettes: Record<AccentKey, { solid: string; strong: string; soft: s
 }
 
 const storageProgress = computed(() => Math.min(100, Math.max(0, storagePercentage.value)))
-const storageCardVars = computed(() => buildCardVars(storageProgress.value > 80 ? 'error' : 'primary'))
+const storageCardVars = computed(() =>
+  buildCardVars(storageProgress.value > 80 ? 'error' : 'primary'),
+)
 
 const decoratedStats = computed(() =>
   stats.value.map((item) => ({

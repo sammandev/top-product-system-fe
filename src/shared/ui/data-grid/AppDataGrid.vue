@@ -20,7 +20,7 @@
       :tableStyle="tableStyle"
       :stateStorage="stateStorage"
       :stateKey="stateKey"
-      :rowClass="rowClass ?? undefined"
+      :rowClass="dataTableRowClass"
       removableSort
       stripedRows
       :class="['app-data-grid__table', { 'app-data-grid__table--sticky-header': stickyHeader }]"
@@ -82,13 +82,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, useAttrs, useSlots } from 'vue'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
+import { computed, useAttrs, useSlots } from 'vue'
 
 defineOptions({ inheritAttrs: false })
 
-type GridRow = any
+type GridRow = object
 type GridSelectionMode = 'single' | 'multiple'
 
 interface AppDataGridColumn {
@@ -132,7 +132,7 @@ const props = withDefaults(
     stateKey?: string
     emptyMessage?: string
     stickyHeader?: boolean
-    rowClass?: (row: GridRow) => string | Record<string, boolean> | undefined
+    rowClass?: (row: never) => string | Record<string, boolean> | undefined
   }>(),
   {
     loading: false,
@@ -161,6 +161,10 @@ const emit = defineEmits<{
 
 const attrs = useAttrs()
 const slots = useSlots()
+
+const dataTableRowClass = computed(
+  () => props.rowClass as ((data: unknown) => string | object | undefined) | undefined,
+)
 
 const visibleColumns = computed<NormalizedAppDataGridColumn[]>(() => {
   return props.columns

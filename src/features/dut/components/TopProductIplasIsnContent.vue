@@ -34,18 +34,14 @@
         <label v-if="inputMode === 'multiple'" class="top-product-iplas-isn-field">
           <span>DUT ISNs</span>
           <div class="top-product-iplas-isn-entry-row">
-            <input v-model="multipleIsnSearchText" type="text" placeholder="Type ISN and press Enter"
-              @keydown.enter.prevent="commitMultipleIdentifier">
-            <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--secondary"
-              :disabled="!multipleIsnSearchText.trim()" @click="commitMultipleIdentifier">
-              Add
-            </button>
+            <input v-model="multipleIsnSearchText" type="text" placeholder="Type ISNs, then press Enter"
+              @input="handleMultipleIdentifierInput" @keydown.enter.prevent="commitMultipleIdentifier">
             <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--primary"
               :disabled="multipleModeIdentifiers.length === 0" @click="handleLookupStations">
               {{ loadingStationLookup ? 'Searching...' : 'Search' }}
             </button>
           </div>
-          <small>Press Enter or use Add to queue identifiers, then Search to resolve site, project, and station coverage.</small>
+          <small>Space, comma, or new line automatically queues multiple identifiers.</small>
           <div v-if="selectedISNs.length > 0" class="top-product-iplas-isn-token-row">
             <button v-for="(isn, index) in selectedISNs" :key="`${isn}-${index}`" type="button"
               class="top-product-iplas-isn-token" @click="removeSelectedISN(index)">
@@ -174,7 +170,10 @@
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useScoring } from '@/features/dut/composables/useScoring'
-import { evaluateForcedFailure, type ForcedFailureItemDetail } from '@/features/dut/utils/iplasForcedFailure'
+import {
+  evaluateForcedFailure,
+  type ForcedFailureItemDetail,
+} from '@/features/dut/utils/iplasForcedFailure'
 import type { IplasDownloadCsvLogInfo } from '@/features/dut-logs/api/iplasProxyApi'
 import {
   type ExportRecord,
@@ -209,13 +208,16 @@ import StationSelectionDialog, { type StationConfig } from './StationSelectionDi
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
 
-const props = withDefaults(defineProps<{
-  rankingTarget?: string
-  isActive?: boolean
-}>(), {
-  rankingTarget: '',
-  isActive: false,
-})
+const props = withDefaults(
+  defineProps<{
+    rankingTarget?: string
+    isActive?: boolean
+  }>(),
+  {
+    rankingTarget: '',
+    isActive: false,
+  },
+)
 
 const { showSuccess, showError: showErrorNotification } = useNotification()
 const ISN_SEARCH_BATCH_LIMIT = 100
@@ -295,7 +297,9 @@ const {
   setScoringType,
 } = useScoring()
 const recordScores = ref<Record<string, number>>({})
-const forcedFailures = ref<Record<string, { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }>>({})
+const forcedFailures = ref<
+  Record<string, { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }>
+>({})
 const calculatingScores = ref(false)
 
 // ============================================================================
@@ -335,7 +339,10 @@ function getConfiguredItemCountLabel(config: StationConfig): string {
 }
 
 const multipleModeIdentifiers = computed(() =>
-  normalizeIdentifierList([...selectedISNs.value.map((value) => String(value)), multipleIsnSearchText.value]),
+  normalizeIdentifierList([
+    ...selectedISNs.value.map((value) => String(value)),
+    multipleIsnSearchText.value,
+  ]),
 )
 
 const currentStationConfig = computed(() => {
@@ -344,14 +351,24 @@ const currentStationConfig = computed(() => {
 })
 
 function commitMultipleIdentifier(): void {
-  const value = multipleIsnSearchText.value.trim()
-  if (!value) {
+  const nextIdentifiers = normalizeIdentifierList([
+    ...selectedISNs.value,
+    multipleIsnSearchText.value,
+  ])
+  if (nextIdentifiers.length === selectedISNs.value.length && !multipleIsnSearchText.value.trim()) {
     return
   }
 
-  const nextIdentifiers = normalizeIdentifierList([...selectedISNs.value, value])
   selectedISNs.value = nextIdentifiers
   multipleIsnSearchText.value = ''
+}
+
+function handleMultipleIdentifierInput(): void {
+  if (!/[\n,\s]/.test(multipleIsnSearchText.value)) {
+    return
+  }
+
+  commitMultipleIdentifier()
 }
 
 function removeSelectedISN(index: number): void {
@@ -423,13 +440,15 @@ function formatTimeForDisplay(timeStr: string, site: string): string {
 function formatTimeForDownload(timeStr: string): string {
   if (!timeStr) return ''
 
-  return timeStr
-    .replace(',', '')
-    .replace('T', ' ')
-    .replace(/-/g, '/')
-    .replace(/\s+/g, ' ')
-    .trim()
-    .split('.')[0] || ''
+  return (
+    timeStr
+      .replace(',', '')
+      .replace('T', ' ')
+      .replace(/-/g, '/')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .split('.')[0] || ''
+  )
 }
 
 function formatTimeForCsvDownload(timeStr: string): string {
@@ -441,9 +460,11 @@ function normalizeIdentifierList(values: string[]): string[] {
   const uniqueValues = new Set<string>()
 
   for (const value of values) {
-    const trimmed = value.trim()
-    if (trimmed) {
-      uniqueValues.add(trimmed)
+    for (const part of value.split(/[\n,\s]+/)) {
+      const trimmed = part.trim()
+      if (trimmed) {
+        uniqueValues.add(trimmed)
+      }
     }
   }
 
@@ -811,9 +832,8 @@ async function handleLookupStations(): Promise<void> {
     allIdentifiersToSearch.value = allIdentifiers
 
     // STEP 2: Search for all identifiers in batch requests and aggregate results
-    const { allRecords, foundIdentifiers, notFoundIdentifiers } = await searchIdentifiersInBatches(
-      allIdentifiers,
-    )
+    const { allRecords, foundIdentifiers, notFoundIdentifiers } =
+      await searchIdentifiersInBatches(allIdentifiers)
 
     if (!isLookupRequestActive(requestId)) {
       return
@@ -1101,24 +1121,26 @@ async function fetchTestItems(): Promise<void> {
     }
 
     // Transform ISN records to CsvTestItemData format
-    const transformedRecords: CsvTestItemData[] = filteredRecords.map((record) => {
-      const csvRecord = transformIsnRecordToCsvData(record)
+    const transformedRecords: CsvTestItemData[] = filteredRecords
+      .map((record) => {
+        const csvRecord = transformIsnRecordToCsvData(record)
 
-      // Apply test item filters if configured
-      const config = stationConfigs.value[record.display_station_name]
-      const includeSet = new Set(config?.includedTestItems ?? [])
-      const excludeSet = new Set(config?.excludedTestItems ?? [])
+        // Apply test item filters if configured
+        const config = stationConfigs.value[record.display_station_name]
+        const includeSet = new Set(config?.includedTestItems ?? [])
+        const excludeSet = new Set(config?.excludedTestItems ?? [])
 
-      if (includeSet.size > 0) {
-        csvRecord.TestItem = csvRecord.TestItem.filter((item) => includeSet.has(item.NAME))
-      }
+        if (includeSet.size > 0) {
+          csvRecord.TestItem = csvRecord.TestItem.filter((item) => includeSet.has(item.NAME))
+        }
 
-      if (excludeSet.size > 0) {
-        csvRecord.TestItem = csvRecord.TestItem.filter((item) => !excludeSet.has(item.NAME))
-      }
+        if (excludeSet.size > 0) {
+          csvRecord.TestItem = csvRecord.TestItem.filter((item) => !excludeSet.has(item.NAME))
+        }
 
-      return csvRecord
-    }).filter((record) => (record.TestItem?.length ?? 0) > 0)
+        return csvRecord
+      })
+      .filter((record) => (record.TestItem?.length ?? 0) > 0)
 
     if (transformedRecords.length === 0) {
       error.value = 'No iPLAS data was returned for the selected station configuration.'
@@ -1241,8 +1263,10 @@ async function handleCalculateScores(): Promise<void> {
 
     // Map scored records back to score map
     const newScores: Record<string, number> = {}
-    const nextForcedFailures: Record<string, { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }> =
-      {}
+    const nextForcedFailures: Record<
+      string,
+      { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }
+    > = {}
     testItemData.value.forEach((record, index) => {
       const isn = record.ISN || record.DeviceId || '-'
       const station = record.station

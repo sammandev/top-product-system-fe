@@ -128,9 +128,7 @@ async function queryRecordsByDateCursor(
   const direction = sortConfig.order === 'desc' ? 'prev' : 'next'
 
   let keyRange: IDBKeyRange | undefined
-  let cursorSource:
-    | ReturnType<typeof store.index>
-    | typeof store = store
+  let cursorSource: ReturnType<typeof store.index> | typeof store = store
 
   if (filter.station) {
     cursorSource = store.index('by-station-date')

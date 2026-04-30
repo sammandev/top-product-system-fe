@@ -68,9 +68,7 @@
 
             <label class="station-dialog__field station-dialog__field--compact">
               <span>Test Status</span>
-              <select v-model="localTestStatus[station.value]">
-                <option v-for="status in testStatusOptions" :key="status" :value="status">{{ status }}</option>
-              </select>
+              <AppSelect v-model="localTestStatus[station.value]" :options="testStatusSelectOptions" :searchable="false" />
             </label>
           </div>
         </article>
@@ -105,6 +103,7 @@
 import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
+import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 
 export interface DataExplorerStationOption {
   value: string
@@ -153,6 +152,10 @@ const localSelectedStations = ref<string[]>([])
 const localDeviceIds = ref<Record<string, string[]>>({})
 const localTestStatus = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
 const testStatusOptions = ['ALL', 'PASS', 'FAIL']
+const testStatusSelectOptions = testStatusOptions.map((status) => ({
+  label: status,
+  value: status,
+}))
 
 const filteredStations = computed(() => {
   const query = searchQuery.value.trim().toLowerCase()
@@ -193,7 +196,9 @@ function syncLocalSelection(): void {
 
 function toggleStation(stationValue: string): void {
   if (localSelectedStations.value.includes(stationValue)) {
-    localSelectedStations.value = localSelectedStations.value.filter((value) => value !== stationValue)
+    localSelectedStations.value = localSelectedStations.value.filter(
+      (value) => value !== stationValue,
+    )
     delete localDeviceIds.value[stationValue]
     delete localTestStatus.value[stationValue]
     emit('station-toggled', stationValue, false)
@@ -211,7 +216,9 @@ function toggleSelectAllFiltered(): void {
   if (allFilteredSelected.value) {
     const filteredSet = new Set(filteredValues.value)
     const removed = localSelectedStations.value.filter((v) => filteredSet.has(v))
-    localSelectedStations.value = localSelectedStations.value.filter((value) => !filteredSet.has(value))
+    localSelectedStations.value = localSelectedStations.value.filter(
+      (value) => !filteredSet.has(value),
+    )
     for (const val of removed) emit('station-toggled', val, false)
     return
   }

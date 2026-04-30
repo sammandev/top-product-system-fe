@@ -92,7 +92,10 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { useIplasSettings, type IplasSettingsMode } from '@/features/dut-logs/composables/useIplasSettings'
+import {
+  type IplasSettingsMode,
+  useIplasSettings,
+} from '@/features/dut-logs/composables/useIplasSettings'
 import { AppDialog } from '@/shared/ui'
 
 // Props & Emits
@@ -129,9 +132,7 @@ const currentServer = computed(() => {
 
 // Current system token for the selected site
 const currentSystemToken = computed(() => {
-  return systemTokens.value.find(
-    (t) => t.site === localSelectedServerId.value && t.is_active,
-  )
+  return systemTokens.value.find((t) => t.site === localSelectedServerId.value && t.is_active)
 })
 
 // Display values: system mode shows system values, custom mode shows editable values

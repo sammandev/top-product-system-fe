@@ -50,8 +50,8 @@
   --app-shell-sidebar: #f8fafc;
 
   /* Fonts */
-  --app-display: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  --app-body: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --app-display: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --app-body: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
 
   color-scheme: light;
 }

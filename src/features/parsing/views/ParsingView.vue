@@ -144,9 +144,7 @@
 
           <label class="parsing-view-field parsing-view-field--compact">
             <span>Download Format</span>
-            <select v-model="downloadFormat">
-              <option v-for="option in downloadFormatOptions" :key="option.value" :value="option.value">{{ option.title }}</option>
-            </select>
+            <AppSelect v-model="downloadFormat" :options="downloadFormatSelectOptions" :searchable="false" />
           </label>
 
           <button type="button" class="parsing-view-button parsing-view-button--secondary parsing-view-button--large" :disabled="!canParse || loading" @click="handleDownload">
@@ -202,7 +200,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
-import { AppDataGrid, AppFilePicker, AppProgress } from '@/shared'
+import { AppDataGrid, AppFilePicker, AppProgress, AppSelect } from '@/shared'
 import { useFileParsing } from '../composables'
 import type { RowSelection } from '../types'
 
@@ -247,9 +245,22 @@ const downloadFormatOptions = [
   { title: 'XLSX', value: 'xlsx' },
   { title: 'Both (ZIP)', value: 'both' },
 ]
-const parseModeOptions: Array<{ value: 'columns' | 'rows' | 'both'; label: string; description: string }> = [
+
+const downloadFormatSelectOptions = downloadFormatOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+const parseModeOptions: Array<{
+  value: 'columns' | 'rows' | 'both'
+  label: string
+  description: string
+}> = [
   { value: 'columns', label: 'Select Columns', description: 'Trim the schema and keep all rows.' },
-  { value: 'rows', label: 'Select Rows', description: 'Filter row ranges while preserving the schema.' },
+  {
+    value: 'rows',
+    label: 'Select Rows',
+    description: 'Filter row ranges while preserving the schema.',
+  },
   { value: 'both', label: 'Select Both', description: 'Control columns and rows in one pass.' },
 ]
 
@@ -293,7 +304,7 @@ const rowSelectionSummary = computed(() => {
 })
 
 function getSelectedFile(value: File | File[] | null | undefined) {
-  return Array.isArray(value) ? (value[0] ?? null) : value ?? null
+  return Array.isArray(value) ? (value[0] ?? null) : (value ?? null)
 }
 
 // Utility: Convert 0-based column index to Excel-style letter (A, B, C, ..., Z, AA, AB, ...)

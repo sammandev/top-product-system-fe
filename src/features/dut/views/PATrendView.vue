@@ -40,9 +40,8 @@
                         <span>DUT ISNs</span>
                         <div class="pa-trend-token-entry">
                             <input v-model="pendingDutInput" type="text" autocomplete="off"
-                                placeholder="Type values, then press Enter or comma"
-                                @keydown="handleTokenKeydown($event, 'dut')" @blur="commitPendingTokens('dut')">
-                            <button type="button" @click="commitPendingTokens('dut')">Add</button>
+                                placeholder="Type values, then press Enter"
+                                @input="handleTokenInput('dut')" @keydown="handleTokenKeydown($event, 'dut')" @blur="commitPendingTokens('dut')">
                         </div>
                         <small>Enter, comma, space, or paste a list.</small>
                         <div class="pa-trend-token-list">
@@ -58,9 +57,8 @@
                         <span>Station IDs</span>
                         <div class="pa-trend-token-entry">
                             <input v-model="pendingStationInput" type="text" autocomplete="off"
-                                placeholder="Type values, then press Enter or comma"
-                                @keydown="handleTokenKeydown($event, 'station')" @blur="commitPendingTokens('station')">
-                            <button type="button" @click="commitPendingTokens('station')">Add</button>
+                                placeholder="Type values, then press Enter"
+                                @input="handleTokenInput('station')" @keydown="handleTokenKeydown($event, 'station')" @blur="commitPendingTokens('station')">
                         </div>
                         <small>Enter, comma, space, or paste a list.</small>
                         <div class="pa-trend-token-list">
@@ -88,11 +86,7 @@
 
                     <label class="pa-trend-field">
                         <span>SROM Filter</span>
-                        <select v-model="sromFilter">
-                            <option v-for="option in sromFilterOptions" :key="option.value" :value="option.value">
-                                {{ option.title }}
-                            </option>
-                        </select>
+                        <AppSelect v-model="sromFilter" :options="sromFilterSelectOptions" :searchable="false" />
                     </label>
                 </div>
 
@@ -164,6 +158,7 @@ import type { PATrendRequest } from '@/core/types'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
+import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 import PATrendResultsCard from '../components/PATrendResultsCard.vue'
 import { useDUTStore } from '../stores/dut.store'
@@ -186,131 +181,147 @@ const pendingStationInput = ref('')
 const activeTab = useTabPersistence<'auto' | 'dex' | 'diff'>('tab', 'auto')
 
 const tabItems = [
-    { value: 'auto', label: 'Auto Trend', icon: 'mdi:auto-mode' },
-    { value: 'dex', label: 'Dex Trend', icon: 'mdi:gesture-tap' },
-    { value: 'diff', label: 'Differential', icon: 'mdi:delta' },
+  { value: 'auto', label: 'Auto Trend', icon: 'mdi:auto-mode' },
+  { value: 'dex', label: 'Dex Trend', icon: 'mdi:gesture-tap' },
+  { value: 'diff', label: 'Differential', icon: 'mdi:delta' },
 ]
 
 const sromFilterOptions = [
-    { title: 'All', value: 'all' },
-    { title: 'Old', value: 'old' },
-    { title: 'New', value: 'new' },
+  { title: 'All', value: 'all' },
+  { title: 'Old', value: 'old' },
+  { title: 'New', value: 'new' },
 ]
+
+const sromFilterSelectOptions = sromFilterOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
 
 const hasDUTAccess = computed(() => authStore.hasDUTAccess)
 const canAnalyze = computed(() => {
-    return hasDUTAccess.value && selectedDutIsns.value.length > 0 && selectedStationIds.value.length > 0
+  return (
+    hasDUTAccess.value && selectedDutIsns.value.length > 0 && selectedStationIds.value.length > 0
+  )
 })
 const hasResults = computed(() => {
-    if (activeTab.value === 'auto') return dutStore.paTrendAutoData.length > 0
-    if (activeTab.value === 'dex') return dutStore.paTrendDexData.length > 0
-    if (activeTab.value === 'diff') return dutStore.paDiffData.length > 0
-    return false
+  if (activeTab.value === 'auto') return dutStore.paTrendAutoData.length > 0
+  if (activeTab.value === 'dex') return dutStore.paTrendDexData.length > 0
+  if (activeTab.value === 'diff') return dutStore.paDiffData.length > 0
+  return false
 })
 
 function parseTokenList(value: string): string[] {
-    return value
-        .split(/[\n,\s]+/)
-        .map((entry) => entry.trim())
-        .filter(Boolean)
+  return value
+    .split(/[\n,\s]+/)
+    .map((entry) => entry.trim())
+    .filter(Boolean)
 }
 
 function uniqueTokens(values: string[]): string[] {
-    return [...new Set(values)]
+  return [...new Set(values)]
 }
 
 function commitPendingTokens(field: TokenField) {
-    const source = field === 'dut' ? pendingDutInput : pendingStationInput
-    const nextTokens = parseTokenList(source.value)
+  const source = field === 'dut' ? pendingDutInput : pendingStationInput
+  const nextTokens = parseTokenList(source.value)
 
-    if (nextTokens.length === 0) {
-        source.value = ''
-        return
-    }
+  if (nextTokens.length === 0) {
+    source.value = ''
+    return
+  }
 
-    if (field === 'dut') {
-        selectedDutIsns.value = uniqueTokens([...selectedDutIsns.value, ...nextTokens])
-        pendingDutInput.value = ''
-        return
-    }
+  if (field === 'dut') {
+    selectedDutIsns.value = uniqueTokens([...selectedDutIsns.value, ...nextTokens])
+    pendingDutInput.value = ''
+    return
+  }
 
-    selectedStationIds.value = uniqueTokens([...selectedStationIds.value, ...nextTokens])
-    pendingStationInput.value = ''
+  selectedStationIds.value = uniqueTokens([...selectedStationIds.value, ...nextTokens])
+  pendingStationInput.value = ''
 }
 
 function removeToken(field: TokenField, value: string) {
-    if (field === 'dut') {
-        selectedDutIsns.value = selectedDutIsns.value.filter((entry) => entry !== value)
-        return
-    }
+  if (field === 'dut') {
+    selectedDutIsns.value = selectedDutIsns.value.filter((entry) => entry !== value)
+    return
+  }
 
-    selectedStationIds.value = selectedStationIds.value.filter((entry) => entry !== value)
+  selectedStationIds.value = selectedStationIds.value.filter((entry) => entry !== value)
 }
 
 function handleTokenKeydown(event: KeyboardEvent, field: TokenField) {
-    if (event.key !== 'Enter' && event.key !== ',') {
-        return
-    }
+  if (event.key !== 'Enter' && event.key !== ',') {
+    return
+  }
 
-    event.preventDefault()
-    commitPendingTokens(field)
+  event.preventDefault()
+  commitPendingTokens(field)
+}
+
+function handleTokenInput(field: TokenField) {
+  const source = field === 'dut' ? pendingDutInput : pendingStationInput
+  if (!/[\n,\s]/.test(source.value)) {
+    return
+  }
+
+  commitPendingTokens(field)
 }
 
 async function handleAnalyze() {
-    commitPendingTokens('dut')
-    commitPendingTokens('station')
+  commitPendingTokens('dut')
+  commitPendingTokens('station')
 
-    if (!canAnalyze.value) {
-        return
-    }
+  if (!canAnalyze.value) {
+    return
+  }
 
-    const params: PATrendRequest = {
-        dut_isn: [...selectedDutIsns.value],
-        station_id: selectedStationIds.value.map(String),
-        srom_filter: sromFilter.value,
-    }
+  const params: PATrendRequest = {
+    dut_isn: [...selectedDutIsns.value],
+    station_id: selectedStationIds.value.map(String),
+    srom_filter: sromFilter.value,
+  }
 
-    if (siteIdentifier.value.trim()) {
-        params.site_identifier = siteIdentifier.value.trim()
-    }
-    if (modelIdentifier.value.trim()) {
-        params.model_identifier = modelIdentifier.value.trim()
-    }
-    if (startTime.value) {
-        params.start_time = startTime.value
-    }
-    if (endTime.value) {
-        params.end_time = endTime.value
-    }
+  if (siteIdentifier.value.trim()) {
+    params.site_identifier = siteIdentifier.value.trim()
+  }
+  if (modelIdentifier.value.trim()) {
+    params.model_identifier = modelIdentifier.value.trim()
+  }
+  if (startTime.value) {
+    params.start_time = startTime.value
+  }
+  if (endTime.value) {
+    params.end_time = endTime.value
+  }
 
-    try {
-        if (activeTab.value === 'auto') {
-            await dutStore.fetchPATrendAuto(params)
-        } else if (activeTab.value === 'dex') {
-            await dutStore.fetchPATrendDex(params)
-        } else {
-            await dutStore.fetchPATrendDiff(params)
-        }
-    } catch (error) {
-        console.error('Failed to fetch PA trend data:', error)
+  try {
+    if (activeTab.value === 'auto') {
+      await dutStore.fetchPATrendAuto(params)
+    } else if (activeTab.value === 'dex') {
+      await dutStore.fetchPATrendDex(params)
+    } else {
+      await dutStore.fetchPATrendDiff(params)
     }
+  } catch (error) {
+    console.error('Failed to fetch PA trend data:', error)
+  }
 }
 
 function handleReset() {
-    selectedDutIsns.value = []
-    selectedStationIds.value = []
-    siteIdentifier.value = ''
-    modelIdentifier.value = ''
-    sromFilter.value = 'all'
-    startTime.value = ''
-    endTime.value = ''
-    pendingDutInput.value = ''
-    pendingStationInput.value = ''
-    dutStore.clearPATrendData()
+  selectedDutIsns.value = []
+  selectedStationIds.value = []
+  siteIdentifier.value = ''
+  modelIdentifier.value = ''
+  sromFilter.value = 'all'
+  startTime.value = ''
+  endTime.value = ''
+  pendingDutInput.value = ''
+  pendingStationInput.value = ''
+  dutStore.clearPATrendData()
 }
 
 function handleExport() {
-    console.log('Export functionality to be implemented')
+  console.log('Export functionality to be implemented')
 }
 </script>
 

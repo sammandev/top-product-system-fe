@@ -8,30 +8,21 @@
     <div class="site-model-station-selector__grid">
       <label class="site-model-station-selector__field">
         <span>Test Site</span>
-        <select :value="selectedSiteId ?? ''" :disabled="loadingSites" @change="handleSiteSelectInput">
-          <option value="">Select a site</option>
-          <option v-for="site in siteItems" :key="site.value" :value="site.value">{{ site.title }}</option>
-        </select>
+        <AppSelect :model-value="selectedSiteId" :options="siteSelectOptions" :disabled="loadingSites" @update:model-value="handleSiteChange($event as number | null)" />
         <small>{{ loadingSites ? 'Loading sites...' : siteItems.length ? 'Available DUT sites.' : 'No sites available.' }}</small>
         <small v-if="siteError" class="site-model-station-selector__error">{{ siteError }}</small>
       </label>
 
       <label class="site-model-station-selector__field">
         <span>Device Model</span>
-        <select :value="selectedModelId ?? ''" :disabled="!selectedSiteId || loadingModels" @change="handleModelSelectInput">
-          <option value="">{{ selectedSiteId ? 'Select a model' : 'Select a site first' }}</option>
-          <option v-for="model in modelItems" :key="model.value" :value="model.value">{{ model.title }}</option>
-        </select>
+        <AppSelect :model-value="selectedModelId" :options="modelSelectOptions" :disabled="!selectedSiteId || loadingModels" @update:model-value="handleModelChange($event as number | null)" />
         <small>{{ loadingModels ? 'Loading models...' : selectedSiteId ? (modelItems.length ? 'Models available for this site.' : 'No models available for this site.') : 'Choose a site to load models.' }}</small>
         <small v-if="modelError" class="site-model-station-selector__error">{{ modelError }}</small>
       </label>
 
       <label class="site-model-station-selector__field">
         <span>Test Station</span>
-        <select :value="selectedStationId ?? ''" :disabled="!selectedModelId || loadingStations" @change="handleStationSelectInput">
-          <option value="">{{ selectedModelId ? 'Select a station' : 'Select a model first' }}</option>
-          <option v-for="station in stationItems" :key="station.value" :value="station.value">{{ station.title }}</option>
-        </select>
+        <AppSelect :model-value="selectedStationId" :options="stationSelectOptions" :disabled="!selectedModelId || loadingStations" @update:model-value="handleStationChange($event as number | null)" />
         <small>{{ loadingStations ? 'Loading stations...' : selectedModelId ? (stationItems.length ? 'Stations available for this model.' : 'No stations available for this model.') : 'Choose a model to load stations.' }}</small>
         <small v-if="stationError" class="site-model-station-selector__error">{{ stationError }}</small>
       </label>
@@ -59,7 +50,7 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import type { DUTModel, DUTSite, DUTStation } from '@/core/types'
-import { AppPanel } from '@/shared'
+import { AppPanel, AppSelect } from '@/shared'
 import { getErrorMessage } from '@/shared/utils'
 import { useDUTStore } from '../stores'
 
@@ -127,6 +118,14 @@ const siteItems = computed(() =>
   })),
 )
 
+const siteSelectOptions = computed(() => [
+  { label: 'Select a site', value: null },
+  ...siteItems.value.map((site) => ({
+    label: site.title,
+    value: site.value,
+  })),
+])
+
 const modelItems = computed(() =>
   dutStore.models.map((model) => ({
     value: model.id,
@@ -135,6 +134,14 @@ const modelItems = computed(() =>
   })),
 )
 
+const modelSelectOptions = computed(() => [
+  { label: selectedSiteId.value ? 'Select a model' : 'Select a site first', value: null },
+  ...modelItems.value.map((model) => ({
+    label: model.title,
+    value: model.value,
+  })),
+])
+
 const stationItems = computed(() =>
   dutStore.stations.map((station) => ({
     value: station.id,
@@ -142,6 +149,14 @@ const stationItems = computed(() =>
     raw: station,
   })),
 )
+
+const stationSelectOptions = computed(() => [
+  { label: selectedModelId.value ? 'Select a station' : 'Select a model first', value: null },
+  ...stationItems.value.map((station) => ({
+    label: station.title,
+    value: station.value,
+  })),
+])
 
 const selectedSite = computed(
   () => dutStore.sites.find((s) => s.id === selectedSiteId.value) || null,
@@ -247,23 +262,6 @@ function handleModelChange(modelId: number | null) {
 function handleStationChange(stationId: number | null) {
   selectedStationId.value = stationId
   emitChange()
-}
-
-function getSelectedIdFromEvent(event: Event): number | null {
-  const value = (event.target as HTMLSelectElement).value
-  return value ? Number(value) : null
-}
-
-function handleSiteSelectInput(event: Event) {
-  handleSiteChange(getSelectedIdFromEvent(event))
-}
-
-function handleModelSelectInput(event: Event) {
-  handleModelChange(getSelectedIdFromEvent(event))
-}
-
-function handleStationSelectInput(event: Event) {
-  handleStationChange(getSelectedIdFromEvent(event))
 }
 
 function emitChange() {

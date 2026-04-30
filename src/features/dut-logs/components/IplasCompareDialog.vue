@@ -41,20 +41,12 @@
 
           <label class="iplas-compare-dialog__field">
             <span>Data Type</span>
-            <select v-model="typeFilter">
-              <option v-for="option in typeFilterOptions" :key="option.value" :value="option.value">
-                {{ option.title }}
-              </option>
-            </select>
+            <AppSelect v-model="typeFilter" :options="typeFilterSelectOptions" :searchable="false" />
           </label>
 
           <label class="iplas-compare-dialog__field">
             <span>Score Filter</span>
-            <select v-model="scoreFilter">
-              <option v-for="option in scoreFilterOptions" :key="option.value" :value="option.value">
-                {{ option.title }}
-              </option>
-            </select>
+            <AppSelect v-model="scoreFilter" :options="scoreFilterSelectOptions" :searchable="false" />
           </label>
 
           <div class="iplas-compare-dialog__field iplas-compare-dialog__field--actions">
@@ -246,7 +238,7 @@ import type {
   RescoreScoringConfig,
 } from '@/features/dut-logs/composables/useTestLogUpload'
 import { useTestLogUpload } from '@/features/dut-logs/composables/useTestLogUpload'
-import { AppDataGrid, AppDialog } from '@/shared'
+import { AppDataGrid, AppDialog, AppSelect } from '@/shared'
 import UploadScoringConfigDialog from './UploadScoringConfigDialog.vue'
 
 const props = defineProps<{
@@ -315,7 +307,10 @@ const showScoringConfig = ref(false)
 const localScoringConfigs = ref<RescoreScoringConfig[]>([])
 
 const customScoringCount = computed(
-  () => localScoringConfigs.value.filter((config) => config.enabled && config.scoring_type !== 'symmetrical').length,
+  () =>
+    localScoringConfigs.value.filter(
+      (config) => config.enabled && config.scoring_type !== 'symmetrical',
+    ).length,
 )
 
 const scoringDialogTestItems = computed<ParsedTestItemEnhanced[]>(() => {
@@ -400,14 +395,54 @@ const scoreFilterOptions = [
   { title: 'No Score', value: 'noScore' },
 ]
 
+const typeFilterSelectOptions = typeFilterOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+
+const scoreFilterSelectOptions = scoreFilterOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+
 const comparisonGridColumns = [
-  { key: 'test_item', field: 'test_item', header: 'Test Item', sortable: true, style: { width: '18rem' } },
+  {
+    key: 'test_item',
+    field: 'test_item',
+    header: 'Test Item',
+    sortable: true,
+    style: { width: '18rem' },
+  },
   { key: 'usl', field: 'usl', header: 'UCL', sortable: true, style: { width: '7rem' } },
   { key: 'lsl', field: 'lsl', header: 'LCL', sortable: true, style: { width: '7rem' } },
-  { key: 'upload_value', field: 'upload_value', header: 'Uploaded Value', sortable: true, style: { width: '10rem' } },
-  { key: 'iplas_value', field: 'iplas_value', header: 'iPLAS Value', sortable: true, style: { width: '10rem' } },
-  { key: 'upload_score', field: 'upload_score', header: 'Uploaded Score', sortable: true, style: { width: '9rem' } },
-  { key: 'iplas_score', field: 'iplas_score', header: 'iPLAS Score', sortable: true, style: { width: '9rem' } },
+  {
+    key: 'upload_value',
+    field: 'upload_value',
+    header: 'Uploaded Value',
+    sortable: true,
+    style: { width: '10rem' },
+  },
+  {
+    key: 'iplas_value',
+    field: 'iplas_value',
+    header: 'iPLAS Value',
+    sortable: true,
+    style: { width: '10rem' },
+  },
+  {
+    key: 'upload_score',
+    field: 'upload_score',
+    header: 'Uploaded Score',
+    sortable: true,
+    style: { width: '9rem' },
+  },
+  {
+    key: 'iplas_score',
+    field: 'iplas_score',
+    header: 'iPLAS Score',
+    sortable: true,
+    style: { width: '9rem' },
+  },
 ]
 
 const breakdownScoringType = computed(() => {
@@ -420,19 +455,19 @@ const breakdownScoringType = computed(() => {
 const breakdownTarget = computed<number | null>(() => {
   if (!breakdownItem.value) return null
   return (
-    breakdownSource.value === 'upload'
+    (breakdownSource.value === 'upload'
       ? breakdownItem.value.upload_target
-      : breakdownItem.value.iplas_target
-  ) ?? null
+      : breakdownItem.value.iplas_target) ?? null
+  )
 })
 
 const breakdownDeviation = computed<number | null>(() => {
   if (!breakdownItem.value) return null
   return (
-    breakdownSource.value === 'upload'
+    (breakdownSource.value === 'upload'
       ? breakdownItem.value.upload_deviation
-      : breakdownItem.value.iplas_deviation
-  ) ?? null
+      : breakdownItem.value.iplas_deviation) ?? null
+  )
 })
 
 const comparisonItems = computed<ComparisonItem[]>(() => {
@@ -524,7 +559,9 @@ const filteredComparisonItems = computed(() => {
   if (scoreFilter.value === 'gte9') {
     items = items.filter((item) => item.upload_score !== null && item.upload_score >= 9)
   } else if (scoreFilter.value === '7to9') {
-    items = items.filter((item) => item.upload_score !== null && item.upload_score >= 7 && item.upload_score < 9)
+    items = items.filter(
+      (item) => item.upload_score !== null && item.upload_score >= 7 && item.upload_score < 9,
+    )
   } else if (scoreFilter.value === 'lt7') {
     items = items.filter((item) => item.upload_score !== null && item.upload_score < 7)
   } else if (scoreFilter.value === 'hasScore') {
@@ -546,10 +583,25 @@ const filteredComparisonItems = computed(() => {
   return items
 })
 
-const matchCount = computed(() => comparisonItems.value.filter((item) => item.status === 'match').length)
-const mismatchCount = computed(() => comparisonItems.value.filter((item) => item.status === 'upload-only' || item.status === 'iplas-only').length)
-const uploadOnlyCount = computed(() => comparisonItems.value.filter((item) => item.status === 'match' || item.status === 'upload-only').length)
-const iplasOnlyCount = computed(() => comparisonItems.value.filter((item) => item.status === 'match' || item.status === 'iplas-only').length)
+const matchCount = computed(
+  () => comparisonItems.value.filter((item) => item.status === 'match').length,
+)
+const mismatchCount = computed(
+  () =>
+    comparisonItems.value.filter(
+      (item) => item.status === 'upload-only' || item.status === 'iplas-only',
+    ).length,
+)
+const uploadOnlyCount = computed(
+  () =>
+    comparisonItems.value.filter((item) => item.status === 'match' || item.status === 'upload-only')
+      .length,
+)
+const iplasOnlyCount = computed(
+  () =>
+    comparisonItems.value.filter((item) => item.status === 'match' || item.status === 'iplas-only')
+      .length,
+)
 
 const comparisonFilterOptions = computed(() => [
   { title: 'Match Items', value: 'match' as const, count: matchCount.value },
@@ -572,7 +624,9 @@ function formatOverallScore(score: number | null): string {
 async function rescoreAllItems() {
   if (localScoringConfigs.value.length === 0) return
 
-  const explicitlyConfigured = new Set(localScoringConfigs.value.map((config) => config.test_item_name))
+  const explicitlyConfigured = new Set(
+    localScoringConfigs.value.map((config) => config.test_item_name),
+  )
 
   try {
     const uploadItems = props.uploadTestItems

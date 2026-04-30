@@ -626,7 +626,9 @@ class IplasProxyApi {
    * @param options - Optional configuration including signal for cancellation
    * @returns Filtered test item data with cache metadata
    */
-  async getCsvTestItems<TRecord extends CsvTestItemData | CompactCsvTestItemData = CompactCsvTestItemData>(
+  async getCsvTestItems<
+    TRecord extends CsvTestItemData | CompactCsvTestItemData = CompactCsvTestItemData,
+  >(
     request: IplasCsvTestItemRequest,
     options?: { signal?: AbortSignal },
   ): Promise<IplasCsvTestItemResponse<TRecord>> {

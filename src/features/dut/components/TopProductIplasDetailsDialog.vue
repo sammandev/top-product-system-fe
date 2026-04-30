@@ -71,19 +71,19 @@
         <article class="iplas-details-dialog__metadata-card">
           <button type="button" class="iplas-details-dialog__copy-row" @click="copyToClipboard(record.deviceId)">
             <Icon icon="mdi:chip" />
-            <span><strong>Device ID:</strong> {{ record.deviceId }}</span>
+            <span><strong>Device ID</strong> {{ record.deviceId }}</span>
           </button>
         </article>
         <article class="iplas-details-dialog__metadata-card">
           <div class="iplas-details-dialog__copy-row iplas-details-dialog__copy-row--static">
             <Icon icon="mdi:map-marker" />
-            <span><strong>Site:</strong> {{ record.site }}</span>
+            <span><strong>Site</strong> {{ record.site }}</span>
           </div>
         </article>
         <article class="iplas-details-dialog__metadata-card">
           <div class="iplas-details-dialog__copy-row iplas-details-dialog__copy-row--static">
             <Icon icon="mdi:folder" />
-            <span><strong>Project:</strong> {{ record.project }}</span>
+            <span><strong>Project</strong> {{ record.project }}</span>
           </div>
         </article>
       </section>
@@ -331,6 +331,16 @@
           </span>
         </summary>
         <div class="iplas-details-dialog__explanation-body">
+          <div class="score-formula-panel score-formula-panel--compact">
+            <div class="iplas-details-dialog__metric-label">Formula</div>
+            <div class="score-formula-equation">{{ getScoringFormula(selectedTestItem.scoringType) }}</div>
+            <dl class="score-formula-variable-list">
+              <template v-for="variable in getScoringFormulaVariables(selectedTestItem.scoringType)" :key="variable.key">
+                <dt>{{ variable.key }}</dt>
+                <dd>{{ variable.value }}</dd>
+              </template>
+            </dl>
+          </div>
           <p>{{ getScoringExplanation(selectedTestItem.scoringType) }}</p>
         </div>
       </details>
@@ -359,20 +369,20 @@
 
       <div class="score-formula-panel">
         <div class="iplas-details-dialog__metric-label">Formula</div>
-        <div class="score-formula-equation">Aggregate = sum(item score × effective weight) / sum(effective weight)</div>
+        <div class="score-formula-equation">Aggregate = sum(item score * effective weight) / sum(effective weight)</div>
         <div class="score-formula-steps">
           <div class="score-formula-step">
             <div class="score-formula-step__index">1</div>
             <div>
               <div>Convert each configured weight into an effective weight.</div>
-              <div class="iplas-details-dialog__muted">Effective weight = configured weight × configured weight.</div>
+              <div class="iplas-details-dialog__muted">Effective weight = configured weight * configured weight.</div>
             </div>
           </div>
           <div class="score-formula-step">
             <div class="score-formula-step__index">2</div>
             <div>
               <div>Use only test items that actually have a score.</div>
-              <div class="iplas-details-dialog__muted">Each scored item contributes score × effective weight to the
+              <div class="iplas-details-dialog__muted">Each scored item contributes score * effective weight to the
                 numerator.</div>
             </div>
           </div>
@@ -516,7 +526,7 @@ const forcedFailSearch = ref('')
 // Filter options for dropdown
 const testItemFilterOptions: { title: string; value: TestItemFilter }[] = [
   { title: 'Show All', value: 'all' },
-  { title: 'Criteria Data ★', value: 'value' },
+  { title: 'Criteria Data', value: 'value' },
   { title: 'Non-Criteria', value: 'non-value' },
   { title: 'Bin Data', value: 'bin' },
 ]
@@ -529,9 +539,9 @@ const testItemFilterSelectOptions = testItemFilterOptions.map((option) => ({
 // UPDATED: Score filter options
 const scoreFilterOptions: { title: string; value: ScoreFilterType }[] = [
   { title: '> Greater than', value: 'gt' },
-  { title: '≥ Greater or equal', value: 'gte' },
+  { title: '>= Greater or equal', value: 'gte' },
   { title: '< Less than', value: 'lt' },
-  { title: '≤ Less or equal', value: 'lte' },
+  { title: '<= Less or equal', value: 'lte' },
   { title: '= Equals', value: 'eq' },
 ]
 
@@ -544,9 +554,21 @@ const scoreFilterSelectOptions = [
 ]
 
 const forcedFailColumns = [
-  { key: 'name', field: 'name', header: 'Failed Test Item', sortable: true, style: { width: '34rem' } },
+  {
+    key: 'name',
+    field: 'name',
+    header: 'Failed Test Item',
+    sortable: true,
+    style: { width: '34rem' },
+  },
   { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '10rem' } },
-  { key: 'reasonLabel', field: 'reasonLabel', header: 'Rule', sortable: true, style: { width: '12rem' } },
+  {
+    key: 'reasonLabel',
+    field: 'reasonLabel',
+    header: 'Rule',
+    sortable: true,
+    style: { width: '12rem' },
+  },
   { key: 'actions', header: 'Actions', sortable: false, style: { width: '6rem' } },
 ]
 
@@ -557,14 +579,19 @@ const breakdownColumns = [
 
 // Computed: check if scores are available
 const hasScores = computed(() => {
-  return props.record?.testItems?.some((item: NormalizedTestItem) => item.score !== undefined) ?? false
+  return (
+    props.record?.testItems?.some((item: NormalizedTestItem) => item.score !== undefined) ?? false
+  )
 })
 
 function hasScore(score: number | null | undefined): score is number {
   return score !== null && score !== undefined
 }
 
-function areDisplayedScoresEqual(left: number | null | undefined, right: number | null | undefined): boolean {
+function areDisplayedScoresEqual(
+  left: number | null | undefined,
+  right: number | null | undefined,
+): boolean {
   if (!hasScore(left) || !hasScore(right)) {
     return false
   }
@@ -572,7 +599,10 @@ function areDisplayedScoresEqual(left: number | null | undefined, right: number 
   return formatScoreValue(left) === formatScoreValue(right)
 }
 
-function getForcedFailureRuleFlags(record: NormalizedRecord | null): { scoreFail: boolean; deviationFail: boolean } {
+function getForcedFailureRuleFlags(record: NormalizedRecord | null): {
+  scoreFail: boolean
+  deviationFail: boolean
+} {
   const details = record?.forcedFailureDetails ?? []
 
   return details.reduce<{ scoreFail: boolean; deviationFail: boolean }>(
@@ -581,7 +611,11 @@ function getForcedFailureRuleFlags(record: NormalizedRecord | null): { scoreFail
         flags.deviationFail = true
       }
 
-      if (detail.reasonLabel === 'Score Fail' || detail.reasonLabel === 'SCORE FAIL' || detail.reasonLabel === 'Dev./Score Fail') {
+      if (
+        detail.reasonLabel === 'Score Fail' ||
+        detail.reasonLabel === 'SCORE FAIL' ||
+        detail.reasonLabel === 'Dev./Score Fail'
+      ) {
         flags.scoreFail = true
       }
 
@@ -615,7 +649,9 @@ function getForcedFailureDetailText(record: NormalizedRecord | null, compact = f
       return `${failingItemCount} ${itemLabel} beyond max deviation`
     }
 
-    return failingItemCount > 0 ? `${failingItemCount} ${itemLabel} failed a scoring rule` : 'Scoring rule triggered'
+    return failingItemCount > 0
+      ? `${failingItemCount} ${itemLabel} failed a scoring rule`
+      : 'Scoring rule triggered'
   }
 
   if (scoreFail && deviationFail) {
@@ -678,7 +714,10 @@ const scoreSummarySecondaryMetrics = computed<ScoreSummaryMetric[]>(() => {
   }
 
   return candidates.reduce<ScoreSummaryMetric[]>((visibleMetrics, metric) => {
-    if (metric.key === primaryMetric.key || areDisplayedScoresEqual(metric.score, primaryMetric.score)) {
+    if (
+      metric.key === primaryMetric.key ||
+      areDisplayedScoresEqual(metric.score, primaryMetric.score)
+    ) {
       return visibleMetrics
     }
 
@@ -769,7 +808,7 @@ const overallScoreExplanation = computed<OverallScoreExplanation | null>(() => {
   const valueItemCount = scoredItems.length - binaryItemCount
   const totalEffectiveWeight = scoredItems.reduce((total: number, item: NormalizedTestItem) => {
     const weight = item.weight ?? 1.0
-    return total + (weight * weight)
+    return total + weight * weight
   }, 0)
 
   return {
@@ -817,8 +856,9 @@ const tableTestItems = computed(() => {
 })
 
 const filteredForcedFailureDetails = computed(() => {
-  const details = [...(props.record?.forcedFailureDetails || [])]
-    .sort((left, right) => left.score - right.score)
+  const details = [...(props.record?.forcedFailureDetails || [])].sort(
+    (left, right) => left.score - right.score,
+  )
 
   const query = forcedFailSearch.value.trim().toLowerCase()
   if (!query) {
@@ -1110,7 +1150,6 @@ function formatTableValue(item: NormalizedTestItem): string {
   if (!rawValue || rawValue === '-999') return '-'
   if (rawValue.toUpperCase() === 'PASS') return 'PASS'
   if (isBinaryValue && rawValue === '1') return 'PASS'
-  if (isBinaryValue && rawValue === '0') return 'FAIL'
   if (rawValue.toUpperCase() === 'FAIL') return 'FAIL'
   return rawValue
 }
@@ -1135,7 +1174,9 @@ function parseDurationDate(value: string): Date | null {
   }
 
   const sanitizedValue = trimmedValue.replace('%:z', '').replace(/\.\d+$/, '')
-  const isoCandidate = sanitizedValue.includes('T') ? sanitizedValue : sanitizedValue.replace(' ', 'T')
+  const isoCandidate = sanitizedValue.includes('T')
+    ? sanitizedValue
+    : sanitizedValue.replace(' ', 'T')
 
   const utcParsedDate = new Date(`${isoCandidate}Z`)
   if (!Number.isNaN(utcParsedDate.getTime())) {
@@ -1177,7 +1218,10 @@ function formatCompactNumber(value: number): string {
     return '-'
   }
 
-  return value.toFixed(2).replace(/\.00$/, '').replace(/(\.\d*[1-9])0$/, '$1')
+  return value
+    .toFixed(2)
+    .replace(/\.00$/, '')
+    .replace(/(\.\d*[1-9])0$/, '$1')
 }
 
 async function copyToClipboard(text: string): Promise<void> {
@@ -1453,18 +1497,44 @@ function formatPolicyLabel(policy?: string): string {
 
 // UPDATED: Added helper to get formula for score breakdown display
 function getScoringFormula(scoringType?: ScoringType): string {
-  const formulas: Record<ScoringType, string> = {
-    symmetrical: 'Score = 1 + 9 × (L - |x - T|) / L, where T = (UCL + LCL) / 2',
-    symmetrical_nl: 'Score = exp(-((x - T) / σ)²), Gaussian decay',
-    evm: 'Score = 1 + 9 × (1 - (x - ref) / (UCL - ref))^0.25, ref = -35 dB',
-    throughput: 'Score = 1 + 9 × (x - LCL) / (UCL - LCL)',
-    asymmetrical: 'Score = 1 + 9 × (L - d) / L, with policy-based limit selection',
-    per_mask: 'Score = 1 + 9 × (UCL - x) / UCL, where 0 is ideal',
-    binary: 'Score = 10.0 if PASS, 0.0 if FAIL',
+  const type = scoringType ?? 'binary'
+  const latex = SCORING_TYPE_INFO[type]?.formulaLatex
+  if (latex) {
+    return latex
+      .replace(/\\cdot/g, 'x')
+      .replace(/\\frac\{L - \|x - T\|\}\{L\}/g, '(L - |x - T|) / L')
+      .replace(/\\frac\{L - d\}\{L\}/g, '(L - d) / L')
+      .replace(/\\frac\{UCL - x\}\{UCL\}/g, '(UCL - x) / UCL')
+      .replace(
+        /\\left\(1 - \\frac\{x - ref\}\{UCL - ref\}\\right\)\^\{0\.25\}/g,
+        '(1 - (x - ref) / (UCL - ref))^0.25',
+      )
+      .replace(
+        /\\begin\{cases\} 10\.0 & \\text\{STATUS\} = \\text\{PASS\} \\\\ 0\.0 & \\text\{STATUS\} = \\text\{FAIL\} \\end\{cases\}/g,
+        '10.0 if STATUS = PASS, 0.0 if STATUS = FAIL',
+      )
   }
-  return formulas[scoringType ?? 'binary'] ?? 'Unknown formula'
+
+  const formulas: Partial<Record<ScoringType, string>> = {
+    symmetrical_nl: 'Score = 1 + 9 x (L - |x - T|) / L',
+    throughput: 'Score = 1 + 9 x (x - LCL) / (UCL - LCL)',
+  }
+  return formulas[type] ?? 'Unknown formula'
 }
 
+function getScoringFormulaVariables(
+  scoringType?: ScoringType,
+): Array<{ key: string; value: string }> {
+  const variables = SCORING_TYPE_INFO[scoringType ?? 'binary']?.variables
+  if (!variables) {
+    return []
+  }
+
+  return Object.entries(variables).map(([key, value]) => ({
+    key,
+    value: value.replace(/\\frac\{UCL \+ LCL\}\{2\}/g, '(UCL + LCL) / 2'),
+  }))
+}
 // Handle row click to show score breakdown
 function handleRowClick(event: unknown): void {
   const row = event as { data?: NormalizedTestItem; item?: NormalizedTestItem }
@@ -2399,10 +2469,16 @@ watch(
 }
 
 .score-formula-panel {
+  display: grid;
+  gap: 0.75rem;
   padding: 1rem;
   border-radius: 14px;
   border: 1px solid var(--app-border);
   background: var(--iplas-panel);
+}
+
+.score-formula-panel--compact {
+  gap: 0.6rem;
 }
 
 .score-formula-equation {
@@ -2412,6 +2488,24 @@ watch(
   border: 1px solid var(--app-border);
   font-family: Consolas, 'Courier New', monospace;
   overflow-wrap: anywhere;
+}
+
+.score-formula-variable-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.35rem 0.75rem;
+  margin: 0;
+  color: var(--iplas-muted);
+  font-size: 0.82rem;
+}
+
+.score-formula-variable-list dt {
+  font-weight: 800;
+  color: var(--iplas-ink);
+}
+
+.score-formula-variable-list dd {
+  margin: 0;
 }
 
 .score-formula-step {

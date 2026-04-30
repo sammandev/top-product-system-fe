@@ -496,7 +496,11 @@ const filteredIncludeSuggestions = computed(() => {
   }
 
   return testItemSuggestions.value
-    .filter((item) => formatPatternLabel(item).toLowerCase().includes(query) || item.toLowerCase().includes(query))
+    .filter(
+      (item) =>
+        formatPatternLabel(item).toLowerCase().includes(query) ||
+        item.toLowerCase().includes(query),
+    )
     .slice(0, 16)
 })
 
@@ -507,7 +511,11 @@ const filteredExcludeSuggestions = computed(() => {
   }
 
   return testItemSuggestions.value
-    .filter((item) => formatPatternLabel(item).toLowerCase().includes(query) || item.toLowerCase().includes(query))
+    .filter(
+      (item) =>
+        formatPatternLabel(item).toLowerCase().includes(query) ||
+        item.toLowerCase().includes(query),
+    )
     .slice(0, 16)
 })
 
@@ -682,7 +690,9 @@ function removePatternSelection(pattern: string, filterType: 'include' | 'exclud
     return
   }
 
-  localExcludeTestItemFilters.value = localExcludeTestItemFilters.value.filter((entry) => entry !== pattern)
+  localExcludeTestItemFilters.value = localExcludeTestItemFilters.value.filter(
+    (entry) => entry !== pattern,
+  )
 }
 
 function isDialogItemSelected(item: string): boolean {

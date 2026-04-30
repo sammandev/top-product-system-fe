@@ -179,32 +179,75 @@ const sortBy = ref<{ key: string; order: 'asc' | 'desc' }[]>([
 
 const { showInfo: showInfoNotification } = useNotification()
 
-const itemsWithKeys = computed(() =>
-  props.items.map((item) => ({
-    ...item,
-    ISN: item.ISN || '',
-    DeviceId: item.DeviceId || '',
-    ErrorCode: item.ErrorCode || '',
-    ErrorName: item.ErrorName || '',
-    TestStartTime: item['Test Start Time'] || '',
-    TestEndTime: item['Test end Time'] || '',
-    Duration: calculateDuration(item['Test Start Time'], item['Test end Time']),
-    TestItemCount: getTestItemCount(item),
-    recordKey: `${item.ISN}_${item['Test Start Time']}`,
-    sourceRecord: item,
-  })) as IplasRecordTableRow[],
+const itemsWithKeys = computed(
+  () =>
+    props.items.map((item) => ({
+      ...item,
+      ISN: item.ISN || '',
+      DeviceId: item.DeviceId || '',
+      ErrorCode: item.ErrorCode || '',
+      ErrorName: item.ErrorName || '',
+      TestStartTime: item['Test Start Time'] || '',
+      TestEndTime: item['Test end Time'] || '',
+      Duration: calculateDuration(item['Test Start Time'], item['Test end Time']),
+      TestItemCount: getTestItemCount(item),
+      recordKey: `${item.ISN}_${item['Test Start Time']}`,
+      sourceRecord: item,
+    })) as IplasRecordTableRow[],
 )
 
 const computedHeaders = computed(() => {
   return [
     { header: 'ISN', key: 'ISN', field: 'ISN', sortable: true, style: { width: '180px' } },
-    { header: 'Device ID', key: 'DeviceId', field: 'DeviceId', sortable: true, style: { width: '120px' } },
-    { header: 'Error Code', key: 'ErrorCode', field: 'ErrorCode', sortable: true, style: { width: '100px' } },
-    { header: 'Error Name', key: 'ErrorName', field: 'ErrorName', sortable: false, style: { width: '150px' } },
-    { header: 'Test Start', key: 'TestStartTime', field: 'TestStartTime', sortable: true, style: { width: '160px' } },
-    { header: 'Test End', key: 'TestEndTime', field: 'TestEndTime', sortable: true, style: { width: '160px' } },
-    { header: 'Duration', key: 'Duration', field: 'Duration', sortable: false, style: { width: '110px' } },
-    { header: 'Test Items', key: 'TestItemCount', field: 'TestItemCount', sortable: false, style: { width: '110px' } },
+    {
+      header: 'Device ID',
+      key: 'DeviceId',
+      field: 'DeviceId',
+      sortable: true,
+      style: { width: '120px' },
+    },
+    {
+      header: 'Error Code',
+      key: 'ErrorCode',
+      field: 'ErrorCode',
+      sortable: true,
+      style: { width: '100px' },
+    },
+    {
+      header: 'Error Name',
+      key: 'ErrorName',
+      field: 'ErrorName',
+      sortable: false,
+      style: { width: '150px' },
+    },
+    {
+      header: 'Test Start',
+      key: 'TestStartTime',
+      field: 'TestStartTime',
+      sortable: true,
+      style: { width: '160px' },
+    },
+    {
+      header: 'Test End',
+      key: 'TestEndTime',
+      field: 'TestEndTime',
+      sortable: true,
+      style: { width: '160px' },
+    },
+    {
+      header: 'Duration',
+      key: 'Duration',
+      field: 'Duration',
+      sortable: false,
+      style: { width: '110px' },
+    },
+    {
+      header: 'Test Items',
+      key: 'TestItemCount',
+      field: 'TestItemCount',
+      sortable: false,
+      style: { width: '110px' },
+    },
     { header: 'Actions', key: 'actions', sortable: false, style: { width: '140px' } },
   ]
 })
@@ -291,7 +334,11 @@ function getRowClass(): string {
   return 'iplas-record-table-row'
 }
 
-function updateOptions(nextPage = page.value, nextItemsPerPage = itemsPerPage.value, nextSortBy = sortBy.value) {
+function updateOptions(
+  nextPage = page.value,
+  nextItemsPerPage = itemsPerPage.value,
+  nextSortBy = sortBy.value,
+) {
   emit('update:options', {
     page: nextPage,
     itemsPerPage: nextItemsPerPage,

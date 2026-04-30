@@ -30,12 +30,12 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { useAttrs } from 'vue'
 import Tab from 'primevue/tab'
 import TabList from 'primevue/tablist'
 import TabPanel from 'primevue/tabpanel'
 import TabPanels from 'primevue/tabpanels'
 import Tabs from 'primevue/tabs'
+import { useAttrs } from 'vue'
 
 defineOptions({ inheritAttrs: false })
 
@@ -59,9 +59,7 @@ withDefaults(
   },
 )
 
-const emit = defineEmits<{
-  (event: 'update:modelValue', value: string | number): void
-}>()
+const emit = defineEmits<(event: 'update:modelValue', value: string | number) => void>()
 
 const attrs = useAttrs()
 

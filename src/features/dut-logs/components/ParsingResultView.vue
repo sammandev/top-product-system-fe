@@ -252,21 +252,51 @@ const gridRowsPerPageOptions = [10, 25, 50, 100, 200]
 const dialogBreakpoints = { '1400px': '96vw', '960px': '98vw' }
 
 const valueColumns = [
-  { key: 'test_item', field: 'test_item', header: 'Test Item', sortable: true, style: { width: '20rem' } },
+  {
+    key: 'test_item',
+    field: 'test_item',
+    header: 'Test Item',
+    sortable: true,
+    style: { width: '20rem' },
+  },
   { key: 'usl', field: 'usl', header: 'USL', sortable: true, style: { width: '7rem' } },
   { key: 'lsl', field: 'lsl', header: 'LSL', sortable: true, style: { width: '7rem' } },
   { key: 'value', field: 'value', header: 'Value', sortable: true },
   { key: 'type', field: 'type', header: 'Type', sortable: true, style: { width: '8rem' } },
   { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '8rem' } },
-  { key: 'matched_criteria', field: 'matched_criteria', header: 'Criteria', sortable: true, style: { width: '7rem' } },
+  {
+    key: 'matched_criteria',
+    field: 'matched_criteria',
+    header: 'Criteria',
+    sortable: true,
+    style: { width: '7rem' },
+  },
 ]
 
 const nonValueColumns = [
-  { key: 'test_item', field: 'test_item', header: 'Test Item', sortable: true, style: { width: '20rem' } },
+  {
+    key: 'test_item',
+    field: 'test_item',
+    header: 'Test Item',
+    sortable: true,
+    style: { width: '20rem' },
+  },
   { key: 'value', field: 'value', header: 'Value', sortable: true },
-  { key: 'decimal_value', field: 'decimal_value', header: 'Decimal Value', sortable: true, style: { width: '10rem' } },
+  {
+    key: 'decimal_value',
+    field: 'decimal_value',
+    header: 'Decimal Value',
+    sortable: true,
+    style: { width: '10rem' },
+  },
   { key: 'type', field: 'type', header: 'Type', sortable: true, style: { width: '8rem' } },
-  { key: 'matched_criteria', field: 'matched_criteria', header: 'Criteria', sortable: true, style: { width: '7rem' } },
+  {
+    key: 'matched_criteria',
+    field: 'matched_criteria',
+    header: 'Criteria',
+    sortable: true,
+    style: { width: '7rem' },
+  },
 ]
 
 const valueGridColumns = computed(() => valueColumns)
@@ -296,8 +326,12 @@ const filteredNonValueItems = computed(() => {
   return nonValueItems.value.filter((item) => item.test_item.toLowerCase().includes(searchLower))
 })
 
-const valueGridRows = computed(() => filteredValueItems.value as unknown as Array<Record<string, unknown>>)
-const nonValueGridRows = computed(() => filteredNonValueItems.value as unknown as Array<Record<string, unknown>>)
+const valueGridRows = computed(
+  () => filteredValueItems.value as unknown as Array<Record<string, unknown>>,
+)
+const nonValueGridRows = computed(
+  () => filteredNonValueItems.value as unknown as Array<Record<string, unknown>>,
+)
 
 function formatDuration(seconds: number | null): string {
   if (!seconds) return 'N/A'

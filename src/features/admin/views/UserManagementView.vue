@@ -388,9 +388,7 @@
 
         <label class="user-management-field">
           <span>Role</span>
-          <select v-model="currentUser.role">
-            <option v-for="option in userRoleOptions" :key="option.value" :value="option.value">{{ option.title }}</option>
-          </select>
+          <AppSelect v-model="currentUser.role" :options="userRoleSelectOptions" :searchable="false" />
         </label>
 
         <label class="user-management-toggle">
@@ -460,9 +458,7 @@
       <div class="user-management-form-grid">
         <label class="user-management-field">
           <span>Role</span>
-          <select v-model="acEditForm.role">
-            <option v-for="option in accessRoleOptions" :key="option.value" :value="option.value">{{ option.title }}</option>
-          </select>
+          <AppSelect v-model="acEditForm.role" :options="accessRoleSelectOptions" :searchable="false" />
         </label>
 
         <label class="user-management-toggle">
@@ -554,7 +550,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { queryKeys } from '@/core/query'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
-import { AppDataGrid, AppDialog, AppTabs } from '@/shared'
+import { AppDataGrid, AppDialog, AppSelect, AppTabs } from '@/shared'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import { getApiErrorDetail } from '@/shared/utils'
 import {
@@ -721,6 +717,18 @@ const accessRoleOptions = computed(() => {
 
   return base
 })
+
+const userRoleSelectOptions = userRoleOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+
+const accessRoleSelectOptions = computed(() =>
+  accessRoleOptions.value.map((option) => ({
+    label: option.title,
+    value: option.value,
+  })),
+)
 
 const userColumns = [
   { key: 'username', field: 'username', header: 'User', sortable: true },

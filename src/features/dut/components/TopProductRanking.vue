@@ -432,11 +432,23 @@ const rankingGridColumns = [
   { key: 'rank', field: 'rank', header: 'Rank', sortable: true, style: { width: '7rem' } },
   { key: 'isn', field: 'isn', header: 'DUT ISN', sortable: true, style: { width: '14rem' } },
   { key: 'device', field: 'device', header: 'Device', sortable: true, style: { width: '12rem' } },
-  { key: 'testDate', field: 'testDate', header: 'Test Date', sortable: true, style: { width: '14rem' } },
+  {
+    key: 'testDate',
+    field: 'testDate',
+    header: 'Test Date',
+    sortable: true,
+    style: { width: '14rem' },
+  },
   { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '8rem' } },
   { key: 'site', field: 'site', header: 'Site', sortable: true, style: { width: '10rem' } },
   { key: 'model', field: 'model', header: 'Model', sortable: true, style: { width: '10rem' } },
-  { key: 'errorItem', field: 'errorItem', header: 'Status', sortable: false, style: { width: '8rem' } },
+  {
+    key: 'errorItem',
+    field: 'errorItem',
+    header: 'Status',
+    sortable: false,
+    style: { width: '8rem' },
+  },
 ]
 
 function getStationRanking(stationName: string): RankingItem[] {

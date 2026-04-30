@@ -780,15 +780,14 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, ref, watch } from 'vue'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
+import { computed, ref, watch } from 'vue'
+import ScoreBreakdownDialog from '@/features/dut-logs/components/ScoreBreakdownDialog.vue'
 import { AppDialog, AppMultiSelect, AppPanel, AppSelect } from '@/shared/ui'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import { formatDate } from '@/shared/utils/helpers'
-import ScoreBreakdownDialog from '@/features/dut-logs/components/ScoreBreakdownDialog.vue'
 import { dutApi } from '../api/dut.api'
-import TopProductRanking from './TopProductRanking.vue'
 import type {
   ScoreBreakdown,
   TopProductError,
@@ -796,6 +795,7 @@ import type {
   TopProductResult,
   TopProductStationResult,
 } from '../types/dutTopProduct.types'
+import TopProductRanking from './TopProductRanking.vue'
 
 interface Props {
   results: TopProductResult[]
@@ -846,11 +846,11 @@ const openDutPanels = ref<string[]>([])
 const measurementLockedColumns = ref<string[]>(['test_item', 'usl', 'lsl'])
 const comparisonLockedColumns = ref<string[]>(['test_item', 'usl', 'lsl', 'target'])
 
-const measurementDialogWidth = computed(() =>
-  isFullscreen.value ? '96vw' : 'min(96vw, 78rem)',
-)
+const measurementDialogWidth = computed(() => (isFullscreen.value ? '96vw' : 'min(96vw, 78rem)'))
 
-const measurementScrollHeight = computed(() => (isFullscreen.value ? 'calc(100vh - 25rem)' : '34rem'))
+const measurementScrollHeight = computed(() =>
+  isFullscreen.value ? 'calc(100vh - 25rem)' : '34rem',
+)
 
 const scoreFilterOptions = [
   { label: 'All Scores', value: null },
@@ -897,7 +897,7 @@ watch(measurementDialog, async (isOpen) => {
   }
 })
 
-function parseMeasurements(data: Array<any>): TopProductMeasurement[] {
+function parseMeasurements(data: unknown[]): TopProductMeasurement[] {
   if (!data || data.length === 0) return []
 
   const measurements: TopProductMeasurement[] = []
@@ -906,7 +906,8 @@ function parseMeasurements(data: Array<any>): TopProductMeasurement[] {
     const item = data[index]
     if (!item) continue
 
-    const isObjectFormat = typeof item === 'object' && !Array.isArray(item) && 'test_item' in item
+    const isObjectFormat =
+      typeof item === 'object' && item !== null && !Array.isArray(item) && 'test_item' in item
 
     let testItem: string
     let usl: number | null
@@ -917,18 +918,21 @@ function parseMeasurements(data: Array<any>): TopProductMeasurement[] {
     let breakdown: ScoreBreakdown | null
 
     if (isObjectFormat) {
-      testItem = String(item.test_item || '')
-      usl = item.usl !== null && item.usl !== undefined ? Number(item.usl) : null
-      lsl = item.lsl !== null && item.lsl !== undefined ? Number(item.lsl) : null
-      actual = item.actual !== null && item.actual !== undefined ? Number(item.actual) : 0
+      const objectItem = item as Record<string, unknown>
+      testItem = String(objectItem.test_item || '')
+      usl = objectItem.usl !== null && objectItem.usl !== undefined ? Number(objectItem.usl) : null
+      lsl = objectItem.lsl !== null && objectItem.lsl !== undefined ? Number(objectItem.lsl) : null
+      actual =
+        objectItem.actual !== null && objectItem.actual !== undefined
+          ? Number(objectItem.actual)
+          : 0
 
       breakdown =
-        item.score_breakdown && typeof item.score_breakdown === 'object'
-          ? (item.score_breakdown as ScoreBreakdown)
+        objectItem.score_breakdown && typeof objectItem.score_breakdown === 'object'
+          ? (objectItem.score_breakdown as ScoreBreakdown)
           : null
 
-      // biome-ignore lint/suspicious/noExplicitAny: backward-compat fallback for legacy 'score' field
-      systemScore = breakdown?.final_score ?? (breakdown as any)?.score ?? 0
+      systemScore = breakdown?.final_score ?? (breakdown as { score?: number } | null)?.score ?? 0
       target = breakdown?.target_used ?? null
     } else {
       const row = item as Array<string | number | null | ScoreBreakdown>
@@ -1147,7 +1151,10 @@ const filteredMeasurements = computed(() => {
 })
 
 const comparisonStationTitle = computed(() => {
-  return comparisonStations.value.find((station) => station.value === selectedCompareStation.value)?.title || ''
+  return (
+    comparisonStations.value.find((station) => station.value === selectedCompareStation.value)
+      ?.title || ''
+  )
 })
 
 const comparisonHeaders = computed(() => {
@@ -1182,13 +1189,7 @@ const comparisonHeaders = computed(() => {
     sortable: true,
   }))
 
-  return [
-    ...baseHeaders,
-    ...measuredHeaders,
-    actMaxDiffHeader,
-    ...deltaHeaders,
-    ...scoreHeaders,
-  ]
+  return [...baseHeaders, ...measuredHeaders, actMaxDiffHeader, ...deltaHeaders, ...scoreHeaders]
 })
 
 const comparisonColumnOptions = computed(() =>
@@ -1249,7 +1250,11 @@ const comparisonData = computed(() => {
         entry[`measured_${result.dut_isn}`] = measurement.actual
         entry[`breakdown_${result.dut_isn}`] = measurement.breakdown
 
-        if (measurement.actual !== null && measurement.actual !== '' && measurement.target !== null) {
+        if (
+          measurement.actual !== null &&
+          measurement.actual !== '' &&
+          measurement.target !== null
+        ) {
           const measuredNum = parseFloat(measurement.actual)
           const targetNum = parseFloat(measurement.target)
           if (!Number.isNaN(measuredNum) && !Number.isNaN(targetNum)) {
@@ -1276,7 +1281,9 @@ const comparisonData = computed(() => {
     return {
       ...item,
       measured_max_diff:
-        measuredValues.length > 1 ? Math.max(...measuredValues) - Math.min(...measuredValues) : null,
+        measuredValues.length > 1
+          ? Math.max(...measuredValues) - Math.min(...measuredValues)
+          : null,
     }
   })
 

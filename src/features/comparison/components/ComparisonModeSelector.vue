@@ -30,10 +30,7 @@
           <span>File A Join Key</span>
           <div class="compare-mode-field__input">
             <span class="compare-mode-pill compare-mode-pill--a">A</span>
-            <select :value="modelValue.joinKeyA" @change="updateJoinKeyA(($event.target as HTMLSelectElement).value)">
-              <option value="">Select join key</option>
-              <option v-for="column in columnsA" :key="`a-${column}`" :value="column">{{ column }}</option>
-            </select>
+            <AppSelect :model-value="modelValue.joinKeyA || null" :options="joinKeyAOptions" @update:model-value="updateJoinKeyA(String($event ?? ''))" />
           </div>
           <small v-if="joinKeyAError" class="compare-mode-field__error">{{ joinKeyAError }}</small>
         </label>
@@ -42,10 +39,7 @@
           <span>File B Join Key</span>
           <div class="compare-mode-field__input">
             <span class="compare-mode-pill compare-mode-pill--b">B</span>
-            <select :value="modelValue.joinKeyB" @change="updateJoinKeyB(($event.target as HTMLSelectElement).value)">
-              <option value="">Select join key</option>
-              <option v-for="column in columnsB" :key="`b-${column}`" :value="column">{{ column }}</option>
-            </select>
+            <AppSelect :model-value="modelValue.joinKeyB || null" :options="joinKeyBOptions" @update:model-value="updateJoinKeyB(String($event ?? ''))" />
           </div>
           <small v-if="joinKeyBError" class="compare-mode-field__error">{{ joinKeyBError }}</small>
         </label>
@@ -92,7 +86,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
-import { AppPanel } from '@/shared'
+import { AppPanel, AppSelect } from '@/shared'
 
 // Types
 export type ComparisonMode = 'columns' | 'rows' | 'both'
@@ -145,6 +139,16 @@ const modeOptions: Array<{ value: ComparisonMode; label: string; description: st
 const needsJoinKeys = computed(() => {
   return props.modelValue.mode === 'rows' || props.modelValue.mode === 'both'
 })
+
+const joinKeyAOptions = computed(() => [
+  { label: 'Select join key', value: null },
+  ...props.columnsA.map((column) => ({ label: column, value: column })),
+])
+
+const joinKeyBOptions = computed(() => [
+  { label: 'Select join key', value: null },
+  ...props.columnsB.map((column) => ({ label: column, value: column })),
+])
 
 const joinKeysMatched = computed(() => {
   return needsJoinKeys.value && props.modelValue.joinKeyA && props.modelValue.joinKeyB

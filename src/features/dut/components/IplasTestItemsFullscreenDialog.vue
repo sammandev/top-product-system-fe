@@ -51,19 +51,19 @@
         <article class="fullscreen-dialog__metadata-card">
           <button type="button" class="fullscreen-dialog__copy-row" @click="copyToClipboard(record.deviceId)">
             <Icon icon="mdi:chip" />
-            <span><strong>Device ID:</strong> {{ record.deviceId }}</span>
+            <span><strong>Device ID</strong> {{ record.deviceId }}</span>
           </button>
         </article>
         <article class="fullscreen-dialog__metadata-card">
           <div class="fullscreen-dialog__copy-row fullscreen-dialog__copy-row--static">
             <Icon icon="mdi:map-marker" />
-            <span><strong>Site:</strong> {{ record.site }}</span>
+            <span><strong>Site</strong> {{ record.site }}</span>
           </div>
         </article>
         <article class="fullscreen-dialog__metadata-card">
           <div class="fullscreen-dialog__copy-row fullscreen-dialog__copy-row--static">
             <Icon icon="mdi:folder" />
-            <span><strong>Project:</strong> {{ record.project }}</span>
+            <span><strong>Project</strong> {{ record.project }}</span>
           </div>
         </article>
       </section>
@@ -157,6 +157,7 @@
           :rows-per-page="50"
           :scroll-height="isFullscreen ? 'flex' : '32rem'"
           :table-style="{ minWidth: '54rem' }"
+          sticky-header
         >
           <template #cell-STATUS="{ data }">
             <span class="fullscreen-dialog__pill" :class="statusPillClass(String(data.STATUS))">
@@ -181,10 +182,10 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
-import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
-import { AppDialog } from '@/shared/ui'
-import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 import { useNotification } from '@/shared/composables/useNotification'
+import { AppDialog } from '@/shared/ui'
+import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
+import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 import {
   adjustIplasDisplayTime,
   getStatusColor,
@@ -290,7 +291,7 @@ const { showInfo: showInfoNotification } = useNotification()
 // Filter options for dropdown (Criteria Data is default)
 const testItemFilterOptions: Array<{ title: string; value: TestItemFilterValue }> = [
   { title: 'Show All', value: 'all' },
-  { title: 'Criteria Data ★', value: 'value' },
+  { title: 'Criteria Data', value: 'value' },
   { title: 'Non-Criteria', value: 'non-value' },
   { title: 'Bin Data', value: 'bin' },
 ]
@@ -330,7 +331,11 @@ const dialogBreakpoints = computed<Record<string, string>>(() =>
 )
 
 const hasActiveFilters = computed(() => {
-  return searchTerms.value.length > 0 || testStatusFilter.value !== 'ALL' || testItemFilter.value !== 'all'
+  return (
+    searchTerms.value.length > 0 ||
+    testStatusFilter.value !== 'ALL' ||
+    testItemFilter.value !== 'all'
+  )
 })
 
 // Helper functions

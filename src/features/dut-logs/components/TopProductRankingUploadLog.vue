@@ -40,12 +40,7 @@
           </label>
           <label class="top-product-ranking-upload-log__field">
             <span>Score Filter</span>
-            <select v-model="scoreFilterType">
-              <option :value="null">No filter</option>
-              <option v-for="option in scoreFilterTypes" :key="option.value" :value="option.value">
-                {{ option.title }}
-              </option>
-            </select>
+            <AppSelect v-model="scoreFilterType" :options="scoreFilterSelectOptions" :searchable="false" />
           </label>
           <label class="top-product-ranking-upload-log__field">
             <span>Score Value</span>
@@ -58,12 +53,7 @@
           </label>
           <label class="top-product-ranking-upload-log__field">
             <span>Test Result</span>
-            <select v-model="resultFilter">
-              <option :value="null">All</option>
-              <option v-for="option in resultFilterOptions.filter((item) => item.value !== null)" :key="option.value" :value="option.value">
-                {{ option.title }}
-              </option>
-            </select>
+            <AppSelect v-model="resultFilter" :options="resultFilterSelectOptions" :searchable="false" />
           </label>
         </section>
 
@@ -122,11 +112,7 @@
         <div class="top-product-ranking-upload-log__footer-bar">
           <div class="top-product-ranking-upload-log__footer-group">
             <span>Show</span>
-            <select v-model.number="itemsPerPage">
-              <option v-for="option in itemsPerPageOptions" :key="option.value" :value="option.value">
-                {{ option.title }}
-              </option>
-            </select>
+            <AppSelect v-model="itemsPerPage" :options="itemsPerPageSelectOptions" :searchable="false" />
             <span>items</span>
           </div>
 
@@ -255,11 +241,7 @@
           </label>
           <label class="top-product-ranking-upload-log__field">
             <span>Filter Items</span>
-            <select v-model="testItemFilterType">
-              <option v-for="option in testItemFilterOptions" :key="option.value" :value="option.value">
-                {{ option.title }}
-              </option>
-            </select>
+            <AppSelect v-model="testItemFilterType" :options="testItemFilterSelectOptions" :searchable="false" />
           </label>
           <div class="top-product-ranking-upload-log__field top-product-ranking-upload-log__field--actions">
             <span>Visible Items</span>
@@ -513,12 +495,7 @@
           </label>
           <label class="top-product-ranking-upload-log__field">
             <span>Score Filter</span>
-            <select v-model="scoreFilterType">
-              <option :value="null">No filter</option>
-              <option v-for="option in scoreFilterTypes" :key="option.value" :value="option.value">
-                {{ option.title }}
-              </option>
-            </select>
+            <AppSelect v-model="scoreFilterType" :options="scoreFilterSelectOptions" :searchable="false" />
           </label>
           <label class="top-product-ranking-upload-log__field">
             <span>Score Value</span>
@@ -531,12 +508,7 @@
           </label>
           <label class="top-product-ranking-upload-log__field">
             <span>Test Result</span>
-            <select v-model="resultFilter">
-              <option :value="null">All</option>
-              <option v-for="option in resultFilterOptions.filter((item) => item.value !== null)" :key="option.value" :value="option.value">
-                {{ option.title }}
-              </option>
-            </select>
+            <AppSelect v-model="resultFilter" :options="resultFilterSelectOptions" :searchable="false" />
           </label>
         </section>
 
@@ -595,11 +567,7 @@
         <div class="top-product-ranking-upload-log__footer-bar">
           <div class="top-product-ranking-upload-log__footer-group">
             <span>Show</span>
-            <select v-model.number="itemsPerPage">
-              <option v-for="option in itemsPerPageOptions" :key="option.value" :value="option.value">
-                {{ option.title }}
-              </option>
-            </select>
+            <AppSelect v-model="itemsPerPage" :options="itemsPerPageSelectOptions" :searchable="false" />
             <span>items</span>
           </div>
 
@@ -628,10 +596,10 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone'
 import utc from 'dayjs/plugin/utc'
-import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 import type {
   CompareResponseEnhanced,
@@ -645,7 +613,7 @@ import {
   type TopProductCreate,
   type TopProductMeasurementCreate,
 } from '@/features/top-products/api/topProducts.api'
-import { AppDataGrid, AppDialog, AppPanel, getApiErrorDetail } from '@/shared'
+import { AppDataGrid, AppDialog, AppPanel, AppSelect, getApiErrorDetail } from '@/shared'
 import { useNotification } from '@/shared/composables/useNotification'
 import IplasCompareDialog from './IplasCompareDialog.vue'
 
@@ -709,6 +677,11 @@ const testItemFilterOptions = [
   { title: 'Non-Criteria Items', value: 'non-criteria' },
 ]
 
+const testItemFilterSelectOptions = testItemFilterOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+
 const filteredTestItems = computed(() => {
   let items = selectedTestItems.value
 
@@ -742,6 +715,10 @@ const itemsPerPageOptions = [
   { title: '100', value: 100 },
   { title: 'Custom', value: 0 },
 ]
+const itemsPerPageSelectOptions = itemsPerPageOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
 const showCustomInput = ref(false)
 const customItemsPerPage = ref(10)
 
@@ -751,26 +728,75 @@ const scoreFilterTypes = [
   { title: 'Equal To', value: 'eq' },
 ]
 
+const scoreFilterSelectOptions = [
+  { label: 'No filter', value: null },
+  ...scoreFilterTypes.map((option) => ({
+    label: option.title,
+    value: option.value,
+  })),
+]
+
 const resultFilterOptions = [
   { title: 'All', value: null },
   { title: 'Pass Only', value: 'PASS' },
   { title: 'Fail Only', value: 'FAIL' },
 ]
 
+const resultFilterSelectOptions = resultFilterOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+
 const rankingGridColumns = [
   { key: 'rank', field: 'rank', header: 'Rank', sortable: false, style: { width: '6rem' } },
   { key: 'isn', field: 'isn', header: 'DUT ISN', sortable: true, style: { width: '12rem' } },
-  { key: 'test_date', field: 'test_date', header: 'Test Date', sortable: true, style: { width: '11rem' } },
-  { key: 'duration', field: 'duration_seconds', header: 'Duration', sortable: true, style: { width: '8rem' } },
-  { key: 'station', field: 'station', header: 'Test Station', sortable: true, style: { width: '11rem' } },
+  {
+    key: 'test_date',
+    field: 'test_date',
+    header: 'Test Date',
+    sortable: true,
+    style: { width: '11rem' },
+  },
+  {
+    key: 'duration',
+    field: 'duration_seconds',
+    header: 'Duration',
+    sortable: true,
+    style: { width: '8rem' },
+  },
+  {
+    key: 'station',
+    field: 'station',
+    header: 'Test Station',
+    sortable: true,
+    style: { width: '11rem' },
+  },
   { key: 'device', field: 'device', header: 'Device', sortable: true, style: { width: '11rem' } },
   { key: 'status', field: 'status', header: 'Status', sortable: true, style: { width: '8rem' } },
-  { key: 'result', field: 'result', header: 'Test Result', sortable: true, style: { width: '9rem' } },
-  { key: 'score', field: 'score', header: 'Overall Score', sortable: true, style: { width: '10rem' } },
+  {
+    key: 'result',
+    field: 'result',
+    header: 'Test Result',
+    sortable: true,
+    style: { width: '9rem' },
+  },
+  {
+    key: 'score',
+    field: 'score',
+    header: 'Overall Score',
+    sortable: true,
+    style: { width: '10rem' },
+  },
 ]
 
 const testItemGridColumns = [
-  { key: 'test_item', field: 'test_item', header: 'Test Item', sortable: true, style: { width: '18rem' } },
+  {
+    key: 'test_item',
+    field: 'test_item',
+    header: 'Test Item',
+    sortable: true,
+    style: { width: '18rem' },
+  },
   { key: 'value', field: 'value', header: 'Value', sortable: true, style: { width: '8rem' } },
   { key: 'usl', field: 'usl', header: 'UCL', sortable: true, style: { width: '7rem' } },
   { key: 'lsl', field: 'lsl', header: 'LCL', sortable: true, style: { width: '7rem' } },
@@ -880,7 +906,9 @@ const getPerPage = () => {
   return normalizeItemsPerPage(itemsPerPage.value)
 }
 
-const totalPages = computed(() => Math.max(1, Math.ceil(filteredRankings.value.length / getPerPage())))
+const totalPages = computed(() =>
+  Math.max(1, Math.ceil(filteredRankings.value.length / getPerPage())),
+)
 
 const paginatedRankings = computed(() => {
   const perPage = getPerPage()

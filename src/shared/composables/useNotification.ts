@@ -5,8 +5,8 @@
  * using the PrimeVue toast service.
  */
 
-import { ref } from 'vue'
 import { useToast } from 'primevue/usetoast'
+import { ref } from 'vue'
 
 export interface NotificationOptions {
   message: string

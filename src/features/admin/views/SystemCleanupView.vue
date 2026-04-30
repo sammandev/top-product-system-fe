@@ -211,10 +211,10 @@ const successMessage = ref('')
 const cleanupResult = ref<{ removed: string[] } | null>(null)
 
 const ttlPresets = [
-    { label: '5 min', value: 300 },
-    { label: '1 hour', value: 3600 },
-    { label: '6 hours', value: 21600 },
-    { label: '24 hours', value: 86400 },
+  { label: '5 min', value: 300 },
+  { label: '1 hour', value: 3600 },
+  { label: '6 hours', value: 21600 },
+  { label: '24 hours', value: 86400 },
 ]
 
 // Computed

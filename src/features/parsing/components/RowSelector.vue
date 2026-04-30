@@ -103,7 +103,11 @@ const excludeIndices = ref<number[]>(props.modelValue?.excluded || [])
 const excludeInput = ref<string>('')
 const modeOptions: Array<{ value: RowSelectionMode; label: string; description: string }> = [
   { value: 'all', label: 'All Rows', description: 'Use every row in the preview.' },
-  { value: 'range', label: 'Row Range', description: 'Choose a start and end row, then optionally exclude rows inside the range.' },
+  {
+    value: 'range',
+    label: 'Row Range',
+    description: 'Choose a start and end row, then optionally exclude rows inside the range.',
+  },
 ]
 
 // Computed
@@ -246,7 +250,7 @@ watch(
         rangeStart.value = newValue.range.start + 1 // Convert 0-based to 1-based
         rangeEnd.value = newValue.range.end + 1 // Convert 0-based to 1-based
       }
-        if (newValue.excluded) {
+      if (newValue.excluded) {
         excludeIndices.value = newValue.excluded // Already 0-based
       }
     }

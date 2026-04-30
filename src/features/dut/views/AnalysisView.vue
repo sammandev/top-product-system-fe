@@ -29,9 +29,8 @@
               <span>DUT ISNs</span>
               <div class="analysis-view-token-entry">
                 <input v-model="pendingDutInput" type="text" autocomplete="off"
-                  placeholder="Type DUT ISNs, then press Enter or comma" @keydown="handleTokenKeydown($event, 'dut')"
+                  placeholder="Type DUT ISNs, then press Enter" @input="handleTokenInput('dut')" @keydown="handleTokenKeydown($event, 'dut')"
                   @blur="commitPendingTokens('dut')">
-                <button type="button" @click="commitPendingTokens('dut')">Add</button>
               </div>
               <small>Enter, comma, space, or paste a list.</small>
               <div class="analysis-view-token-list">
@@ -47,9 +46,8 @@
               <span>Station Filters</span>
               <div class="analysis-view-token-entry">
                 <input v-model="pendingStationInput" type="text" autocomplete="off"
-                  placeholder="Optional stations to include" @keydown="handleTokenKeydown($event, 'station')"
+                  placeholder="Optional stations to include" @input="handleTokenInput('station')" @keydown="handleTokenKeydown($event, 'station')"
                   @blur="commitPendingTokens('station')">
-                <button type="button" @click="commitPendingTokens('station')">Add</button>
               </div>
               <small>Optional. Leave blank to include all stations.</small>
               <div class="analysis-view-token-list">
@@ -305,8 +303,13 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
+import type {
+  GroupScores,
+  HierarchicalDUTResult,
+  HierarchicalRequest,
+  HierarchicalStationResult,
+} from '@/core/types/dut.types'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
-import type { GroupScores, HierarchicalDUTResult, HierarchicalRequest, HierarchicalStationResult } from '@/core/types/dut.types'
 import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
 import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
@@ -351,7 +354,9 @@ const totalStationCount = computed(() => {
 })
 const averageScore = computed(() => {
   const stationScores = results.value.flatMap((result) =>
-    result.test_result.map((station) => station.overall_data_score).filter((score) => Number.isFinite(score)),
+    result.test_result
+      .map((station) => station.overall_data_score)
+      .filter((score) => Number.isFinite(score)),
   )
 
   if (stationScores.length === 0) {
@@ -392,9 +397,11 @@ watch(results, (nextResults) => {
   const nextSelectedStations: Record<string, string> = {}
   for (const result of nextResults) {
     const currentStation = selectedStationByDut.value[result.dut_isn]
-      const hasCurrentStation = result.test_result.some((station) => station.station_name === currentStation)
+    const hasCurrentStation = result.test_result.some(
+      (station) => station.station_name === currentStation,
+    )
     nextSelectedStations[result.dut_isn] = hasCurrentStation
-        ? currentStation || result.test_result[0]?.station_name || ''
+      ? currentStation || result.test_result[0]?.station_name || ''
       : result.test_result[0]?.station_name || ''
   }
 
@@ -437,6 +444,15 @@ function handleTokenKeydown(event: KeyboardEvent, field: TokenField) {
   }
 
   event.preventDefault()
+  commitPendingTokens(field)
+}
+
+function handleTokenInput(field: TokenField) {
+  const source = field === 'dut' ? pendingDutInput : pendingStationInput
+  if (!/[\n,\s]/.test(source.value)) {
+    return
+  }
+
   commitPendingTokens(field)
 }
 
@@ -498,7 +514,10 @@ function getSelectedStation(dutIsn: string): HierarchicalStationResult | undefin
   }
 
   const selectedStationName = selectedStationByDut.value[dutIsn]
-  return result.test_result.find((station) => station.station_name === selectedStationName) || result.test_result[0]
+  return (
+    result.test_result.find((station) => station.station_name === selectedStationName) ||
+    result.test_result[0]
+  )
 }
 
 function handleReset() {
@@ -596,7 +615,10 @@ function exportCSV() {
               if (typeof scoreData === 'number') {
                 bayesScore = scoreData.toString()
               } else if (typeof scoreData === 'object' && scoreData) {
-                const typedScoreData = scoreData as { category_bayes_score?: number; category_avg_score?: number }
+                const typedScoreData = scoreData as {
+                  category_bayes_score?: number
+                  category_avg_score?: number
+                }
                 bayesScore = typedScoreData.category_bayes_score?.toString() || ''
                 avgScore = typedScoreData.category_avg_score?.toString() || ''
               }
@@ -624,7 +646,10 @@ function exportCSV() {
     })
   })
 
-  downloadBlob(new Blob([rows.join('\n')], { type: 'text/csv' }), `hierarchical_analysis_${Date.now()}.csv`)
+  downloadBlob(
+    new Blob([rows.join('\n')], { type: 'text/csv' }),
+    `hierarchical_analysis_${Date.now()}.csv`,
+  )
 }
 
 function escapeCsvValue(value: string) {

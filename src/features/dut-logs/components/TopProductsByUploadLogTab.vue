@@ -150,41 +150,23 @@
       <div class="upload-log-comparison__filters">
         <label class="upload-log-comparison__field">
           <span>Station (Uploaded)</span>
-          <select v-model="selectedUploadedStation">
-            <option :value="null">All uploaded stations</option>
-            <option v-for="station in uploadedStationOptions" :key="station" :value="station">
-              {{ station }}
-            </option>
-          </select>
+          <AppSelect v-model="selectedUploadedStation" :options="uploadedStationSelectOptions" />
         </label>
 
         <label class="upload-log-comparison__field">
           <span>Station (iPLAS)</span>
-          <select v-model="selectedIplasStation" :disabled="iplasDataByIsn.size === 0">
-            <option :value="null">Auto</option>
-            <option v-for="station in iplasStationOptions" :key="station" :value="station">
-              {{ station }}
-            </option>
-          </select>
+          <AppSelect v-model="selectedIplasStation" :options="iplasStationSelectOptions" :disabled="iplasDataByIsn.size === 0" />
         </label>
 
         <label class="upload-log-comparison__field upload-log-comparison__field--wide">
           <span>ISNs To Compare</span>
-          <select v-model="selectedCompareIsns" multiple size="4">
-            <option v-for="isn in allCompareIsns" :key="isn" :value="isn">
-              {{ isn }}
-            </option>
-          </select>
+          <AppMultiSelect v-model="selectedCompareIsns" :options="compareIsnSelectOptions" placeholder="All detected ISNs" />
           <small>Leave empty to compare all detected ISNs.</small>
         </label>
 
         <label class="upload-log-comparison__field">
           <span>Filter Items</span>
-          <select v-model="itemFilterType">
-            <option v-for="option in itemFilterOptions" :key="option.value" :value="option.value">
-              {{ option.title }}
-            </option>
-          </select>
+          <AppSelect v-model="itemFilterType" :options="itemFilterSelectOptions" :searchable="false" />
         </label>
 
         <label class="upload-log-comparison__field upload-log-comparison__field--wide">
@@ -324,40 +306,22 @@
       <div class="upload-log-comparison__filters upload-log-comparison__filters--fullscreen">
         <label class="upload-log-comparison__field">
           <span>Station (Uploaded)</span>
-          <select v-model="selectedUploadedStation">
-            <option :value="null">All uploaded stations</option>
-            <option v-for="station in uploadedStationOptions" :key="`fullscreen-uploaded-${station}`" :value="station">
-              {{ station }}
-            </option>
-          </select>
+          <AppSelect v-model="selectedUploadedStation" :options="uploadedStationSelectOptions" />
         </label>
 
         <label class="upload-log-comparison__field">
           <span>Station (iPLAS)</span>
-          <select v-model="selectedIplasStation" :disabled="iplasDataByIsn.size === 0">
-            <option :value="null">Auto</option>
-            <option v-for="station in iplasStationOptions" :key="`fullscreen-iplas-${station}`" :value="station">
-              {{ station }}
-            </option>
-          </select>
+          <AppSelect v-model="selectedIplasStation" :options="iplasStationSelectOptions" :disabled="iplasDataByIsn.size === 0" />
         </label>
 
         <label class="upload-log-comparison__field upload-log-comparison__field--wide">
           <span>ISNs To Compare</span>
-          <select v-model="selectedCompareIsns" multiple size="6">
-            <option v-for="isn in allCompareIsns" :key="`fullscreen-isn-${isn}`" :value="isn">
-              {{ isn }}
-            </option>
-          </select>
+          <AppMultiSelect v-model="selectedCompareIsns" :options="compareIsnSelectOptions" placeholder="All detected ISNs" />
         </label>
 
         <label class="upload-log-comparison__field">
           <span>Filter Items</span>
-          <select v-model="itemFilterType">
-            <option v-for="option in itemFilterOptions" :key="`fullscreen-${option.value}`" :value="option.value">
-              {{ option.title }}
-            </option>
-          </select>
+          <AppSelect v-model="itemFilterType" :options="itemFilterSelectOptions" :searchable="false" />
         </label>
 
         <label class="upload-log-comparison__field upload-log-comparison__field--wide">
@@ -552,16 +516,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
 import Column from 'primevue/column'
 import ColumnGroup from 'primevue/columngroup'
 import DataTable from 'primevue/datatable'
 import Row from 'primevue/row'
+import { computed, ref, watch } from 'vue'
 import type { IplasIsnSearchRecord } from '@/features/dut-logs/api/iplasProxyApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
-import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
-import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
-import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import {
   type CompareItemEnhanced,
   type CompareResponseEnhanced,
@@ -574,11 +535,16 @@ import {
   useTestLogUpload,
 } from '@/features/dut-logs/composables/useTestLogUpload'
 import { useNotification } from '@/shared/composables/useNotification'
+import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
+import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
+import AppMultiSelect from '@/shared/ui/forms/AppMultiSelect.vue'
+import AppSelect from '@/shared/ui/forms/AppSelect.vue'
+import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import { getErrorMessage } from '@/shared/utils'
+import { downloadUploadLogCriteriaTemplate } from '../utils/criteriaTemplate'
 import CriteriaBuilderDialog from './CriteriaBuilderDialog.vue'
 import TopProductRankingUploadLog from './TopProductRankingUploadLog.vue'
 import UploadScoringConfigDialog from './UploadScoringConfigDialog.vue'
-import { downloadUploadLogCriteriaTemplate } from '../utils/criteriaTemplate'
 
 // File inputs
 const logFiles = ref<File[] | null>(null)
@@ -628,7 +594,12 @@ const breakdownRows = computed(() => {
   }
 
   const breakdown = breakdownItem.value.score_breakdown
-  const rows: Array<{ key: string; label: string; value: string; valueType?: 'scoring-type' | 'policy' | 'score' | 'warning' }> = [
+  const rows: Array<{
+    key: string
+    label: string
+    value: string
+    valueType?: 'scoring-type' | 'policy' | 'score' | 'warning'
+  }> = [
     {
       key: 'scoring_type',
       label: 'Scoring Type',
@@ -692,6 +663,11 @@ const itemFilterOptions = [
   { title: 'Non-Criteria Items', value: 'non-criteria' },
 ]
 
+const itemFilterSelectOptions = itemFilterOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+
 // Computed
 const hasFiles = computed(() => {
   return logFiles.value && logFiles.value.length > 0
@@ -722,6 +698,13 @@ const allCompareIsns = computed<string[]>(() => {
     .filter((isn: string | null): isn is string => isn !== null)
 })
 
+const compareIsnSelectOptions = computed(() =>
+  allCompareIsns.value.map((isn) => ({
+    label: isn,
+    value: isn,
+  })),
+)
+
 // Available stations from uploaded files
 const uploadedStationOptions = computed(() => {
   if (!compareResult.value?.file_summaries) return []
@@ -733,6 +716,14 @@ const uploadedStationOptions = computed(() => {
   })
   return Array.from(stations).sort()
 })
+
+const uploadedStationSelectOptions = computed(() => [
+  { label: 'All uploaded stations', value: null },
+  ...uploadedStationOptions.value.map((station) => ({
+    label: station,
+    value: station,
+  })),
+])
 
 // ISNs currently displayed in the table columns (with station filter support)
 const displayedIsns = computed(() => {
@@ -764,6 +755,14 @@ const iplasStationOptions = computed(() => {
   }
   return Array.from(stations)
 })
+
+const iplasStationSelectOptions = computed(() => [
+  { label: 'Auto', value: null },
+  ...iplasStationOptions.value.map((station) => ({
+    label: station,
+    value: station,
+  })),
+])
 
 // UPDATED: Comparison table items with per-ISN uploaded + iPLAS data
 const comparisonTableItems = computed(() => {

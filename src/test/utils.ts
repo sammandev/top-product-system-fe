@@ -1,6 +1,6 @@
+import { VueQueryPlugin } from '@tanstack/vue-query'
 import type { ComponentMountingOptions } from '@vue/test-utils'
 import { mount, type VueWrapper } from '@vue/test-utils'
-import { VueQueryPlugin } from '@tanstack/vue-query'
 import { createPinia, setActivePinia } from 'pinia'
 import PrimeVue from 'primevue/config'
 import { createMemoryHistory, createRouter, type RouteRecordRaw } from 'vue-router'

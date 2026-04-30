@@ -1,5 +1,5 @@
-import type { RecordScoreResult, TestItemScoreResult } from '../types/scoring.types'
 import type { StationConfig } from '../components/StationSelectionDialog.vue'
+import type { RecordScoreResult, TestItemScoreResult } from '../types/scoring.types'
 
 export interface ForcedFailureItemDetail {
   name: string
@@ -45,14 +45,21 @@ export function evaluateForcedFailure(
         return []
       }
 
-      return [{
-        name: item.testItemName,
-        score: item.score,
-        deviation: item.deviation,
-        scoreFail,
-        deviationFail,
-        reasonLabel: scoreFail && deviationFail ? 'Dev./Score Fail' : deviationFail ? 'Deviation Fail' : 'Score Fail',
-      }]
+      return [
+        {
+          name: item.testItemName,
+          score: item.score,
+          deviation: item.deviation,
+          scoreFail,
+          deviationFail,
+          reasonLabel:
+            scoreFail && deviationFail
+              ? 'Dev./Score Fail'
+              : deviationFail
+                ? 'Deviation Fail'
+                : 'Score Fail',
+        },
+      ]
     })
 
   return {

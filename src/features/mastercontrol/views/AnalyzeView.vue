@@ -238,8 +238,8 @@ function handleMc2FileChange() {
 }
 
 function handleMc2FileSelection(value: File | File[] | null) {
-    mc2File.value = Array.isArray(value) ? (value[0] ?? null) : value
-    handleMc2FileChange()
+  mc2File.value = Array.isArray(value) ? (value[0] ?? null) : value
+  handleMc2FileChange()
 }
 
 function handleSpecFileChange() {
@@ -253,8 +253,8 @@ function handleSpecFileChange() {
 }
 
 function handleSpecFileSelection(value: File | File[] | null) {
-    specFile.value = Array.isArray(value) ? (value[0] ?? null) : value
-    handleSpecFileChange()
+  specFile.value = Array.isArray(value) ? (value[0] ?? null) : value
+  handleSpecFileChange()
 }
 
 function downloadMc2Template() {
@@ -279,7 +279,7 @@ function openSpecBuilder() {
 }
 
 function handleSpecCreated(file: File, _format: 'json' | 'ini') {
-    specFile.value = file
+  specFile.value = file
   handleSpecFileChange()
 }
 
@@ -289,7 +289,7 @@ async function handleAnalyze() {
   analyzing.value = true
   uploadProgress.value = 0
   analysisCompleted.value = false
-    analysisError.value = ''
+  analysisError.value = ''
 
   try {
     const blob = await analyzeMultiDut({
@@ -309,8 +309,9 @@ async function handleAnalyze() {
     analysisCompleted.value = true
   } catch (error) {
     console.error('Analysis failed:', error)
-        analysisError.value = error instanceof Error ? error.message : 'Analysis failed. Please try again.'
-        showErrorNotification(analysisError.value)
+    analysisError.value =
+      error instanceof Error ? error.message : 'Analysis failed. Please try again.'
+    showErrorNotification(analysisError.value)
   } finally {
     analyzing.value = false
     uploadProgress.value = 0
@@ -318,13 +319,13 @@ async function handleAnalyze() {
 }
 
 function resetForm() {
-    mc2File.value = null
-    specFile.value = null
+  mc2File.value = null
+  specFile.value = null
   mc2FileError.value = ''
   specFileError.value = ''
   analysisCompleted.value = false
   uploadProgress.value = 0
-    analysisError.value = ''
+  analysisError.value = ''
 }
 </script>
 

@@ -57,12 +57,7 @@
 
           <label class="custom-scoring-dialog__field">
             <span>Select Measurement to Test</span>
-            <select v-model="selectedMeasurementKey" class="custom-scoring-dialog__select">
-              <option value="">Choose a measurement</option>
-              <option v-for="measurement in availableMeasurements" :key="measurement.test_item" :value="measurement.test_item">
-                {{ measurement.test_item }}{{ measurement.category ? ` — ${measurement.category}` : '' }}
-              </option>
-            </select>
+            <AppSelect v-model="selectedMeasurementKey" :options="measurementSelectOptions" />
           </label>
 
           <AppPanel v-if="testMeasurement" title="Test Results" compact-header>
@@ -173,7 +168,7 @@
 
 <script setup lang="ts">
 import { computed, inject, ref } from 'vue'
-import { AppDataGrid, AppDialog, AppPanel } from '@/shared/ui'
+import { AppDataGrid, AppDialog, AppPanel, AppSelect } from '@/shared/ui'
 import type {
   CategoryFormulasV2,
   CustomFormulaV2,
@@ -228,7 +223,8 @@ const testMeasurement = ref<TestMeasurement | null>(null)
 const selectedMeasurementKey = computed({
   get: () => testMeasurement.value?.test_item ?? '',
   set: (value: string) => {
-    testMeasurement.value = availableMeasurements.value.find((measurement) => measurement.test_item === value) ?? null
+    testMeasurement.value =
+      availableMeasurements.value.find((measurement) => measurement.test_item === value) ?? null
   },
 })
 
@@ -294,6 +290,14 @@ const availableMeasurements = computed<TestMeasurement[]>(() => {
   return unique.slice(0, 50) // Limit to first 50 for performance
 })
 
+const measurementSelectOptions = computed(() => [
+  { label: 'Choose a measurement', value: '' },
+  ...availableMeasurements.value.map((measurement) => ({
+    label: `${measurement.test_item}${measurement.category ? ` - ${measurement.category}` : ''}`,
+    value: measurement.test_item,
+  })),
+])
+
 // Calculate custom score for test measurement
 const testResult = computed(() => {
   if (!testMeasurement.value) {
@@ -350,12 +354,18 @@ const measurementResultRows = computed<MeasurementResultRow[]>(() => {
 
   return [
     { key: 'test-item', label: 'Test Item', value: testMeasurement.value.test_item },
-    { key: 'category', label: 'Category', value: testMeasurement.value.category || 'General', valueType: 'category' },
+    {
+      key: 'category',
+      label: 'Category',
+      value: testMeasurement.value.category || 'General',
+      valueType: 'category',
+    },
     { key: 'actual', label: 'Measured Value', value: testMeasurement.value.actual.toFixed(4) },
     {
       key: 'target',
       label: 'Target Value',
-      value: testMeasurement.value.target !== null ? testMeasurement.value.target.toFixed(4) : 'N/A',
+      value:
+        testMeasurement.value.target !== null ? testMeasurement.value.target.toFixed(4) : 'N/A',
     },
     {
       key: 'limits',

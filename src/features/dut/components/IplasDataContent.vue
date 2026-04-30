@@ -41,29 +41,20 @@
               <div class="iplas-control-grid iplas-control-grid--two">
                 <label class="iplas-field">
                   <span>Site</span>
-                  <select v-model="selectedSite" :disabled="loading" @change="handleSiteChange">
-                    <option :value="null">Select a site</option>
-                    <option v-for="site in uniqueSites" :key="site" :value="site">{{ site }}</option>
-                  </select>
+                  <AppSelect v-model="selectedSite" :options="siteSelectOptions" :disabled="loading" @change="handleSiteChange" />
                 </label>
 
                 <label class="iplas-field">
                   <span>Project</span>
-                  <select v-model="selectedProject" :disabled="!selectedSite || loadingStations"
-                    @change="handleProjectChange">
-                    <option :value="null">Select a project</option>
-                    <option v-for="project in availableProjects" :key="project" :value="project">{{ project }}</option>
-                  </select>
+                  <AppSelect v-model="selectedProject" :options="projectSelectOptions" :disabled="!selectedSite || loadingStations"
+                    @change="handleProjectChange" />
                 </label>
               </div>
 
               <div class="iplas-control-grid iplas-control-grid--three">
                 <label class="iplas-field">
                   <span>Date Range</span>
-                  <select v-model="dateRangePreset" @change="applyDateRangePreset(dateRangePreset)">
-                    <option v-for="preset in dateRangePresets" :key="preset.value" :value="preset.value">{{ preset.title
-                      }}</option>
-                  </select>
+                  <AppSelect v-model="dateRangePreset" :options="dateRangePresetSelectOptions" :searchable="false" @change="applyDateRangePreset(dateRangePreset)" />
                 </label>
 
                 <label class="iplas-field">
@@ -262,12 +253,12 @@
 
                 <label class="iplas-field">
                   <span>Status</span>
-                  <select :value="stationStatusFilters[currentStationGroup.stationName] || 'ALL'"
-                    @change="handleStationStatusChange(currentStationGroup.stationName, $event)">
-                    <option value="ALL">All Results</option>
-                    <option value="PASS">PASS</option>
-                    <option value="FAIL">FAIL</option>
-                  </select>
+                  <AppSelect
+                    :model-value="stationStatusFilters[currentStationGroup.stationName] || 'ALL'"
+                    :options="stationStatusSelectOptions"
+                    :searchable="false"
+                    @update:model-value="handleStationStatusChange(currentStationGroup.stationName, $event as 'ALL' | 'PASS' | 'FAIL')"
+                  />
                 </label>
 
                 <div class="iplas-field iplas-field--device-filter">
@@ -521,6 +512,7 @@ import { useIplasLocalData } from '@/features/dut-logs/composables/useIplasLocal
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { useNotification } from '@/shared/composables/useNotification'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
+import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 import type { StationSelectionResult } from './DataExplorerStationSelectionDialog.vue'
@@ -600,6 +592,17 @@ const dateRangePresets = [
   { title: 'This Week', value: 'week' },
   { title: 'Last Week', value: 'last_week' },
   { title: 'This Month', value: 'month' },
+]
+
+const dateRangePresetSelectOptions = dateRangePresets.map((preset) => ({
+  label: preset.title,
+  value: preset.value,
+}))
+
+const stationStatusSelectOptions = [
+  { label: 'All Results', value: 'ALL' },
+  { label: 'PASS', value: 'PASS' },
+  { label: 'FAIL', value: 'FAIL' },
 ]
 
 // Device IDs grouped by station
@@ -829,10 +832,7 @@ function setRecordSearchQuery(stationName: string, value: string | null): void {
   updateDebouncedSearch(stationName, normalizedValue)
 }
 
-const {
-  showError: showErrorNotification,
-  showInfo: showInfoNotification,
-} = useNotification()
+const { showError: showErrorNotification, showInfo: showInfoNotification } = useNotification()
 
 // Station tab and device filter controls
 const activeStationTab = ref(0)
@@ -904,28 +904,44 @@ function updateSelectedStations(nextSelectedStations: string[]): void {
 
   selectedStations.value = nextStations
   stationDeviceIds.value = Object.fromEntries(
-    Object.entries(stationDeviceIds.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+    Object.entries(stationDeviceIds.value).filter(([stationValue]) =>
+      nextStationSet.has(stationValue),
+    ),
   )
   deviceIdsByStation.value = Object.fromEntries(
-    Object.entries(deviceIdsByStation.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+    Object.entries(deviceIdsByStation.value).filter(([stationValue]) =>
+      nextStationSet.has(stationValue),
+    ),
   )
   loadingDevicesByStation.value = Object.fromEntries(
-    Object.entries(loadingDevicesByStation.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+    Object.entries(loadingDevicesByStation.value).filter(([stationValue]) =>
+      nextStationSet.has(stationValue),
+    ),
   )
   selectedFilterDeviceIds.value = Object.fromEntries(
-    Object.entries(selectedFilterDeviceIds.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+    Object.entries(selectedFilterDeviceIds.value).filter(([stationValue]) =>
+      nextStationSet.has(stationValue),
+    ),
   )
   stationStatusFilters.value = Object.fromEntries(
-    Object.entries(stationStatusFilters.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+    Object.entries(stationStatusFilters.value).filter(([stationValue]) =>
+      nextStationSet.has(stationValue),
+    ),
   )
   recordSearchQueries.value = Object.fromEntries(
-    Object.entries(recordSearchQueries.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+    Object.entries(recordSearchQueries.value).filter(([stationValue]) =>
+      nextStationSet.has(stationValue),
+    ),
   )
   debouncedRecordSearchQueries.value = Object.fromEntries(
-    Object.entries(debouncedRecordSearchQueries.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+    Object.entries(debouncedRecordSearchQueries.value).filter(([stationValue]) =>
+      nextStationSet.has(stationValue),
+    ),
   )
   stationTestStatus.value = Object.fromEntries(
-    Object.entries(stationTestStatus.value).filter(([stationValue]) => nextStationSet.has(stationValue)),
+    Object.entries(stationTestStatus.value).filter(([stationValue]) =>
+      nextStationSet.has(stationValue),
+    ),
   )
 
   if (hasChanged) {
@@ -1065,6 +1081,22 @@ const availableProjects = computed(() => {
   return projectsBySite.value[selectedSite.value] || []
 })
 
+const siteSelectOptions = computed(() => [
+  { label: 'Select a site', value: null },
+  ...uniqueSites.value.map((site) => ({
+    label: site,
+    value: site,
+  })),
+])
+
+const projectSelectOptions = computed(() => [
+  { label: 'Select a project', value: null },
+  ...availableProjects.value.map((project) => ({
+    label: project,
+    value: project,
+  })),
+])
+
 const stationOptions = computed(() => {
   return [...stations.value]
     .sort((a: Station, b: Station) => a.order - b.order)
@@ -1203,7 +1235,8 @@ const indexedDbSortOrder = computed(() => {
 const indexedDbActiveStationTab = ref(0)
 
 const indexedDbActiveStationTabKey = computed({
-  get: () => (indexedDbActiveStationTab.value === 0 ? 'all' : `station-${indexedDbActiveStationTab.value}`),
+  get: () =>
+    indexedDbActiveStationTab.value === 0 ? 'all' : `station-${indexedDbActiveStationTab.value}`,
   set: (value: string) => {
     if (value === 'all') {
       indexedDbActiveStationTab.value = 0
@@ -1279,11 +1312,14 @@ function getIndexedDbRecordKey(record: (typeof indexedDbItems.value)[0]): string
 }
 
 // Handle IndexedDB row click to show details dialog
-async function handleIndexedDbRowClick(
-  event: unknown,
-): Promise<void> {
-  const item = (event as { data?: (typeof indexedDbItems.value)[0]; sourceRecord?: (typeof indexedDbItems.value)[0] }).data
-    ?? (event as { sourceRecord?: (typeof indexedDbItems.value)[0] }).sourceRecord
+async function handleIndexedDbRowClick(event: unknown): Promise<void> {
+  const item =
+    (
+      event as {
+        data?: (typeof indexedDbItems.value)[0]
+        sourceRecord?: (typeof indexedDbItems.value)[0]
+      }
+    ).data ?? (event as { sourceRecord?: (typeof indexedDbItems.value)[0] }).sourceRecord
   if (!item) return
 
   if (!selectedSite.value || !selectedProject.value) return
@@ -1345,9 +1381,12 @@ async function handleIndexedDbGridPage(event: unknown): Promise<void> {
   const pageEvent = event as { page?: number; rows?: number }
   indexedDbTableOptions.value = {
     ...indexedDbTableOptions.value,
-    page: typeof pageEvent.page === 'number' ? pageEvent.page + 1 : indexedDbTableOptions.value.page,
+    page:
+      typeof pageEvent.page === 'number' ? pageEvent.page + 1 : indexedDbTableOptions.value.page,
     itemsPerPage:
-      typeof pageEvent.rows === 'number' ? pageEvent.rows : indexedDbTableOptions.value.itemsPerPage,
+      typeof pageEvent.rows === 'number'
+        ? pageEvent.rows
+        : indexedDbTableOptions.value.itemsPerPage,
   }
 
   await loadIndexedDbItems({
@@ -1538,10 +1577,8 @@ function handleStationSearchInput(stationName: string, event: Event): void {
   setRecordSearchQuery(stationName, target?.value ?? '')
 }
 
-function handleStationStatusChange(stationName: string, event: Event): void {
-  const target = event.target as HTMLSelectElement | null
-  stationStatusFilters.value[stationName] =
-    (target?.value as 'ALL' | 'PASS' | 'FAIL' | undefined) || 'ALL'
+function handleStationStatusChange(stationName: string, value: 'ALL' | 'PASS' | 'FAIL'): void {
+  stationStatusFilters.value[stationName] = value
 }
 
 function isStationDeviceSelected(stationName: string, deviceId: string): boolean {
@@ -1600,36 +1637,33 @@ function getTestItemsForRecord(
 }
 
 // Watch for station selection changes to fetch device IDs
-watch(
-  selectedStations,
-  async (newStations: string[], oldStations: string[]) => {
-    // Find newly added stations
-    const addedStations = newStations.filter((s: string) => !oldStations.includes(s))
-    // Find removed stations
-    const removedStations = oldStations.filter((s: string) => !newStations.includes(s))
+watch(selectedStations, async (newStations: string[], oldStations: string[]) => {
+  // Find newly added stations
+  const addedStations = newStations.filter((s: string) => !oldStations.includes(s))
+  // Find removed stations
+  const removedStations = oldStations.filter((s: string) => !newStations.includes(s))
 
-    // Remove device IDs and selections for removed stations
-    for (const station of removedStations) {
-      delete deviceIdsByStation.value[station]
-      delete stationDeviceIds.value[station]
-      delete loadingDevicesByStation.value[station]
-      stationDeviceRequestPromises.value.delete(station)
-    }
+  // Remove device IDs and selections for removed stations
+  for (const station of removedStations) {
+    delete deviceIdsByStation.value[station]
+    delete stationDeviceIds.value[station]
+    delete loadingDevicesByStation.value[station]
+    stationDeviceRequestPromises.value.delete(station)
+  }
 
-    // Fetch device IDs for newly added stations
-    if (selectedSite.value && selectedProject.value && startTime.value && endTime.value) {
-      for (const station of addedStations) {
-        const devices = await ensureStationDeviceIdsLoaded(station)
-        if (!devices.length && !deviceIdsByStation.value[station]) {
-          deviceIdsByStation.value[station] = []
-        }
-        if (!stationDeviceIds.value[station]) {
-          stationDeviceIds.value[station] = []
-        }
+  // Fetch device IDs for newly added stations
+  if (selectedSite.value && selectedProject.value && startTime.value && endTime.value) {
+    for (const station of addedStations) {
+      const devices = await ensureStationDeviceIdsLoaded(station)
+      if (!devices.length && !deviceIdsByStation.value[station]) {
+        deviceIdsByStation.value[station] = []
+      }
+      if (!stationDeviceIds.value[station]) {
+        stationDeviceIds.value[station] = []
       }
     }
-  },
-)
+  }
+})
 
 // Initialize testItemFilters when records change - ensure 'value' is selected by default
 watch(
@@ -1653,24 +1687,34 @@ watch(
  * Get selected record keys for a specific station (used by IplasRecordTable)
  */
 function getSelectedKeysForStation(stationName: string): string[] {
-  const stationGroup = groupedByStation.value.find((g: StationGroup) => g.stationName === stationName)
+  const stationGroup = groupedByStation.value.find(
+    (g: StationGroup) => g.stationName === stationName,
+  )
   if (!stationGroup) return []
 
-  const stationRecordKeys = stationGroup.records.map((r: CsvTestItemData | CompactCsvTestItemData) => `${r.ISN}_${r['Test Start Time']}`)
+  const stationRecordKeys = stationGroup.records.map(
+    (r: CsvTestItemData | CompactCsvTestItemData) => `${r.ISN}_${r['Test Start Time']}`,
+  )
 
-  return Array.from(selectedRecordKeys.value as Set<string>).filter((key) => stationRecordKeys.includes(key))
+  return Array.from(selectedRecordKeys.value as Set<string>).filter((key) =>
+    stationRecordKeys.includes(key),
+  )
 }
 
 /**
  * Handle selection changes from IplasRecordTable
  */
 function handleTableSelectionChange(stationName: string, newSelectedKeys: string[]): void {
-  const stationGroup = groupedByStation.value.find((g: StationGroup) => g.stationName === stationName)
+  const stationGroup = groupedByStation.value.find(
+    (g: StationGroup) => g.stationName === stationName,
+  )
   if (!stationGroup) return
 
   // Get all record keys for this station
   const stationRecordKeys = new Set(
-    stationGroup.records.map((r: CsvTestItemData | CompactCsvTestItemData) => `${r.ISN}_${r['Test Start Time']}`),
+    stationGroup.records.map(
+      (r: CsvTestItemData | CompactCsvTestItemData) => `${r.ISN}_${r['Test Start Time']}`,
+    ),
   )
 
   // Remove old selections for this station

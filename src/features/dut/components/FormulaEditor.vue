@@ -18,16 +18,13 @@
 
     <label class="formula-editor__field">
       <span>Formula Type</span>
-      <select
-        :value="formula.formulaType"
-        class="formula-editor__select"
+      <AppSelect
+        :model-value="formula.formulaType"
+        :options="formulaTypeSelectOptions"
         :disabled="!formula.enabled"
-        @change="handleFormulaTypeSelect"
-      >
-        <option v-for="option in formulaTypes" :key="option.value" :value="option.value">
-          {{ option.title }}
-        </option>
-      </select>
+        :searchable="false"
+        @update:model-value="handleFormulaTypeChange($event as FormulaType)"
+      />
     </label>
 
     <p class="formula-editor__field-hint">{{ currentFormulaDescription }}</p>
@@ -185,7 +182,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from 'vue'
-import { AppPanel } from '@/shared/ui'
+import { AppPanel, AppSelect } from '@/shared/ui'
 import type {
   CustomFormulaV2,
   FormulaParameters,
@@ -225,8 +222,15 @@ const formulaTypes = [
   { value: 'custom', title: 'Custom', description: getFormulaTypeDescription('custom') },
 ]
 
+const formulaTypeSelectOptions = formulaTypes.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+
 const currentFormulaDescription = computed(() => {
-  return formulaTypes.find((option) => option.value === props.formula.formulaType)?.description ?? ''
+  return (
+    formulaTypes.find((option) => option.value === props.formula.formulaType)?.description ?? ''
+  )
 })
 
 const stepThresholds = computed(() => props.formula.parameters.thresholds ?? [])
@@ -234,10 +238,6 @@ const stepScores = computed(() => props.formula.parameters.scores ?? [])
 
 const handleEnabledChange = (event: Event) => {
   emit('update:enabled', (event.target as HTMLInputElement).checked)
-}
-
-const handleFormulaTypeSelect = (event: Event) => {
-  handleFormulaTypeChange((event.target as HTMLSelectElement).value as FormulaType)
 }
 
 const updateCustomExpression = (event: Event) => {

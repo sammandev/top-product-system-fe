@@ -23,12 +23,7 @@
 
         <label v-if="stationOptions.length > 0" class="upload-scoring-dialog__field">
           <span>Station</span>
-          <select v-model="selectedStationValue">
-            <option value="">All stations</option>
-            <option v-for="station in stationOptions" :key="station" :value="station">
-              {{ station }}
-            </option>
-          </select>
+          <AppSelect v-model="selectedStationValue" :options="stationSelectOptions" />
         </label>
       </div>
 
@@ -176,11 +171,7 @@
 
       <label class="upload-scoring-dialog__field">
         <span>Scoring Type</span>
-        <select v-model="bulkScoringType">
-          <option v-for="option in scoringTypeOptions" :key="option.value" :value="option.value">
-            {{ option.title }}
-          </option>
-        </select>
+        <AppSelect v-model="bulkScoringType" :options="scoringTypeSelectOptions" :searchable="false" />
       </label>
 
       <div class="upload-scoring-dialog__notice" :class="getScoringNoticeClass(bulkScoringType)">
@@ -189,11 +180,7 @@
 
       <label v-if="bulkScoringType === 'asymmetrical'" class="upload-scoring-dialog__field">
         <span>Policy</span>
-        <select v-model="bulkPolicy">
-          <option v-for="option in policyOptions" :key="option.value" :value="option.value">
-            {{ option.title }}
-          </option>
-        </select>
+        <AppSelect v-model="bulkPolicy" :options="policySelectOptions" :searchable="false" />
       </label>
 
       <label v-if="bulkScoringType === 'asymmetrical'" class="upload-scoring-dialog__field">
@@ -233,14 +220,12 @@
     <div v-if="singleConfigItem" class="upload-scoring-dialog__modal-stack">
       <label class="upload-scoring-dialog__field">
         <span>Scoring Type</span>
-        <select
-          :value="getSingleDialogConfig()?.scoring_type ?? 'symmetrical'"
-          @change="updateSingleDialogScoringType(($event.target as HTMLSelectElement).value as RescoreScoringConfig['scoring_type'])"
-        >
-          <option v-for="option in scoringTypeOptions" :key="option.value" :value="option.value">
-            {{ option.title }}
-          </option>
-        </select>
+        <AppSelect
+          :model-value="getSingleDialogConfig()?.scoring_type ?? 'symmetrical'"
+          :options="scoringTypeSelectOptions"
+          :searchable="false"
+          @update:model-value="updateSingleDialogScoringType($event as RescoreScoringConfig['scoring_type'])"
+        />
       </label>
 
       <div class="upload-scoring-dialog__notice" :class="getScoringNoticeClass(getSingleDialogConfig()?.scoring_type ?? 'symmetrical')">
@@ -252,14 +237,12 @@
         class="upload-scoring-dialog__field"
       >
         <span>Policy</span>
-        <select
-          :value="getSingleDialogConfig()?.policy ?? 'symmetrical'"
-          @change="updateSingleDialogPolicy(($event.target as HTMLSelectElement).value as RescoreScoringConfig['policy'])"
-        >
-          <option v-for="option in policyOptions" :key="option.value" :value="option.value">
-            {{ option.title }}
-          </option>
-        </select>
+        <AppSelect
+          :model-value="getSingleDialogConfig()?.policy ?? 'symmetrical'"
+          :options="policySelectOptions"
+          :searchable="false"
+          @update:model-value="updateSingleDialogPolicy($event as RescoreScoringConfig['policy'])"
+        />
       </label>
 
       <label
@@ -320,11 +303,11 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { AppDialog, AppPanel } from '@/shared/ui'
 import type {
   ParsedTestItemEnhanced,
   RescoreScoringConfig,
 } from '@/features/dut-logs/composables/useTestLogUpload'
+import { AppDialog, AppPanel, AppSelect } from '@/shared/ui'
 
 interface Props {
   modelValue: boolean
@@ -371,6 +354,14 @@ const selectedStationValue = computed({
 // Station options computed from props
 const stationOptions = computed(() => props.stations || [])
 
+const stationSelectOptions = computed(() => [
+  { label: 'All stations', value: '' },
+  ...stationOptions.value.map((station) => ({
+    label: station,
+    value: station,
+  })),
+])
+
 // Single item scoring dialog (popup from clicking scoring type button)
 const singleItemScoringDialog = ref(false)
 const singleConfigItem = ref<string | null>(null)
@@ -392,11 +383,21 @@ const scoringTypeOptions = [
   // { title: 'Binary (PASS/FAIL)', value: 'binary' },
 ]
 
+const scoringTypeSelectOptions = scoringTypeOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
+
 const policyOptions = [
   { title: 'Symmetrical (Centered)', value: 'symmetrical' },
   { title: 'Higher is Better', value: 'higher' },
   { title: 'Lower is Better', value: 'lower' },
 ]
+
+const policySelectOptions = policyOptions.map((option) => ({
+  label: option.title,
+  value: option.value,
+}))
 
 // Initialize scoring configs from test items - preserving original order
 function initializeConfigs() {

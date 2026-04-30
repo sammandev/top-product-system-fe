@@ -168,9 +168,9 @@
 import { Icon } from '@iconify/vue'
 import { useDebounceFn } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
-import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
-import { AppPanel, AppSelect, AppTabs } from '@/shared/ui'
 import type { CsvTestItemData } from '@/features/dut-logs/composables/useIplasApi'
+import { AppPanel, AppSelect, AppTabs } from '@/shared/ui'
+import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import { adjustIplasDisplayTime, isStatusPass } from '@/shared/utils/helpers'
 import { getScoreColor } from '../types/scoring.types'
 
@@ -178,7 +178,13 @@ interface Props {
   records: CsvTestItemData[]
   stationDisplayNames?: Record<string, string>
   scores?: Record<string, number> // Map of ISN+station+time to score
-  forcedFailures?: Record<string, { minimumItemScore: number | null; failingItems: { name: string; score: number; reasonLabel?: string }[] }>
+  forcedFailures?: Record<
+    string,
+    {
+      minimumItemScore: number | null
+      failingItems: { name: string; score: number; reasonLabel?: string }[]
+    }
+  >
   calculatingScores?: boolean
   loading?: boolean // Whether data is still being fetched
   exportingAll?: boolean // Whether export all is in progress (controlled by parent)
@@ -302,16 +308,40 @@ const stationTabItems = computed(() =>
 const gridColumns = computed(() => {
   const columns = [
     { key: 'isn', field: 'isn', header: 'DUT ISN', sortable: true, style: { width: '14rem' } },
-    { key: 'device', field: 'device', header: 'Device ID', sortable: true, style: { width: '9rem' } },
-    { key: 'testDate', field: 'testDate', header: 'Test End', sortable: true, style: { width: '12rem' } },
-    { key: 'duration', field: 'duration', header: 'Duration', sortable: true, style: { width: '8rem' } },
+    {
+      key: 'device',
+      field: 'device',
+      header: 'Device ID',
+      sortable: true,
+      style: { width: '9rem' },
+    },
+    {
+      key: 'testDate',
+      field: 'testDate',
+      header: 'Test End',
+      sortable: true,
+      style: { width: '12rem' },
+    },
+    {
+      key: 'duration',
+      field: 'duration',
+      header: 'Duration',
+      sortable: true,
+      style: { width: '8rem' },
+    },
     { key: 'status', field: 'status', header: 'Status', sortable: true, style: { width: '10rem' } },
     { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '7rem' } },
     { key: 'actions', field: 'actions', header: 'Actions', style: { width: '8rem' } },
   ]
 
   if (hasScores.value) {
-    columns.unshift({ key: 'rank', field: 'rank', header: '#', sortable: true, style: { width: '5rem' } })
+    columns.unshift({
+      key: 'rank',
+      field: 'rank',
+      header: '#',
+      sortable: true,
+      style: { width: '5rem' },
+    })
   }
 
   return columns
@@ -354,7 +384,9 @@ const rankingByStation = computed(() => {
     const scoreKey = `${record.ISN || record.DeviceId}_${stationName}_${record['Test end Time']}`
     const score = props.scores?.[scoreKey] ?? null
     const forcedFailure = props.forcedFailures?.[scoreKey]
-    const forcedFailureLabel = forcedFailure?.failingItems.some((item) => item.reasonLabel === 'Dev./Score Fail')
+    const forcedFailureLabel = forcedFailure?.failingItems.some(
+      (item) => item.reasonLabel === 'Dev./Score Fail',
+    )
       ? 'Dev./Score Fail'
       : forcedFailure?.failingItems.some((item) => item.reasonLabel === 'Deviation Fail')
         ? 'Deviation Fail'
@@ -378,10 +410,12 @@ const rankingByStation = computed(() => {
       testEndTime: record['Test end Time'] || '',
       duration: duration,
       score: hasError ? (forcedFailure ? score : 0) : score,
-      status: forcedFailure ? forcedFailureLabel : (hasError ? (record.ErrorCode || '-') : 'PASS'),
+      status: forcedFailure ? forcedFailureLabel : hasError ? record.ErrorCode || '-' : 'PASS',
       hasError: hasError || !!forcedFailure,
       isForcedFailure: !!forcedFailure,
-      errorCode: forcedFailure ? forcedFailureLabel.toUpperCase().replace(/[^A-Z0-9]+/g, '_') : record.ErrorCode || '-',
+      errorCode: forcedFailure
+        ? forcedFailureLabel.toUpperCase().replace(/[^A-Z0-9]+/g, '_')
+        : record.ErrorCode || '-',
       errorName: forcedFailure
         ? forcedFailure.minimumItemScore !== null
           ? `One or more scored items fell below ${forcedFailure.minimumItemScore.toFixed(1)} / 10 or exceeded the configured deviation.`

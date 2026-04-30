@@ -45,10 +45,11 @@
           <span>Select column from File B</span>
           <div class="mapping-select__field">
             <span class="mapping-pill mapping-pill--b">B</span>
-            <select :value="getMappingForColumnA(colA) ?? ''" @change="updateMapping(colA, (($event.target as HTMLSelectElement).value || null))">
-              <option value="">No mapping</option>
-              <option v-for="colB in availableColumnsBForA(colA)" :key="`${colA}-${colB}`" :value="colB">{{ colB }}</option>
-            </select>
+            <AppSelect
+              :model-value="getMappingForColumnA(colA)"
+              :options="mappingOptionsForA(colA)"
+              @update:model-value="updateMapping(colA, typeof $event === 'string' ? $event : null)"
+            />
           </div>
         </label>
       </div>
@@ -85,7 +86,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
-import { AppPanel } from '@/shared'
+import { AppPanel, AppSelect } from '@/shared'
 
 // Types
 export interface ColumnMapping {
@@ -158,6 +159,16 @@ function availableColumnsBForA(colA: string): string[] {
   return props.columnsB.filter((colB) => {
     return colB === currentMapping || !mappedBColumns.has(colB)
   })
+}
+
+function mappingOptionsForA(colA: string) {
+  return [
+    { label: 'No mapping', value: null },
+    ...availableColumnsBForA(colA).map((colB) => ({
+      label: colB,
+      value: colB,
+    })),
+  ]
 }
 
 function updateMapping(colA: string, colB: string | null) {

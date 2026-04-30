@@ -53,7 +53,9 @@ import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 const TopProductsByIplasDataTab = defineAsyncComponent(
   () => import('../components/TopProductsByIplasDataTab.vue'),
 )
-const TopProductsByISNTab = defineAsyncComponent(() => import('../components/TopProductsByISNTab.vue'))
+const TopProductsByISNTab = defineAsyncComponent(
+  () => import('../components/TopProductsByISNTab.vue'),
+)
 const TopProductsByUploadLogTab = defineAsyncComponent(
   () => import('@/features/dut-logs/components/TopProductsByUploadLogTab.vue'),
 )

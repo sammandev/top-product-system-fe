@@ -169,7 +169,13 @@ const columns = [
 ]
 
 const detailColumns = [
-  { key: 'test_item_name', field: 'test_item_name', header: 'Test Item Name', sortable: false, style: { width: '22rem' } },
+  {
+    key: 'test_item_name',
+    field: 'test_item_name',
+    header: 'Test Item Name',
+    sortable: false,
+    style: { width: '22rem' },
+  },
   { key: 'mid', field: 'mid', header: 'MID', sortable: false, style: { width: '8rem' } },
   { key: 'mean', field: 'mean', header: 'Mean', sortable: false, style: { width: '8rem' } },
 ]
@@ -198,7 +204,9 @@ const detailRows = computed(() => {
   }))
 })
 
-function getTrendItems(item: PATrendStationDataSchema | PADiffStationDataSchema): PATrendStationItemSchema[] {
+function getTrendItems(
+  item: PATrendStationDataSchema | PADiffStationDataSchema,
+): PATrendStationItemSchema[] {
   if ('trend_items' in item) {
     return item.trend_items
   }

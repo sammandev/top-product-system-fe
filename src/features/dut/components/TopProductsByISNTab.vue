@@ -312,7 +312,14 @@ const excludeTestItemFiltersText = computed({
 })
 
 function parseMultilineValues(value: string): string[] {
-  return [...new Set(value.split(/[\n,]+/).map((entry) => entry.trim()).filter(Boolean))]
+  return [
+    ...new Set(
+      value
+        .split(/[\n,]+/)
+        .map((entry) => entry.trim())
+        .filter(Boolean),
+    ),
+  ]
 }
 
 function commitStationEntry() {

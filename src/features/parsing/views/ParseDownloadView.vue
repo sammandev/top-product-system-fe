@@ -122,21 +122,13 @@
                           <div class="parse-download-select-grid">
                             <label class="parse-download-field">
                               <span>Include Columns</span>
-                              <select v-model="selectedColumns" class="parse-download-multi-select" multiple :size="Math.min(Math.max(columns.length, 6), 12)">
-                                <option v-for="column in columns" :key="`include-${column}`" :value="column">
-                                  {{ column }}
-                                </option>
-                              </select>
-                              <small class="parse-download-field__hint">Hold Ctrl or Cmd to select multiple columns.</small>
+                              <AppMultiSelect v-model="selectedColumns" :options="columnSelectOptions" placeholder="Include all columns" />
+                              <small class="parse-download-field__hint">Leave empty to include all columns.</small>
                             </label>
 
                             <label class="parse-download-field">
                               <span>Exclude Columns</span>
-                              <select v-model="excludeColumns" class="parse-download-multi-select" multiple :size="Math.min(Math.max(columns.length, 6), 12)">
-                                <option v-for="column in columns" :key="`exclude-${column}`" :value="column">
-                                  {{ column }}
-                                </option>
-                              </select>
+                              <AppMultiSelect v-model="excludeColumns" :options="columnSelectOptions" placeholder="No excluded columns" />
                               <small class="parse-download-field__hint">Optional removal list applied after the main selection.</small>
                             </label>
                           </div>
@@ -266,8 +258,15 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
-import { AppDataGrid, AppDialog, AppFilePicker, AppPanel, AppProgress } from '@/shared'
 import type { UploadPreviewResponse } from '@/core/types/api.types'
+import {
+  AppDataGrid,
+  AppDialog,
+  AppFilePicker,
+  AppMultiSelect,
+  AppPanel,
+  AppProgress,
+} from '@/shared'
 import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
 import { parsingApi } from '../api/parsing.api'
 
@@ -302,13 +301,23 @@ const modeOptions = [
 const formatOptions = [
   { value: 'csv', label: 'CSV', description: 'Lightweight flat export for broad compatibility.' },
   { value: 'xlsx', label: 'XLSX', description: 'Spreadsheet output with Excel-native formatting.' },
-  { value: 'both', label: 'Both (ZIP)', description: 'Bundle CSV and XLSX together for downstream users.' },
+  {
+    value: 'both',
+    label: 'Both (ZIP)',
+    description: 'Bundle CSV and XLSX together for downstream users.',
+  },
 ] as const
 
 // Computed
 const hasPreview = computed(() => preview.value !== null)
 
 const columns = computed(() => preview.value?.columns || [])
+const columnSelectOptions = computed(() =>
+  columns.value.map((column) => ({
+    label: column,
+    value: column,
+  })),
+)
 
 const previewRows = computed(() => preview.value?.preview || [])
 
