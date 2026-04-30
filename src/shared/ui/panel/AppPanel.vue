@@ -64,10 +64,10 @@ const hasHeader = computed(() =>
 }
 
 .app-panel--cool {
-  background: linear-gradient(180deg, rgba(6, 182, 212, 0.035), rgba(6, 182, 212, 0.02)), var(--app-panel-strong);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--app-info) 3.5%, transparent), color-mix(in srgb, var(--app-info) 2%, transparent)), var(--app-panel-strong);
 }
 
 .app-panel--success {
-  background: linear-gradient(180deg, rgba(34, 197, 94, 0.035), rgba(34, 197, 94, 0.02)), var(--app-panel-strong);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--app-success) 3.5%, transparent), color-mix(in srgb, var(--app-success) 2%, transparent)), var(--app-panel-strong);
 }
 </style>

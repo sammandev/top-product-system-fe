@@ -1486,7 +1486,7 @@ onUnmounted(() => {
 .top-product-iplas-station-button:hover,
 .top-product-iplas-station-token-card:hover,
 .top-product-iplas-station-remove:hover {
-  border-color: rgba(15, 118, 110, 0.24);
+  border-color: var(--app-accent);
 }
 
 .top-product-iplas-station-button--primary {
@@ -1517,8 +1517,8 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-station-pill--primary {
-  background: rgba(15, 118, 110, 0.1);
-  border-color: rgba(15, 118, 110, 0.16);
+  background: var(--app-accent-soft);
+  border-color: color-mix(in srgb, var(--app-accent) 24%, var(--app-border));
   color: var(--app-accent);
 }
 
@@ -1535,8 +1535,8 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-station-pill--muted {
-  background: rgba(95, 103, 122, 0.1);
-  border-color: rgba(95, 103, 122, 0.16);
+  background: color-mix(in srgb, var(--app-muted) 10%, transparent);
+  border-color: color-mix(in srgb, var(--app-muted) 16%, transparent);
   color: var(--app-muted);
 }
 
@@ -1546,7 +1546,7 @@ onUnmounted(() => {
 .top-product-iplas-station-notice {
   padding: 0.9rem;
   border-radius: 0.8rem;
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid color-mix(in srgb, var(--app-accent) 12%, var(--app-border));
   background: var(--app-panel);
 }
 
@@ -1630,7 +1630,7 @@ onUnmounted(() => {
   width: 2rem;
   height: 2rem;
   border-radius: 50%;
-  border: 3px solid rgba(15, 118, 110, 0.16);
+  border: 3px solid color-mix(in srgb, var(--app-accent) 16%, transparent);
   border-top-color: var(--app-accent);
   animation: top-product-iplas-station-spin 0.9s linear infinite;
 }

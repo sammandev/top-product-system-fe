@@ -1,6 +1,5 @@
 import { createApp } from 'vue'
-import { initializeSentry, installAppProviders } from '@/app/providers'
-import { envConfig } from '@/core/config/env.config'
+import { captureFrontendException, initializeSentry, installAppProviders } from '@/app/providers'
 import router from '@/core/router'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
@@ -23,25 +22,17 @@ applyThemePreferences(getStoredThemePreferences(), { persist: false })
 
 app.config.errorHandler = (error, _instance, info) => {
   console.error('Vue error:', error, info)
-  if (envConfig.sentryDsn) {
-    void import('@sentry/vue').then(({ captureException }) => captureException(error))
-  }
+  captureFrontendException(error)
 }
 
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason)
-  if (envConfig.sentryDsn) {
-    void import('@sentry/vue').then(({ captureException }) => captureException(event.reason))
-  }
+  captureFrontendException(event.reason)
 })
 
 window.addEventListener('error', (event) => {
   console.error('Window error:', event.error || event.message)
-  if (envConfig.sentryDsn) {
-    void import('@sentry/vue').then(({ captureException }) =>
-      captureException(event.error || event.message),
-    )
-  }
+  captureFrontendException(event.error || event.message)
 })
 
 // Initialize stores

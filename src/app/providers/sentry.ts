@@ -17,3 +17,11 @@ export function initializeSentry(app: App, router: Router) {
     release: envConfig.appVersion,
   })
 }
+
+export function captureFrontendException(error: unknown) {
+  if (!envConfig.sentryDsn) {
+    return
+  }
+
+  Sentry.captureException(error)
+}

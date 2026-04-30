@@ -29,18 +29,28 @@
       </div>
 
       <div class="station-dialog__list">
-        <article v-for="station in filteredStations" :key="station.value" class="station-dialog__item">
-          <label class="station-dialog__item-toggle">
-            <input type="checkbox" :checked="localSelectedStations.includes(station.value)"
-              @change="toggleStation(station.value)" />
-
+        <article v-for="station in filteredStations" :key="station.value" class="station-dialog__item"
+          :class="{ 'station-dialog__item--active': isStationSelected(station.value) }" role="button" tabindex="0"
+          @click="toggleStation(station.value)" @keydown.enter.prevent="toggleStation(station.value)"
+          @keydown.space.prevent="toggleStation(station.value)">
+          <div class="station-dialog__item-main">
+            <span class="station-dialog__checkmark" :class="{ 'is-active': isStationSelected(station.value) }"></span>
             <div class="station-dialog__item-copy">
               <strong>{{ station.displayName }}</strong>
               <span>{{ station.stationName }}</span>
             </div>
-          </label>
+            <div class="station-dialog__item-meta">
+              <span v-if="isStationSelected(station.value)" class="station-dialog__pill station-dialog__pill--info">
+                {{ getStationDeviceLabel(station.value) }}
+              </span>
+              <span v-if="isStationSelected(station.value) && localTestStatus[station.value] !== 'ALL'"
+                class="station-dialog__pill station-dialog__pill--warning">
+                {{ localTestStatus[station.value] }}
+              </span>
+            </div>
+          </div>
 
-          <div v-if="localSelectedStations.includes(station.value)" class="station-dialog__config">
+          <div v-if="isStationSelected(station.value)" class="station-dialog__config" @click.stop>
             <div class="station-dialog__config-header">
               <p>Device IDs</p>
               <button v-if="(localDeviceIds[station.value] || []).length > 0" type="button"
@@ -236,6 +246,19 @@ function isStationDeviceSelected(stationValue: string, deviceId: string): boolea
   return (localDeviceIds.value[stationValue] || []).includes(deviceId)
 }
 
+function isStationSelected(stationValue: string): boolean {
+  return localSelectedStations.value.includes(stationValue)
+}
+
+function getStationDeviceLabel(stationValue: string): string {
+  const selectedCount = localDeviceIds.value[stationValue]?.length ?? 0
+  if (selectedCount === 0) {
+    return 'All Device(s)'
+  }
+
+  return `${selectedCount} Device(s)`
+}
+
 function toggleStationDeviceId(stationValue: string, deviceId: string): void {
   const currentIds = localDeviceIds.value[stationValue] || []
   localDeviceIds.value[stationValue] = currentIds.includes(deviceId)
@@ -319,7 +342,7 @@ watch(
   min-height: 2.75rem;
   border: 1px solid var(--app-border);
   border-radius: 0.75rem;
-  background: rgba(255, 252, 249, 0.96);
+  background: var(--app-panel);
   color: var(--app-ink);
   font: inherit;
 }
@@ -340,7 +363,7 @@ watch(
   padding: 0.3rem 0.35rem 0.3rem 0.85rem;
   border: 1px solid var(--app-border);
   border-radius: 0.75rem;
-  background: rgba(255, 252, 249, 0.96);
+  background: var(--app-panel);
 }
 
 .station-dialog__search-shell input {
@@ -377,13 +400,23 @@ watch(
 }
 
 .station-dialog__pill--cool {
-  background: rgba(40, 96, 163, 0.12);
-  color: #17406a;
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .station-dialog__pill--success {
-  background: rgba(28, 126, 84, 0.12);
-  color: #1c7e54;
+  background: var(--app-success-soft);
+  color: var(--app-success);
+}
+
+.station-dialog__pill--info {
+  background: var(--app-accent-soft);
+  color: var(--app-accent);
+}
+
+.station-dialog__pill--warning {
+  background: var(--app-warning-soft);
+  color: var(--app-warning);
 }
 
 .station-dialog__list {
@@ -397,25 +430,46 @@ watch(
 .station-dialog__item {
   border: 1px solid var(--app-border);
   border-radius: 0.8rem;
-  background: rgba(255, 252, 249, 0.96);
+  background: var(--app-panel);
   overflow: hidden;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.station-dialog__item-toggle {
+.station-dialog__item:hover,
+.station-dialog__item--active {
+  border-color: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 5%, var(--app-panel));
+}
+
+.station-dialog__item-main {
   display: flex;
   gap: 0.85rem;
   align-items: flex-start;
   padding: 0.8rem 0.9rem;
-  cursor: pointer;
 }
 
-.station-dialog__item-toggle input {
-  margin-top: 0.2rem;
+.station-dialog__checkmark {
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+  margin-top: 0.16rem;
+  border: 2px solid var(--app-border);
+  border-radius: 50%;
+  background: var(--app-panel);
+  box-shadow: inset 0 0 0 3px var(--app-panel);
+}
+
+.station-dialog__checkmark.is-active {
+  border-color: var(--app-accent);
+  background: var(--app-accent);
 }
 
 .station-dialog__item-copy {
   display: grid;
   gap: 0.2rem;
+  min-width: 0;
+  flex: 1;
 }
 
 .station-dialog__item-copy strong {
@@ -428,11 +482,19 @@ watch(
   color: var(--app-muted);
 }
 
+.station-dialog__item-meta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 0.45rem;
+  margin-left: auto;
+}
+
 .station-dialog__config {
   display: grid;
   gap: 0.85rem;
   padding: 0 0.9rem 0.9rem;
-  background: rgba(245, 250, 247, 0.9);
+  background: color-mix(in srgb, var(--app-accent) 4%, transparent);
 }
 
 .station-dialog__device-list {
@@ -450,7 +512,7 @@ watch(
   gap: 0.45rem;
   border: 1px solid var(--app-border);
   border-radius: 999px;
-  background: rgba(255, 252, 249, 0.96);
+  background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
   font: inherit;
@@ -462,7 +524,7 @@ watch(
 }
 
 .station-dialog__device-chip--active {
-  border-color: rgba(15, 118, 110, 0.28);
+  border-color: var(--app-accent);
   background: var(--app-accent-soft);
   color: var(--app-accent);
 }
@@ -474,7 +536,7 @@ watch(
 }
 
 .station-dialog__primary-action {
-  border-color: rgba(15, 118, 110, 0.32);
+  border-color: var(--app-accent);
   background: var(--app-accent);
   color: var(--app-canvas);
 }
@@ -527,6 +589,12 @@ watch(
   .station-dialog__field--compact {
     width: 100%;
     max-width: none;
+  }
+
+  .station-dialog__item-main,
+  .station-dialog__item-meta {
+    align-items: flex-start;
+    justify-content: flex-start;
   }
 }
 </style>

@@ -32,6 +32,13 @@ import {
   type SiteProject,
   type TestItem,
 } from '../api/iplasProxyApi'
+import {
+  fetchIplasDevicesQuery,
+  fetchIplasPaginatedTestItemsQuery,
+  fetchIplasRecordTestItemsQuery,
+  fetchIplasSiteProjectsQuery,
+  fetchIplasStationsQuery,
+} from './useIplasQueries'
 import { useIplasSettings } from './useIplasSettings'
 
 // Re-export types for backwards compatibility
@@ -71,11 +78,6 @@ export interface PaginatedResult<T> {
   possiblyTruncated: boolean
   chunkProgress: { fetched: number; total: number } | null
 }
-
-// Module-level cache for metadata (rarely changes)
-let cachedSiteProjects: SiteProject[] | null = null
-const cachedStations: Map<string, IplasStation[]> = new Map()
-const CACHE_KEY_SEPARATOR = '::'
 
 // Retry configuration for ISN search operations
 const ISN_SEARCH_RETRY_ATTEMPTS = 3
@@ -335,19 +337,13 @@ export function useIplasApi() {
    * Fetch site and project list via backend proxy (cached for 24 hours)
    */
   async function fetchSiteProjects(forceRefresh = false): Promise<SiteProject[]> {
-    if (!forceRefresh && cachedSiteProjects) {
-      siteProjects.value = cachedSiteProjects
-      return cachedSiteProjects
-    }
-
     loading.value = true
     error.value = null
 
     try {
-      const response = await iplasProxyApi.getSiteProjects('simple')
-      cachedSiteProjects = response.data
-      siteProjects.value = response.data
-      return response.data
+      const data = await fetchIplasSiteProjectsQuery(forceRefresh)
+      siteProjects.value = data
+      return data
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to fetch site/project list'
       throw err
@@ -364,37 +360,18 @@ export function useIplasApi() {
     project: string,
     forceRefresh = false,
   ): Promise<Station[]> {
-    const cacheKey = `${site}${CACHE_KEY_SEPARATOR}${project}`
-
-    if (!forceRefresh && cachedStations.has(cacheKey)) {
-      // biome-ignore lint/style/noNonNullAssertion: Guarded by .has() check above
-      stations.value = cachedStations.get(cacheKey)!
-      return stations.value
-    }
-
     loadingStations.value = true
     error.value = null
 
     try {
-      const response = await iplasProxyApi.getStations({
-        site,
-        project,
-        token: getUserToken(),
-      })
-      // Convert proxy response to Station type
-      const stationData: Station[] = response.data
-        .map((s) => ({
-          display_station_name: s.display_station_name,
-          station_name: s.station_name,
-          order: s.order,
-          data_source: s.data_source,
-        }))
-        .sort((a, b) => {
-          const aOrder = a.order ?? Number.MAX_SAFE_INTEGER
-          const bOrder = b.order ?? Number.MAX_SAFE_INTEGER
-          return aOrder - bOrder
-        })
-      cachedStations.set(cacheKey, stationData)
+      const stationData = await fetchIplasStationsQuery(
+        {
+          site,
+          project,
+          token: getUserToken(),
+        },
+        forceRefresh,
+      )
       stations.value = stationData
       return stationData
     } catch (err: unknown) {
@@ -423,16 +400,16 @@ export function useIplasApi() {
       const start = startTime instanceof Date ? startTime.toISOString() : startTime
       const end = endTime instanceof Date ? endTime.toISOString() : endTime
 
-      const response = await iplasProxyApi.getDevices({
+      const data = await fetchIplasDevicesQuery({
         site,
         project,
         station: displayStationName,
-        start_time: start,
-        end_time: end,
+        startTime: start,
+        endTime: end,
         token: getUserToken(),
       })
-      deviceIds.value = response.data
-      return response.data
+      deviceIds.value = data
+      return data
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to fetch device IDs'
       throw err
@@ -654,53 +631,27 @@ export function useIplasApi() {
     chunkProgress.value = null
 
     try {
-      // Calculate offset from page number (1-based)
-      const offset = (options.page - 1) * options.itemsPerPage
-
-      const response = await iplasProxyApi.getCsvTestItemsCompact({
+      const result = await fetchIplasPaginatedTestItemsQuery({
         site,
         project,
         station,
-        device_id: deviceid,
-        begin_time: iplasProxyApi.formatDateForRequest(begintime),
-        end_time: iplasProxyApi.formatDateForRequest(endtime),
-        test_status: testStatus,
-        limit: options.itemsPerPage,
-        offset: offset,
-        sort_by: options.sortBy,
-        sort_desc: options.sortDesc ?? true,
+        deviceId: deviceid,
+        startTime: begintime,
+        endTime: endtime,
+        testStatus,
+        options,
         token: getUserToken(),
       })
 
-      // Track truncation warning
-      const truncated = response.possibly_truncated ?? false
-      if (truncated) {
+      if (result.possiblyTruncated) {
         possiblyTruncated.value = true
       }
 
-      // Track chunk progress
-      let progress: { fetched: number; total: number } | null = null
-      if (response.chunks_fetched && response.total_chunks) {
-        progress = {
-          fetched: response.chunks_fetched,
-          total: response.total_chunks,
-        }
-        chunkProgress.value = progress
+      if (result.chunkProgress) {
+        chunkProgress.value = result.chunkProgress
       }
 
-      stationSearchCacheMetadata.value = mergeStationSearchMetadata(
-        stationSearchCacheMetadata.value,
-        response,
-      )
-
-      return {
-        items: response.data,
-        totalItems: response.total_records,
-        page: options.page,
-        itemsPerPage: options.itemsPerPage,
-        possiblyTruncated: truncated,
-        chunkProgress: progress,
-      }
+      return result
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to fetch paginated test items'
       throw err
@@ -733,7 +684,7 @@ export function useIplasApi() {
     error.value = null
 
     try {
-      const response = await iplasProxyApi.getRecordTestItems({
+      const testItems = await fetchIplasRecordTestItemsQuery({
         site,
         project,
         station,
@@ -744,8 +695,8 @@ export function useIplasApi() {
       })
 
       // Cache the result
-      cacheRecordTestItems(testItemsCache, cacheKey, response.test_items)
-      return response.test_items
+      cacheRecordTestItems(testItemsCache, cacheKey, testItems)
+      return testItems
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to fetch record test items'
       throw err
@@ -1001,8 +952,6 @@ export function useIplasApi() {
    * Clear all cached data
    */
   function clearCache(): void {
-    cachedSiteProjects = null
-    cachedStations.clear()
     siteProjects.value = []
     stations.value = []
     deviceIds.value = []

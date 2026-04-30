@@ -11,33 +11,15 @@
             <button type="button" @click="error = null">Dismiss</button>
           </div>
 
-          <section class="iplas-section">
-            <div class="iplas-section__header">
-              <div>
-                <p class="iplas-section__eyebrow">Controls</p>
-                <h2>Station Search</h2>
-                <p class="iplas-section__description">
-                  Choose the site, project, time range, and stations before pulling iPLAS data.
-                </p>
-              </div>
-            </div>
-            <div class="iplas-selection-shell">
-              <div class="iplas-selection-shell__toolbar">
-                <div class="iplas-selection-shell__summary">
-                  <span class="iplas-pill">{{ selectedStations.length }} configured station{{ selectedStations.length
-                    === 1 ? '' : 's' }}</span>
-                  <span class="iplas-pill iplas-pill--cool">{{ totalDeviceCount }} device candidate{{ totalDeviceCount
-                    === 1 ? '' : 's' }}</span>
-                  <span class="iplas-pill iplas-pill--warm">{{ useIndexedDbMode ? 'Streaming to disk' : 
-                  'In-memory search' }}</span>
-                </div>
-                <button type="button" class="iplas-button iplas-button--ghost" :disabled="loading"
-                  @click="handleRefresh">
-                  <Icon :icon="loading ? 'mdi:loading' : 'mdi:refresh'" :class="{ 'iplas-spin': loading }" />
-                  <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
-                </button>
-              </div>
+          <AppPanel eyebrow="Scope" title="Station Search" tone="cool" split-header>
+            <template #header-aside>
+              <button type="button" class="iplas-button iplas-button--ghost" :disabled="loading" @click="handleRefresh">
+                <Icon :icon="loading ? 'mdi:loading' : 'mdi:refresh'" :class="{ 'iplas-spin': loading }" />
+                <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
+              </button>
+            </template>
 
+            <div class="iplas-selection-shell">
               <div class="iplas-control-grid iplas-control-grid--two">
                 <label class="iplas-field">
                   <span>Site</span>
@@ -68,17 +50,20 @@
                 </label>
               </div>
 
-              <div class="iplas-selection-actions">
+              <div class="iplas-action-card">
+                <div>
+                  <strong>Configure Stations</strong>
+                  <p>Select stations, device IDs, and status filters for iPLAS search.</p>
+                </div>
                 <button type="button" class="iplas-button iplas-button--secondary"
-                  :disabled="!selectedProject || loadingStations" @click="openStationSelectionDialog">
+                  :disabled="!selectedSite || !selectedProject || loadingStations" @click="openStationSelectionDialog">
                   <Icon icon="mdi:tune-variant" />
-                  <span>Configure Stations</span>
+                  <span>{{ loadingStations ? 'Loading...' : 'Configure Stations' }}</span>
                   <strong v-if="selectedStations.length > 0">{{ selectedStations.length }}</strong>
                 </button>
-                <p>Station and device selection still runs through the existing dialog.</p>
               </div>
 
-              <section class="iplas-summary-panel">
+              <section v-if="selectedProject" class="iplas-summary-panel">
                 <div class="iplas-summary-panel__header">
                   <div>
                     <p class="iplas-summary-panel__eyebrow">Selected Station(s)</p>
@@ -190,7 +175,7 @@
                 </div>
               </div>
             </div>
-          </section>
+          </AppPanel>
 
           <!-- Test Items Results (Regular Mode) -->
           <section v-if="!useIndexedDbMode && hasRegularModeData" class="iplas-section">
@@ -497,6 +482,7 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import { useMutation } from '@tanstack/vue-query'
 import { useDebounceFn } from '@vueuse/core'
 import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
 import type {
@@ -513,6 +499,7 @@ import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettin
 import { useNotification } from '@/shared/composables/useNotification'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import AppSelect from '@/shared/ui/forms/AppSelect.vue'
+import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 import type { StationSelectionResult } from './DataExplorerStationSelectionDialog.vue'
@@ -658,6 +645,10 @@ const {
 } = useIplasLocalData({
   initialItemsPerPage: 25,
   filterDebounceMs: 300,
+})
+
+const stationSearchMutation = useMutation({
+  mutationFn: runStationSearch,
 })
 
 // Server-side pagination state (for table view mode)
@@ -2196,6 +2187,10 @@ function handleStationChange() {
 }
 
 async function fetchTestItems() {
+  await stationSearchMutation.mutateAsync()
+}
+
+async function runStationSearch() {
   if (!selectedSite.value || !selectedProject.value || selectedStations.value.length === 0) return
 
   // Pass Date objects - the composable handles ISO format conversion
@@ -2628,7 +2623,7 @@ onUnmounted(() => {
 .iplas-field select:focus,
 .iplas-field input:focus {
   outline: none;
-  border-color: rgba(15, 118, 110, 0.4);
+  border-color: var(--app-ring);
   box-shadow: none;
 }
 
@@ -2655,7 +2650,7 @@ onUnmounted(() => {
 }
 
 .iplas-input-with-icon:focus-within {
-  border-color: rgba(15, 118, 110, 0.4);
+  border-color: var(--app-ring);
   box-shadow: none;
 }
 
@@ -2745,9 +2740,30 @@ onUnmounted(() => {
 }
 
 .iplas-pill--neutral {
-  background: rgba(95, 103, 122, 0.1);
-  border-color: rgba(95, 103, 122, 0.16);
+  background: color-mix(in srgb, var(--app-muted) 10%, transparent);
+  border-color: color-mix(in srgb, var(--app-muted) 16%, transparent);
   color: var(--app-muted);
+}
+
+.iplas-action-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.9rem;
+  border: 1px solid color-mix(in srgb, var(--app-accent) 12%, var(--app-border));
+  border-radius: 0.8rem;
+  background: var(--app-panel);
+}
+
+.iplas-action-card strong {
+  color: var(--app-ink);
+}
+
+.iplas-action-card p {
+  margin: 0.35rem 0 0;
+  color: var(--app-muted);
+  line-height: 1.55;
 }
 
 .iplas-selection-actions {
@@ -2848,7 +2864,7 @@ onUnmounted(() => {
 }
 
 .iplas-device-chip--active {
-  border-color: rgba(15, 118, 110, 0.24);
+  border-color: var(--app-accent);
   background: var(--app-accent-soft);
   color: var(--app-accent);
 }
@@ -2917,7 +2933,7 @@ onUnmounted(() => {
   width: 2rem;
   height: 2rem;
   border-radius: 999px;
-  border: 3px solid rgba(15, 118, 110, 0.14);
+  border: 3px solid color-mix(in srgb, var(--app-accent) 14%, transparent);
   border-top-color: var(--app-accent);
   animation: iplas-spin 0.9s linear infinite;
 }
@@ -3000,6 +3016,7 @@ onUnmounted(() => {
   .iplas-selection-shell__toolbar,
   .iplas-selection-shell__summary,
   .iplas-selection-actions,
+  .iplas-action-card,
   .iplas-result-toolbar,
   .iplas-summary-panel__header,
   .iplas-summary-item,

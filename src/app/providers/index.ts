@@ -7,7 +7,7 @@ import { installRouter } from './router'
 
 export { primeVueOptions } from './primevue'
 export { createAppQueryClient, queryClient } from './query-client'
-export { initializeSentry } from './sentry'
+export { captureFrontendException, initializeSentry } from './sentry'
 
 export function installAppProviders(app: App, router: Router) {
   app.use(pinia)

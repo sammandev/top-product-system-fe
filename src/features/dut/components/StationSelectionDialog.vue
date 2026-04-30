@@ -267,7 +267,7 @@ watch(
 .station-selection-dialog__button:hover,
 .station-selection-dialog__clear-button:hover,
 .station-item:hover {
-  border-color: rgba(15, 118, 110, 0.24);
+  border-color: var(--app-accent);
 }
 
 .station-selection-dialog__icon-button,
@@ -329,7 +329,7 @@ watch(
   gap: 1rem;
   align-items: center;
   padding: 0.85rem 0.9rem;
-  border: 1px solid rgba(15, 118, 110, 0.12);
+  border: 1px solid color-mix(in srgb, var(--app-accent) 12%, var(--app-border));
   border-radius: 0.8rem;
   background: var(--app-panel);
   cursor: pointer;
@@ -337,7 +337,7 @@ watch(
 }
 
 .station-item:hover {
-  border-color: rgba(15, 118, 110, 0.18);
+  border-color: color-mix(in srgb, var(--app-accent) 24%, var(--app-border));
   background-color: var(--app-panel-strong);
 }
 
@@ -354,7 +354,7 @@ watch(
   width: 1.15rem;
   height: 1.15rem;
   border-radius: 0.35rem;
-  border: 1px solid rgba(15, 118, 110, 0.24);
+  border: 1px solid color-mix(in srgb, var(--app-accent) 24%, var(--app-border));
   background: var(--app-panel-strong);
 }
 
@@ -393,14 +393,14 @@ watch(
 }
 
 .station-selection-dialog__pill--muted {
-  background: rgba(95, 103, 122, 0.1);
-  border-color: rgba(95, 103, 122, 0.16);
+  background: color-mix(in srgb, var(--app-muted) 10%, transparent);
+  border-color: color-mix(in srgb, var(--app-muted) 16%, transparent);
   color: var(--app-muted);
 }
 
 .station-selection-dialog__pill--success {
-  background: rgba(15, 118, 110, 0.1);
-  border-color: rgba(15, 118, 110, 0.16);
+  background: var(--app-accent-soft);
+  border-color: color-mix(in srgb, var(--app-accent) 16%, var(--app-border));
   color: var(--app-accent);
 }
 

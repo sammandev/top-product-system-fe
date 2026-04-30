@@ -1,19 +1,9 @@
 <template>
   <div class="iplas-isn-shell">
-    <AppPanel
-      eyebrow="Controls"
-      title="ISN Search"
-      description="Search by ISN, SSN, or MAC, optionally expand identifiers through SFISTSP, then review grouped station results."
-      tone="cool"
-      split-header
-    >
+    <AppPanel eyebrow="Controls" title="ISN Search" tone="cool" split-header>
       <template #header-aside>
-        <button
-          type="button"
-          class="iplas-isn-button iplas-isn-button--ghost"
-          :disabled="loadingIsnSearch || !canClearAll"
-          @click="clearAll"
-        >
+        <button type="button" class="iplas-isn-button iplas-isn-button--ghost"
+          :disabled="loadingIsnSearch || !canClearAll" @click="clearAll">
           Clear All
         </button>
       </template>
@@ -21,20 +11,12 @@
       <div class="iplas-isn-stack">
         <div class="iplas-isn-toolbar">
           <div class="iplas-isn-toggle-row">
-            <button
-              type="button"
-              class="iplas-isn-toggle-chip"
-              :class="{ 'is-active': inputMode === 'multiple' }"
-              @click="inputMode = 'multiple'"
-            >
+            <button type="button" class="iplas-isn-toggle-chip" :class="{ 'is-active': inputMode === 'multiple' }"
+              @click="inputMode = 'multiple'">
               Multiple ISNs
             </button>
-            <button
-              type="button"
-              class="iplas-isn-toggle-chip"
-              :class="{ 'is-active': inputMode === 'bulk' }"
-              @click="inputMode = 'bulk'"
-            >
+            <button type="button" class="iplas-isn-toggle-chip" :class="{ 'is-active': inputMode === 'bulk' }"
+              @click="inputMode = 'bulk'">
               Bulk Paste
             </button>
           </div>
@@ -51,39 +33,21 @@
         <label v-if="inputMode === 'multiple'" class="iplas-isn-field">
           <span>DUT ISNs / SSNs / MACs</span>
           <div class="iplas-isn-entry-row">
-            <input
-              v-model="multipleIsnSearchText"
-              type="text"
-              placeholder="Type identifiers, then press Enter"
-              @input="handleMultipleIdentifierInput"
-              @keydown.enter.prevent="commitMultipleIdentifier"
-            >
-            <button
-              type="button"
-              class="iplas-isn-button iplas-isn-button--ghost"
-              :disabled="multipleModeIdentifiers.length === 0 || loadingSfistspLookup"
-              @click="handleSfistspLookup"
-            >
+            <input v-model="multipleIsnSearchText" type="text" placeholder="Type identifiers, then press Enter"
+              @input="handleMultipleIdentifierInput" @keydown.enter.prevent="commitMultipleIdentifier">
+            <button type="button" class="iplas-isn-button iplas-isn-button--ghost"
+              :disabled="multipleModeIdentifiers.length === 0 || loadingSfistspLookup" @click="handleSfistspLookup">
               {{ loadingSfistspLookup ? 'Looking up...' : 'ISN Ref' }}
             </button>
-            <button
-              type="button"
-              class="iplas-isn-button iplas-isn-button--primary"
-              :disabled="multipleModeIdentifiers.length === 0 || isSearching || loadingIsnSearch"
-              @click="handleSearch"
-            >
+            <button type="button" class="iplas-isn-button iplas-isn-button--primary"
+              :disabled="multipleModeIdentifiers.length === 0 || isSearching || loadingIsnSearch" @click="handleSearch">
               {{ isSearching || loadingIsnSearch ? 'Searching...' : 'Search' }}
             </button>
           </div>
           <small>Space, comma, or new line automatically queues multiple identifiers before lookup or search.</small>
           <div v-if="selectedISNs.length > 0" class="iplas-isn-token-row">
-            <button
-              v-for="(isn, index) in selectedISNs"
-              :key="`${isn}-${index}`"
-              type="button"
-              class="iplas-isn-token"
-              @click="removeSelectedISN(index)"
-            >
+            <button v-for="(isn, index) in selectedISNs" :key="`${isn}-${index}`" type="button" class="iplas-isn-token"
+              @click="removeSelectedISN(index)">
               <span>{{ isn }}</span>
               <span aria-hidden="true">x</span>
             </button>
@@ -92,28 +56,17 @@
 
         <label v-else class="iplas-isn-field">
           <span>Bulk ISN / SSN / MAC Input</span>
-          <textarea
-            v-model="searchIsn"
-            rows="5"
-            placeholder="Paste multiple ISNs, SSNs, or MACs separated by newlines, commas, or spaces"
-          />
+          <textarea v-model="searchIsn" rows="5"
+            placeholder="Paste multiple ISNs, SSNs, or MACs separated by newlines, commas, or spaces" />
           <div class="iplas-isn-entry-row iplas-isn-entry-row--split">
             <small>Bulk input accepts one-per-line, comma-separated, or space-separated identifiers.</small>
             <div class="iplas-isn-inline-actions">
-              <button
-                type="button"
-                class="iplas-isn-button iplas-isn-button--ghost"
-                :disabled="!searchIsn.trim() || loadingSfistspLookup"
-                @click="handleSfistspLookup"
-              >
+              <button type="button" class="iplas-isn-button iplas-isn-button--ghost"
+                :disabled="!searchIsn.trim() || loadingSfistspLookup" @click="handleSfistspLookup">
                 {{ loadingSfistspLookup ? 'Looking up...' : 'ISN Ref' }}
               </button>
-              <button
-                type="button"
-                class="iplas-isn-button iplas-isn-button--primary"
-                :disabled="!searchIsn.trim() || isSearching || loadingIsnSearch"
-                @click="handleSearch"
-              >
+              <button type="button" class="iplas-isn-button iplas-isn-button--primary"
+                :disabled="!searchIsn.trim() || isSearching || loadingIsnSearch" @click="handleSearch">
                 {{ isSearching || loadingIsnSearch ? 'Searching...' : 'Search' }}
               </button>
             </div>
@@ -132,29 +85,22 @@
           </div>
 
           <div class="iplas-isn-reference-grid">
-            <article
-              v-for="ref in sfistspReferences"
-              :key="ref.isn_searched"
-              class="iplas-isn-reference-card"
-              :class="ref.success ? 'iplas-isn-reference-card--success' : 'iplas-isn-reference-card--error'"
-            >
+            <article v-for="ref in sfistspReferences" :key="ref.isn_searched" class="iplas-isn-reference-card"
+              :class="ref.success ? 'iplas-isn-reference-card--success' : 'iplas-isn-reference-card--error'">
               <div class="iplas-isn-reference-card__topline">
                 <div>
                   <small>Searched</small>
                   <strong>{{ ref.isn_searched }}</strong>
                 </div>
-                <span class="iplas-isn-pill" :class="ref.success ? 'iplas-isn-pill--success' : 'iplas-isn-pill--danger'">
+                <span class="iplas-isn-pill"
+                  :class="ref.success ? 'iplas-isn-pill--success' : 'iplas-isn-pill--danger'">
                   {{ ref.success ? 'Found' : 'Not Found' }}
                 </span>
               </div>
 
               <div v-if="ref.success" class="iplas-isn-reference-stack">
-                <button
-                  v-if="ref.isn && ref.isn !== ref.isn_searched"
-                  type="button"
-                  class="iplas-isn-reference-code"
-                  @click="copyToClipboard(ref.isn)"
-                >
+                <button v-if="ref.isn && ref.isn !== ref.isn_searched" type="button" class="iplas-isn-reference-code"
+                  @click="copyToClipboard(ref.isn)">
                   <span>Primary ISN</span>
                   <strong>{{ ref.isn }}</strong>
                 </button>
@@ -170,13 +116,8 @@
                 <div v-if="ref.isn_references && ref.isn_references.length > 0" class="iplas-isn-reference-stack">
                   <span class="iplas-isn-reference-label">All References</span>
                   <div class="iplas-isn-reference-token-row">
-                    <button
-                      v-for="refIsn in ref.isn_references"
-                      :key="refIsn"
-                      type="button"
-                      class="iplas-isn-token"
-                      @click="copyToClipboard(refIsn)"
-                    >
+                    <button v-for="refIsn in ref.isn_references" :key="refIsn" type="button" class="iplas-isn-token"
+                      @click="copyToClipboard(refIsn)">
                       {{ refIsn }}
                     </button>
                   </div>
@@ -194,355 +135,320 @@
       {{ error }}
     </div>
 
-    <div v-if="hasSearched && groupedByISN.length === 0 && !isSearching" class="iplas-isn-notice iplas-isn-notice--info">
+    <div v-if="hasSearched && groupedByISN.length === 0 && !isSearching"
+      class="iplas-isn-notice iplas-isn-notice--info">
       No test records found for the provided ISN(s).
     </div>
 
-        <AppPanel
-          v-if="groupedByISN.length > 0"
-          eyebrow="Results"
-          title="Records"
-          description="Review grouped iPLAS records per ISN, switch display modes, and drill into station-level histories."
-          tone="warm"
-          split-header
-          class="iplas-isn-results-panel"
-        >
-          <template #header-aside>
-            <div class="iplas-isn-results-actions">
-              <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ groupedByISN.length }} ISN(s)</span>
-              <button
-                v-if="selectedRecordIndices.length > 0"
-                type="button"
-                class="iplas-isn-button iplas-isn-button--secondary"
-                :disabled="downloading"
-                @click="downloadSelectedRecords"
-              >
-                {{ downloading ? 'Downloading...' : `Download Selected (${selectedRecordIndices.length})` }}
-              </button>
-              <button type="button" class="iplas-isn-button iplas-isn-button--ghost" @click="toggleExpandAll">
-                {{ allExpanded ? 'Collapse All' : 'Expand All' }}
-              </button>
+    <AppPanel v-if="groupedByISN.length > 0" eyebrow="Results" title="Records"
+      description="Review grouped iPLAS records per ISN, switch display modes, and drill into station-level histories."
+      tone="warm" split-header class="iplas-isn-results-panel">
+      <template #header-aside>
+        <div class="iplas-isn-results-actions">
+          <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ groupedByISN.length }} ISN(s)</span>
+          <button v-if="selectedRecordIndices.length > 0" type="button"
+            class="iplas-isn-button iplas-isn-button--secondary" :disabled="downloading"
+            @click="downloadSelectedRecords">
+            {{ downloading ? 'Downloading...' : `Download Selected (${selectedRecordIndices.length})` }}
+          </button>
+          <button type="button" class="iplas-isn-button iplas-isn-button--ghost" @click="toggleExpandAll">
+            {{ allExpanded ? 'Collapse All' : 'Expand All' }}
+          </button>
+        </div>
+      </template>
+
+      <AppTabs v-model="activeISNTab" :items="isnTabItems" scrollable>
+        <template v-for="(isnGroup, isnIndex) in groupedByISN" :key="isnGroup.isn" v-slot:[`panel-${isnIndex}`]>
+          <section class="iplas-isn-results-pane">
+            <div class="iplas-isn-results-toolbar">
+              <div class="iplas-isn-summary-grid">
+                <button type="button" class="iplas-isn-summary-card iplas-isn-summary-card--primary"
+                  @click="copyToClipboard(isnGroup.isn)">
+                  <small>DUT ISN</small>
+                  <strong>{{ isnGroup.isn }}</strong>
+                </button>
+                <div class="iplas-isn-summary-card">
+                  <small>Site</small>
+                  <strong>{{ isnGroup.site }}</strong>
+                </div>
+                <div class="iplas-isn-summary-card">
+                  <small>Project</small>
+                  <strong>{{ isnGroup.project }}</strong>
+                </div>
+                <div class="iplas-isn-summary-card">
+                  <small>Stations</small>
+                  <strong>{{ isnGroup.stations.length }}</strong>
+                </div>
+                <div class="iplas-isn-summary-card">
+                  <small>Total Records</small>
+                  <strong>{{ isnGroup.records.length }}</strong>
+                </div>
+                <div class="iplas-isn-summary-card"
+                  :class="isnGroup.hasError ? 'iplas-isn-summary-card--danger' : 'iplas-isn-summary-card--success'">
+                  <small>{{ isnGroup.hasError ? 'Errors' : 'Status' }}</small>
+                  <strong>{{ isnGroup.hasError ? `${isnGroup.errorCount} issue(s)` : 'Healthy' }}</strong>
+                </div>
+              </div>
+
+              <div class="iplas-isn-view-toggle-row">
+                <button v-for="option in viewModeOptions" :key="option.value" type="button"
+                  class="iplas-isn-toggle-chip" :class="{ 'is-active': viewMode === option.value }"
+                  @click="viewMode = option.value">
+                  {{ option.label }}
+                </button>
+              </div>
             </div>
-          </template>
 
-          <AppTabs v-model="activeISNTab" :items="isnTabItems" scrollable>
-            <template v-for="(isnGroup, isnIndex) in groupedByISN" :key="isnGroup.isn" v-slot:[`panel-${isnIndex}`]>
-              <section class="iplas-isn-results-pane">
-                <div class="iplas-isn-results-toolbar">
-                  <div class="iplas-isn-summary-grid">
-                    <button type="button" class="iplas-isn-summary-card iplas-isn-summary-card--primary" @click="copyToClipboard(isnGroup.isn)">
-                      <small>DUT ISN</small>
-                      <strong>{{ isnGroup.isn }}</strong>
+            <div v-if="viewMode === 'grid'" class="iplas-isn-station-grid">
+              <article v-for="(stationGroup, stationIndex) in isnGroup.stations"
+                :key="`grid-station-${stationGroup.stationName}`" class="iplas-isn-station-card">
+                <div class="iplas-isn-station-card__header"
+                  :class="hasLatestStationError(stationGroup) ? 'is-error' : ''">
+                  <div>
+                    <strong>{{ stationGroup.displayName }}</strong>
+                    <p>{{ stationGroup.records.length }} record(s)</p>
+                  </div>
+                  <span v-if="getStationErrorCount(stationGroup) > 0" class="iplas-isn-pill iplas-isn-pill--danger">
+                    {{ getStationErrorCount(stationGroup) }} error(s)
+                  </span>
+                </div>
+
+                <template v-if="getDisplayedStationRecords(isnGroup, stationGroup).length > 0">
+                  <div class="iplas-isn-carousel-controls">
+                    <button type="button" class="iplas-isn-inline-button"
+                      :disabled="getGridCarouselIndex(isnGroup, stationGroup) === 0"
+                      @click="setGridCarouselIndex(getGridCarouselKey(isnGroup, stationGroup), 0, getDisplayedStationRecords(isnGroup, stationGroup).length)">
+                      First
                     </button>
-                    <div class="iplas-isn-summary-card">
-                      <small>Site</small>
-                      <strong>{{ isnGroup.site }}</strong>
-                    </div>
-                    <div class="iplas-isn-summary-card">
-                      <small>Project</small>
-                      <strong>{{ isnGroup.project }}</strong>
-                    </div>
-                    <div class="iplas-isn-summary-card">
-                      <small>Stations</small>
-                      <strong>{{ isnGroup.stations.length }}</strong>
-                    </div>
-                    <div class="iplas-isn-summary-card">
-                      <small>Total Records</small>
-                      <strong>{{ isnGroup.records.length }}</strong>
-                    </div>
-                    <div class="iplas-isn-summary-card" :class="isnGroup.hasError ? 'iplas-isn-summary-card--danger' : 'iplas-isn-summary-card--success'">
-                      <small>{{ isnGroup.hasError ? 'Errors' : 'Status' }}</small>
-                      <strong>{{ isnGroup.hasError ? `${isnGroup.errorCount} issue(s)` : 'Healthy' }}</strong>
-                    </div>
+                    <button type="button" class="iplas-isn-inline-button"
+                      :disabled="getGridCarouselIndex(isnGroup, stationGroup) === 0"
+                      @click="setGridCarouselIndex(getGridCarouselKey(isnGroup, stationGroup), getGridCarouselIndex(isnGroup, stationGroup) - 1, getDisplayedStationRecords(isnGroup, stationGroup).length)">
+                      Prev
+                    </button>
+                    <span class="iplas-isn-pill iplas-isn-pill--primary">
+                      Record {{ getGridCarouselIndex(isnGroup, stationGroup) + 1 }} / {{
+                        getDisplayedStationRecords(isnGroup, stationGroup).length }}
+                    </span>
+                    <button type="button" class="iplas-isn-inline-button"
+                      :disabled="getGridCarouselIndex(isnGroup, stationGroup) >= getDisplayedStationRecords(isnGroup, stationGroup).length - 1"
+                      @click="setGridCarouselIndex(getGridCarouselKey(isnGroup, stationGroup), getGridCarouselIndex(isnGroup, stationGroup) + 1, getDisplayedStationRecords(isnGroup, stationGroup).length)">
+                      Next
+                    </button>
+                    <button type="button" class="iplas-isn-inline-button"
+                      :disabled="getGridCarouselIndex(isnGroup, stationGroup) >= getDisplayedStationRecords(isnGroup, stationGroup).length - 1"
+                      @click="setGridCarouselIndex(getGridCarouselKey(isnGroup, stationGroup), getDisplayedStationRecords(isnGroup, stationGroup).length - 1, getDisplayedStationRecords(isnGroup, stationGroup).length)">
+                      Last
+                    </button>
                   </div>
 
-                  <div class="iplas-isn-view-toggle-row">
-                    <button
-                      v-for="option in viewModeOptions"
-                      :key="option.value"
-                      type="button"
-                      class="iplas-isn-toggle-chip"
-                      :class="{ 'is-active': viewMode === option.value }"
-                      @click="viewMode = option.value"
-                    >
-                      {{ option.label }}
-                    </button>
+                  <div v-if="getCurrentGridRecord(isnGroup, stationGroup)" class="iplas-isn-record-card"
+                    :class="isRecordPassing(getCurrentGridRecord(isnGroup, stationGroup)!) ? 'is-pass' : 'is-fail'">
+                    <div class="iplas-isn-record-card__identity">
+                      <span class="iplas-isn-pill iplas-isn-pill--primary">{{ getCurrentGridRecord(isnGroup,
+                        stationGroup)?.isn }}</span>
+                      <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ getCurrentGridRecord(isnGroup,
+                        stationGroup)?.device_id }}</span>
+                    </div>
+                    <div class="iplas-isn-record-card__meta">
+                      <span class="iplas-isn-pill iplas-isn-pill--neutral">{{
+                        formatShortTime(getCurrentGridRecord(isnGroup, stationGroup)!.test_end_time,
+                        getCurrentGridRecord(isnGroup, stationGroup)!.site) }}</span>
+                      <span class="iplas-isn-pill iplas-isn-pill--neutral">{{
+                        calculateDuration(getCurrentGridRecord(isnGroup, stationGroup)!.test_start_time,
+                        getCurrentGridRecord(isnGroup, stationGroup)!.test_end_time) }}</span>
+                    </div>
+                    <p class="iplas-isn-record-card__status"
+                      :class="isRecordPassing(getCurrentGridRecord(isnGroup, stationGroup)!) ? 'is-pass' : 'is-fail'">
+                      {{ recordStatusText(getCurrentGridRecord(isnGroup, stationGroup)!) }}
+                    </p>
+                    <div class="iplas-isn-record-card__actions">
+                      <button type="button" class="iplas-isn-button iplas-isn-button--ghost"
+                        @click="openFullscreen(getCurrentGridRecord(isnGroup, stationGroup)!)">
+                        Details
+                      </button>
+                      <button type="button" class="iplas-isn-button iplas-isn-button--primary"
+                        :disabled="downloadingKey === `${isnIndex}-${stationIndex}-${getGridCarouselIndex(isnGroup, stationGroup)}`"
+                        @click="downloadSingleRecord(getCurrentGridRecord(isnGroup, stationGroup)!, `${isnIndex}-${stationIndex}`, getGridCarouselIndex(isnGroup, stationGroup))">
+                        {{ downloadingKey === `${isnIndex}-${stationIndex}-${getGridCarouselIndex(isnGroup,
+                          stationGroup)}` ? 'Downloading...' : 'Download' }}
+                      </button>
+                    </div>
                   </div>
+                </template>
+
+                <div v-else class="iplas-isn-empty-state">
+                  No test records available for this station.
                 </div>
+              </article>
+            </div>
 
-                <div v-if="viewMode === 'grid'" class="iplas-isn-station-grid">
-                  <article
-                    v-for="(stationGroup, stationIndex) in isnGroup.stations"
-                    :key="`grid-station-${stationGroup.stationName}`"
-                    class="iplas-isn-station-card"
-                  >
-                    <div class="iplas-isn-station-card__header" :class="hasLatestStationError(stationGroup) ? 'is-error' : ''">
-                      <div>
-                        <strong>{{ stationGroup.displayName }}</strong>
-                        <p>{{ stationGroup.records.length }} record(s)</p>
-                      </div>
-                      <span v-if="getStationErrorCount(stationGroup) > 0" class="iplas-isn-pill iplas-isn-pill--danger">
-                        {{ getStationErrorCount(stationGroup) }} error(s)
-                      </span>
-                    </div>
+            <div v-else-if="viewMode === 'list'" class="iplas-isn-section-stack">
+              <section v-for="(stationGroup, stationIndex) in isnGroup.stations"
+                :key="`list-station-${stationGroup.stationName}`" class="iplas-isn-station-section">
+                <button type="button" class="iplas-isn-station-section__toggle"
+                  :class="{ 'is-error': hasLatestStationError(stationGroup) }"
+                  @click="toggleStationExpansion(isnIndex, stationIndex)">
+                  <div>
+                    <strong>{{ stationGroup.displayName }}</strong>
+                    <span>{{ stationGroup.records.length }} record(s)</span>
+                  </div>
+                  <div class="iplas-isn-station-section__meta">
+                    <span v-if="getStationErrorCount(stationGroup) > 0" class="iplas-isn-pill iplas-isn-pill--danger">{{
+                      getStationErrorCount(stationGroup) }} error(s)</span>
+                    <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ isStationExpanded(isnIndex, stationIndex) ?
+                      'Collapse' : 'Expand' }}</span>
+                  </div>
+                </button>
 
-                    <template v-if="getDisplayedStationRecords(isnGroup, stationGroup).length > 0">
-                      <div class="iplas-isn-carousel-controls">
-                        <button
-                          type="button"
-                          class="iplas-isn-inline-button"
-                          :disabled="getGridCarouselIndex(isnGroup, stationGroup) === 0"
-                          @click="setGridCarouselIndex(getGridCarouselKey(isnGroup, stationGroup), 0, getDisplayedStationRecords(isnGroup, stationGroup).length)"
-                        >
-                          First
-                        </button>
-                        <button
-                          type="button"
-                          class="iplas-isn-inline-button"
-                          :disabled="getGridCarouselIndex(isnGroup, stationGroup) === 0"
-                          @click="setGridCarouselIndex(getGridCarouselKey(isnGroup, stationGroup), getGridCarouselIndex(isnGroup, stationGroup) - 1, getDisplayedStationRecords(isnGroup, stationGroup).length)"
-                        >
-                          Prev
-                        </button>
-                        <span class="iplas-isn-pill iplas-isn-pill--primary">
-                          Record {{ getGridCarouselIndex(isnGroup, stationGroup) + 1 }} / {{ getDisplayedStationRecords(isnGroup, stationGroup).length }}
-                        </span>
-                        <button
-                          type="button"
-                          class="iplas-isn-inline-button"
-                          :disabled="getGridCarouselIndex(isnGroup, stationGroup) >= getDisplayedStationRecords(isnGroup, stationGroup).length - 1"
-                          @click="setGridCarouselIndex(getGridCarouselKey(isnGroup, stationGroup), getGridCarouselIndex(isnGroup, stationGroup) + 1, getDisplayedStationRecords(isnGroup, stationGroup).length)"
-                        >
-                          Next
-                        </button>
-                        <button
-                          type="button"
-                          class="iplas-isn-inline-button"
-                          :disabled="getGridCarouselIndex(isnGroup, stationGroup) >= getDisplayedStationRecords(isnGroup, stationGroup).length - 1"
-                          @click="setGridCarouselIndex(getGridCarouselKey(isnGroup, stationGroup), getDisplayedStationRecords(isnGroup, stationGroup).length - 1, getDisplayedStationRecords(isnGroup, stationGroup).length)"
-                        >
-                          Last
-                        </button>
-                      </div>
-
-                      <div
-                        v-if="getCurrentGridRecord(isnGroup, stationGroup)"
-                        class="iplas-isn-record-card"
-                        :class="isRecordPassing(getCurrentGridRecord(isnGroup, stationGroup)!) ? 'is-pass' : 'is-fail'"
-                      >
-                        <div class="iplas-isn-record-card__identity">
-                          <span class="iplas-isn-pill iplas-isn-pill--primary">{{ getCurrentGridRecord(isnGroup, stationGroup)?.isn }}</span>
-                          <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ getCurrentGridRecord(isnGroup, stationGroup)?.device_id }}</span>
-                        </div>
-                        <div class="iplas-isn-record-card__meta">
-                          <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ formatShortTime(getCurrentGridRecord(isnGroup, stationGroup)!.test_end_time, getCurrentGridRecord(isnGroup, stationGroup)!.site) }}</span>
-                          <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ calculateDuration(getCurrentGridRecord(isnGroup, stationGroup)!.test_start_time, getCurrentGridRecord(isnGroup, stationGroup)!.test_end_time) }}</span>
-                        </div>
-                        <p class="iplas-isn-record-card__status" :class="isRecordPassing(getCurrentGridRecord(isnGroup, stationGroup)!) ? 'is-pass' : 'is-fail'">
-                          {{ recordStatusText(getCurrentGridRecord(isnGroup, stationGroup)!) }}
-                        </p>
-                        <div class="iplas-isn-record-card__actions">
-                          <button type="button" class="iplas-isn-button iplas-isn-button--ghost" @click="openFullscreen(getCurrentGridRecord(isnGroup, stationGroup)!)">
-                            Details
-                          </button>
-                          <button
-                            type="button"
-                            class="iplas-isn-button iplas-isn-button--primary"
-                            :disabled="downloadingKey === `${isnIndex}-${stationIndex}-${getGridCarouselIndex(isnGroup, stationGroup)}`"
-                            @click="downloadSingleRecord(getCurrentGridRecord(isnGroup, stationGroup)!, `${isnIndex}-${stationIndex}`, getGridCarouselIndex(isnGroup, stationGroup))"
-                          >
-                            {{ downloadingKey === `${isnIndex}-${stationIndex}-${getGridCarouselIndex(isnGroup, stationGroup)}` ? 'Downloading...' : 'Download' }}
-                          </button>
+                <div v-if="isStationExpanded(isnIndex, stationIndex)" class="iplas-isn-station-section__body">
+                  <div v-if="getDisplayedStationRecords(isnGroup, stationGroup).length > 0"
+                    class="iplas-isn-list-stack">
+                    <article v-for="(record, recordIndex) in getDisplayedStationRecords(isnGroup, stationGroup)"
+                      :key="`list-record-${recordIndex}`" class="iplas-isn-list-row"
+                      :class="isRecordPassing(record) ? 'is-pass' : 'is-fail'">
+                      <div class="iplas-isn-list-row__copy">
+                        <strong>{{ record.device_id }} • {{ record.isn }}</strong>
+                        <div class="iplas-isn-list-row__meta">
+                          <span class="iplas-isn-pill"
+                            :class="isRecordPassing(record) ? 'iplas-isn-pill--success' : 'iplas-isn-pill--danger'">{{
+                            recordStatusText(record) }}</span>
+                          <span class="iplas-isn-pill iplas-isn-pill--neutral">{{
+                            calculateDuration(record.test_start_time,
+                            record.test_end_time) }}</span>
+                          <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ formatShortTime(record.test_end_time,
+                            record.site) }}</span>
                         </div>
                       </div>
-                    </template>
-
-                    <div v-else class="iplas-isn-empty-state">
-                      No test records available for this station.
-                    </div>
-                  </article>
-                </div>
-
-                <div v-else-if="viewMode === 'list'" class="iplas-isn-section-stack">
-                  <section
-                    v-for="(stationGroup, stationIndex) in isnGroup.stations"
-                    :key="`list-station-${stationGroup.stationName}`"
-                    class="iplas-isn-station-section"
-                  >
-                    <button
-                      type="button"
-                      class="iplas-isn-station-section__toggle"
-                      :class="{ 'is-error': hasLatestStationError(stationGroup) }"
-                      @click="toggleStationExpansion(isnIndex, stationIndex)"
-                    >
-                      <div>
-                        <strong>{{ stationGroup.displayName }}</strong>
-                        <span>{{ stationGroup.records.length }} record(s)</span>
+                      <div class="iplas-isn-record-card__actions">
+                        <button type="button" class="iplas-isn-button iplas-isn-button--ghost"
+                          @click="openFullscreen(record)">Details</button>
+                        <button type="button" class="iplas-isn-button iplas-isn-button--primary"
+                          :disabled="downloadingKey === `${isnIndex}-${stationIndex}-${recordIndex}`"
+                          @click="downloadSingleRecord(record, `${isnIndex}-${stationIndex}`, recordIndex)">
+                          {{ downloadingKey === `${isnIndex}-${stationIndex}-${recordIndex}` ? 'Downloading...' :
+                          'Download' }}
+                        </button>
                       </div>
-                      <div class="iplas-isn-station-section__meta">
-                        <span v-if="getStationErrorCount(stationGroup) > 0" class="iplas-isn-pill iplas-isn-pill--danger">{{ getStationErrorCount(stationGroup) }} error(s)</span>
-                        <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ isStationExpanded(isnIndex, stationIndex) ? 'Collapse' : 'Expand' }}</span>
-                      </div>
-                    </button>
-
-                    <div v-if="isStationExpanded(isnIndex, stationIndex)" class="iplas-isn-station-section__body">
-                      <div v-if="getDisplayedStationRecords(isnGroup, stationGroup).length > 0" class="iplas-isn-list-stack">
-                        <article
-                          v-for="(record, recordIndex) in getDisplayedStationRecords(isnGroup, stationGroup)"
-                          :key="`list-record-${recordIndex}`"
-                          class="iplas-isn-list-row"
-                          :class="isRecordPassing(record) ? 'is-pass' : 'is-fail'"
-                        >
-                          <div class="iplas-isn-list-row__copy">
-                            <strong>{{ record.device_id }} • {{ record.isn }}</strong>
-                            <div class="iplas-isn-list-row__meta">
-                              <span class="iplas-isn-pill" :class="isRecordPassing(record) ? 'iplas-isn-pill--success' : 'iplas-isn-pill--danger'">{{ recordStatusText(record) }}</span>
-                              <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ calculateDuration(record.test_start_time, record.test_end_time) }}</span>
-                              <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ formatShortTime(record.test_end_time, record.site) }}</span>
-                            </div>
-                          </div>
-                          <div class="iplas-isn-record-card__actions">
-                            <button type="button" class="iplas-isn-button iplas-isn-button--ghost" @click="openFullscreen(record)">Details</button>
-                            <button
-                              type="button"
-                              class="iplas-isn-button iplas-isn-button--primary"
-                              :disabled="downloadingKey === `${isnIndex}-${stationIndex}-${recordIndex}`"
-                              @click="downloadSingleRecord(record, `${isnIndex}-${stationIndex}`, recordIndex)"
-                            >
-                              {{ downloadingKey === `${isnIndex}-${stationIndex}-${recordIndex}` ? 'Downloading...' : 'Download' }}
-                            </button>
-                          </div>
-                        </article>
-                      </div>
-                      <div v-else class="iplas-isn-empty-state">No test records available for this station.</div>
-                    </div>
-                  </section>
-                </div>
-
-                <div v-else-if="viewMode === 'table'" class="iplas-isn-section-stack">
-                  <section
-                    v-for="(stationGroup, stationIndex) in isnGroup.stations"
-                    :key="`table-station-${stationGroup.stationName}`"
-                    class="iplas-isn-station-section"
-                  >
-                    <button
-                      type="button"
-                      class="iplas-isn-station-section__toggle"
-                      :class="{ 'is-error': hasLatestStationError(stationGroup) }"
-                      @click="toggleStationExpansion(isnIndex, stationIndex)"
-                    >
-                      <div>
-                        <strong>{{ stationGroup.displayName }}</strong>
-                        <span>{{ stationGroup.records.length }} record(s)</span>
-                      </div>
-                      <div class="iplas-isn-station-section__meta">
-                        <span v-if="getStationErrorCount(stationGroup) > 0" class="iplas-isn-pill iplas-isn-pill--danger">{{ getStationErrorCount(stationGroup) }} error(s)</span>
-                        <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ isStationExpanded(isnIndex, stationIndex) ? 'Collapse' : 'Expand' }}</span>
-                      </div>
-                    </button>
-
-                    <div v-if="isStationExpanded(isnIndex, stationIndex)" class="iplas-isn-station-section__body">
-                      <AppDataGrid
-                        :columns="recordTableColumns"
-                        :rows="getTableRows(isnGroup, stationGroup, stationIndex)"
-                        data-key="_rowKey"
-                        :paginator="false"
-                        scroll-height="24rem"
-                        :table-style="{ minWidth: '60rem' }"
-                        empty-message="No test records available for this station."
-                      >
-                        <template #cell-status="{ data }">
-                          <span class="iplas-isn-pill" :class="isRecordPassing(data as IsnSearchData) ? 'iplas-isn-pill--success' : 'iplas-isn-pill--danger'">
-                            {{ isRecordPassing(data as IsnSearchData) ? 'PASS' : (String((data as IsnSearchData).error_code || 'FAIL')) }}
-                          </span>
-                        </template>
-                        <template #cell-error_name="{ data }">
-                          <span :class="isRecordPassing(data as IsnSearchData) ? '' : 'iplas-isn-text-danger'">{{ (data as IsnSearchData).error_name || '-' }}</span>
-                        </template>
-                        <template #cell-test_end_time="{ data }">
-                          {{ formatShortTime((data as IsnSearchData).test_end_time, (data as IsnSearchData).site) }}
-                        </template>
-                        <template #cell-actions="{ data }">
-                          <div class="iplas-isn-record-card__actions iplas-isn-record-card__actions--tight">
-                            <button type="button" class="iplas-isn-inline-button" @click="openFullscreen(data as IsnSearchData)">Details</button>
-                            <button
-                              type="button"
-                              class="iplas-isn-inline-button"
-                              :disabled="downloadingKey === `${isnIndex}-${(data as TableRow)._stationIndex}-${(data as TableRow)._idx}`"
-                              @click="downloadSingleRecord(data as IsnSearchData, `${isnIndex}-${(data as TableRow)._stationIndex}`, (data as TableRow)._idx)"
-                            >
-                              {{ downloadingKey === `${isnIndex}-${(data as TableRow)._stationIndex}-${(data as TableRow)._idx}` ? 'Downloading...' : 'Download' }}
-                            </button>
-                          </div>
-                        </template>
-                      </AppDataGrid>
-                    </div>
-                  </section>
-                </div>
-
-                <div v-else class="iplas-isn-section-stack">
-                  <section
-                    v-for="(stationGroup, stationIndex) in isnGroup.stations"
-                    :key="`compact-station-${stationGroup.stationName}`"
-                    class="iplas-isn-station-section"
-                  >
-                    <button
-                      type="button"
-                      class="iplas-isn-station-section__toggle"
-                      :class="{ 'is-error': hasLatestStationError(stationGroup) }"
-                      @click="toggleCompactExpansion(isnIndex, stationIndex)"
-                    >
-                      <div>
-                        <strong>{{ stationGroup.displayName }}</strong>
-                        <span>{{ stationGroup.records.length }} record(s)</span>
-                      </div>
-                      <div class="iplas-isn-station-section__meta">
-                        <span v-if="getStationErrorCount(stationGroup) > 0" class="iplas-isn-pill iplas-isn-pill--danger">{{ getStationErrorCount(stationGroup) }} error(s)</span>
-                        <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ isCompactExpanded(isnIndex, stationIndex) ? 'Collapse' : 'Expand' }}</span>
-                      </div>
-                    </button>
-
-                    <div v-if="isCompactExpanded(isnIndex, stationIndex)" class="iplas-isn-station-section__body">
-                      <div v-if="getDisplayedStationRecords(isnGroup, stationGroup).length > 0" class="iplas-isn-compact-grid">
-                        <article
-                          v-for="(record, recordIndex) in getDisplayedStationRecords(isnGroup, stationGroup)"
-                          :key="`compact-${record.device_id}-${recordIndex}`"
-                          class="iplas-isn-compact-card"
-                          :class="isRecordPassing(record) ? 'is-pass' : 'is-fail'"
-                        >
-                          <strong>{{ record.device_id }} • {{ record.isn }}</strong>
-                          <span class="iplas-isn-pill" :class="isRecordPassing(record) ? 'iplas-isn-pill--success' : 'iplas-isn-pill--danger'">
-                            {{ recordStatusText(record) }}
-                          </span>
-                          <div class="iplas-isn-list-row__meta">
-                            <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ formatShortTime(record.test_end_time, record.site) }}</span>
-                            <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ calculateDuration(record.test_start_time, record.test_end_time) }}</span>
-                          </div>
-                          <div class="iplas-isn-record-card__actions">
-                            <button type="button" class="iplas-isn-button iplas-isn-button--ghost" @click="openFullscreen(record)">Details</button>
-                            <button
-                              type="button"
-                              class="iplas-isn-button iplas-isn-button--primary"
-                              :disabled="downloadingKey === `${isnIndex}-${stationIndex}-${recordIndex}`"
-                              @click="downloadSingleRecord(record, `${isnIndex}-${stationIndex}`, recordIndex)"
-                            >
-                              {{ downloadingKey === `${isnIndex}-${stationIndex}-${recordIndex}` ? 'Downloading...' : 'Download' }}
-                            </button>
-                          </div>
-                        </article>
-                      </div>
-                      <div v-else class="iplas-isn-empty-state">No test records available for this station.</div>
-                    </div>
-                  </section>
+                    </article>
+                  </div>
+                  <div v-else class="iplas-isn-empty-state">No test records available for this station.</div>
                 </div>
               </section>
-            </template>
-          </AppTabs>
-        </AppPanel>
-        <!-- Fullscreen Dialog -->
-        <IplasTestItemsFullscreenDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
-            :downloading="fullscreenDownloading" @download="downloadSingleRecordFromFullscreen" />
-    </div>
+            </div>
+
+            <div v-else-if="viewMode === 'table'" class="iplas-isn-section-stack">
+              <section v-for="(stationGroup, stationIndex) in isnGroup.stations"
+                :key="`table-station-${stationGroup.stationName}`" class="iplas-isn-station-section">
+                <button type="button" class="iplas-isn-station-section__toggle"
+                  :class="{ 'is-error': hasLatestStationError(stationGroup) }"
+                  @click="toggleStationExpansion(isnIndex, stationIndex)">
+                  <div>
+                    <strong>{{ stationGroup.displayName }}</strong>
+                    <span>{{ stationGroup.records.length }} record(s)</span>
+                  </div>
+                  <div class="iplas-isn-station-section__meta">
+                    <span v-if="getStationErrorCount(stationGroup) > 0" class="iplas-isn-pill iplas-isn-pill--danger">{{
+                      getStationErrorCount(stationGroup) }} error(s)</span>
+                    <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ isStationExpanded(isnIndex, stationIndex) ?
+                      'Collapse' : 'Expand' }}</span>
+                  </div>
+                </button>
+
+                <div v-if="isStationExpanded(isnIndex, stationIndex)" class="iplas-isn-station-section__body">
+                  <AppDataGrid :columns="recordTableColumns" :rows="getTableRows(isnGroup, stationGroup, stationIndex)"
+                    data-key="_rowKey" :paginator="false" scroll-height="24rem" :table-style="{ minWidth: '60rem' }"
+                    empty-message="No test records available for this station.">
+                    <template #cell-status="{ data }">
+                      <span class="iplas-isn-pill"
+                        :class="isRecordPassing(data as IsnSearchData) ? 'iplas-isn-pill--success' : 'iplas-isn-pill--danger'">
+                        {{ isRecordPassing(data as IsnSearchData) ? 'PASS' : (String((data as IsnSearchData).error_code
+                        || 'FAIL')) }}
+                      </span>
+                    </template>
+                    <template #cell-error_name="{ data }">
+                      <span :class="isRecordPassing(data as IsnSearchData) ? '' : 'iplas-isn-text-danger'">{{ (data as
+                        IsnSearchData).error_name || '-' }}</span>
+                    </template>
+                    <template #cell-test_end_time="{ data }">
+                      {{ formatShortTime((data as IsnSearchData).test_end_time, (data as IsnSearchData).site) }}
+                    </template>
+                    <template #cell-actions="{ data }">
+                      <div class="iplas-isn-record-card__actions iplas-isn-record-card__actions--tight">
+                        <button type="button" class="iplas-isn-inline-button"
+                          @click="openFullscreen(data as IsnSearchData)">Details</button>
+                        <button type="button" class="iplas-isn-inline-button"
+                          :disabled="downloadingKey === `${isnIndex}-${(data as TableRow)._stationIndex}-${(data as TableRow)._idx}`"
+                          @click="downloadSingleRecord(data as IsnSearchData, `${isnIndex}-${(data as TableRow)._stationIndex}`, (data as TableRow)._idx)">
+                          {{ downloadingKey === `${isnIndex}-${(data as TableRow)._stationIndex}-${(data as
+                            TableRow)._idx}` ? 'Downloading...' : 'Download' }}
+                        </button>
+                      </div>
+                    </template>
+                  </AppDataGrid>
+                </div>
+              </section>
+            </div>
+
+            <div v-else class="iplas-isn-section-stack">
+              <section v-for="(stationGroup, stationIndex) in isnGroup.stations"
+                :key="`compact-station-${stationGroup.stationName}`" class="iplas-isn-station-section">
+                <button type="button" class="iplas-isn-station-section__toggle"
+                  :class="{ 'is-error': hasLatestStationError(stationGroup) }"
+                  @click="toggleCompactExpansion(isnIndex, stationIndex)">
+                  <div>
+                    <strong>{{ stationGroup.displayName }}</strong>
+                    <span>{{ stationGroup.records.length }} record(s)</span>
+                  </div>
+                  <div class="iplas-isn-station-section__meta">
+                    <span v-if="getStationErrorCount(stationGroup) > 0" class="iplas-isn-pill iplas-isn-pill--danger">{{
+                      getStationErrorCount(stationGroup) }} error(s)</span>
+                    <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ isCompactExpanded(isnIndex, stationIndex) ?
+                      'Collapse' : 'Expand' }}</span>
+                  </div>
+                </button>
+
+                <div v-if="isCompactExpanded(isnIndex, stationIndex)" class="iplas-isn-station-section__body">
+                  <div v-if="getDisplayedStationRecords(isnGroup, stationGroup).length > 0"
+                    class="iplas-isn-compact-grid">
+                    <article v-for="(record, recordIndex) in getDisplayedStationRecords(isnGroup, stationGroup)"
+                      :key="`compact-${record.device_id}-${recordIndex}`" class="iplas-isn-compact-card"
+                      :class="isRecordPassing(record) ? 'is-pass' : 'is-fail'">
+                      <strong>{{ record.device_id }} • {{ record.isn }}</strong>
+                      <span class="iplas-isn-pill"
+                        :class="isRecordPassing(record) ? 'iplas-isn-pill--success' : 'iplas-isn-pill--danger'">
+                        {{ recordStatusText(record) }}
+                      </span>
+                      <div class="iplas-isn-list-row__meta">
+                        <span class="iplas-isn-pill iplas-isn-pill--neutral">{{ formatShortTime(record.test_end_time,
+                          record.site) }}</span>
+                        <span class="iplas-isn-pill iplas-isn-pill--neutral">{{
+                          calculateDuration(record.test_start_time,
+                          record.test_end_time) }}</span>
+                      </div>
+                      <div class="iplas-isn-record-card__actions">
+                        <button type="button" class="iplas-isn-button iplas-isn-button--ghost"
+                          @click="openFullscreen(record)">Details</button>
+                        <button type="button" class="iplas-isn-button iplas-isn-button--primary"
+                          :disabled="downloadingKey === `${isnIndex}-${stationIndex}-${recordIndex}`"
+                          @click="downloadSingleRecord(record, `${isnIndex}-${stationIndex}`, recordIndex)">
+                          {{ downloadingKey === `${isnIndex}-${stationIndex}-${recordIndex}` ? 'Downloading...' :
+                          'Download' }}
+                        </button>
+                      </div>
+                    </article>
+                  </div>
+                  <div v-else class="iplas-isn-empty-state">No test records available for this station.</div>
+                </div>
+              </section>
+            </div>
+          </section>
+        </template>
+      </AppTabs>
+    </AppPanel>
+    <!-- Fullscreen Dialog -->
+    <IplasTestItemsFullscreenDialog v-model="showFullscreenDialog" :record="fullscreenRecord"
+      :downloading="fullscreenDownloading" @download="downloadSingleRecordFromFullscreen" />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -2076,23 +1982,23 @@ async function handleSearch(): Promise<void> {
 }
 
 .w-100 {
-    width: 100%;
+  width: 100%;
 }
 
 .gap-2 {
-    gap: 0.5rem;
+  gap: 0.5rem;
 }
 
 .gap-3 {
-    gap: 0.75rem;
+  gap: 0.75rem;
 }
 
 .gap-4 {
-    gap: 1rem;
+  gap: 1rem;
 }
 
 .cursor-pointer {
-    cursor: pointer;
+  cursor: pointer;
 }
 
 /* Striped table styling */
@@ -2105,6 +2011,7 @@ async function handleSearch(): Promise<void> {
 }
 
 @media (max-width: 900px) {
+
   .iplas-isn-toolbar,
   .iplas-isn-entry-row--split,
   .iplas-isn-list-row {
