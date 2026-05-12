@@ -105,7 +105,7 @@ export async function fetchIplasSiteProjectsQuery(
   return client.fetchQuery({
     queryKey,
     queryFn: async () => {
-      const response = await iplasProxyApi.getSiteProjects('simple')
+      const response = await iplasProxyApi.getSiteProjects('simple', forceRefresh)
       return response.data
     },
     staleTime: SITE_PROJECT_STALE_TIME,

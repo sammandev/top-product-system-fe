@@ -58,9 +58,9 @@
                   {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}
                 </div>
                 <div class="iplas-details-dialog__metric-caption">{{ scoreSummaryCaption }}</div>
-                <div v-if="scoreSummarySecondaryText" class="iplas-details-dialog__metric-secondary">
+                <!-- <div v-if="scoreSummarySecondaryText" class="iplas-details-dialog__metric-secondary">
                   {{ scoreSummarySecondaryText }}
-                </div>
+                </div> -->
               </div>
             </div>
           </button>
@@ -135,7 +135,7 @@
       <section class="iplas-details-dialog__filters" :class="{ 'iplas-details-dialog__filters--has-scores': hasScores }">
         <label class="iplas-details-dialog__field">
           <span>Search Test Items (Regex)</span>
-          <div class="iplas-details-dialog__token-shell">
+          <div class="iplas-details-dialog__token-shell app-themed-input">
             <div v-if="searchTerms.length > 0" class="iplas-details-dialog__token-list">
               <button v-for="term in searchTerms" :key="term" type="button" class="iplas-details-dialog__token"
                 @click="removeSearchTerm(term)">
@@ -143,7 +143,7 @@
                 <Icon icon="mdi:close" />
               </button>
             </div>
-            <div class="iplas-details-dialog__search-shell">
+            <div class="iplas-details-dialog__search-shell app-themed-input">
               <Icon icon="mdi:magnify" />
               <input v-model="pendingSearchTerm" type="text" placeholder="Type and press Enter (AND logic)..."
                 @keydown="handleSearchTermKeydown" @blur="commitSearchTerms()" />
@@ -168,7 +168,7 @@
         </label>
         <label v-if="hasScores" class="iplas-details-dialog__field">
           <span>Value (0-10)</span>
-          <input v-model.number="scoreFilterValue" type="number" min="0" max="10" step="0.1"
+          <input v-model.number="scoreFilterValue" class="app-themed-input" type="number" min="0" max="10" step="0.1"
             :disabled="!scoreFilterType" placeholder="0.00" />
         </label>
       </section>
@@ -225,7 +225,7 @@
 
       <label class="iplas-details-dialog__field">
         <span>Search Failed Items</span>
-        <div class="iplas-details-dialog__search-shell">
+        <div class="iplas-details-dialog__search-shell app-themed-input">
           <Icon icon="mdi:magnify" />
           <input v-model="forcedFailSearch" type="search" placeholder="Search by test item name..." />
         </div>
@@ -1952,10 +1952,10 @@ watch(
   font-size: 0.74rem;
 }
 
-.iplas-details-dialog__field input,
-.iplas-details-dialog__field select,
-.iplas-details-dialog__search-shell,
-.iplas-details-dialog__token-shell {
+.iplas-details-dialog__field input:not(.app-themed-input),
+.iplas-details-dialog__field select:not(.app-themed-input),
+.iplas-details-dialog__search-shell:not(.app-themed-input),
+.iplas-details-dialog__token-shell:not(.app-themed-input) {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 0.7rem;
@@ -1963,15 +1963,15 @@ watch(
   color: var(--iplas-ink);
 }
 
-.iplas-details-dialog__field input:focus,
-.iplas-details-dialog__field select:focus,
-.iplas-details-dialog__search-shell:focus-within,
-.iplas-details-dialog__token-shell:focus-within {
+.iplas-details-dialog__field input:not(.app-themed-input):focus,
+.iplas-details-dialog__field select:not(.app-themed-input):focus,
+.iplas-details-dialog__search-shell:not(.app-themed-input):focus-within,
+.iplas-details-dialog__token-shell:not(.app-themed-input):focus-within {
   border-color: var(--app-accent);
 }
 
-.iplas-details-dialog__field input,
-.iplas-details-dialog__field select {
+.iplas-details-dialog__field input:not(.app-themed-input),
+.iplas-details-dialog__field select:not(.app-themed-input) {
   padding: 0.68rem 0.8rem;
 }
 

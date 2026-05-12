@@ -174,6 +174,7 @@
             <span>Search Measurements</span>
             <input
               v-model="measurementSearch"
+              class="app-themed-input"
               type="text"
               placeholder="Search by test item"
             >
@@ -332,7 +333,7 @@
 
           <label class="top-product-isn-results__field top-product-isn-results__field--wide">
             <span>Search Test Items</span>
-            <input v-model="comparisonSearch" type="text" placeholder="Search comparison rows">
+            <input v-model="comparisonSearch" class="app-themed-input" type="text" placeholder="Search comparison rows">
           </label>
 
           <label class="top-product-isn-results__field">
@@ -547,7 +548,7 @@
 
           <label class="top-product-isn-results__field top-product-isn-results__field--wide">
             <span>Search Test Items</span>
-            <input v-model="comparisonSearch" type="text" placeholder="Filter the shared comparison set">
+            <input v-model="comparisonSearch" class="app-themed-input" type="text" placeholder="Filter the shared comparison set">
           </label>
 
           <label class="top-product-isn-results__field">
@@ -1757,7 +1758,7 @@ function stationRowClass(row: Record<string, unknown>) {
   text-transform: none;
 }
 
-.top-product-isn-results__field input,
+.top-product-isn-results__field input:not(.app-themed-input),
 .top-product-isn-results__field select {
   width: 100%;
   border: 1px solid var(--app-border);

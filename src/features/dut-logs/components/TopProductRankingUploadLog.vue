@@ -36,7 +36,7 @@
         <section class="top-product-ranking-upload-log__filter-grid">
           <label class="top-product-ranking-upload-log__field top-product-ranking-upload-log__field--wide">
             <span>Search</span>
-            <input v-model="searchQuery" type="text" placeholder="ISN, device, station, or test date">
+            <input v-model="searchQuery" class="app-themed-input" type="text" placeholder="ISN, device, station, or test date">
           </label>
           <label class="top-product-ranking-upload-log__field">
             <span>Score Filter</span>
@@ -46,6 +46,7 @@
             <span>Score Value</span>
             <input
               v-model.number="scoreFilterValue"
+              class="app-themed-input"
               type="number"
               placeholder="e.g. 9"
               :disabled="!scoreFilterType"
@@ -237,7 +238,7 @@
         <section class="top-product-ranking-upload-log__filter-grid">
           <label class="top-product-ranking-upload-log__field top-product-ranking-upload-log__field--wide">
             <span>Search Test Items</span>
-            <input v-model="testItemSearch" type="text" placeholder="Search by test item name">
+            <input v-model="testItemSearch" class="app-themed-input" type="text" placeholder="Search by test item name">
           </label>
           <label class="top-product-ranking-upload-log__field">
             <span>Filter Items</span>
@@ -389,6 +390,7 @@
           <span>Items Per Page</span>
           <input
             v-model.number="customItemsPerPage"
+            class="app-themed-input"
             type="number"
             min="1"
             :max="MAX_TABLE_ITEMS_PER_PAGE"
@@ -491,7 +493,7 @@
         <section class="top-product-ranking-upload-log__filter-grid">
           <label class="top-product-ranking-upload-log__field top-product-ranking-upload-log__field--wide">
             <span>Search</span>
-            <input v-model="searchQuery" type="text" placeholder="ISN, device, station, or test date">
+            <input v-model="searchQuery" class="app-themed-input" type="text" placeholder="ISN, device, station, or test date">
           </label>
           <label class="top-product-ranking-upload-log__field">
             <span>Score Filter</span>
@@ -501,6 +503,7 @@
             <span>Score Value</span>
             <input
               v-model.number="scoreFilterValue"
+              class="app-themed-input"
               type="number"
               placeholder="e.g. 9"
               :disabled="!scoreFilterType"
@@ -1531,7 +1534,7 @@ function rankingRowClass(row: Record<string, unknown>) {
   text-transform: none;
 }
 
-.top-product-ranking-upload-log__field input,
+.top-product-ranking-upload-log__field input:not(.app-themed-input),
 .top-product-ranking-upload-log__field select,
 .top-product-ranking-upload-log__footer-group select {
   width: 100%;

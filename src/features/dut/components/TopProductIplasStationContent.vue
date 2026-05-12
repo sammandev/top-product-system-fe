@@ -2,10 +2,16 @@
   <div class="top-product-iplas-station-shell">
     <AppPanel eyebrow="Scope" title="Station Search" tone="cool" split-header>
       <template #header-aside>
-        <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--ghost"
-          @click="emit('show-settings')">
-          iPLAS Settings
-        </button>
+        <div class="top-product-iplas-station-header-actions">
+          <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--ghost"
+            :disabled="loading" @click="handleRefresh">
+            {{ loading ? 'Refreshing...' : 'Refresh' }}
+          </button>
+          <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--ghost"
+            @click="emit('show-settings')">
+            iPLAS Settings
+          </button>
+        </div>
       </template>
 
       <div class="top-product-iplas-station-stack">
@@ -27,17 +33,27 @@
           <label class="top-product-iplas-station-field">
             <span>Date Range Preset</span>
             <AppSelect v-model="dateRangePreset" :options="dateRangePresetOptions" :searchable="false"
-              @change="applyDateRangePreset()" />
+              @change="void applyDateRangePreset()" />
           </label>
 
           <label class="top-product-iplas-station-field">
             <span>Start Time</span>
-            <input v-model="startTime" type="datetime-local">
+            <input
+              v-model="startTime"
+              type="datetime-local"
+              class="top-product-iplas-station-datetime-input app-themed-input app-themed-datetime-input"
+              @click="openNativeDateTimePicker"
+            />
           </label>
 
           <label class="top-product-iplas-station-field">
             <span>End Time</span>
-            <input v-model="endTime" type="datetime-local">
+            <input
+              v-model="endTime"
+              type="datetime-local"
+              class="top-product-iplas-station-datetime-input app-themed-input app-themed-datetime-input"
+              @click="openNativeDateTimePicker"
+            />
           </label>
         </div>
 
@@ -75,10 +91,11 @@
                 </span>
                 <span class="top-product-iplas-station-pill"
                   :class="(config.minimumItemScoreEnabled ?? true) ? 'top-product-iplas-station-pill--warning' : 'top-product-iplas-station-pill--muted'">
-                  {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` : 'MinOff' }}
+                  {{ (config.minimumItemScoreEnabled ?? true) ? `Min ${(config.minimumItemScore ?? 6.5).toFixed(1)}` :
+                  'MinOff' }}
                 </span>
-                <button type="button" class="top-product-iplas-station-icon-button"
-                  title="Delete station configuration" @click.stop="removeStationConfig(displayName)">
+                <button type="button" class="top-product-iplas-station-icon-button" title="Delete station configuration"
+                  @click.stop="removeStationConfig(displayName)">
                   <Icon icon="mdi:delete-outline" />
                 </button>
               </div>
@@ -112,18 +129,18 @@
     </div>
 
     <Teleport v-if="props.rankingTarget && props.isActive && testItemData.length > 0" :to="props.rankingTarget">
-      <TopProductIplasRanking :records="testItemData" :scores="recordScores"
-        :forced-failures="forcedFailures" :calculating-scores="calculatingScores" :loading="loadingTestItems"
-        :exporting-all="exportingAll" @row-click="handleRowClick" @download="handleDownloadRecord"
-        @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords" @export-all="handleExportAllRecords"
-        @calculate-scores="handleCalculateScores" @save-to-db="handleSaveToDb" />
+      <TopProductIplasRanking :records="testItemData" :scores="recordScores" :forced-failures="forcedFailures"
+        :calculating-scores="calculatingScores" :loading="loadingTestItems" :exporting-all="exportingAll"
+        @row-click="handleRowClick" @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords"
+        @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores"
+        @save-to-db="handleSaveToDb" />
     </Teleport>
 
-    <TopProductIplasRanking v-else-if="!props.rankingTarget && testItemData.length > 0" :records="testItemData" :scores="recordScores"
-      :forced-failures="forcedFailures" :calculating-scores="calculatingScores" :loading="loadingTestItems"
-      :exporting-all="exportingAll" @row-click="handleRowClick" @download="handleDownloadRecord"
-      @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords" @export-all="handleExportAllRecords"
-      @calculate-scores="handleCalculateScores" @save-to-db="handleSaveToDb" />
+    <TopProductIplasRanking v-else-if="!props.rankingTarget && testItemData.length > 0" :records="testItemData"
+      :scores="recordScores" :forced-failures="forcedFailures" :calculating-scores="calculatingScores"
+      :loading="loadingTestItems" :exporting-all="exportingAll" @row-click="handleRowClick"
+      @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords"
+      @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores" @save-to-db="handleSaveToDb" />
 
     <!-- Station Selection Dialog -->
     <StationSelectionDialog v-model:show="showStationSelectionDialog" :site="selectedSite || ''"
@@ -252,6 +269,28 @@ const dateRangePresets = [
 
 const startTime = ref('')
 const endTime = ref('')
+
+function getLocalTimeString(date: Date): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const hours = String(date.getHours()).padStart(2, '0')
+  const minutes = String(date.getMinutes()).padStart(2, '0')
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+function openNativeDateTimePicker(event: MouseEvent): void {
+  const input = event.currentTarget as (HTMLInputElement & { showPicker?: () => void }) | null
+  if (!input?.showPicker) {
+    return
+  }
+
+  try {
+    input.showPicker()
+  } catch {
+    // Native picker availability is browser-dependent.
+  }
+}
 
 // Dialog state
 const showStationSelectionDialog = ref(false)
@@ -401,26 +440,42 @@ function logStationSearchCacheStatus(): void {
   console.groupEnd()
 }
 
+async function getObservableIplasNow(): Promise<Date> {
+  try {
+    const response = await iplasProxyApi.getServerTime()
+    const serverNow = new Date(response.server_time)
+    if (!Number.isNaN(serverNow.getTime())) {
+      return serverNow
+    }
+  } catch (_err) {
+    // Fall back to browser time when proxy server time is unavailable.
+  }
+
+  return new Date()
+}
+
 // Apply date range preset
-function applyDateRangePreset(): void {
-  const now = new Date()
+async function applyDateRangePreset(): Promise<void> {
+  const now = dateRangePreset.value === 'current_shift' ? await getObservableIplasNow() : new Date()
   let start = new Date()
   let end = new Date()
 
   switch (dateRangePreset.value) {
     case 'current_shift': {
-      const currentHour = now.getHours()
+      start = new Date(now)
+      end = new Date(now)
+      const currentHour = now.getUTCHours()
       if (currentHour >= 8 && currentHour < 20) {
-        start.setHours(8, 0, 0, 0)
-        end.setHours(20, 0, 0, 0)
+        start.setUTCHours(8, 0, 0, 0)
+        end.setUTCHours(20, 0, 0, 0)
       } else if (currentHour >= 20) {
-        start.setHours(20, 0, 0, 0)
-        end.setDate(end.getDate() + 1)
-        end.setHours(8, 0, 0, 0)
+        start.setUTCHours(20, 0, 0, 0)
+        end.setUTCDate(end.getUTCDate() + 1)
+        end.setUTCHours(8, 0, 0, 0)
       } else {
-        start.setDate(start.getDate() - 1)
-        start.setHours(20, 0, 0, 0)
-        end.setHours(8, 0, 0, 0)
+        start.setUTCDate(start.getUTCDate() - 1)
+        start.setUTCHours(20, 0, 0, 0)
+        end.setUTCHours(8, 0, 0, 0)
       }
       break
     }
@@ -1276,6 +1331,14 @@ async function handleProjectChange(): Promise<void> {
   }
 }
 
+async function handleRefresh(): Promise<void> {
+  await fetchSiteProjects(true)
+
+  if (selectedSite.value && selectedProject.value) {
+    await fetchStations(selectedSite.value, selectedProject.value, true)
+  }
+}
+
 function handleClearAll(): void {
   selectedSite.value = null
   selectedProject.value = null
@@ -1333,7 +1396,7 @@ async function fetchTestItems(): Promise<void> {
           deviceId,
           new Date(startTime.value),
           new Date(endTime.value),
-          'PASS',
+          config.testStatus,
           includeFilters,
           excludeFilters,
         )
@@ -1347,7 +1410,7 @@ async function fetchTestItems(): Promise<void> {
           deviceId,
           new Date(startTime.value),
           new Date(endTime.value),
-          'PASS',
+          config.testStatus,
         )
       }
     }
@@ -1364,7 +1427,7 @@ async function fetchTestItems(): Promise<void> {
 // Initialize
 onMounted(async () => {
   await fetchSiteProjects()
-  applyDateRangePreset()
+  await applyDateRangePreset()
 
   // UPDATED: Set default site based on connected iPLAS server
   const { selectedServer } = useIplasSettings()
@@ -1390,13 +1453,18 @@ onUnmounted(() => {
 .top-product-iplas-station-summary-panel,
 .top-product-iplas-station-summary-panel__header,
 .top-product-iplas-station-footer-actions,
-.top-product-iplas-station-token-card {
+.top-product-iplas-station-token-card,
+.top-product-iplas-station-header-actions {
   display: grid;
   gap: 0.9rem;
 }
 
 .top-product-iplas-station-shell {
   gap: 0.9rem;
+}
+
+.top-product-iplas-station-header-actions {
+  grid-auto-flow: column;
 }
 
 .top-product-iplas-station-summary-row,
@@ -1450,8 +1518,7 @@ onUnmounted(() => {
   line-height: 1.55;
 }
 
-.top-product-iplas-station-field select,
-.top-product-iplas-station-field input {
+.top-product-iplas-station-field :not(.app-select)>select {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 0.75rem;
@@ -1459,6 +1526,10 @@ onUnmounted(() => {
   color: var(--app-ink);
   padding: 0.72rem 0.82rem;
   font: inherit;
+}
+
+.top-product-iplas-station-datetime-input {
+  width: 100%;
 }
 
 .top-product-iplas-station-button,
@@ -1652,6 +1723,10 @@ onUnmounted(() => {
 }
 
 @media (max-width: 620px) {
+  .top-product-iplas-station-header-actions {
+    grid-auto-flow: row;
+  }
+
   .top-product-iplas-station-footer-actions {
     grid-auto-flow: row;
     justify-content: stretch;

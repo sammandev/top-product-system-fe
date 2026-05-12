@@ -2,10 +2,18 @@
   <div class="iplas-isn-shell">
     <AppPanel eyebrow="Controls" title="ISN Search" tone="cool" split-header>
       <template #header-aside>
-        <button type="button" class="iplas-isn-button iplas-isn-button--ghost"
-          :disabled="loadingIsnSearch || !canClearAll" @click="clearAll">
-          Clear All
-        </button>
+        <div class="iplas-isn-header-actions">
+          <span v-if="inputMode === 'multiple'" class="iplas-isn-pill iplas-isn-pill--neutral">
+            {{ multipleModeIdentifiers.length }} ready
+          </span>
+          <span v-else class="iplas-isn-pill iplas-isn-pill--primary">
+            {{ bulkModeIdentifiers.length }} parsed
+          </span>
+          <button type="button" class="iplas-isn-button iplas-isn-button--ghost"
+            :disabled="loadingIsnSearch || !canClearAll" @click="clearAll">
+            Clear All
+          </button>
+        </div>
       </template>
 
       <div class="iplas-isn-stack">
@@ -30,48 +38,61 @@
           </label>
         </div>
 
-        <label v-if="inputMode === 'multiple'" class="iplas-isn-field">
-          <span>DUT ISNs / SSNs / MACs</span>
-          <div class="iplas-isn-entry-row">
-            <input v-model="multipleIsnSearchText" type="text" placeholder="Type identifiers, then press Enter"
-              @input="handleMultipleIdentifierInput" @keydown.enter.prevent="commitMultipleIdentifier">
-            <button type="button" class="iplas-isn-button iplas-isn-button--ghost"
-              :disabled="multipleModeIdentifiers.length === 0 || loadingSfistspLookup" @click="handleSfistspLookup">
-              {{ loadingSfistspLookup ? 'Looking up...' : 'ISN Ref' }}
-            </button>
-            <button type="button" class="iplas-isn-button iplas-isn-button--primary"
-              :disabled="multipleModeIdentifiers.length === 0 || isSearching || loadingIsnSearch" @click="handleSearch">
-              {{ isSearching || loadingIsnSearch ? 'Searching...' : 'Search' }}
-            </button>
-          </div>
-          <small>Space, comma, or new line automatically queues multiple identifiers before lookup or search.</small>
-          <div v-if="selectedISNs.length > 0" class="iplas-isn-token-row">
+        <section v-if="inputMode === 'multiple'" class="iplas-isn-input-shell">
+          <label class="iplas-isn-input-card" for="iplas-isn-multiple-input">
+            <span class="iplas-isn-input-label">DUT ISNs / SSNs / MACs</span>
+            <div class="iplas-isn-input-row">
+              <input id="iplas-isn-multiple-input" v-model="multipleIsnSearchText" type="text"
+                placeholder="Type identifiers, then press Enter" @input="handleMultipleIdentifierInput"
+                @keydown.enter.prevent="commitMultipleIdentifier">
+              <button type="button" class="iplas-isn-button iplas-isn-button--ghost"
+                :disabled="multipleModeIdentifiers.length === 0 || loadingSfistspLookup" @click="handleSfistspLookup">
+                {{ loadingSfistspLookup ? 'Looking up...' : 'ISN Ref' }}
+              </button>
+              <button type="button" class="iplas-isn-button iplas-isn-button--primary"
+                :disabled="multipleModeIdentifiers.length === 0 || isSearching || loadingIsnSearch" @click="handleSearch">
+                {{ isSearching || loadingIsnSearch ? 'Searching...' : 'Search' }}
+              </button>
+            </div>
+            <small>Space, comma, or new line automatically queues multiple identifiers before lookup or search.</small>
+          </label>
+
+          <div v-if="selectedISNs.length > 0 || multipleIsnSearchText.trim()" class="iplas-isn-token-row">
             <button v-for="(isn, index) in selectedISNs" :key="`${isn}-${index}`" type="button" class="iplas-isn-token"
               @click="removeSelectedISN(index)">
               <span>{{ isn }}</span>
               <span aria-hidden="true">x</span>
             </button>
+            <span v-if="multipleIsnSearchText.trim()" class="iplas-isn-token iplas-isn-token--draft">
+              Pending: {{ multipleIsnSearchText.trim() }}
+            </span>
           </div>
-        </label>
+        </section>
 
-        <label v-else class="iplas-isn-field">
-          <span>Bulk ISN / SSN / MAC Input</span>
-          <textarea v-model="searchIsn" rows="5"
-            placeholder="Paste multiple ISNs, SSNs, or MACs separated by newlines, commas, or spaces" />
-          <div class="iplas-isn-entry-row iplas-isn-entry-row--split">
+        <section v-else class="iplas-isn-input-shell">
+          <label class="iplas-isn-input-card iplas-isn-input-card--textarea" for="iplas-isn-bulk-input">
+            <span class="iplas-isn-input-label">Bulk ISN / SSN / MAC Input</span>
+            <textarea id="iplas-isn-bulk-input" v-model="searchIsn" rows="5"
+              placeholder="Paste multiple ISNs, SSNs, or MACs separated by newlines, commas, or spaces" />
             <small>Bulk input accepts one-per-line, comma-separated, or space-separated identifiers.</small>
+          </label>
+
+          <div class="iplas-isn-bulk-footer">
+            <span class="iplas-isn-pill iplas-isn-pill--primary">
+              {{ bulkModeIdentifiers.length }} parsed identifier{{ bulkModeIdentifiers.length === 1 ? '' : 's' }}
+            </span>
             <div class="iplas-isn-inline-actions">
               <button type="button" class="iplas-isn-button iplas-isn-button--ghost"
-                :disabled="!searchIsn.trim() || loadingSfistspLookup" @click="handleSfistspLookup">
+                :disabled="bulkModeIdentifiers.length === 0 || loadingSfistspLookup" @click="handleSfistspLookup">
                 {{ loadingSfistspLookup ? 'Looking up...' : 'ISN Ref' }}
               </button>
               <button type="button" class="iplas-isn-button iplas-isn-button--primary"
-                :disabled="!searchIsn.trim() || isSearching || loadingIsnSearch" @click="handleSearch">
+                :disabled="bulkModeIdentifiers.length === 0 || isSearching || loadingIsnSearch" @click="handleSearch">
                 {{ isSearching || loadingIsnSearch ? 'Searching...' : 'Search' }}
               </button>
             </div>
           </div>
-        </label>
+        </section>
 
         <section v-if="sfistspReferences.length > 0" class="iplas-isn-reference-panel">
           <div class="iplas-isn-reference-panel__header">
@@ -644,6 +665,8 @@ function parseBulkIdentifiers(value: string): string[] {
 const multipleModeIdentifiers = computed(() => {
   return normalizeIdentifierList(selectedISNs.value.map((value) => String(value ?? '')))
 })
+
+const bulkModeIdentifiers = computed(() => parseBulkIdentifiers(searchIsn.value))
 
 const canClearAll = computed(() => {
   return Boolean(
@@ -1495,6 +1518,8 @@ async function handleSearch(): Promise<void> {
 }
 
 .iplas-isn-stack,
+.iplas-isn-input-shell,
+.iplas-isn-input-card,
 .iplas-isn-toolbar,
 .iplas-isn-field,
 .iplas-isn-reference-stack,
@@ -1508,10 +1533,13 @@ async function handleSearch(): Promise<void> {
 }
 
 .iplas-isn-toolbar,
+.iplas-isn-header-actions,
 .iplas-isn-toggle-row,
 .iplas-isn-entry-row,
 .iplas-isn-token-row,
 .iplas-isn-inline-actions,
+.iplas-isn-input-row,
+.iplas-isn-bulk-footer,
 .iplas-isn-reference-panel__header,
 .iplas-isn-reference-card__topline,
 .iplas-isn-reference-token-row,
@@ -1533,6 +1561,10 @@ async function handleSearch(): Promise<void> {
 
 .iplas-isn-toolbar {
   justify-content: space-between;
+}
+
+.iplas-isn-header-actions {
+  justify-content: flex-end;
 }
 
 .iplas-isn-toggle-chip,
@@ -1608,12 +1640,14 @@ async function handleSearch(): Promise<void> {
 
 .iplas-isn-toggle-card p,
 .iplas-isn-field small,
+.iplas-isn-input-card small,
 .iplas-isn-reference-error {
   margin: 0;
   color: var(--app-muted);
 }
 
 .iplas-isn-field span,
+.iplas-isn-input-label,
 .iplas-isn-reference-label,
 .iplas-isn-reference-card small {
   color: var(--app-ink);
@@ -1636,6 +1670,29 @@ async function handleSearch(): Promise<void> {
 
 .iplas-isn-field textarea {
   resize: vertical;
+}
+
+.iplas-isn-input-card {
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  background: var(--app-panel);
+  padding: 0.95rem 1rem;
+}
+
+.iplas-isn-input-card--textarea textarea {
+  min-height: 8.5rem;
+}
+
+.iplas-isn-input-row {
+  align-items: stretch;
+}
+
+.iplas-isn-input-row input {
+  flex: 1 1 16rem;
+}
+
+.iplas-isn-bulk-footer {
+  justify-content: space-between;
 }
 
 .iplas-isn-entry-row {
@@ -1663,6 +1720,12 @@ async function handleSearch(): Promise<void> {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
+}
+
+.iplas-isn-token--draft {
+  cursor: default;
+  border-style: dashed;
+  color: var(--app-muted);
 }
 
 .iplas-isn-reference-panel {
@@ -2013,6 +2076,9 @@ async function handleSearch(): Promise<void> {
 @media (max-width: 900px) {
 
   .iplas-isn-toolbar,
+  .iplas-isn-header-actions,
+  .iplas-isn-input-row,
+  .iplas-isn-bulk-footer,
   .iplas-isn-entry-row--split,
   .iplas-isn-list-row {
     flex-direction: column;

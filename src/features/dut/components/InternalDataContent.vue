@@ -1,13 +1,6 @@
 <template>
     <div class="internal-data-shell">
-        <AppPanel
-            eyebrow="Search"
-            title="DUT ISN Search"
-            description="Search internal DUT records by one or more ISNs, then pivot between grid, list, table, and compact views."
-            tone="cool"
-            split-header
-            compact-header
-        >
+        <AppPanel eyebrow="Search" title="DUT ISN Search" tone="cool" split-header compact-header>
             <template #header-aside>
                 <div class="internal-data-header-actions">
                     <span v-if="inputMode === 'multiple'" class="internal-data-context-pill">
@@ -16,12 +9,8 @@
                     <span v-else class="internal-data-context-pill internal-data-context-pill--cool">
                         {{ bulkModeIdentifiers.length }} parsed from bulk input
                     </span>
-                    <button
-                        type="button"
-                        class="internal-data-button internal-data-button--ghost"
-                        :disabled="loading || !hasSearchState"
-                        @click="clearAll"
-                    >
+                    <button type="button" class="internal-data-button internal-data-button--ghost"
+                        :disabled="loading || !hasSearchState" @click="clearAll">
                         <Icon icon="mdi:close-circle-outline" />
                         <span>Clear All</span>
                     </button>
@@ -29,21 +18,15 @@
             </template>
 
             <div class="internal-data-mode-toggle">
-                <button
-                    type="button"
-                    class="internal-data-mode-toggle__button"
+                <button type="button" class="internal-data-mode-toggle__button"
                     :class="{ 'internal-data-mode-toggle__button--active': inputMode === 'multiple' }"
-                    @click="inputMode = 'multiple'"
-                >
+                    @click="inputMode = 'multiple'">
                     <Icon icon="mdi:format-list-bulleted" />
                     <span>Multiple ISNs</span>
                 </button>
-                <button
-                    type="button"
-                    class="internal-data-mode-toggle__button"
+                <button type="button" class="internal-data-mode-toggle__button"
                     :class="{ 'internal-data-mode-toggle__button--active': inputMode === 'bulk' }"
-                    @click="inputMode = 'bulk'"
-                >
+                    @click="inputMode = 'bulk'">
                     <Icon icon="mdi:text-box-multiple" />
                     <span>Bulk Paste</span>
                 </button>
@@ -54,36 +37,25 @@
                     <span class="internal-data-input-label">DUT ISNs</span>
                     <div class="internal-data-input-row">
                         <Icon icon="mdi:barcode-scan" class="internal-data-input-icon" />
-                        <input
-                            id="internal-data-isn-input"
-                            v-model="multipleIsnSearchText"
-                            class="internal-data-text-input"
-                            type="text"
-                            placeholder="Type ISNs, then press Enter to search"
-                            @input="handleMultipleIdentifierInput"
-                            @keydown="handleMultipleInputKeydown"
-                        >
-                        <button
-                            type="button"
-                            class="internal-data-button internal-data-button--primary"
-                            :disabled="loading || multipleModeIdentifiers.length === 0"
-                            @click="submitMultipleSearch"
-                        >
-                            <Icon :icon="loading ? 'mdi:loading' : 'mdi:magnify'" :class="{ 'internal-data-spin': loading }" />
+                        <input id="internal-data-isn-input" v-model="multipleIsnSearchText"
+                            class="internal-data-text-input" type="text"
+                            placeholder="Type ISNs, then press Enter to search" @input="handleMultipleIdentifierInput"
+                            @keydown="handleMultipleInputKeydown">
+                        <button type="button" class="internal-data-button internal-data-button--primary"
+                            :disabled="loading || multipleModeIdentifiers.length === 0" @click="submitMultipleSearch">
+                            <Icon :icon="loading ? 'mdi:loading' : 'mdi:magnify'"
+                                :class="{ 'internal-data-spin': loading }" />
                             <span>Search</span>
                         </button>
                     </div>
-                    <p class="internal-data-helper-copy">Space, comma, or new line automatically queues multiple ISNs. Press Enter to search.</p>
+                    <p class="internal-data-helper-copy">Space, comma, or new line automatically queues multiple ISNs.
+                        Press Enter
+                        to search.</p>
                 </label>
 
                 <div v-if="selectedISNs.length > 0 || multipleIsnSearchText.trim()" class="internal-data-chip-list">
-                    <button
-                        v-for="identifier in selectedISNs"
-                        :key="identifier"
-                        type="button"
-                        class="internal-data-chip"
-                        @click="removeSelectedISN(identifier)"
-                    >
+                    <button v-for="identifier in selectedISNs" :key="identifier" type="button"
+                        class="internal-data-chip" @click="removeSelectedISN(identifier)">
                         <span>{{ identifier }}</span>
                         <Icon icon="mdi:close" />
                     </button>
@@ -94,29 +66,25 @@
             </section>
 
             <section v-else class="internal-data-input-shell">
-                <label class="internal-data-input-card internal-data-input-card--textarea" for="internal-data-bulk-input">
+                <label class="internal-data-input-card internal-data-input-card--textarea"
+                    for="internal-data-bulk-input">
                     <span class="internal-data-input-label">Bulk ISN Input</span>
-                    <textarea
-                        id="internal-data-bulk-input"
-                        v-model="dutIsn"
-                        class="internal-data-textarea"
-                        rows="6"
-                        placeholder="Paste multiple ISNs (one per line, comma-separated, or space-separated)&#10;Example:&#10;260884980003907&#10;DM2527470036123&#10;260884980003908"
-                    />
-                    <p class="internal-data-helper-copy">Paste ISNs separated by newlines, commas, or spaces. Duplicates are collapsed automatically.</p>
+                    <textarea id="internal-data-bulk-input" v-model="dutIsn" class="internal-data-textarea" rows="6"
+                        placeholder="Paste multiple ISNs (one per line, comma-separated, or space-separated)&#10;Example:&#10;260884980003907&#10;DM2527470036123&#10;260884980003908" />
+                    <p class="internal-data-helper-copy">Paste ISNs separated by newlines, commas, or spaces. Duplicates
+                        are
+                        collapsed automatically.</p>
                 </label>
 
                 <div class="internal-data-bulk-footer">
                     <span class="internal-data-context-pill internal-data-context-pill--cool">
-                        {{ bulkModeIdentifiers.length }} parsed identifier{{ bulkModeIdentifiers.length === 1 ? '' : 's' }}
+                        {{ bulkModeIdentifiers.length }} parsed identifier{{ bulkModeIdentifiers.length === 1 ? '' : 's'
+                        }}
                     </span>
-                    <button
-                        type="button"
-                        class="internal-data-button internal-data-button--primary"
-                        :disabled="loading || bulkModeIdentifiers.length === 0"
-                        @click="fetchTestRecords"
-                    >
-                        <Icon :icon="loading ? 'mdi:loading' : 'mdi:magnify'" :class="{ 'internal-data-spin': loading }" />
+                    <button type="button" class="internal-data-button internal-data-button--primary"
+                        :disabled="loading || bulkModeIdentifiers.length === 0" @click="fetchTestRecords">
+                        <Icon :icon="loading ? 'mdi:loading' : 'mdi:magnify'"
+                            :class="{ 'internal-data-spin': loading }" />
                         <span>Search</span>
                     </button>
                 </div>
@@ -131,15 +99,9 @@
             <button type="button" @click="error = null">Dismiss</button>
         </div>
 
-        <AppPanel
-            v-if="groupedByISN.length > 0"
-            eyebrow="Results"
-            title="Internal Records"
-            :description="`${groupedByISN.length} ISN group${groupedByISN.length === 1 ? '' : 's'} loaded.`"
-            tone="warm"
-            split-header
-            compact-header
-        >
+        <AppPanel v-if="groupedByISN.length > 0" eyebrow="Results" title="Internal Records"
+            :description="`${groupedByISN.length} ISN group${groupedByISN.length === 1 ? '' : 's'} loaded.`" tone="warm"
+            split-header compact-header>
             <template #header-aside>
                 <span class="internal-data-context-pill internal-data-context-pill--cool">
                     {{ activeViewModeDescription }}
@@ -168,22 +130,21 @@
                             <div class="internal-data-summary-ribbon">
                                 <span class="internal-data-context-pill">{{ isnGroup.isn }}</span>
                                 <span class="internal-data-context-pill internal-data-context-pill--cool">
-                                    {{ getGroupRecordCount(isnGroup) }} total record{{ getGroupRecordCount(isnGroup) === 1 ? '' : 's' }}
+                                    {{ getGroupRecordCount(isnGroup) }} total record{{ getGroupRecordCount(isnGroup) ===
+                                    1 ? '' : 's' }}
                                 </span>
-                                <span class="internal-data-context-pill" :class="getGroupErrorCount(isnGroup) > 0 ? 'internal-data-context-pill--error' : 'internal-data-context-pill--success'">
-                                    {{ getGroupErrorCount(isnGroup) }} failing record{{ getGroupErrorCount(isnGroup) === 1 ? '' : 's' }}
+                                <span class="internal-data-context-pill"
+                                    :class="getGroupErrorCount(isnGroup) > 0 ? 'internal-data-context-pill--error' : 'internal-data-context-pill--success'">
+                                    {{ getGroupErrorCount(isnGroup) }} failing record{{ getGroupErrorCount(isnGroup) ===
+                                    1 ? '' : 's' }}
                                 </span>
                             </div>
 
                             <div class="internal-data-view-toggle">
-                                <button
-                                    v-for="mode in viewModeOptions"
-                                    :key="mode.value"
-                                    type="button"
+                                <button v-for="mode in viewModeOptions" :key="mode.value" type="button"
                                     class="internal-data-view-toggle__button"
                                     :class="{ 'internal-data-view-toggle__button--active': viewMode === mode.value }"
-                                    @click="viewMode = mode.value"
-                                >
+                                    @click="viewMode = mode.value">
                                     <Icon :icon="mode.icon" />
                                     <span>{{ mode.label }}</span>
                                 </button>
@@ -191,57 +152,66 @@
                         </div>
 
                         <div v-if="viewMode === 'grid'" class="internal-data-grid">
-                            <article
-                                v-for="station in getSortedStations(isnGroup)"
-                                :key="station.id"
+                            <article v-for="station in getSortedStations(isnGroup)" :key="station.id"
                                 class="internal-data-station-card"
-                                :class="{ 'internal-data-station-card--alert': hasLatestError(station) }"
-                            >
+                                :class="{ 'internal-data-station-card--alert': hasLatestError(station) }">
                                 {{ initializeCarousel(station.id, station.data.length) }}
                                 <header class="internal-data-station-card__header">
                                     <div>
                                         <h3>{{ station.name }}</h3>
-                                        <p>{{ station.data.length }} record{{ station.data.length === 1 ? '' : 's' }} for {{ isnGroup.isn }}.</p>
+                                        <p>{{ station.data.length }} record{{ station.data.length === 1 ? '' : 's' }}
+                                            for {{ isnGroup.isn }}.</p>
                                     </div>
-                                    <span
-                                        class="internal-data-badge"
-                                        :class="getErrorCount(station) > 0 ? 'internal-data-badge--error' : 'internal-data-badge--success'"
-                                    >
+                                    <span class="internal-data-badge"
+                                        :class="getErrorCount(station) > 0 ? 'internal-data-badge--error' : 'internal-data-badge--success'">
                                         {{ getErrorCount(station) > 0 ? `${getErrorCount(station)} error(s)` : 'Latest pass' }}
                                     </span>
                                 </header>
 
                                 <div v-if="station.data.length > 1" class="internal-data-carousel-toolbar">
-                                    <button type="button" class="internal-data-carousel-button" :disabled="getStationCarouselIndex(station) === 0" @click="setStationCarouselIndex(station, 0)">
+                                    <button type="button" class="internal-data-carousel-button"
+                                        :disabled="getStationCarouselIndex(station) === 0"
+                                        @click="setStationCarouselIndex(station, 0)">
                                         <Icon icon="mdi:page-first" />
                                     </button>
-                                    <button type="button" class="internal-data-carousel-button" :disabled="getStationCarouselIndex(station) === 0" @click="setStationCarouselIndex(station, getStationCarouselIndex(station) - 1)">
+                                    <button type="button" class="internal-data-carousel-button"
+                                        :disabled="getStationCarouselIndex(station) === 0"
+                                        @click="setStationCarouselIndex(station, getStationCarouselIndex(station) - 1)">
                                         <Icon icon="mdi:chevron-left" />
                                     </button>
                                     <span class="internal-data-context-pill internal-data-context-pill--cool">
                                         Record {{ getStationCarouselIndex(station) + 1 }} / {{ station.data.length }}
                                     </span>
-                                    <button type="button" class="internal-data-carousel-button" :disabled="getStationCarouselIndex(station) >= station.data.length - 1" @click="setStationCarouselIndex(station, getStationCarouselIndex(station) + 1)">
+                                    <button type="button" class="internal-data-carousel-button"
+                                        :disabled="getStationCarouselIndex(station) >= station.data.length - 1"
+                                        @click="setStationCarouselIndex(station, getStationCarouselIndex(station) + 1)">
                                         <Icon icon="mdi:chevron-right" />
                                     </button>
-                                    <button type="button" class="internal-data-carousel-button" :disabled="getStationCarouselIndex(station) >= station.data.length - 1" @click="setStationCarouselIndex(station, station.data.length - 1)">
+                                    <button type="button" class="internal-data-carousel-button"
+                                        :disabled="getStationCarouselIndex(station) >= station.data.length - 1"
+                                        @click="setStationCarouselIndex(station, station.data.length - 1)">
                                         <Icon icon="mdi:page-last" />
                                     </button>
                                 </div>
 
-                                <div v-if="getActiveStationRecord(station)" class="internal-data-record-card" :class="getActiveStationRecord(station)!.test_result === 1 ? 'internal-data-record-card--success' : 'internal-data-record-card--error'">
+                                <div v-if="getActiveStationRecord(station)" class="internal-data-record-card"
+                                    :class="getActiveStationRecord(station)!.test_result === 1 ? 'internal-data-record-card--success' : 'internal-data-record-card--error'">
                                     <div class="internal-data-record-header">
                                         <div class="internal-data-record-title">
-                                            <span class="internal-data-record-icon" :class="getActiveStationRecord(station)!.test_result === 1 ? 'internal-data-record-icon--success' : 'internal-data-record-icon--error'">
-                                                <Icon :icon="getActiveStationRecord(station)!.test_result === 1 ? 'mdi:check-circle' : 'mdi:alert-circle'" />
+                                            <span class="internal-data-record-icon"
+                                                :class="getActiveStationRecord(station)!.test_result === 1 ? 'internal-data-record-icon--success' : 'internal-data-record-icon--error'">
+                                                <Icon
+                                                    :icon="getActiveStationRecord(station)!.test_result === 1 ? 'mdi:check-circle' : 'mdi:alert-circle'" />
                                             </span>
                                             <div>
                                                 <strong>{{ getActiveStationRecord(station)!.device_id__name }}</strong>
                                                 <p>{{ getActiveStationRecord(station)!.dut_id__isn }}</p>
                                             </div>
                                         </div>
-                                        <span class="internal-data-badge" :class="getActiveStationRecord(station)!.test_result === 1 ? 'internal-data-badge--success' : 'internal-data-badge--error'">
-                                            {{ getActiveStationRecord(station)!.test_result === 1 ? 'PASS' : (getActiveStationRecord(station)!.error_item || 'FAIL') }}
+                                        <span class="internal-data-badge"
+                                            :class="getActiveStationRecord(station)!.test_result === 1 ? 'internal-data-badge--success' : 'internal-data-badge--error'">
+                                            {{ getActiveStationRecord(station)!.test_result === 1 ? 'PASS' :
+                                                (getActiveStationRecord(station)!.error_item || 'FAIL') }}
                                         </span>
                                     </div>
 
@@ -260,13 +230,13 @@
                                         </span>
                                     </div>
 
-                                    <button
-                                        type="button"
+                                    <button type="button"
                                         class="internal-data-button internal-data-button--primary internal-data-button--full"
                                         :disabled="downloadingRecordId === getActiveStationRecord(station)!.id"
-                                        @click="handleDownload({ station, record: getActiveStationRecord(station)! })"
-                                    >
-                                        <Icon :icon="downloadingRecordId === getActiveStationRecord(station)!.id ? 'mdi:loading' : 'mdi:download'" :class="{ 'internal-data-spin': downloadingRecordId === getActiveStationRecord(station)!.id }" />
+                                        @click="handleDownload({ station, record: getActiveStationRecord(station)! })">
+                                        <Icon
+                                            :icon="downloadingRecordId === getActiveStationRecord(station)!.id ? 'mdi:loading' : 'mdi:download'"
+                                            :class="{ 'internal-data-spin': downloadingRecordId === getActiveStationRecord(station)!.id }" />
                                         <span>Download</span>
                                     </button>
                                 </div>
@@ -280,25 +250,36 @@
                         </div>
 
                         <section v-if="viewMode === 'list'" class="internal-data-mode-stack">
-                            <article v-for="station in getSortedStations(isnGroup)" :key="station.id" class="internal-data-section-card" :class="{ 'internal-data-section-card--alert': hasLatestError(station) }">
+                            <article v-for="station in getSortedStations(isnGroup)" :key="station.id"
+                                class="internal-data-section-card"
+                                :class="{ 'internal-data-section-card--alert': hasLatestError(station) }">
                                 <header class="internal-data-section-card__header">
                                     <div>
                                         <h3>{{ station.name }}</h3>
-                                        <p>{{ station.data.length }} record{{ station.data.length === 1 ? '' : 's' }} arranged as a chronological list.</p>
+                                        <p>{{ station.data.length }} record{{ station.data.length === 1 ? '' : 's' }}
+                                            arranged as a chronological list.</p>
                                     </div>
                                     <div class="internal-data-section-card__meta">
-                                        <span class="internal-data-badge" :class="getErrorCount(station) > 0 ? 'internal-data-badge--error' : 'internal-data-badge--success'">
-                                            {{ getErrorCount(station) > 0 ? `${getErrorCount(station)} error(s)` : 'Latest pass' }}
+                                        <span class="internal-data-badge"
+                                            :class="getErrorCount(station) > 0 ? 'internal-data-badge--error' : 'internal-data-badge--success'">
+                                            {{ getErrorCount(station) > 0 ? `${getErrorCount(station)} error(s)` :
+                                            'Latest pass' }}
                                         </span>
-                                        <span class="internal-data-context-pill internal-data-context-pill--cool">{{ station.data.length }} record{{ station.data.length === 1 ? '' : 's' }}</span>
+                                        <span class="internal-data-context-pill internal-data-context-pill--cool">{{
+                                            station.data.length }} record{{ station.data.length === 1 ? '' : 's'
+                                            }}</span>
                                     </div>
                                 </header>
 
                                 <div v-if="station.data.length > 0" class="internal-data-list">
-                                    <article v-for="record in getReversedData(station.data)" :key="record.id" class="internal-data-list-item" :class="record.test_result === 1 ? 'internal-data-list-item--success' : 'internal-data-list-item--error'">
+                                    <article v-for="record in getReversedData(station.data)" :key="record.id"
+                                        class="internal-data-list-item"
+                                        :class="record.test_result === 1 ? 'internal-data-list-item--success' : 'internal-data-list-item--error'">
                                         <div class="internal-data-list-item__summary">
-                                            <span class="internal-data-record-icon" :class="record.test_result === 1 ? 'internal-data-record-icon--success' : 'internal-data-record-icon--error'">
-                                                <Icon :icon="record.test_result === 1 ? 'mdi:check-circle' : 'mdi:alert-circle'" />
+                                            <span class="internal-data-record-icon"
+                                                :class="record.test_result === 1 ? 'internal-data-record-icon--success' : 'internal-data-record-icon--error'">
+                                                <Icon
+                                                    :icon="record.test_result === 1 ? 'mdi:check-circle' : 'mdi:alert-circle'" />
                                             </span>
                                             <div>
                                                 <strong>{{ record.device_id__name }}</strong>
@@ -306,12 +287,23 @@
                                             </div>
                                         </div>
                                         <div class="internal-data-record-meta">
-                                            <span class="internal-data-badge" :class="record.test_result === 1 ? 'internal-data-badge--success' : 'internal-data-badge--error'">{{ record.test_result === 1 ? 'PASS' : record.error_item || 'FAIL' }}</span>
-                                            <span class="internal-data-context-pill"><Icon icon="mdi:timer" />{{ record.test_duration }}s</span>
-                                            <span class="internal-data-context-pill internal-data-context-pill--cool"><Icon icon="mdi:calendar" />{{ formatDate(record.test_date) }}</span>
+                                            <span class="internal-data-badge"
+                                                :class="record.test_result === 1 ? 'internal-data-badge--success' : 'internal-data-badge--error'">{{
+                                                    record.test_result === 1 ? 'PASS' : record.error_item || 'FAIL'
+                                                }}</span>
+                                            <span class="internal-data-context-pill">
+                                                <Icon icon="mdi:timer" />{{ record.test_duration }}s
+                                            </span>
+                                            <span class="internal-data-context-pill internal-data-context-pill--cool">
+                                                <Icon icon="mdi:calendar" />{{ formatDate(record.test_date) }}
+                                            </span>
                                         </div>
-                                        <button type="button" class="internal-data-button internal-data-button--primary" :disabled="downloadingRecordId === record.id" @click="handleDownload({ station, record })">
-                                            <Icon :icon="downloadingRecordId === record.id ? 'mdi:loading' : 'mdi:download'" :class="{ 'internal-data-spin': downloadingRecordId === record.id }" />
+                                        <button type="button" class="internal-data-button internal-data-button--primary"
+                                            :disabled="downloadingRecordId === record.id"
+                                            @click="handleDownload({ station, record })">
+                                            <Icon
+                                                :icon="downloadingRecordId === record.id ? 'mdi:loading' : 'mdi:download'"
+                                                :class="{ 'internal-data-spin': downloadingRecordId === record.id }" />
                                             <span>Download</span>
                                         </button>
                                     </article>
@@ -325,33 +317,32 @@
                         </section>
 
                         <section v-if="viewMode === 'table'" class="internal-data-mode-stack">
-                            <article v-for="station in getSortedStations(isnGroup)" :key="station.id" class="internal-data-section-card" :class="{ 'internal-data-section-card--alert': hasLatestError(station) }">
+                            <article v-for="station in getSortedStations(isnGroup)" :key="station.id"
+                                class="internal-data-section-card"
+                                :class="{ 'internal-data-section-card--alert': hasLatestError(station) }">
                                 <header class="internal-data-section-card__header">
                                     <div>
                                         <h3>{{ station.name }}</h3>
                                         <p>Tabular audit view for all records captured at this station.</p>
                                     </div>
                                     <div class="internal-data-section-card__meta">
-                                        <span class="internal-data-badge" :class="getErrorCount(station) > 0 ? 'internal-data-badge--error' : 'internal-data-badge--success'">
-                                            {{ getErrorCount(station) > 0 ? `${getErrorCount(station)} error(s)` : 'Latest pass' }}
+                                        <span class="internal-data-badge"
+                                            :class="getErrorCount(station) > 0 ? 'internal-data-badge--error' : 'internal-data-badge--success'">
+                                            {{ getErrorCount(station) > 0 ? `${getErrorCount(station)} error(s)` :
+                                            'Latest pass' }}
                                         </span>
-                                        <span class="internal-data-context-pill internal-data-context-pill--cool">{{ station.data.length }} rows</span>
+                                        <span class="internal-data-context-pill internal-data-context-pill--cool">{{
+                                            station.data.length }} rows</span>
                                     </div>
                                 </header>
 
-                                <AppDataGrid
-                                    v-if="station.data.length > 0"
-                                    :columns="internalTableColumns"
-                                    :rows="getStationTableRows(station)"
-                                    data-key="id"
-                                    :scrollable="true"
-                                    scroll-height="20rem"
-                                    :paginator="false"
-                                    :table-style="{ minWidth: '52rem' }"
-                                    empty-message="No records found."
-                                >
+                                <AppDataGrid v-if="station.data.length > 0" :columns="internalTableColumns"
+                                    :rows="getStationTableRows(station)" data-key="id" :scrollable="true"
+                                    scroll-height="20rem" :paginator="false" :table-style="{ minWidth: '52rem' }"
+                                    empty-message="No records found.">
                                     <template #cell-status="{ data }">
-                                        <span class="internal-data-badge" :class="data.test_result === 1 ? 'internal-data-badge--success' : 'internal-data-badge--error'">
+                                        <span class="internal-data-badge"
+                                            :class="data.test_result === 1 ? 'internal-data-badge--success' : 'internal-data-badge--error'">
                                             {{ data.test_result === 1 ? 'PASS' : (data.error_item || 'FAIL') }}
                                         </span>
                                     </template>
@@ -362,8 +353,12 @@
                                         <span class="internal-data-table-date">{{ formatDate(data.test_date) }}</span>
                                     </template>
                                     <template #cell-actions="{ data }">
-                                        <button type="button" class="internal-data-table-action" :disabled="downloadingRecordId === data.id" @click="handleDownload({ station, record: data })">
-                                            <Icon :icon="downloadingRecordId === data.id ? 'mdi:loading' : 'mdi:download'" :class="{ 'internal-data-spin': downloadingRecordId === data.id }" />
+                                        <button type="button" class="internal-data-table-action"
+                                            :disabled="downloadingRecordId === data.id"
+                                            @click="handleDownload({ station, record: data })">
+                                            <Icon
+                                                :icon="downloadingRecordId === data.id ? 'mdi:loading' : 'mdi:download'"
+                                                :class="{ 'internal-data-spin': downloadingRecordId === data.id }" />
                                             <span>Download</span>
                                         </button>
                                     </template>
@@ -377,35 +372,55 @@
                         </section>
 
                         <section v-if="viewMode === 'compact'" class="internal-data-mode-stack">
-                            <article v-for="station in getSortedStations(isnGroup)" :key="station.id" class="internal-data-section-card" :class="{ 'internal-data-section-card--alert': hasLatestError(station) }">
+                            <article v-for="station in getSortedStations(isnGroup)" :key="station.id"
+                                class="internal-data-section-card"
+                                :class="{ 'internal-data-section-card--alert': hasLatestError(station) }">
                                 <header class="internal-data-section-card__header">
                                     <div>
                                         <h3>{{ station.name }}</h3>
-                                        <p>Compact cards keep the latest station context visible while scanning more records at once.</p>
+                                        <p>Compact cards keep the latest station context visible while scanning more
+                                            records at once.
+                                        </p>
                                     </div>
                                     <div class="internal-data-section-card__meta">
-                                        <span class="internal-data-badge" :class="getErrorCount(station) > 0 ? 'internal-data-badge--error' : 'internal-data-badge--success'">
-                                            {{ getErrorCount(station) > 0 ? `${getErrorCount(station)} error(s)` : 'Latest pass' }}
+                                        <span class="internal-data-badge"
+                                            :class="getErrorCount(station) > 0 ? 'internal-data-badge--error' : 'internal-data-badge--success'">
+                                            {{ getErrorCount(station) > 0 ? `${getErrorCount(station)} error(s)` :
+                                            'Latest pass' }}
                                         </span>
-                                        <span class="internal-data-context-pill internal-data-context-pill--cool">{{ station.data.length }} cards</span>
+                                        <span class="internal-data-context-pill internal-data-context-pill--cool">{{
+                                            station.data.length
+                                            }} cards</span>
                                     </div>
                                 </header>
 
                                 <div v-if="station.data.length > 0" class="internal-data-compact-grid">
-                                    <article v-for="record in station.data" :key="record.id" class="internal-data-compact-card" :class="record.test_result === 1 ? 'internal-data-compact-card--success' : 'internal-data-compact-card--error'">
+                                    <article v-for="record in station.data" :key="record.id"
+                                        class="internal-data-compact-card"
+                                        :class="record.test_result === 1 ? 'internal-data-compact-card--success' : 'internal-data-compact-card--error'">
                                         <div class="internal-data-compact-card__topline">
                                             <strong>{{ record.device_id__name }}</strong>
-                                            <span class="internal-data-badge" :class="record.test_result === 1 ? 'internal-data-badge--success' : 'internal-data-badge--error'">
+                                            <span class="internal-data-badge"
+                                                :class="record.test_result === 1 ? 'internal-data-badge--success' : 'internal-data-badge--error'">
                                                 {{ record.test_result === 1 ? 'PASS' : (record.error_item || 'FAIL') }}
                                             </span>
                                         </div>
                                         <p>{{ record.dut_id__isn }}</p>
                                         <div class="internal-data-record-meta">
-                                            <span class="internal-data-context-pill internal-data-context-pill--cool"><Icon icon="mdi:calendar" />{{ formatDate(record.test_date) }}</span>
-                                            <span class="internal-data-context-pill"><Icon icon="mdi:timer" />{{ record.test_duration }}s</span>
+                                            <span class="internal-data-context-pill internal-data-context-pill--cool">
+                                                <Icon icon="mdi:calendar" />{{ formatDate(record.test_date) }}
+                                            </span>
+                                            <span class="internal-data-context-pill">
+                                                <Icon icon="mdi:timer" />{{ record.test_duration }}s
+                                            </span>
                                         </div>
-                                        <button type="button" class="internal-data-button internal-data-button--primary internal-data-button--full" :disabled="downloadingRecordId === record.id" @click="handleDownload({ station, record })">
-                                            <Icon :icon="downloadingRecordId === record.id ? 'mdi:loading' : 'mdi:download'" :class="{ 'internal-data-spin': downloadingRecordId === record.id }" />
+                                        <button type="button"
+                                            class="internal-data-button internal-data-button--primary internal-data-button--full"
+                                            :disabled="downloadingRecordId === record.id"
+                                            @click="handleDownload({ station, record })">
+                                            <Icon
+                                                :icon="downloadingRecordId === record.id ? 'mdi:loading' : 'mdi:download'"
+                                                :class="{ 'internal-data-spin': downloadingRecordId === record.id }" />
                                             <span>Download</span>
                                         </button>
                                     </article>
@@ -435,42 +450,42 @@ import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 import { getErrorStatus } from '@/shared/utils'
 
 interface TestRecord {
-  id: number
-  test_date: string
-  test_duration: number
-  test_result: number
-  error_item: string
-  device_id: number
-  device_id__name: string
-  dut_id: number
-  dut_id__isn: string
-  site_name: string
+    id: number
+    test_date: string
+    test_duration: number
+    test_result: number
+    error_item: string
+    device_id: number
+    device_id__name: string
+    dut_id: number
+    dut_id__isn: string
+    site_name: string
 }
 
 interface Station {
-  id: number
-  name: string
-  status: number
-  order: number
-  model_id: number
-  site_name: string
-  model_name: string
-  data: TestRecord[]
-  dut_isn: string
-  dut_id: number
+    id: number
+    name: string
+    status: number
+    order: number
+    model_id: number
+    site_name: string
+    model_name: string
+    data: TestRecord[]
+    dut_isn: string
+    dut_id: number
 }
 
 interface TestRecordsResponse {
-  site_name: string
-  model_name: string
-  record_data: Station[]
+    site_name: string
+    model_name: string
+    record_data: Station[]
 }
 
 interface ISNGroupedRecords {
-  isn: string
-  site_name: string
-  model_name: string
-  record_data: Station[]
+    isn: string
+    site_name: string
+    model_name: string
+    record_data: Station[]
 }
 
 const dutIsn = ref('')
@@ -489,428 +504,428 @@ const carouselModels = ref<Record<number, number>>({})
 const { showSuccess: showSuccessNotification } = useNotification()
 
 const activeISNTabKey = computed({
-  get: () => `isn-${activeISNTab.value}`,
-  set: (value: string) => {
-    const match = value.match(/^isn-(\d+)$/)
-    activeISNTab.value = match ? Number(match[1]) : 0
-  },
+    get: () => `isn-${activeISNTab.value}`,
+    set: (value: string) => {
+        const match = value.match(/^isn-(\d+)$/)
+        activeISNTab.value = match ? Number(match[1]) : 0
+    },
 })
 
 const isnTabItems = computed(() => {
-  return groupedByISN.value.map((group, index) => ({
-    value: `isn-${index}`,
-    label: group.isn,
-    icon: 'mdi:barcode',
-  }))
+    return groupedByISN.value.map((group, index) => ({
+        value: `isn-${index}`,
+        label: group.isn,
+        icon: 'mdi:barcode',
+    }))
 })
 
 const viewModeOptions = [
-  { value: 'grid' as const, label: 'Grid', icon: 'mdi:view-grid' },
-  { value: 'list' as const, label: 'List', icon: 'mdi:view-list' },
-  { value: 'table' as const, label: 'Table', icon: 'mdi:table' },
-  { value: 'compact' as const, label: 'Compact', icon: 'mdi:view-compact' },
+    { value: 'grid' as const, label: 'Grid', icon: 'mdi:view-grid' },
+    { value: 'list' as const, label: 'List', icon: 'mdi:view-list' },
+    { value: 'table' as const, label: 'Table', icon: 'mdi:table' },
+    { value: 'compact' as const, label: 'Compact', icon: 'mdi:view-compact' },
 ]
 
 const activeViewModeDescription = computed(() => {
-  switch (viewMode.value) {
-    case 'grid':
-      return 'Grid mode highlights one active record per station.'
-    case 'list':
-      return 'List mode keeps every record visible without collapsible shells.'
-    case 'table':
-      return 'Table mode uses the shared grid wrapper for requirement comparison.'
-    case 'compact':
-      return 'Compact mode scans dense station cards without expansion panels.'
-    default:
-      return ''
-  }
+    switch (viewMode.value) {
+        case 'grid':
+            return 'Grid mode highlights one active record per station.'
+        case 'list':
+            return 'List mode keeps every record visible without collapsible shells.'
+        case 'table':
+            return 'Table mode uses the shared grid wrapper for requirement comparison.'
+        case 'compact':
+            return 'Compact mode scans dense station cards without expansion panels.'
+        default:
+            return ''
+    }
 })
 
 const bulkModeIdentifiers = computed(() => parseBulkIdentifiers(dutIsn.value))
 
 const multipleModeIdentifiers = computed(() =>
-  normalizeIdentifierList([
-    ...selectedISNs.value.map((value) => String(value)),
-    multipleIsnSearchText.value,
-  ]),
+    normalizeIdentifierList([
+        ...selectedISNs.value.map((value) => String(value)),
+        multipleIsnSearchText.value,
+    ]),
 )
 
 const hasSearchState = computed(() => {
-  return (
-    groupedByISN.value.length > 0 ||
-    testRecords.value !== null ||
-    multipleModeIdentifiers.value.length > 0 ||
-    parseBulkIdentifiers(dutIsn.value).length > 0
-  )
+    return (
+        groupedByISN.value.length > 0 ||
+        testRecords.value !== null ||
+        multipleModeIdentifiers.value.length > 0 ||
+        parseBulkIdentifiers(dutIsn.value).length > 0
+    )
 })
 
 // Table headers for table view
 const tableHeaders = [
-  { title: 'Record', key: 'record_number', sortable: true },
-  { title: 'Device', key: 'device_id__name', sortable: true },
-  { title: 'DUT ISN', key: 'dut_id__isn', sortable: true },
-  { title: 'Status', key: 'status', sortable: false },
-  { title: 'Duration', key: 'test_duration', sortable: true },
-  { title: 'Test Date', key: 'test_date', sortable: true },
-  { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const },
+    { title: 'Record', key: 'record_number', sortable: true },
+    { title: 'Device', key: 'device_id__name', sortable: true },
+    { title: 'DUT ISN', key: 'dut_id__isn', sortable: true },
+    { title: 'Status', key: 'status', sortable: false },
+    { title: 'Duration', key: 'test_duration', sortable: true },
+    { title: 'Test Date', key: 'test_date', sortable: true },
+    { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const },
 ]
 
 const internalTableColumns = [
-  { key: 'record_number', header: 'Record', field: 'record_number' },
-  { key: 'device_id__name', header: 'Device', field: 'device_id__name' },
-  { key: 'dut_id__isn', header: 'DUT ISN', field: 'dut_id__isn' },
-  { key: 'status', header: 'Status', field: 'status' },
-  { key: 'test_duration', header: 'Duration', field: 'test_duration' },
-  { key: 'test_date', header: 'Test Date', field: 'test_date' },
-  { key: 'actions', header: 'Actions', field: 'actions' },
+    { key: 'record_number', header: 'Record', field: 'record_number' },
+    { key: 'device_id__name', header: 'Device', field: 'device_id__name' },
+    { key: 'dut_id__isn', header: 'DUT ISN', field: 'dut_id__isn' },
+    { key: 'status', header: 'Status', field: 'status' },
+    { key: 'test_duration', header: 'Duration', field: 'test_duration' },
+    { key: 'test_date', header: 'Test Date', field: 'test_date' },
+    { key: 'actions', header: 'Actions', field: 'actions' },
 ]
 
 const normalizeIdentifierList = (values: string[]): string[] => {
-  const identifiers = new Set<string>()
+    const identifiers = new Set<string>()
 
-  for (const value of values) {
-    for (const part of value.split(/[\n,\s]+/)) {
-      const trimmed = part.trim()
-      if (trimmed) {
-        identifiers.add(trimmed)
-      }
+    for (const value of values) {
+        for (const part of value.split(/[\n,\s]+/)) {
+            const trimmed = part.trim()
+            if (trimmed) {
+                identifiers.add(trimmed)
+            }
+        }
     }
-  }
 
-  return Array.from(identifiers)
+    return Array.from(identifiers)
 }
 
 const parseBulkIdentifiers = (input: string): string[] => {
-  return normalizeIdentifierList(input.split(/[\n,\s]+/))
+    return normalizeIdentifierList(input.split(/[\n,\s]+/))
 }
 
 const getCurrentInputIdentifiers = (): string[] => {
-  if (inputMode.value === 'multiple') {
-    return multipleModeIdentifiers.value
-  }
+    if (inputMode.value === 'multiple') {
+        return multipleModeIdentifiers.value
+    }
 
-  return parseBulkIdentifiers(dutIsn.value)
+    return parseBulkIdentifiers(dutIsn.value)
 }
 
 const commitPendingMultipleIdentifier = () => {
-  const nextIdentifiers = normalizeIdentifierList([
-    ...selectedISNs.value,
-    multipleIsnSearchText.value,
-  ])
+    const nextIdentifiers = normalizeIdentifierList([
+        ...selectedISNs.value,
+        multipleIsnSearchText.value,
+    ])
 
-  if (nextIdentifiers.length === selectedISNs.value.length && !multipleIsnSearchText.value.trim()) {
-    return
-  }
+    if (nextIdentifiers.length === selectedISNs.value.length && !multipleIsnSearchText.value.trim()) {
+        return
+    }
 
-  selectedISNs.value = nextIdentifiers
-  multipleIsnSearchText.value = ''
+    selectedISNs.value = nextIdentifiers
+    multipleIsnSearchText.value = ''
 }
 
 const handleMultipleIdentifierInput = () => {
-  if (!/[\n,\s]/.test(multipleIsnSearchText.value)) {
-    return
-  }
+    if (!/[\n,\s]/.test(multipleIsnSearchText.value)) {
+        return
+    }
 
-  commitPendingMultipleIdentifier()
+    commitPendingMultipleIdentifier()
 }
 
 const removeSelectedISN = (identifier: string) => {
-  selectedISNs.value = selectedISNs.value.filter((value) => value !== identifier)
+    selectedISNs.value = selectedISNs.value.filter((value) => value !== identifier)
 }
 
 const submitMultipleSearch = async () => {
-  if (multipleIsnSearchText.value.trim()) {
-    commitPendingMultipleIdentifier()
-  }
+    if (multipleIsnSearchText.value.trim()) {
+        commitPendingMultipleIdentifier()
+    }
 
-  await fetchTestRecords()
+    await fetchTestRecords()
 }
 
 const handleMultipleInputKeydown = async (event: KeyboardEvent) => {
-  if (event.key === ',' || event.key === 'Enter') {
-    if (loading.value) {
-      event.preventDefault()
-      return
+    if (event.key === ',' || event.key === 'Enter') {
+        if (loading.value) {
+            event.preventDefault()
+            return
+        }
+
+        if (multipleIsnSearchText.value.trim()) {
+            event.preventDefault()
+            commitPendingMultipleIdentifier()
+            return
+        }
     }
 
-    if (multipleIsnSearchText.value.trim()) {
-      event.preventDefault()
-      commitPendingMultipleIdentifier()
-      return
+    if (
+        event.key === 'Backspace' &&
+        !multipleIsnSearchText.value.trim() &&
+        selectedISNs.value.length > 0
+    ) {
+        selectedISNs.value = selectedISNs.value.slice(0, -1)
     }
-  }
 
-  if (
-    event.key === 'Backspace' &&
-    !multipleIsnSearchText.value.trim() &&
-    selectedISNs.value.length > 0
-  ) {
-    selectedISNs.value = selectedISNs.value.slice(0, -1)
-  }
-
-  if (event.key === 'Enter' && multipleModeIdentifiers.value.length > 0) {
-    event.preventDefault()
-    await fetchTestRecords()
-  }
+    if (event.key === 'Enter' && multipleModeIdentifiers.value.length > 0) {
+        event.preventDefault()
+        await fetchTestRecords()
+    }
 }
 
 const handleMultipleIsnsEnter = async (event: KeyboardEvent) => {
-  if (loading.value) {
+    if (loading.value) {
+        event.preventDefault()
+        return
+    }
+
+    if (multipleIsnSearchText.value.trim()) {
+        return
+    }
+
+    if (multipleModeIdentifiers.value.length === 0) {
+        return
+    }
+
     event.preventDefault()
-    return
-  }
-
-  if (multipleIsnSearchText.value.trim()) {
-    return
-  }
-
-  if (multipleModeIdentifiers.value.length === 0) {
-    return
-  }
-
-  event.preventDefault()
-  await fetchTestRecords()
+    await fetchTestRecords()
 }
 
 const fetchTestRecords = async () => {
-  const isnList = getCurrentInputIdentifiers()
+    const isnList = getCurrentInputIdentifiers()
 
-  if (isnList.length === 0) {
-    error.value = 'Please enter at least one valid ISN'
-    return
-  }
-
-  loading.value = true
-  error.value = null
-
-  try {
-    // Fetch all ISNs in parallel
-    const responses = await Promise.all(
-      isnList.map((isn) =>
-        apiClient
-          .get<TestRecordsResponse>(`/api/dut/records/${isn}`)
-          .then((response) => ({ isn, data: response.data, success: true }))
-          .catch((err) => {
-            console.warn(`Failed to fetch records for ISN ${isn}:`, err)
-            return { isn, data: null, success: false }
-          }),
-      ),
-    )
-
-    // Separate successful responses
-    const validResponses = responses.filter((r) => r.success && r.data)
-
-    if (validResponses.length === 0) {
-      throw new Error('Failed to fetch records for all ISNs')
+    if (isnList.length === 0) {
+        error.value = 'Please enter at least one valid ISN'
+        return
     }
 
-    // Store fetched ISNs for reference
-    fetchedISNs.value = isnList
+    loading.value = true
+    error.value = null
 
-    // Group results by ISN
-    groupedByISN.value = validResponses.map((response) => ({
-      isn: response.isn,
-      site_name: response.data?.site_name ?? '',
-      model_name: response.data?.model_name ?? '',
-      record_data: response.data?.record_data ?? [],
-    }))
+    try {
+        // Fetch all ISNs in parallel
+        const responses = await Promise.all(
+            isnList.map((isn) =>
+                apiClient
+                    .get<TestRecordsResponse>(`/api/dut/records/${isn}`)
+                    .then((response) => ({ isn, data: response.data, success: true }))
+                    .catch((err) => {
+                        console.warn(`Failed to fetch records for ISN ${isn}:`, err)
+                        return { isn, data: null, success: false }
+                    }),
+            ),
+        )
 
-    // Use first response for backward compatibility (testRecords still used in template)
-    const firstValid = validResponses[0]
-    if (!firstValid || !firstValid.data) {
-      throw new Error('No valid data in response')
+        // Separate successful responses
+        const validResponses = responses.filter((r) => r.success && r.data)
+
+        if (validResponses.length === 0) {
+            throw new Error('Failed to fetch records for all ISNs')
+        }
+
+        // Store fetched ISNs for reference
+        fetchedISNs.value = isnList
+
+        // Group results by ISN
+        groupedByISN.value = validResponses.map((response) => ({
+            isn: response.isn,
+            site_name: response.data?.site_name ?? '',
+            model_name: response.data?.model_name ?? '',
+            record_data: response.data?.record_data ?? [],
+        }))
+
+        // Use first response for backward compatibility (testRecords still used in template)
+        const firstValid = validResponses[0]
+        if (!firstValid || !firstValid.data) {
+            throw new Error('No valid data in response')
+        }
+        testRecords.value = firstValid.data
+    } catch (err: unknown) {
+        // Show user-friendly error message
+        if (getErrorStatus(err) === 400) {
+            error.value = 'Invalid ISN or no records found. Please check the ISN and try again.'
+        } else if (getErrorStatus(err) === 404) {
+            error.value = 'No test records found for the provided ISN.'
+        } else if ((getErrorStatus(err) ?? 0) >= 500) {
+            error.value = 'Server error. Please try again later.'
+        } else {
+            error.value = 'Failed to fetch test records. Please check your connection and try again.'
+        }
+        testRecords.value = null
+    } finally {
+        loading.value = false
     }
-    testRecords.value = firstValid.data
-  } catch (err: unknown) {
-    // Show user-friendly error message
-    if (getErrorStatus(err) === 400) {
-      error.value = 'Invalid ISN or no records found. Please check the ISN and try again.'
-    } else if (getErrorStatus(err) === 404) {
-      error.value = 'No test records found for the provided ISN.'
-    } else if ((getErrorStatus(err) ?? 0) >= 500) {
-      error.value = 'Server error. Please try again later.'
-    } else {
-      error.value = 'Failed to fetch test records. Please check your connection and try again.'
-    }
-    testRecords.value = null
-  } finally {
-    loading.value = false
-  }
 }
 
 const handleDownload = async (downloadInfo: { station: Station; record: TestRecord }) => {
-  downloadingRecordId.value = downloadInfo.record.id
-  error.value = null
+    downloadingRecordId.value = downloadInfo.record.id
+    error.value = null
 
-  try {
-    const response = await apiClient.post(
-      '/api/dut/test-log/download',
-      {
-        info_list: [
-          {
-            isn: downloadInfo.record.dut_id__isn,
-            time: formatTimeForExternal2(downloadInfo.record.test_date),
-            deviceid: downloadInfo.record.device_id__name,
-            station: downloadInfo.station.name,
-          },
-        ],
-        site: downloadInfo.station.site_name,
-        project: downloadInfo.station.model_name,
-      },
-      { responseType: 'blob' },
-    )
+    try {
+        const response = await apiClient.post(
+            '/api/dut/test-log/download',
+            {
+                info_list: [
+                    {
+                        isn: downloadInfo.record.dut_id__isn,
+                        time: formatTimeForExternal2(downloadInfo.record.test_date),
+                        deviceid: downloadInfo.record.device_id__name,
+                        station: downloadInfo.station.name,
+                    },
+                ],
+                site: downloadInfo.station.site_name,
+                project: downloadInfo.station.model_name,
+            },
+            { responseType: 'blob' },
+        )
 
-    // Create download link
-    const url = window.URL.createObjectURL(new Blob([response.data]))
-    const link = document.createElement('a')
-    link.href = url
+        // Create download link
+        const url = window.URL.createObjectURL(new Blob([response.data]))
+        const link = document.createElement('a')
+        link.href = url
 
-    // Extract filename from Content-Disposition or use default
-    const contentDisposition = response.headers['content-disposition']
-    const defaultFilename = `${downloadInfo.record.dut_id__isn}_${downloadInfo.station.name}.zip`
-    const filename = contentDisposition
-      ? (contentDisposition.split('filename=')[1]?.replace(/"/g, '') ?? defaultFilename)
-      : defaultFilename
+        // Extract filename from Content-Disposition or use default
+        const contentDisposition = response.headers['content-disposition']
+        const defaultFilename = `${downloadInfo.record.dut_id__isn}_${downloadInfo.station.name}.zip`
+        const filename = contentDisposition
+            ? (contentDisposition.split('filename=')[1]?.replace(/"/g, '') ?? defaultFilename)
+            : defaultFilename
 
-    link.setAttribute('download', filename)
-    document.body.appendChild(link)
-    link.click()
-    link.remove()
-    window.URL.revokeObjectURL(url)
+        link.setAttribute('download', filename)
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        window.URL.revokeObjectURL(url)
 
-    showSuccessNotification('Test log downloaded successfully!')
-  } catch (err: unknown) {
-    // Show user-friendly error message
-    if (getErrorStatus(err) === 404) {
-      error.value = 'Test log file not found. It may have been deleted or moved.'
-    } else if ((getErrorStatus(err) ?? 0) >= 500) {
-      error.value = 'Server error while downloading. Please try again later.'
-    } else {
-      error.value = 'Failed to download test log. Please try again.'
+        showSuccessNotification('Test log downloaded successfully!')
+    } catch (err: unknown) {
+        // Show user-friendly error message
+        if (getErrorStatus(err) === 404) {
+            error.value = 'Test log file not found. It may have been deleted or moved.'
+        } else if ((getErrorStatus(err) ?? 0) >= 500) {
+            error.value = 'Server error while downloading. Please try again later.'
+        } else {
+            error.value = 'Failed to download test log. Please try again.'
+        }
+    } finally {
+        downloadingRecordId.value = null
     }
-  } finally {
-    downloadingRecordId.value = null
-  }
 }
 
 const formatTimeForExternal2 = (isoDate: string): string => {
-  // Convert UTC time to local timezone + 1 hour for UTC+7 (making it UTC+8)
-  const date = new Date(isoDate)
+    // Convert UTC time to local timezone + 1 hour for UTC+7 (making it UTC+8)
+    const date = new Date(isoDate)
 
-  // Add 1 hour (3600000 ms) to the local time for UTC+7 timezone
-  const adjustedDate = new Date(date.getTime() + 3600000)
+    // Add 1 hour (3600000 ms) to the local time for UTC+7 timezone
+    const adjustedDate = new Date(date.getTime() + 3600000)
 
-  const year = adjustedDate.getFullYear()
-  const month = String(adjustedDate.getMonth() + 1).padStart(2, '0')
-  const day = String(adjustedDate.getDate()).padStart(2, '0')
-  const hours = String(adjustedDate.getHours()).padStart(2, '0')
-  const minutes = String(adjustedDate.getMinutes()).padStart(2, '0')
-  const seconds = String(adjustedDate.getSeconds()).padStart(2, '0')
+    const year = adjustedDate.getFullYear()
+    const month = String(adjustedDate.getMonth() + 1).padStart(2, '0')
+    const day = String(adjustedDate.getDate()).padStart(2, '0')
+    const hours = String(adjustedDate.getHours()).padStart(2, '0')
+    const minutes = String(adjustedDate.getMinutes()).padStart(2, '0')
+    const seconds = String(adjustedDate.getSeconds()).padStart(2, '0')
 
-  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`
+    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`
 }
 
 const formatDate = (isoDate: string): string => {
-  return new Date(isoDate).toLocaleString()
+    return new Date(isoDate).toLocaleString()
 }
 
 // Clear all data
 const clearAll = () => {
-  dutIsn.value = ''
-  selectedISNs.value = []
-  multipleIsnSearchText.value = ''
-  testRecords.value = null
-  groupedByISN.value = []
-  fetchedISNs.value = []
-  error.value = null
+    dutIsn.value = ''
+    selectedISNs.value = []
+    multipleIsnSearchText.value = ''
+    testRecords.value = null
+    groupedByISN.value = []
+    fetchedISNs.value = []
+    error.value = null
 }
 
 // Helper to get sorted stations for an ISN group
 const getSortedStations = (isnGroup: ISNGroupedRecords) => {
-  return [...isnGroup.record_data].sort((a, b) => a.order - b.order)
+    return [...isnGroup.record_data].sort((a, b) => a.order - b.order)
 }
 
 const getGroupRecordCount = (isnGroup: ISNGroupedRecords): number => {
-  return isnGroup.record_data.reduce((total, station) => total + station.data.length, 0)
+    return isnGroup.record_data.reduce((total, station) => total + station.data.length, 0)
 }
 
 const getGroupErrorCount = (isnGroup: ISNGroupedRecords): number => {
-  return isnGroup.record_data.reduce((total, station) => total + getErrorCount(station), 0)
+    return isnGroup.record_data.reduce((total, station) => total + getErrorCount(station), 0)
 }
 
 const getStationTableRows = (station: Station) => {
-  return getReversedData(station.data).map((record, idx) => ({
-    ...record,
-    record_number: station.data.length - idx,
-    status: record.test_result === 1 ? 'PASS' : record.error_item || 'FAIL',
-    actions: 'download',
-  }))
+    return getReversedData(station.data).map((record, idx) => ({
+        ...record,
+        record_number: station.data.length - idx,
+        status: record.test_result === 1 ? 'PASS' : record.error_item || 'FAIL',
+        actions: 'download',
+    }))
 }
 
 // Helper to get the latest record from a station
 const getLatestRecord = (station: Station): TestRecord | null => {
-  if (station.data.length === 0) return null
-  return station.data[station.data.length - 1] || null
+    if (station.data.length === 0) return null
+    return station.data[station.data.length - 1] || null
 }
 
 // Helper to initialize carousel at latest record for a station
 const initializeCarousel = (stationId: number, dataLength: number) => {
-  if (!(stationId in carouselModels.value) && dataLength > 1) {
-    carouselModels.value[stationId] = dataLength - 1 // Start at last record
-  }
+    if (!(stationId in carouselModels.value) && dataLength > 1) {
+        carouselModels.value[stationId] = dataLength - 1 // Start at last record
+    }
 }
 
 const getStationCarouselIndex = (station: Station): number => {
-  if (station.data.length <= 1) {
-    return 0
-  }
+    if (station.data.length <= 1) {
+        return 0
+    }
 
-  const currentIndex = carouselModels.value[station.id]
+    const currentIndex = carouselModels.value[station.id]
 
-  if (typeof currentIndex !== 'number') {
-    return station.data.length - 1
-  }
+    if (typeof currentIndex !== 'number') {
+        return station.data.length - 1
+    }
 
-  return Math.min(Math.max(currentIndex, 0), station.data.length - 1)
+    return Math.min(Math.max(currentIndex, 0), station.data.length - 1)
 }
 
 const setStationCarouselIndex = (station: Station, index: number) => {
-  if (station.data.length === 0) {
-    return
-  }
+    if (station.data.length === 0) {
+        return
+    }
 
-  carouselModels.value[station.id] = Math.min(Math.max(index, 0), station.data.length - 1)
+    carouselModels.value[station.id] = Math.min(Math.max(index, 0), station.data.length - 1)
 }
 
 const getActiveStationRecord = (station: Station): TestRecord | null => {
-  if (station.data.length === 0) {
-    return null
-  }
+    if (station.data.length === 0) {
+        return null
+    }
 
-  return (
-    station.data[getStationCarouselIndex(station)] || station.data[station.data.length - 1] || null
-  )
+    return (
+        station.data[getStationCarouselIndex(station)] || station.data[station.data.length - 1] || null
+    )
 }
 
 // Helper to get reversed data (latest first) for list and table views
 const getReversedData = (data: TestRecord[]) => {
-  return [...data].reverse()
+    return [...data].reverse()
 }
 
 // Helper to calculate error count for a station
 const getErrorCount = (station: Station): number => {
-  return station.data.filter((record) => record.test_result !== 1).length
+    return station.data.filter((record) => record.test_result !== 1).length
 }
 
 // Helper to check if latest record has error
 const hasLatestError = (station: Station): boolean => {
-  if (station.data.length === 0) return false
-  // Sort by test_date descending and check the first one
-  const sortedData = [...station.data].sort(
-    (a, b) => new Date(b.test_date).getTime() - new Date(a.test_date).getTime(),
-  )
-  const latestRecord = sortedData[0]
-  return latestRecord ? latestRecord.test_result !== 1 : false
+    if (station.data.length === 0) return false
+    // Sort by test_date descending and check the first one
+    const sortedData = [...station.data].sort(
+        (a, b) => new Date(b.test_date).getTime() - new Date(a.test_date).getTime(),
+    )
+    const latestRecord = sortedData[0]
+    return latestRecord ? latestRecord.test_result !== 1 : false
 }
 </script>
 

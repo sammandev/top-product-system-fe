@@ -39,7 +39,7 @@
                     <label class="pa-trend-field">
                         <span>DUT ISNs</span>
                         <div class="pa-trend-token-entry">
-                            <input v-model="pendingDutInput" type="text" autocomplete="off"
+                            <input v-model="pendingDutInput" class="app-themed-input" type="text" autocomplete="off"
                                 placeholder="Type values, then press Enter"
                                 @input="handleTokenInput('dut')" @keydown="handleTokenKeydown($event, 'dut')" @blur="commitPendingTokens('dut')">
                         </div>
@@ -56,7 +56,7 @@
                     <label class="pa-trend-field">
                         <span>Station IDs</span>
                         <div class="pa-trend-token-entry">
-                            <input v-model="pendingStationInput" type="text" autocomplete="off"
+                            <input v-model="pendingStationInput" class="app-themed-input" type="text" autocomplete="off"
                                 placeholder="Type values, then press Enter"
                                 @input="handleTokenInput('station')" @keydown="handleTokenKeydown($event, 'station')" @blur="commitPendingTokens('station')">
                         </div>
@@ -74,13 +74,13 @@
                 <div class="pa-trend-grid pa-trend-grid--three">
                     <label class="pa-trend-field">
                         <span>Site Identifier</span>
-                        <input v-model="siteIdentifier" type="text" autocomplete="off"
+                        <input v-model="siteIdentifier" class="app-themed-input" type="text" autocomplete="off"
                             placeholder="Optional site filter">
                     </label>
 
                     <label class="pa-trend-field">
                         <span>Model Identifier</span>
-                        <input v-model="modelIdentifier" type="text" autocomplete="off"
+                        <input v-model="modelIdentifier" class="app-themed-input" type="text" autocomplete="off"
                             placeholder="Optional model filter">
                     </label>
 
@@ -93,12 +93,12 @@
                 <div class="pa-trend-grid pa-trend-grid--two">
                     <label class="pa-trend-field">
                         <span>Start Time</span>
-                        <input v-model="startTime" type="datetime-local">
+                        <input v-model="startTime" class="app-themed-input" type="datetime-local">
                     </label>
 
                     <label class="pa-trend-field">
                         <span>End Time</span>
-                        <input v-model="endTime" type="datetime-local">
+                        <input v-model="endTime" class="app-themed-input" type="datetime-local">
                     </label>
                 </div>
 
@@ -490,7 +490,7 @@ function handleExport() {
     color: #0f172a;
 }
 
-.pa-trend-field input,
+.pa-trend-field input:not(.app-themed-input),
 .pa-trend-field select {
     width: 100%;
     border: 1px solid #cbd5e1;
@@ -501,7 +501,7 @@ function handleExport() {
     background: white;
 }
 
-.pa-trend-field input:focus,
+.pa-trend-field input:not(.app-themed-input):focus,
 .pa-trend-field select:focus {
     outline: none;
     border-color: #0f766e;

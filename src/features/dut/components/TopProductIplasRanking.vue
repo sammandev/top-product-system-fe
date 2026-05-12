@@ -34,12 +34,12 @@
           <div class="ranking-filter-grid">
             <label class="ranking-field">
               <span>Search Records</span>
-              <input v-model="searchQuery" type="text" placeholder="Search ISN, Device ID, Error Code...">
+              <input v-model="searchQuery" class="app-themed-input" type="text" placeholder="Search ISN, Device ID, Error Code...">
             </label>
 
             <label class="ranking-field">
               <span>Device IDs</span>
-              <input v-model="deviceFilterEntry" type="text" list="ranking-device-filter-options"
+              <input v-model="deviceFilterEntry" class="app-themed-input" type="text" list="ranking-device-filter-options"
                 placeholder="Type a device and press Enter" @keydown.enter.prevent="commitDeviceFilter"
                 @blur="commitDeviceFilter">
               <datalist id="ranking-device-filter-options">
@@ -63,9 +63,9 @@
 
               <label class="ranking-field">
                 <span>{{ scoreFilterType === 'between' ? 'Range (e.g. 8-10)' : 'Score Value' }}</span>
-                <input v-if="scoreFilterType === 'between'" v-model="scoreRangeInput" type="text" placeholder="8-10"
+                <input v-if="scoreFilterType === 'between'" v-model="scoreRangeInput" class="app-themed-input" type="text" placeholder="8-10"
                   @input="parseScoreRange">
-                <input v-else v-model.number="scoreFilterValue" type="number" min="0" max="10" step="0.1"
+                <input v-else v-model.number="scoreFilterValue" class="app-themed-input" type="number" min="0" max="10" step="0.1"
                   placeholder="0-10" :disabled="!scoreFilterType">
               </label>
             </template>
@@ -862,7 +862,7 @@ function scoreTone(score: number) {
 
 .ranking-filter-grid {
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  margin-bottom: 1rem;
+  padding: 1rem 0.75rem;
 }
 
 .ranking-field span {
@@ -873,7 +873,7 @@ function scoreTone(score: number) {
   text-transform: none;
 }
 
-.ranking-field input,
+.ranking-field input:not(.app-themed-input),
 .ranking-field select {
   width: 100%;
   border: 1px solid var(--app-border);

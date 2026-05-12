@@ -198,12 +198,13 @@ function ensureArrayResponse<T>(
   data: T[] | null | undefined,
   emptyMessage: string,
   invalidMessage: string,
+  allowEmpty = false,
 ): T[] {
   if (!Array.isArray(data)) {
     throw new Error(invalidMessage)
   }
 
-  if (data.length === 0) {
+  if (!allowEmpty && data.length === 0) {
     throw new Error(emptyMessage)
   }
 
@@ -454,6 +455,7 @@ export function useIplasApi() {
         response.data as CompactCsvTestItemData[] | undefined,
         'No iPLAS data was returned for the selected device and time range',
         'iPLAS API returned an invalid response for test items',
+        true,
       )
 
       // Track truncation warning (any chunk hit 5000 limit)
@@ -518,6 +520,7 @@ export function useIplasApi() {
         response.data as CsvTestItemData[] | undefined,
         'No iPLAS data was returned for the selected device and time range',
         'iPLAS API returned an invalid response for test items',
+        true,
       )
 
       if (response.possibly_truncated) {
@@ -1091,6 +1094,7 @@ export function useIplasApi() {
         response.data as CsvTestItemData[] | undefined,
         'No iPLAS data was returned for the selected device and filters',
         'iPLAS API returned an invalid filtered test-item response',
+        true,
       )
 
       if (response.possibly_truncated) {

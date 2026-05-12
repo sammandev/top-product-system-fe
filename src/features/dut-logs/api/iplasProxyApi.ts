@@ -177,6 +177,10 @@ export interface IplasProxyHealthResponse {
   }
 }
 
+export interface IplasServerTimeResponse {
+  server_time: string
+}
+
 // ============================================================================
 // iPLAS v2 API Types
 // ============================================================================
@@ -732,6 +736,11 @@ class IplasProxyApi {
     return response.data
   }
 
+  async getServerTime(): Promise<IplasServerTimeResponse> {
+    const response = await apiClient.get<IplasServerTimeResponse>(`${this.baseUrl}/server-time`)
+    return response.data
+  }
+
   /**
    * Helper to format date for API request
    *
@@ -758,10 +767,11 @@ class IplasProxyApi {
    */
   async getSiteProjects(
     dataType: 'simple' | 'strict' = 'simple',
+    forceRefresh = false,
   ): Promise<IplasSiteProjectListResponse> {
     const response = await apiClient.get<IplasSiteProjectListResponse>(
       `${this.baseUrl}/site-projects`,
-      { params: { data_type: dataType } },
+      { params: { data_type: dataType, force_refresh: forceRefresh } },
     )
     return response.data
   }

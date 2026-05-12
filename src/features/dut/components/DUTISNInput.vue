@@ -1,21 +1,13 @@
 <template>
-  <AppPanel title="DUT ISN Search" eyebrow="Input" description="Add DUT serials one by one or paste a batch, then refine the optional site and model hints emitted to the parent flow." tone="cool">
+  <AppPanel tone="cool">
     <div class="dut-isn-input__stack">
       <div class="dut-isn-input__toggle-row">
-        <button
-          type="button"
-          class="dut-isn-input__toggle-chip"
-          :class="{ 'is-active': inputMode === 'multiple' }"
-          @click="inputMode = 'multiple'"
-        >
+        <button type="button" class="dut-isn-input__toggle-chip" :class="{ 'is-active': inputMode === 'multiple' }"
+          @click="inputMode = 'multiple'">
           ISN Search
         </button>
-        <button
-          type="button"
-          class="dut-isn-input__toggle-chip"
-          :class="{ 'is-active': inputMode === 'bulk' }"
-          @click="inputMode = 'bulk'"
-        >
+        <button type="button" class="dut-isn-input__toggle-chip" :class="{ 'is-active': inputMode === 'bulk' }"
+          @click="inputMode = 'bulk'">
           Bulk Paste
         </button>
       </div>
@@ -23,28 +15,20 @@
       <label v-if="inputMode === 'multiple'" class="dut-isn-input__field">
         <span>DUT ISNs</span>
         <div class="dut-isn-input__entry-row">
-          <input
-            v-model="isnEntry"
-            type="text"
-            placeholder="Type ISNs and press Enter"
-            @input="handleISNEntryInput"
-            @keydown.enter.prevent="commitISNEntry"
-            @blur="commitISNEntry"
-          />
+          <input v-model="isnEntry" type="text" placeholder="Type ISNs and press Enter" @input="handleISNEntryInput"
+            @keydown.enter.prevent="commitISNEntry" @blur="commitISNEntry" />
         </div>
         <small>Space, comma, or new line automatically queues multiple serials.</small>
       </label>
 
       <label v-else class="dut-isn-input__field">
         <span>Bulk ISN Input</span>
-        <textarea
-          v-model="bulkText"
-          rows="5"
-          placeholder="Paste multiple ISNs, one per line, comma-separated, or space-separated"
-        />
+        <textarea v-model="bulkText" rows="5"
+          placeholder="Paste multiple ISNs, one per line, comma-separated, or space-separated" />
         <div class="dut-isn-input__entry-row dut-isn-input__entry-row--end">
           <small>Paste ISNs separated by newlines, commas, or spaces.</small>
-          <button type="button" class="dut-isn-input__button dut-isn-input__button--primary" :disabled="!bulkText" @click="parseBulkISNs">
+          <button type="button" class="dut-isn-input__button dut-isn-input__button--primary" :disabled="!bulkText"
+            @click="parseBulkISNs">
             Parse
           </button>
         </div>
@@ -56,7 +40,8 @@
           <button type="button" class="dut-isn-input__link" @click="clearAll">Clear All</button>
         </div>
         <div class="dut-isn-input__token-row">
-          <button v-for="(isn, index) in selectedISNs" :key="`${isn}-${index}`" type="button" class="dut-isn-input__token" @click="removeISN(index)">
+          <button v-for="(isn, index) in selectedISNs" :key="`${isn}-${index}`" type="button"
+            class="dut-isn-input__token" @click="removeISN(index)">
             <span>{{ isn }}</span>
             <span aria-hidden="true">x</span>
           </button>
@@ -67,24 +52,19 @@
         <label class="dut-isn-input__field">
           <span>Site Identifier (Optional)</span>
           <div class="dut-isn-input__entry-row">
-            <input
-              v-model="siteEntry"
-              type="text"
-              list="dut-isn-input-sites"
-              placeholder="Auto-populated from DUT ISNs"
-              @keydown.enter.prevent="commitSiteEntry"
-              @blur="commitSiteEntry"
-            />
-            <button type="button" class="dut-isn-input__button dut-isn-input__button--ghost" @click="commitSiteEntry">
+            <input v-model="siteEntry" type="text" list="dut-isn-input-sites" placeholder="Auto-populated from DUT ISNs"
+              @keydown.enter.prevent="commitSiteEntry" @blur="commitSiteEntry" />
+            <!-- <button type="button" class="dut-isn-input__button dut-isn-input__button--ghost" @click="commitSiteEntry">
               Add
-            </button>
+            </button> -->
           </div>
           <datalist id="dut-isn-input-sites">
             <option v-for="site in availableSites" :key="site" :value="site" />
           </datalist>
           <small>Sites detected from selected ISNs. Add or remove tokens to refine the scope.</small>
           <div v-if="selectedSites.length > 0" class="dut-isn-input__token-row">
-            <button v-for="site in selectedSites" :key="site" type="button" class="dut-isn-input__token dut-isn-input__token--info" @click="removeSite(site)">
+            <button v-for="site in selectedSites" :key="site" type="button"
+              class="dut-isn-input__token dut-isn-input__token--info" @click="removeSite(site)">
               <span>{{ site }}</span>
               <span aria-hidden="true">x</span>
             </button>
@@ -94,24 +74,20 @@
         <label class="dut-isn-input__field">
           <span>Model Identifier (Optional)</span>
           <div class="dut-isn-input__entry-row">
-            <input
-              v-model="modelEntry"
-              type="text"
-              list="dut-isn-input-models"
-              placeholder="Auto-populated from DUT ISNs"
-              @keydown.enter.prevent="commitModelEntry"
-              @blur="commitModelEntry"
-            />
-            <button type="button" class="dut-isn-input__button dut-isn-input__button--ghost" @click="commitModelEntry">
+            <input v-model="modelEntry" type="text" list="dut-isn-input-models"
+              placeholder="Auto-populated from DUT ISNs" @keydown.enter.prevent="commitModelEntry"
+              @blur="commitModelEntry" />
+            <!-- <button type="button" class="dut-isn-input__button dut-isn-input__button--ghost" @click="commitModelEntry">
               Add
-            </button>
+            </button> -->
           </div>
           <datalist id="dut-isn-input-models">
             <option v-for="model in availableModels" :key="model" :value="model" />
           </datalist>
           <small>Models detected from selected ISNs. Leave empty to keep the parent flow unconstrained.</small>
           <div v-if="selectedModels.length > 0" class="dut-isn-input__token-row">
-            <button v-for="model in selectedModels" :key="model" type="button" class="dut-isn-input__token dut-isn-input__token--info" @click="removeModel(model)">
+            <button v-for="model in selectedModels" :key="model" type="button"
+              class="dut-isn-input__token dut-isn-input__token--info" @click="removeModel(model)">
               <span>{{ model }}</span>
               <span aria-hidden="true">x</span>
             </button>

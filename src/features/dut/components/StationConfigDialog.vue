@@ -7,21 +7,26 @@
     <section class="station-config-body" :class="{ 'station-config-body--fullscreen': isFullscreen }">
       <div class="station-config-shell">
         <AppPanel title="Minimum Test Item Score" tone="warm" compact-header class="min-score-section">
-          <div class="station-config-dialog__min-score-layout">
-            <div class="min-score-summary">
-              <p>DUT is marked as <strong>Min. Score Fail</strong> when one test item drops below the threshold.</p>
+          <div class="station-config-dialog__min-score-card">
+            <div class="station-config-dialog__min-score-copy">
+              <p>Below-threshold items mark the result as Min. Score Fail.</p>
             </div>
-            <div class="station-config-dialog__toggle-row min-score-controls">
-              <label class="station-config-dialog__toggle-pill"
-                :class="{ 'is-active': localConfig.minimumItemScoreEnabled }">
-                <input v-model="localConfig.minimumItemScoreEnabled" type="checkbox" />
-                <span>{{ localConfig.minimumItemScoreEnabled ? 'Enabled' : 'Disabled' }}</span>
-              </label>
-              <label v-if="localConfig.minimumItemScoreEnabled" class="station-config-dialog__field min-score-input">
-                <span>Threshold</span>
-                <input v-model.number="localConfig.minimumItemScore" type="number" min="0" max="10" step="0.1" />
-              </label>
-              <span v-else class="station-config-dialog__pill station-config-dialog__pill--muted">Check disabled</span>
+
+            <div class="station-config-dialog__min-score-controls">
+              <template v-if="localConfig.minimumItemScoreEnabled">
+                <label class="station-config-dialog__field min-score-input">
+                  <span>Threshold</span>
+                  <input v-model.number="localConfig.minimumItemScore" type="number" min="0" max="10" step="0.1" />
+                </label>
+                <span class="station-config-dialog__pill station-config-dialog__pill--warning">
+                  {{ (localConfig.minimumItemScore ?? 6.5).toFixed(1) }}
+                </span>
+              </template>
+              <button type="button" class="station-config-dialog__toggle-pill"
+                :class="{ 'is-active': !localConfig.minimumItemScoreEnabled }"
+                @click="localConfig.minimumItemScoreEnabled = !localConfig.minimumItemScoreEnabled">
+                {{ localConfig.minimumItemScoreEnabled ? 'Disable' : 'Off' }}
+              </button>
             </div>
           </div>
         </AppPanel>
@@ -1136,7 +1141,8 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-dialog__item-list,
 .station-config-dialog__chip-grid,
 .station-config-dialog__action-grid,
-.station-config-dialog__min-score-layout,
+.station-config-dialog__min-score-card,
+.station-config-dialog__min-score-controls,
 .station-config-dialog__toolbar-grid,
 .station-config-dialog__toolbar-row,
 .station-config-dialog__selection-toggle-row,
@@ -1571,25 +1577,37 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   background: var(--app-warning-soft);
 }
 
-.min-score-summary {
-  flex: 1 1 320px;
-}
-
-.station-config-dialog__min-score-layout {
+.station-config-dialog__min-score-card {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
+  gap: 1rem;
 }
 
-.min-score-switch {
-  min-width: 120px;
+.station-config-dialog__min-score-copy {
+  display: grid;
+  gap: 0.35rem;
 }
 
-.min-score-controls {
-  justify-content: flex-end;
+.station-config-dialog__min-score-copy strong {
+  color: var(--app-ink);
+  font-size: 1rem;
+}
+
+.station-config-dialog__min-score-copy p {
+  margin: 0;
+  color: var(--app-ink-soft, var(--app-muted));
+  line-height: 1.55;
+}
+
+.station-config-dialog__min-score-controls {
+  grid-auto-flow: column;
+  align-items: end;
+  justify-content: end;
+  gap: 0.65rem;
 }
 
 .min-score-input {
-  width: 150px;
+  width: 220px;
 }
 
 .test-item-list-container {
@@ -1670,7 +1688,11 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 @media (max-width: 840px) {
-  .min-score-controls {
+  .station-config-dialog__min-score-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .station-config-dialog__min-score-controls {
     width: 100%;
     justify-content: flex-start;
   }
@@ -1684,7 +1706,8 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 @media (max-width: 600px) {
 
   .station-config-dialog__toolbar-grid,
-  .station-config-dialog__min-score-layout,
+  .station-config-dialog__min-score-card,
+  .station-config-dialog__min-score-controls,
   .test-item-row,
   .test-item-row-actions,
   .station-config-dialog__selection-toggle-row,

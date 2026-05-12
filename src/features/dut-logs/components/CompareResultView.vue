@@ -56,7 +56,7 @@
         <div class="result-surface-filter-grid">
           <label class="result-surface-search result-surface-search--wide">
             <span>Search test items</span>
-            <input v-model="valueSearch" placeholder="Filter numeric items by name" type="text">
+            <input v-model="valueSearch" class="app-themed-input" placeholder="Filter numeric items by name" type="text">
           </label>
           <label class="result-surface-search">
             <span>Score Filter</span>
@@ -111,7 +111,7 @@
 
         <label class="result-surface-search">
           <span>Search test items</span>
-          <input v-model="nonValueSearch" placeholder="Filter non-value items by name" type="text">
+          <input v-model="nonValueSearch" class="app-themed-input" placeholder="Filter non-value items by name" type="text">
         </label>
 
         <AppDataGrid
@@ -136,7 +136,7 @@
       <div class="result-surface-filter-grid">
         <label class="result-surface-search result-surface-search--wide">
           <span>Search test items</span>
-          <input v-model="valueSearch" placeholder="Filter numeric items by name" type="text">
+          <input v-model="valueSearch" class="app-themed-input" placeholder="Filter numeric items by name" type="text">
         </label>
         <label class="result-surface-search">
           <span>Score Filter</span>
@@ -179,7 +179,7 @@
 
       <label class="result-surface-search">
         <span>Search test items</span>
-        <input v-model="nonValueSearch" placeholder="Filter non-value items by name" type="text">
+        <input v-model="nonValueSearch" class="app-themed-input" placeholder="Filter non-value items by name" type="text">
       </label>
 
       <AppDataGrid
@@ -671,7 +671,7 @@ function statusPillClass(value: string, isCalculated?: boolean): string {
   color: var(--app-muted);
 }
 
-.result-surface-search input,
+.result-surface-search input:not(.app-themed-input),
 .result-surface-search select {
   width: 100%;
   border: 1px solid var(--app-border);
@@ -682,7 +682,7 @@ function statusPillClass(value: string, isCalculated?: boolean): string {
   padding: 0.85rem 0.95rem;
 }
 
-.result-surface-search input:focus,
+.result-surface-search input:not(.app-themed-input):focus,
 .result-surface-search select:focus {
   outline: none;
   border-color: var(--app-accent);

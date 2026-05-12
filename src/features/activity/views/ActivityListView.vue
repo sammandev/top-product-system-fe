@@ -34,17 +34,17 @@
 
           <label v-if="timeRangeType === 'custom'" class="activity-field">
             <span>Start date</span>
-            <input v-model="customStartDate" type="date" @change="onCustomDateChange" />
+            <input v-model="customStartDate" class="app-themed-input" type="date" @change="onCustomDateChange" />
           </label>
 
           <label v-if="timeRangeType === 'custom'" class="activity-field">
             <span>End date</span>
-            <input v-model="customEndDate" type="date" @change="onCustomDateChange" />
+            <input v-model="customEndDate" class="app-themed-input" type="date" @change="onCustomDateChange" />
           </label>
 
           <label class="activity-field">
             <span>Search</span>
-            <input v-model="searchQuery" placeholder="Search title, ISN, station, device" type="text" @input="onSearchChange" />
+            <input v-model="searchQuery" class="app-themed-input" placeholder="Search title, ISN, station, device" type="text" @input="onSearchChange" />
           </label>
 
           <label class="activity-field">
@@ -551,7 +551,7 @@ function formatTime(timestamp: string): string {
   gap: 0.45rem;
 }
 
-.activity-field input,
+.activity-field input:not(.app-themed-input),
 .activity-field select {
   width: 100%;
   border: 1px solid var(--app-border);
@@ -563,7 +563,7 @@ function formatTime(timestamp: string): string {
   transition: border-color 0.16s ease, box-shadow 0.16s ease;
 }
 
-.activity-field input:focus,
+.activity-field input:not(.app-themed-input):focus,
 .activity-field select:focus {
   border-color: var(--app-accent);
   box-shadow: 0 0 0 4px var(--app-ring);

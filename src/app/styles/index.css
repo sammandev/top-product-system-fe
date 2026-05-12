@@ -98,3 +98,87 @@
     text-decoration: none;
   }
 }
+
+@layer components {
+  .app-themed-input {
+    appearance: none;
+    -webkit-appearance: none;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px solid var(--p-select-border-color, var(--p-inputtext-border-color, var(--p-form-field-border-color, var(--app-border))));
+    border-radius: var(--p-select-border-radius, var(--p-inputtext-border-radius, var(--p-form-field-border-radius, 0.75rem)));
+    background: var(--p-select-background, var(--p-inputtext-background, var(--p-form-field-background, var(--app-panel))));
+    color: var(--p-select-color, var(--p-inputtext-color, var(--p-form-field-color, var(--app-ink))));
+    box-shadow: var(--p-select-shadow, var(--p-inputtext-shadow, var(--p-form-field-shadow, none)));
+    padding: var(--p-select-padding-y, var(--p-inputtext-padding-y, var(--p-form-field-padding-y, 0.72rem)))
+      var(--p-select-padding-x, var(--p-inputtext-padding-x, var(--p-form-field-padding-x, 0.82rem)));
+    font: inherit;
+    transition:
+      border-color var(--p-select-transition-duration, var(--p-inputtext-transition-duration, var(--p-form-field-transition-duration, 0.2s))),
+      box-shadow var(--p-select-transition-duration, var(--p-inputtext-transition-duration, var(--p-form-field-transition-duration, 0.2s))),
+      background-color var(--p-select-transition-duration, var(--p-inputtext-transition-duration, var(--p-form-field-transition-duration, 0.2s)));
+    color-scheme: light dark;
+  }
+
+  .app-themed-datetime-input {
+    appearance: auto;
+    -webkit-appearance: auto;
+    padding-right: calc(
+      var(--p-select-padding-x, var(--p-inputtext-padding-x, var(--p-form-field-padding-x, 0.82rem))) +
+        1.75rem
+    );
+  }
+
+  .app-themed-input::-webkit-date-and-time-value,
+  .app-themed-input::-webkit-date-and-time-value-text,
+  .app-themed-input::-webkit-datetime-edit,
+  .app-themed-input::-webkit-datetime-edit-fields-wrapper,
+  .app-themed-input::-webkit-datetime-edit-text,
+  .app-themed-input::-webkit-datetime-edit-month-field,
+  .app-themed-input::-webkit-datetime-edit-day-field,
+  .app-themed-input::-webkit-datetime-edit-year-field,
+  .app-themed-input::-webkit-datetime-edit-hour-field,
+  .app-themed-input::-webkit-datetime-edit-minute-field,
+  .app-themed-input::-webkit-datetime-edit-ampm-field {
+    color: inherit;
+  }
+
+  .app-themed-input::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.8;
+    filter: var(--app-themed-input-picker-filter, none);
+  }
+
+  .app-themed-datetime-input::-webkit-calendar-picker-indicator {
+    opacity: 1;
+    width: 1.1rem;
+    height: 1.1rem;
+  }
+
+  .app-themed-input::placeholder {
+    color: var(--p-select-placeholder-color, var(--p-inputtext-placeholder-color, var(--p-form-field-placeholder-color, var(--app-muted))));
+    opacity: 1;
+  }
+
+  .app-themed-input:hover:not(:disabled) {
+    border-color: var(--p-select-hover-border-color, var(--p-inputtext-hover-border-color, var(--p-form-field-hover-border-color, var(--app-border))));
+  }
+
+  .app-themed-input:focus {
+    outline: none;
+    border-color: var(--p-select-focus-border-color, var(--p-inputtext-focus-border-color, var(--p-form-field-focus-border-color, var(--app-accent))));
+    box-shadow: var(--p-select-focus-ring-shadow, var(--p-inputtext-focus-ring-shadow, var(--p-form-field-focus-ring-shadow, 0 0 0 0 transparent)));
+  }
+
+  .app-themed-input:disabled {
+    background: var(--p-select-disabled-background, var(--p-inputtext-disabled-background, var(--p-form-field-disabled-background, var(--app-panel-strong))));
+    color: var(--p-select-disabled-color, var(--p-inputtext-disabled-color, var(--p-form-field-disabled-color, var(--app-muted))));
+    cursor: not-allowed;
+    opacity: 1;
+  }
+
+  .app-dark .app-themed-input {
+    color-scheme: dark;
+    --app-themed-input-picker-filter: invert(1);
+  }
+}

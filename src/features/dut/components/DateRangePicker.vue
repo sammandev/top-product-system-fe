@@ -27,13 +27,13 @@
     <div class="date-range-picker__grid">
       <label class="date-range-picker__field">
         <span>Start Date</span>
-        <input v-model="startDate" type="date" :max="maxStartDate" @input="handleStartDateChange">
+        <input v-model="startDate" class="app-themed-input" type="date" :max="maxStartDate" @input="handleStartDateChange">
         <small v-if="startDateError" class="date-range-picker__error">{{ startDateError }}</small>
       </label>
 
       <label class="date-range-picker__field">
         <span>End Date</span>
-        <input v-model="endDate" type="date" :min="minEndDate" :max="today" @input="handleEndDateChange">
+        <input v-model="endDate" class="app-themed-input" type="date" :min="minEndDate" :max="today" @input="handleEndDateChange">
         <small v-if="endDateError" class="date-range-picker__error">{{ endDateError }}</small>
       </label>
     </div>
@@ -277,7 +277,7 @@ watch(
   text-transform: none;
 }
 
-.date-range-picker__field input {
+.date-range-picker__field input:not(.app-themed-input) {
   width: 100%;
   border: 1px solid var(--app-border);
   border-radius: 0.95rem;
@@ -286,7 +286,7 @@ watch(
   padding: 0.82rem 0.95rem;
 }
 
-.date-range-picker__field input:focus {
+.date-range-picker__field input:not(.app-themed-input):focus {
   outline: none;
   border-color: var(--app-accent);
   box-shadow: 0 0 0 4px var(--app-ring);

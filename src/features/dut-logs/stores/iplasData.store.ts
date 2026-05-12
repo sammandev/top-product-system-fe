@@ -247,7 +247,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     error.value = null
 
     try {
-      const response = await iplasProxyApi.getSiteProjects('simple')
+      const response = await iplasProxyApi.getSiteProjects('simple', forceRefresh)
       siteProjects.value = response.data
       siteProjectsCached = true
       return response.data

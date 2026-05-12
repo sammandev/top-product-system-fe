@@ -13,10 +13,15 @@
 
           <AppPanel eyebrow="Scope" title="Station Search" tone="cool" split-header>
             <template #header-aside>
-              <button type="button" class="iplas-button iplas-button--ghost" :disabled="loading" @click="handleRefresh">
-                <Icon :icon="loading ? 'mdi:loading' : 'mdi:refresh'" :class="{ 'iplas-spin': loading }" />
-                <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
-              </button>
+              <div class="iplas-header-actions">
+                <button type="button" class="iplas-button iplas-button--ghost" :disabled="loading" @click="handleRefresh">
+                  <Icon :icon="loading ? 'mdi:loading' : 'mdi:refresh'" :class="{ 'iplas-spin': loading }" />
+                  <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
+                </button>
+                <button type="button" class="iplas-button iplas-button--ghost" @click="emit('show-settings')">
+                  iPLAS Settings
+                </button>
+              </div>
             </template>
 
             <div class="iplas-selection-shell">
@@ -41,12 +46,22 @@
 
                 <label class="iplas-field">
                   <span>Start Time</span>
-                  <input v-model="startTime" type="datetime-local">
+                  <input
+                    v-model="startTime"
+                    type="datetime-local"
+                    class="iplas-datetime-input app-themed-input app-themed-datetime-input"
+                    @click="openNativeDateTimePicker"
+                  />
                 </label>
 
                 <label class="iplas-field">
                   <span>End Time</span>
-                  <input v-model="endTime" type="datetime-local">
+                  <input
+                    v-model="endTime"
+                    type="datetime-local"
+                    class="iplas-datetime-input app-themed-input app-themed-datetime-input"
+                    @click="openNativeDateTimePicker"
+                  />
                 </label>
               </div>
 
@@ -230,7 +245,7 @@
                   <span>Search Records</span>
                   <div class="iplas-input-with-icon">
                     <Icon icon="mdi:magnify" />
-                    <input :value="recordSearchQueries[currentStationGroup.stationName] || ''" type="text"
+                    <input :value="recordSearchQueries[currentStationGroup.stationName] || ''" class="app-themed-input" type="text"
                       placeholder="Search ISN, Device ID, Error Code, Error Name..."
                       @input="handleStationSearchInput(currentStationGroup.stationName, $event)">
                   </div>
@@ -485,6 +500,7 @@ import { Icon } from '@iconify/vue'
 import { useMutation } from '@tanstack/vue-query'
 import { useDebounceFn } from '@vueuse/core'
 import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
+import { iplasProxyApi } from '@/features/dut-logs/api/iplasProxyApi'
 import type {
   CsvTestItemData,
   DownloadAttachmentInfo,
@@ -531,7 +547,7 @@ const searchMode = useTabPersistence<'station' | 'isn'>('subTab', 'station')
 
 const searchModeItems = [
   { value: 'station', label: 'Station Search', icon: 'mdi:router-wireless' },
-  { value: 'isn', label: 'ISN Search', icon: 'mdi:barcode-search' },
+  { value: 'isn', label: 'ISN Search', icon: 'mdi:barcode-scan' },
 ]
 
 const {
@@ -681,17 +697,39 @@ function getLocalTimeString(date: Date): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
+function openNativeDateTimePicker(event: MouseEvent): void {
+  const input = event.currentTarget as (HTMLInputElement & { showPicker?: () => void }) | null
+  if (!input?.showPicker) {
+    return
+  }
+
+  try {
+    input.showPicker()
+  } catch {
+    // Native picker availability is browser-dependent.
+  }
+}
+
+async function getObservableIplasNow(): Promise<Date> {
+  try {
+    const response = await iplasProxyApi.getServerTime()
+    const serverNow = new Date(response.server_time)
+    if (!Number.isNaN(serverNow.getTime())) {
+      return serverNow
+    }
+  } catch (_err) {
+    // Fall back to browser time when proxy server time is unavailable.
+  }
+
+  return new Date()
+}
+
 /**
- * Get date range based on preset selection
- * Current Shift: 06:50:00 - 20:00:00 (Day) or 20:00:00 - 06:50:00 next day (Night)
- * Today: 00:00:01 - 23:59:59
- * Yesterday: Same as today but yesterday
- * Week: Current week 00:00:01 - 23:59:59
- * Last Week: Monday - Sunday last week
- * Month: Current month
+ * Get date range based on preset selection.
+ * Current Shift follows observable iPLAS server time so local dev matches mirror fixtures.
  */
-function getDateRangeForPreset(preset: string): { start: Date; end: Date } {
-  const now = new Date()
+async function getDateRangeForPreset(preset: string): Promise<{ start: Date; end: Date }> {
+  const now = preset === 'current_shift' ? await getObservableIplasNow() : new Date()
   const currentHour = now.getHours()
   const currentMinutes = now.getMinutes()
 
@@ -783,16 +821,15 @@ function getDateRangeForPreset(preset: string): { start: Date; end: Date } {
 /**
  * Apply selected date range preset
  */
-function applyDateRangePreset(preset: string): void {
-  const { start, end } = getDateRangeForPreset(preset)
+async function applyDateRangePreset(preset: string): Promise<void> {
+  const { start, end } = await getDateRangeForPreset(preset)
   startTime.value = getLocalTimeString(start)
   endTime.value = getLocalTimeString(end)
 }
 
 // Time range - initialize with current shift
-const { start: initialStart, end: initialEnd } = getDateRangeForPreset('current_shift')
-const startTime = ref(getLocalTimeString(initialStart))
-const endTime = ref(getLocalTimeString(initialEnd))
+const startTime = ref('')
+const endTime = ref('')
 
 // Per-station status filters (for filtering records within each station tab)
 const stationStatusFilters = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
@@ -2470,6 +2507,7 @@ watch(indexedDbActiveStationTab, async (newTab: number) => {
 // Initialize
 onMounted(async () => {
   await fetchSiteProjects()
+  await applyDateRangePreset(dateRangePreset.value)
   await refreshIndexedDbPage(true)
 
   // UPDATED: Set default site based on connected iPLAS server
@@ -2498,7 +2536,8 @@ onUnmounted(() => {
 <style scoped>
 .iplas-content-shell,
 .iplas-content-pane,
-.iplas-selection-shell {
+.iplas-selection-shell,
+.iplas-header-actions {
   display: grid;
   gap: 1rem;
 }
@@ -2603,7 +2642,7 @@ onUnmounted(() => {
 }
 
 .iplas-field select,
-.iplas-field input,
+.iplas-field input:not(.app-themed-input),
 .iplas-button,
 .iplas-notice button,
 .iplas-summary-remove {
@@ -2611,8 +2650,8 @@ onUnmounted(() => {
   font: inherit;
 }
 
-.iplas-field select,
-.iplas-field input {
+.iplas-field :not(.app-select) > select,
+.iplas-field input:not(.app-themed-input) {
   width: 100%;
   border: 1px solid var(--app-border);
   padding: 0.74rem 0.82rem;
@@ -2620,8 +2659,12 @@ onUnmounted(() => {
   color: var(--app-ink);
 }
 
-.iplas-field select:focus,
-.iplas-field input:focus {
+.iplas-datetime-input {
+  width: 100%;
+}
+
+.iplas-field :not(.app-select) > select:focus,
+.iplas-field input:not(.app-themed-input):focus {
   outline: none;
   border-color: var(--app-ring);
   box-shadow: none;
@@ -2642,16 +2685,21 @@ onUnmounted(() => {
   color: var(--app-muted);
 }
 
-.iplas-input-with-icon input {
+.iplas-input-with-icon input.app-themed-input {
   border: 0;
   padding-left: 0;
   padding-right: 0;
   background: transparent;
+  box-shadow: none;
 }
 
 .iplas-input-with-icon:focus-within {
   border-color: var(--app-ring);
   box-shadow: none;
+}
+
+.iplas-header-actions {
+  grid-auto-flow: column;
 }
 
 .iplas-button,
@@ -3011,6 +3059,8 @@ onUnmounted(() => {
 }
 
 @media (max-width: 720px) {
+
+  .iplas-header-actions,
 
   .iplas-section__header--split,
   .iplas-selection-shell__toolbar,
