@@ -28,6 +28,34 @@
         </button>
       </div>
 
+      <section v-if="localSelectedStations.length > 0" class="station-dialog__summary-panel">
+        <div class="station-dialog__summary-header">
+          <div>
+            <p class="station-dialog__summary-eyebrow">Configured Stations</p>
+            <strong>Review the active station scope before saving</strong>
+          </div>
+          <span class="station-dialog__pill station-dialog__pill--success">{{ localSelectedStations.length }} active</span>
+        </div>
+
+        <div class="station-dialog__summary-list">
+          <article
+            v-for="station in selectedStationSummaries"
+            :key="station.value"
+            class="station-dialog__summary-item"
+          >
+            <div>
+              <strong>{{ station.displayName }}</strong>
+              <p>{{ station.stationName }}</p>
+            </div>
+            <div class="station-dialog__summary-meta">
+              <span v-if="station.order" class="station-dialog__pill station-dialog__pill--muted">#{{ station.order }}</span>
+              <span class="station-dialog__pill station-dialog__pill--info">{{ station.deviceLabel }}</span>
+              <span v-if="station.testStatus !== 'ALL'" class="station-dialog__pill station-dialog__pill--warning">{{ station.testStatus }}</span>
+            </div>
+          </article>
+        </div>
+      </section>
+
       <div class="station-dialog__list">
         <article v-for="station in filteredStations" :key="station.value" class="station-dialog__item"
           :class="{ 'station-dialog__item--active': isStationSelected(station.value) }" role="button" tabindex="0"
@@ -37,7 +65,10 @@
             <span class="station-dialog__checkmark" :class="{ 'is-active': isStationSelected(station.value) }"></span>
             <div class="station-dialog__item-copy">
               <strong>{{ station.displayName }}</strong>
-              <span>{{ station.stationName }}</span>
+              <span>
+                TSP: {{ station.stationName }}
+                <span v-if="station.order" class="station-dialog__pill station-dialog__pill--muted">#{{ station.order }}</span>
+              </span>
             </div>
             <div class="station-dialog__item-meta">
               <span v-if="isStationSelected(station.value)" class="station-dialog__pill station-dialog__pill--info">
@@ -51,35 +82,44 @@
           </div>
 
           <div v-if="isStationSelected(station.value)" class="station-dialog__config" @click.stop>
-            <div class="station-dialog__config-header">
-              <p>Device IDs</p>
-              <button v-if="(localDeviceIds[station.value] || []).length > 0" type="button"
-                class="station-dialog__ghost-action" @click="clearStationDeviceIds(station.value)">
-                Clear devices
-              </button>
-            </div>
+            <section class="station-dialog__config-group">
+              <div class="station-dialog__config-header">
+                <div>
+                  <p>Device Scope</p>
+                  <span class="station-dialog__config-caption">Leave empty to include all devices for this station.</span>
+                </div>
+                <button v-if="(localDeviceIds[station.value] || []).length > 0" type="button"
+                  class="station-dialog__ghost-action" @click="clearStationDeviceIds(station.value)">
+                  Clear devices
+                </button>
+              </div>
 
-            <div v-if="loadingDeviceIdsByStation[station.value]" class="station-dialog__subtle-state">
-              <Icon icon="mdi:loading" class="station-dialog__spin" />
-              <span>Loading device IDs...</span>
-            </div>
-            <div v-else-if="(deviceIdsByStation[station.value] || []).length > 0" class="station-dialog__device-list">
-              <button v-for="deviceId in deviceIdsByStation[station.value] || []" :key="deviceId" type="button"
-                class="station-dialog__device-chip"
-                :class="{ 'station-dialog__device-chip--active': isStationDeviceSelected(station.value, deviceId) }"
-                @click="toggleStationDeviceId(station.value, deviceId)">
-                <Icon
-                  :icon="isStationDeviceSelected(station.value, deviceId) ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'" />
-                <span>{{ deviceId }}</span>
-              </button>
-            </div>
-            <p v-else class="station-dialog__subtle-copy">No device IDs available yet. Empty selection keeps all
-              devices.</p>
+              <div v-if="loadingDeviceIdsByStation[station.value]" class="station-dialog__subtle-state">
+                <Icon icon="mdi:loading" class="station-dialog__spin" />
+                <span>Loading device IDs...</span>
+              </div>
+              <AppMultiSelect v-else-if="(deviceIdsByStation[station.value] || []).length > 0"
+                :model-value="getSelectedDeviceIds(station.value)"
+                @update:model-value="setSelectedDeviceIds(station.value, $event as string[])"
+                :options="getDeviceIdOptions(station.value)"
+                placeholder="All Device(s)" class="station-dialog__device-select" />
+              <p v-else class="station-dialog__subtle-copy">No device IDs available yet. Empty selection keeps all
+                devices.</p>
+            </section>
 
-            <label class="station-dialog__field station-dialog__field--compact">
-              <span>Test Status</span>
-              <AppSelect v-model="localTestStatus[station.value]" :options="testStatusSelectOptions" :searchable="false" />
-            </label>
+            <section class="station-dialog__config-group station-dialog__config-group--compact">
+              <div class="station-dialog__config-header">
+                <div>
+                  <p>Result Scope</p>
+                  <span class="station-dialog__config-caption">Optionally narrow results to PASS or FAIL only.</span>
+                </div>
+              </div>
+
+              <label class="station-dialog__field station-dialog__field--compact">
+                <span>Test Status</span>
+                <AppSelect v-model="localTestStatus[station.value]" :options="testStatusSelectOptions" :searchable="false" />
+              </label>
+            </section>
           </div>
         </article>
 
@@ -113,12 +153,14 @@
 import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
+import AppMultiSelect from '@/shared/ui/forms/AppMultiSelect.vue'
 import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 
 export interface DataExplorerStationOption {
   value: string
   displayName: string
   stationName: string
+  order?: number
 }
 
 export interface StationSelectionResult {
@@ -194,6 +236,21 @@ const someFilteredSelected = computed(() => {
   return filteredValues.value.some((value) => localSelectedStations.value.includes(value))
 })
 
+const selectedStationSummaries = computed(() => {
+  return localSelectedStations.value
+    .map((stationValue) => {
+      const station = props.stations.find((entry) => entry.value === stationValue)
+      if (!station) return null
+
+      return {
+        ...station,
+        deviceLabel: getStationDeviceLabel(stationValue),
+        testStatus: localTestStatus.value[stationValue] || 'ALL',
+      }
+    })
+    .filter((station): station is NonNullable<typeof station> => Boolean(station))
+})
+
 function syncLocalSelection(): void {
   localSelectedStations.value = [...props.selectedStations]
   localDeviceIds.value = { ...props.selectedDeviceIds }
@@ -246,6 +303,21 @@ function isStationDeviceSelected(stationValue: string, deviceId: string): boolea
   return (localDeviceIds.value[stationValue] || []).includes(deviceId)
 }
 
+function getDeviceIdOptions(stationValue: string) {
+  return (props.deviceIdsByStation[stationValue] || []).map((deviceId) => ({
+    label: deviceId,
+    value: deviceId,
+  }))
+}
+
+function getSelectedDeviceIds(stationValue: string): string[] {
+  return localDeviceIds.value[stationValue] || []
+}
+
+function setSelectedDeviceIds(stationValue: string, deviceIds: string[]): void {
+  localDeviceIds.value[stationValue] = [...deviceIds]
+}
+
 function isStationSelected(stationValue: string): boolean {
   return localSelectedStations.value.includes(stationValue)
 }
@@ -257,13 +329,6 @@ function getStationDeviceLabel(stationValue: string): string {
   }
 
   return `${selectedCount} Device(s)`
-}
-
-function toggleStationDeviceId(stationValue: string, deviceId: string): void {
-  const currentIds = localDeviceIds.value[stationValue] || []
-  localDeviceIds.value[stationValue] = currentIds.includes(deviceId)
-    ? currentIds.filter((value) => value !== deviceId)
-    : [...currentIds, deviceId]
 }
 
 function clearStationDeviceIds(stationValue: string): void {
@@ -390,6 +455,53 @@ watch(
   gap: 0.5rem;
 }
 
+.station-dialog__summary-panel,
+.station-dialog__summary-item,
+.station-dialog__config-group {
+  display: grid;
+  gap: 0.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.8rem;
+  background: var(--app-panel);
+}
+
+.station-dialog__summary-panel,
+.station-dialog__config-group {
+  padding: 0.9rem;
+}
+
+.station-dialog__summary-header,
+.station-dialog__summary-item {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.station-dialog__summary-eyebrow,
+.station-dialog__config-caption {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.station-dialog__summary-list,
+.station-dialog__summary-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
+.station-dialog__summary-list {
+  flex-direction: column;
+}
+
+.station-dialog__summary-item {
+  padding: 0.8rem 0.9rem;
+}
+
 .station-dialog__pill {
   display: inline-flex;
   align-items: center;
@@ -419,6 +531,13 @@ watch(
   color: var(--app-warning);
 }
 
+.station-dialog__pill--muted {
+  margin-left: 0.45rem;
+  background: color-mix(in srgb, var(--app-muted) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--app-muted) 16%, transparent);
+  color: var(--app-muted);
+}
+
 .station-dialog__list {
   display: grid;
   gap: 0.8rem;
@@ -431,9 +550,8 @@ watch(
   border: 1px solid var(--app-border);
   border-radius: 0.8rem;
   background: var(--app-panel);
-  overflow: hidden;
-  cursor: pointer;
-  transition: border-color 0.15s ease, background-color 0.15s ease;
+   cursor: pointer;
+   transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
 .station-dialog__item:hover,
@@ -443,9 +561,10 @@ watch(
 }
 
 .station-dialog__item-main {
-  display: flex;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 0.85rem;
-  align-items: flex-start;
+  align-items: start;
   padding: 0.8rem 0.9rem;
 }
 
@@ -485,9 +604,9 @@ watch(
 .station-dialog__item-meta {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 0.45rem;
-  margin-left: auto;
+  max-width: 100%;
 }
 
 .station-dialog__config {
@@ -495,6 +614,14 @@ watch(
   gap: 0.85rem;
   padding: 0 0.9rem 0.9rem;
   background: color-mix(in srgb, var(--app-accent) 4%, transparent);
+}
+
+.station-dialog__config-group--compact {
+  max-width: 18rem;
+}
+
+.station-dialog__device-select {
+  width: 100%;
 }
 
 .station-dialog__device-list {
@@ -592,9 +719,16 @@ watch(
   }
 
   .station-dialog__item-main,
-  .station-dialog__item-meta {
+  .station-dialog__item-meta,
+  .station-dialog__summary-header,
+  .station-dialog__summary-item {
+    grid-template-columns: minmax(0, 1fr);
     align-items: flex-start;
     justify-content: flex-start;
+  }
+
+  .station-dialog__config-group--compact {
+    max-width: none;
   }
 }
 </style>

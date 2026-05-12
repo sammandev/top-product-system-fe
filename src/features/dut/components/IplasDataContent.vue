@@ -123,75 +123,34 @@
               </section>
 
               <section v-if="selectedStations.length > 0" class="iplas-fetch-panel">
-                <label class="iplas-toggle-card">
-                  <input v-model="useIndexedDbMode" type="checkbox">
-                  <div>
-                    <span>Stream to Disk</span>
-                    <p>Use IndexedDB streaming for long or high-volume searches. Searches over 7 days switch automatically.</p>
-                  </div>
-                </label>
-
                 <div class="iplas-fetch-panel__actions">
-                  <button type="button" class="iplas-button iplas-button--primary" :disabled="isStreaming || stationSearchRunLoading"
+                  <button type="button" class="iplas-button iplas-button--primary" :disabled="stationSearchRunLoading"
                     @click="fetchTestItems">
-                    <Icon :icon="stationSearchRunLoading || isStreaming ? 'mdi:loading' : 'mdi:database-search-outline'"
-                      :class="{ 'iplas-spin': stationSearchRunLoading || isStreaming }" />
-                    <span>{{ useIndexedDbMode ? 'Stream' : 'Search' }} Test Data</span>
+                    <Icon :icon="stationSearchRunLoading ? 'mdi:loading' : 'mdi:database-search-outline'"
+                      :class="{ 'iplas-spin': stationSearchRunLoading }" />
+                    <span>Search Test Data</span>
                     <strong>({{ selectedStations.length }} station{{ selectedStations.length > 1 ? 's' : '' }})</strong>
-                  </button>
-
-                  <button v-if="isStreaming" type="button" class="iplas-button iplas-button--danger"
-                    @click="abortIndexedDbStream">
-                    <Icon icon="mdi:stop-circle-outline" />
-                    <span>Stop Stream</span>
                   </button>
                 </div>
 
-                <div
-                  v-if="stationSearchRunLoading && !useIndexedDbMode"
-                  class="iplas-progress-card"
-                >
+                <div v-if="stationSearchRunLoading" class="iplas-progress-card">
                   <div class="iplas-progress-card__spinner" />
                   <div>
                     <strong>
                       Processing {{ stationSearchRunProgress.processed }} of
                       {{ stationSearchRunProgress.total }} station/device searches
                     </strong>
-                    <p>Regular mode is preparing a backend-managed search run before paging results.</p>
-                  </div>
-                </div>
-
-                <div v-if="isStreaming" class="iplas-progress-card iplas-progress-card--success">
-                  <div class="iplas-progress-card__spinner" />
-                  <div>
-                    <strong>Streaming {{ streamStatus.recordsWritten.toLocaleString() }} records to disk</strong>
-                    <p>
-                      <template v-if="streamStatus.totalEstimated > 0">
-                        Estimated total: {{ streamStatus.totalEstimated.toLocaleString() }} records.
-                      </template>
-                      <template v-else>
-                        Total estimate will appear once the stream reports it.
-                      </template>
-                    </p>
+                    <p>Preparing a backend-managed search run before paging results.</p>
                   </div>
                 </div>
               </section>
 
-              <div v-if="autoIndexedDbReason" class="iplas-notice iplas-notice--info">
-                <div>
-                  <strong>Stream mode was enabled automatically</strong>
-                  <p>{{ autoIndexedDbReason }}</p>
-                </div>
-                <button type="button" @click="autoIndexedDbReason = null">Dismiss</button>
-              </div>
-
               <div v-if="stationSearchPossiblyTruncated && hasRegularModeData" class="iplas-notice iplas-notice--warning">
                 <div>
-                  <strong>5,000-row upstream limit reached</strong>
+                  <strong>Backend flagged possible truncation</strong>
                   <p>
-                    Results may be incomplete because the upstream iPLAS API caps each response at 5,000 rows. Narrow
-                    the date range
-                    or keep Stream to Disk enabled for larger searches.
+                    Results may still be incomplete if the upstream iPLAS API could not be fully covered by backend splitting.
+                    Narrow the date range or station and device scope, then run the search again.
                   </p>
                 </div>
               </div>
@@ -199,7 +158,7 @@
           </AppPanel>
 
           <!-- Test Items Results (Regular Mode) -->
-          <section v-if="!useIndexedDbMode && hasRegularModeData" class="iplas-section">
+          <section v-if="hasRegularModeData" class="iplas-section">
             <div class="iplas-section__header iplas-section__header--split">
               <div>
                 <p class="iplas-section__eyebrow">Regular Mode</p>
@@ -320,179 +279,6 @@
             </div>
           </section>
 
-          <!-- IndexedDB Mode Results -->
-          <section v-if="useIndexedDbMode && (indexedDbTotalItems > 0 || isStreaming)" class="iplas-section">
-            <div class="iplas-section__header iplas-section__header--split">
-              <div>
-                <p class="iplas-section__eyebrow">Disk Mode</p>
-                <h2>IndexedDB Results</h2>
-                <p class="iplas-section__description">
-                  {{ indexedDbTotalItems.toLocaleString() }} records currently live on disk{{ isStreaming ? ' while the stream is still running' : '' }}. Use station tabs to scope the current result view.
-                </p>
-              </div>
-              <div class="iplas-result-toolbar">
-                <span class="iplas-pill iplas-pill--success">{{ indexedDbTotalItems.toLocaleString() }} on disk</span>
-                <span v-if="isStreaming" class="iplas-pill iplas-pill--warm">Streaming in progress</span>
-                <button v-if="indexedDbSelectedKeys.length > 0" type="button" class="iplas-button iplas-button--ghost"
-                  :disabled="downloading" @click="downloadIndexedDbSelectedRecords">
-                  <Icon :icon="downloading ? 'mdi:loading' : 'mdi:download'" :class="{ 'iplas-spin': downloading }" />
-                  <span>Download TXT ({{ indexedDbSelectedKeys.length }})</span>
-                </button>
-                <button v-if="indexedDbSelectedKeys.length > 0" type="button" class="iplas-button iplas-button--success"
-                  :disabled="downloadingCsv" @click="downloadIndexedDbSelectedRecordsCsv">
-                  <Icon :icon="downloadingCsv ? 'mdi:loading' : 'mdi:file-delimited'"
-                    :class="{ 'iplas-spin': downloadingCsv }" />
-                  <span>Download CSV ({{ indexedDbSelectedKeys.length }})</span>
-                </button>
-              </div>
-            </div>
-
-            <div v-if="streamStatus.error" class="iplas-notice iplas-notice--error">
-              <div>
-                <strong>IndexedDB stream error</strong>
-                <p>{{ streamStatus.error }}</p>
-              </div>
-            </div>
-
-            <AppTabs v-if="indexedDbStationList.length > 0 && !isStreaming" v-model="indexedDbActiveStationTabKey"
-              :items="indexedDbTabItems" scrollable>
-              <template #panel-all>
-                <div class="iplas-result-summary-card">
-                  <div>
-                    <strong>All Stations</strong>
-                    <p>Browse the full disk-backed result set before narrowing to one station.</p>
-                  </div>
-                  <span class="iplas-pill iplas-pill--cool">{{ indexedDbTotalItems.toLocaleString() }} rows</span>
-                </div>
-              </template>
-              <template v-for="panel in indexedDbStationPanels" :key="panel.stationName" v-slot:[panel.slotName]>
-                <div class="iplas-result-summary-card">
-                  <div>
-                    <strong>{{ panel.stationName }}</strong>
-                    <p>Use the server-side table below with the active station filter applied.</p>
-                  </div>
-                  <span class="iplas-pill iplas-pill--cool">Station filter active</span>
-                </div>
-              </template>
-            </AppTabs>
-            <div v-else class="iplas-result-summary-card">
-              <div>
-                <strong>{{ isStreaming ? 'Streaming to disk' : 'Disk-backed result view' }}</strong>
-                <p>
-                  <template v-if="isStreaming">
-                    Station sub-tabs will appear after the stream finishes and the station list can be derived from the
-                    stored payload.
-                  </template>
-                  <template v-else>
-                    Station sub-tabs will appear once disk-backed rows are available for at least one station.
-                  </template>
-                </p>
-              </div>
-            </div>
-
-            <div class="iplas-indexeddb-status-bar">
-              <div>
-                <strong>{{ indexedDbSelectedKeys.length }} selected row{{ indexedDbSelectedKeys.length === 1 ? '' : 's'
-                  }}</strong>
-                <p>
-                  <template v-if="indexedDbActiveStationTab === 0">
-                    The disk-backed table is showing all stations.
-                  </template>
-                  <template v-else>
-                    Active station filter: {{ indexedDbStationList[indexedDbActiveStationTab - 1] || 'Unknown station'
-                    }}.
-                  </template>
-                </p>
-              </div>
-              <div>
-                <strong>{{ isStreaming ? 'Stream in progress' : 'Ready for pagination' }}</strong>
-                <p>
-                  <template v-if="isStreaming">
-                    {{ streamStatus.recordsWritten.toLocaleString() }} records written so far.
-                  </template>
-                  <template v-else>
-                    Existing table pagination internals remain unchanged in this slice.
-                  </template>
-                </p>
-              </div>
-            </div>
-
-            <AppDataGrid class="iplas-indexeddb-grid" :columns="indexedDbGridColumns" :rows="indexedDbGridRows"
-              data-key="recordKey" :loading="indexedDbLoading || isStreaming" paginator
-              :rows-per-page="indexedDbTableOptions.itemsPerPage" :total-records="indexedDbTotalItems" lazy
-              :selection="indexedDbSelectedRows" selection-mode="multiple" :show-selection-column="true"
-              :sort-field="indexedDbSortField" :sort-order="indexedDbSortOrder" scroll-height="640px"
-              :table-style="{ minWidth: '62rem' }" :row-class="indexedDbRowClass"
-              @update:selection="handleIndexedDbSelectionChange" @page="handleIndexedDbGridPage"
-              @sort="handleIndexedDbGridSort" @row-click="handleIndexedDbRowClick">
-              <template #cell-ISN="{ data }">
-                <div class="iplas-indexeddb-inline-cell">
-                  <button type="button" class="iplas-indexeddb-icon-button" title="Copy ISN" aria-label="Copy ISN"
-                    @click.stop="copyToClipboard(String(data.ISN || ''))">
-                    <Icon icon="mdi:content-copy" />
-                  </button>
-                  <button type="button" class="iplas-indexeddb-copy-value" :title="String(data.ISN || 'No ISN')"
-                    @click.stop="copyToClipboard(String(data.ISN || ''))">
-                    {{ data.ISN || '-' }}
-                  </button>
-                </div>
-              </template>
-
-              <template #cell-DeviceId="{ data }">
-                <button type="button" class="iplas-indexeddb-copy-pill" :title="String(data.DeviceId || 'No Device ID')"
-                  @click.stop="copyToClipboard(String(data.DeviceId || ''))">
-                  {{ data.DeviceId }}
-                </button>
-              </template>
-
-              <template #cell-TestEndTime="{ value }">
-                {{ value }}
-              </template>
-
-              <template #cell-Duration="{ value }">
-                <span class="iplas-indexeddb-badge iplas-indexeddb-badge--neutral">
-                  {{ value }}
-                </span>
-              </template>
-
-              <template #cell-TestStatus="{ data }">
-                <span class="iplas-indexeddb-badge"
-                  :class="data.TestStatus === 'PASS' ? 'iplas-indexeddb-badge--success' : 'iplas-indexeddb-badge--error'">
-                  {{ data.TestStatus }}
-                </span>
-              </template>
-
-              <template #cell-actions="{ data }">
-                <div class="iplas-indexeddb-action-cell">
-                  <button type="button" class="iplas-indexeddb-action-button" :disabled="downloading"
-                    title="Download Test Log" @click.stop="downloadIndexedDbRecord(data.sourceRecord)">
-                    <Icon :icon="downloading ? 'mdi:loading' : 'mdi:download'" :class="{ 'iplas-spin': downloading }" />
-                    <span>TXT</span>
-                  </button>
-                </div>
-              </template>
-
-              <template #empty>
-                <div v-if="isStreaming" class="iplas-indexeddb-empty-state">
-                  <Icon icon="mdi:database-sync-outline" class="iplas-indexeddb-empty-state__icon iplas-spin" />
-                  <strong>Streaming data to disk...</strong>
-                  <p>{{ streamStatus.recordsWritten.toLocaleString() }} records saved so far.</p>
-                </div>
-                <div v-else class="iplas-indexeddb-empty-state">
-                  <Icon icon="mdi:database-off-outline" class="iplas-indexeddb-empty-state__icon" />
-                  <strong>No data in IndexedDB</strong>
-                  <p>Start a search with Stream to Disk enabled.</p>
-                </div>
-              </template>
-
-              <template #loading>
-                <div class="iplas-indexeddb-loading-state">
-                  <Icon icon="mdi:loading" class="iplas-spin" />
-                  <span>{{ isStreaming ? 'Streaming rows from disk...' : 'Loading IndexedDB rows...' }}</span>
-                </div>
-              </template>
-            </AppDataGrid>
-          </section>
         </section>
       </template>
 
@@ -531,7 +317,6 @@ import type {
 import type { CompactCsvTestItemData } from '@/features/dut-logs/api/iplasProxyApi'
 import type { DownloadCsvLogInfo } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
-import { useIplasLocalData } from '@/features/dut-logs/composables/useIplasLocalData'
 import {
   createIplasStationSearchRun,
   fetchIplasStationSearchRunRecordsQuery,
@@ -540,11 +325,9 @@ import {
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { queryKeys } from '@/core/query'
 import { useNotification } from '@/shared/composables/useNotification'
-import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
-import { adjustIplasDisplayTime } from '@/shared/utils/helpers'
 import type { StationSelectionResult } from './DataExplorerStationSelectionDialog.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 
@@ -584,9 +367,7 @@ const {
   loadingStations,
   downloading,
   error,
-  siteProjects,
   stations,
-  compactTestItemData,
   uniqueSites,
   projectsBySite,
   fetchSiteProjects,
@@ -634,10 +415,6 @@ const stationStatusSelectOptions = [
 const deviceIdsByStation = ref<Record<string, string[]>>({})
 const stationDeviceRequestPromises = ref<Map<string, Promise<string[]>>>(new Map())
 
-// Mode: 'full' loads complete records, 'compact' uses lazy loading for test items
-// Compact mode is more memory efficient for large datasets
-const useCompactMode = ref(true)
-
 // Computed: Check if the backend search run has records available.
 const hasRegularModeData = computed(() => {
   return (stationSearchRunStatus.value?.total_records ?? 0) > 0
@@ -648,40 +425,8 @@ const regularModeRecordCount = computed(() => {
   return stationSearchRunStatus.value?.total_records ?? 0
 })
 
-// IndexedDB Mode: Stream data directly to disk instead of keeping in memory
-// This is the most memory-efficient mode for large datasets (10,000+ records)
-const useIndexedDbMode = ref(false)
-const autoIndexedDbReason = ref<string | null>(null)
 const showStationSelectionDialog = ref(false)
 const stationTestStatus = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
-
-const FORCE_STREAM_RANGE_DAYS = 7
-const FORCE_STREAM_RANGE_HOURS = FORCE_STREAM_RANGE_DAYS * 24
-const AUTO_INDEXED_DB_LONG_RANGE_HOURS = 12
-const AUTO_INDEXED_DB_STATION_HOURS = 24
-const AUTO_INDEXED_DB_DEVICE_HOURS = 96
-
-// ============================================================================
-// IndexedDB Mode Setup (Stream-to-Disk Architecture)
-// ============================================================================
-
-// Initialize the local data composable for IndexedDB table integration
-const {
-  items: indexedDbItems,
-  totalItems: indexedDbTotalItems,
-  loading: indexedDbLoading,
-  tableOptions: indexedDbTableOptions,
-  streamStatus,
-  isStreaming,
-  streamProgress,
-  loadItems: loadIndexedDbItems,
-  streamData: streamToIndexedDb,
-  abortStream: abortIndexedDbStream,
-  updateFilter: updateIndexedDbFilter,
-} = useIplasLocalData({
-  initialItemsPerPage: 25,
-  filterDebounceMs: 300,
-})
 
 const stationSearchMutation = useMutation({
   mutationFn: runStationSearch,
@@ -1092,61 +837,6 @@ function removeSelectedStation(stationValue: string): void {
   updateSelectedStations(selectedStations.value.filter((value: string) => value !== stationValue))
 }
 
-function formatIndexedDbHours(durationHours: number): string {
-  return Number.isInteger(durationHours) ? `${durationHours}` : durationHours.toFixed(1)
-}
-
-function getAutoIndexedDbReason(
-  resolvedStations: { deviceIds: string[] }[],
-  beginTime: Date,
-  endTime: Date,
-): string | null {
-  const durationHours = Math.max((endTime.getTime() - beginTime.getTime()) / 3_600_000, 1)
-  const stationCount = Math.max(resolvedStations.length, 1)
-  const selectedDeviceCount = resolvedStations.reduce(
-    (total, entry) => total + Math.max(entry.deviceIds.length, 1),
-    0,
-  )
-  const includesAllDevices = resolvedStations.some(
-    (entry) => entry.deviceIds.length === 0 || entry.deviceIds.includes('ALL'),
-  )
-
-  if (durationHours > FORCE_STREAM_RANGE_HOURS) {
-    return `Date range exceeds ${FORCE_STREAM_RANGE_DAYS} days (${formatIndexedDbHours(durationHours)} hours). Stream to Disk is required for this search.`
-  }
-
-  if (durationHours >= AUTO_INDEXED_DB_LONG_RANGE_HOURS) {
-    return `Long date range detected (${formatIndexedDbHours(durationHours)} hours). Stream to Disk was enabled automatically to keep the page responsive.`
-  }
-
-  if (stationCount * durationHours >= AUTO_INDEXED_DB_STATION_HOURS) {
-    return `${stationCount} stations across ${formatIndexedDbHours(durationHours)} hours can return a large result set. Stream to Disk was enabled automatically.`
-  }
-
-  if (selectedDeviceCount * durationHours >= AUTO_INDEXED_DB_DEVICE_HOURS) {
-    return `${selectedDeviceCount} device selections across ${formatIndexedDbHours(durationHours)} hours can return a large result set. Stream to Disk was enabled automatically.`
-  }
-
-  if (includesAllDevices && stationCount > 1 && durationHours >= 4) {
-    return `Multiple stations with all devices selected can exceed the in-memory limit. Stream to Disk was enabled automatically.`
-  }
-
-  return null
-}
-
-async function refreshIndexedDbPage(resetPage = false): Promise<void> {
-  if (resetPage) {
-    indexedDbTableOptions.value = {
-      ...indexedDbTableOptions.value,
-      page: 1,
-    }
-  }
-
-  await loadIndexedDbItems({
-    ...indexedDbTableOptions.value,
-  })
-}
-
 // Download controls
 const selectedRecordKeys = ref<Set<string>>(new Set<string>())
 const selectedRecordStationMap = ref<Map<string, string>>(new Map())
@@ -1279,362 +969,6 @@ const regularStationTabItems = computed(() => {
 const currentStationGroup = computed(() => {
   return groupedByStation.value[activeStationTab.value] || null
 })
-
-// Headers for IndexedDB table - User requested columns:
-// Checkbox (via show-select), ISN, Device ID, Test End, Duration, Status, Actions
-const indexedDbHeaders = [
-  { title: 'ISN', key: 'ISN', sortable: true, width: '180px' },
-  { title: 'Device ID', key: 'DeviceId', sortable: true, width: '100px' },
-  { title: 'Test End', key: 'TestEndTime', sortable: true, width: '160px' },
-  { title: 'Duration', key: 'Duration', sortable: false, width: '90px' },
-  { title: 'Status', key: 'TestStatus', sortable: true, width: '90px' },
-  { title: 'Actions', key: 'actions', sortable: false, width: '100px' },
-]
-
-const indexedDbGridColumns = indexedDbHeaders.map((header) => ({
-  header: header.title,
-  key: header.key,
-  field: header.key,
-  sortable: header.sortable,
-  style: { width: header.width },
-}))
-
-// Selected keys for IndexedDB table (for bulk download)
-const indexedDbSelectedKeys = ref<string[]>([])
-
-const indexedDbGridRows = computed(() =>
-  indexedDbItems.value.map((item) => ({
-    ...item,
-    recordKey: getIndexedDbRecordKey(item),
-    TestEndTime: item.TestEndTime
-      ? adjustIplasDisplayTime(item.TestEndTime, 1)
-      : adjustIplasDisplayTime(item.TestStartTime, 1),
-    Duration: calculateIndexedDbDuration(item),
-    sourceRecord: item,
-  })),
-)
-
-const indexedDbSelectedRows = computed(() => {
-  if (indexedDbSelectedKeys.value.length === 0) {
-    return []
-  }
-
-  const selectedKeySet = new Set(indexedDbSelectedKeys.value)
-  return indexedDbGridRows.value.filter((item) => selectedKeySet.has(String(item.recordKey)))
-})
-
-const indexedDbSortField = computed(() => indexedDbTableOptions.value.sortBy[0]?.key)
-
-const indexedDbSortOrder = computed(() => {
-  const currentSort = indexedDbTableOptions.value.sortBy[0]
-  if (!currentSort) {
-    return null
-  }
-
-  return currentSort.order === 'desc' ? -1 : 1
-})
-
-// Active station tab for IndexedDB results
-const indexedDbActiveStationTab = ref(0)
-
-const indexedDbActiveStationTabKey = computed({
-  get: () =>
-    indexedDbActiveStationTab.value === 0 ? 'all' : `station-${indexedDbActiveStationTab.value}`,
-  set: (value: string) => {
-    if (value === 'all') {
-      indexedDbActiveStationTab.value = 0
-      return
-    }
-
-    const match = value.match(/^station-(\d+)$/)
-    indexedDbActiveStationTab.value = match ? Number(match[1]) : 0
-  },
-})
-
-// Get distinct stations from IndexedDB data
-const indexedDbStationList = computed(() => {
-  const stations = new Set<string>()
-  for (const item of indexedDbItems.value) {
-    if (item.Station) {
-      stations.add(item.Station)
-    }
-  }
-  return Array.from(stations).sort()
-})
-
-const indexedDbTabItems = computed(() => {
-  return [
-    { value: 'all', label: 'All Stations', icon: 'mdi:view-list' },
-    ...indexedDbStationList.value.map((stationName, index) => ({
-      value: `station-${index + 1}`,
-      label: stationName,
-      icon: 'mdi:router-wireless',
-    })),
-  ]
-})
-
-const indexedDbStationPanels = computed(() => {
-  return indexedDbStationList.value.map((stationName, index) => ({
-    stationName,
-    slotName: `panel-station-${index + 1}`,
-  }))
-})
-
-// Calculate duration for IndexedDB records
-function calculateIndexedDbDuration(record: (typeof indexedDbItems.value)[0]): string {
-  // First try to use pre-calculated TestDuration
-  if (record.TestDuration && record.TestDuration > 0) {
-    const mins = Math.floor(record.TestDuration / 60)
-    const secs = record.TestDuration % 60
-    return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
-  }
-
-  // Fallback: calculate from TestStartTime and TestEndTime
-  const startTime = record.TestStartTime
-  const endTime = record.TestEndTime
-  if (startTime && endTime) {
-    try {
-      const start = new Date(startTime).getTime()
-      const end = new Date(endTime).getTime()
-      const diffSecs = Math.floor((end - start) / 1000)
-      if (diffSecs >= 0) {
-        const mins = Math.floor(diffSecs / 60)
-        const secs = diffSecs % 60
-        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`
-      }
-    } catch {
-      // Ignore parse errors
-    }
-  }
-  return '-'
-}
-
-// Get record key for IndexedDB records
-function getIndexedDbRecordKey(record: (typeof indexedDbItems.value)[0]): string {
-  return record.id || `${record.ISN}_${record.TestStartTime}`
-}
-
-// Handle IndexedDB row click to show details dialog
-async function handleIndexedDbRowClick(event: unknown): Promise<void> {
-  const item =
-    (
-      event as {
-        data?: (typeof indexedDbItems.value)[0]
-        sourceRecord?: (typeof indexedDbItems.value)[0]
-      }
-    ).data ?? (event as { sourceRecord?: (typeof indexedDbItems.value)[0] }).sourceRecord
-  if (!item) return
-
-  if (!selectedSite.value || !selectedProject.value) return
-
-  // Get station from record - use Station field for API calls (not TSP)
-  // Per iPLAS API docs: "station" is used to make requests, "TSP" is display only
-  const station =
-    item.Station || (indexedDbStationList.value[indexedDbActiveStationTab.value - 1] ?? '')
-
-  if (!station) {
-    console.error('Cannot fetch record test items: station is undefined')
-    return
-  }
-
-  // Fetch test items for this record
-  const testItems = await fetchRecordTestItems(
-    selectedSite.value,
-    selectedProject.value,
-    station,
-    item.ISN,
-    item.TestStartTime,
-    item.DeviceId,
-  )
-
-  // Create normalized record for dialog
-  const normalizedRecord: NormalizedRecord = {
-    isn: item.ISN,
-    deviceId: item.DeviceId,
-    stationName: item.Station,
-    displayStationName: item.Station,
-    tsp: item.Station,
-    site: item.Site,
-    project: item.Project,
-    line: item.Slot || '',
-    errorCode: item.ErrorCode || '',
-    errorName: item.ErrorName || '',
-    testStatus: item.TestStatus,
-    testStartTime: item.TestStartTime,
-    testEndTime: item.TestStartTime, // Will be computed from duration
-    testItems: testItems || [],
-  }
-
-  fullscreenRecord.value = normalizedRecord
-  showFullscreenDialog.value = true
-}
-
-function indexedDbRowClass(): string {
-  return 'iplas-indexeddb-row'
-}
-
-function handleIndexedDbSelectionChange(selection: unknown): void {
-  const selectedRows = Array.isArray(selection)
-    ? (selection as Array<{ recordKey: string }>).map((row) => row.recordKey)
-    : []
-  indexedDbSelectedKeys.value = selectedRows
-}
-
-async function handleIndexedDbGridPage(event: unknown): Promise<void> {
-  const pageEvent = event as { page?: number; rows?: number }
-  indexedDbTableOptions.value = {
-    ...indexedDbTableOptions.value,
-    page:
-      typeof pageEvent.page === 'number' ? pageEvent.page + 1 : indexedDbTableOptions.value.page,
-    itemsPerPage:
-      typeof pageEvent.rows === 'number'
-        ? pageEvent.rows
-        : indexedDbTableOptions.value.itemsPerPage,
-  }
-
-  await loadIndexedDbItems({
-    ...indexedDbTableOptions.value,
-  })
-}
-
-async function handleIndexedDbGridSort(event: unknown): Promise<void> {
-  const sortEvent = event as { sortField?: string; sortOrder?: number }
-  indexedDbTableOptions.value = {
-    ...indexedDbTableOptions.value,
-    sortBy:
-      sortEvent.sortField && sortEvent.sortOrder
-        ? [{ key: sortEvent.sortField, order: sortEvent.sortOrder === -1 ? 'desc' : 'asc' }]
-        : [],
-  }
-
-  await loadIndexedDbItems({
-    ...indexedDbTableOptions.value,
-  })
-}
-
-// Download selected IndexedDB records
-async function downloadIndexedDbSelectedRecords(): Promise<void> {
-  if (!selectedSite.value || !selectedProject.value || indexedDbSelectedKeys.value.length === 0)
-    return
-
-  try {
-    const attachments: DownloadAttachmentInfo[] = []
-
-    for (const item of indexedDbItems.value) {
-      const key = getIndexedDbRecordKey(item)
-      if (indexedDbSelectedKeys.value.includes(key)) {
-        // Use ISN if available, otherwise use DeviceId
-        const isn = item.ISN && item.ISN.trim() !== '' ? item.ISN : item.DeviceId
-        // Use TestEndTime for download API (required format), fallback to TestStartTime
-        const timeField = item.TestEndTime || item.TestStartTime
-        attachments.push({
-          isn,
-          time: formatTimeForDownload(timeField),
-          deviceid: item.DeviceId,
-          station: item.Station || '',
-        })
-      }
-    }
-
-    if (attachments.length > 0) {
-      console.log('Download IndexedDB attachments:', attachments)
-      await downloadAttachments(selectedSite.value, selectedProject.value, attachments)
-    }
-  } catch (err) {
-    console.error('Failed to download IndexedDB test logs:', err)
-  }
-}
-
-// Download selected IndexedDB records as CSV files
-async function downloadIndexedDbSelectedRecordsCsv(): Promise<void> {
-  if (!selectedSite.value || !selectedProject.value || indexedDbSelectedKeys.value.length === 0)
-    return
-
-  downloadingCsv.value = true
-
-  try {
-    const csvContents: { content: string; filename: string }[] = []
-
-    for (const item of indexedDbItems.value) {
-      const key = getIndexedDbRecordKey(item)
-      if (!indexedDbSelectedKeys.value.includes(key)) continue
-
-      // Get station from indexedDbStationList if not available
-      // Use Station field for API calls (not TSP) per iPLAS API docs
-      const station =
-        item.Station || indexedDbStationList.value[indexedDbActiveStationTab.value - 1] || ''
-
-      // Fetch test items
-      const testItems = await fetchRecordTestItems(
-        selectedSite.value,
-        selectedProject.value,
-        station,
-        item.DeviceId,
-        item.TestStartTime,
-        item.TestEndTime || item.TestStartTime,
-      )
-
-      if (testItems && testItems.length > 0) {
-        // Create a mock record for CSV conversion
-        const mockRecord: CsvTestItemData = {
-          Site: selectedSite.value,
-          Project: selectedProject.value,
-          station,
-          TSP: station,
-          Model: '',
-          MO: '',
-          Line: '',
-          ISN: item.ISN || item.DeviceId,
-          DeviceId: item.DeviceId,
-          'Test Status': item.TestStatus,
-          'Test Start Time': item.TestStartTime,
-          'Test end Time': item.TestEndTime || item.TestStartTime,
-          ErrorCode: item.ErrorCode || '',
-          ErrorName: item.ErrorName || '',
-          TestItem: testItems,
-        }
-
-        const csvContent = convertTestItemsToCsv(mockRecord, testItems)
-        const timestamp = item.TestStartTime.replace(/[/:]/g, '_').replace(/ /g, '_')
-        const filename = `${item.ISN || item.DeviceId}_${timestamp}_test_items.csv`
-        csvContents.push({ content: csvContent, filename })
-      }
-    }
-
-    // Download all CSVs
-    for (const { content, filename } of csvContents) {
-      downloadCsvFile(content, filename)
-      await new Promise((resolve) => setTimeout(resolve, 100))
-    }
-
-    console.log(`Downloaded ${csvContents.length} CSV files from IndexedDB`)
-  } catch (err) {
-    console.error('Failed to download IndexedDB CSV files:', err)
-  } finally {
-    downloadingCsv.value = false
-  }
-}
-
-// Download single IndexedDB record
-async function downloadIndexedDbRecord(record: (typeof indexedDbItems.value)[0]): Promise<void> {
-  if (!selectedSite.value || !selectedProject.value) return
-
-  try {
-    const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-    // Use TestEndTime for download API (required format), fallback to TestStartTime
-    const timeField = record.TestEndTime || record.TestStartTime
-    const attachmentInfo: DownloadAttachmentInfo = {
-      isn,
-      time: formatTimeForDownload(timeField),
-      deviceid: record.DeviceId,
-      station: record.Station || '',
-    }
-    console.log('Download IndexedDB attachment:', attachmentInfo)
-    await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
-  } catch (err) {
-    console.error('Failed to download IndexedDB test log:', err)
-  }
-}
 
 // Helper functions for station sub-tabs and device ID filtering
 function getUniqueDeviceIdsForStation(stationGroup: StationGroup): string[] {
@@ -2287,8 +1621,6 @@ async function runStationSearch() {
   loadingTestItemsForRecord.value.clear()
   serverPaginationState.value = {}
   stationSearchRunId.value = null
-  // Clear IndexedDB selection when fetching new data
-  indexedDbSelectedKeys.value = []
 
   // STEP 1: Collect all stations and identify which need device ID fetching
   const stationInfoList: {
@@ -2329,64 +1661,6 @@ async function runStationSearch() {
   })
   const resolvedStations = await Promise.all(deviceIdPromises)
 
-  const automaticIndexedDbReason = getAutoIndexedDbReason(resolvedStations, begintime, endtime)
-  const useDiskBackedResults = useIndexedDbMode.value || automaticIndexedDbReason !== null
-
-  if (useDiskBackedResults) {
-    if (!useIndexedDbMode.value && automaticIndexedDbReason) {
-      useIndexedDbMode.value = true
-    }
-
-    autoIndexedDbReason.value = automaticIndexedDbReason
-
-    let totalRecords = 0
-    const streamPromises: Promise<void>[] = []
-    for (const { stationInfo, deviceIds } of resolvedStations) {
-      for (const deviceId of deviceIds) {
-        streamPromises.push(
-          (async () => {
-            try {
-              const recordCount = await streamToIndexedDb({
-                // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
-                site: selectedSite.value!,
-                // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
-                project: selectedProject.value!,
-                station: stationInfo.display_station_name,
-                deviceId,
-                beginTime: begintime,
-                endTime: endtime,
-                testStatus: stationTestStatus.value[stationInfo.display_station_name] || 'ALL',
-              })
-              console.log(
-                `[IndexedDB] Streamed ${recordCount} records for station ${stationInfo.display_station_name} device ${deviceId}`,
-              )
-              totalRecords += recordCount
-            } catch (err) {
-              console.error(
-                `[IndexedDB] Stream failed for station ${stationInfo.display_station_name} device ${deviceId}:`,
-                err,
-              )
-              error.value =
-                err instanceof Error ? err.message : 'Failed to stream data to IndexedDB'
-            }
-          })(),
-        )
-      }
-    }
-    await Promise.all(streamPromises)
-
-    console.log(
-      `[IndexedDB] Total: Streamed ${totalRecords} records from ${selectedStations.value.length} stations`,
-    )
-
-    indexedDbActiveStationTab.value = 0
-    updateIndexedDbFilter({ station: undefined })
-    await refreshIndexedDbPage(true)
-    return
-  }
-
-  autoIndexedDbReason.value = null
-
   const run = await createIplasStationSearchRun({
     site: selectedSite.value,
     project: selectedProject.value,
@@ -2400,8 +1674,6 @@ async function runStationSearch() {
   })
 
   stationSearchRunId.value = run.run_id
-
-  compactTestItemData.value = []
 }
 
 /**
@@ -2516,13 +1788,6 @@ watch(
   { immediate: true },
 )
 
-// UPDATED: Watch for streaming completion to load all items for client-side table
-watch(isStreaming, async (streaming: boolean, wasStreaming: boolean) => {
-  if (wasStreaming && !streaming && streamStatus.recordsWritten > 0) {
-    await refreshIndexedDbPage(true)
-  }
-})
-
 // Watch for active station tab changes - initialize pagination if needed
 watch(activeStationTab, async (newTab: number) => {
   if (groupedByStation.value.length > newTab) {
@@ -2533,26 +1798,10 @@ watch(activeStationTab, async (newTab: number) => {
   }
 })
 
-// Watch for IndexedDB station tab changes - update filter
-watch(indexedDbActiveStationTab, async (newTab: number) => {
-  if (newTab === 0) {
-    // All stations - clear station filter
-    updateIndexedDbFilter({ station: undefined })
-  } else {
-    // Specific station selected
-    const stationName = indexedDbStationList.value[newTab - 1]
-    if (stationName) {
-      updateIndexedDbFilter({ station: stationName })
-    }
-  }
-  await refreshIndexedDbPage(true)
-})
-
 // Initialize
 onMounted(async () => {
   await fetchSiteProjects()
   await applyDateRangePreset(dateRangePreset.value)
-  await refreshIndexedDbPage(true)
 
   // UPDATED: Set default site based on connected iPLAS server
   const { selectedServer } = useIplasSettings()
@@ -2920,8 +2169,7 @@ onUnmounted(() => {
   color: var(--app-ink);
 }
 
-.iplas-device-filter-shell,
-.iplas-indexeddb-status-bar {
+.iplas-device-filter-shell {
   display: grid;
   gap: 0.85rem;
   border: 1px solid var(--app-border);
@@ -2930,8 +2178,7 @@ onUnmounted(() => {
   background: var(--app-panel);
 }
 
-.iplas-device-filter-shell p,
-.iplas-indexeddb-status-bar p {
+.iplas-device-filter-shell p {
   margin: 0;
   color: var(--app-muted);
   line-height: 1.55;
@@ -2962,14 +2209,6 @@ onUnmounted(() => {
   color: var(--app-accent);
 }
 
-.iplas-indexeddb-status-bar {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.iplas-indexeddb-status-bar strong {
-  color: var(--app-ink);
-}
-
 .iplas-summary-item {
   border: 1px solid var(--app-border);
   border-radius: 0.8rem;
@@ -2984,28 +2223,6 @@ onUnmounted(() => {
   border-radius: 999px;
 }
 
-.iplas-toggle-card {
-  display: flex;
-  gap: 0.85rem;
-  align-items: flex-start;
-  border: 1px solid var(--app-border);
-  border-radius: 0.8rem;
-  padding: 0.85rem 0.9rem;
-  background: var(--app-panel);
-}
-
-.iplas-toggle-card input {
-  width: 1rem;
-  height: 1rem;
-  margin-top: 0.2rem;
-}
-
-.iplas-toggle-card span {
-  display: block;
-  color: var(--app-ink);
-  font-weight: 700;
-}
-
 .iplas-progress-card {
   grid-template-columns: auto 1fr;
   align-items: center;
@@ -3015,11 +2232,6 @@ onUnmounted(() => {
 .iplas-empty-state strong,
 .iplas-notice strong {
   color: var(--app-ink);
-}
-
-.iplas-progress-card--success {
-  border-color: var(--app-success-line);
-  background: var(--app-panel);
 }
 
 .iplas-progress-card__spinner {
@@ -3120,8 +2332,7 @@ onUnmounted(() => {
   .iplas-notice,
   .iplas-empty-state,
   .iplas-progress-card,
-  .iplas-result-summary-card,
-  .iplas-indexeddb-status-bar {
+  .iplas-result-summary-card {
     grid-template-columns: 1fr;
     flex-direction: column;
     align-items: stretch;
