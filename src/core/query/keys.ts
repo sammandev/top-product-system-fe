@@ -33,6 +33,9 @@ export const queryKeys = {
     stations: (site: string, project: string) =>
       [...queryKeys.iplas.all, 'stations', site, project] as const,
     devices: (params: unknown) => [...queryKeys.iplas.all, 'devices', params] as const,
+    stationSearchRun: (runId: string) => [...queryKeys.iplas.all, 'station-search-run', runId] as const,
+    stationSearchRunRecords: (runId: string, params: unknown) =>
+      [...queryKeys.iplas.all, 'station-search-run-records', runId, params] as const,
     recordTestItems: (params: unknown) =>
       [...queryKeys.iplas.all, 'record-test-items', params] as const,
     paginatedTestItems: (params: unknown) =>

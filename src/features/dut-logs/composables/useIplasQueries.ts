@@ -6,6 +6,10 @@ import { queryKeys } from '@/core/query'
 import {
   type CompactCsvTestItemData,
   type IplasStation,
+  type IplasStationSearchRunCreateRequest,
+  type IplasStationSearchRunRecordsRequest,
+  type IplasStationSearchRunRecordsResponse,
+  type IplasStationSearchRunResponse,
   iplasProxyApi,
   type RecordTestItemsRequest,
   type SiteProject,
@@ -34,6 +38,15 @@ export interface IplasDevicesQueryParams extends IplasStationsQueryParams {
 export interface IplasPaginatedTestItemsQueryParams extends IplasDevicesQueryParams {
   deviceId: string
   testStatus?: 'ALL' | 'PASS' | 'FAIL'
+  options?: PaginationOptions
+}
+
+export interface IplasStationSearchRunRecordsQueryParams {
+  runId: string
+  station?: string | null
+  deviceIds?: string[]
+  testStatus?: 'ALL' | 'PASS' | 'FAIL'
+  search?: string | null
   options?: PaginationOptions
 }
 
@@ -74,6 +87,20 @@ function normalizeRecordTestItemsParams(params: RecordTestItemsRequest) {
     deviceId: params.device_id ?? 'ALL',
     testStatus: params.test_status ?? 'ALL',
     token: params.token,
+  }
+}
+
+function normalizeStationSearchRunRecordsParams(params: IplasStationSearchRunRecordsQueryParams) {
+  return {
+    runId: params.runId,
+    station: params.station ?? null,
+    deviceIds: params.deviceIds ?? [],
+    testStatus: params.testStatus ?? 'ALL',
+    search: params.search ?? null,
+    page: params.options?.page ?? 1,
+    itemsPerPage: params.options?.itemsPerPage ?? 25,
+    sortBy: params.options?.sortBy ?? 'TestStartTime',
+    sortDesc: params.options?.sortDesc ?? true,
   }
 }
 
@@ -186,6 +213,56 @@ export async function fetchIplasRecordTestItemsQuery(
       return response.test_items
     },
     staleTime: RECORD_TEST_ITEMS_STALE_TIME,
+  })
+}
+
+export async function createIplasStationSearchRun(
+  request: IplasStationSearchRunCreateRequest,
+): Promise<IplasStationSearchRunResponse> {
+  return iplasProxyApi.createStationSearchRun(request)
+}
+
+export async function fetchIplasStationSearchRunQuery(
+  runId: string,
+  forceRefresh = false,
+  client = queryClient,
+): Promise<IplasStationSearchRunResponse> {
+  const queryKey = queryKeys.iplas.stationSearchRun(runId)
+  await refreshQuery(client, queryKey, forceRefresh)
+
+  return client.fetchQuery({
+    queryKey,
+    queryFn: () => iplasProxyApi.getStationSearchRun(runId),
+    staleTime: 0,
+  })
+}
+
+export async function fetchIplasStationSearchRunRecordsQuery(
+  params: IplasStationSearchRunRecordsQueryParams,
+  forceRefresh = false,
+  client = queryClient,
+): Promise<IplasStationSearchRunRecordsResponse> {
+  const normalizedParams = normalizeStationSearchRunRecordsParams(params)
+  const queryKey = queryKeys.iplas.stationSearchRunRecords(normalizedParams.runId, normalizedParams)
+  await refreshQuery(client, queryKey, forceRefresh)
+
+  return client.fetchQuery({
+    queryKey,
+    queryFn: () => {
+      const offset = (normalizedParams.page - 1) * normalizedParams.itemsPerPage
+      const request: IplasStationSearchRunRecordsRequest = {
+        station: normalizedParams.station,
+        device_ids: normalizedParams.deviceIds,
+        test_status: normalizedParams.testStatus,
+        search: normalizedParams.search,
+        limit: normalizedParams.itemsPerPage,
+        offset,
+        sort_by: normalizedParams.sortBy,
+        sort_desc: normalizedParams.sortDesc,
+      }
+      return iplasProxyApi.getStationSearchRunRecords(normalizedParams.runId, request)
+    },
+    staleTime: PAGINATED_TEST_ITEMS_STALE_TIME,
   })
 }
 

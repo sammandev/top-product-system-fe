@@ -543,6 +543,65 @@ export interface CompactCsvTestItemResponse {
   bucket_stats?: IplasStationSearchBucketStat[] | null
 }
 
+export interface IplasStationSearchRunSelection {
+  station: string
+  device_ids: string[]
+  test_status: 'ALL' | 'PASS' | 'FAIL'
+}
+
+export interface IplasStationSearchRunCreateRequest {
+  site: string
+  project: string
+  begin_time: string
+  end_time: string
+  selections: IplasStationSearchRunSelection[]
+  token?: string
+}
+
+export interface IplasStationSearchRunStationSummary {
+  station: string
+  requested_test_status: 'ALL' | 'PASS' | 'FAIL'
+  selected_device_ids: string[]
+  available_device_ids: string[]
+  total_records: number
+}
+
+export interface IplasStationSearchRunResponse {
+  run_id: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  site: string
+  project: string
+  begin_time: string
+  end_time: string
+  total_records: number
+  total_stations: number
+  total_combinations: number
+  processed_combinations: number
+  possibly_truncated: boolean
+  created_at: string
+  started_at?: string | null
+  completed_at?: string | null
+  error_message?: string | null
+  stations: IplasStationSearchRunStationSummary[]
+}
+
+export interface IplasStationSearchRunRecordsRequest {
+  station?: string | null
+  device_ids?: string[]
+  test_status?: 'ALL' | 'PASS' | 'FAIL'
+  search?: string | null
+  limit?: number
+  offset?: number
+  sort_by?: string
+  sort_desc?: boolean
+}
+
+export interface IplasStationSearchRunRecordsResponse {
+  data: CompactCsvTestItemData[]
+  total_records: number
+  returned_records: number
+}
+
 export interface RecordTestItemsRequest {
   site: string
   project: string
@@ -666,6 +725,34 @@ class IplasProxyApi {
       `${this.baseUrl}/csv-test-items/compact`,
       request,
       { signal: options?.signal },
+    )
+    return response.data
+  }
+
+  async createStationSearchRun(
+    request: IplasStationSearchRunCreateRequest,
+  ): Promise<IplasStationSearchRunResponse> {
+    const response = await apiClient.post<IplasStationSearchRunResponse>(
+      `${this.baseUrl}/station-search-runs`,
+      request,
+    )
+    return response.data
+  }
+
+  async getStationSearchRun(runId: string): Promise<IplasStationSearchRunResponse> {
+    const response = await apiClient.get<IplasStationSearchRunResponse>(
+      `${this.baseUrl}/station-search-runs/${runId}`,
+    )
+    return response.data
+  }
+
+  async getStationSearchRunRecords(
+    runId: string,
+    request: IplasStationSearchRunRecordsRequest,
+  ): Promise<IplasStationSearchRunRecordsResponse> {
+    const response = await apiClient.post<IplasStationSearchRunRecordsResponse>(
+      `${this.baseUrl}/station-search-runs/${runId}/records`,
+      request,
     )
     return response.data
   }
