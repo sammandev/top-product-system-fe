@@ -1,7 +1,7 @@
 <template>
   <AppDialog v-model="internalShow" title="Select & Configure Stations"
     description="Pick the stations to include, then narrow device IDs and status if needed." width="min(96vw, 56rem)"
-    persistent>
+    persistent fullscreenable sticky-header>
     <div class="station-dialog">
       <label class="station-dialog__field">
         <span>Search Stations</span>
@@ -27,34 +27,6 @@
           'Select remaining filtered stations' : 'Select filtered stations' }}
         </button>
       </div>
-
-      <section v-if="localSelectedStations.length > 0" class="station-dialog__summary-panel">
-        <div class="station-dialog__summary-header">
-          <div>
-            <p class="station-dialog__summary-eyebrow">Configured Stations</p>
-            <strong>Review the active station scope before saving</strong>
-          </div>
-          <span class="station-dialog__pill station-dialog__pill--success">{{ localSelectedStations.length }} active</span>
-        </div>
-
-        <div class="station-dialog__summary-list">
-          <article
-            v-for="station in selectedStationSummaries"
-            :key="station.value"
-            class="station-dialog__summary-item"
-          >
-            <div>
-              <strong>{{ station.displayName }}</strong>
-              <p>{{ station.stationName }}</p>
-            </div>
-            <div class="station-dialog__summary-meta">
-              <span v-if="station.order" class="station-dialog__pill station-dialog__pill--muted">#{{ station.order }}</span>
-              <span class="station-dialog__pill station-dialog__pill--info">{{ station.deviceLabel }}</span>
-              <span v-if="station.testStatus !== 'ALL'" class="station-dialog__pill station-dialog__pill--warning">{{ station.testStatus }}</span>
-            </div>
-          </article>
-        </div>
-      </section>
 
       <div class="station-dialog__list">
         <article v-for="station in filteredStations" :key="station.value" class="station-dialog__item"
@@ -82,7 +54,7 @@
           </div>
 
           <div v-if="isStationSelected(station.value)" class="station-dialog__config" @click.stop>
-            <section class="station-dialog__config-group">
+            <section class="station-dialog__config-group station-dialog__config-group--wide">
               <div class="station-dialog__config-header">
                 <div>
                   <p>Device Scope</p>
@@ -110,13 +82,11 @@
             <section class="station-dialog__config-group station-dialog__config-group--compact">
               <div class="station-dialog__config-header">
                 <div>
-                  <p>Result Scope</p>
-                  <span class="station-dialog__config-caption">Optionally narrow results to PASS or FAIL only.</span>
+                  <p>Test Status</p>
+                  <span class="station-dialog__config-caption">Select the results status.</span>
                 </div>
               </div>
-
               <label class="station-dialog__field station-dialog__field--compact">
-                <span>Test Status</span>
                 <AppSelect v-model="localTestStatus[station.value]" :options="testStatusSelectOptions" :searchable="false" />
               </label>
             </section>
@@ -234,21 +204,6 @@ const allFilteredSelected = computed(() => {
 
 const someFilteredSelected = computed(() => {
   return filteredValues.value.some((value) => localSelectedStations.value.includes(value))
-})
-
-const selectedStationSummaries = computed(() => {
-  return localSelectedStations.value
-    .map((stationValue) => {
-      const station = props.stations.find((entry) => entry.value === stationValue)
-      if (!station) return null
-
-      return {
-        ...station,
-        deviceLabel: getStationDeviceLabel(stationValue),
-        testStatus: localTestStatus.value[stationValue] || 'ALL',
-      }
-    })
-    .filter((station): station is NonNullable<typeof station> => Boolean(station))
 })
 
 function syncLocalSelection(): void {
@@ -455,8 +410,7 @@ watch(
   gap: 0.5rem;
 }
 
-.station-dialog__summary-panel,
-.station-dialog__summary-item,
+.station-dialog__config,
 .station-dialog__config-group {
   display: grid;
   gap: 0.75rem;
@@ -465,41 +419,15 @@ watch(
   background: var(--app-panel);
 }
 
-.station-dialog__summary-panel,
 .station-dialog__config-group {
   padding: 0.9rem;
 }
 
-.station-dialog__summary-header,
-.station-dialog__summary-item {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-
-.station-dialog__summary-eyebrow,
 .station-dialog__config-caption {
   margin: 0;
   color: var(--app-muted);
   font-size: 0.78rem;
   line-height: 1.5;
-}
-
-.station-dialog__summary-list,
-.station-dialog__summary-meta {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
-}
-
-.station-dialog__summary-list {
-  flex-direction: column;
-}
-
-.station-dialog__summary-item {
-  padding: 0.8rem 0.9rem;
 }
 
 .station-dialog__pill {
@@ -611,13 +539,19 @@ watch(
 
 .station-dialog__config {
   display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(15rem, 0.8fr);
   gap: 0.85rem;
   padding: 0 0.9rem 0.9rem;
   background: color-mix(in srgb, var(--app-accent) 4%, transparent);
 }
 
+.station-dialog__config-group--wide {
+  min-width: 0;
+}
+
 .station-dialog__config-group--compact {
-  max-width: 18rem;
+  align-content: start;
+  max-width: none;
 }
 
 .station-dialog__device-select {
@@ -720,8 +654,7 @@ watch(
 
   .station-dialog__item-main,
   .station-dialog__item-meta,
-  .station-dialog__summary-header,
-  .station-dialog__summary-item {
+  .station-dialog__config {
     grid-template-columns: minmax(0, 1fr);
     align-items: flex-start;
     justify-content: flex-start;

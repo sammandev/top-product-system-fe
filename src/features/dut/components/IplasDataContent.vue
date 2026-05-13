@@ -104,19 +104,18 @@
 
                 <div v-else class="iplas-summary-list">
                   <article v-for="configuredStation in configuredStations" :key="configuredStation.stationValue"
-                    class="iplas-summary-item">
-                    <div>
+                    class="iplas-summary-item" role="button" tabindex="0" @click="openStationSelectionDialog"
+                    @keydown.enter.prevent="openStationSelectionDialog" @keydown.space.prevent="openStationSelectionDialog">
+                    <div class="iplas-summary-item__copy">
                       <h4>{{ configuredStation.displayName }}</h4>
-                      <p>{{ configuredStation.deviceSummary }}</p>
+                      <p>{{ configuredStation.stationName }}</p>
                     </div>
                     <div class="iplas-summary-item__actions">
-                      <span class="iplas-pill iplas-pill--cool">{{ configuredStation.deviceSummary }}</span>
-                      <span v-if="configuredStation.testStatus !== 'ALL'" class="iplas-pill iplas-pill--warm">{{
-                        configuredStation.testStatus }}</span>
-                      <button type="button" class="iplas-summary-remove"
-                        @click="removeSelectedStation(configuredStation.stationValue)">
-                        <Icon icon="mdi:close" />
-                      </button>
+                      <span v-if="configuredStation.order !== null" class="iplas-pill iplas-pill--neutral">
+                        #{{ configuredStation.order }}
+                      </span>
+                      <span class="iplas-pill iplas-pill--cool">{{ configuredStation.deviceChip }}</span>
+                      <span class="iplas-pill iplas-pill--warm">{{ configuredStation.statusChip }}</span>
                     </div>
                   </article>
                 </div>
@@ -696,27 +695,47 @@ function getStationDisplayName(stationValue: string): string {
   return station?.display_station_name || stationValue
 }
 
-function getStationDeviceSummary(stationValue: string): string {
+function getStationName(stationValue: string): string {
+  const station = stations.value.find((s: Station) => s.display_station_name === stationValue)
+  return station?.station_name || stationValue
+}
+
+function getStationOrder(stationValue: string): number | null {
+  const station = stations.value.find((s: Station) => s.display_station_name === stationValue)
+  return typeof station?.order === 'number' ? station.order : null
+}
+
+function getStationDeviceChip(stationValue: string): string {
   const selectedDeviceCount = stationDeviceIds.value[stationValue]?.length || 0
   if (selectedDeviceCount === 0) {
-    return 'All devices'
+    return 'ALL Device(s)'
   }
-  return `${selectedDeviceCount} DeviceId${selectedDeviceCount > 1 ? 's' : ''} selected`
+
+  const totalDeviceCount = deviceIdsByStation.value[stationValue]?.length || selectedDeviceCount
+  return `ALL/${totalDeviceCount} Device(s)`
+}
+
+function getStationStatusChip(stationValue: string): string {
+  return `${stationTestStatus.value[stationValue] || 'ALL'} Result`
 }
 
 const configuredStations = computed<
   Array<{
     stationValue: string
     displayName: string
-    deviceSummary: string
-    testStatus: 'ALL' | 'PASS' | 'FAIL'
+    stationName: string
+    order: number | null
+    deviceChip: string
+    statusChip: string
   }>
 >(() => {
   return selectedStations.value.map((stationValue: string) => ({
     stationValue,
     displayName: getStationDisplayName(stationValue),
-    deviceSummary: getStationDeviceSummary(stationValue),
-    testStatus: stationTestStatus.value[stationValue] || 'ALL',
+    stationName: getStationName(stationValue),
+    order: getStationOrder(stationValue),
+    deviceChip: getStationDeviceChip(stationValue),
+    statusChip: getStationStatusChip(stationValue),
   }))
 })
 
@@ -831,10 +850,6 @@ async function ensureStationDeviceIdsLoaded(stationValue: string): Promise<strin
 function handleDialogStationToggle(stationValue: string, selected: boolean): void {
   if (!selected) return
   void ensureStationDeviceIdsLoaded(stationValue)
-}
-
-function removeSelectedStation(stationValue: string): void {
-  updateSelectedStations(selectedStations.value.filter((value: string) => value !== stationValue))
 }
 
 // Download controls
@@ -1881,7 +1896,6 @@ onUnmounted(() => {
 .iplas-selection-shell__summary,
 .iplas-selection-actions,
 .iplas-result-toolbar,
-.iplas-summary-item,
 .iplas-summary-item__actions,
 .iplas-fetch-panel__actions,
 .iplas-notice {
@@ -1938,8 +1952,7 @@ onUnmounted(() => {
 .iplas-field select,
 .iplas-field input:not(.app-themed-input),
 .iplas-button,
-.iplas-notice button,
-.iplas-summary-remove {
+.iplas-notice button {
   border-radius: 0.75rem;
   font: inherit;
 }
@@ -1997,8 +2010,7 @@ onUnmounted(() => {
 }
 
 .iplas-button,
-.iplas-notice button,
-.iplas-summary-remove {
+.iplas-notice button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -2027,8 +2039,7 @@ onUnmounted(() => {
 }
 
 .iplas-button--ghost,
-.iplas-notice button,
-.iplas-summary-remove {
+.iplas-notice button {
   background: var(--app-panel);
   border-color: var(--app-border);
   color: var(--app-ink);
@@ -2114,7 +2125,6 @@ onUnmounted(() => {
 
 .iplas-selection-actions p,
 .iplas-summary-item p,
-.iplas-toggle-card p,
 .iplas-progress-card p,
 .iplas-notice p,
 .iplas-empty-state p {
@@ -2152,6 +2162,7 @@ onUnmounted(() => {
 
 .iplas-summary-list {
   display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
   gap: 0.75rem;
 }
 
@@ -2210,17 +2221,34 @@ onUnmounted(() => {
 }
 
 .iplas-summary-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  width: 100%;
+  min-height: 0;
   border: 1px solid var(--app-border);
   border-radius: 0.8rem;
-  padding: 0.8rem 0.9rem;
+  padding: 0.72rem 0.8rem;
   background: var(--app-panel);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background-color 0.15s ease;
 }
 
-.iplas-summary-remove {
-  width: 2.3rem;
-  height: 2.3rem;
-  padding: 0;
-  border-radius: 999px;
+.iplas-summary-item:hover {
+  border-color: var(--app-accent);
+  background: color-mix(in srgb, var(--app-accent) 5%, var(--app-panel));
+}
+
+.iplas-summary-item__copy {
+  display: grid;
+  gap: 0.28rem;
+}
+
+.iplas-summary-item__actions {
+  align-self: start;
+  justify-content: flex-end;
+  flex-wrap: wrap;
 }
 
 .iplas-progress-card {
