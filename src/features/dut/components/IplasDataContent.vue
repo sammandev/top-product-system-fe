@@ -480,6 +480,7 @@ const serverPaginationState = ref<
       items: (CsvTestItemData | CompactCsvTestItemData)[]
       totalItems: number
       loading: boolean
+      initialized: boolean
     }
   >
 >({})
@@ -707,12 +708,13 @@ function getStationOrder(stationValue: string): number | null {
 
 function getStationDeviceChip(stationValue: string): string {
   const selectedDeviceCount = stationDeviceIds.value[stationValue]?.length || 0
+  const totalDeviceCount = deviceIdsByStation.value[stationValue]?.length || 0
+
   if (selectedDeviceCount === 0) {
-    return 'ALL Device(s)'
+    return totalDeviceCount > 0 ? `ALL/${totalDeviceCount} Device(s)` : 'ALL Device(s)'
   }
 
-  const totalDeviceCount = deviceIdsByStation.value[stationValue]?.length || selectedDeviceCount
-  return `ALL/${totalDeviceCount} Device(s)`
+  return `${selectedDeviceCount} Device(s)`
 }
 
 function getStationStatusChip(stationValue: string): string {
@@ -799,9 +801,13 @@ function updateSelectedStations(nextSelectedStations: string[]): void {
 }
 
 function handleStationSelectionConfirm(result: StationSelectionResult): void {
-  stationDeviceIds.value = result.deviceIds
-  stationTestStatus.value = result.testStatus
   updateSelectedStations(result.stations)
+  stationDeviceIds.value = Object.fromEntries(
+    result.stations.map((stationValue) => [stationValue, [...(result.deviceIds[stationValue] || [])]]),
+  )
+  stationTestStatus.value = Object.fromEntries(
+    result.stations.map((stationValue) => [stationValue, result.testStatus[stationValue] || 'ALL']),
+  )
   showStationSelectionDialog.value = false
 }
 
@@ -1000,6 +1006,7 @@ function getActiveStationPaginationState(stationName: string) {
       items: [],
       totalItems: 0,
       loading: false,
+      initialized: false,
     }
   }
 
@@ -1583,6 +1590,7 @@ async function downloadAllSelectedRecords(): Promise<void> {
 function handleSiteChange() {
   selectedProject.value = null
   selectedStations.value = []
+  activeStationTab.value = 0
   showStationSelectionDialog.value = false
   stationDeviceIds.value = {}
   deviceIdsByStation.value = {}
@@ -1597,6 +1605,7 @@ function handleSiteChange() {
 
 async function handleProjectChange() {
   selectedStations.value = []
+  activeStationTab.value = 0
   showStationSelectionDialog.value = false
   stationDeviceIds.value = {}
   deviceIdsByStation.value = {}
@@ -1614,6 +1623,9 @@ async function handleProjectChange() {
 
 function handleStationChange() {
   clearTestItemData()
+  activeStationTab.value = 0
+  stationSearchRunId.value = null
+  serverPaginationState.value = {}
   selectedRecordKeys.value.clear()
   selectedRecordStationMap.value.clear()
 }
@@ -1634,6 +1646,11 @@ async function runStationSearch() {
   selectedRecordStationMap.value.clear()
   lazyLoadedTestItems.value.clear()
   loadingTestItemsForRecord.value.clear()
+  activeStationTab.value = 0
+  stationStatusFilters.value = {}
+  selectedFilterDeviceIds.value = {}
+  recordSearchQueries.value = {}
+  debouncedRecordSearchQueries.value = {}
   serverPaginationState.value = {}
   stationSearchRunId.value = null
 
@@ -1703,6 +1720,7 @@ async function handleTableOptionsUpdate(
 
   const state = getActiveStationPaginationState(stationName)
   state.loading = true
+  state.initialized = true
 
   // Get sort info
   const sortInfo = options.sortBy[0]
@@ -1784,6 +1802,18 @@ watch(
     if (status?.status === 'failed' && status.error_message) {
       error.value = status.error_message
     }
+
+    if (status?.status === 'completed') {
+      const stationCount = status.stations.length
+      if (stationCount === 0) {
+        activeStationTab.value = 0
+        return
+      }
+
+      if (activeStationTab.value >= stationCount) {
+        activeStationTab.value = 0
+      }
+    }
   },
   { immediate: true },
 )
@@ -1795,7 +1825,10 @@ watch(
     if (groups.length > 0) {
       // Initialize pagination for the active station tab
       const activeStation = groups[activeStationTab.value]
-      if (activeStation && !serverPaginationState.value[activeStation.stationName]) {
+      const activeState = activeStation
+        ? getActiveStationPaginationState(activeStation.stationName)
+        : null
+      if (activeStation && activeState && !activeState.initialized) {
         await initializeServerPagination(activeStation.stationName)
       }
     }
@@ -1807,7 +1840,8 @@ watch(
 watch(activeStationTab, async (newTab: number) => {
   if (groupedByStation.value.length > newTab) {
     const station = groupedByStation.value[newTab]
-    if (station && !serverPaginationState.value[station.stationName]) {
+    const stationState = station ? getActiveStationPaginationState(station.stationName) : null
+    if (station && stationState && !stationState.initialized) {
       await initializeServerPagination(station.stationName)
     }
   }

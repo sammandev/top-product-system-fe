@@ -208,7 +208,12 @@ const someFilteredSelected = computed(() => {
 
 function syncLocalSelection(): void {
   localSelectedStations.value = [...props.selectedStations]
-  localDeviceIds.value = { ...props.selectedDeviceIds }
+  localDeviceIds.value = Object.fromEntries(
+    Object.entries(props.selectedDeviceIds).map(([stationValue, deviceIds]) => [
+      stationValue,
+      [...deviceIds],
+    ]),
+  )
   const ts: Record<string, 'ALL' | 'PASS' | 'FAIL'> = {}
   for (const station of props.selectedStations) {
     ts[station] = props.selectedTestStatus[station] || 'ALL'
@@ -323,10 +328,11 @@ watch(
 
     searchQuery.value = ''
   },
+  { immediate: true },
 )
 
 watch(
-  () => props.selectedStations,
+  () => [props.selectedStations, props.selectedDeviceIds, props.selectedTestStatus],
   () => {
     if (!props.show) {
       syncLocalSelection()
