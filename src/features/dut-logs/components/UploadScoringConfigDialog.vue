@@ -1,5 +1,6 @@
 <template>
-  <AppDialog :model-value="dialogOpen" width="min(96vw, 70rem)" :breakpoints="{ '1100px': '94vw', '760px': '96vw' }"
+  <AppDialog :model-value="dialogOpen" v-model:fullscreen="dialogFullscreen" width="min(98vw, 84rem)"
+    fullscreen-width="100vw" fullscreenable sticky-header :breakpoints="{ '1100px': '96vw', '760px': '100vw' }"
     persistent title="Configure Scoring"
     description="Filter, select, and adjust upload-log scoring rules without leaving the comparison workflow."
     @update:modelValue="dialogOpen = $event">
@@ -11,11 +12,6 @@
 
     <div class="upload-scoring-dialog">
       <div class="upload-scoring-dialog__toolbar">
-        <label class="upload-scoring-dialog__field upload-scoring-dialog__field--search">
-          <span>Search Test Items</span>
-          <input v-model="searchQuery" type="text" placeholder="Search by test item name" />
-        </label>
-
         <label v-if="stationOptions.length > 0" class="upload-scoring-dialog__field">
           <span>Station</span>
           <AppSelect v-model="selectedStationValue" :options="stationSelectOptions" />
@@ -25,96 +21,98 @@
           <span>Device Scope</span>
           <AppMultiSelect v-model="selectedDevices" :options="deviceSelectOptions" placeholder="All uploaded devices" />
         </label>
+
+        <label class="upload-scoring-dialog__field">
+          <span>Min. Test Item Score</span>
+          <input :value="getGlobalMinScoreValue()" type="number" min="0" max="10" step="0.1"
+            placeholder="Leave empty to ignore low-score filtering"
+            @input="updateGlobalMinScore(($event.target as HTMLInputElement).value)" />
+          <small>Applies the same minimum score rule to every included and excluded item you configure here.</small>
+        </label>
       </div>
 
-      <div class="upload-scoring-dialog__action-bands">
-        <div class="upload-scoring-dialog__action-band">
-          <div class="upload-scoring-dialog__action-band-copy">
-            <span class="upload-scoring-dialog__band-label">Select</span>
-            <small>Pick a scope first, then choose the test items that belong to that mode.</small>
+      <section class="upload-scoring-dialog__selection-shell">
+        <div class="upload-scoring-dialog__selection-header">
+          <div class="upload-scoring-dialog__selection-copy">
+            <h3>Test Items Selection</h3>
+            <p>Choose Include or Exclude first, then add visible criteria groups or click individual test items below.</p>
           </div>
-          <div class="upload-scoring-dialog__action-band-controls">
-            <button type="button" class="upload-scoring-dialog__chip-button upload-scoring-dialog__chip-button--info"
-              :disabled="!hasActiveSelectionMode || filteredConfigs.length === 0" @click="selectDisplayedItems">
-              Displayed ({{ selectableFilteredCount }})
-            </button>
-            <button type="button" class="upload-scoring-dialog__chip-button upload-scoring-dialog__chip-button--success"
-              :disabled="!hasActiveSelectionMode" @click="selectCriteriaItems">
-              Criteria
-            </button>
-            <button type="button" class="upload-scoring-dialog__chip-button upload-scoring-dialog__chip-button--warning"
-              :disabled="!hasActiveSelectionMode" @click="selectNonCriteriaItems">
-              Non-Criteria
-            </button>
-            <button type="button" class="upload-scoring-dialog__chip-button upload-scoring-dialog__chip-button--danger"
-              :disabled="selectedCount === 0" @click="clearSelection">
-              Clear Selection
-            </button>
-          </div>
+          <button type="button" class="upload-scoring-dialog__selection-pill upload-scoring-dialog__selection-pill--ghost"
+            :disabled="selectedCount === 0" @click="openBulkScoringConfig">
+            Bulk Scoring ({{ selectedCount }})
+          </button>
         </div>
 
-        <div class="upload-scoring-dialog__action-band upload-scoring-dialog__action-band--secondary">
-          <div class="upload-scoring-dialog__action-band-copy">
-            <span class="upload-scoring-dialog__band-label">Scope</span>
-            <small>Choose one mode, then click rows below. Opposite scoped items stay locked until restored.</small>
-          </div>
-          <div class="upload-scoring-dialog__action-band-controls">
-            <button type="button" class="upload-scoring-dialog__button"
-              :class="activeSelectionMode === 'included'
-                ? 'upload-scoring-dialog__button--secondary upload-scoring-dialog__button--active'
-                : 'upload-scoring-dialog__button--ghost'"
-              @click="setActiveSelectionMode('included')">
-              Include Mode
-            </button>
-            <button type="button" class="upload-scoring-dialog__button"
-              :class="activeSelectionMode === 'excluded'
-                ? 'upload-scoring-dialog__button--danger upload-scoring-dialog__button--active'
-                : 'upload-scoring-dialog__button--ghost'"
-              @click="setActiveSelectionMode('excluded')">
-              Exclude Mode
-            </button>
-            <button type="button" class="upload-scoring-dialog__button upload-scoring-dialog__button--ghost"
-              :disabled="selectedCount === 0" @click="restoreSelectedToAuto">
-              Restore Selected to Auto
-            </button>
-          </div>
+        <div class="upload-scoring-dialog__selection-mode-row">
+          <button type="button" class="upload-scoring-dialog__selection-pill"
+            :class="activeSelectionMode === 'included'
+              ? 'upload-scoring-dialog__selection-pill--include is-active'
+              : 'upload-scoring-dialog__selection-pill--ghost'"
+            @click="setActiveSelectionMode('included')">
+            INCLUDE ({{ includedScopedCount }} Selected)
+          </button>
+          <button type="button" class="upload-scoring-dialog__selection-pill"
+            :class="activeSelectionMode === 'excluded'
+              ? 'upload-scoring-dialog__selection-pill--exclude is-active'
+              : 'upload-scoring-dialog__selection-pill--ghost'"
+            @click="setActiveSelectionMode('excluded')">
+            EXCLUDE ({{ excludedScopedCount }} Selected)
+          </button>
+          <span class="upload-scoring-dialog__selection-pill upload-scoring-dialog__selection-pill--muted">
+            {{ filteredConfigs.length }} Showing
+          </span>
         </div>
 
-        <div class="upload-scoring-dialog__action-band upload-scoring-dialog__action-band--secondary">
-          <div class="upload-scoring-dialog__action-band-copy">
-            <span class="upload-scoring-dialog__band-label">Bulk Actions</span>
-            <small>Configure the items currently selected inside the active scope mode.</small>
-          </div>
-          <div class="upload-scoring-dialog__action-band-controls">
-            <button type="button" class="upload-scoring-dialog__button upload-scoring-dialog__button--primary"
-              :disabled="!hasActiveSelectionMode || selectableFilteredCount === 0" @click="selectDisplayedAndConfigure">
-              Select Displayed & Configure ({{ selectableFilteredCount }})
-            </button>
-            <button type="button" class="upload-scoring-dialog__button upload-scoring-dialog__button--secondary"
-              :disabled="selectedCount === 0" @click="openBulkScoringConfig">
-              Bulk Config ({{ selectedCount }})
-            </button>
-            <button type="button" class="upload-scoring-dialog__button upload-scoring-dialog__button--ghost"
-              @click="resetAll">
-              Reset All
-            </button>
-          </div>
+        <div class="upload-scoring-dialog__action-card-grid">
+          <button type="button" class="upload-scoring-dialog__action-card"
+            :disabled="!hasActiveSelectionMode || selectableFilteredCount === 0" @click="selectDisplayedItems">
+            <strong>Add Displayed</strong>
+            <span>{{ selectableFilteredCount }} visible item(s)</span>
+          </button>
+          <button type="button" class="upload-scoring-dialog__action-card"
+            :disabled="!hasActiveSelectionMode || selectableFilteredCriteriaCount === 0" @click="selectCriteriaItems">
+            <strong>Add Criteria</strong>
+            <span>Add criteria items to {{ activeSelectionActionLabel }}</span>
+          </button>
+          <button type="button" class="upload-scoring-dialog__action-card"
+            :disabled="!hasActiveSelectionMode || selectableFilteredNonCriteriaCount === 0" @click="selectNonCriteriaItems">
+            <strong>Add Non-Criteria</strong>
+            <span>Add non-criteria items to {{ activeSelectionActionLabel }}</span>
+          </button>
+          <button type="button" class="upload-scoring-dialog__action-card"
+            :disabled="!hasActiveSelectionMode || activeScopeCount === 0" @click="clearActiveScope">
+            <strong>Clear {{ activeSelectionScopeLabel }}</strong>
+            <span>Remove all items from the active list</span>
+          </button>
+          <button type="button" class="upload-scoring-dialog__action-card upload-scoring-dialog__action-card--primary"
+            :disabled="!hasActiveSelectionMode || selectableDisplayedCriteriaCount === 0"
+            @click="selectDisplayedCriteriaAndConfigure">
+            <strong>Add Displayed Criteria And Configure Score</strong>
+            <span>{{ selectableDisplayedCriteriaCount }} criteria item(s)</span>
+          </button>
         </div>
-      </div>
 
-      <div v-if="!hasActiveSelectionMode" class="upload-scoring-dialog__notice upload-scoring-dialog__notice--info">
-        Choose <strong>Include Mode</strong> or <strong>Exclude Mode</strong> first, then select the test items below.
-      </div>
+        <div v-if="!hasActiveSelectionMode" class="upload-scoring-dialog__notice upload-scoring-dialog__notice--info">
+          Select <strong>Include</strong> or <strong>Exclude</strong> mode first. Items already scoped to the opposite mode stay locked until you switch modes.
+        </div>
+      </section>
 
-      <div v-if="selectedCount > 0" class="upload-scoring-dialog__selection-banner">
-        <strong>{{ selectedCount }}</strong> test item{{ selectedCount === 1 ? '' : 's' }} selected in
-        <strong>{{ activeSelectionLabel }}</strong> mode.
+      <div class="upload-scoring-dialog__search-row">
+        <label class="upload-scoring-dialog__field upload-scoring-dialog__field--search">
+          <span>{{ activeSelectionMode === 'excluded' ? 'Search Exclude Candidates' : 'Search Include Candidates' }}</span>
+          <input v-model="searchQuery" type="text" placeholder="Type keywords and press Enter, e.g. tx rx 2404" />
+        </label>
       </div>
 
       <div v-if="selectedDevices.length > 0" class="upload-scoring-dialog__notice upload-scoring-dialog__notice--info">
         Device scope is limited to {{ selectedDevices.length }} uploaded device{{ selectedDevices.length === 1 ? '' :
         's'
         }}.
+      </div>
+
+      <div v-if="selectedCount > 0 && hasActiveSelectionMode" class="upload-scoring-dialog__selection-banner">
+        <strong>{{ selectedCount }}</strong> item{{ selectedCount === 1 ? '' : 's' }} currently staged for
+        <strong>{{ activeSelectionLabel }}</strong> updates.
       </div>
 
       <div class="upload-scoring-dialog__list">
@@ -373,6 +371,7 @@ const dialogOpen = computed({
 })
 
 // Local state
+const dialogFullscreen = ref(false)
 const searchQuery = ref('')
 const selectedStation = ref<string | null>(null)
 const selectedDevices = ref<string[]>([])
@@ -380,10 +379,13 @@ const selectedItemNames = ref<Set<string>>(new Set())
 const scoringConfigs = ref<RescoreScoringConfig[]>([])
 const itemScopeModes = ref<Map<string, ItemScopeMode>>(new Map())
 const activeSelectionMode = ref<ActiveSelectionMode | null>(null)
+const globalMinScore = ref<number | undefined>(undefined)
 
 const selectedCount = computed(() => selectedItemNames.value.size)
 const hasActiveSelectionMode = computed(() => activeSelectionMode.value !== null)
 const activeSelectionLabel = computed(() => activeSelectionMode.value === 'excluded' ? 'Exclude' : 'Include')
+const activeSelectionActionLabel = computed(() => activeSelectionMode.value === 'excluded' ? 'Exclude' : 'Include')
+const activeSelectionScopeLabel = computed(() => activeSelectionMode.value === 'excluded' ? 'Exclude' : 'Include')
 const selectedStationValue = computed({
   get: () => selectedStation.value ?? '',
   set: (value: string) => {
@@ -496,6 +498,7 @@ function buildAppliedConfigs(): RescoreScoringConfig[] {
 
     return [{
       ...config,
+      min_score: globalMinScore.value ?? config.min_score,
       enabled: scopeMode !== 'excluded',
     }]
   })
@@ -532,6 +535,20 @@ function initializeConfigs() {
   })
   itemScopeModes.value = scopeModes
   selectedDevices.value = [...props.initialDeviceScope]
+  globalMinScore.value = getCommonMinScore(props.existingConfigs)
+}
+
+function getCommonMinScore(configs: RescoreScoringConfig[]): number | undefined {
+  const definedValues = configs
+    .map((config) => config.min_score)
+    .filter((value): value is number => value !== null && value !== undefined)
+
+  if (definedValues.length === 0) {
+    return undefined
+  }
+
+  const first = definedValues[0]
+  return definedValues.every((value) => value === first) ? first : undefined
 }
 
 // Auto-detect scoring type by test item name patterns
@@ -624,6 +641,28 @@ function getSelectableConfigs(configs: RescoreScoringConfig[]): RescoreScoringCo
 }
 
 const selectableFilteredCount = computed(() => getSelectableConfigs(filteredConfigs.value).length)
+const selectableFilteredCriteriaCount = computed(() =>
+  getSelectableConfigs(filteredConfigs.value).filter((config) => isItemCriteria(config.test_item_name)).length,
+)
+const selectableFilteredNonCriteriaCount = computed(() =>
+  getSelectableConfigs(filteredConfigs.value).filter((config) => !isItemCriteria(config.test_item_name)).length,
+)
+const selectableDisplayedCriteriaCount = computed(() =>
+  getSelectableConfigs(filteredConfigs.value).filter((config) => isItemCriteria(config.test_item_name)).length,
+)
+const includedScopedCount = computed(() =>
+  scoringConfigs.value.filter((config) => getItemScopeMode(config.test_item_name) === 'included').length,
+)
+const excludedScopedCount = computed(() =>
+  scoringConfigs.value.filter((config) => getItemScopeMode(config.test_item_name) === 'excluded').length,
+)
+const activeScopeCount = computed(() => {
+  if (!activeSelectionMode.value) {
+    return 0
+  }
+
+  return scoringConfigs.value.filter((config) => getItemScopeMode(config.test_item_name) === activeSelectionMode.value).length
+})
 
 // ============================================
 // Selection management (checkbox multi-select)
@@ -664,7 +703,7 @@ function selectCriteriaItems() {
   if (!activeSelectionMode.value) return
 
   const names: string[] = []
-  getSelectableConfigs(scoringConfigs.value).forEach((c) => {
+  getSelectableConfigs(filteredConfigs.value).forEach((c) => {
     if (isItemCriteria(c.test_item_name)) {
       names.push(c.test_item_name)
     }
@@ -677,7 +716,7 @@ function selectNonCriteriaItems() {
   if (!activeSelectionMode.value) return
 
   const names: string[] = []
-  getSelectableConfigs(scoringConfigs.value).forEach((c) => {
+  getSelectableConfigs(filteredConfigs.value).forEach((c) => {
     if (!isItemCriteria(c.test_item_name)) {
       names.push(c.test_item_name)
     }
@@ -703,8 +742,16 @@ function applyScopeModeToSelected(scopeMode: ItemScopeMode) {
   selectedItemNames.value.forEach((name) => setItemScopeMode(name, scopeMode))
 }
 
-function restoreSelectedToAuto() {
-  applyScopeModeToSelected('auto')
+function clearActiveScope() {
+  if (!activeSelectionMode.value) {
+    return
+  }
+
+  scoringConfigs.value.forEach((config) => {
+    if (getItemScopeMode(config.test_item_name) === activeSelectionMode.value) {
+      setItemScopeMode(config.test_item_name, 'auto')
+    }
+  })
   selectedItemNames.value = new Set()
 }
 
@@ -724,6 +771,21 @@ function selectDisplayedAndConfigure() {
 
   // Then open bulk config dialog
   if (newSet.size > 0) {
+    openBulkScoringConfig()
+  }
+}
+
+function selectDisplayedCriteriaAndConfigure() {
+  if (!activeSelectionMode.value) return
+
+  const names = getSelectableConfigs(filteredConfigs.value)
+    .filter((config) => isItemCriteria(config.test_item_name))
+    .map((config) => config.test_item_name)
+
+  names.forEach((name) => setItemScopeMode(name, activeSelectionMode.value as ActiveSelectionMode))
+  selectedItemNames.value = new Set(names)
+
+  if (names.length > 0) {
     openBulkScoringConfig()
   }
 }
@@ -790,6 +852,16 @@ function updateSingleDialogMinScore(rawValue: string) {
   config.min_score = parsed === undefined ? undefined : clampNumber(parsed, 0, 10) / 10
 }
 
+function getGlobalMinScoreValue(): string {
+  if (globalMinScore.value === null || globalMinScore.value === undefined) return ''
+  return String(Number((globalMinScore.value * 10).toFixed(2)))
+}
+
+function updateGlobalMinScore(rawValue: string) {
+  const parsed = toOptionalNumber(rawValue)
+  globalMinScore.value = parsed === undefined ? undefined : clampNumber(parsed, 0, 10) / 10
+}
+
 // ============================================
 // Bulk scoring config dialog
 // ============================================
@@ -849,6 +921,7 @@ function resetAll() {
   selectedDevices.value = []
   selectedItemNames.value = new Set()
   activeSelectionMode.value = null
+  globalMinScore.value = undefined
 }
 
 // Handlers
@@ -953,6 +1026,7 @@ watch(
       initializeConfigs()
       selectedItemNames.value = new Set()
       activeSelectionMode.value = null
+      dialogFullscreen.value = false
       searchQuery.value = ''
       // Set default station filter if provided
       selectedStation.value = props.defaultStation || null
@@ -1002,7 +1076,6 @@ watch(
 }
 
 .upload-scoring-dialog__toolbar,
-.upload-scoring-dialog__action-band,
 .upload-scoring-dialog__footer,
 .upload-scoring-dialog__item-row,
 .upload-scoring-dialog__item-meta,
@@ -1012,42 +1085,62 @@ watch(
 }
 
 .upload-scoring-dialog__toolbar {
-  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(14rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(14rem, 1fr));
 }
 
-.upload-scoring-dialog__action-bands {
+.upload-scoring-dialog__selection-shell {
   display: grid;
+  gap: 1rem;
+  padding: 1rem;
+  border: 1px solid rgba(15, 118, 110, 0.12);
+  border-radius: 1rem;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--app-panel) 90%, white 10%), var(--app-panel));
+}
+
+.upload-scoring-dialog__selection-header,
+.upload-scoring-dialog__selection-mode-row,
+.upload-scoring-dialog__action-band-controls,
+.upload-scoring-dialog__action-card-grid {
+  display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
 }
 
-.upload-scoring-dialog__action-band {
-  grid-template-columns: minmax(12rem, 15rem) minmax(0, 1fr);
+.upload-scoring-dialog__selection-header {
+  justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  padding: 1rem 1.1rem;
-  border: 1px solid rgba(15, 118, 110, 0.12);
-  border-radius: 1rem;
-  background: var(--app-panel);
 }
 
-.upload-scoring-dialog__action-band--secondary {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--app-panel) 92%, white 8%), var(--app-panel));
-}
-
-.upload-scoring-dialog__action-band-copy {
+.upload-scoring-dialog__selection-copy {
   display: grid;
   gap: 0.3rem;
 }
 
-.upload-scoring-dialog__action-band-copy small {
+.upload-scoring-dialog__selection-copy h3 {
+  margin: 0;
+  color: var(--app-ink);
+  font-size: 1.1rem;
+}
+
+.upload-scoring-dialog__selection-copy p,
+.upload-scoring-dialog__selection-copy small {
+  margin: 0;
   color: var(--app-muted);
   line-height: 1.45;
 }
 
-.upload-scoring-dialog__action-band-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.65rem;
+.upload-scoring-dialog__selection-mode-row {
+  align-items: center;
+}
+
+.upload-scoring-dialog__action-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.upload-scoring-dialog__search-row {
+  display: grid;
+  gap: 0.75rem;
 }
 
 .upload-scoring-dialog__band-label,
@@ -1220,7 +1313,8 @@ watch(
 
 .upload-scoring-dialog__pill,
 .upload-scoring-dialog__pill-button,
-.upload-scoring-dialog__chip-button {
+.upload-scoring-dialog__chip-button,
+.upload-scoring-dialog__selection-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -1239,6 +1333,84 @@ watch(
 
 .upload-scoring-dialog__pill-button svg {
   font-size: 0.95rem;
+}
+
+.upload-scoring-dialog__selection-pill {
+  min-height: 3rem;
+  padding: 0.8rem 1.2rem;
+  border: 1px solid var(--app-border);
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.upload-scoring-dialog__selection-pill--muted {
+  cursor: default;
+  color: var(--app-muted);
+}
+
+.upload-scoring-dialog__selection-pill--ghost {
+  background: var(--app-panel);
+}
+
+.upload-scoring-dialog__selection-pill--include {
+  background: rgba(15, 118, 110, 0.12);
+  border-color: rgba(15, 118, 110, 0.22);
+  color: #0f766e;
+}
+
+.upload-scoring-dialog__selection-pill--exclude {
+  background: rgba(164, 52, 58, 0.1);
+  border-color: rgba(164, 52, 58, 0.18);
+  color: #8e3037;
+}
+
+.upload-scoring-dialog__selection-pill.is-active {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent) 16%, transparent);
+}
+
+.upload-scoring-dialog__action-card {
+  display: grid;
+  gap: 0.45rem;
+  min-height: 9rem;
+  padding: 1.1rem 1.15rem;
+  text-align: left;
+  border: 1px solid var(--app-border);
+  border-radius: 1.2rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.upload-scoring-dialog__action-card strong {
+  font-size: 0.9rem;
+  line-height: 1.25;
+}
+
+.upload-scoring-dialog__action-card span {
+  color: var(--app-muted);
+  line-height: 1.45;
+}
+
+.upload-scoring-dialog__action-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(15, 118, 110, 0.24);
+  box-shadow: 0 0.9rem 1.8rem rgba(15, 118, 110, 0.08);
+}
+
+.upload-scoring-dialog__action-card--primary {
+  background: linear-gradient(180deg, rgba(40, 96, 163, 0.12), rgba(15, 118, 110, 0.08));
+}
+
+.upload-scoring-dialog__action-card:disabled,
+.upload-scoring-dialog__selection-pill:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .upload-scoring-dialog__pill-button,
@@ -1380,15 +1552,20 @@ watch(
 @media (max-width: 900px) {
 
   .upload-scoring-dialog__toolbar,
-  .upload-scoring-dialog__action-band,
   .upload-scoring-dialog__item-row,
   .upload-scoring-dialog__footer,
   .upload-scoring-dialog__spec-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .upload-scoring-dialog__action-band-controls {
+  .upload-scoring-dialog__action-band-controls,
+  .upload-scoring-dialog__selection-header,
+  .upload-scoring-dialog__selection-mode-row {
     width: 100%;
+  }
+
+  .upload-scoring-dialog__selection-header {
+    align-items: stretch;
   }
 
   .upload-scoring-dialog__item-meta {

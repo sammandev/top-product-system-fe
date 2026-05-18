@@ -60,8 +60,12 @@
 
         <AppDataGrid
           :columns="rankingGridColumns"
-          :rows="paginatedRankings"
+          :rows="filteredRankings"
           dataKey="row_id"
+          paginator
+          :rowsPerPage="rankingPagination.rows"
+          :rowsPerPageOptions="rankingRowsOptions"
+          :first="rankingPagination.first"
           :selection="selectedRankingItems"
           selectionMode="multiple"
           :showSelectionColumn="true"
@@ -70,10 +74,11 @@
           :rowClass="rankingRowClass"
           emptyMessage="No ranking rows match the current filters."
           @update:selection="updateSelection"
+          @page="handleRankingPage"
           @row-click="handleGridRowClick"
         >
           <template #cell-rank="{ index }">
-            <span class="top-product-ranking-upload-log__rank-value">{{ (currentPage - 1) * getPerPage() + index + 1 }}</span>
+            <span class="top-product-ranking-upload-log__rank-value">{{ rankingPagination.first + index + 1 }}</span>
           </template>
           <template #cell-isn="{ data }">
             <span class="top-product-ranking-upload-log__strong">{{ data.isn || 'N/A' }}</span>
@@ -109,33 +114,6 @@
             </button>
           </template>
         </AppDataGrid>
-
-        <div class="top-product-ranking-upload-log__footer-bar">
-          <div class="top-product-ranking-upload-log__footer-group">
-            <span>Show</span>
-            <AppSelect v-model="itemsPerPage" :options="itemsPerPageSelectOptions" :searchable="false" />
-            <span>items</span>
-          </div>
-
-          <div v-if="totalPages > 1" class="top-product-ranking-upload-log__pager">
-            <button type="button" class="top-product-ranking-upload-log__pager-button" :disabled="currentPage === 1" @click="currentPage -= 1">
-              Prev
-            </button>
-            <button
-              v-for="page in visiblePageNumbers"
-              :key="page"
-              type="button"
-              class="top-product-ranking-upload-log__pager-button"
-              :class="{ 'top-product-ranking-upload-log__pager-button--active': currentPage === page }"
-              @click="currentPage = page"
-            >
-              {{ page }}
-            </button>
-            <button type="button" class="top-product-ranking-upload-log__pager-button" :disabled="currentPage === totalPages" @click="currentPage += 1">
-              Next
-            </button>
-          </div>
-        </div>
       </div>
     </AppDialog>
 
@@ -146,6 +124,7 @@
       fullscreen-width="98vw"
       :breakpoints="dialogBreakpoints"
       fullscreenable
+      :showFooter="false"
       title="Test Items Details"
       description="Inspect the selected DUT record and compare it with iPLAS."
       class="top-product-ranking-upload-log__dialog"
@@ -153,52 +132,53 @@
       <template #header-actions>
         <button
           type="button"
-          class="app-dialog__header-btn"
+          class="top-product-ranking-upload-log__header-action"
           :disabled="savingToDb"
           :title="savingToDb ? 'Saving...' : 'Save to DB'"
           @click="saveSingleToDatabase"
         >
           <Icon :icon="savingToDb ? 'mdi:loading' : 'solar:database-bold-duotone'" :class="{ 'top-product-ranking-upload-log__spin': savingToDb }" />
+          <span>{{ savingToDb ? 'Saving...' : 'Save to DB' }}</span>
         </button>
         <button
           v-if="selectedRankingItem?.isn"
           type="button"
-          class="app-dialog__header-btn"
+          class="top-product-ranking-upload-log__header-action"
           title="Compare iPLAS"
           @click="openIplasCompare"
         >
           <Icon icon="solar:transfer-horizontal-bold-duotone" />
+          <span>iPLAS Compare</span>
         </button>
       </template>
 
       <div v-if="selectedRankingItem" class="top-product-ranking-upload-log__details-shell">
         <section class="top-product-ranking-upload-log__summary-grid">
           <article class="top-product-ranking-upload-log__summary-card top-product-ranking-upload-log__summary-card--highlight">
-            <button type="button" class="top-product-ranking-upload-log__info-button" @click="copyIsnToClipboard(selectedRankingItem.isn)">
-              <span class="top-product-ranking-upload-log__info-icon"><Icon icon="mdi:barcode" /></span>
-              <span>
-                <small>DUT ISN</small>
-                <strong>{{ selectedRankingItem.isn || 'N/A' }}</strong>
-              </span>
+            <button type="button" class="top-product-ranking-upload-log__summary-card-button" @click="copyIsnToClipboard(selectedRankingItem.isn)">
+              <small>DUT ISN</small>
+              <strong>{{ selectedRankingItem.isn || 'N/A' }}</strong>
+              <span class="top-product-ranking-upload-log__summary-hint">Click to copy</span>
             </button>
           </article>
           <article class="top-product-ranking-upload-log__summary-card">
-            <div class="top-product-ranking-upload-log__info-button top-product-ranking-upload-log__info-button--static">
-              <span class="top-product-ranking-upload-log__info-icon"><Icon icon="mdi:factory" /></span>
-              <span>
-                <small>Station</small>
-                <strong>{{ selectedRankingItem.station }}</strong>
-              </span>
+            <div class="top-product-ranking-upload-log__summary-card-button top-product-ranking-upload-log__summary-card-button--static">
+              <small>Station</small>
+              <strong>{{ selectedRankingItem.station }}</strong>
             </div>
           </article>
           <article class="top-product-ranking-upload-log__summary-card">
-            <div class="top-product-ranking-upload-log__info-button top-product-ranking-upload-log__info-button--static">
-              <span class="top-product-ranking-upload-log__info-icon"><Icon icon="mdi:chip" /></span>
-              <span>
-                <small>Device</small>
-                <strong>{{ selectedRankingItem.device || 'N/A' }}</strong>
-              </span>
+            <div class="top-product-ranking-upload-log__summary-card-button top-product-ranking-upload-log__summary-card-button--static">
+              <small>Device</small>
+              <strong>{{ selectedRankingItem.device || 'N/A' }}</strong>
             </div>
+          </article>
+          <article class="top-product-ranking-upload-log__summary-card top-product-ranking-upload-log__summary-card--score">
+            <button type="button" class="top-product-ranking-upload-log__summary-card-button" @click="openOverallScoreDialog">
+              <small>Overall Score</small>
+              <strong>{{ selectedRankingItem.score.toFixed(2) }}</strong>
+              <span class="top-product-ranking-upload-log__summary-hint">View formula</span>
+            </button>
           </article>
         </section>
 
@@ -227,11 +207,6 @@
             <Icon icon="mdi:flag-checkered" />
             <strong>Result:</strong>
             <span>{{ selectedRankingItem.result || 'N/A' }}</span>
-          </span>
-          <span class="top-product-ranking-upload-log__pill" :class="scoreBadgeClass(selectedRankingItem.score)">
-            <Icon icon="mdi:chart-line" />
-            <strong>Overall Score:</strong>
-            <span>{{ selectedRankingItem.score.toFixed(2) }}</span>
           </span>
         </section>
 
@@ -308,15 +283,72 @@
     />
 
     <AppDialog
+      v-model="showOverallScoreDialog"
+      width="min(92vw, 52rem)"
+      :breakpoints="{ '960px': '96vw', '640px': '100vw' }"
+      :showFooter="false"
+      title="Overall Score Formula"
+      description="Review how the weighted average was calculated for this DUT."
+      class="top-product-ranking-upload-log__dialog"
+    >
+      <div v-if="overallScoreDetails" class="top-product-ranking-upload-log__breakdown-shell">
+        <section class="top-product-ranking-upload-log__summary-grid">
+          <article class="top-product-ranking-upload-log__summary-card">
+            <small>Eligible Items</small>
+            <strong>{{ overallScoreDetails.includedCount }}</strong>
+          </article>
+          <article class="top-product-ranking-upload-log__summary-card">
+            <small>Weighted Sum</small>
+            <strong>{{ overallScoreDetails.weightedSum.toFixed(2) }}</strong>
+          </article>
+          <article class="top-product-ranking-upload-log__summary-card">
+            <small>Total Weight</small>
+            <strong>{{ overallScoreDetails.totalWeight.toFixed(2) }}</strong>
+          </article>
+          <article class="top-product-ranking-upload-log__summary-card top-product-ranking-upload-log__summary-card--score">
+            <small>Overall Score</small>
+            <strong>{{ overallScoreDetails.displayScore }}</strong>
+          </article>
+        </section>
+
+        <div class="top-product-ranking-upload-log__detail-table">
+          <div class="top-product-ranking-upload-log__detail-row top-product-ranking-upload-log__detail-row--highlight">
+            <span>Formula Used</span>
+            <strong>Overall Score = Sum(Item Score x Weight) / Sum(Weight)</strong>
+          </div>
+          <div class="top-product-ranking-upload-log__detail-row">
+            <span>Calculated Result</span>
+            <strong>{{ overallScoreDetails.weightedSum.toFixed(2) }} / {{ overallScoreDetails.totalWeight.toFixed(2) }} = {{ overallScoreDetails.displayScore }}</strong>
+          </div>
+        </div>
+
+        <div class="top-product-ranking-upload-log__detail-table">
+          <div class="top-product-ranking-upload-log__detail-row top-product-ranking-upload-log__detail-row--highlight">
+            <span>Item Contribution</span>
+            <strong>Status</strong>
+          </div>
+          <div v-for="contributor in overallScoreDetails.contributors" :key="contributor.test_item" class="top-product-ranking-upload-log__detail-row">
+            <span>
+              <strong>{{ contributor.test_item }}</strong><br>
+              Score {{ contributor.scoreLabel }} x Weight {{ contributor.weight.toFixed(2) }} = {{ contributor.weightedScoreLabel }}
+            </span>
+            <strong>{{ contributor.reason }}</strong>
+          </div>
+        </div>
+      </div>
+    </AppDialog>
+
+    <AppDialog
       v-model="showBreakdownDialog"
       v-model:fullscreen="breakdownFullscreen"
       width="min(94vw, 44rem)"
       fullscreen-width="96vw"
       :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
       fullscreenable
+      :showFooter="false"
       :title="selectedTestItem?.test_item || 'Score Breakdown'"
       description="Review the scoring inputs and final score for this test item."
-      class="top-product-ranking-upload-log__dialog"
+      class="top-product-ranking-upload-log__dialog top-product-ranking-upload-log__dialog--breakdown"
     >
 
       <div v-if="selectedTestItem?.score_breakdown" class="top-product-ranking-upload-log__breakdown-shell">
@@ -372,39 +404,6 @@
             <span>Score (0-10)</span>
             <strong>{{ selectedTestItem.score_breakdown.score?.toFixed(2) ?? 'N/A' }}</strong>
           </div>
-        </div>
-      </div>
-    </AppDialog>
-
-    <AppDialog
-      v-model="showCustomInput"
-      width="min(92vw, 28rem)"
-      :breakpoints="{ '640px': '100vw' }"
-      title="Custom Items Per Page"
-      description="Choose how many ranking rows to show."
-      class="top-product-ranking-upload-log__dialog"
-    >
-
-      <div class="top-product-ranking-upload-log__custom-dialog">
-        <label class="top-product-ranking-upload-log__field">
-          <span>Items Per Page</span>
-          <input
-            v-model.number="customItemsPerPage"
-            class="app-themed-input"
-            type="number"
-            min="1"
-            :max="MAX_TABLE_ITEMS_PER_PAGE"
-            @keyup.enter="applyCustomItemsPerPage"
-          >
-        </label>
-
-        <div class="top-product-ranking-upload-log__dialog-actions">
-          <button type="button" class="top-product-ranking-upload-log__ghost-button" @click="cancelCustomInput">
-            Cancel
-          </button>
-          <button type="button" class="top-product-ranking-upload-log__primary-button" @click="applyCustomItemsPerPage">
-            Apply
-          </button>
         </div>
       </div>
     </AppDialog>
@@ -517,8 +516,12 @@
 
         <AppDataGrid
           :columns="rankingGridColumns"
-          :rows="paginatedRankings"
+          :rows="filteredRankings"
           dataKey="row_id"
+          paginator
+          :rowsPerPage="rankingPagination.rows"
+          :rowsPerPageOptions="rankingRowsOptions"
+          :first="rankingPagination.first"
           :selection="selectedRankingItems"
           selectionMode="multiple"
           :showSelectionColumn="true"
@@ -527,10 +530,11 @@
           :rowClass="rankingRowClass"
           emptyMessage="No ranking rows match the current filters."
           @update:selection="updateSelection"
+          @page="handleRankingPage"
           @row-click="handleGridRowClick"
         >
           <template #cell-rank="{ index }">
-            <span class="top-product-ranking-upload-log__rank-value">{{ (currentPage - 1) * getPerPage() + index + 1 }}</span>
+            <span class="top-product-ranking-upload-log__rank-value">{{ rankingPagination.first + index + 1 }}</span>
           </template>
           <template #cell-isn="{ data }">
             <span class="top-product-ranking-upload-log__strong">{{ data.isn || 'N/A' }}</span>
@@ -566,33 +570,6 @@
             </button>
           </template>
         </AppDataGrid>
-
-        <div class="top-product-ranking-upload-log__footer-bar">
-          <div class="top-product-ranking-upload-log__footer-group">
-            <span>Show</span>
-            <AppSelect v-model="itemsPerPage" :options="itemsPerPageSelectOptions" :searchable="false" />
-            <span>items</span>
-          </div>
-
-          <div v-if="totalPages > 1" class="top-product-ranking-upload-log__pager">
-            <button type="button" class="top-product-ranking-upload-log__pager-button" :disabled="currentPage === 1" @click="currentPage -= 1">
-              Prev
-            </button>
-            <button
-              v-for="page in visiblePageNumbers"
-              :key="page"
-              type="button"
-              class="top-product-ranking-upload-log__pager-button"
-              :class="{ 'top-product-ranking-upload-log__pager-button--active': currentPage === page }"
-              @click="currentPage = page"
-            >
-              {{ page }}
-            </button>
-            <button type="button" class="top-product-ranking-upload-log__pager-button" :disabled="currentPage === totalPages" @click="currentPage += 1">
-              Next
-            </button>
-          </div>
-        </div>
       </section>
     </AppPanel>
   </div>
@@ -670,6 +647,7 @@ const selectedTestItems = ref<ParsedTestItemEnhanced[]>([])
 const showBreakdownDialog = ref(false)
 const breakdownFullscreen = ref(false)
 const selectedTestItem = ref<ParsedTestItemEnhanced | null>(null)
+const showOverallScoreDialog = ref(false)
 
 const showIplasCompareDialog = ref(false)
 const comparisonIsn = ref<string | null>(null)
@@ -709,23 +687,11 @@ const resetTestItemFilters = () => {
   testItemSearch.value = ''
 }
 
-const MAX_TABLE_ITEMS_PER_PAGE = 200
-const itemsPerPage = ref(10)
-const currentPage = ref(1)
-const itemsPerPageOptions = [
-  { title: '5', value: 5 },
-  { title: '10', value: 10 },
-  { title: '25', value: 25 },
-  { title: '50', value: 50 },
-  { title: '100', value: 100 },
-  { title: 'Custom', value: 0 },
-]
-const itemsPerPageSelectOptions = itemsPerPageOptions.map((option) => ({
-  label: option.title,
-  value: option.value,
-}))
-const showCustomInput = ref(false)
-const customItemsPerPage = ref(10)
+const rankingRowsOptions = [10, 25, 50, 100]
+const rankingPagination = ref({
+  first: 0,
+  rows: 25,
+})
 
 const scoreFilterTypes = [
   { title: 'Greater Than', value: 'gt' },
@@ -903,65 +869,64 @@ const filteredRankings = computed(() => {
   return filtered
 })
 
-const normalizeItemsPerPage = (value: number) => {
-  if (value <= 0) {
-    return MAX_TABLE_ITEMS_PER_PAGE
+const scoringConfigMap = computed(() => new Map((props.scoringConfigs || []).map((config) => [config.test_item_name, config])))
+
+const overallScoreDetails = computed(() => {
+  if (!selectedRankingItem.value) {
+    return null
   }
 
-  return Math.min(Math.trunc(value), MAX_TABLE_ITEMS_PER_PAGE)
-}
+  const contributors = selectedTestItems.value.map((item) => {
+    const config = scoringConfigMap.value.get(item.test_item)
+    const weight = config?.weight ?? item.score_breakdown?.weight ?? 1
+    const enabled = config?.enabled !== false
+    const hasScore = item.score !== null && item.score !== undefined
+    const passesMinScore = config?.min_score === undefined || config?.min_score === null || !hasScore
+      ? true
+      : (item.score as number) >= config.min_score
+    const included = enabled && hasScore && passesMinScore
+    const weightedScore = included ? (item.score as number) * weight : 0
 
-const getPerPage = () => {
-  if (itemsPerPage.value === 0) {
-    return 10
+    let reason = 'Included in weighted average'
+    if (!enabled) {
+      reason = 'Excluded by scope'
+    } else if (!hasScore) {
+      reason = 'No score returned'
+    } else if (!passesMinScore) {
+      reason = 'Below configured minimum score'
+    }
+
+    return {
+      test_item: item.test_item,
+      weight,
+      weightedScore,
+      weightedScoreLabel: weightedScore.toFixed(2),
+      scoreLabel: hasScore ? (item.score as number).toFixed(2) : 'N/A',
+      included,
+      reason,
+    }
+  })
+
+  const includedContributors = contributors.filter((contributor) => contributor.included)
+  const weightedSum = includedContributors.reduce((sum, contributor) => sum + contributor.weightedScore, 0)
+  const totalWeight = includedContributors.reduce((sum, contributor) => sum + contributor.weight, 0)
+
+  return {
+    contributors,
+    includedCount: includedContributors.length,
+    weightedSum,
+    totalWeight,
+    displayScore: selectedRankingItem.value.score.toFixed(2),
   }
-
-  return normalizeItemsPerPage(itemsPerPage.value)
-}
-
-const totalPages = computed(() =>
-  Math.max(1, Math.ceil(filteredRankings.value.length / getPerPage())),
-)
-
-const paginatedRankings = computed(() => {
-  const perPage = getPerPage()
-  const start = (currentPage.value - 1) * perPage
-  const end = start + perPage
-  return filteredRankings.value.slice(start, end)
-})
-
-const visiblePageNumbers = computed(() => {
-  const total = totalPages.value
-  const current = currentPage.value
-  const start = Math.max(1, current - 3)
-  const end = Math.min(total, start + 6)
-  const adjustedStart = Math.max(1, end - 6)
-  return Array.from({ length: end - adjustedStart + 1 }, (_, index) => adjustedStart + index)
 })
 
 watch([searchQuery, stationTab, scoreFilterType, scoreFilterValue, resultFilter], () => {
-  currentPage.value = 1
+  rankingPagination.value.first = 0
 })
 
 watch(filteredRankings, () => {
-  if (currentPage.value > totalPages.value) {
-    currentPage.value = totalPages.value
-  }
-})
-
-watch(itemsPerPage, (newValue) => {
-  if (newValue === 0) {
-    showCustomInput.value = true
-  } else {
-    showCustomInput.value = false
-
-    const normalized = normalizeItemsPerPage(newValue)
-    if (normalized !== newValue) {
-      itemsPerPage.value = normalized
-      return
-    }
-
-    currentPage.value = 1
+  if (rankingPagination.value.first >= filteredRankings.value.length) {
+    rankingPagination.value.first = 0
   }
 })
 
@@ -970,6 +935,7 @@ watch(showTestItemsDialog, (isOpen) => {
     testItemsFullscreen.value = false
     testItemSearch.value = ''
     testItemFilterType.value = 'all'
+    showOverallScoreDialog.value = false
   }
 })
 
@@ -979,16 +945,12 @@ watch(showBreakdownDialog, (isOpen) => {
   }
 })
 
-const applyCustomItemsPerPage = () => {
-  if (customItemsPerPage.value > 0) {
-    itemsPerPage.value = normalizeItemsPerPage(customItemsPerPage.value)
+const handleRankingPage = (event: unknown) => {
+  const pageEvent = event as { first?: number; rows?: number }
+  rankingPagination.value = {
+    first: pageEvent.first ?? 0,
+    rows: pageEvent.rows ?? rankingPagination.value.rows,
   }
-  showCustomInput.value = false
-}
-
-const cancelCustomInput = () => {
-  itemsPerPage.value = 10
-  showCustomInput.value = false
 }
 
 const formatDuration = (seconds: number | null): string => {
@@ -1127,6 +1089,12 @@ const showScoreBreakdown = (item: ParsedTestItemEnhanced) => {
 
 const showScoreBreakdownForIsn = (item: RankingItem) => {
   openRankingItem(item)
+}
+
+const openOverallScoreDialog = () => {
+  if (selectedRankingItem.value) {
+    showOverallScoreDialog.value = true
+  }
 }
 
 const openIplasCompare = () => {
@@ -1456,30 +1424,47 @@ function rankingRowClass(row: Record<string, unknown>) {
   font-weight: 700;
 }
 
-.top-product-ranking-upload-log__info-button,
-.top-product-ranking-upload-log__info-button--static {
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
+.top-product-ranking-upload-log__summary-card--score {
+  background: rgba(40, 96, 163, 0.08);
+}
+
+.top-product-ranking-upload-log__summary-card-button {
+  display: grid;
+  gap: 0.3rem;
   border: 0;
   background: transparent;
   padding: 0;
   text-align: left;
-}
-
-.top-product-ranking-upload-log__info-button {
+  color: inherit;
   cursor: pointer;
 }
 
-.top-product-ranking-upload-log__info-icon {
+.top-product-ranking-upload-log__summary-card-button--static {
+  cursor: default;
+}
+
+.top-product-ranking-upload-log__summary-hint {
+  color: var(--app-muted);
+  font-size: 0.78rem;
+}
+
+.top-product-ranking-upload-log__header-action {
   display: inline-flex;
-  width: 2.15rem;
-  height: 2.15rem;
   align-items: center;
-  justify-content: center;
-  border-radius: 999px;
-  background: rgba(15, 118, 110, 0.12);
-  color: var(--app-accent);
+  gap: 0.45rem;
+  min-height: 1.95rem;
+  padding: 0.45rem 0.8rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.7rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.top-product-ranking-upload-log__header-action:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .top-product-ranking-upload-log__pill,
@@ -1558,8 +1543,7 @@ function rankingRowClass(row: Record<string, unknown>) {
 .top-product-ranking-upload-log__station-tab,
 .top-product-ranking-upload-log__ghost-button,
 .top-product-ranking-upload-log__primary-button,
-.top-product-ranking-upload-log__score-button,
-.top-product-ranking-upload-log__pager-button {
+.top-product-ranking-upload-log__score-button {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
@@ -1569,8 +1553,7 @@ function rankingRowClass(row: Record<string, unknown>) {
 }
 
 .top-product-ranking-upload-log__station-tab,
-.top-product-ranking-upload-log__ghost-button,
-.top-product-ranking-upload-log__pager-button {
+.top-product-ranking-upload-log__ghost-button {
   border: 1px solid var(--app-border);
   background: var(--app-panel);
   color: var(--app-ink);
@@ -1614,18 +1597,6 @@ function rankingRowClass(row: Record<string, unknown>) {
   color: #8f2020;
 }
 
-.top-product-ranking-upload-log__footer-bar {
-  display: flex;
-  justify-content: space-between;
-  gap: 1rem;
-  align-items: center;
-}
-
-.top-product-ranking-upload-log__pager-button--active {
-  border-color: rgba(15, 118, 110, 0.35);
-  background: rgba(15, 118, 110, 0.1);
-}
-
 .top-product-ranking-upload-log__detail-table {
   display: grid;
   border: 1px solid var(--app-border);
@@ -1655,9 +1626,10 @@ function rankingRowClass(row: Record<string, unknown>) {
   font-weight: 600;
 }
 
-.top-product-ranking-upload-log__custom-dialog {
-  display: grid;
-  gap: 1rem;
+.top-product-ranking-upload-log__dialog--breakdown :deep(.app-dialog__title) {
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.15;
 }
 
 .top-product-ranking-upload-log__row--fail :deep(td) {
@@ -1684,8 +1656,7 @@ function rankingRowClass(row: Record<string, unknown>) {
 
 @media (max-width: 960px) {
   .top-product-ranking-upload-log__dialog-header,
-  .top-product-ranking-upload-log__section-header,
-  .top-product-ranking-upload-log__footer-bar {
+  .top-product-ranking-upload-log__section-header {
     flex-direction: column;
     align-items: stretch;
   }
