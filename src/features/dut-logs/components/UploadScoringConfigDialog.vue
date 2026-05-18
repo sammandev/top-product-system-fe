@@ -138,7 +138,6 @@
 
           <div class="upload-scoring-dialog__item-copy">
             <strong :title="config.test_item_name">{{ config.test_item_name }}</strong>
-            <span>{{ getScoringTypeDescription(config.scoring_type) }}</span>
           </div>
 
           <div class="upload-scoring-dialog__item-meta">

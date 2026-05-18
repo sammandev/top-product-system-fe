@@ -6,55 +6,57 @@
 
     <section class="station-config-body" :class="{ 'station-config-body--fullscreen': isFullscreen }">
       <div class="station-config-shell">
-        <AppPanel title="Minimum Test Item Score" tone="warm" compact-header class="min-score-section">
-          <div class="station-config-dialog__min-score-card">
-            <div class="station-config-dialog__min-score-copy">
-              <p>Below-threshold items mark the result as Min. Score Fail.</p>
-            </div>
+        <div class="station-config-dialog__scope-row">
+          <AppPanel title="Minimum Test Item Score" tone="warm" compact-header class="min-score-section">
+            <div class="station-config-dialog__min-score-card">
+              <div class="station-config-dialog__min-score-copy">
+                <p>Below-threshold items mark Min. Score Fail.</p>
+              </div>
 
-            <div class="station-config-dialog__min-score-controls">
-              <template v-if="localConfig.minimumItemScoreEnabled">
-                <label class="station-config-dialog__field min-score-input">
-                  <span>Threshold</span>
-                  <input v-model.number="localConfig.minimumItemScore" type="number" min="0" max="10" step="0.1" />
-                </label>
-                <span class="station-config-dialog__pill station-config-dialog__pill--warning">
-                  {{ (localConfig.minimumItemScore ?? 6.5).toFixed(1) }}
-                </span>
-              </template>
-              <button type="button" class="station-config-dialog__toggle-pill"
-                :class="{ 'is-active': !localConfig.minimumItemScoreEnabled }"
-                @click="localConfig.minimumItemScoreEnabled = !localConfig.minimumItemScoreEnabled">
-                {{ localConfig.minimumItemScoreEnabled ? 'Disable' : 'Off' }}
+              <div class="station-config-dialog__min-score-controls">
+                <template v-if="localConfig.minimumItemScoreEnabled">
+                  <label class="station-config-dialog__field min-score-input">
+                    <span>Threshold</span>
+                    <input v-model.number="localConfig.minimumItemScore" type="number" min="0" max="10" step="0.1" />
+                  </label>
+                  <span class="station-config-dialog__pill station-config-dialog__pill--warning">
+                    {{ (localConfig.minimumItemScore ?? 6.5).toFixed(1) }}
+                  </span>
+                </template>
+                <button type="button" class="station-config-dialog__toggle-pill"
+                  :class="{ 'is-active': !localConfig.minimumItemScoreEnabled }"
+                  @click="localConfig.minimumItemScoreEnabled = !localConfig.minimumItemScoreEnabled">
+                  {{ localConfig.minimumItemScoreEnabled ? 'Disable' : 'Off' }}
+                </button>
+              </div>
+            </div>
+          </AppPanel>
+
+          <AppPanel title="Device Scope" tone="cool" compact-header class="station-config-dialog__device-section">
+            <template #header-aside>
+              <button type="button" class="station-config-dialog__button station-config-dialog__button--ghost station-config-dialog__button--compact"
+                :disabled="loadingDevices" @click="handleRefreshDevices">
+                {{ loadingDevices ? 'Refreshing...' : 'Refresh' }}
               </button>
-            </div>
-          </div>
-        </AppPanel>
+            </template>
 
-        <AppPanel title="Device Scope" tone="cool" compact-header>
-          <template #header-aside>
-            <button type="button" class="station-config-dialog__button station-config-dialog__button--ghost"
-              :disabled="loadingDevices" @click="handleRefreshDevices">
-              {{ loadingDevices ? 'Refreshing...' : 'Refresh Devices' }}
-            </button>
-          </template>
-
-          <div class="station-config-dialog__section-stack">
-            <div v-if="loadingDevices" class="station-config-dialog__notice station-config-dialog__notice--info">
-              Loading devices for the selected station...
+            <div class="station-config-dialog__section-stack station-config-dialog__section-stack--compact">
+              <div v-if="loadingDevices" class="station-config-dialog__notice station-config-dialog__notice--info">
+                Loading devices...
+              </div>
+              <div v-else-if="availableDeviceIds.length === 0"
+                class="station-config-dialog__notice station-config-dialog__notice--info">
+                No devices available yet.
+              </div>
+              <AppMultiSelect v-else v-model="localConfig.deviceIds" :options="deviceSelectOptions"
+                placeholder="All devices" />
+              <p v-if="!loadingDevices && availableDeviceIds.length > 0 && localConfig.deviceIds.length === 0"
+                class="station-config-dialog__helper-copy station-config-dialog__helper-copy--footnote">
+                Empty means all devices.
+              </p>
             </div>
-            <div v-else-if="availableDeviceIds.length === 0"
-              class="station-config-dialog__notice station-config-dialog__notice--info">
-              No devices available yet. Refresh after station data is ready.
-            </div>
-            <AppMultiSelect v-else v-model="localConfig.deviceIds" :options="deviceSelectOptions"
-              placeholder="Select devices..." />
-            <p v-if="!loadingDevices && availableDeviceIds.length > 0 && localConfig.deviceIds.length === 0"
-              class="station-config-dialog__helper-copy station-config-dialog__helper-copy--footnote">
-              Leave empty to use all devices.
-            </p>
-          </div>
-        </AppPanel>
+          </AppPanel>
+        </div>
 
         <div v-if="deviceError" class="station-config-dialog__notice station-config-dialog__notice--danger">
           {{ deviceError }}
@@ -555,7 +557,7 @@ const filteredTestItemEntries = computed(() => {
   return filteredTestItems.value.map((item: TestItemInfo) => {
     const isIncluded = includedSet.value.has(item.name)
     const isExcluded = excludedSet.value.has(item.name)
-    const scoringConfig = isIncluded && item.isValue ? getTestItemScoringConfig(item.name) : null
+    const scoringConfig = isIncluded && isCriteriaTestItem(item) ? getTestItemScoringConfig(item.name) : null
     const scoringInfo = scoringConfig ? getScoringTypeInfo(scoringConfig.scoringType) : null
 
     return {
@@ -564,7 +566,7 @@ const filteredTestItemEntries = computed(() => {
       isIncluded,
       isExcluded,
       isLockedByOppositeSelection: oppositeSelectionSet.value.has(item.name),
-      canConfigureScoring: isIncluded && item.isValue,
+      canConfigureScoring: isIncluded && isCriteriaTestItem(item),
       scoringLabel: scoringInfo?.label,
       scoringColor: scoringInfo?.color ?? 'primary',
       scoringIcon: scoringInfo?.icon ?? 'mdi-tune',
@@ -646,6 +648,14 @@ function getAllAnalyzableTestItemNames(): string[] {
   return uniqueAvailableTestItems.value
     .filter((item: TestItemInfo) => !item.isBin)
     .map((item: TestItemInfo) => item.name)
+}
+
+function isCriteriaTestItem(item: TestItemInfo): boolean {
+  return item.hasUcl || item.hasLcl
+}
+
+function isNonCriteriaTestItem(item: TestItemInfo): boolean {
+  return !item.isBin && !isCriteriaTestItem(item)
 }
 
 function getSelectionItems(target: 'include' | 'exclude'): string[] {
@@ -769,7 +779,7 @@ function selectDisplayedAndConfigureScore(): void {
 function selectValueTestItems(): void {
   const currentItems = new Set(getSelectionItems(selectionTarget.value))
   const itemsToAdd = uniqueAvailableTestItems.value
-    .filter((item: TestItemInfo) => item.isValue && (item.hasUcl || item.hasLcl))
+    .filter((item: TestItemInfo) => isCriteriaTestItem(item))
     .map((item: TestItemInfo) => item.name)
 
   for (const itemName of itemsToAdd) {
@@ -782,7 +792,7 @@ function selectValueTestItems(): void {
 function selectNonValueTestItems(): void {
   const currentItems = new Set(getSelectionItems(selectionTarget.value))
   const itemsToAdd = uniqueAvailableTestItems.value
-    .filter((item: TestItemInfo) => item.isValue && !item.hasUcl && !item.hasLcl)
+    .filter((item: TestItemInfo) => isNonCriteriaTestItem(item))
     .map((item: TestItemInfo) => item.name)
 
   for (const itemName of itemsToAdd) {
@@ -797,16 +807,14 @@ function clearTestItemSelection(): void {
 }
 
 function getTestItemTypeLabel(item: TestItemInfo): string {
-  // CRITERIA: has UCL or LCL (criteria limits define criteria)
-  if (item.isValue && (item.hasUcl || item.hasLcl)) return 'CRITERIA'
-  // NON-CRITERIA: has numeric VALUE but no limits
-  if (item.isValue && !item.hasUcl && !item.hasLcl) return 'NON-CRITERIA'
+  if (isCriteriaTestItem(item)) return 'CRITERIA'
+  if (isNonCriteriaTestItem(item)) return 'NON-CRITERIA'
   return 'OTHER'
 }
 
 function getTestItemTypeColor(item: TestItemInfo): string {
-  if (item.isValue && (item.hasUcl || item.hasLcl)) return 'success'
-  if (item.isValue && !item.hasUcl && !item.hasLcl) return 'warning'
+  if (isCriteriaTestItem(item)) return 'success'
+  if (isNonCriteriaTestItem(item)) return 'warning'
   return 'grey'
 }
 
@@ -1036,7 +1044,7 @@ function applyBulkScoringConfig(): void {
   // Apply to all selected criteria test items (has VALUE + UCL or LCL)
   const criteriaItems = uniqueAvailableTestItems.value.filter(
     (item: TestItemInfo) =>
-      item.isValue && (item.hasUcl || item.hasLcl) && includedTestItems.value.includes(item.name),
+      isCriteriaTestItem(item) && includedTestItems.value.includes(item.name),
   )
 
   for (const item of criteriaItems) {
@@ -1067,18 +1075,14 @@ function applyBulkScoringConfig(): void {
 
 // Get count of selected criteria items for bulk config
 const selectedCriteriaCount = computed(() => {
-  // CRITERIA: has VALUE + (UCL or LCL)
   return uniqueAvailableTestItems.value.filter(
-    (item: TestItemInfo) =>
-      item.isValue && (item.hasUcl || item.hasLcl) && includedSet.value.has(item.name),
+    (item: TestItemInfo) => isCriteriaTestItem(item) && includedSet.value.has(item.name),
   ).length
 })
 
 // Get count of criteria items in currently displayed/filtered list
 const displayedCriteriaCount = computed(() => {
-  return filteredTestItems.value.filter(
-    (item: TestItemInfo) => item.isValue && (item.hasUcl || item.hasLcl),
-  ).length
+  return filteredTestItems.value.filter((item: TestItemInfo) => isCriteriaTestItem(item)).length
 })
 
 const bulkScoringTypeRequiresTarget = computed(() => {
@@ -1136,6 +1140,13 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
   min-height: 0;
 }
 
+.station-config-dialog__scope-row {
+  display: grid;
+  grid-template-columns: minmax(18rem, 0.85fr) minmax(22rem, 1.15fr);
+  gap: 0.85rem;
+  align-items: stretch;
+}
+
 .station-config-dialog__section-stack,
 .station-config-dialog__search-stack,
 .station-config-dialog__item-list,
@@ -1153,6 +1164,10 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .test-item-row-actions {
   display: grid;
   gap: 0.75rem;
+}
+
+.station-config-dialog__section-stack--compact {
+  gap: 0.45rem;
 }
 
 .station-config-dialog__header {
@@ -1224,6 +1239,13 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 
 .station-config-dialog__button {
   padding: 0.65rem 0.9rem;
+}
+
+.station-config-dialog__button--compact {
+  min-height: 2.2rem;
+  padding: 0.42rem 0.65rem;
+  border-radius: 0.6rem;
+  font-size: 0.78rem;
 }
 
 .station-config-dialog__icon-button {
@@ -1580,7 +1602,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-dialog__min-score-card {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 1rem;
+  gap: 0.65rem;
 }
 
 .station-config-dialog__min-score-copy {
@@ -1596,18 +1618,24 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 .station-config-dialog__min-score-copy p {
   margin: 0;
   color: var(--app-ink-soft, var(--app-muted));
-  line-height: 1.55;
+  line-height: 1.35;
+  font-size: 0.82rem;
 }
 
 .station-config-dialog__min-score-controls {
   grid-auto-flow: column;
   align-items: end;
   justify-content: end;
-  gap: 0.65rem;
+  gap: 0.5rem;
 }
 
 .min-score-input {
-  width: 220px;
+  width: 8.5rem;
+}
+
+.min-score-section,
+.station-config-dialog__device-section {
+  min-width: 0;
 }
 
 .test-item-list-container {
@@ -1688,6 +1716,7 @@ const bulkScoringTypeRequiresPolicy = computed(() => {
 }
 
 @media (max-width: 840px) {
+  .station-config-dialog__scope-row,
   .station-config-dialog__min-score-card {
     grid-template-columns: minmax(0, 1fr);
   }

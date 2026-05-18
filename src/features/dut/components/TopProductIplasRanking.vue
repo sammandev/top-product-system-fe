@@ -131,7 +131,6 @@
               <template #cell-status="{ data }">
                 <span v-if="isPendingCalculation(data)" class="ranking-pill ranking-pill--pending">
                   <span class="ranking-inline-spinner" aria-hidden="true"></span>
-                  Calculating...
                 </span>
                 <span v-else class="ranking-pill"
                   :class="data.isForcedFailure ? 'ranking-pill--warning' : (data.hasError ? 'ranking-pill--danger' : 'ranking-pill--success')">
@@ -143,7 +142,6 @@
                 <template v-if="isPendingCalculation(data)">
                   <span class="ranking-score-chip ranking-score-chip--pending">
                     <span class="ranking-inline-spinner" aria-hidden="true"></span>
-                    Calculating...
                   </span>
                 </template>
                 <template v-else-if="data.hasError && !data.isForcedFailure">

@@ -121,9 +121,11 @@
     </div>
 
     <div v-if="loadingTestItems" class="top-product-iplas-station-loading-card" role="status" aria-live="polite">
-      <div class="top-product-iplas-station-spinner"></div>
       <div class="top-product-iplas-station-loading-copy">
-        <span class="top-product-iplas-station-pill top-product-iplas-station-pill--info">Searching iPLAS</span>
+        <span class="top-product-iplas-station-pill top-product-iplas-station-pill--info top-product-iplas-station-pill--loading">
+          <span class="top-product-iplas-station-spinner" aria-hidden="true"></span>
+          Searching iPLAS
+        </span>
         <strong>Building the station ranking dataset...</strong>
         <p>Fetching records for the selected station scope, device filters, and time range.</p>
         <small>
@@ -1697,13 +1699,13 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-station-loading-card {
-  grid-template-columns: auto minmax(0, 1fr);
-  align-items: center;
+  align-items: start;
 }
 
 .top-product-iplas-station-loading-copy {
   display: grid;
   gap: 0.35rem;
+  justify-items: start;
 }
 
 .top-product-iplas-station-loading-copy small {
@@ -1712,12 +1714,16 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-station-spinner {
-  width: 2rem;
-  height: 2rem;
+  width: 1rem;
+  height: 1rem;
   border-radius: 50%;
-  border: 3px solid color-mix(in srgb, var(--app-accent) 16%, transparent);
-  border-top-color: var(--app-accent);
+  border: 2px solid currentColor;
+  border-right-color: transparent;
   animation: top-product-iplas-station-spin 0.9s linear infinite;
+}
+
+.top-product-iplas-station-pill--loading {
+  gap: 0.5rem;
 }
 
 @keyframes top-product-iplas-station-spin {

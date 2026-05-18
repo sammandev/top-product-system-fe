@@ -132,26 +132,17 @@
         </button>
       </section>
 
-      <section class="iplas-details-dialog__filters" :class="{ 'iplas-details-dialog__filters--has-scores': hasScores }">
+      <section class="iplas-details-dialog__filters"
+        :class="{ 'iplas-details-dialog__filters--has-scores': hasScores }">
         <label class="iplas-details-dialog__field">
-          <span>Search Test Items (Regex)</span>
-          <div class="iplas-details-dialog__token-shell app-themed-input">
-            <div v-if="searchTerms.length > 0" class="iplas-details-dialog__token-list">
-              <button v-for="term in searchTerms" :key="term" type="button" class="iplas-details-dialog__token"
-                @click="removeSearchTerm(term)">
-                <span>{{ term }}</span>
-                <Icon icon="mdi:close" />
-              </button>
-            </div>
-            <div class="iplas-details-dialog__search-shell app-themed-input">
-              <Icon icon="mdi:magnify" />
-              <input v-model="pendingSearchTerm" type="text" placeholder="Type and press Enter (AND logic)..."
-                @keydown="handleSearchTermKeydown" @blur="commitSearchTerms()" />
-              <button v-if="searchTerms.length > 0 || pendingSearchTerm" type="button"
-                class="iplas-details-dialog__ghost-action" @click="clearSearchTerms">
-                Clear
-              </button>
-            </div>
+          <span>Search Test Items</span>
+          <div class="iplas-details-dialog__search-shell app-themed-input">
+            <Icon icon="mdi:magnify" />
+            <input v-model="testItemSearchQuery" type="search" placeholder="Search by item, status, or value..." />
+            <button v-if="testItemSearchQuery" type="button" class="iplas-details-dialog__ghost-action"
+              @click="clearSearchTerms">
+              Clear
+            </button>
           </div>
         </label>
 
@@ -215,7 +206,8 @@
   </AppDialog>
 
   <AppDialog v-model="showForcedFailDialog" title="Forced Fail Items"
-    description="Review items that fell below the minimum score or exceeded the configured deviation." width="min(92vw, 56rem)">
+    description="Review items that fell below the minimum score or exceeded the configured deviation."
+    width="min(92vw, 56rem)">
     <div v-if="record" class="iplas-details-subdialog">
       <section class="iplas-details-dialog__notice iplas-details-dialog__notice--warning">
         <strong>
@@ -335,7 +327,8 @@
             <div class="iplas-details-dialog__metric-label">Formula</div>
             <div class="score-formula-equation">{{ getScoringFormula(selectedTestItem.scoringType) }}</div>
             <dl class="score-formula-variable-list">
-              <template v-for="variable in getScoringFormulaVariables(selectedTestItem.scoringType)" :key="variable.key">
+              <template v-for="variable in getScoringFormulaVariables(selectedTestItem.scoringType)"
+                :key="variable.key">
                 <dt>{{ variable.key }}</dt>
                 <dd>{{ variable.value }}</dd>
               </template>
@@ -357,6 +350,13 @@
     </template>
 
     <div v-if="record && scoreSummaryPrimary && overallScoreExplanation" class="iplas-details-subdialog">
+      <section v-if="record.isForcedFailure" class="iplas-details-dialog__notice iplas-details-dialog__notice--warning">
+        <strong>Forced Fail Override</strong>
+        <p>
+          {{ forcedFailureNoticeText }} That threshold rule is separate from the aggregate weighted-average score shown above.
+        </p>
+      </section>
+
       <div class="score-explanation-primary">
         <div>
           <div class="iplas-details-dialog__metric-label">{{ scoreSummaryLabel }}</div>
@@ -412,14 +412,6 @@
           <div class="iplas-details-dialog__muted">Based on squared per-item weights.</div>
         </div>
       </div>
-
-      <section v-if="record.isForcedFailure" class="iplas-details-dialog__notice iplas-details-dialog__notice--warning">
-        <strong>Forced Fail Override</strong>
-        <p>
-          {{ forcedFailureNoticeText }}
-        </p>
-        <p>That threshold rule is separate from the aggregate weighted-average score shown above.</p>
-      </section>
     </div>
 
   </AppDialog>
@@ -506,8 +498,7 @@ const isFullscreen = ref(false)
 // Filter controls
 // UPDATED: Default to 'all' (Show All) instead of 'value'
 const testItemFilter = ref<TestItemFilter>('all')
-const searchTerms = ref<string[]>([])
-const pendingSearchTerm = ref('')
+const testItemSearchQuery = ref('')
 const { showInfo: showInfoNotification } = useNotification()
 
 // UPDATED: Score filter state
@@ -1035,35 +1026,8 @@ function scoreTableRowClass(): string {
   return hasScores.value ? 'iplas-details-dialog__table-row--clickable' : ''
 }
 
-function commitSearchTerms(rawInput: string = pendingSearchTerm.value): void {
-  const values = rawInput
-    .split(/[,\n]+/)
-    .map((value) => value.trim())
-    .filter((value) => value.length > 0)
-
-  if (values.length === 0) {
-    pendingSearchTerm.value = ''
-    return
-  }
-
-  searchTerms.value = Array.from(new Set([...searchTerms.value, ...values]))
-  pendingSearchTerm.value = ''
-}
-
-function handleSearchTermKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Enter' || event.key === ',' || event.key === 'Tab') {
-    event.preventDefault()
-    commitSearchTerms()
-  }
-}
-
-function removeSearchTerm(term: string): void {
-  searchTerms.value = searchTerms.value.filter((value) => value !== term)
-}
-
 function clearSearchTerms(): void {
-  searchTerms.value = []
-  pendingSearchTerm.value = ''
+  testItemSearchQuery.value = ''
 }
 
 function getItemScoreThreshold(item: NormalizedTestItem): number | null {
@@ -1272,22 +1236,17 @@ const filteredTestItems = computed(() => {
     })
   }
 
-  // UPDATED: Apply multi-term regex search (AND logic - all terms must match)
-  if (searchTerms.value.length > 0) {
+  const searchKeywords = testItemSearchQuery.value
+    .toLowerCase()
+    .split(/[\s,]+/)
+    .map((value) => value.trim())
+    .filter(Boolean)
+
+  if (searchKeywords.length > 0) {
     items = items.filter((item: NormalizedTestItem) => {
       const searchableText =
         `${item.NAME || ''} ${item.STATUS || ''} ${item.VALUE || ''}`.toLowerCase()
-      // AND logic: every term must match
-      return searchTerms.value.every((term: string) => {
-        const trimmedTerm = term.trim().toLowerCase()
-        if (!trimmedTerm) return true // Empty terms don't affect filtering
-        try {
-          const regex = new RegExp(trimmedTerm, 'i')
-          return regex.test(searchableText)
-        } catch {
-          return searchableText.includes(trimmedTerm)
-        }
-      })
+      return searchKeywords.every((term: string) => searchableText.includes(term))
     })
   }
 
@@ -1321,8 +1280,7 @@ const filteredTestItems = computed(() => {
 // Methods
 function close(): void {
   isOpen.value = false
-  searchTerms.value = []
-  pendingSearchTerm.value = ''
+  testItemSearchQuery.value = ''
 }
 
 function handleDownload(): void {
@@ -1557,8 +1515,7 @@ watch(
   () => {
     // UPDATED: Always default to Show All
     testItemFilter.value = 'all'
-    searchTerms.value = []
-    pendingSearchTerm.value = ''
+    testItemSearchQuery.value = ''
     // Clear score filter
     scoreFilterType.value = null
     scoreFilterValue.value = null
@@ -1702,11 +1659,13 @@ watch(
 
 .iplas-details-dialog__summary-grid {
   grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
   align-items: stretch;
 }
 
 .iplas-details-dialog__metadata-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.55rem;
 }
 
 .iplas-details-dialog__stats-grid,
@@ -1759,6 +1718,14 @@ watch(
 .iplas-details-dialog__metric-list,
 .iplas-details-dialog__simple-list {
   padding: 1rem 1.1rem;
+}
+
+.iplas-details-dialog__summary-card {
+  padding: 0.68rem 0.8rem;
+}
+
+.iplas-details-dialog__metadata-card {
+  padding: 0.52rem 0.65rem;
 }
 
 .iplas-details-dialog__table-shell {
@@ -1829,7 +1796,7 @@ watch(
 .iplas-details-dialog__copy-row {
   width: 100%;
   display: flex;
-  gap: 0.72rem;
+  gap: 0.55rem;
   align-items: center;
   text-align: left;
   cursor: pointer;
@@ -1859,19 +1826,35 @@ watch(
 }
 
 .iplas-details-dialog__summary-card .iplas-details-dialog__info-button small {
-  font-size: 0.92rem;
+  font-size: 0.72rem;
+}
+
+.iplas-details-dialog__summary-card .iplas-details-dialog__info-icon {
+  width: 1.85rem;
+  height: 1.85rem;
+  border-radius: 0.55rem;
+  font-size: 0.9rem;
 }
 
 .iplas-details-dialog__summary-card .iplas-details-dialog__info-button strong {
-  font-size: clamp(1.4rem, 1.15rem + 0.75vw, 1.85rem);
+  font-size: clamp(1rem, 0.95rem + 0.35vw, 1.28rem);
   line-height: 1.15;
 }
 
 .iplas-details-dialog__metric-value,
 .score-explanation-primary__score {
-  font-size: clamp(1.3rem, 2vw, 2rem);
+  font-size: clamp(1.05rem, 1.45vw, 1.45rem);
   line-height: 1.1;
   font-variant-numeric: tabular-nums;
+}
+
+.iplas-details-dialog__metadata-card .iplas-details-dialog__copy-row {
+  min-height: 1.9rem;
+  font-size: 0.82rem;
+}
+
+.iplas-details-dialog__metadata-card .iplas-details-dialog__copy-row :deep(svg) {
+  font-size: 1rem;
 }
 
 .iplas-details-dialog__pill {
@@ -2040,7 +2023,7 @@ watch(
 .iplas-details-dialog__score-button-layout {
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 0.55rem;
   min-width: 0;
 }
 
@@ -2077,6 +2060,9 @@ watch(
 .iplas-details-dialog__body--fullscreen .iplas-details-dialog__table-shell {
   min-height: 0;
   max-height: none;
+  position: sticky;
+  bottom: 0;
+  overflow: hidden;
 }
 
 .iplas-details-dialog__notice--warning {
@@ -2354,6 +2340,20 @@ watch(
 
 .iplas-details-dialog__table-shell :deep(.app-data-grid__table--sticky-header .p-datatable-thead > tr > th) {
   z-index: 4;
+}
+
+.iplas-details-dialog__body--fullscreen .iplas-details-dialog__table-shell :deep(.p-datatable-thead > tr > th) {
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.iplas-details-dialog__body--fullscreen .iplas-details-dialog__table-shell :deep(.p-paginator) {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  border-top: 1px solid var(--iplas-border-strong);
+  background: var(--iplas-panel);
 }
 
 .iplas-details-dialog__explanation-card summary {

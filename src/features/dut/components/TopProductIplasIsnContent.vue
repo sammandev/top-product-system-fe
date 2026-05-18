@@ -29,13 +29,20 @@
             </button>
           </div>
 
-          <label class="top-product-iplas-isn-toggle-card">
-            <input v-model="enableUnifiedSearch" type="checkbox">
-            <div>
+          <button type="button" class="top-product-iplas-isn-unified-card"
+            :class="{ 'is-active': enableUnifiedSearch }" :aria-pressed="enableUnifiedSearch"
+            @click="enableUnifiedSearch = !enableUnifiedSearch">
+            <span class="top-product-iplas-isn-unified-card__icon">
+              <Icon icon="mdi:link-variant" />
+            </span>
+            <span class="top-product-iplas-isn-unified-card__copy">
               <strong>Unified Search</strong>
-              <p>Expand the search to all related ISN, SSN, and MAC identifiers.</p>
-            </div>
-          </label>
+              <small>{{ enableUnifiedSearch ? 'ISN, SSN, and MAC enabled' : 'Only entered identifiers' }}</small>
+            </span>
+            <span class="top-product-iplas-isn-unified-card__switch" aria-hidden="true">
+              <span></span>
+            </span>
+          </button>
         </div>
 
         <section v-if="inputMode === 'multiple'" class="top-product-iplas-isn-input-shell">
@@ -95,19 +102,26 @@
           </div>
         </section>
 
-        <section v-if="sfistspReferences.length > 0" class="top-product-iplas-isn-reference-panel">
+        <section v-if="sfistspReferences.length > 0" class="top-product-iplas-isn-reference-panel"
+          :class="{ 'is-collapsed': isSfistspCollapsed }">
           <div class="top-product-iplas-isn-reference-panel__header">
             <div>
               <p class="top-product-iplas-isn-reference-panel__eyebrow">Lookup</p>
               <h3>SFISTSP Matches</h3>
             </div>
-            <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--ghost"
-              @click="sfistspReferences = []">
-              Dismiss
-            </button>
+            <div class="top-product-iplas-isn-reference-panel__actions">
+              <button type="button" class="top-product-iplas-isn-icon-button" :title="isSfistspCollapsed ? 'Expand matches' : 'Collapse matches'"
+                :aria-expanded="!isSfistspCollapsed" @click="isSfistspCollapsed = !isSfistspCollapsed">
+                <Icon :icon="isSfistspCollapsed ? 'mdi:chevron-down' : 'mdi:chevron-up'" />
+              </button>
+              <button type="button" class="top-product-iplas-isn-icon-button" title="Close lookup matches"
+                @click="sfistspReferences = []">
+                <Icon icon="mdi:close" />
+              </button>
+            </div>
           </div>
 
-          <div class="top-product-iplas-isn-reference-grid">
+          <div v-show="!isSfistspCollapsed" class="top-product-iplas-isn-reference-grid">
             <article v-for="ref in sfistspReferences" :key="ref.isn_searched" class="top-product-iplas-isn-reference-card"
               :class="ref.success ? 'top-product-iplas-isn-reference-card--success' : 'top-product-iplas-isn-reference-card--error'">
               <div class="top-product-iplas-isn-reference-card__topline">
@@ -207,9 +221,11 @@
     </div>
 
     <div v-if="isnLoadingState" class="top-product-iplas-isn-loading-card" role="status" aria-live="polite">
-      <div class="top-product-iplas-isn-spinner"></div>
       <div class="top-product-iplas-isn-loading-copy">
-        <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">{{ isnLoadingState.badge }}</span>
+        <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info top-product-iplas-isn-pill--loading">
+          <span class="top-product-iplas-isn-spinner" aria-hidden="true"></span>
+          {{ isnLoadingState.badge }}
+        </span>
         <strong>{{ isnLoadingState.title }}</strong>
         <p>{{ isnLoadingState.description }}</p>
         <small>{{ isnLoadingState.meta }}</small>
@@ -330,6 +346,7 @@ const sfistspReferences = ref<SfistspIsnReferenceResponse[]>([])
 const loadingSfistsp = ref(false)
 /** Toggle for unified search (ISN/SSN/MAC reference lookup) */
 const enableUnifiedSearch = ref(true)
+const isSfistspCollapsed = ref(false)
 
 // ============================================================================
 // State: Station Lookup
@@ -861,6 +878,7 @@ function extractTestItemsFromRecords(
 async function lookupSfistspReferences(isnList: string[]): Promise<string[]> {
   loadingSfistsp.value = true
   sfistspReferences.value = []
+  isSfistspCollapsed.value = false
 
   try {
     // Use batch lookup for efficiency
@@ -1805,6 +1823,7 @@ onUnmounted(() => {
 .top-product-iplas-isn-inline-actions,
 .top-product-iplas-isn-bulk-footer,
 .top-product-iplas-isn-reference-card__topline,
+.top-product-iplas-isn-reference-panel__actions,
 .top-product-iplas-isn-token-card__meta {
   display: flex;
   flex-wrap: wrap;
@@ -1820,6 +1839,7 @@ onUnmounted(() => {
 
 .top-product-iplas-isn-input-label,
 .top-product-iplas-isn-toggle-card strong,
+.top-product-iplas-isn-unified-card strong,
 .top-product-iplas-isn-summary-panel h3,
 .top-product-iplas-isn-reference-panel__header h3,
 .top-product-iplas-isn-loading-card strong,
@@ -1849,6 +1869,7 @@ onUnmounted(() => {
 .top-product-iplas-isn-notice,
 .top-product-iplas-isn-input-card small,
 .top-product-iplas-isn-loading-card p,
+.top-product-iplas-isn-unified-card small,
 .top-product-iplas-isn-reference-error {
   margin: 0;
   color: var(--app-muted);
@@ -1891,6 +1912,7 @@ onUnmounted(() => {
 
 .top-product-iplas-isn-button,
 .top-product-iplas-isn-toggle-chip,
+.top-product-iplas-isn-unified-card,
 .top-product-iplas-isn-token,
 .top-product-iplas-isn-token-card,
 .top-product-iplas-isn-remove {
@@ -1917,6 +1939,7 @@ onUnmounted(() => {
 
 .top-product-iplas-isn-button:hover,
 .top-product-iplas-isn-toggle-chip:hover,
+.top-product-iplas-isn-unified-card:hover,
 .top-product-iplas-isn-token:hover,
 .top-product-iplas-isn-token-card:hover,
 .top-product-iplas-isn-remove:hover {
@@ -1954,14 +1977,14 @@ onUnmounted(() => {
 
 .top-product-iplas-isn-loading-card {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
   gap: 0.9rem;
-  align-items: center;
+  align-items: start;
 }
 
 .top-product-iplas-isn-loading-copy {
   display: grid;
   gap: 0.35rem;
+  justify-items: start;
 }
 
 .top-product-iplas-isn-loading-copy small {
@@ -1970,12 +1993,16 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-isn-spinner {
-  width: 2rem;
-  height: 2rem;
+  width: 1rem;
+  height: 1rem;
   border-radius: 50%;
-  border: 3px solid color-mix(in srgb, var(--app-accent) 16%, transparent);
-  border-top-color: var(--app-accent);
+  border: 2px solid currentColor;
+  border-right-color: transparent;
   animation: top-product-iplas-isn-spin 0.9s linear infinite;
+}
+
+.top-product-iplas-isn-pill--loading {
+  gap: 0.5rem;
 }
 
 @keyframes top-product-iplas-isn-spin {
@@ -1989,6 +2016,64 @@ onUnmounted(() => {
   grid-template-columns: auto minmax(0, 1fr);
   gap: 0.85rem;
   align-items: start;
+}
+
+.top-product-iplas-isn-unified-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: center;
+  min-width: min(100%, 26rem);
+  padding: 0.72rem 0.85rem;
+  text-align: left;
+}
+
+.top-product-iplas-isn-unified-card.is-active {
+  border-color: var(--app-success-line);
+  background: var(--app-success-soft);
+}
+
+.top-product-iplas-isn-unified-card__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.65rem;
+  background: var(--app-panel-strong);
+  color: var(--app-accent);
+}
+
+.top-product-iplas-isn-unified-card__copy {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.top-product-iplas-isn-unified-card__switch {
+  width: 2.35rem;
+  height: 1.3rem;
+  padding: 0.16rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--app-muted) 18%, transparent);
+}
+
+.top-product-iplas-isn-unified-card__switch span {
+  display: block;
+  width: 0.98rem;
+  height: 0.98rem;
+  border-radius: 50%;
+  background: var(--app-panel);
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+
+.top-product-iplas-isn-unified-card.is-active .top-product-iplas-isn-unified-card__switch {
+  background: var(--app-accent);
+}
+
+.top-product-iplas-isn-unified-card.is-active .top-product-iplas-isn-unified-card__switch span {
+  transform: translateX(1.05rem);
+  background: var(--app-canvas);
 }
 
 .top-product-iplas-isn-toggle-card input {
@@ -2072,6 +2157,25 @@ onUnmounted(() => {
   background: var(--app-panel);
 }
 
+.top-product-iplas-isn-reference-panel.is-collapsed {
+  padding-bottom: 0.9rem;
+}
+
+.top-product-iplas-isn-reference-panel__actions {
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.top-product-iplas-isn-reference-panel__actions .top-product-iplas-isn-icon-button {
+  color: var(--app-muted);
+}
+
+.top-product-iplas-isn-reference-panel__actions .top-product-iplas-isn-icon-button:hover {
+  border-color: var(--app-info-line);
+  background: var(--app-info-soft);
+  color: var(--app-info);
+}
+
 .top-product-iplas-isn-reference-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
@@ -2102,6 +2206,21 @@ onUnmounted(() => {
   color: var(--app-muted);
   font-size: 0.72rem;
   font-weight: 700;
+}
+
+.top-product-iplas-isn-reference-card__topline {
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.top-product-iplas-isn-reference-card__topline > div {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.top-product-iplas-isn-reference-card__topline strong {
+  overflow-wrap: anywhere;
 }
 
 .top-product-iplas-isn-reference-code {
@@ -2184,6 +2303,7 @@ onUnmounted(() => {
   .top-product-iplas-isn-inline-actions,
   .top-product-iplas-isn-bulk-footer,
   .top-product-iplas-isn-reference-card__topline,
+  .top-product-iplas-isn-reference-panel__actions,
   .top-product-iplas-isn-token-card__meta {
     align-items: stretch;
   }
