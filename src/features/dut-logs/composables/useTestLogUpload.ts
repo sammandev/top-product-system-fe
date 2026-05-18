@@ -145,6 +145,24 @@ export interface RescoreScoringConfig {
   policy?: 'symmetrical' | 'higher' | 'lower'
   limit_score?: number
   alpha?: number
+  min_score?: number
+  max_deviation?: number
+}
+
+export interface UploadScoringConfigApplyPayload {
+  configs: RescoreScoringConfig[]
+  deviceScope: string[]
+}
+
+export function hasMeaningfulUploadLogLimit(limit: number | null | undefined): boolean {
+  return limit !== null && limit !== undefined && limit !== 0
+}
+
+export function hasMeaningfulUploadLogCriteria(
+  usl: number | null | undefined,
+  lsl: number | null | undefined,
+): boolean {
+  return hasMeaningfulUploadLogLimit(usl) || hasMeaningfulUploadLogLimit(lsl)
 }
 
 export interface RescoreItemResult {
@@ -155,7 +173,7 @@ export interface RescoreItemResult {
   status: string
   scoring_type: string
   policy: string | null
-  score: number
+  score: number | null
   deviation: number | null
   weight: number
   target: number | null

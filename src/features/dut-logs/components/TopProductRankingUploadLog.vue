@@ -18,7 +18,7 @@
             @click="stationTab = 'all'"
           >
             <span>All Stations</span>
-            <strong>{{ rankings.length }}</strong>
+            <strong>{{ deviceScopedRankings.length }}</strong>
           </button>
           <button
             v-for="station in availableStations"
@@ -475,7 +475,7 @@
             @click="stationTab = 'all'"
           >
             <span>All Stations</span>
-            <strong>{{ rankings.length }}</strong>
+            <strong>{{ deviceScopedRankings.length }}</strong>
           </button>
           <button
             v-for="station in availableStations"
@@ -610,6 +610,7 @@ import type {
   RescoreScoringConfig,
   TestLogParseResponseEnhanced,
 } from '@/features/dut-logs/composables/useTestLogUpload'
+import { hasMeaningfulUploadLogCriteria } from '@/features/dut-logs/composables/useTestLogUpload'
 import {
   createTopProduct,
   createTopProductsBulk,
@@ -629,6 +630,7 @@ const props = defineProps<{
   parseResult?: TestLogParseResponseEnhanced | null
   compareResult?: CompareResponseEnhanced | null
   scoringConfigs?: RescoreScoringConfig[]
+  deviceScope?: string[]
 }>()
 
 interface RankingItem {
@@ -689,9 +691,9 @@ const filteredTestItems = computed(() => {
   let items = selectedTestItems.value
 
   if (testItemFilterType.value === 'criteria') {
-    items = items.filter((item) => item.usl !== null || item.lsl !== null)
+    items = items.filter((item) => hasMeaningfulUploadLogCriteria(item.usl, item.lsl))
   } else if (testItemFilterType.value === 'non-criteria') {
-    items = items.filter((item) => item.usl === null && item.lsl === null)
+    items = items.filter((item) => !hasMeaningfulUploadLogCriteria(item.usl, item.lsl))
   }
 
   if (testItemSearch.value) {
@@ -844,9 +846,17 @@ const rankings = computed<RankingItem[]>(() => {
   return items.sort((a, b) => b.score - a.score)
 })
 
+const deviceScopedRankings = computed(() => {
+  if (!props.deviceScope || props.deviceScope.length === 0) {
+    return rankings.value
+  }
+
+  return rankings.value.filter((item) => !!item.device && props.deviceScope?.includes(item.device))
+})
+
 const availableStations = computed(() => {
   const stations = new Set<string>()
-  rankings.value.forEach((item) => {
+  deviceScopedRankings.value.forEach((item) => {
     if (item.station) {
       stations.add(item.station)
     }
@@ -855,11 +865,11 @@ const availableStations = computed(() => {
 })
 
 function getStationCount(station: string): number {
-  return rankings.value.filter((item) => item.station === station).length
+  return deviceScopedRankings.value.filter((item) => item.station === station).length
 }
 
 const filteredRankings = computed(() => {
-  let filtered = rankings.value
+  let filtered = deviceScopedRankings.value
 
   if (stationTab.value !== 'all') {
     filtered = filtered.filter((item) => item.station === stationTab.value)

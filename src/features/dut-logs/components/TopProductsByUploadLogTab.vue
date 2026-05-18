@@ -108,6 +108,17 @@
           Clear
         </button>
       </div>
+
+      <div v-if="selectedDeviceScope.length > 0" class="upload-log-shell__notice">
+        <div>
+          <strong>Device scope active</strong>
+          <p>{{ selectedDeviceScope.length }} uploaded device{{ selectedDeviceScope.length === 1 ? '' : 's' }} selected for ranking and comparison.</p>
+        </div>
+
+        <button type="button" class="upload-log-shell__link" @click="selectedDeviceScope = []">
+          Clear
+        </button>
+      </div>
     </AppPanel>
 
     <section v-if="hasResults" class="upload-log-shell__summary">
@@ -115,6 +126,7 @@
         :parse-result="parsingResult"
         :compare-result="compareResult"
         :scoring-configs="appliedScoringConfigs"
+        :device-scope="selectedDeviceScope"
       />
     </section>
   </section>
@@ -511,8 +523,9 @@
 
   <!-- UPDATED: Upload Scoring Config Dialog -->
   <UploadScoringConfigDialog v-model="showScoringConfigDialog" :test-items="extractedTestItems"
-    :existing-configs="appliedScoringConfigs" :stations="extractedStations" :test-item-stations="testItemStationsMap"
-    :default-station="selectedUploadedStation" @apply="handleScoringConfigApply" />
+    :existing-configs="appliedScoringConfigs" :stations="extractedStations" :devices="extractedDevices"
+    :test-item-stations="testItemStationsMap" :default-station="selectedUploadedStation"
+    :initial-device-scope="selectedDeviceScope" @apply="handleScoringConfigApply" />
 </template>
 
 <script setup lang="ts">
@@ -527,11 +540,14 @@ import {
   type CompareItemEnhanced,
   type CompareResponseEnhanced,
   type FileSummaryEnhanced,
+  hasMeaningfulUploadLogCriteria,
+  hasMeaningfulUploadLogLimit,
   type ParsedTestItemEnhanced,
   type PerIsnData,
   type RescoreItemResult,
   type RescoreScoringConfig,
   type TestLogParseResponseEnhanced,
+  type UploadScoringConfigApplyPayload,
   useTestLogUpload,
 } from '@/features/dut-logs/composables/useTestLogUpload'
 import { useNotification } from '@/shared/composables/useNotification'
@@ -580,8 +596,10 @@ const selectedUploadedStation = ref<string | null>(null)
 const showScoringConfigDialog = ref(false)
 const extractedTestItems = ref<ParsedTestItemEnhanced[]>([])
 const extractedStations = ref<string[]>([])
+const extractedDevices = ref<string[]>([])
 const testItemStationsMap = ref<Map<string, Set<string>>>(new Map()) // Maps test item -> stations
 const appliedScoringConfigs = ref<RescoreScoringConfig[]>([])
+const selectedDeviceScope = ref<string[]>([])
 
 // Score breakdown dialog (new universal scoring)
 const showBreakdownDialog = ref(false)
@@ -694,6 +712,11 @@ const totalFiles = computed(() => {
 const allCompareIsns = computed<string[]>(() => {
   if (!compareResult.value?.file_summaries) return []
   return compareResult.value.file_summaries
+    .filter((summary: FileSummaryEnhanced) => {
+      if (selectedDeviceScope.value.length === 0) return true
+      const device = summary.metadata?.device
+      return !!device && selectedDeviceScope.value.includes(device)
+    })
     .map((s: FileSummaryEnhanced) => s.isn)
     .filter((isn: string | null): isn is string => isn !== null)
 })
@@ -710,6 +733,12 @@ const uploadedStationOptions = computed(() => {
   if (!compareResult.value?.file_summaries) return []
   const stations = new Set<string>()
   compareResult.value.file_summaries.forEach((s: FileSummaryEnhanced) => {
+    if (selectedDeviceScope.value.length > 0) {
+      const device = s.metadata?.device
+      if (!device || !selectedDeviceScope.value.includes(device)) {
+        return
+      }
+    }
     if (s.metadata?.station) {
       stations.add(s.metadata.station)
     }
@@ -785,9 +814,9 @@ const comparisonTableItems = computed(() => {
 
   // Apply criteria filters
   if (itemFilterType.value === 'criteria') {
-    items = items.filter((item) => item.usl !== null || item.lsl !== null)
+    items = items.filter((item) => hasMeaningfulUploadLogCriteria(item.usl, item.lsl))
   } else if (itemFilterType.value === 'non-criteria') {
-    items = items.filter((item) => item.usl === null && item.lsl === null)
+    items = items.filter((item) => !hasMeaningfulUploadLogCriteria(item.usl, item.lsl))
   }
   if (searchQuery.value) {
     const query = searchQuery.value.toLowerCase()
@@ -848,6 +877,7 @@ const extractTestItems = async (): Promise<void> => {
   extractingItems.value = true
   try {
     const stations = new Set<string>()
+    const devices = new Set<string>()
     const itemsMap = new Map<string, ParsedTestItemEnhanced>()
     const itemStationsMap = new Map<string, Set<string>>() // Track which items appear in which stations
 
@@ -868,6 +898,9 @@ const extractTestItems = async (): Promise<void> => {
         result.file_summaries?.forEach((summary: FileSummaryEnhanced) => {
           const station = summary.metadata?.station || 'Unknown'
           stations.add(station)
+          if (summary.metadata?.device) {
+            devices.add(summary.metadata.device)
+          }
         })
 
         // Extract items from comparison_value_items and comparison_non_value_items
@@ -920,6 +953,9 @@ const extractTestItems = async (): Promise<void> => {
           const result = await parseLog(file, criteriaFile.value, showOnlyCriteria.value)
           const station = result.station || 'Unknown'
           stations.add(station)
+          if (result.metadata?.device) {
+            devices.add(result.metadata.device)
+          }
 
           // Track items and their stations
           for (const item of result.parsed_items_enhanced || []) {
@@ -941,12 +977,14 @@ const extractTestItems = async (): Promise<void> => {
 
     extractedTestItems.value = Array.from(itemsMap.values())
     extractedStations.value = Array.from(stations).sort()
+    extractedDevices.value = Array.from(devices).sort()
     testItemStationsMap.value = itemStationsMap
   } catch (err: unknown) {
     // If quick-parse fails, we can still open config dialog with empty items
     console.warn('Failed to extract test items for scoring config:', getErrorMessage(err))
     extractedTestItems.value = []
     extractedStations.value = []
+    extractedDevices.value = []
     testItemStationsMap.value = new Map()
   } finally {
     extractingItems.value = false
@@ -966,8 +1004,9 @@ const handleConfigureScoring = async () => {
 /**
  * Handle scoring config applied from dialog
  */
-const handleScoringConfigApply = (configs: RescoreScoringConfig[]) => {
-  appliedScoringConfigs.value = configs
+const handleScoringConfigApply = (payload: UploadScoringConfigApplyPayload) => {
+  appliedScoringConfigs.value = payload.configs
+  selectedDeviceScope.value = payload.deviceScope
 }
 
 /**
@@ -1037,7 +1076,8 @@ const rescoreIplasData = async () => {
     // UPDATED: Filter to only criteria items (with limits) or explicitly configured items
     const testItems = stationRecord.test_item
       .filter((t) => {
-        const hasLimits = (t.UCL && t.UCL !== '') || (t.LCL && t.LCL !== '')
+        const hasLimits = hasMeaningfulUploadLogLimit(t.UCL ? parseFloat(t.UCL) : null)
+          || hasMeaningfulUploadLogLimit(t.LCL ? parseFloat(t.LCL) : null)
         return hasLimits || explicitlyConfigured.has(t.NAME)
       })
       .map((t) => ({
@@ -1146,7 +1186,9 @@ const handleReset = () => {
   itemFilterType.value = 'all'
   extractedTestItems.value = []
   extractedStations.value = []
+  extractedDevices.value = []
   appliedScoringConfigs.value = []
+  selectedDeviceScope.value = []
   // UPDATED: Clear iPLAS comparison state
   iplasDataByIsn.value = new Map()
   iplasScoredByIsn.value = new Map()
@@ -1290,6 +1332,10 @@ watch(showOnlyCriteria, async () => {
 // When files change, clear extracted items so they get re-extracted
 watch(logFiles, () => {
   extractedTestItems.value = []
+  extractedStations.value = []
+  extractedDevices.value = []
+  testItemStationsMap.value = new Map()
+  selectedDeviceScope.value = []
 })
 
 // UPDATED: Auto-fetch iPLAS data when comparison results are available
@@ -1303,6 +1349,12 @@ watch(compareResult, async (newVal) => {
 watch(selectedIplasStation, async () => {
   if (iplasDataByIsn.value.size > 0) {
     await rescoreIplasData()
+  }
+})
+
+watch(selectedDeviceScope, async () => {
+  if (compareResult.value) {
+    await fetchIplasForComparison()
   }
 })
 </script>
@@ -1382,8 +1434,9 @@ watch(selectedIplasStation, async () => {
 
 .upload-log-shell__ghost-button {
   border-color: var(--app-border);
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--app-panel);
   color: var(--app-ink);
+  box-shadow: var(--app-shadow-soft);
 }
 
 .upload-log-shell__primary-button {
@@ -1474,9 +1527,34 @@ watch(selectedIplasStation, async () => {
   font-weight: 700;
 }
 
+.upload-log-comparison__ghost-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  min-height: 2.65rem;
+  padding: 0.72rem 0.95rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  background: var(--app-panel);
+  color: var(--app-ink);
+  cursor: pointer;
+  box-shadow: var(--app-shadow-soft);
+  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+}
+
+.upload-log-comparison__ghost-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.upload-log-comparison__ghost-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
 .upload-log-comparison__pill {
   border: 1px solid var(--app-border);
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--app-panel);
   color: var(--app-ink);
 }
 
@@ -1525,7 +1603,7 @@ watch(selectedIplasStation, async () => {
   padding: 0.76rem 0.9rem;
   font: inherit;
   color: var(--app-ink);
-  background: rgba(255, 255, 255, 0.92);
+  background: var(--app-panel-strong);
 }
 
 .upload-log-comparison__field select[multiple] {

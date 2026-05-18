@@ -10,7 +10,7 @@
   >
     <template #header-actions>
       <span class="upload-scoring-dialog__pill upload-scoring-dialog__pill--muted">
-        {{ scoringConfigCount }} items
+        {{ appliedConfigCount }} custom
       </span>
     </template>
 
@@ -24,6 +24,16 @@
         <label v-if="stationOptions.length > 0" class="upload-scoring-dialog__field">
           <span>Station</span>
           <AppSelect v-model="selectedStationValue" :options="stationSelectOptions" />
+        </label>
+
+        <label v-if="deviceSelectOptions.length > 0" class="upload-scoring-dialog__field">
+          <span>Device Scope</span>
+          <AppMultiSelect
+            v-model="selectedDevices"
+            :options="deviceSelectOptions"
+            placeholder="All uploaded devices"
+          />
+          <small>Limit ranking and comparison results to the selected uploaded device(s).</small>
         </label>
       </div>
 
@@ -62,6 +72,34 @@
         </div>
 
         <div class="upload-scoring-dialog__action-band upload-scoring-dialog__action-band--secondary">
+          <span class="upload-scoring-dialog__band-label">Scope</span>
+          <button
+            type="button"
+            class="upload-scoring-dialog__button upload-scoring-dialog__button--secondary"
+            :disabled="selectedCount === 0"
+            @click="applyScopeModeToSelected('included')"
+          >
+            Include Selected
+          </button>
+          <button
+            type="button"
+            class="upload-scoring-dialog__button upload-scoring-dialog__button--ghost"
+            :disabled="selectedCount === 0"
+            @click="applyScopeModeToSelected('excluded')"
+          >
+            Exclude Selected
+          </button>
+          <button
+            type="button"
+            class="upload-scoring-dialog__button upload-scoring-dialog__button--ghost"
+            :disabled="selectedCount === 0"
+            @click="applyScopeModeToSelected('auto')"
+          >
+            Restore Auto
+          </button>
+        </div>
+
+        <div class="upload-scoring-dialog__action-band upload-scoring-dialog__action-band--secondary">
           <span class="upload-scoring-dialog__band-label">Bulk Actions</span>
           <button
             type="button"
@@ -93,12 +131,19 @@
         <strong>{{ selectedCount }}</strong> test item{{ selectedCount === 1 ? '' : 's' }} selected for bulk actions.
       </div>
 
+      <div v-if="selectedDevices.length > 0" class="upload-scoring-dialog__notice upload-scoring-dialog__notice--info">
+        Device scope is limited to {{ selectedDevices.length }} uploaded device{{ selectedDevices.length === 1 ? '' : 's' }}.
+      </div>
+
       <div class="upload-scoring-dialog__list">
         <div
           v-for="config in filteredConfigs"
           :key="config.test_item_name"
           class="upload-scoring-dialog__item-row"
-          :class="{ 'is-selected': selectedItemNames.has(config.test_item_name) }"
+          :class="{
+            'is-selected': selectedItemNames.has(config.test_item_name),
+            'is-excluded': getItemScopeMode(config.test_item_name) === 'excluded',
+          }"
           role="button"
           tabindex="0"
           @click="toggleItemSelection(config.test_item_name)"
@@ -130,6 +175,9 @@
             </button>
             <span class="upload-scoring-dialog__pill" :class="getItemTypeClass(config.test_item_name)">
               {{ getItemTypeLabel(config.test_item_name) }}
+            </span>
+            <span class="upload-scoring-dialog__pill" :class="getItemScopeClass(config.test_item_name)">
+              {{ getItemScopeLabel(config.test_item_name) }}
             </span>
           </div>
         </div>
@@ -194,6 +242,17 @@
         <input v-model.number="bulkWeight" type="number" min="0" max="10" step="0.1" />
         <small>Weight contribution for all selected items in the overall score.</small>
       </label>
+
+      <label class="upload-scoring-dialog__field">
+        <span>Minimum Test Item Score</span>
+        <input v-model.number="bulkMinScore" type="number" min="0" max="10" step="0.1" placeholder="Leave empty to ignore low-score filtering" />
+        <small>Items scoring below this threshold are excluded from aggregate analysis.</small>
+      </label>
+
+      <label class="upload-scoring-dialog__field">
+        <span>Analysis Scope</span>
+        <AppSelect v-model="bulkScopeMode" :options="bulkScopeSelectOptions" :searchable="false" />
+      </label>
     </div>
 
     <template #footer>
@@ -218,6 +277,16 @@
     @update:modelValue="singleItemScoringDialog = $event"
   >
     <div v-if="singleConfigItem" class="upload-scoring-dialog__modal-stack">
+      <label class="upload-scoring-dialog__field">
+        <span>Analysis Scope</span>
+        <AppSelect
+          :model-value="getItemScopeMode(singleConfigItem)"
+          :options="itemScopeSelectOptions"
+          :searchable="false"
+          @update:model-value="updateSingleDialogScopeMode($event as ItemScopeMode)"
+        />
+      </label>
+
       <label class="upload-scoring-dialog__field">
         <span>Scoring Type</span>
         <AppSelect
@@ -272,6 +341,20 @@
         <small>Weight contribution for this item in the overall score.</small>
       </label>
 
+      <label class="upload-scoring-dialog__field">
+        <span>Minimum Test Item Score</span>
+        <input
+          :value="getSingleDialogMinScoreValue()"
+          type="number"
+          min="0"
+          max="10"
+          step="0.1"
+          placeholder="Leave empty to ignore low-score filtering"
+          @input="updateSingleDialogMinScore(($event.target as HTMLInputElement).value)"
+        />
+        <small>Exclude this item from aggregate analysis when its score falls below the threshold.</small>
+      </label>
+
       <AppPanel v-if="singleDialogSpecs" title="Item Specifications" tone="warm" compact-header>
         <div class="upload-scoring-dialog__spec-grid">
           <div>
@@ -306,27 +389,36 @@ import { computed, ref, watch } from 'vue'
 import type {
   ParsedTestItemEnhanced,
   RescoreScoringConfig,
+  UploadScoringConfigApplyPayload,
 } from '@/features/dut-logs/composables/useTestLogUpload'
-import { AppDialog, AppPanel, AppSelect } from '@/shared/ui'
+import { hasMeaningfulUploadLogCriteria } from '@/features/dut-logs/composables/useTestLogUpload'
+import { AppDialog, AppMultiSelect, AppPanel, AppSelect } from '@/shared/ui'
+
+type ItemScopeMode = 'auto' | 'included' | 'excluded'
+type BulkScopeMode = 'keep' | ItemScopeMode
 
 interface Props {
   modelValue: boolean
   testItems: ParsedTestItemEnhanced[]
   existingConfigs?: RescoreScoringConfig[]
   stations?: string[]
+  devices?: string[]
   testItemStations?: Map<string, Set<string>> // Maps test item name -> stations it appears in
   defaultStation?: string | null // Initial station to filter by when dialog opens
+  initialDeviceScope?: string[]
 }
 
 interface Emits {
   (e: 'update:modelValue', value: boolean): void
-  (e: 'apply', configs: RescoreScoringConfig[]): void
+  (e: 'apply', payload: UploadScoringConfigApplyPayload): void
 }
 
 const props = withDefaults(defineProps<Props>(), {
   existingConfigs: () => [],
   stations: () => [],
+  devices: () => [],
   defaultStation: null,
+  initialDeviceScope: () => [],
 })
 
 const emit = defineEmits<Emits>()
@@ -339,11 +431,12 @@ const dialogOpen = computed({
 // Local state
 const searchQuery = ref('')
 const selectedStation = ref<string | null>(null)
+const selectedDevices = ref<string[]>([])
 const selectedItemNames = ref<Set<string>>(new Set())
 const scoringConfigs = ref<RescoreScoringConfig[]>([])
+const itemScopeModes = ref<Map<string, ItemScopeMode>>(new Map())
 
 const selectedCount = computed(() => selectedItemNames.value.size)
-const scoringConfigCount = computed(() => scoringConfigs.value.length)
 const selectedStationValue = computed({
   get: () => selectedStation.value ?? '',
   set: (value: string) => {
@@ -362,6 +455,13 @@ const stationSelectOptions = computed(() => [
   })),
 ])
 
+const deviceSelectOptions = computed(() =>
+  (props.devices || []).map((device) => ({
+    label: device,
+    value: device,
+  })),
+)
+
 // Single item scoring dialog (popup from clicking scoring type button)
 const singleItemScoringDialog = ref(false)
 const singleConfigItem = ref<string | null>(null)
@@ -372,6 +472,8 @@ const bulkScoringType = ref<RescoreScoringConfig['scoring_type']>('symmetrical')
 const bulkPolicy = ref<RescoreScoringConfig['policy']>('symmetrical')
 const bulkTarget = ref<number | undefined>(undefined)
 const bulkWeight = ref(1.0)
+const bulkMinScore = ref<number | undefined>(undefined)
+const bulkScopeMode = ref<BulkScopeMode>('keep')
 
 // Scoring type options
 const scoringTypeOptions = [
@@ -399,6 +501,61 @@ const policySelectOptions = policyOptions.map((option) => ({
   value: option.value,
 }))
 
+const itemScopeSelectOptions = [
+  { label: 'Auto', value: 'auto' },
+  { label: 'Included', value: 'included' },
+  { label: 'Excluded', value: 'excluded' },
+]
+
+const bulkScopeSelectOptions = [
+  { label: 'Keep current scope', value: 'keep' },
+  ...itemScopeSelectOptions,
+]
+
+function clampNumber(value: number, min: number, max: number): number {
+  return Math.min(max, Math.max(min, value))
+}
+
+function createDefaultConfig(name: string): RescoreScoringConfig {
+  return {
+    test_item_name: name,
+    scoring_type: detectScoringType(name) as RescoreScoringConfig['scoring_type'],
+    enabled: true,
+    weight: 1.0,
+    policy: 'symmetrical' as const,
+  }
+}
+
+function isConfigCustomized(config: RescoreScoringConfig, defaultConfig: RescoreScoringConfig): boolean {
+  return config.scoring_type !== defaultConfig.scoring_type
+    || config.weight !== defaultConfig.weight
+    || (config.policy ?? 'symmetrical') !== (defaultConfig.policy ?? 'symmetrical')
+    || config.target !== defaultConfig.target
+    || config.limit_score !== defaultConfig.limit_score
+    || config.alpha !== defaultConfig.alpha
+    || config.min_score !== defaultConfig.min_score
+    || config.max_deviation !== defaultConfig.max_deviation
+}
+
+function buildAppliedConfigs(): RescoreScoringConfig[] {
+  return scoringConfigs.value.flatMap((config) => {
+    const defaultConfig = createDefaultConfig(config.test_item_name)
+    const scopeMode = getItemScopeMode(config.test_item_name)
+    const shouldEmit = scopeMode !== 'auto' || isConfigCustomized(config, defaultConfig)
+
+    if (!shouldEmit) {
+      return []
+    }
+
+    return [{
+      ...config,
+      enabled: scopeMode !== 'excluded',
+    }]
+  })
+}
+
+const appliedConfigCount = computed(() => buildAppliedConfigs().length)
+
 // Initialize scoring configs from test items - preserving original order
 function initializeConfigs() {
   const existingMap = new Map<string, RescoreScoringConfig>()
@@ -414,19 +571,20 @@ function initializeConfigs() {
     }
   })
 
+  const scopeModes = new Map<string, ItemScopeMode>()
   scoringConfigs.value = orderedNames.map((name) => {
+    const defaultConfig = createDefaultConfig(name)
     if (existingMap.has(name)) {
       // biome-ignore lint/style/noNonNullAssertion: checked via existingMap.has(name) above
-      return { ...existingMap.get(name)! }
+      const existingConfig = { ...defaultConfig, ...existingMap.get(name)! }
+      scopeModes.set(name, existingConfig.enabled === false ? 'excluded' : 'included')
+      return existingConfig
     }
-    return {
-      test_item_name: name,
-      scoring_type: detectScoringType(name) as RescoreScoringConfig['scoring_type'],
-      enabled: true,
-      weight: 1.0,
-      policy: 'symmetrical' as const,
-    }
+    scopeModes.set(name, 'auto')
+    return defaultConfig
   })
+  itemScopeModes.value = scopeModes
+  selectedDevices.value = [...props.initialDeviceScope]
 }
 
 // Auto-detect scoring type by test item name patterns
@@ -437,6 +595,21 @@ function detectScoringType(name: string): string {
   if (upper.includes('THROUGHPUT') || upper.includes('THRUPUT') || upper.includes('TPUT'))
     return 'throughput'
   return 'symmetrical'
+}
+
+function getItemScopeMode(name: string): ItemScopeMode {
+  return itemScopeModes.value.get(name) ?? 'auto'
+}
+
+function setItemScopeMode(name: string, scopeMode: ItemScopeMode) {
+  const nextModes = new Map(itemScopeModes.value)
+  nextModes.set(name, scopeMode)
+  itemScopeModes.value = nextModes
+
+  const config = scoringConfigs.value.find((entry) => entry.test_item_name === name)
+  if (config) {
+    config.enabled = scopeMode !== 'excluded'
+  }
 }
 
 // Filtered configs based on search and station
@@ -463,7 +636,7 @@ const filteredConfigs = computed(() => {
 // Helper: check if item is criteria (has UCL or LCL)
 function isItemCriteria(name: string): boolean {
   const item = props.testItems.find((t) => t.test_item === name)
-  return item ? item.usl !== null || item.lsl !== null : false
+  return item ? hasMeaningfulUploadLogCriteria(item.usl, item.lsl) : false
 }
 
 function getItemTypeLabel(name: string): string {
@@ -474,6 +647,20 @@ function getItemTypeClass(name: string): string {
   return isItemCriteria(name)
     ? 'upload-scoring-dialog__pill--success'
     : 'upload-scoring-dialog__pill--warning'
+}
+
+function getItemScopeLabel(name: string): string {
+  const scopeMode = getItemScopeMode(name)
+  if (scopeMode === 'included') return 'Included'
+  if (scopeMode === 'excluded') return 'Excluded'
+  return 'Auto'
+}
+
+function getItemScopeClass(name: string): string {
+  const scopeMode = getItemScopeMode(name)
+  if (scopeMode === 'included') return 'upload-scoring-dialog__pill--info'
+  if (scopeMode === 'excluded') return 'upload-scoring-dialog__pill--danger'
+  return 'upload-scoring-dialog__pill--muted'
 }
 
 // ============================================
@@ -518,6 +705,10 @@ function selectNonCriteriaItems() {
 
 function clearSelection() {
   selectedItemNames.value = new Set()
+}
+
+function applyScopeModeToSelected(scopeMode: ItemScopeMode) {
+  selectedItemNames.value.forEach((name) => setItemScopeMode(name, scopeMode))
 }
 
 /**
@@ -577,6 +768,26 @@ function updateSingleDialogWeight(weight: number) {
   if (config) config.weight = weight
 }
 
+function updateSingleDialogScopeMode(scopeMode: ItemScopeMode) {
+  if (singleConfigItem.value) {
+    setItemScopeMode(singleConfigItem.value, scopeMode)
+  }
+}
+
+function getSingleDialogMinScoreValue(): string {
+  const minScore = getSingleDialogConfig()?.min_score
+  if (minScore === null || minScore === undefined) return ''
+  return String(Number((minScore * 10).toFixed(2)))
+}
+
+function updateSingleDialogMinScore(rawValue: string) {
+  const config = getSingleDialogConfig()
+  if (!config) return
+
+  const parsed = toOptionalNumber(rawValue)
+  config.min_score = parsed === undefined ? undefined : clampNumber(parsed, 0, 10) / 10
+}
+
 // ============================================
 // Bulk scoring config dialog
 // ============================================
@@ -587,6 +798,8 @@ function openBulkScoringConfig() {
   bulkPolicy.value = 'symmetrical'
   bulkTarget.value = undefined
   bulkWeight.value = 1.0
+  bulkMinScore.value = undefined
+  bulkScopeMode.value = 'keep'
   bulkScoringDialog.value = true
 }
 
@@ -602,8 +815,17 @@ function applyBulkScoringConfig() {
         c.policy = 'symmetrical'
         c.target = undefined
       }
+
+      c.min_score = bulkMinScore.value === undefined
+        ? undefined
+        : clampNumber(bulkMinScore.value, 0, 10) / 10
     }
   })
+
+  if (bulkScopeMode.value !== 'keep') {
+    applyScopeModeToSelected(bulkScopeMode.value)
+  }
+
   bulkScoringDialog.value = false
 }
 
@@ -614,15 +836,23 @@ function applyBulkScoringConfig() {
 function resetAll() {
   scoringConfigs.value.forEach((c) => {
     c.scoring_type = detectScoringType(c.test_item_name) as RescoreScoringConfig['scoring_type']
+    c.enabled = true
     c.weight = 1.0
     c.policy = 'symmetrical'
     c.target = undefined
+    c.min_score = undefined
+    c.max_deviation = undefined
   })
+  itemScopeModes.value = new Map(scoringConfigs.value.map((c) => [c.test_item_name, 'auto']))
+  selectedDevices.value = []
 }
 
 // Handlers
 function handleApply() {
-  emit('apply', [...scoringConfigs.value])
+  emit('apply', {
+    configs: buildAppliedConfigs(),
+    deviceScope: [...selectedDevices.value],
+  })
   dialogOpen.value = false
 }
 
@@ -777,7 +1007,7 @@ watch(
 }
 
 .upload-scoring-dialog__toolbar {
-  grid-template-columns: minmax(0, 2fr) minmax(14rem, 1fr);
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(14rem, 1fr));
 }
 
 .upload-scoring-dialog__action-bands {
@@ -786,7 +1016,8 @@ watch(
 }
 
 .upload-scoring-dialog__action-band {
-  grid-template-columns: auto repeat(4, max-content);
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.6rem;
   padding: 0.85rem 1rem;
@@ -796,7 +1027,7 @@ watch(
 }
 
 .upload-scoring-dialog__action-band--secondary {
-  grid-template-columns: auto repeat(3, max-content);
+  display: flex;
 }
 
 .upload-scoring-dialog__band-label,
@@ -877,7 +1108,7 @@ watch(
   padding: 0.95rem 1rem;
   border-radius: 1rem;
   border: 1px solid rgba(15, 118, 110, 0.1);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--app-panel-strong);
   cursor: pointer;
   transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
@@ -892,7 +1123,12 @@ watch(
 
 .upload-scoring-dialog__item-row.is-selected {
   border-color: rgba(15, 118, 110, 0.28);
-  background: rgba(246, 255, 250, 0.9);
+  background: rgba(15, 118, 110, 0.1);
+}
+
+.upload-scoring-dialog__item-row.is-excluded {
+  border-color: rgba(185, 28, 28, 0.22);
+  background: rgba(185, 28, 28, 0.08);
 }
 
 .upload-scoring-dialog__checkbox {
@@ -912,7 +1148,7 @@ watch(
   height: 1.2rem;
   border-radius: 0.35rem;
   border: 1px solid rgba(15, 118, 110, 0.25);
-  background: white;
+  background: var(--app-panel);
   box-shadow: inset 0 0 0 0 rgba(15, 118, 110, 0.95);
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
