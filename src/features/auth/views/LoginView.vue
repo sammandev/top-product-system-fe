@@ -58,11 +58,11 @@
 
                 <Button
                     class="login-submit w-full"
-                    :disabled="!canSubmit"
-                    :loading="loading"
+                    :disabled="!canSubmit || isAuthenticating"
                     type="submit"
                 >
-                    Sign in
+                    <Icon v-if="signInLoading" icon="mdi:loading" class="login-button-spinner" />
+                    <span>{{ signInLoading ? 'Signing In...' : 'Sign In' }}</span>
                 </Button>
 
                 <div class="login-divider flex items-center gap-3 text-app-muted text-xs">
@@ -71,12 +71,13 @@
 
                 <Button
                     class="w-full border border-app-border rounded-lg bg-transparent text-app-ink py-[0.625rem] px-4 text-sm font-medium cursor-pointer"
-                    :loading="guestLoading"
+                    :disabled="isAuthenticating"
                     severity="secondary"
                     type="button"
                     @click="handleGuestLogin"
                 >
-                    Continue as Guest
+                    <Icon v-if="guestLoading" icon="mdi:loading" class="login-button-spinner" />
+                    <span>{{ guestLoading ? 'Continuing as Guest...' : 'Continue as Guest' }}</span>
                 </Button>
             </form>
 
@@ -100,7 +101,7 @@ const appConfigStore = useAppConfigStore()
 const { appName, error: appConfigError } = storeToRefs(appConfigStore)
 
 const currentYear = new Date().getFullYear()
-const guestLoading = ref(false)
+const activeAuthAction = ref<'sign-in' | 'guest' | null>(null)
 const submitAttempted = ref(false)
 const username = ref('')
 const password = ref('')
@@ -108,6 +109,9 @@ const showPassword = ref(false)
 const rememberMe = ref(localStorage.getItem('remember_me') === 'true')
 
 const canSubmit = computed(() => username.value.trim().length > 0 && password.value.length > 0)
+const isAuthenticating = computed(() => loading.value)
+const signInLoading = computed(() => loading.value && activeAuthAction.value === 'sign-in')
+const guestLoading = computed(() => loading.value && activeAuthAction.value === 'guest')
 const usernameError = computed(() =>
   submitAttempted.value && username.value.trim().length === 0 ? 'Username is required.' : '',
 )
@@ -130,6 +134,7 @@ async function handleLogin() {
   submitAttempted.value = true
   if (!canSubmit.value) return
   clearError()
+  activeAuthAction.value = 'sign-in'
   try {
     await externalLogin({ username: username.value, password: password.value })
     if (rememberMe.value) {
@@ -141,18 +146,20 @@ async function handleLogin() {
     }
   } catch (loginError) {
     console.error('Login failed:', loginError)
+  } finally {
+    activeAuthAction.value = null
   }
 }
 
 async function handleGuestLogin() {
   clearError()
-  guestLoading.value = true
+  activeAuthAction.value = 'guest'
   try {
     await guestLogin()
   } catch (guestError) {
     console.error('Guest login failed:', guestError)
   } finally {
-    guestLoading.value = false
+    activeAuthAction.value = null
   }
 }
 </script>
@@ -202,6 +209,20 @@ async function handleGuestLogin() {
 
 .login-submit :deep(.p-button) {
     width: 100%;
+}
+
+.login-button-spinner {
+    animation: login-spin 0.9s linear infinite;
+}
+
+@keyframes login-spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .login-divider::before,

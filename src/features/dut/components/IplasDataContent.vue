@@ -453,6 +453,19 @@ const stationSearchRunStatusQuery = useQuery({
 })
 
 const stationSearchRunStatus = computed(() => stationSearchRunStatusQuery.data.value ?? null)
+const lastStationSearchRequestSummary = ref<{
+  site: string
+  project: string
+  beginTime: string
+  endTime: string
+  stationCount: number
+  selections: Array<{
+    station: string
+    requestedDeviceCount: number
+    resolvedDeviceCount: number
+    testStatus: 'ALL' | 'PASS' | 'FAIL'
+  }>
+} | null>(null)
 
 const stationSearchRunLoading = computed(() => {
   const status = stationSearchRunStatus.value?.status
@@ -537,50 +550,46 @@ async function getDateRangeForPreset(preset: string): Promise<{ start: Date; end
 
   switch (preset) {
     case 'current_shift': {
-      // Day Shift: 06:50:00 - 20:00:00
-      // Night Shift: 20:00:00 - 06:50:00 (next day)
-      const isDayShift = currentHour > 6 || (currentHour === 6 && currentMinutes >= 50)
-      const isBeforeNightEnd = currentHour < 6 || (currentHour === 6 && currentMinutes < 50)
+      const utcHour = now.getUTCHours()
 
-      if (isDayShift && currentHour < 20) {
-        // Currently in day shift
+      if (utcHour >= 8 && utcHour < 20) {
         const start = new Date(now)
-        start.setHours(6, 50, 0, 0)
+        start.setUTCHours(8, 0, 0, 0)
         const end = new Date(now)
-        end.setHours(20, 0, 0, 0)
-        return { start, end }
-      } else if (isBeforeNightEnd) {
-        // Currently in night shift (before 06:50 AM)
-        const start = new Date(now)
-        start.setDate(start.getDate() - 1)
-        start.setHours(20, 0, 0, 0)
-        const end = new Date(now)
-        end.setHours(6, 50, 0, 0)
-        return { start, end }
-      } else {
-        // After 20:00 - start of night shift
-        const start = new Date(now)
-        start.setHours(20, 0, 0, 0)
-        const end = new Date(now)
-        end.setDate(end.getDate() + 1)
-        end.setHours(6, 50, 0, 0)
+        end.setUTCHours(20, 0, 0, 0)
         return { start, end }
       }
+
+      if (utcHour >= 20) {
+        const start = new Date(now)
+        start.setUTCHours(20, 0, 0, 0)
+        const end = new Date(now)
+        end.setUTCDate(end.getUTCDate() + 1)
+        end.setUTCHours(8, 0, 0, 0)
+        return { start, end }
+      }
+
+      const start = new Date(now)
+      start.setUTCDate(start.getUTCDate() - 1)
+      start.setUTCHours(20, 0, 0, 0)
+      const end = new Date(now)
+      end.setUTCHours(8, 0, 0, 0)
+      return { start, end }
     }
     case 'today': {
       const start = new Date(now)
-      start.setHours(0, 0, 1, 0)
+      start.setHours(0, 0, 0, 0)
       const end = new Date(now)
-      end.setHours(23, 59, 59, 0)
+      end.setHours(23, 59, 59, 999)
       return { start, end }
     }
     case 'yesterday': {
       const start = new Date(now)
       start.setDate(start.getDate() - 1)
-      start.setHours(0, 0, 1, 0)
+      start.setHours(0, 0, 0, 0)
       const end = new Date(now)
       end.setDate(end.getDate() - 1)
-      end.setHours(23, 59, 59, 0)
+      end.setHours(23, 59, 59, 999)
       return { start, end }
     }
     case 'week': {
@@ -589,9 +598,9 @@ async function getDateRangeForPreset(preset: string): Promise<{ start: Date; end
       const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek // Sunday is 0, Monday is 1
       const start = new Date(now)
       start.setDate(start.getDate() + diff)
-      start.setHours(0, 0, 1, 0)
+      start.setHours(0, 0, 0, 0)
       const end = new Date(now)
-      end.setHours(23, 59, 59, 0)
+      end.setHours(23, 59, 59, 999)
       return { start, end }
     }
     case 'last_week': {
@@ -600,17 +609,17 @@ async function getDateRangeForPreset(preset: string): Promise<{ start: Date; end
       const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek
       const start = new Date(now)
       start.setDate(start.getDate() + diff - 7) // Last Monday
-      start.setHours(0, 0, 1, 0)
+      start.setHours(0, 0, 0, 0)
       const end = new Date(start)
       end.setDate(end.getDate() + 6) // Last Sunday
-      end.setHours(23, 59, 59, 0)
+      end.setHours(23, 59, 59, 999)
       return { start, end }
     }
     case 'month': {
       const start = new Date(now.getFullYear(), now.getMonth(), 1)
-      start.setHours(0, 0, 1, 0)
+      start.setHours(0, 0, 0, 0)
       const end = new Date(now)
-      end.setHours(23, 59, 59, 0)
+      end.setHours(23, 59, 59, 999)
       return { start, end }
     }
     default: {
@@ -1641,7 +1650,13 @@ async function runStationSearch() {
   const begintime = new Date(startTime.value)
   const endtime = new Date(endTime.value)
 
+  if (Number.isNaN(begintime.getTime()) || Number.isNaN(endtime.getTime()) || endtime <= begintime) {
+    error.value = 'Please select a valid Station Search time range before running the query.'
+    return
+  }
+
   clearTestItemData()
+  error.value = null
   selectedRecordKeys.value.clear()
   selectedRecordStationMap.value.clear()
   lazyLoadedTestItems.value.clear()
@@ -1692,6 +1707,25 @@ async function runStationSearch() {
     return entry
   })
   const resolvedStations = await Promise.all(deviceIdPromises)
+
+  if (resolvedStations.length === 0) {
+    error.value = 'No station selections could be resolved for the current Data Explorer Station Search request.'
+    return
+  }
+
+  lastStationSearchRequestSummary.value = {
+    site: selectedSite.value,
+    project: selectedProject.value,
+    beginTime: startTime.value,
+    endTime: endTime.value,
+    stationCount: resolvedStations.length,
+    selections: resolvedStations.map(({ stationInfo, deviceIds }) => ({
+      station: stationInfo.display_station_name,
+      requestedDeviceCount: stationDeviceIds.value[stationInfo.display_station_name]?.length || 0,
+      resolvedDeviceCount: deviceIds.length,
+      testStatus: stationTestStatus.value[stationInfo.display_station_name] || 'ALL',
+    })),
+  }
 
   const run = await createIplasStationSearchRun({
     site: selectedSite.value,
@@ -1804,10 +1838,33 @@ watch(
     }
 
     if (status?.status === 'completed') {
+      if (status.total_records === 0) {
+        const requestSummary = lastStationSearchRequestSummary.value
+        console.warn('Data Explorer Station Search completed with zero records', {
+          requestSummary,
+          runStatus: status,
+        })
+
+        const stationSummary = requestSummary?.selections
+          .map(
+            (selection) =>
+              `${selection.station} [devices: ${selection.requestedDeviceCount > 0 ? selection.requestedDeviceCount : `ALL/${selection.resolvedDeviceCount || 0}`}, status: ${selection.testStatus}]`,
+          )
+          .join('; ')
+
+        error.value = stationSummary
+          ? `No iPLAS data was returned for the selected Data Explorer Station Search scope. Time range: ${requestSummary?.beginTime} to ${requestSummary?.endTime}. Stations: ${stationSummary}.`
+          : 'No iPLAS data was returned for the selected Data Explorer Station Search scope.'
+      }
+
       const stationCount = status.stations.length
       if (stationCount === 0) {
         activeStationTab.value = 0
         return
+      }
+
+      if (status.total_records > 0 && error.value?.startsWith('No iPLAS data was returned')) {
+        error.value = null
       }
 
       if (activeStationTab.value >= stationCount) {
