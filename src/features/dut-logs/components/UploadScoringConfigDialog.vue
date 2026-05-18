@@ -27,7 +27,6 @@
           <input :value="getGlobalMinScoreValue()" type="number" min="0" max="10" step="0.1"
             placeholder="Leave empty to ignore low-score filtering"
             @input="updateGlobalMinScore(($event.target as HTMLInputElement).value)" />
-          <small>Applies the same minimum score rule to every included and excluded item you configure here.</small>
         </label>
       </div>
 
@@ -60,6 +59,9 @@
           </button>
           <span class="upload-scoring-dialog__selection-pill upload-scoring-dialog__selection-pill--muted">
             {{ filteredConfigs.length }} Showing
+          </span>
+          <span v-if="scoreFailCount > 0" class="upload-scoring-dialog__selection-pill upload-scoring-dialog__selection-pill--danger">
+            Score Fail ({{ scoreFailCount }})
           </span>
         </div>
 
@@ -151,6 +153,9 @@
             </span>
             <span class="upload-scoring-dialog__pill" :class="getItemScopeClass(config.test_item_name)">
               {{ getItemScopeLabel(config.test_item_name) }}
+            </span>
+            <span class="upload-scoring-dialog__pill" :class="getItemStatusClass(config.test_item_name)">
+              {{ getItemStatusLabel(config.test_item_name) }}
             </span>
           </div>
         </div>
@@ -664,6 +669,50 @@ const activeScopeCount = computed(() => {
   return scoringConfigs.value.filter((config) => getItemScopeMode(config.test_item_name) === activeSelectionMode.value).length
 })
 
+const scoreFailCount = computed(() =>
+  scoringConfigs.value.filter((config) => isItemScoreFail(config.test_item_name)).length,
+)
+
+function getTestItem(name: string): ParsedTestItemEnhanced | undefined {
+  return props.testItems.find((item) => item.test_item === name)
+}
+
+function getConfig(name: string): RescoreScoringConfig | undefined {
+  return scoringConfigs.value.find((config) => config.test_item_name === name)
+}
+
+function getItemScore(name: string): number | null {
+  const score = getTestItem(name)?.score
+  return score === undefined ? null : score
+}
+
+function getEffectiveMinScore(name: string): number | undefined {
+  return globalMinScore.value ?? getConfig(name)?.min_score
+}
+
+function isItemScoreFail(name: string): boolean {
+  const minScore = getEffectiveMinScore(name)
+  const score = getItemScore(name)
+
+  if (minScore === undefined || score === null) {
+    return false
+  }
+
+  return score < minScore * 10
+}
+
+function getItemStatusLabel(name: string): string {
+  if (isItemScoreFail(name)) return 'Score Fail'
+  if (getItemScore(name) !== null) return 'Scored'
+  return 'Not Scored'
+}
+
+function getItemStatusClass(name: string): string {
+  if (isItemScoreFail(name)) return 'upload-scoring-dialog__pill--danger'
+  if (getItemScore(name) !== null) return 'upload-scoring-dialog__pill--success'
+  return 'upload-scoring-dialog__pill--muted'
+}
+
 // ============================================
 // Selection management (checkbox multi-select)
 // ============================================
@@ -696,7 +745,7 @@ function selectDisplayedItems() {
 
   const names = getSelectableConfigs(filteredConfigs.value).map((config) => config.test_item_name)
   names.forEach((name) => setItemScopeMode(name, activeSelectionMode.value as ActiveSelectionMode))
-  selectedItemNames.value = new Set(names)
+  selectedItemNames.value = new Set([...selectedItemNames.value, ...names])
 }
 
 function selectCriteriaItems() {
@@ -709,7 +758,7 @@ function selectCriteriaItems() {
     }
   })
   names.forEach((name) => setItemScopeMode(name, activeSelectionMode.value as ActiveSelectionMode))
-  selectedItemNames.value = new Set(names)
+  selectedItemNames.value = new Set([...selectedItemNames.value, ...names])
 }
 
 function selectNonCriteriaItems() {
@@ -722,7 +771,7 @@ function selectNonCriteriaItems() {
     }
   })
   names.forEach((name) => setItemScopeMode(name, activeSelectionMode.value as ActiveSelectionMode))
-  selectedItemNames.value = new Set(names)
+  selectedItemNames.value = new Set([...selectedItemNames.value, ...names])
 }
 
 function clearSelection() {
@@ -762,7 +811,7 @@ function selectDisplayedAndConfigure() {
   if (!activeSelectionMode.value) return
 
   // First, select all displayed items
-  const newSet = new Set<string>()
+  const newSet = new Set(selectedItemNames.value)
   getSelectableConfigs(filteredConfigs.value).forEach((c) => {
     newSet.add(c.test_item_name)
     setItemScopeMode(c.test_item_name, activeSelectionMode.value as ActiveSelectionMode)
@@ -783,9 +832,9 @@ function selectDisplayedCriteriaAndConfigure() {
     .map((config) => config.test_item_name)
 
   names.forEach((name) => setItemScopeMode(name, activeSelectionMode.value as ActiveSelectionMode))
-  selectedItemNames.value = new Set(names)
+  selectedItemNames.value = new Set([...selectedItemNames.value, ...names])
 
-  if (names.length > 0) {
+  if (selectedItemNames.value.size > 0) {
     openBulkScoringConfig()
   }
 }
@@ -1090,8 +1139,8 @@ watch(
 
 .upload-scoring-dialog__selection-shell {
   display: grid;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 0.7rem;
+  padding: 0.75rem;
   border: 1px solid rgba(15, 118, 110, 0.12);
   border-radius: 1rem;
   background: linear-gradient(180deg, color-mix(in srgb, var(--app-panel) 90%, white 10%), var(--app-panel));
@@ -1103,7 +1152,7 @@ watch(
 .upload-scoring-dialog__action-card-grid {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.75rem;
+  gap: 0.55rem;
 }
 
 .upload-scoring-dialog__selection-header {
@@ -1119,14 +1168,15 @@ watch(
 .upload-scoring-dialog__selection-copy h3 {
   margin: 0;
   color: var(--app-ink);
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .upload-scoring-dialog__selection-copy p,
 .upload-scoring-dialog__selection-copy small {
   margin: 0;
   color: var(--app-muted);
-  line-height: 1.45;
+  font-size: 0.82rem;
+  line-height: 1.35;
 }
 
 .upload-scoring-dialog__selection-mode-row {
@@ -1135,7 +1185,7 @@ watch(
 
 .upload-scoring-dialog__action-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(10.5rem, 1fr));
 }
 
 .upload-scoring-dialog__search-row {
@@ -1367,15 +1417,23 @@ watch(
   color: #8e3037;
 }
 
+.upload-scoring-dialog__selection-pill--danger {
+  background: rgba(164, 52, 58, 0.1);
+  border-color: rgba(164, 52, 58, 0.18);
+  color: #8e3037;
+  cursor: default;
+}
+
 .upload-scoring-dialog__selection-pill.is-active {
   box-shadow: 0 0 0 2px color-mix(in srgb, var(--app-accent) 16%, transparent);
 }
 
 .upload-scoring-dialog__action-card {
   display: grid;
-  gap: 0.45rem;
-  min-height: 9rem;
-  padding: 1.1rem 1.15rem;
+  align-content: start;
+  gap: 0.25rem;
+  min-height: 5.25rem;
+  padding: 0.75rem 0.85rem;
   text-align: left;
   border: 1px solid var(--app-border);
   border-radius: 1.2rem;
@@ -1386,13 +1444,14 @@ watch(
 }
 
 .upload-scoring-dialog__action-card strong {
-  font-size: 0.9rem;
-  line-height: 1.25;
+  font-size: 0.82rem;
+  line-height: 1.2;
 }
 
 .upload-scoring-dialog__action-card span {
   color: var(--app-muted);
-  line-height: 1.45;
+  font-size: 0.8rem;
+  line-height: 1.35;
 }
 
 .upload-scoring-dialog__action-card:hover:not(:disabled) {

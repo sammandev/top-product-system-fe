@@ -173,7 +173,8 @@
               <strong>{{ selectedRankingItem.device || 'N/A' }}</strong>
             </div>
           </article>
-          <article class="top-product-ranking-upload-log__summary-card top-product-ranking-upload-log__summary-card--score">
+          <article class="top-product-ranking-upload-log__summary-card top-product-ranking-upload-log__summary-card--score"
+            :class="overallScoreSummaryClass(selectedRankingItem.score)">
             <button type="button" class="top-product-ranking-upload-log__summary-card-button" @click="openOverallScoreDialog">
               <small>Overall Score</small>
               <strong>{{ selectedRankingItem.score.toFixed(2) }}</strong>
@@ -243,9 +244,10 @@
           :rows="filteredTestItems"
           dataKey="test_item"
           paginator
+          stickyHeader
           :rowsPerPage="50"
           :rowsPerPageOptions="[25, 50, 100, 200]"
-          :scrollHeight="testItemsFullscreen ? 'calc(100vh - 26rem)' : '30rem'"
+          :scrollHeight="testItemsFullscreen ? 'calc(100vh - 18rem)' : '30rem'"
           emptyMessage="No test items match the current filters."
           @row-click="handleTestItemRowClick"
         >
@@ -257,6 +259,11 @@
           </template>
           <template #cell-lsl="{ data }">
             <span class="top-product-ranking-upload-log__muted">{{ data.lsl ?? '-' }}</span>
+          </template>
+          <template #cell-status="{ data }">
+            <span class="top-product-ranking-upload-log__badge" :class="testItemStatusClass(data)">
+              {{ testItemStatusLabel(data) }}
+            </span>
           </template>
           <template #cell-score="{ data }">
             <button
@@ -292,7 +299,7 @@
       class="top-product-ranking-upload-log__dialog"
     >
       <div v-if="overallScoreDetails" class="top-product-ranking-upload-log__breakdown-shell">
-        <section class="top-product-ranking-upload-log__summary-grid">
+        <section class="top-product-ranking-upload-log__summary-grid top-product-ranking-upload-log__overall-summary-grid">
           <article class="top-product-ranking-upload-log__summary-card">
             <small>Eligible Items</small>
             <strong>{{ overallScoreDetails.includedCount }}</strong>
@@ -305,7 +312,8 @@
             <small>Total Weight</small>
             <strong>{{ overallScoreDetails.totalWeight.toFixed(2) }}</strong>
           </article>
-          <article class="top-product-ranking-upload-log__summary-card top-product-ranking-upload-log__summary-card--score">
+          <article class="top-product-ranking-upload-log__summary-card top-product-ranking-upload-log__summary-card--score"
+            :class="overallScoreSummaryClass(overallScoreDetails.scoreValue)">
             <small>Overall Score</small>
             <strong>{{ overallScoreDetails.displayScore }}</strong>
           </article>
@@ -322,17 +330,17 @@
           </div>
         </div>
 
-        <div class="top-product-ranking-upload-log__detail-table">
+        <div class="top-product-ranking-upload-log__detail-table top-product-ranking-upload-log__contribution-table">
           <div class="top-product-ranking-upload-log__detail-row top-product-ranking-upload-log__detail-row--highlight">
             <span>Item Contribution</span>
             <strong>Status</strong>
           </div>
           <div v-for="contributor in overallScoreDetails.contributors" :key="contributor.test_item" class="top-product-ranking-upload-log__detail-row">
-            <span>
-              <strong>{{ contributor.test_item }}</strong><br>
-              Score {{ contributor.scoreLabel }} x Weight {{ contributor.weight.toFixed(2) }} = {{ contributor.weightedScoreLabel }}
+            <span class="top-product-ranking-upload-log__contribution-copy">
+              <strong :title="contributor.test_item">{{ contributor.test_item }}</strong>
+              <small>Score {{ contributor.scoreLabel }} x Weight {{ contributor.weight.toFixed(2) }} = {{ contributor.weightedScoreLabel }}</small>
             </span>
-            <strong>{{ contributor.reason }}</strong>
+            <strong class="top-product-ranking-upload-log__badge" :class="contributor.statusClass">{{ contributor.reason }}</strong>
           </div>
         </div>
       </div>
@@ -771,6 +779,7 @@ const testItemGridColumns = [
   { key: 'value', field: 'value', header: 'Value', sortable: true, style: { width: '8rem' } },
   { key: 'usl', field: 'usl', header: 'UCL', sortable: true, style: { width: '7rem' } },
   { key: 'lsl', field: 'lsl', header: 'LCL', sortable: true, style: { width: '7rem' } },
+  { key: 'status', field: 'status', header: 'Status', sortable: false, style: { width: '10rem' } },
   { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '9rem' } },
 ]
 
@@ -883,7 +892,7 @@ const overallScoreDetails = computed(() => {
     const hasScore = item.score !== null && item.score !== undefined
     const passesMinScore = config?.min_score === undefined || config?.min_score === null || !hasScore
       ? true
-      : (item.score as number) >= config.min_score
+      : (item.score as number) >= config.min_score * 10
     const included = enabled && hasScore && passesMinScore
     const weightedScore = included ? (item.score as number) * weight : 0
 
@@ -896,6 +905,10 @@ const overallScoreDetails = computed(() => {
       reason = 'Below configured minimum score'
     }
 
+    const statusClass = included
+      ? 'top-product-ranking-upload-log__badge--success'
+      : (!passesMinScore ? 'top-product-ranking-upload-log__badge--error' : 'top-product-ranking-upload-log__badge--warning')
+
     return {
       test_item: item.test_item,
       weight,
@@ -904,6 +917,7 @@ const overallScoreDetails = computed(() => {
       scoreLabel: hasScore ? (item.score as number).toFixed(2) : 'N/A',
       included,
       reason,
+      statusClass,
     }
   })
 
@@ -916,9 +930,37 @@ const overallScoreDetails = computed(() => {
     includedCount: includedContributors.length,
     weightedSum,
     totalWeight,
+    scoreValue: selectedRankingItem.value.score,
     displayScore: selectedRankingItem.value.score.toFixed(2),
   }
 })
+
+function getConfiguredMinScore(item: ParsedTestItemEnhanced): number | null {
+  const minScore = scoringConfigMap.value.get(item.test_item)?.min_score
+  return minScore === null || minScore === undefined ? null : minScore * 10
+}
+
+function isTestItemScoreFail(item: ParsedTestItemEnhanced): boolean {
+  const minScore = getConfiguredMinScore(item)
+
+  if (minScore === null || item.score === null || item.score === undefined) {
+    return false
+  }
+
+  return item.score < minScore
+}
+
+function testItemStatusLabel(item: ParsedTestItemEnhanced): string {
+  if (isTestItemScoreFail(item)) return 'Score Fail'
+  if (item.score !== null && item.score !== undefined) return 'Scored'
+  return 'Not Scored'
+}
+
+function testItemStatusClass(item: ParsedTestItemEnhanced): string {
+  if (isTestItemScoreFail(item)) return 'top-product-ranking-upload-log__badge--error'
+  if (item.score !== null && item.score !== undefined) return 'top-product-ranking-upload-log__badge--success'
+  return 'top-product-ranking-upload-log__badge--neutral'
+}
 
 watch([searchQuery, stationTab, scoreFilterType, scoreFilterValue, resultFilter], () => {
   rankingPagination.value.first = 0
@@ -988,6 +1030,13 @@ const getScoreColor = (score: number): string => {
   if (score >= 7) return 'info'
   if (score >= 6) return 'warning'
   return 'error'
+}
+
+function overallScoreSummaryClass(score: number): string {
+  if (score <= 5) return 'top-product-ranking-upload-log__summary-card--score-error'
+  if (score < 7) return 'top-product-ranking-upload-log__summary-card--score-warning'
+  if (score < 9) return 'top-product-ranking-upload-log__summary-card--score-info'
+  return 'top-product-ranking-upload-log__summary-card--score-success'
 }
 
 const copyIsnToClipboard = async (isn: string | null) => {
@@ -1390,6 +1439,10 @@ function rankingRowClass(row: Record<string, unknown>) {
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
 }
 
+.top-product-ranking-upload-log__overall-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
 .top-product-ranking-upload-log__stat-card,
 .top-product-ranking-upload-log__summary-card {
   display: grid;
@@ -1426,6 +1479,26 @@ function rankingRowClass(row: Record<string, unknown>) {
 
 .top-product-ranking-upload-log__summary-card--score {
   background: rgba(40, 96, 163, 0.08);
+}
+
+.top-product-ranking-upload-log__summary-card--score-error {
+  background: rgba(189, 64, 64, 0.14);
+  border-color: rgba(189, 64, 64, 0.24);
+}
+
+.top-product-ranking-upload-log__summary-card--score-warning {
+  background: rgba(184, 118, 38, 0.16);
+  border-color: rgba(184, 118, 38, 0.26);
+}
+
+.top-product-ranking-upload-log__summary-card--score-info {
+  background: rgba(40, 96, 163, 0.12);
+  border-color: rgba(40, 96, 163, 0.22);
+}
+
+.top-product-ranking-upload-log__summary-card--score-success {
+  background: rgba(15, 118, 110, 0.12);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .top-product-ranking-upload-log__summary-card-button {
@@ -1626,6 +1699,41 @@ function rankingRowClass(row: Record<string, unknown>) {
   font-weight: 600;
 }
 
+.top-product-ranking-upload-log__contribution-table .top-product-ranking-upload-log__detail-row {
+  grid-template-columns: minmax(0, 1fr) minmax(10rem, 14rem);
+  align-items: center;
+}
+
+.top-product-ranking-upload-log__contribution-copy {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.top-product-ranking-upload-log__contribution-copy strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+}
+
+.top-product-ranking-upload-log__contribution-copy small {
+  color: var(--app-muted);
+  line-height: 1.35;
+}
+
+.top-product-ranking-upload-log__details-shell :deep(.app-data-grid__table--sticky-header .p-datatable-table-container) {
+  min-height: 0;
+}
+
+.top-product-ranking-upload-log__details-shell :deep(.p-paginator) {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-panel-strong);
+}
+
 .top-product-ranking-upload-log__dialog--breakdown :deep(.app-dialog__title) {
   white-space: normal;
   overflow-wrap: anywhere;
@@ -1665,7 +1773,15 @@ function rankingRowClass(row: Record<string, unknown>) {
     grid-column: span 1;
   }
 
+  .top-product-ranking-upload-log__overall-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .top-product-ranking-upload-log__detail-row {
+    grid-template-columns: 1fr;
+  }
+
+  .top-product-ranking-upload-log__contribution-table .top-product-ranking-upload-log__detail-row {
     grid-template-columns: 1fr;
   }
 }

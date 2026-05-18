@@ -120,11 +120,15 @@
       {{ error }}
     </div>
 
-    <div v-if="loadingTestItems" class="top-product-iplas-station-loading-card">
+    <div v-if="loadingTestItems" class="top-product-iplas-station-loading-card" role="status" aria-live="polite">
       <div class="top-product-iplas-station-spinner"></div>
-      <div>
-        <strong>Fetching test data from iPLAS...</strong>
-        <p>The ranking view updates when the current station set finishes loading.</p>
+      <div class="top-product-iplas-station-loading-copy">
+        <span class="top-product-iplas-station-pill top-product-iplas-station-pill--info">Searching iPLAS</span>
+        <strong>Building the station ranking dataset...</strong>
+        <p>Fetching records for the selected station scope, device filters, and time range.</p>
+        <small>
+          {{ configuredStationsCount }} station{{ configuredStationsCount === 1 ? '' : 's' }} queued. Ranking and test-item scores continue as soon as the fetch completes.
+        </small>
       </div>
     </div>
 
@@ -1695,6 +1699,16 @@ onUnmounted(() => {
 .top-product-iplas-station-loading-card {
   grid-template-columns: auto minmax(0, 1fr);
   align-items: center;
+}
+
+.top-product-iplas-station-loading-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.top-product-iplas-station-loading-copy small {
+  color: var(--app-muted);
+  line-height: 1.45;
 }
 
 .top-product-iplas-station-spinner {

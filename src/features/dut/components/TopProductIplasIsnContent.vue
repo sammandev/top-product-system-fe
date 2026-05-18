@@ -206,16 +206,28 @@
       {{ error }}
     </div>
 
+    <div v-if="isnLoadingState" class="top-product-iplas-isn-loading-card" role="status" aria-live="polite">
+      <div class="top-product-iplas-isn-spinner"></div>
+      <div class="top-product-iplas-isn-loading-copy">
+        <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">{{ isnLoadingState.badge }}</span>
+        <strong>{{ isnLoadingState.title }}</strong>
+        <p>{{ isnLoadingState.description }}</p>
+        <small>{{ isnLoadingState.meta }}</small>
+      </div>
+    </div>
+
     <Teleport v-if="props.rankingTarget && props.isActive && testItemData.length > 0" :to="props.rankingTarget">
       <TopProductIplasRanking :records="testItemData" :scores="recordScores"
-        :forced-failures="forcedFailures" :calculating-scores="calculatingScores" :exporting-all="exportingAll"
+        :forced-failures="forcedFailures" :calculating-scores="calculatingScores"
+        :loading="loadingStationLookup || processingIsnData || loadingTestItems" :exporting-all="exportingAll"
         @row-click="handleRowClick" @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords"
         @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores"
         @save-to-db="handleSaveToDb" />
     </Teleport>
 
     <TopProductIplasRanking v-else-if="!props.rankingTarget && testItemData.length > 0" :records="testItemData" :scores="recordScores"
-      :forced-failures="forcedFailures" :calculating-scores="calculatingScores" :exporting-all="exportingAll"
+      :forced-failures="forcedFailures" :calculating-scores="calculatingScores"
+      :loading="loadingStationLookup || processingIsnData || loadingTestItems" :exporting-all="exportingAll"
       @row-click="handleRowClick" @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords"
       @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores"
       @save-to-db="handleSaveToDb" />
@@ -396,6 +408,33 @@ const exportingAll = ref(false)
 // ============================================================================
 const configuredStationsCount = computed(() => {
   return Object.keys(stationConfigs.value).length
+})
+
+const isnLoadingState = computed<{
+  badge: string
+  title: string
+  description: string
+  meta: string
+} | null>(() => {
+  if (loadingStationLookup.value) {
+    return {
+      badge: 'Searching iPLAS',
+      title: 'Resolving identifier history...',
+      description: 'Looking up matching ISN, SSN, and MAC records to determine the station scope.',
+      meta: `${getCurrentInputIdentifiers().length} identifier${getCurrentInputIdentifiers().length === 1 ? '' : 's'} in the current request.`,
+    }
+  }
+
+  if (processingIsnData.value || loadingTestItems.value) {
+    return {
+      badge: 'Preparing ranking',
+      title: 'Building the ISN ranking dataset...',
+      description: 'Applying the configured station, device, and test-item filters before score calculation starts.',
+      meta: `${configuredStationsCount.value} station${configuredStationsCount.value === 1 ? '' : 's'} selected for this ISN search.`,
+    }
+  }
+
+  return null
 })
 
 const bulkModeIdentifiers = computed(() => parseBulkIdentifiers(searchIsn.value))
@@ -1783,6 +1822,7 @@ onUnmounted(() => {
 .top-product-iplas-isn-toggle-card strong,
 .top-product-iplas-isn-summary-panel h3,
 .top-product-iplas-isn-reference-panel__header h3,
+.top-product-iplas-isn-loading-card strong,
 .top-product-iplas-isn-token-card strong {
   color: var(--app-ink);
 }
@@ -1808,6 +1848,7 @@ onUnmounted(() => {
 .top-product-iplas-isn-token-card p,
 .top-product-iplas-isn-notice,
 .top-product-iplas-isn-input-card small,
+.top-product-iplas-isn-loading-card p,
 .top-product-iplas-isn-reference-error {
   margin: 0;
   color: var(--app-muted);
@@ -1903,11 +1944,44 @@ onUnmounted(() => {
 .top-product-iplas-isn-lookup-card,
 .top-product-iplas-isn-action-card,
 .top-product-iplas-isn-summary-panel,
+.top-product-iplas-isn-loading-card,
 .top-product-iplas-isn-notice {
   padding: 0.9rem;
   border-radius: 0.8rem;
   border: 1px solid rgba(15, 118, 110, 0.12);
   background: var(--app-panel);
+}
+
+.top-product-iplas-isn-loading-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.9rem;
+  align-items: center;
+}
+
+.top-product-iplas-isn-loading-copy {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.top-product-iplas-isn-loading-copy small {
+  color: var(--app-muted);
+  line-height: 1.45;
+}
+
+.top-product-iplas-isn-spinner {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 50%;
+  border: 3px solid color-mix(in srgb, var(--app-accent) 16%, transparent);
+  border-top-color: var(--app-accent);
+  animation: top-product-iplas-isn-spin 0.9s linear infinite;
+}
+
+@keyframes top-product-iplas-isn-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .top-product-iplas-isn-toggle-card {
@@ -2093,6 +2167,7 @@ onUnmounted(() => {
 @media (max-width: 840px) {
 
   .top-product-iplas-isn-action-card,
+  .top-product-iplas-isn-loading-card,
   .top-product-iplas-isn-token-card {
     grid-template-columns: minmax(0, 1fr);
   }

@@ -129,14 +129,24 @@
               </template>
 
               <template #cell-status="{ data }">
-                <span class="ranking-pill"
+                <span v-if="isPendingCalculation(data)" class="ranking-pill ranking-pill--pending">
+                  <span class="ranking-inline-spinner" aria-hidden="true"></span>
+                  Calculating...
+                </span>
+                <span v-else class="ranking-pill"
                   :class="data.isForcedFailure ? 'ranking-pill--warning' : (data.hasError ? 'ranking-pill--danger' : 'ranking-pill--success')">
                   {{ data.status }}
                 </span>
               </template>
 
               <template #cell-score="{ data }">
-                <template v-if="data.hasError && !data.isForcedFailure">
+                <template v-if="isPendingCalculation(data)">
+                  <span class="ranking-score-chip ranking-score-chip--pending">
+                    <span class="ranking-inline-spinner" aria-hidden="true"></span>
+                    Calculating...
+                  </span>
+                </template>
+                <template v-else-if="data.hasError && !data.isForcedFailure">
                   <span class="ranking-pill ranking-pill--danger">FAIL</span>
                 </template>
                 <template v-else-if="data.score !== null">
@@ -192,6 +202,7 @@ interface Props {
 
 interface RankingItem {
   key: string // Unique key for selection
+  stationName: string
   rank: number
   isn: string
   device: string
@@ -402,6 +413,7 @@ const rankingByStation = computed(() => {
 
     stationMap[stationName].push({
       key: uniqueKey,
+      stationName,
       rank: 0,
       isn: record.ISN || '-',
       device: record.DeviceId || '-',
@@ -796,6 +808,22 @@ function handleExportAll(): void {
   emit('export-all', { records: props.records, filenamePrefix: 'all_stations' })
 }
 
+function buildScoreKey(record: CsvTestItemData, stationName: string): string {
+  return `${record.ISN || record.DeviceId}_${stationName}_${record['Test end Time']}`
+}
+
+function hasResolvedScore(item: RankingItem): boolean {
+  const scores = props.scores ?? {}
+  return Object.prototype.hasOwnProperty.call(
+    scores,
+    buildScoreKey(item.originalRecord, item.stationName),
+  )
+}
+
+function isPendingCalculation(item: RankingItem): boolean {
+  return Boolean(props.calculatingScores) && !item.hasError && !hasResolvedScore(item)
+}
+
 function scoreTone(score: number) {
   const color = getScoreColor(score)
   if (color.includes('green') || color.includes('success')) return 'success'
@@ -955,6 +983,14 @@ function scoreTone(score: number) {
   font-weight: 700;
 }
 
+.ranking-pill--pending,
+.ranking-score-chip--pending {
+  gap: 0.45rem;
+  background: color-mix(in srgb, var(--app-info) 10%, var(--app-panel));
+  border-color: color-mix(in srgb, var(--app-info) 20%, var(--app-border));
+  color: var(--app-info);
+}
+
 .ranking-pill--success,
 .ranking-score-chip--success {
   background: rgba(15, 118, 110, 0.1);
@@ -1007,6 +1043,21 @@ function scoreTone(score: number) {
 .ranking-rank-icon--danger {
   background: var(--app-danger-soft);
   color: var(--app-danger);
+}
+
+.ranking-inline-spinner {
+  width: 0.9rem;
+  height: 0.9rem;
+  border-radius: 50%;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  animation: ranking-spin 0.8s linear infinite;
+}
+
+@keyframes ranking-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .ranking-table-shell {
