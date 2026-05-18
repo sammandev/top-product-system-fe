@@ -236,6 +236,7 @@ import type {
   ParsedTestItemEnhanced,
   RescoreItemResult,
   RescoreScoringConfig,
+  UploadScoringConfigApplyPayload,
 } from '@/features/dut-logs/composables/useTestLogUpload'
 import { useTestLogUpload } from '@/features/dut-logs/composables/useTestLogUpload'
 import { AppDataGrid, AppDialog, AppSelect } from '@/shared'
@@ -349,8 +350,8 @@ const scoringDialogTestItems = computed<ParsedTestItemEnhanced[]>(() => {
   return items
 })
 
-function handleScoringConfigApply(configs: RescoreScoringConfig[]) {
-  localScoringConfigs.value = configs
+function handleScoringConfigApply(payload: UploadScoringConfigApplyPayload) {
+  localScoringConfigs.value = payload.configs
   rescoreAllItems()
 }
 
