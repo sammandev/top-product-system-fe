@@ -336,7 +336,6 @@ import type {
   RescoreScoringConfig,
   UploadScoringConfigApplyPayload,
 } from '@/features/dut-logs/composables/useTestLogUpload'
-import { hasMeaningfulUploadLogCriteria } from '@/features/dut-logs/composables/useTestLogUpload'
 import { AppDialog, AppMultiSelect, AppPanel, AppSelect } from '@/shared/ui'
 
 type ItemScopeMode = 'auto' | 'included' | 'excluded'
@@ -382,14 +381,16 @@ const selectedDevices = ref<string[]>([])
 const selectedItemNames = ref<Set<string>>(new Set())
 const scoringConfigs = ref<RescoreScoringConfig[]>([])
 const itemScopeModes = ref<Map<string, ItemScopeMode>>(new Map())
-const activeSelectionMode = ref<ActiveSelectionMode | null>(null)
-const globalMinScore = ref<number | undefined>(undefined)
+const activeSelectionMode = ref<ActiveSelectionMode>('included')
+const globalMinScore = ref<number | undefined>(0.65)
 
 const selectedCount = computed(() => selectedItemNames.value.size)
-const hasActiveSelectionMode = computed(() => activeSelectionMode.value !== null)
+const hasActiveSelectionMode = computed(() => true)
 const activeSelectionLabel = computed(() => activeSelectionMode.value === 'excluded' ? 'Exclude' : 'Include')
 const activeSelectionActionLabel = computed(() => activeSelectionMode.value === 'excluded' ? 'Exclude' : 'Include')
 const activeSelectionScopeLabel = computed(() => activeSelectionMode.value === 'excluded' ? 'Exclude' : 'Include')
+const testItemMap = computed(() => new Map(props.testItems.map((item) => [item.test_item, item])))
+const configMap = computed(() => new Map(scoringConfigs.value.map((config) => [config.test_item_name, config])))
 const selectedStationValue = computed({
   get: () => selectedStation.value ?? '',
   set: (value: string) => {
@@ -455,14 +456,14 @@ const policySelectOptions = policyOptions.map((option) => ({
 }))
 
 const itemScopeSelectOptions = [
-  { label: 'Auto', value: 'auto' },
   { label: 'Included', value: 'included' },
   { label: 'Excluded', value: 'excluded' },
 ]
 
 const bulkScopeSelectOptions = [
   { label: 'Keep current scope', value: 'keep' },
-  ...itemScopeSelectOptions,
+  { label: 'Included', value: 'included' },
+  { label: 'Excluded', value: 'excluded' },
 ]
 
 function clampNumber(value: number, min: number, max: number): number {
@@ -494,7 +495,7 @@ function buildAppliedConfigs(): RescoreScoringConfig[] {
   return scoringConfigs.value.flatMap((config) => {
     const defaultConfig = createDefaultConfig(config.test_item_name)
     const scopeMode = getItemScopeMode(config.test_item_name)
-    const shouldEmit = scopeMode !== 'auto' || isConfigCustomized(config, defaultConfig)
+    const shouldEmit = scopeMode === 'excluded' || isConfigCustomized(config, defaultConfig) || globalMinScore.value !== undefined
 
     if (!shouldEmit) {
       return []
@@ -539,7 +540,7 @@ function initializeConfigs() {
   })
   itemScopeModes.value = scopeModes
   selectedDevices.value = [...props.initialDeviceScope]
-  globalMinScore.value = getCommonMinScore(props.existingConfigs)
+  globalMinScore.value = getCommonMinScore(props.existingConfigs) ?? 0.65
 }
 
 function getCommonMinScore(configs: RescoreScoringConfig[]): number | undefined {
@@ -602,9 +603,13 @@ const filteredConfigs = computed(() => {
 })
 
 // Helper: check if item is criteria (has UCL or LCL)
+function hasUploadLogLimitValue(limit: number | null | undefined): boolean {
+  return limit !== null && limit !== undefined
+}
+
 function isItemCriteria(name: string): boolean {
-  const item = props.testItems.find((t) => t.test_item === name)
-  return item ? hasMeaningfulUploadLogCriteria(item.usl, item.lsl) : false
+  const item = getTestItem(name)
+  return item ? hasUploadLogLimitValue(item.usl) || hasUploadLogLimitValue(item.lsl) : false
 }
 
 function getItemTypeLabel(name: string): string {
@@ -621,14 +626,14 @@ function getItemScopeLabel(name: string): string {
   const scopeMode = getItemScopeMode(name)
   if (scopeMode === 'included') return 'Included'
   if (scopeMode === 'excluded') return 'Excluded'
-  return 'Auto'
+  return 'Included'
 }
 
 function getItemScopeClass(name: string): string {
   const scopeMode = getItemScopeMode(name)
   if (scopeMode === 'included') return 'upload-scoring-dialog__pill--info'
   if (scopeMode === 'excluded') return 'upload-scoring-dialog__pill--danger'
-  return 'upload-scoring-dialog__pill--muted'
+  return 'upload-scoring-dialog__pill--info'
 }
 
 function isItemSelectionLocked(name: string): boolean {
@@ -673,11 +678,24 @@ const scoreFailCount = computed(() =>
 )
 
 function getTestItem(name: string): ParsedTestItemEnhanced | undefined {
-  return props.testItems.find((item) => item.test_item === name)
+  return testItemMap.value.get(name)
 }
 
 function getConfig(name: string): RescoreScoringConfig | undefined {
-  return scoringConfigs.value.find((config) => config.test_item_name === name)
+  return configMap.value.get(name)
+}
+
+function setScopeModes(names: string[], scopeMode: ItemScopeMode): void {
+  const nextModes = new Map(itemScopeModes.value)
+  const nameSet = new Set(names)
+
+  names.forEach((name) => nextModes.set(name, scopeMode))
+  itemScopeModes.value = nextModes
+  scoringConfigs.value.forEach((config) => {
+    if (nameSet.has(config.test_item_name)) {
+      config.enabled = scopeMode !== 'excluded'
+    }
+  })
 }
 
 function getItemScore(name: string): number | null {
@@ -740,54 +758,45 @@ function toggleItemSelection(name: string) {
 }
 
 function selectDisplayedItems() {
-  if (!activeSelectionMode.value) return
-
   const names = getSelectableConfigs(filteredConfigs.value).map((config) => config.test_item_name)
-  names.forEach((name) => setItemScopeMode(name, activeSelectionMode.value as ActiveSelectionMode))
+  setScopeModes(names, activeSelectionMode.value)
   selectedItemNames.value = new Set([...selectedItemNames.value, ...names])
 }
 
 function selectCriteriaItems() {
-  if (!activeSelectionMode.value) return
-
   const names: string[] = []
   getSelectableConfigs(filteredConfigs.value).forEach((c) => {
     if (isItemCriteria(c.test_item_name)) {
       names.push(c.test_item_name)
     }
   })
-  names.forEach((name) => setItemScopeMode(name, activeSelectionMode.value as ActiveSelectionMode))
+  setScopeModes(names, activeSelectionMode.value)
   selectedItemNames.value = new Set([...selectedItemNames.value, ...names])
 }
 
 function selectNonCriteriaItems() {
-  if (!activeSelectionMode.value) return
-
   const names: string[] = []
   getSelectableConfigs(filteredConfigs.value).forEach((c) => {
     if (!isItemCriteria(c.test_item_name)) {
       names.push(c.test_item_name)
     }
   })
-  names.forEach((name) => setItemScopeMode(name, activeSelectionMode.value as ActiveSelectionMode))
+  setScopeModes(names, activeSelectionMode.value)
   selectedItemNames.value = new Set([...selectedItemNames.value, ...names])
 }
 
 function clearSelection() {
   const currentMode = activeSelectionMode.value
   if (currentMode) {
-    selectedItemNames.value.forEach((name) => {
-      if (getItemScopeMode(name) === currentMode) {
-        setItemScopeMode(name, 'auto')
-      }
-    })
+    const names = [...selectedItemNames.value].filter((name) => getItemScopeMode(name) === currentMode)
+    setScopeModes(names, 'auto')
   }
 
   selectedItemNames.value = new Set()
 }
 
 function applyScopeModeToSelected(scopeMode: ItemScopeMode) {
-  selectedItemNames.value.forEach((name) => setItemScopeMode(name, scopeMode))
+  setScopeModes([...selectedItemNames.value], scopeMode)
 }
 
 function clearActiveScope() {
@@ -795,11 +804,10 @@ function clearActiveScope() {
     return
   }
 
-  scoringConfigs.value.forEach((config) => {
-    if (getItemScopeMode(config.test_item_name) === activeSelectionMode.value) {
-      setItemScopeMode(config.test_item_name, 'auto')
-    }
-  })
+  const names = scoringConfigs.value
+    .filter((config) => getItemScopeMode(config.test_item_name) === activeSelectionMode.value)
+    .map((config) => config.test_item_name)
+  setScopeModes(names, 'auto')
   selectedItemNames.value = new Set()
 }
 
@@ -807,14 +815,13 @@ function clearActiveScope() {
  * Select all displayed items and open bulk config dialog
  */
 function selectDisplayedAndConfigure() {
-  if (!activeSelectionMode.value) return
-
   // First, select all displayed items
   const newSet = new Set(selectedItemNames.value)
-  getSelectableConfigs(filteredConfigs.value).forEach((c) => {
+  const names = getSelectableConfigs(filteredConfigs.value).map((c) => {
     newSet.add(c.test_item_name)
-    setItemScopeMode(c.test_item_name, activeSelectionMode.value as ActiveSelectionMode)
+    return c.test_item_name
   })
+  setScopeModes(names, activeSelectionMode.value)
   selectedItemNames.value = newSet
 
   // Then open bulk config dialog
@@ -824,13 +831,11 @@ function selectDisplayedAndConfigure() {
 }
 
 function selectDisplayedCriteriaAndConfigure() {
-  if (!activeSelectionMode.value) return
-
   const names = getSelectableConfigs(filteredConfigs.value)
     .filter((config) => isItemCriteria(config.test_item_name))
     .map((config) => config.test_item_name)
 
-  names.forEach((name) => setItemScopeMode(name, activeSelectionMode.value as ActiveSelectionMode))
+  setScopeModes(names, activeSelectionMode.value)
   selectedItemNames.value = new Set([...selectedItemNames.value, ...names])
 
   if (selectedItemNames.value.size > 0) {
@@ -968,8 +973,8 @@ function resetAll() {
   itemScopeModes.value = new Map(scoringConfigs.value.map((c) => [c.test_item_name, 'auto']))
   selectedDevices.value = []
   selectedItemNames.value = new Set()
-  activeSelectionMode.value = null
-  globalMinScore.value = undefined
+  activeSelectionMode.value = 'included'
+  globalMinScore.value = 0.65
 }
 
 // Handlers
@@ -1073,7 +1078,7 @@ watch(
     if (isOpen) {
       initializeConfigs()
       selectedItemNames.value = new Set()
-      activeSelectionMode.value = null
+      activeSelectionMode.value = 'included'
       dialogFullscreen.value = false
       searchQuery.value = ''
       // Set default station filter if provided

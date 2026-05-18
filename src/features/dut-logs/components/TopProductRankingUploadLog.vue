@@ -209,6 +209,16 @@
             <strong>Result:</strong>
             <span>{{ selectedRankingItem.result || 'N/A' }}</span>
           </span>
+          <button
+            v-if="selectedForcedFailItems.length > 0"
+            type="button"
+            class="top-product-ranking-upload-log__pill top-product-ranking-upload-log__pill--danger top-product-ranking-upload-log__pill--button"
+            @click="showForcedFailDialog = true"
+          >
+            <Icon icon="mdi:alert-octagon" />
+            <strong>Forced Fail:</strong>
+            <span>{{ forcedFailSummaryText }}</span>
+          </button>
         </section>
 
         <section class="top-product-ranking-upload-log__filter-grid">
@@ -277,6 +287,46 @@
               <Icon icon="mdi:information-outline" />
             </button>
             <span v-else class="top-product-ranking-upload-log__muted">-</span>
+          </template>
+        </AppDataGrid>
+      </div>
+    </AppDialog>
+
+    <AppDialog
+      v-model="showForcedFailDialog"
+      width="min(92vw, 52rem)"
+      :breakpoints="dialogBreakpoints"
+      :showFooter="false"
+      title="Forced Fail Items"
+      description="Review test items below the configured minimum score."
+      class="top-product-ranking-upload-log__dialog"
+    >
+      <div class="top-product-ranking-upload-log__breakdown-shell">
+        <section class="top-product-ranking-upload-log__notice top-product-ranking-upload-log__notice--warning">
+          <strong>{{ forcedFailSummaryText }}</strong>
+        </section>
+        <AppDataGrid
+          :columns="forcedFailGridColumns"
+          :rows="selectedForcedFailItems"
+          dataKey="test_item"
+          :paginator="selectedForcedFailItems.length > 10"
+          :rowsPerPage="10"
+          :rowsPerPageOptions="[10, 25, 50]"
+          scrollHeight="24rem"
+          emptyMessage="No forced-fail items."
+        >
+          <template #cell-test_item="{ data }">
+            <span class="top-product-ranking-upload-log__strong">{{ data.test_item }}</span>
+          </template>
+          <template #cell-score="{ data }">
+            <span class="top-product-ranking-upload-log__score-button" :class="scoreBadgeClass(data.score)">
+              {{ data.score.toFixed(2) }}
+            </span>
+          </template>
+          <template #cell-threshold="{ data }">
+            <span class="top-product-ranking-upload-log__badge top-product-ranking-upload-log__badge--warning">
+              {{ data.threshold.toFixed(1) }} / 10
+            </span>
           </template>
         </AppDataGrid>
       </div>
@@ -595,7 +645,6 @@ import type {
   RescoreScoringConfig,
   TestLogParseResponseEnhanced,
 } from '@/features/dut-logs/composables/useTestLogUpload'
-import { hasMeaningfulUploadLogCriteria } from '@/features/dut-logs/composables/useTestLogUpload'
 import {
   createTopProduct,
   createTopProductsBulk,
@@ -630,6 +679,12 @@ interface RankingItem {
   score: number
 }
 
+interface ForcedFailItemRow {
+  test_item: string
+  score: number
+  threshold: number
+}
+
 const dialogBreakpoints = {
   '1400px': '96vw',
   '960px': '98vw',
@@ -656,6 +711,7 @@ const showBreakdownDialog = ref(false)
 const breakdownFullscreen = ref(false)
 const selectedTestItem = ref<ParsedTestItemEnhanced | null>(null)
 const showOverallScoreDialog = ref(false)
+const showForcedFailDialog = ref(false)
 
 const showIplasCompareDialog = ref(false)
 const comparisonIsn = ref<string | null>(null)
@@ -677,9 +733,9 @@ const filteredTestItems = computed(() => {
   let items = selectedTestItems.value
 
   if (testItemFilterType.value === 'criteria') {
-    items = items.filter((item) => hasMeaningfulUploadLogCriteria(item.usl, item.lsl))
+    items = items.filter((item) => hasUploadLogLimitValue(item.usl) || hasUploadLogLimitValue(item.lsl))
   } else if (testItemFilterType.value === 'non-criteria') {
-    items = items.filter((item) => !hasMeaningfulUploadLogCriteria(item.usl, item.lsl))
+    items = items.filter((item) => !hasUploadLogLimitValue(item.usl) && !hasUploadLogLimitValue(item.lsl))
   }
 
   if (testItemSearch.value) {
@@ -719,6 +775,7 @@ const resultFilterOptions = [
   { title: 'All', value: null },
   { title: 'Pass Only', value: 'PASS' },
   { title: 'Fail Only', value: 'FAIL' },
+  { title: 'Min. Score Fail', value: 'Min. Score Fail' },
 ]
 
 const resultFilterSelectOptions = resultFilterOptions.map((option) => ({
@@ -726,47 +783,54 @@ const resultFilterSelectOptions = resultFilterOptions.map((option) => ({
   value: option.value,
 }))
 
-const rankingGridColumns = [
-  { key: 'rank', field: 'rank', header: 'Rank', sortable: false, style: { width: '6rem' } },
-  { key: 'isn', field: 'isn', header: 'DUT ISN', sortable: true, style: { width: '12rem' } },
-  {
-    key: 'test_date',
-    field: 'test_date',
-    header: 'Test Date',
-    sortable: true,
-    style: { width: '11rem' },
-  },
-  {
-    key: 'duration',
-    field: 'duration_seconds',
-    header: 'Duration',
-    sortable: true,
-    style: { width: '8rem' },
-  },
-  {
-    key: 'station',
-    field: 'station',
-    header: 'Test Station',
-    sortable: true,
-    style: { width: '11rem' },
-  },
-  { key: 'device', field: 'device', header: 'Device', sortable: true, style: { width: '11rem' } },
-  { key: 'status', field: 'status', header: 'Status', sortable: true, style: { width: '8rem' } },
-  {
-    key: 'result',
-    field: 'result',
-    header: 'Test Result',
-    sortable: true,
-    style: { width: '9rem' },
-  },
-  {
-    key: 'score',
-    field: 'score',
-    header: 'Overall Score',
-    sortable: true,
-    style: { width: '10rem' },
-  },
-]
+const rankingGridColumns = computed(() => {
+  const columns = [
+    { key: 'rank', field: 'rank', header: 'Rank', sortable: false, style: { width: '6rem' } },
+    { key: 'isn', field: 'isn', header: 'DUT ISN', sortable: true, style: { width: '12rem' } },
+    {
+      key: 'test_date',
+      field: 'test_date',
+      header: 'Test Date',
+      sortable: true,
+      style: { width: '11rem' },
+    },
+    {
+      key: 'duration',
+      field: 'duration_seconds',
+      header: 'Duration',
+      sortable: true,
+      style: { width: '8rem' },
+    },
+    { key: 'device', field: 'device', header: 'Device', sortable: true, style: { width: '11rem' } },
+    { key: 'status', field: 'status', header: 'Status', sortable: true, style: { width: '8rem' } },
+    {
+      key: 'result',
+      field: 'result',
+      header: 'Test Result',
+      sortable: true,
+      style: { width: '9rem' },
+    },
+    {
+      key: 'score',
+      field: 'score',
+      header: 'Overall Score',
+      sortable: true,
+      style: { width: '10rem' },
+    },
+  ]
+
+  if (stationTab.value === 'all') {
+    columns.splice(4, 0, {
+      key: 'station',
+      field: 'station',
+      header: 'Test Station',
+      sortable: true,
+      style: { width: '11rem' },
+    })
+  }
+
+  return columns
+})
 
 const testItemGridColumns = [
   {
@@ -783,12 +847,21 @@ const testItemGridColumns = [
   { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '9rem' } },
 ]
 
+const forcedFailGridColumns = [
+  { key: 'test_item', field: 'test_item', header: 'Test Item', sortable: true, style: { width: '24rem' } },
+  { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '10rem' } },
+  { key: 'threshold', field: 'threshold', header: 'Minimum', sortable: true, style: { width: '10rem' } },
+]
+
 const rankings = computed<RankingItem[]>(() => {
   const items: RankingItem[] = []
 
   if (props.parseResult?.metadata) {
     const isn = props.parseResult.isn || 'unknown'
     const station = props.parseResult.station || 'Unknown'
+    const result = hasRankingForcedFail(props.parseResult.parsed_items_enhanced)
+      ? 'Min. Score Fail'
+      : props.parseResult.metadata.result
     items.push({
       row_id: `${isn}_${station}`,
       isn: props.parseResult.isn,
@@ -797,13 +870,16 @@ const rankings = computed<RankingItem[]>(() => {
       station,
       device: props.parseResult.metadata.device,
       status: props.parseResult.metadata.sfis_status || 'Unknown',
-      result: props.parseResult.metadata.result,
+      result,
       score: props.parseResult.avg_score || 0,
     })
   } else if (props.compareResult?.file_summaries) {
     props.compareResult.file_summaries.forEach((fileSummary) => {
       const isn = fileSummary.isn || 'unknown'
       const station = fileSummary.metadata.station || 'Unknown'
+      const result = hasRankingForcedFail(getTestItemsForIsn(fileSummary.isn))
+        ? 'Min. Score Fail'
+        : fileSummary.metadata.result
       items.push({
         row_id: `${isn}_${station}`,
         isn: fileSummary.isn,
@@ -812,7 +888,7 @@ const rankings = computed<RankingItem[]>(() => {
         station,
         device: fileSummary.metadata.device,
         status: fileSummary.metadata.sfis_status || 'Unknown',
-        result: fileSummary.metadata.result,
+        result,
         score: fileSummary.avg_score || 0,
       })
     })
@@ -879,6 +955,40 @@ const filteredRankings = computed(() => {
 })
 
 const scoringConfigMap = computed(() => new Map((props.scoringConfigs || []).map((config) => [config.test_item_name, config])))
+
+function hasUploadLogLimitValue(limit: number | null | undefined): boolean {
+  return limit !== null && limit !== undefined
+}
+
+const selectedForcedFailItems = computed<ForcedFailItemRow[]>(() => {
+  return selectedTestItems.value.flatMap((item) => {
+    const minScore = getConfiguredMinScore(item)
+
+    if (minScore === null || item.score === null || item.score === undefined || item.score >= minScore) {
+      return []
+    }
+
+    return [{
+      test_item: item.test_item,
+      score: item.score,
+      threshold: minScore,
+    }]
+  })
+})
+
+const forcedFailSummaryText = computed(() => {
+  const count = selectedForcedFailItems.value.length
+  const threshold = selectedForcedFailItems.value[0]?.threshold
+  const itemLabel = count === 1 ? 'item' : 'items'
+
+  return threshold === undefined
+    ? `${count} ${itemLabel} below minimum score`
+    : `${count} ${itemLabel} below ${threshold.toFixed(1)} / 10`
+})
+
+function hasRankingForcedFail(testItems: ParsedTestItemEnhanced[]): boolean {
+  return testItems.some((item) => isTestItemScoreFail(item))
+}
 
 const overallScoreDetails = computed(() => {
   if (!selectedRankingItem.value) {
@@ -952,7 +1062,7 @@ function isTestItemScoreFail(item: ParsedTestItemEnhanced): boolean {
 
 function testItemStatusLabel(item: ParsedTestItemEnhanced): string {
   if (isTestItemScoreFail(item)) return 'Score Fail'
-  if (item.score !== null && item.score !== undefined) return 'Scored'
+  if (item.score !== null && item.score !== undefined) return 'PASS'
   return 'Not Scored'
 }
 
@@ -978,6 +1088,7 @@ watch(showTestItemsDialog, (isOpen) => {
     testItemSearch.value = ''
     testItemFilterType.value = 'all'
     showOverallScoreDialog.value = false
+    showForcedFailDialog.value = false
   }
 })
 
@@ -1021,8 +1132,13 @@ const getResultColor = (result: string | null): string => {
   if (!result) return 'grey'
   const upper = result.toUpperCase()
   if (upper === 'PASS') return 'success'
-  if (upper === 'FAIL') return 'error'
+  if (upper === 'FAIL' || upper === 'MIN. SCORE FAIL') return 'error'
   return 'warning'
+}
+
+function isFailResult(result: string | null): boolean {
+  const upper = String(result || '').toUpperCase()
+  return upper === 'FAIL' || upper === 'MIN. SCORE FAIL'
 }
 
 const getScoreColor = (score: number): string => {
@@ -1226,7 +1342,7 @@ function buildTopProductData(
     test_date: rankingItem.test_date ? new Date(rankingItem.test_date).toISOString() : null,
     test_duration: rankingItem.duration_seconds ?? undefined,
     pass_count: rankingItem.result === 'PASS' ? 1 : 0,
-    fail_count: rankingItem.result === 'FAIL' ? 1 : 0,
+    fail_count: isFailResult(rankingItem.result) ? 1 : 0,
     retest_count: 0,
     score: rankingItem.score,
     measurements,
@@ -1360,7 +1476,8 @@ function resultBadgeClass(result: string | null): string {
 
 function rankingRowClass(row: Record<string, unknown>) {
   const result = String(row.result || '')
-  if (result.toUpperCase() === 'FAIL') {
+  const upperResult = result.toUpperCase()
+  if (upperResult === 'FAIL' || upperResult === 'MIN. SCORE FAIL') {
     return 'top-product-ranking-upload-log__row--fail'
   }
 
@@ -1556,6 +1673,17 @@ function rankingRowClass(row: Record<string, unknown>) {
   background: var(--app-panel);
 }
 
+.top-product-ranking-upload-log__pill--button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.top-product-ranking-upload-log__pill--danger {
+  border-color: rgba(189, 64, 64, 0.24);
+  background: rgba(189, 64, 64, 0.14);
+  color: #8f2020;
+}
+
 .top-product-ranking-upload-log__pill--cool {
   background: rgba(40, 96, 163, 0.1);
 }
@@ -1668,6 +1796,20 @@ function rankingRowClass(row: Record<string, unknown>) {
 .top-product-ranking-upload-log__score-button--error {
   background: rgba(189, 64, 64, 0.14);
   color: #8f2020;
+}
+
+.top-product-ranking-upload-log__notice {
+  border: 1px solid var(--app-border);
+  border-radius: 0.8rem;
+  padding: 0.85rem 1rem;
+  background: var(--app-panel);
+  color: var(--app-ink);
+}
+
+.top-product-ranking-upload-log__notice--warning {
+  border-color: rgba(184, 118, 38, 0.26);
+  background: rgba(184, 118, 38, 0.12);
+  color: #8f5314;
 }
 
 .top-product-ranking-upload-log__detail-table {

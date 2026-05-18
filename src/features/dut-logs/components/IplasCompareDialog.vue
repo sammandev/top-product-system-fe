@@ -6,6 +6,7 @@
     fullscreen-width="98vw"
     :breakpoints="dialogBreakpoints"
     fullscreenable
+    :showFooter="false"
     :title="`Compare With iPLAS${isn ? ` - ${isn}` : ''}`"
     description="Review uploaded measurements against iPLAS values and export the aligned result set."
     class="iplas-compare-dialog"
@@ -173,6 +174,7 @@
     fullscreen-width="96vw"
     :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
     fullscreenable
+    :showFooter="false"
     :title="`${breakdownSource === 'upload' ? 'Uploaded' : 'iPLAS'} Score`"
     :description="breakdownItem?.test_item ?? 'Score Breakdown'"
     class="iplas-compare-dialog__breakdown-dialog"

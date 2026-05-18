@@ -2157,6 +2157,24 @@ onUnmounted(() => {
   background: var(--app-panel);
 }
 
+.top-product-iplas-isn-reference-panel__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.75rem;
+  align-items: start;
+}
+
+.top-product-iplas-isn-reference-panel__header > div:first-child {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.top-product-iplas-isn-reference-panel__header h3 {
+  margin: 0;
+  line-height: 1.15;
+}
+
 .top-product-iplas-isn-reference-panel.is-collapsed {
   padding-bottom: 0.9rem;
 }
