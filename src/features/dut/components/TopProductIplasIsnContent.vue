@@ -155,7 +155,7 @@
           </div>
         </section>
 
-        <section v-if="isnProjectInfo" class="top-product-iplas-isn-lookup-card">
+        <section v-if="isnProjectInfo" ref="lookupResultSection" class="top-product-iplas-isn-lookup-card">
           <div class="top-product-iplas-isn-chip-row">
             <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--primary">{{ parsedIsns.length }}
               ISN(s)</span>
@@ -273,7 +273,7 @@
 <script setup lang="ts">
 // UPDATED: Complete rewrite of script section for new UX flow
 import { Icon } from '@iconify/vue'
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, nextTick, onMounted, onUnmounted, ref } from 'vue'
 import { useScoring } from '@/features/dut/composables/useScoring'
 import {
   evaluateForcedFailure,
@@ -363,6 +363,7 @@ const isSfistspCollapsed = ref(false)
 // State: Station Lookup
 // ============================================================================
 const loadingStationLookup = ref(false)
+const lookupResultSection = ref<HTMLElement | null>(null)
 const isnProjectInfo = ref<IplasIsnProjectInfo | null>(null)
 const availableStations = ref<Station[]>([])
 const parsedIsns = ref<string[]>([])
@@ -642,7 +643,12 @@ async function handleLookupReferences(): Promise<void> {
   }
 
   error.value = null
-  allIdentifiersToSearch.value = await lookupSfistspReferences(isnList)
+  allIdentifiersToSearch.value = await lookupSfistspReferences(isnList, true)
+}
+
+async function scrollToLookupResults(): Promise<void> {
+  await nextTick()
+  lookupResultSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 function getCurrentInputIdentifiers(): string[] {
@@ -886,15 +892,19 @@ function extractTestItemsFromRecords(
  * Lookup ISN references from SFISTSP to get SSN and MAC.
  * Returns a list of all unique identifiers (ISN, SSN, MAC) to search in iPLAS.
  */
-async function lookupSfistspReferences(isnList: string[]): Promise<string[]> {
+async function lookupSfistspReferences(isnList: string[], showMatches = true): Promise<string[]> {
   loadingSfistsp.value = true
-  sfistspReferences.value = []
+  if (showMatches) {
+    sfistspReferences.value = []
+  }
   isSfistspCollapsed.value = false
 
   try {
     // Use batch lookup for efficiency
     const batchResponse = await lookupIsnsBatch(isnList)
-    sfistspReferences.value = batchResponse.results
+    if (showMatches) {
+      sfistspReferences.value = batchResponse.results
+    }
 
     // Collect only primary identifiers: isn (or isn_searched if isn not present), ssn, mac
     // Do NOT collect isn_references to avoid searching all related ISNs
@@ -990,7 +1000,7 @@ async function handleLookupStations(): Promise<void> {
     // STEP 1: Conditionally lookup SFISTSP to get all ISN, SSN, MAC references
     let allIdentifiers: string[]
     if (enableUnifiedSearch.value) {
-      allIdentifiers = await lookupSfistspReferences(isnList)
+      allIdentifiers = await lookupSfistspReferences(isnList, false)
     } else {
       // Skip SFISTSP lookup - use original ISN list only
       allIdentifiers = isnList
@@ -1022,7 +1032,6 @@ async function handleLookupStations(): Promise<void> {
 
     // Store the raw ISN search records for later use (aggregated and deduplicated)
     isnSearchRecords.value = allRecords
-    testItemData.value = allRecords.map(transformIsnRecordToCsvData)
 
     // Extract project info from first record (assume same project for all)
     // biome-ignore lint/style/noNonNullAssertion: allRecords.length > 0 is checked above
@@ -1038,6 +1047,7 @@ async function handleLookupStations(): Promise<void> {
     console.info(`Using ${availableStations.value.length} stations from search results`)
 
     preCacheStationData(allRecords, isnProjectInfo.value)
+    await scrollToLookupResults()
 
     // STEP 3: Refresh station ordering in the background without blocking initial results
     void refreshStationOrderingForLookup(firstRecord.isn, allRecords, requestId)

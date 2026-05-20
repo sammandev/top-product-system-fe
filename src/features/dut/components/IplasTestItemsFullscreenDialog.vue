@@ -108,25 +108,8 @@
 
       <section class="fullscreen-dialog__filters">
         <label class="fullscreen-dialog__field">
-          <span>Search Test Items (Regex)</span>
-          <div class="fullscreen-dialog__search-shell">
-            <input
-              v-model="searchEntry"
-              type="text"
-              placeholder="Type regex or text and press Enter"
-              @keydown.enter.prevent="commitSearchEntry"
-              @blur="commitSearchEntry"
-            >
-            <button v-if="searchEntry" type="button" class="fullscreen-dialog__inline-button" @click="commitSearchEntry">
-              Add
-            </button>
-          </div>
-          <div v-if="searchTerms.length > 0" class="fullscreen-dialog__token-row">
-            <button v-for="term in searchTerms" :key="term" type="button" class="fullscreen-dialog__token" @click="removeSearchTerm(term)">
-              <span>{{ term }}</span>
-              <span aria-hidden="true">x</span>
-            </button>
-          </div>
+          <span>Search Test Items</span>
+          <input v-model="searchEntry" type="search" placeholder="Search by item, status, or value">
         </label>
 
         <label class="fullscreen-dialog__field">
@@ -283,7 +266,6 @@ const isOpen = computed({
 // Filter controls
 const testItemFilter = ref<TestItemFilterValue>('all')
 const testStatusFilter = ref<'ALL' | 'PASS' | 'FAIL'>('ALL')
-const searchTerms = ref<string[]>([])
 const searchEntry = ref('')
 const isFullscreen = ref(false)
 const { showInfo: showInfoNotification } = useNotification()
@@ -332,7 +314,7 @@ const dialogBreakpoints = computed<Record<string, string>>(() =>
 
 const hasActiveFilters = computed(() => {
   return (
-    searchTerms.value.length > 0 ||
+    searchEntry.value.trim().length > 0 ||
     testStatusFilter.value !== 'ALL' ||
     testItemFilter.value !== 'all'
   )
@@ -440,22 +422,8 @@ async function copyToClipboard(text: string): Promise<void> {
   }
 }
 
-function commitSearchEntry(): void {
-  const entry = searchEntry.value.trim()
-  searchEntry.value = ''
-  if (!entry || searchTerms.value.includes(entry)) {
-    return
-  }
-  searchTerms.value = [...searchTerms.value, entry]
-}
-
-function removeSearchTerm(term: string): void {
-  searchTerms.value = searchTerms.value.filter((value) => value !== term)
-}
-
 function clearFilters(): void {
   searchEntry.value = ''
-  searchTerms.value = []
   testStatusFilter.value = 'ALL'
   testItemFilter.value = 'all'
 }
@@ -492,23 +460,12 @@ const filteredTestItems = computed(() => {
     items = items.filter((item) => item.STATUS === testStatusFilter.value)
   }
 
-  // Apply multi-term regex search (OR logic - any term must match)
-  if (searchTerms.value.length > 0) {
+  const searchTerm = searchEntry.value.trim().toLowerCase()
+  if (searchTerm) {
     items = items.filter((item) => {
       const searchableText =
         `${item.NAME || ''} ${item.STATUS || ''} ${item.VALUE || ''}`.toLowerCase()
-      // OR logic: at least one term must match
-      return searchTerms.value.some((term) => {
-        const trimmedTerm = term.trim().toLowerCase()
-        if (!trimmedTerm) return false
-        try {
-          const regex = new RegExp(trimmedTerm, 'i')
-          return regex.test(searchableText)
-        } catch {
-          // If invalid regex, fall back to simple includes
-          return searchableText.includes(trimmedTerm)
-        }
-      })
+      return searchableText.includes(searchTerm)
     })
   }
 
@@ -538,7 +495,6 @@ watch(
       testItemFilter.value = 'value'
     }
     testStatusFilter.value = 'ALL'
-    searchTerms.value = []
     searchEntry.value = ''
   },
 )
@@ -564,10 +520,8 @@ watch(
 .fullscreen-dialog__metadata-grid,
 .fullscreen-dialog__meta-pills,
 .fullscreen-dialog__filters,
-.fullscreen-dialog__token-row,
 .fullscreen-dialog__option-row,
-.fullscreen-dialog__filter-actions,
-.fullscreen-dialog__search-shell {
+.fullscreen-dialog__filter-actions {
   display: grid;
   gap: 0.9rem;
 }
@@ -721,10 +675,10 @@ watch(
 
 .fullscreen-dialog__summary-card,
 .fullscreen-dialog__metadata-card {
-  border: 1px solid var(--app-border);
-  border-radius: 0.82rem;
-  background: var(--app-panel-strong);
-  padding: 0.32rem;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
 }
 
 .fullscreen-dialog__summary-card--highlight {
@@ -831,16 +785,6 @@ watch(
   font: inherit;
 }
 
-.fullscreen-dialog__search-shell {
-  grid-template-columns: minmax(0, 1fr) auto;
-  border: 1px solid color-mix(in srgb, var(--app-info) 16%, var(--app-border));
-  border-radius: 0.72rem;
-  background: var(--app-panel-strong);
-  padding: 0.24rem;
-  align-items: center;
-}
-
-.fullscreen-dialog__token-row,
 .fullscreen-dialog__option-row {
   display: flex;
   flex-wrap: wrap;

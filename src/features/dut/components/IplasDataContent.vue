@@ -157,7 +157,7 @@
           </AppPanel>
 
           <!-- Test Items Results (Regular Mode) -->
-          <section v-if="hasRegularModeData" class="iplas-section">
+          <section v-if="hasRegularModeData" ref="stationSearchResultsSection" class="iplas-section">
             <div class="iplas-section__header iplas-section__header--split">
               <div>
                 <p class="iplas-section__eyebrow">Regular Mode</p>
@@ -305,7 +305,7 @@
 import { Icon } from '@iconify/vue'
 import { useMutation, useQuery } from '@tanstack/vue-query'
 import { useDebounceFn } from '@vueuse/core'
-import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { queryClient } from '@/app/providers/query-client'
 import { iplasProxyApi } from '@/features/dut-logs/api/iplasProxyApi'
 import type {
@@ -314,10 +314,7 @@ import type {
   Station,
   TestItem,
 } from '@/features/dut-logs/api/iplasApi'
-import type {
-  CompactCsvTestItemData,
-  IplasStationSearchRunResponse,
-} from '@/features/dut-logs/api/iplasProxyApi'
+import type { CompactCsvTestItemData } from '@/features/dut-logs/api/iplasProxyApi'
 import type { DownloadCsvLogInfo } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
 import {
@@ -436,8 +433,8 @@ const stationSearchMutation = useMutation({
 })
 
 const stationSearchRunId = ref<string | null>(null)
-const STATION_SEARCH_RUN_POLL_INTERVAL_MS = 1000
-const STATION_SEARCH_RUN_TIMEOUT_MS = 120000
+const stationSearchResultsSection = ref<HTMLElement | null>(null)
+const initializedStationSearchRuns = ref<Set<string>>(new Set())
 
 const stationSearchRunStatusQuery = useQuery({
   queryKey: computed(() =>
@@ -1649,27 +1646,9 @@ async function fetchTestItems() {
   await stationSearchMutation.mutateAsync()
 }
 
-async function waitForStationSearchRunCompletion(
-  runId: string,
-): Promise<IplasStationSearchRunResponse> {
-  const startedAt = Date.now()
-
-  while (Date.now() - startedAt < STATION_SEARCH_RUN_TIMEOUT_MS) {
-    const status = await fetchIplasStationSearchRunQuery(runId, true)
-    queryClient.setQueryData(queryKeys.iplas.stationSearchRun(runId), status)
-
-    if (status.status === 'failed') {
-      throw new Error(status.error_message || 'Data Explorer Station Search failed.')
-    }
-
-    if (status.status === 'completed') {
-      return status
-    }
-
-    await new Promise<void>((resolve) => window.setTimeout(resolve, STATION_SEARCH_RUN_POLL_INTERVAL_MS))
-  }
-
-  throw new Error('Data Explorer Station Search is still running. Please try again in a moment.')
+async function scrollToStationSearchResults(): Promise<void> {
+  await nextTick()
+  stationSearchResultsSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 async function runStationSearch() {
@@ -1770,18 +1749,6 @@ async function runStationSearch() {
 
   stationSearchRunId.value = run.run_id
   queryClient.setQueryData(queryKeys.iplas.stationSearchRun(run.run_id), run)
-
-  const completedRun = await waitForStationSearchRunCompletion(run.run_id)
-  const firstStationWithRecords = completedRun.stations.find((station) => station.total_records > 0)
-  const firstStation = firstStationWithRecords ?? completedRun.stations[0]
-
-  if (firstStation) {
-    const nextActiveIndex = groupedByStation.value.findIndex(
-      (stationGroup) => stationGroup.stationName === firstStation.station,
-    )
-    activeStationTab.value = nextActiveIndex >= 0 ? nextActiveIndex : 0
-    await initializeServerPagination(firstStation.station)
-  }
 }
 
 /**
@@ -1874,12 +1841,14 @@ watch(
 
 watch(
   stationSearchRunStatus,
-  (status) => {
+  async (status) => {
     if (status?.status === 'failed' && status.error_message) {
       error.value = status.error_message
     }
 
     if (status?.status === 'completed') {
+      const runId = status.run_id
+
       if (status.total_records === 0) {
         const requestSummary = lastStationSearchRequestSummary.value
         console.warn('Data Explorer Station Search completed with zero records', {
@@ -1912,23 +1881,20 @@ watch(
       if (activeStationTab.value >= stationCount) {
         activeStationTab.value = 0
       }
-    }
-  },
-  { immediate: true },
-)
 
-// Watch for station data changes - initialize server pagination
-watch(
-  groupedByStation,
-  async (groups: StationGroup[]) => {
-    if (groups.length > 0) {
-      // Initialize pagination for the active station tab
-      const activeStation = groups[activeStationTab.value]
-      const activeState = activeStation
-        ? getActiveStationPaginationState(activeStation.stationName)
-        : null
-      if (activeStation && activeState && !activeState.initialized) {
-        await initializeServerPagination(activeStation.stationName)
+      if (!initializedStationSearchRuns.value.has(runId)) {
+        initializedStationSearchRuns.value.add(runId)
+        const firstStationWithRecords = status.stations.find((station) => station.total_records > 0)
+        const firstStation = firstStationWithRecords ?? status.stations[0]
+
+        if (firstStation) {
+          const nextActiveIndex = groupedByStation.value.findIndex(
+            (stationGroup) => stationGroup.stationName === firstStation.station,
+          )
+          activeStationTab.value = nextActiveIndex >= 0 ? nextActiveIndex : 0
+          await initializeServerPagination(firstStation.station)
+          await scrollToStationSearchResults()
+        }
       }
     }
   },

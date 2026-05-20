@@ -32,12 +32,11 @@
           <button type="button" class="iplas-isn-unified-card" :class="{ 'is-active': enableUnifiedSearch }"
             :aria-pressed="enableUnifiedSearch" @click="enableUnifiedSearch = !enableUnifiedSearch">
             <span class="iplas-isn-unified-card__icon">
-              <Icon :icon="enableUnifiedSearch ? 'mdi:link-variant' : 'mdi:link-variant-off'" />
+              <Icon icon="mdi:link-variant" />
             </span>
             <span class="iplas-isn-unified-card__copy">
               <strong>Unified Search</strong>
-              <p>Expand the search to related ISN, SSN, and MAC identifiers before requesting iPLAS data.</p>
-              <small>{{ enableUnifiedSearch ? 'SFISTSP expansion enabled' : 'Direct iPLAS lookup only' }}</small>
+              <small>{{ enableUnifiedSearch ? 'ISN, SSN, and MAC enabled' : 'Only entered identifiers' }}</small>
             </span>
             <span class="iplas-isn-unified-card__switch" aria-hidden="true"><span /></span>
           </button>
@@ -176,6 +175,8 @@
       No test records found for the provided ISN(s).
     </div>
 
+    <div ref="recordsResultSection"></div>
+
     <AppPanel v-if="groupedByISN.length > 0" eyebrow="Results" title="Records"
       description="Review grouped iPLAS records per ISN, switch display modes, and drill into station-level histories."
       tone="warm" split-header class="iplas-isn-results-panel">
@@ -278,6 +279,11 @@
 
                   <div v-if="getCurrentGridRecord(isnGroup, stationGroup)" class="iplas-isn-record-card"
                     :class="isRecordPassing(getCurrentGridRecord(isnGroup, stationGroup)!) ? 'is-pass' : 'is-fail'">
+                    <p class="iplas-isn-record-card__status"
+                      :title="recordStatusText(getCurrentGridRecord(isnGroup, stationGroup)!)"
+                      :class="isRecordPassing(getCurrentGridRecord(isnGroup, stationGroup)!) ? 'is-pass' : 'is-fail'">
+                      {{ recordStatusText(getCurrentGridRecord(isnGroup, stationGroup)!) }}
+                    </p>
                     <div class="iplas-isn-record-card__identity">
                       <span class="iplas-isn-pill iplas-isn-pill--primary">{{ getCurrentGridRecord(isnGroup,
                         stationGroup)?.isn }}</span>
@@ -292,11 +298,6 @@
                         calculateDuration(getCurrentGridRecord(isnGroup, stationGroup)!.test_start_time,
                         getCurrentGridRecord(isnGroup, stationGroup)!.test_end_time) }}</span>
                     </div>
-                    <p class="iplas-isn-record-card__status"
-                      :title="recordStatusText(getCurrentGridRecord(isnGroup, stationGroup)!)"
-                      :class="isRecordPassing(getCurrentGridRecord(isnGroup, stationGroup)!) ? 'is-pass' : 'is-fail'">
-                      {{ recordStatusText(getCurrentGridRecord(isnGroup, stationGroup)!) }}
-                    </p>
                     <div class="iplas-isn-record-card__actions">
                       <button type="button" class="iplas-isn-button iplas-isn-button--ghost"
                         @click="openFullscreen(getCurrentGridRecord(isnGroup, stationGroup)!)">
@@ -490,7 +491,7 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import {
   lookupIsnsBatch,
   type SfistspIsnReferenceResponse,
@@ -631,6 +632,7 @@ const hasSearched = ref(false)
 const isSearching = ref(false) // Local state to track entire search operation (fixes premature "no results" alert)
 const groupedByISN = ref<ISNGroup[]>([])
 const activeISNTab = ref(0)
+const recordsResultSection = ref<HTMLElement | null>(null)
 const {
   showError: showErrorNotification,
   showInfo: showInfoNotification,
@@ -660,6 +662,11 @@ const expandedPanels = ref<Record<number, number[]>>({}) // Key: isnIndex, Value
 const testItemSearchTerms = ref<Record<string, string[]>>({})
 const carouselModels = ref<Record<string, number>>({}) // For grid view carousel navigation
 const compactExpanded = ref<Record<number, number[]>>({}) // For compact view per-ISN station expansion
+
+async function scrollToRecordsResults(): Promise<void> {
+  await nextTick()
+  recordsResultSection.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
 
 // Device ID filter controls
 const selectedFilterDeviceIds = ref<Record<string, string[]>>({})
@@ -989,12 +996,13 @@ function getTableRows(
   stationGroup: StationGroup,
   stationIndex: number,
 ): TableRow[] {
-  return getTableStationRecords(isnGroup, stationGroup).map((record, idx) => ({
+  const records = getTableStationRecords(isnGroup, stationGroup)
+  return records.map((record, idx) => ({
     ...record,
     _rowKey: `${isnGroup.isn}-${stationGroup.stationName}-${idx}`,
     _idx: idx,
     _stationIndex: stationIndex,
-    record_number: idx + 1,
+    record_number: records.length - idx,
     duration: calculateDuration(record.test_start_time, record.test_end_time),
   }))
 }
@@ -1537,6 +1545,8 @@ async function handleSearch(): Promise<void> {
           }
         }
       }
+
+      await scrollToRecordsResults()
     }
   } catch (err) {
     console.error('Search failed:', err)
@@ -1967,6 +1977,19 @@ async function handleSearch(): Promise<void> {
   cursor: pointer;
 }
 
+.iplas-isn-station-card__header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.iplas-isn-carousel-controls {
+  flex-wrap: nowrap;
+  justify-content: center;
+  padding: 0.85rem 1rem 0;
+}
+
 .iplas-isn-station-card__header.is-error,
 .iplas-isn-station-section__toggle.is-error {
   background: var(--app-danger-soft);
@@ -2025,17 +2048,28 @@ async function handleSearch(): Promise<void> {
 }
 
 .iplas-isn-record-card__status {
-  margin: 0;
+  width: 100%;
+  margin: 0 0 0.25rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 999px;
+  text-align: center;
   font-weight: 700;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
 .iplas-isn-record-card__status.is-pass {
+  border: 1px solid var(--app-success-line);
+  background: var(--app-panel);
   color: var(--app-accent);
 }
 
-.iplas-isn-record-card__status.is-fail,
+.iplas-isn-record-card__status.is-fail {
+  border: 1px solid var(--app-danger-line);
+  background: var(--app-panel);
+  color: var(--app-danger);
+}
+
 .iplas-isn-text-danger {
   color: var(--app-danger);
 }
