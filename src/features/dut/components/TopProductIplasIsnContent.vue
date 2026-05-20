@@ -298,6 +298,11 @@ import {
   useIplasApi,
 } from '@/features/dut-logs/composables/useIplasApi'
 import {
+  fetchIplasIsnSearchBatchQuery,
+  fetchIplasStationsFromIsnQuery,
+} from '@/features/dut-logs/composables/useIplasQueries'
+import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
+import {
   createTopProductsBulk,
   type TopProductCreate,
   type TopProductMeasurementCreate,
@@ -325,7 +330,13 @@ const props = withDefaults(
 )
 
 const { showSuccess, showError: showErrorNotification } = useNotification()
+const { apiToken } = useIplasSettings()
 const ISN_SEARCH_BATCH_LIMIT = 100
+
+function getUserToken(): string | undefined {
+  const token = apiToken.value?.trim()
+  return token ? token : undefined
+}
 
 // ============================================================================
 // State: ISN Input
@@ -690,7 +701,7 @@ async function searchIdentifiersInBatches(identifiers: string[]): Promise<{
   const recordKeys = new Set<string>()
 
   for (const batch of chunkArray(identifiers, ISN_SEARCH_BATCH_LIMIT)) {
-    const response = await iplasProxyApi.searchByIsnBatch({ isns: batch })
+    const response = await fetchIplasIsnSearchBatchQuery({ isns: batch, token: getUserToken() })
 
     if (!Array.isArray(response.results)) {
       throw new Error('iPLAS API returned an invalid batch ISN search response')
@@ -927,7 +938,7 @@ async function lookupSfistspReferences(isnList: string[]): Promise<string[]> {
  */
 async function fetchStationListFromIsn(identifier: string): Promise<Station[]> {
   try {
-    const response = await iplasProxyApi.getStationsFromIsn({ isn: identifier })
+    const response = await fetchIplasStationsFromIsnQuery({ isn: identifier, token: getUserToken() })
 
     if (!response.isn_info.found) {
       console.warn(`Station list not found for identifier: ${identifier}`)
@@ -1011,6 +1022,7 @@ async function handleLookupStations(): Promise<void> {
 
     // Store the raw ISN search records for later use (aggregated and deduplicated)
     isnSearchRecords.value = allRecords
+    testItemData.value = allRecords.map(transformIsnRecordToCsvData)
 
     // Extract project info from first record (assume same project for all)
     // biome-ignore lint/style/noNonNullAssertion: allRecords.length > 0 is checked above

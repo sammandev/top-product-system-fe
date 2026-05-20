@@ -33,6 +33,11 @@ export const queryKeys = {
     stations: (site: string, project: string) =>
       [...queryKeys.iplas.all, 'stations', site, project] as const,
     devices: (params: unknown) => [...queryKeys.iplas.all, 'devices', params] as const,
+    csvTestItems: (params: unknown) => [...queryKeys.iplas.all, 'csv-test-items', params] as const,
+    isnSearch: (params: unknown) => [...queryKeys.iplas.all, 'isn-search', params] as const,
+    isnSearchBatch: (params: unknown) => [...queryKeys.iplas.all, 'isn-search-batch', params] as const,
+    stationsFromIsn: (params: unknown) => [...queryKeys.iplas.all, 'stations-from-isn', params] as const,
+    stationsFromIsnBatch: (params: unknown) => [...queryKeys.iplas.all, 'stations-from-isn-batch', params] as const,
     stationSearchRun: (runId: string) => [...queryKeys.iplas.all, 'station-search-run', runId] as const,
     stationSearchRunRecords: (runId: string, params: unknown) =>
       [...queryKeys.iplas.all, 'station-search-run-records', runId, params] as const,

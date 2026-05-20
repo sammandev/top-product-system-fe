@@ -495,7 +495,7 @@ function buildAppliedConfigs(): RescoreScoringConfig[] {
   return scoringConfigs.value.flatMap((config) => {
     const defaultConfig = createDefaultConfig(config.test_item_name)
     const scopeMode = getItemScopeMode(config.test_item_name)
-    const shouldEmit = scopeMode === 'excluded' || isConfigCustomized(config, defaultConfig) || globalMinScore.value !== undefined
+    const shouldEmit = scopeMode !== 'auto' || isConfigCustomized(config, defaultConfig)
 
     if (!shouldEmit) {
       return []

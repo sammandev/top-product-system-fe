@@ -30,6 +30,7 @@ import {
   type StreamProgress,
 } from '../api/streamReader'
 import { useIplasSettings } from '../composables/useIplasSettings'
+import { fetchIplasIsnSearchQuery } from '../composables/useIplasQueries'
 import {
   clearAllRecords,
   getPagedRecords,
@@ -480,7 +481,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     error.value = null
 
     try {
-      const response = await iplasProxyApi.searchByIsn({
+      const response = await fetchIplasIsnSearchQuery({
         isn,
         token: getUserToken(),
       })

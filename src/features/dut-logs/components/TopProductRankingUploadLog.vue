@@ -174,10 +174,16 @@
             </div>
           </article>
           <article class="top-product-ranking-upload-log__summary-card top-product-ranking-upload-log__summary-card--score"
-            :class="overallScoreSummaryClass(selectedRankingItem.score)">
+            :class="[
+              overallScoreSummaryClass(selectedRankingItem.score),
+              { 'top-product-ranking-upload-log__summary-card--forced-fail': hasSelectedForcedFail },
+            ]">
             <button type="button" class="top-product-ranking-upload-log__summary-card-button" @click="openOverallScoreDialog">
-              <small>Overall Score</small>
-              <strong>{{ selectedRankingItem.score.toFixed(2) }}</strong>
+              <small>{{ hasSelectedForcedFail ? 'Overall Score (Forced Fail)' : 'Overall Score' }}</small>
+              <strong class="top-product-ranking-upload-log__score-with-icon">
+                <Icon v-if="hasSelectedForcedFail" icon="mdi:alert-octagon" />
+                <span>{{ selectedRankingItem.score.toFixed(2) }}</span>
+              </strong>
               <span class="top-product-ranking-upload-log__summary-hint">View formula</span>
             </button>
           </article>
@@ -305,11 +311,15 @@
         <section class="top-product-ranking-upload-log__notice top-product-ranking-upload-log__notice--warning">
           <strong>{{ forcedFailSummaryText }}</strong>
         </section>
+        <label class="top-product-ranking-upload-log__field">
+          <span>Search Forced Fail Items</span>
+          <input v-model="forcedFailSearch" class="app-themed-input" type="text" placeholder="Search by test item name">
+        </label>
         <AppDataGrid
           :columns="forcedFailGridColumns"
-          :rows="selectedForcedFailItems"
+          :rows="filteredForcedFailItems"
           dataKey="test_item"
-          :paginator="selectedForcedFailItems.length > 10"
+          :paginator="filteredForcedFailItems.length > 10"
           :rowsPerPage="10"
           :rowsPerPageOptions="[10, 25, 50]"
           scrollHeight="24rem"
@@ -349,6 +359,12 @@
       class="top-product-ranking-upload-log__dialog"
     >
       <div v-if="overallScoreDetails" class="top-product-ranking-upload-log__breakdown-shell">
+        <section v-if="hasSelectedForcedFail" class="top-product-ranking-upload-log__notice top-product-ranking-upload-log__notice--danger">
+          <Icon icon="mdi:alert-octagon" />
+          <strong>Forced Fail DUT:</strong>
+          <span>{{ forcedFailSummaryText }}. The displayed overall score is kept for ranking context, but the test result is forced to Min. Score Fail.</span>
+        </section>
+
         <section class="top-product-ranking-upload-log__summary-grid top-product-ranking-upload-log__overall-summary-grid">
           <article class="top-product-ranking-upload-log__summary-card">
             <small>Eligible Items</small>
@@ -363,9 +379,15 @@
             <strong>{{ overallScoreDetails.totalWeight.toFixed(2) }}</strong>
           </article>
           <article class="top-product-ranking-upload-log__summary-card top-product-ranking-upload-log__summary-card--score"
-            :class="overallScoreSummaryClass(overallScoreDetails.scoreValue)">
-            <small>Overall Score</small>
-            <strong>{{ overallScoreDetails.displayScore }}</strong>
+            :class="[
+              overallScoreSummaryClass(overallScoreDetails.scoreValue),
+              { 'top-product-ranking-upload-log__summary-card--forced-fail': hasSelectedForcedFail },
+            ]">
+            <small>{{ hasSelectedForcedFail ? 'Overall Score (Forced Fail)' : 'Overall Score' }}</small>
+            <strong class="top-product-ranking-upload-log__score-with-icon">
+              <Icon v-if="hasSelectedForcedFail" icon="mdi:alert-octagon" />
+              <span>{{ overallScoreDetails.displayScore }}</span>
+            </strong>
           </article>
         </section>
 
@@ -712,6 +734,7 @@ const breakdownFullscreen = ref(false)
 const selectedTestItem = ref<ParsedTestItemEnhanced | null>(null)
 const showOverallScoreDialog = ref(false)
 const showForcedFailDialog = ref(false)
+const forcedFailSearch = ref('')
 
 const showIplasCompareDialog = ref(false)
 const comparisonIsn = ref<string | null>(null)
@@ -976,6 +999,17 @@ const selectedForcedFailItems = computed<ForcedFailItemRow[]>(() => {
   })
 })
 
+const filteredForcedFailItems = computed(() => {
+  const query = forcedFailSearch.value.trim().toLowerCase()
+  if (!query) {
+    return selectedForcedFailItems.value
+  }
+
+  return selectedForcedFailItems.value.filter((item) => item.test_item.toLowerCase().includes(query))
+})
+
+const hasSelectedForcedFail = computed(() => selectedForcedFailItems.value.length > 0)
+
 const forcedFailSummaryText = computed(() => {
   const count = selectedForcedFailItems.value.length
   const threshold = selectedForcedFailItems.value[0]?.threshold
@@ -1089,6 +1123,7 @@ watch(showTestItemsDialog, (isOpen) => {
     testItemFilterType.value = 'all'
     showOverallScoreDialog.value = false
     showForcedFailDialog.value = false
+    forcedFailSearch.value = ''
   }
 })
 
@@ -1618,6 +1653,23 @@ function rankingRowClass(row: Record<string, unknown>) {
   border-color: rgba(15, 118, 110, 0.24);
 }
 
+.top-product-ranking-upload-log__summary-card--forced-fail {
+  background: rgba(189, 64, 64, 0.16);
+  border-color: rgba(189, 64, 64, 0.32);
+}
+
+.top-product-ranking-upload-log__summary-card--forced-fail small,
+.top-product-ranking-upload-log__summary-card--forced-fail strong,
+.top-product-ranking-upload-log__summary-card--forced-fail .top-product-ranking-upload-log__summary-hint {
+  color: #8f2020;
+}
+
+.top-product-ranking-upload-log__score-with-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
 .top-product-ranking-upload-log__summary-card-button {
   display: grid;
   gap: 0.3rem;
@@ -1799,6 +1851,9 @@ function rankingRowClass(row: Record<string, unknown>) {
 }
 
 .top-product-ranking-upload-log__notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.55rem;
   border: 1px solid var(--app-border);
   border-radius: 0.8rem;
   padding: 0.85rem 1rem;
@@ -1810,6 +1865,12 @@ function rankingRowClass(row: Record<string, unknown>) {
   border-color: rgba(184, 118, 38, 0.26);
   background: rgba(184, 118, 38, 0.12);
   color: #8f5314;
+}
+
+.top-product-ranking-upload-log__notice--danger {
+  border-color: rgba(189, 64, 64, 0.28);
+  background: rgba(189, 64, 64, 0.12);
+  color: #8f2020;
 }
 
 .top-product-ranking-upload-log__detail-table {

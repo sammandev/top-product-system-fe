@@ -485,6 +485,11 @@ import {
   type IsnSearchData,
   useIplasApi,
 } from '@/features/dut-logs/composables/useIplasApi'
+import {
+  fetchIplasStationsFromIsnBatchQuery,
+  fetchIplasStationsFromIsnQuery,
+} from '@/features/dut-logs/composables/useIplasQueries'
+import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { useNotification } from '@/shared/composables/useNotification'
 import { AppPanel, AppTabs } from '@/shared/ui'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
@@ -615,6 +620,12 @@ const {
   showInfo: showInfoNotification,
   showSuccess: showSuccessNotification,
 } = useNotification()
+const { apiToken } = useIplasSettings()
+
+function getUserToken(): string | undefined {
+  const token = apiToken.value?.trim()
+  return token ? token : undefined
+}
 
 // SFISTSP lookup state
 const loadingSfistspLookup = ref(false)
@@ -1458,14 +1469,18 @@ async function handleSearch(): Promise<void> {
         const uniqueIsns = [...new Set(allRecords.map((r) => r.isn))]
         if (uniqueIsns.length === 1) {
           // biome-ignore lint/style/noNonNullAssertion: length === 1 guarantees index 0 exists
-          const stationsResponse = await iplasProxyApi.getStationsFromIsn({ isn: uniqueIsns[0]! })
+          const stationsResponse = await fetchIplasStationsFromIsnQuery({
+            isn: uniqueIsns[0]!,
+            token: getUserToken(),
+          })
           for (const station of stationsResponse.stations) {
             stationOrderMap.set(station.display_station_name, station.order)
             stationOrderMap.set(station.station_name, station.order)
           }
         } else if (uniqueIsns.length > 1) {
-          const stationsResponse = await iplasProxyApi.getStationsFromIsnBatch({
+          const stationsResponse = await fetchIplasStationsFromIsnBatchQuery({
             isns: uniqueIsns.slice(0, 50),
+            token: getUserToken(),
           })
           for (const result of stationsResponse.results) {
             for (const station of result.stations) {

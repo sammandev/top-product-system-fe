@@ -68,7 +68,16 @@
       <div class="upload-log-shell__actions">
         <button
           type="button"
-          class="upload-log-shell__ghost-button"
+          class="upload-log-shell__primary-button upload-log-shell__action-button--analyze"
+          :disabled="!canAnalyze || loading"
+          @click="handleAnalyze"
+        >
+          {{ loading ? 'Analyzing...' : 'Analyze Log(s)' }}
+        </button>
+
+        <button
+          type="button"
+          class="upload-log-shell__ghost-button upload-log-shell__action-button--configure"
           :disabled="!hasFiles || loading"
           @click="handleConfigureScoring"
         >
@@ -80,17 +89,7 @@
 
         <button
           type="button"
-          class="upload-log-shell__primary-button"
-          :disabled="!canAnalyze || loading"
-          @click="handleAnalyze"
-        >
-          {{ loading ? 'Analyzing...' : 'Analyze Logs' }}
-        </button>
-
-        <button
-          v-if="hasResults"
-          type="button"
-          class="upload-log-shell__ghost-button"
+          class="upload-log-shell__ghost-button upload-log-shell__action-button--reset"
           :disabled="loading"
           @click="handleReset"
         >
@@ -1379,7 +1378,8 @@ watch(selectedDeviceScope, async () => {
 }
 
 .upload-log-shell__actions {
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: minmax(0, 6fr) minmax(0, 4fr) minmax(8rem, 2fr);
   gap: 0.75rem;
 }
 
@@ -1440,10 +1440,15 @@ watch(selectedDeviceScope, async () => {
 }
 
 .upload-log-shell__primary-button {
-  flex: 1 1 15rem;
   background: linear-gradient(135deg, #0f766e, #2860a3);
   color: white;
   box-shadow: 0 16px 30px rgba(15, 118, 110, 0.18);
+}
+
+.upload-log-shell__action-button--analyze,
+.upload-log-shell__action-button--configure,
+.upload-log-shell__action-button--reset {
+  width: 100%;
 }
 
 .upload-log-shell__pill {
@@ -1818,13 +1823,16 @@ watch(selectedDeviceScope, async () => {
 }
 
 @media (max-width: 720px) {
-  .upload-log-shell__actions,
   .upload-log-shell__notice,
   .upload-log-comparison__header-actions,
   .upload-log-comparison-overlay__header,
   .upload-log-breakdown__header {
     flex-direction: column;
     align-items: stretch;
+  }
+
+  .upload-log-shell__actions {
+    grid-template-columns: 1fr;
   }
 
   .upload-log-shell__ghost-button,

@@ -5,11 +5,22 @@ import { queryClient } from '@/app/providers/query-client'
 import { queryKeys } from '@/core/query'
 import {
   type CompactCsvTestItemData,
+  type CsvTestItemData,
+  type IplasCsvTestItemRequest,
+  type IplasCsvTestItemResponse,
+  type IplasIsnSearchRequest,
+  type IplasIsnSearchResponse,
+  type IplasIsnSearchBatchRequest,
+  type IplasIsnSearchBatchResponse,
   type IplasStation,
   type IplasStationSearchRunCreateRequest,
   type IplasStationSearchRunRecordsRequest,
   type IplasStationSearchRunRecordsResponse,
   type IplasStationSearchRunResponse,
+  type IplasStationsFromIsnRequest,
+  type IplasStationsFromIsnResponse,
+  type IplasStationsFromIsnBatchRequest,
+  type IplasStationsFromIsnBatchResponse,
   iplasProxyApi,
   type RecordTestItemsRequest,
   type SiteProject,
@@ -20,6 +31,8 @@ import type { PaginatedResult, PaginationOptions } from './useIplasApi'
 const SITE_PROJECT_STALE_TIME = 24 * 60 * 60 * 1000
 const STATION_STALE_TIME = 60 * 60 * 1000
 const DEVICE_STALE_TIME = 5 * 60 * 1000
+const CSV_TEST_ITEMS_STALE_TIME = 2 * 60 * 1000
+const ISN_SEARCH_STALE_TIME = 5 * 60 * 1000
 const RECORD_TEST_ITEMS_STALE_TIME = 10 * 60 * 1000
 const PAGINATED_TEST_ITEMS_STALE_TIME = 30 * 1000
 
@@ -74,6 +87,54 @@ function normalizePaginatedParams(params: IplasPaginatedTestItemsQueryParams) {
     itemsPerPage: params.options?.itemsPerPage ?? 25,
     sortBy: params.options?.sortBy ?? 'TestStartTime',
     sortDesc: params.options?.sortDesc ?? true,
+  }
+}
+
+function normalizeCsvTestItemsRequest(request: IplasCsvTestItemRequest) {
+  return {
+    site: request.site,
+    project: request.project,
+    station: request.station,
+    device_id: request.device_id,
+    begin_time: request.begin_time,
+    end_time: request.end_time,
+    test_status: request.test_status,
+    test_item_filters: request.test_item_filters ?? [],
+    exclude_test_item_filters: request.exclude_test_item_filters ?? [],
+    include_test_items: request.include_test_items ?? false,
+    limit: request.limit ?? null,
+    offset: request.offset ?? null,
+    sort_by: request.sort_by ?? null,
+    sort_desc: request.sort_desc ?? true,
+    token: request.token,
+  }
+}
+
+function normalizeIsnSearchBatchRequest(request: IplasIsnSearchBatchRequest) {
+  return {
+    isns: [...request.isns].sort(),
+    token: request.token,
+  }
+}
+
+function normalizeIsnSearchRequest(request: IplasIsnSearchRequest) {
+  return {
+    isn: request.isn,
+    token: request.token,
+  }
+}
+
+function normalizeStationsFromIsnRequest(request: IplasStationsFromIsnRequest) {
+  return {
+    isn: request.isn,
+    token: request.token,
+  }
+}
+
+function normalizeStationsFromIsnBatchRequest(request: IplasStationsFromIsnBatchRequest) {
+  return {
+    isns: [...request.isns].sort(),
+    token: request.token,
   }
 }
 
@@ -194,6 +255,88 @@ export async function fetchIplasDevicesQuery(
       return response.data
     },
     staleTime: DEVICE_STALE_TIME,
+  })
+}
+
+export async function fetchIplasCsvTestItemsQuery<
+  TRecord extends CsvTestItemData | CompactCsvTestItemData = CsvTestItemData,
+>(
+  request: IplasCsvTestItemRequest,
+  forceRefresh = false,
+  client = queryClient,
+): Promise<IplasCsvTestItemResponse<TRecord>> {
+  const normalizedRequest = normalizeCsvTestItemsRequest(request)
+  const queryKey = queryKeys.iplas.csvTestItems(normalizedRequest)
+  await refreshQuery(client, queryKey, forceRefresh)
+
+  return client.fetchQuery({
+    queryKey,
+    queryFn: () => iplasProxyApi.getCsvTestItems<TRecord>(request),
+    staleTime: CSV_TEST_ITEMS_STALE_TIME,
+  })
+}
+
+export async function fetchIplasIsnSearchBatchQuery(
+  request: IplasIsnSearchBatchRequest,
+  forceRefresh = false,
+  client = queryClient,
+): Promise<IplasIsnSearchBatchResponse> {
+  const normalizedRequest = normalizeIsnSearchBatchRequest(request)
+  const queryKey = queryKeys.iplas.isnSearchBatch(normalizedRequest)
+  await refreshQuery(client, queryKey, forceRefresh)
+
+  return client.fetchQuery({
+    queryKey,
+    queryFn: () => iplasProxyApi.searchByIsnBatch(request),
+    staleTime: ISN_SEARCH_STALE_TIME,
+  })
+}
+
+export async function fetchIplasIsnSearchQuery(
+  request: IplasIsnSearchRequest,
+  forceRefresh = false,
+  client = queryClient,
+): Promise<IplasIsnSearchResponse> {
+  const normalizedRequest = normalizeIsnSearchRequest(request)
+  const queryKey = queryKeys.iplas.isnSearch(normalizedRequest)
+  await refreshQuery(client, queryKey, forceRefresh)
+
+  return client.fetchQuery({
+    queryKey,
+    queryFn: () => iplasProxyApi.searchByIsn(request),
+    staleTime: ISN_SEARCH_STALE_TIME,
+  })
+}
+
+export async function fetchIplasStationsFromIsnBatchQuery(
+  request: IplasStationsFromIsnBatchRequest,
+  forceRefresh = false,
+  client = queryClient,
+): Promise<IplasStationsFromIsnBatchResponse> {
+  const normalizedRequest = normalizeStationsFromIsnBatchRequest(request)
+  const queryKey = queryKeys.iplas.stationsFromIsnBatch(normalizedRequest)
+  await refreshQuery(client, queryKey, forceRefresh)
+
+  return client.fetchQuery({
+    queryKey,
+    queryFn: () => iplasProxyApi.getStationsFromIsnBatch(request),
+    staleTime: STATION_STALE_TIME,
+  })
+}
+
+export async function fetchIplasStationsFromIsnQuery(
+  request: IplasStationsFromIsnRequest,
+  forceRefresh = false,
+  client = queryClient,
+): Promise<IplasStationsFromIsnResponse> {
+  const normalizedRequest = normalizeStationsFromIsnRequest(request)
+  const queryKey = queryKeys.iplas.stationsFromIsn(normalizedRequest)
+  await refreshQuery(client, queryKey, forceRefresh)
+
+  return client.fetchQuery({
+    queryKey,
+    queryFn: () => iplasProxyApi.getStationsFromIsn(request),
+    staleTime: STATION_STALE_TIME,
   })
 }
 

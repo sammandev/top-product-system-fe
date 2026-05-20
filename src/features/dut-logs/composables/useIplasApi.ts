@@ -33,7 +33,10 @@ import {
   type TestItem,
 } from '../api/iplasProxyApi'
 import {
+  fetchIplasCsvTestItemsQuery,
   fetchIplasDevicesQuery,
+  fetchIplasIsnSearchQuery,
+  fetchIplasIsnSearchBatchQuery,
   fetchIplasPaginatedTestItemsQuery,
   fetchIplasRecordTestItemsQuery,
   fetchIplasSiteProjectsQuery,
@@ -505,7 +508,7 @@ export function useIplasApi() {
     chunkProgress.value = null
 
     try {
-      const response = await iplasProxyApi.getCsvTestItems<CsvTestItemData>({
+      const response = await fetchIplasCsvTestItemsQuery<CsvTestItemData>({
         site,
         project,
         station,
@@ -720,7 +723,7 @@ export function useIplasApi() {
     try {
       // UPDATED: Use retry logic for better reliability
       const response = await withRetry(async () => {
-        return await iplasProxyApi.searchByIsn({
+        return await fetchIplasIsnSearchQuery({
           isn,
           token: getUserToken(),
         })
@@ -759,7 +762,7 @@ export function useIplasApi() {
     try {
       // UPDATED: Use retry logic for better reliability
       const response = await withRetry(async () => {
-        return await iplasProxyApi.searchByIsnBatch({
+        return await fetchIplasIsnSearchBatchQuery({
           isns,
           token: getUserToken(),
         })
@@ -1075,7 +1078,7 @@ export function useIplasApi() {
     error.value = null
 
     try {
-      const response = await iplasProxyApi.getCsvTestItems<CsvTestItemData>({
+      const response = await fetchIplasCsvTestItemsQuery<CsvTestItemData>({
         site,
         project,
         station,
