@@ -136,10 +136,10 @@
                   <div class="iplas-progress-card__spinner" />
                   <div>
                     <strong>
-                      Processing {{ stationSearchRunProgress.processed }} of
-                      {{ stationSearchRunProgress.total }} station/device searches
+                      Fetching {{ stationSearchProgress.processed }} of
+                      {{ stationSearchProgress.total }} station/device searches
                     </strong>
-                    <p>Preparing a backend-managed search run before paging results.</p>
+                    <p>Using the same station/device query path as Top Product, without scoring.</p>
                   </div>
                 </div>
               </section>
@@ -163,7 +163,7 @@
                 <p class="iplas-section__eyebrow">Regular Mode</p>
                 <h2>Test Results</h2>
                 <p class="iplas-section__description">
-                  {{ regularModeRecordCount }} records are available from the backend search run. Use station tabs to review paged results.
+                  {{ regularModeRecordCount }} records are available from the station/device query. Use station tabs to review results.
                 </p>
               </div>
               <div class="iplas-result-toolbar">
@@ -195,7 +195,7 @@
                 <div class="iplas-result-summary-card">
                   <div>
                     <strong>{{ stationGroup.displayName }}</strong>
-                    <p>{{ stationGroup.totalRecords }} records ready for review. Filters and pagination are handled by the backend run.</p>
+                    <p>{{ stationGroup.totalRecords }} records ready for review.</p>
                   </div>
                   <span class="iplas-pill iplas-pill--cool">{{ stationGroup.totalRecords }}
                     visible</span>
@@ -257,21 +257,17 @@
                 <div>
                   <strong>Server-side result page</strong>
                   <p>
-                    Showing {{ getActiveStationPaginationState(currentStationGroup.stationName).items.length }} of
-                    {{ getActiveStationPaginationState(currentStationGroup.stationName).totalItems }} matching rows.
+                    Showing {{ currentStationGroup.records.length }} of {{ currentStationGroup.totalRecords }} matching rows.
                   </p>
                 </div>
-                <span class="iplas-pill iplas-pill--cool">
-                  Page {{ getActiveStationPaginationState(currentStationGroup.stationName).page }}
-                </span>
+                <span class="iplas-pill iplas-pill--cool">Client-side table</span>
               </div>
 
-              <IplasRecordTable :items="getActiveStationPaginationState(currentStationGroup.stationName).items"
-                :total-items="getActiveStationPaginationState(currentStationGroup.stationName).totalItems"
-                :loading="getActiveStationPaginationState(currentStationGroup.stationName).loading"
+              <IplasRecordTable :items="currentStationGroup.records"
+                :total-items="currentStationGroup.records.length"
+                :loading="stationSearchRunLoading"
                 :downloading-record="downloadingKey" :downloading-csv-record="downloadingCsvKey" :selectable="true"
-                :selected-keys="getSelectedKeysForStation(currentStationGroup.stationName)" :server-side="true"
-                @update:options="handleTableOptionsUpdate(currentStationGroup.stationName, $event)"
+                :selected-keys="getSelectedKeysForStation(currentStationGroup.stationName)" :server-side="false"
                 @update:selected-keys="handleTableSelectionChange(currentStationGroup.stationName, $event)"
                 @row-click="openFullscreen" @download="downloadSingleRecord($event, currentStationGroup.stationName, 0)"
                 @download-csv="downloadCsvRecord($event, currentStationGroup.stationName, 0)" />
@@ -303,10 +299,8 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { useMutation, useQuery } from '@tanstack/vue-query'
 import { useDebounceFn } from '@vueuse/core'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { queryClient } from '@/app/providers/query-client'
 import { iplasProxyApi } from '@/features/dut-logs/api/iplasProxyApi'
 import type {
   CsvTestItemData,
@@ -317,17 +311,12 @@ import type {
 import type { CompactCsvTestItemData } from '@/features/dut-logs/api/iplasProxyApi'
 import type { DownloadCsvLogInfo } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
-import {
-  createIplasStationSearchRun,
-  fetchIplasStationSearchRunRecordsQuery,
-  fetchIplasStationSearchRunQuery,
-} from '@/features/dut-logs/composables/useIplasQueries'
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
-import { queryKeys } from '@/core/query'
 import { useNotification } from '@/shared/composables/useNotification'
 import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
+import { isStatusPass } from '@/shared/utils/helpers'
 import type { StationSelectionResult } from './DataExplorerStationSelectionDialog.vue'
 import type { NormalizedRecord } from './IplasTestItemsFullscreenDialog.vue'
 
@@ -365,14 +354,18 @@ const searchModeItems = [
 const {
   loading,
   loadingStations,
+  loadingTestItems,
   downloading,
   error,
+  possiblyTruncated,
   stations,
+  testItemData,
   uniqueSites,
   projectsBySite,
   fetchSiteProjects,
   fetchStations,
   fetchDeviceIds,
+  fetchTestItemsFull: fetchTestItemsApi,
   fetchRecordTestItems,
   downloadAttachments,
   downloadCsvLogs,
@@ -417,45 +410,19 @@ const stationDeviceRequestPromises = ref<Map<string, Promise<string[]>>>(new Map
 
 // Computed: Check if the backend search run has records available.
 const hasRegularModeData = computed(() => {
-  return (stationSearchRunStatus.value?.total_records ?? 0) > 0
+  return testItemData.value.length > 0
 })
 
 // Computed: Get the total count of regular mode records
 const regularModeRecordCount = computed(() => {
-  return stationSearchRunStatus.value?.total_records ?? 0
+  return testItemData.value.length
 })
 
 const showStationSelectionDialog = ref(false)
 const stationTestStatus = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
-
-const stationSearchMutation = useMutation({
-  mutationFn: runStationSearch,
-})
-
-const stationSearchRunId = ref<string | null>(null)
 const stationSearchResultsSection = ref<HTMLElement | null>(null)
-const initializedStationSearchRuns = ref<Set<string>>(new Set())
-
-const stationSearchRunStatusQuery = useQuery({
-  queryKey: computed(() =>
-    stationSearchRunId.value
-      ? queryKeys.iplas.stationSearchRun(stationSearchRunId.value)
-      : queryKeys.iplas.stationSearchRun('idle'),
-  ),
-  queryFn: () => {
-    if (!stationSearchRunId.value) {
-      throw new Error('Missing Station Search run id')
-    }
-    return fetchIplasStationSearchRunQuery(stationSearchRunId.value, true)
-  },
-  enabled: computed(() => Boolean(stationSearchRunId.value)),
-  refetchInterval: (query) => {
-    const status = query.state.data?.status
-    return status === 'completed' || status === 'failed' ? false : 1000
-  },
-})
-
-const stationSearchRunStatus = computed(() => stationSearchRunStatusQuery.data.value ?? null)
+const stationSearchInProgress = ref(false)
+const stationSearchProgress = ref({ processed: 0, total: 0 })
 const lastStationSearchRequestSummary = ref<{
   site: string
   project: string
@@ -470,36 +437,9 @@ const lastStationSearchRequestSummary = ref<{
   }>
 } | null>(null)
 
-const stationSearchRunLoading = computed(() => {
-  const status = stationSearchRunStatus.value?.status
-  return status === 'pending' || status === 'running' || stationSearchMutation.isPending.value
-})
+const stationSearchRunLoading = computed(() => stationSearchInProgress.value || loadingTestItems.value)
 
-const stationSearchRunProgress = computed(() => ({
-  processed: stationSearchRunStatus.value?.processed_combinations ?? 0,
-  total: stationSearchRunStatus.value?.total_combinations ?? 0,
-}))
-
-const stationSearchPossiblyTruncated = computed(
-  () => stationSearchRunStatus.value?.possibly_truncated ?? false,
-)
-
-// Server-side pagination state (for table view mode)
-const serverPaginationState = ref<
-  Record<
-    string,
-    {
-      page: number
-      itemsPerPage: number
-      sortBy: string
-      sortDesc: boolean
-      items: (CsvTestItemData | CompactCsvTestItemData)[]
-      totalItems: number
-      loading: boolean
-      initialized: boolean
-    }
-  >
->({})
+const stationSearchPossiblyTruncated = computed(() => possiblyTruncated.value)
 
 // Local cache for lazy-loaded test items (keyed by ISN_TestStartTime)
 const lazyLoadedTestItems = ref<Map<string, TestItem[]>>(new Map())
@@ -943,24 +883,60 @@ const activeStationTabKey = computed({
 const groupedByStation = computed<StationGroup[]>(() => {
   const groups: Record<string, StationGroup> = {}
 
-  const stationSummaries = new Map(
-    (stationSearchRunStatus.value?.stations ?? []).map((station) => [station.station, station]),
-  )
-
-  const sourceData = Object.values(serverPaginationState.value).flatMap((state) => state.items)
-
-  for (const record of sourceData) {
-    const stationName = record.station
+  for (const record of testItemData.value) {
+    const stationName = record.TSP || record.station || 'Unknown Station'
     if (!groups[stationName]) {
-      const stationInfo = stations.value.find((s: Station) => s.station_name === stationName)
+      const stationInfo = stations.value.find(
+        (s: Station) =>
+          s.display_station_name === stationName ||
+          s.station_name === stationName ||
+          s.station_name === record.station,
+      )
       groups[stationName] = {
         stationName,
         displayName: stationInfo?.display_station_name || stationName,
         records: [],
-        totalRecords: stationSummaries.get(stationName)?.total_records ?? 0,
-        deviceIds: stationSummaries.get(stationName)?.available_device_ids ?? [],
+        totalRecords: 0,
+        deviceIds: [],
       }
     }
+
+    groups[stationName].totalRecords += 1
+    if (record.DeviceId && !groups[stationName].deviceIds.includes(record.DeviceId)) {
+      groups[stationName].deviceIds.push(record.DeviceId)
+    }
+
+    const statusFilter = stationStatusFilters.value[stationName] || 'ALL'
+    if (statusFilter !== 'ALL') {
+      const passes = isStatusPass(String(record.ErrorCode || record['Test Status'] || ''))
+      if ((statusFilter === 'PASS' && !passes) || (statusFilter === 'FAIL' && passes)) {
+        continue
+      }
+    }
+
+    const selectedDevices = selectedFilterDeviceIds.value[stationName] || []
+    if (selectedDevices.length > 0 && !selectedDevices.includes(record.DeviceId)) {
+      continue
+    }
+
+    const search = (debouncedRecordSearchQueries.value[stationName] || '').trim().toLowerCase()
+    if (search) {
+      const searchableText = [
+        record.ISN,
+        record.DeviceId,
+        record.ErrorCode,
+        record.ErrorName,
+        record.station,
+        record.TSP,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      if (!searchableText.includes(search)) {
+        continue
+      }
+    }
+
     groups[stationName].records.push(record)
   }
 
@@ -971,21 +947,6 @@ const groupedByStation = computed<StationGroup[]>(() => {
       const timeB = new Date(b['Test end Time']).getTime()
       return timeB - timeA // Latest first
     })
-  }
-
-  for (const stationSummary of stationSummaries.values()) {
-    if (!groups[stationSummary.station]) {
-      const stationInfo = stations.value.find(
-        (s: Station) => s.display_station_name === stationSummary.station,
-      )
-      groups[stationSummary.station] = {
-        stationName: stationSummary.station,
-        displayName: stationInfo?.display_station_name || stationSummary.station,
-        records: [],
-        totalRecords: stationSummary.total_records,
-        deviceIds: stationSummary.available_device_ids,
-      }
-    }
   }
 
   return Object.values(groups)
@@ -1008,23 +969,6 @@ function getUniqueDeviceIdsForStation(stationGroup: StationGroup): string[] {
   return stationGroup.deviceIds
 }
 
-function getActiveStationPaginationState(stationName: string) {
-  if (!serverPaginationState.value[stationName]) {
-    serverPaginationState.value[stationName] = {
-      page: 1,
-      itemsPerPage: 25,
-      sortBy: 'TestStartTime',
-      sortDesc: true,
-      items: [],
-      totalItems: 0,
-      loading: false,
-      initialized: false,
-    }
-  }
-
-  return serverPaginationState.value[stationName]!
-}
-
 function handleStationSearchInput(stationName: string, event: Event): void {
   const target = event.target as HTMLInputElement | null
   setRecordSearchQuery(stationName, target?.value ?? '')
@@ -1032,7 +976,6 @@ function handleStationSearchInput(stationName: string, event: Event): void {
 
 function handleStationStatusChange(stationName: string, value: 'ALL' | 'PASS' | 'FAIL'): void {
   stationStatusFilters.value[stationName] = value
-  void initializeServerPagination(stationName)
 }
 
 function isStationDeviceSelected(stationName: string, deviceId: string): boolean {
@@ -1049,8 +992,6 @@ function toggleStationDeviceFilter(stationName: string, deviceId: string): void 
     ...selectedFilterDeviceIds.value,
     [stationName]: nextSelectedIds,
   }
-
-  void initializeServerPagination(stationName)
 }
 
 function clearStationDeviceFilters(stationName: string): void {
@@ -1058,8 +999,6 @@ function clearStationDeviceFilters(stationName: string): void {
     ...selectedFilterDeviceIds.value,
     [stationName]: [],
   }
-
-  void initializeServerPagination(stationName)
 }
 
 /**
@@ -1418,13 +1357,10 @@ async function downloadSelectedRecords(): Promise<void> {
   try {
     const attachments: DownloadAttachmentInfo[] = []
 
-    // Build a map of recordKey -> record for quick lookup
-    const recordMap = new Map<string, CsvTestItemData | CompactCsvTestItemData>()
-    for (const state of Object.values(serverPaginationState.value)) {
-      for (const record of state.items) {
-        const recordKey = `${record.ISN}_${record['Test Start Time']}`
-        recordMap.set(recordKey, record)
-      }
+    const recordMap = new Map<string, CsvTestItemData>()
+    for (const record of testItemData.value) {
+      const recordKey = `${record.ISN}_${record['Test Start Time']}`
+      recordMap.set(recordKey, record)
     }
 
     // Find selected records and create attachment info
@@ -1636,14 +1572,12 @@ async function handleProjectChange() {
 function handleStationChange() {
   clearTestItemData()
   activeStationTab.value = 0
-  stationSearchRunId.value = null
-  serverPaginationState.value = {}
   selectedRecordKeys.value.clear()
   selectedRecordStationMap.value.clear()
 }
 
 async function fetchTestItems() {
-  await stationSearchMutation.mutateAsync()
+  await runStationSearch()
 }
 
 async function scrollToStationSearchResults(): Promise<void> {
@@ -1653,6 +1587,9 @@ async function scrollToStationSearchResults(): Promise<void> {
 
 async function runStationSearch() {
   if (!selectedSite.value || !selectedProject.value || selectedStations.value.length === 0) return
+
+  const site = selectedSite.value
+  const project = selectedProject.value
 
   // Pass Date objects - the composable handles ISO format conversion
   const begintime = new Date(startTime.value)
@@ -1665,6 +1602,8 @@ async function runStationSearch() {
 
   clearTestItemData()
   error.value = null
+  stationSearchInProgress.value = true
+  stationSearchProgress.value = { processed: 0, total: 0 }
   selectedRecordKeys.value.clear()
   selectedRecordStationMap.value.clear()
   lazyLoadedTestItems.value.clear()
@@ -1674,8 +1613,6 @@ async function runStationSearch() {
   selectedFilterDeviceIds.value = {}
   recordSearchQueries.value = {}
   debouncedRecordSearchQueries.value = {}
-  serverPaginationState.value = {}
-  stationSearchRunId.value = null
 
   // STEP 1: Collect all stations and identify which need device ID fetching
   const stationInfoList: {
@@ -1692,225 +1629,103 @@ async function runStationSearch() {
     stationInfoList.push({ stationInfo, stationDisplayName, deviceIds })
   }
 
-  // STEP 2: Fetch device IDs in parallel for stations that don't have them
-  const deviceIdPromises = stationInfoList.map(async (entry) => {
-    if (entry.deviceIds.length === 0) {
-      try {
-        entry.deviceIds = await fetchDeviceIds(
-          // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
-          selectedSite.value!,
-          // biome-ignore lint/style/noNonNullAssertion: guarded by early return at function entry
-          selectedProject.value!,
-          entry.stationInfo.display_station_name,
-          begintime,
-          endtime,
-        )
-      } catch (_err) {
-        console.warn(
-          `Failed to fetch device IDs for ${entry.stationDisplayName}, falling back to ALL`,
-        )
-        entry.deviceIds = ['ALL']
+  try {
+    const deviceIdPromises = stationInfoList.map(async (entry) => {
+      if (entry.deviceIds.length === 0) {
+        try {
+          entry.deviceIds = await fetchDeviceIds(
+            site,
+            project,
+            entry.stationInfo.display_station_name,
+            begintime,
+            endtime,
+          )
+          if (entry.deviceIds.length === 0) {
+            entry.deviceIds = ['ALL']
+          }
+        } catch (_err) {
+          console.warn(
+            `Failed to fetch device IDs for ${entry.stationDisplayName}, falling back to ALL`,
+          )
+          entry.deviceIds = ['ALL']
+        }
+      }
+      return entry
+    })
+    const resolvedStations = await Promise.all(deviceIdPromises)
+
+    if (resolvedStations.length === 0) {
+      error.value = 'No station selections could be resolved for the current Data Explorer Station Search request.'
+      return
+    }
+
+    lastStationSearchRequestSummary.value = {
+      site,
+      project,
+      beginTime: startTime.value,
+      endTime: endTime.value,
+      stationCount: resolvedStations.length,
+      selections: resolvedStations.map(({ stationInfo, deviceIds }) => ({
+        station: stationInfo.display_station_name,
+        requestedDeviceCount: stationDeviceIds.value[stationInfo.display_station_name]?.length || 0,
+        resolvedDeviceCount: deviceIds.length,
+        testStatus: stationTestStatus.value[stationInfo.display_station_name] || 'ALL',
+      })),
+    }
+
+    stationSearchProgress.value = {
+      processed: 0,
+      total: resolvedStations.reduce((total, entry) => total + Math.max(entry.deviceIds.length, 1), 0),
+    }
+
+    for (const { stationInfo, deviceIds } of resolvedStations) {
+      for (const deviceId of deviceIds.length > 0 ? deviceIds : ['ALL']) {
+        try {
+          await fetchTestItemsApi(
+            site,
+            project,
+            stationInfo.display_station_name,
+            deviceId,
+            begintime,
+            endtime,
+            stationTestStatus.value[stationInfo.display_station_name] || 'ALL',
+          )
+        } finally {
+          stationSearchProgress.value = {
+            ...stationSearchProgress.value,
+            processed: stationSearchProgress.value.processed + 1,
+          }
+        }
       }
     }
-    return entry
-  })
-  const resolvedStations = await Promise.all(deviceIdPromises)
 
-  if (resolvedStations.length === 0) {
-    error.value = 'No station selections could be resolved for the current Data Explorer Station Search request.'
-    return
-  }
-
-  lastStationSearchRequestSummary.value = {
-    site: selectedSite.value,
-    project: selectedProject.value,
-    beginTime: startTime.value,
-    endTime: endTime.value,
-    stationCount: resolvedStations.length,
-    selections: resolvedStations.map(({ stationInfo, deviceIds }) => ({
-      station: stationInfo.display_station_name,
-      requestedDeviceCount: stationDeviceIds.value[stationInfo.display_station_name]?.length || 0,
-      resolvedDeviceCount: deviceIds.length,
-      testStatus: stationTestStatus.value[stationInfo.display_station_name] || 'ALL',
-    })),
-  }
-
-  const run = await createIplasStationSearchRun({
-    site: selectedSite.value,
-    project: selectedProject.value,
-    begin_time: iplasProxyApi.formatDateForRequest(begintime),
-    end_time: iplasProxyApi.formatDateForRequest(endtime),
-    selections: resolvedStations.map(({ stationInfo, deviceIds }) => ({
-      station: stationInfo.display_station_name,
-      device_ids: deviceIds.filter((deviceId) => deviceId !== 'ALL'),
-      test_status: stationTestStatus.value[stationInfo.display_station_name] || 'ALL',
-    })),
-  })
-
-  stationSearchRunId.value = run.run_id
-  queryClient.setQueryData(queryKeys.iplas.stationSearchRun(run.run_id), run)
-}
-
-/**
- * Handle server-side pagination for table view mode.
- * Called when user changes page, sort, or items per page.
- */
-async function handleTableOptionsUpdate(
-  stationName: string,
-  options: { page: number; itemsPerPage: number; sortBy: { key: string; order: 'asc' | 'desc' }[] },
-) {
-  if (!stationSearchRunId.value) return
-
-  const state = getActiveStationPaginationState(stationName)
-  state.loading = true
-  state.initialized = true
-
-  // Get sort info
-  const sortInfo = options.sortBy[0]
-  const sortBy = sortInfo?.key || 'TestStartTime'
-  const sortDesc = sortInfo?.order === 'desc'
-
-  const filterDeviceIds = selectedFilterDeviceIds.value[stationName]
-  const statusFilter = stationStatusFilters.value[stationName] || 'ALL'
-  const search = debouncedRecordSearchQueries.value[stationName] || null
-
-  for (const key of Array.from(selectedRecordKeys.value)) {
-    if (selectedRecordStationMap.value.get(key) === stationName) {
-      selectedRecordKeys.value.delete(key)
-      selectedRecordStationMap.value.delete(key)
+    if (testItemData.value.length === 0) {
+      const stationSummary = lastStationSearchRequestSummary.value?.selections
+        .map(
+          (selection) =>
+            `${selection.station} [devices: ${selection.requestedDeviceCount > 0 ? selection.requestedDeviceCount : `ALL/${selection.resolvedDeviceCount || 0}`}, status: ${selection.testStatus}]`,
+        )
+        .join('; ')
+      error.value = stationSummary
+        ? `No iPLAS data was returned for the selected Data Explorer Station Search scope. Time range: ${startTime.value} to ${endTime.value}. Stations: ${stationSummary}.`
+        : 'No iPLAS data was returned for the selected Data Explorer Station Search scope.'
+      return
     }
-  }
 
-  try {
-    const result = await fetchIplasStationSearchRunRecordsQuery(
-      {
-        runId: stationSearchRunId.value,
-        station: stationName,
-        deviceIds: filterDeviceIds || [],
-        testStatus: statusFilter,
-        search,
-        options: {
-          page: options.page,
-          itemsPerPage: options.itemsPerPage,
-          sortBy,
-          sortDesc,
-        },
-      },
-    )
-
-    // Update state
-    state.page = options.page
-    state.itemsPerPage = options.itemsPerPage
-    state.sortBy = sortBy
-    state.sortDesc = sortDesc
-    state.items = result.data
-    state.totalItems = result.total_records
+    await nextTick()
+    activeStationTab.value = 0
+    await scrollToStationSearchResults()
   } catch (err) {
-    console.error('Failed to fetch paginated data:', err)
+    console.error('Data Explorer Station Search failed:', err)
+    error.value = err instanceof Error ? err.message : 'Data Explorer Station Search failed.'
   } finally {
-    state.loading = false
+    stationSearchInProgress.value = false
   }
-}
-
-/**
- * Initialize server-side pagination for a station (called when switching to table view).
- */
-async function initializeServerPagination(stationName: string) {
-  await handleTableOptionsUpdate(stationName, {
-    page: 1,
-    itemsPerPage: 25,
-    sortBy: [{ key: 'TestStartTime', order: 'desc' }],
-  })
 }
 
 async function handleRefresh() {
   await fetchSiteProjects(true)
 }
-
-watch(
-  () => ({ ...debouncedRecordSearchQueries.value }),
-  (queries) => {
-    for (const [stationName] of Object.entries(queries)) {
-      if (serverPaginationState.value[stationName]) {
-        void initializeServerPagination(stationName)
-      }
-    }
-  },
-  { deep: true },
-)
-
-watch(
-  stationSearchRunStatus,
-  async (status) => {
-    if (status?.status === 'failed' && status.error_message) {
-      error.value = status.error_message
-    }
-
-    if (status?.status === 'completed') {
-      const runId = status.run_id
-
-      if (status.total_records === 0) {
-        const requestSummary = lastStationSearchRequestSummary.value
-        console.warn('Data Explorer Station Search completed with zero records', {
-          requestSummary,
-          runStatus: status,
-        })
-
-        const stationSummary = requestSummary?.selections
-          .map(
-            (selection) =>
-              `${selection.station} [devices: ${selection.requestedDeviceCount > 0 ? selection.requestedDeviceCount : `ALL/${selection.resolvedDeviceCount || 0}`}, status: ${selection.testStatus}]`,
-          )
-          .join('; ')
-
-        error.value = stationSummary
-          ? `No iPLAS data was returned for the selected Data Explorer Station Search scope. Time range: ${requestSummary?.beginTime} to ${requestSummary?.endTime}. Stations: ${stationSummary}.`
-          : 'No iPLAS data was returned for the selected Data Explorer Station Search scope.'
-      }
-
-      const stationCount = status.stations.length
-      if (stationCount === 0) {
-        activeStationTab.value = 0
-        return
-      }
-
-      if (status.total_records > 0 && error.value?.startsWith('No iPLAS data was returned')) {
-        error.value = null
-      }
-
-      if (activeStationTab.value >= stationCount) {
-        activeStationTab.value = 0
-      }
-
-      if (!initializedStationSearchRuns.value.has(runId)) {
-        initializedStationSearchRuns.value.add(runId)
-        const firstStationWithRecords = status.stations.find((station) => station.total_records > 0)
-        const firstStation = firstStationWithRecords ?? status.stations[0]
-
-        if (firstStation) {
-          const nextActiveIndex = groupedByStation.value.findIndex(
-            (stationGroup) => stationGroup.stationName === firstStation.station,
-          )
-          activeStationTab.value = nextActiveIndex >= 0 ? nextActiveIndex : 0
-          await initializeServerPagination(firstStation.station)
-          await scrollToStationSearchResults()
-        }
-      }
-    }
-  },
-  { immediate: true },
-)
-
-// Watch for active station tab changes - initialize pagination if needed
-watch(activeStationTab, async (newTab: number) => {
-  if (groupedByStation.value.length > newTab) {
-    const station = groupedByStation.value[newTab]
-    const stationState = station ? getActiveStationPaginationState(station.stationName) : null
-    if (station && stationState && !stationState.initialized) {
-      await initializeServerPagination(station.stationName)
-    }
-  }
-})
 
 // Initialize
 onMounted(async () => {
@@ -1935,7 +1750,6 @@ onUnmounted(() => {
   testItemFilters.value = {}
   testItemStatusFilters.value = {}
   testItemSearchTerms.value = {}
-  serverPaginationState.value = {}
   selectedRecordKeys.value.clear()
   selectedRecordStationMap.value.clear()
 })

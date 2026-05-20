@@ -262,7 +262,7 @@
                       &lt;
                     </button>
                     <span class="iplas-isn-pill iplas-isn-pill--primary">
-                      Record {{ getGridCarouselIndex(isnGroup, stationGroup) + 1 }} / {{
+                      Test {{ getGridCarouselIndex(isnGroup, stationGroup) + 1 }} / {{
                         getDisplayedStationRecords(isnGroup, stationGroup).length }}
                     </span>
                     <button type="button" class="iplas-isn-carousel-button" aria-label="Next record"
@@ -1791,6 +1791,21 @@ async function handleSearch(): Promise<void> {
   min-height: 8.5rem;
 }
 
+.iplas-isn-input-card input,
+.iplas-isn-input-card textarea {
+  width: 100%;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
+  padding: 0.72rem 0.82rem;
+  font: inherit;
+}
+
+.iplas-isn-input-card textarea {
+  resize: vertical;
+}
+
 .iplas-isn-input-row {
   align-items: stretch;
 }
@@ -1969,7 +1984,7 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-station-section__toggle {
   justify-content: space-between;
   width: 100%;
-  padding: 1rem 1.1rem;
+  padding: 1rem 1rem 0.5rem;
   border: 0;
   background: var(--app-panel);
   color: var(--app-ink);
@@ -1986,8 +2001,8 @@ async function handleSearch(): Promise<void> {
 
 .iplas-isn-carousel-controls {
   flex-wrap: nowrap;
-  justify-content: center;
-  padding: 0.85rem 1rem 0;
+  justify-content: space-between;
+  padding: 0.25rem 0.5rem 0.25rem;
 }
 
 .iplas-isn-station-card__header.is-error,
@@ -2033,6 +2048,11 @@ async function handleSearch(): Promise<void> {
   background: var(--app-panel);
 }
 
+.iplas-isn-record-card {
+  display: grid;
+  gap: 0.9rem;
+}
+
 .iplas-isn-record-card.is-pass,
 .iplas-isn-list-row.is-pass,
 .iplas-isn-compact-card.is-pass {
@@ -2050,9 +2070,10 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-record-card__status {
   width: 100%;
   margin: 0 0 0.25rem;
-  padding: 0.45rem 0.7rem;
+  padding: 0.72rem 0.85rem;
   border-radius: 999px;
   text-align: center;
+  font-size: 1.05rem;
   font-weight: 700;
   overflow-wrap: anywhere;
   word-break: break-word;
@@ -2074,8 +2095,43 @@ async function handleSearch(): Promise<void> {
   color: var(--app-danger);
 }
 
-.iplas-isn-record-card__actions {
-  justify-content: flex-start;
+.iplas-isn-record-card > .iplas-isn-record-card__actions {
+  display: grid;
+  grid-template-columns: minmax(6.5rem, 0.85fr) minmax(8.75rem, 1.15fr);
+  gap: 0.75rem;
+  align-items: stretch;
+  justify-content: stretch;
+}
+
+.iplas-isn-record-card > .iplas-isn-record-card__actions .iplas-isn-button,
+.iplas-isn-record-card > .iplas-isn-record-card__actions .iplas-isn-inline-button {
+  min-height: 3.65rem;
+  padding-inline: 1rem;
+  border-radius: 0.9rem;
+  font-size: 1rem;
+  justify-content: center;
+}
+
+.iplas-isn-record-card > .iplas-isn-record-card__actions .iplas-isn-button--primary {
+  background: var(--app-accent);
+  border-color: var(--app-accent);
+  color: var(--app-canvas);
+}
+
+.iplas-isn-record-card > .iplas-isn-record-card__identity,
+.iplas-isn-record-card > .iplas-isn-record-card__meta {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.iplas-isn-record-card > .iplas-isn-record-card__identity .iplas-isn-pill,
+.iplas-isn-record-card > .iplas-isn-record-card__meta .iplas-isn-pill {
+  min-height: 2.45rem;
+  padding-inline: 0.85rem;
+  font-size: 0.86rem;
+  overflow-wrap: anywhere;
 }
 
 .iplas-isn-record-card__actions--tight {

@@ -20,7 +20,7 @@
       <button type="button" class="fullscreen-dialog__download-button" :disabled="downloading"
         :title="downloading ? 'Downloading...' : 'Download'" @click="handleDownload">
         <Icon :icon="downloading ? 'mdi:loading' : 'solar:download-minimalistic-bold-duotone'" :class="{ 'fullscreen-dialog__spin': downloading }" />
-        <span>{{ downloading ? 'DOWNLOADING...' : 'DOWNLOAD' }}</span>
+        <span>{{ downloading ? 'Downloading...' : 'Download' }}</span>
       </button>
     </template>
 
@@ -28,7 +28,6 @@
       <section class="fullscreen-dialog__summary-grid">
         <article class="fullscreen-dialog__summary-card fullscreen-dialog__summary-card--highlight">
           <button type="button" class="fullscreen-dialog__info-button" @click="copyToClipboard(record.isn)">
-            <span class="fullscreen-dialog__info-icon"><Icon icon="mdi:barcode" /></span>
             <span>
               <small>DUT ISN</small>
               <strong>{{ record.isn || '-' }}</strong>
@@ -662,7 +661,8 @@ watch(
   background: transparent;
   color: #fff;
   font-size: 0.78rem;
-  letter-spacing: 0.04em;
+  letter-spacing: 0;
+  white-space: nowrap;
 }
 
 .fullscreen-dialog__button--ghost {
@@ -711,7 +711,21 @@ watch(
 }
 
 .fullscreen-dialog__metadata-grid {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(8rem, max-content));
+  justify-content: start;
+  gap: 0.75rem;
+}
+
+.fullscreen-dialog__metadata-card .fullscreen-dialog__copy-row {
+  min-width: 8rem;
+  max-width: 13rem;
+  min-height: 3.25rem;
+  padding: 0.72rem 0.9rem;
+  border-radius: 0.8rem;
+}
+
+.fullscreen-dialog__metadata-card:first-child .fullscreen-dialog__copy-row {
+  min-width: 11rem;
 }
 
 .fullscreen-dialog__meta-pills {

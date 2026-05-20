@@ -136,14 +136,7 @@
         :class="{ 'iplas-details-dialog__filters--has-scores': hasScores }">
         <label class="iplas-details-dialog__field">
           <span>Search Test Items</span>
-          <div class="iplas-details-dialog__search-shell app-themed-input">
-            <Icon icon="mdi:magnify" />
-            <input v-model="testItemSearchQuery" type="search" placeholder="Search by item, status, or value..." />
-            <button v-if="testItemSearchQuery" type="button" class="iplas-details-dialog__ghost-action"
-              @click="clearSearchTerms">
-              Clear
-            </button>
-          </div>
+          <input v-model="testItemSearchQuery" type="search" placeholder="Search by item, status, or value" />
         </label>
 
         <label class="iplas-details-dialog__field">
@@ -353,7 +346,8 @@
       <section v-if="record.isForcedFailure" class="iplas-details-dialog__notice iplas-details-dialog__notice--warning">
         <strong>Forced Fail Override</strong>
         <p>
-          {{ forcedFailureNoticeText }} That threshold rule is separate from the aggregate weighted-average score shown above.
+          {{ forcedFailureNoticeText }} That threshold rule is separate from the aggregate weighted-average score shown
+          above.
         </p>
       </section>
 
