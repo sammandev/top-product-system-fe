@@ -373,11 +373,9 @@ export async function fetchIplasStationSearchRunQuery(
   const queryKey = queryKeys.iplas.stationSearchRun(runId)
   await refreshQuery(client, queryKey, forceRefresh)
 
-  return client.fetchQuery({
-    queryKey,
-    queryFn: () => iplasProxyApi.getStationSearchRun(runId),
-    staleTime: 0,
-  })
+  const response = await iplasProxyApi.getStationSearchRun(runId)
+  client.setQueryData(queryKey, response)
+  return response
 }
 
 export async function fetchIplasStationSearchRunRecordsQuery(

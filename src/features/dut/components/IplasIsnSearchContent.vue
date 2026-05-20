@@ -29,13 +29,18 @@
             </button>
           </div>
 
-          <label class="iplas-isn-toggle-card">
-            <input v-model="enableUnifiedSearch" type="checkbox">
-            <div>
+          <button type="button" class="iplas-isn-unified-card" :class="{ 'is-active': enableUnifiedSearch }"
+            :aria-pressed="enableUnifiedSearch" @click="enableUnifiedSearch = !enableUnifiedSearch">
+            <span class="iplas-isn-unified-card__icon">
+              <Icon :icon="enableUnifiedSearch ? 'mdi:link-variant' : 'mdi:link-variant-off'" />
+            </span>
+            <span class="iplas-isn-unified-card__copy">
               <strong>Unified Search</strong>
               <p>Expand the search to related ISN, SSN, and MAC identifiers before requesting iPLAS data.</p>
-            </div>
-          </label>
+              <small>{{ enableUnifiedSearch ? 'SFISTSP expansion enabled' : 'Direct iPLAS lookup only' }}</small>
+            </span>
+            <span class="iplas-isn-unified-card__switch" aria-hidden="true"><span /></span>
+          </button>
         </div>
 
         <section v-if="inputMode === 'multiple'" class="iplas-isn-input-shell">
@@ -94,18 +99,28 @@
           </div>
         </section>
 
-        <section v-if="sfistspReferences.length > 0" class="iplas-isn-reference-panel">
+        <section v-if="sfistspReferences.length > 0" class="iplas-isn-reference-panel"
+          :class="{ 'is-collapsed': isSfistspCollapsed }">
           <div class="iplas-isn-reference-panel__header">
             <div>
               <p class="iplas-isn-reference-panel__eyebrow">Lookup</p>
               <h3>SFISTSP Matches</h3>
             </div>
-            <button type="button" class="iplas-isn-button iplas-isn-button--ghost" @click="sfistspReferences = []">
-              Dismiss
-            </button>
+            <div class="iplas-isn-reference-panel__actions">
+              <button type="button" class="iplas-isn-icon-button"
+                :title="isSfistspCollapsed ? 'Expand matches' : 'Collapse matches'"
+                :aria-label="isSfistspCollapsed ? 'Expand SFISTSP matches' : 'Collapse SFISTSP matches'"
+                :aria-expanded="!isSfistspCollapsed" @click="isSfistspCollapsed = !isSfistspCollapsed">
+                <Icon :icon="isSfistspCollapsed ? 'mdi:chevron-down' : 'mdi:chevron-up'" />
+              </button>
+              <button type="button" class="iplas-isn-icon-button" title="Close lookup matches"
+                aria-label="Close SFISTSP matches" @click="sfistspReferences = []">
+                <Icon icon="mdi:close" />
+              </button>
+            </div>
           </div>
 
-          <div class="iplas-isn-reference-grid">
+          <div v-show="!isSfistspCollapsed" class="iplas-isn-reference-grid">
             <article v-for="ref in sfistspReferences" :key="ref.isn_searched" class="iplas-isn-reference-card"
               :class="ref.success ? 'iplas-isn-reference-card--success' : 'iplas-isn-reference-card--error'">
               <div class="iplas-isn-reference-card__topline">
@@ -225,9 +240,8 @@
                 :key="`grid-station-${stationGroup.stationName}`" class="iplas-isn-station-card">
                 <div class="iplas-isn-station-card__header"
                   :class="hasLatestStationError(stationGroup) ? 'is-error' : ''">
-                  <div>
+                  <div class="iplas-isn-station-title">
                     <strong>{{ stationGroup.displayName }}</strong>
-                    <p>{{ stationGroup.records.length }} record(s)</p>
                   </div>
                   <span v-if="getStationErrorCount(stationGroup) > 0" class="iplas-isn-pill iplas-isn-pill--danger">
                     {{ getStationErrorCount(stationGroup) }} error(s)
@@ -236,29 +250,29 @@
 
                 <template v-if="getDisplayedStationRecords(isnGroup, stationGroup).length > 0">
                   <div class="iplas-isn-carousel-controls">
-                    <button type="button" class="iplas-isn-inline-button"
+                    <button type="button" class="iplas-isn-carousel-button" aria-label="First record"
                       :disabled="getGridCarouselIndex(isnGroup, stationGroup) === 0"
                       @click="setGridCarouselIndex(getGridCarouselKey(isnGroup, stationGroup), 0, getDisplayedStationRecords(isnGroup, stationGroup).length)">
-                      First
+                      &lt;&lt;
                     </button>
-                    <button type="button" class="iplas-isn-inline-button"
+                    <button type="button" class="iplas-isn-carousel-button" aria-label="Previous record"
                       :disabled="getGridCarouselIndex(isnGroup, stationGroup) === 0"
                       @click="setGridCarouselIndex(getGridCarouselKey(isnGroup, stationGroup), getGridCarouselIndex(isnGroup, stationGroup) - 1, getDisplayedStationRecords(isnGroup, stationGroup).length)">
-                      Prev
+                      &lt;
                     </button>
                     <span class="iplas-isn-pill iplas-isn-pill--primary">
                       Record {{ getGridCarouselIndex(isnGroup, stationGroup) + 1 }} / {{
                         getDisplayedStationRecords(isnGroup, stationGroup).length }}
                     </span>
-                    <button type="button" class="iplas-isn-inline-button"
+                    <button type="button" class="iplas-isn-carousel-button" aria-label="Next record"
                       :disabled="getGridCarouselIndex(isnGroup, stationGroup) >= getDisplayedStationRecords(isnGroup, stationGroup).length - 1"
                       @click="setGridCarouselIndex(getGridCarouselKey(isnGroup, stationGroup), getGridCarouselIndex(isnGroup, stationGroup) + 1, getDisplayedStationRecords(isnGroup, stationGroup).length)">
-                      Next
+                      &gt;
                     </button>
-                    <button type="button" class="iplas-isn-inline-button"
+                    <button type="button" class="iplas-isn-carousel-button" aria-label="Last record"
                       :disabled="getGridCarouselIndex(isnGroup, stationGroup) >= getDisplayedStationRecords(isnGroup, stationGroup).length - 1"
                       @click="setGridCarouselIndex(getGridCarouselKey(isnGroup, stationGroup), getDisplayedStationRecords(isnGroup, stationGroup).length - 1, getDisplayedStationRecords(isnGroup, stationGroup).length)">
-                      Last
+                      &gt;&gt;
                     </button>
                   </div>
 
@@ -279,6 +293,7 @@
                         getCurrentGridRecord(isnGroup, stationGroup)!.test_end_time) }}</span>
                     </div>
                     <p class="iplas-isn-record-card__status"
+                      :title="recordStatusText(getCurrentGridRecord(isnGroup, stationGroup)!)"
                       :class="isRecordPassing(getCurrentGridRecord(isnGroup, stationGroup)!) ? 'is-pass' : 'is-fail'">
                       {{ recordStatusText(getCurrentGridRecord(isnGroup, stationGroup)!) }}
                     </p>
@@ -309,7 +324,7 @@
                 <button type="button" class="iplas-isn-station-section__toggle"
                   :class="{ 'is-error': hasLatestStationError(stationGroup) }"
                   @click="toggleStationExpansion(isnIndex, stationIndex)">
-                  <div>
+                  <div class="iplas-isn-station-title">
                     <strong>{{ stationGroup.displayName }}</strong>
                     <span>{{ stationGroup.records.length }} record(s)</span>
                   </div>
@@ -363,7 +378,7 @@
                 <button type="button" class="iplas-isn-station-section__toggle"
                   :class="{ 'is-error': hasLatestStationError(stationGroup) }"
                   @click="toggleStationExpansion(isnIndex, stationIndex)">
-                  <div>
+                  <div class="iplas-isn-station-title">
                     <strong>{{ stationGroup.displayName }}</strong>
                     <span>{{ stationGroup.records.length }} record(s)</span>
                   </div>
@@ -377,17 +392,18 @@
 
                 <div v-if="isStationExpanded(isnIndex, stationIndex)" class="iplas-isn-station-section__body">
                   <AppDataGrid :columns="recordTableColumns" :rows="getTableRows(isnGroup, stationGroup, stationIndex)"
-                    data-key="_rowKey" :paginator="false" scroll-height="24rem" :table-style="{ minWidth: '60rem' }"
+                    data-key="_rowKey" :paginator="false" scroll-height="24rem" sort-field="test_end_time" :sort-order="-1"
+                    :table-style="{ minWidth: '60rem' }"
                     empty-message="No test records available for this station.">
                     <template #cell-status="{ data }">
-                      <span class="iplas-isn-pill"
+                      <span class="iplas-isn-pill iplas-isn-table-text"
                         :class="isRecordPassing(data as IsnSearchData) ? 'iplas-isn-pill--success' : 'iplas-isn-pill--danger'">
                         {{ isRecordPassing(data as IsnSearchData) ? 'PASS' : (String((data as IsnSearchData).error_code
                         || 'FAIL')) }}
                       </span>
                     </template>
                     <template #cell-error_name="{ data }">
-                      <span :class="isRecordPassing(data as IsnSearchData) ? '' : 'iplas-isn-text-danger'">{{ (data as
+                      <span class="iplas-isn-table-text" :class="isRecordPassing(data as IsnSearchData) ? '' : 'iplas-isn-text-danger'">{{ (data as
                         IsnSearchData).error_name || '-' }}</span>
                     </template>
                     <template #cell-test_end_time="{ data }">
@@ -416,7 +432,7 @@
                 <button type="button" class="iplas-isn-station-section__toggle"
                   :class="{ 'is-error': hasLatestStationError(stationGroup) }"
                   @click="toggleCompactExpansion(isnIndex, stationIndex)">
-                  <div>
+                  <div class="iplas-isn-station-title">
                     <strong>{{ stationGroup.displayName }}</strong>
                     <span>{{ stationGroup.records.length }} record(s)</span>
                   </div>
@@ -473,8 +489,8 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
-import { iplasProxyApi } from '@/features/dut-logs/api/iplasProxyApi'
 import {
   lookupIsnsBatch,
   type SfistspIsnReferenceResponse,
@@ -630,6 +646,7 @@ function getUserToken(): string | undefined {
 // SFISTSP lookup state
 const loadingSfistspLookup = ref(false)
 const sfistspReferences = ref<SfistspReference[]>([])
+const isSfistspCollapsed = ref(false)
 
 // Unified search toggle - when enabled, first looks up SFISTSP to find all related identifiers
 const enableUnifiedSearch = ref(true)
@@ -959,9 +976,12 @@ function getDisplayedStationRecords(
 // Record search queries per station
 const recordSearchQueries = ref<Record<string, string>>({})
 
-// Get total filtered records count for a station
-function getTotalFilteredStationRecords(isnGroup: ISNGroup, stationGroup: StationGroup): number {
-  return getFilteredStationRecords(isnGroup, stationGroup).length
+function getTableStationRecords(isnGroup: ISNGroup, stationGroup: StationGroup): IsnSearchData[] {
+  return [...getDisplayedStationRecords(isnGroup, stationGroup)].sort((a, b) => {
+    const timeA = new Date(`${a.test_end_time.replace('%:z', '').replace(' ', 'T')}Z`).getTime()
+    const timeB = new Date(`${b.test_end_time.replace('%:z', '').replace(' ', 'T')}Z`).getTime()
+    return timeB - timeA
+  })
 }
 
 function getTableRows(
@@ -969,12 +989,12 @@ function getTableRows(
   stationGroup: StationGroup,
   stationIndex: number,
 ): TableRow[] {
-  return getDisplayedStationRecords(isnGroup, stationGroup).map((record, idx) => ({
+  return getTableStationRecords(isnGroup, stationGroup).map((record, idx) => ({
     ...record,
     _rowKey: `${isnGroup.isn}-${stationGroup.stationName}-${idx}`,
     _idx: idx,
     _stationIndex: stationIndex,
-    record_number: getTotalFilteredStationRecords(isnGroup, stationGroup) - idx,
+    record_number: idx + 1,
     duration: calculateDuration(record.test_start_time, record.test_end_time),
   }))
 }
@@ -1319,6 +1339,7 @@ function clearAll(): void {
   testItemFilters.value = {}
   testItemSearchTerms.value = {}
   sfistspReferences.value = []
+  isSfistspCollapsed.value = false
   carouselModels.value = {}
   compactExpanded.value = {}
   clearIsnSearchData()
@@ -1348,6 +1369,7 @@ async function handleSfistspLookup(): Promise<void> {
 
   loadingSfistspLookup.value = true
   sfistspReferences.value = []
+  isSfistspCollapsed.value = false
 
   try {
     const response = await lookupIsnsBatch(isnList)
@@ -1632,7 +1654,7 @@ async function handleSearch(): Promise<void> {
   background: var(--app-panel);
 }
 
-.iplas-isn-toggle-card,
+.iplas-isn-unified-card,
 .iplas-isn-notice,
 .iplas-isn-reference-panel {
   border: 1px solid var(--app-border);
@@ -1640,20 +1662,81 @@ async function handleSearch(): Promise<void> {
   background: var(--app-panel);
 }
 
-.iplas-isn-toggle-card {
+.iplas-isn-unified-card {
   display: grid;
-  grid-template-columns: auto 1fr;
-  gap: 0.85rem;
-  align-items: start;
-  padding: 0.82rem 0.9rem;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.9rem;
+  align-items: center;
+  min-width: min(100%, 32rem);
+  padding: 0.85rem 1rem;
+  text-align: left;
+  color: var(--app-ink);
+  cursor: pointer;
 }
 
-.iplas-isn-toggle-card input {
-  margin-top: 0.15rem;
-  accent-color: var(--app-accent);
+.iplas-isn-unified-card.is-active {
+  border-color: rgba(15, 118, 110, 0.24);
+  background: linear-gradient(180deg, rgba(15, 118, 110, 0.08), var(--app-panel));
 }
 
-.iplas-isn-toggle-card p,
+.iplas-isn-unified-card__icon,
+.iplas-isn-icon-button,
+.iplas-isn-carousel-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.iplas-isn-unified-card__icon {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 0.7rem;
+  background: var(--app-info-soft);
+  color: var(--app-info);
+  font-size: 1.2rem;
+}
+
+.iplas-isn-unified-card__copy {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 0;
+}
+
+.iplas-isn-unified-card__copy small {
+  color: var(--app-accent);
+  font-weight: 700;
+}
+
+.iplas-isn-unified-card__switch {
+  position: relative;
+  width: 2.6rem;
+  height: 1.45rem;
+  border-radius: 999px;
+  background: rgba(95, 103, 122, 0.16);
+  transition: background-color 0.15s ease;
+}
+
+.iplas-isn-unified-card__switch span {
+  position: absolute;
+  top: 0.18rem;
+  left: 0.2rem;
+  width: 1.08rem;
+  height: 1.08rem;
+  border-radius: 50%;
+  background: var(--app-panel);
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.18);
+  transition: transform 0.15s ease;
+}
+
+.iplas-isn-unified-card.is-active .iplas-isn-unified-card__switch {
+  background: var(--app-accent);
+}
+
+.iplas-isn-unified-card.is-active .iplas-isn-unified-card__switch span {
+  transform: translateX(1.1rem);
+}
+
+.iplas-isn-unified-card p,
 .iplas-isn-field small,
 .iplas-isn-input-card small,
 .iplas-isn-reference-error {
@@ -1750,6 +1833,33 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-reference-panel__header {
   justify-content: space-between;
   margin-bottom: 0.85rem;
+}
+
+.iplas-isn-reference-panel.is-collapsed .iplas-isn-reference-panel__header {
+  margin-bottom: 0;
+}
+
+.iplas-isn-reference-panel__actions {
+  display: flex;
+  gap: 0.45rem;
+  justify-content: flex-end;
+}
+
+.iplas-isn-icon-button {
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel-strong);
+  color: var(--app-muted);
+  font-size: 1.1rem;
+  cursor: pointer;
+}
+
+.iplas-isn-icon-button:hover {
+  border-color: var(--app-info-line);
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .iplas-isn-reference-panel__eyebrow {
@@ -1868,6 +1978,24 @@ async function handleSearch(): Promise<void> {
   color: var(--app-muted);
 }
 
+.iplas-isn-station-title {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.iplas-isn-station-title strong,
+.iplas-isn-list-row__copy strong,
+.iplas-isn-compact-card > strong {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.iplas-isn-station-title span {
+  margin: 0;
+  color: var(--app-muted);
+}
+
 .iplas-isn-station-section__body,
 .iplas-isn-record-card,
 .iplas-isn-empty-state {
@@ -1899,6 +2027,8 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-record-card__status {
   margin: 0;
   font-weight: 700;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .iplas-isn-record-card__status.is-pass {
@@ -1928,8 +2058,27 @@ async function handleSearch(): Promise<void> {
   cursor: pointer;
 }
 
+.iplas-isn-carousel-button {
+  width: 2.55rem;
+  height: 2.35rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel);
+  color: var(--app-ink);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.iplas-isn-carousel-button:hover:not(:disabled) {
+  border-color: var(--app-info-line);
+  background: var(--app-info-soft);
+  color: var(--app-info);
+}
+
 .iplas-isn-inline-button:disabled,
-.iplas-isn-button:disabled {
+.iplas-isn-button:disabled,
+.iplas-isn-carousel-button:disabled {
   cursor: not-allowed;
   opacity: 0.65;
 }
@@ -1944,6 +2093,15 @@ async function handleSearch(): Promise<void> {
 .iplas-isn-list-row__copy {
   display: grid;
   gap: 0.55rem;
+  min-width: 0;
+}
+
+.iplas-isn-table-text {
+  max-width: 100%;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  text-align: left;
 }
 
 .iplas-isn-compact-grid {

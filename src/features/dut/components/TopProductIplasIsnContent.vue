@@ -2163,6 +2163,7 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-isn-reference-panel {
+  margin-bottom: 0.65rem;
   padding: 0.9rem;
   border-radius: 0.8rem;
   border: 1px solid rgba(15, 118, 110, 0.12);

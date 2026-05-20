@@ -306,6 +306,7 @@ import { Icon } from '@iconify/vue'
 import { useMutation, useQuery } from '@tanstack/vue-query'
 import { useDebounceFn } from '@vueuse/core'
 import { computed, defineAsyncComponent, onMounted, onUnmounted, ref, watch } from 'vue'
+import { queryClient } from '@/app/providers/query-client'
 import { iplasProxyApi } from '@/features/dut-logs/api/iplasProxyApi'
 import type {
   CsvTestItemData,
@@ -313,7 +314,10 @@ import type {
   Station,
   TestItem,
 } from '@/features/dut-logs/api/iplasApi'
-import type { CompactCsvTestItemData } from '@/features/dut-logs/api/iplasProxyApi'
+import type {
+  CompactCsvTestItemData,
+  IplasStationSearchRunResponse,
+} from '@/features/dut-logs/api/iplasProxyApi'
 import type { DownloadCsvLogInfo } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
 import {
@@ -432,6 +436,8 @@ const stationSearchMutation = useMutation({
 })
 
 const stationSearchRunId = ref<string | null>(null)
+const STATION_SEARCH_RUN_POLL_INTERVAL_MS = 1000
+const STATION_SEARCH_RUN_TIMEOUT_MS = 120000
 
 const stationSearchRunStatusQuery = useQuery({
   queryKey: computed(() =>
@@ -1643,6 +1649,29 @@ async function fetchTestItems() {
   await stationSearchMutation.mutateAsync()
 }
 
+async function waitForStationSearchRunCompletion(
+  runId: string,
+): Promise<IplasStationSearchRunResponse> {
+  const startedAt = Date.now()
+
+  while (Date.now() - startedAt < STATION_SEARCH_RUN_TIMEOUT_MS) {
+    const status = await fetchIplasStationSearchRunQuery(runId, true)
+    queryClient.setQueryData(queryKeys.iplas.stationSearchRun(runId), status)
+
+    if (status.status === 'failed') {
+      throw new Error(status.error_message || 'Data Explorer Station Search failed.')
+    }
+
+    if (status.status === 'completed') {
+      return status
+    }
+
+    await new Promise<void>((resolve) => window.setTimeout(resolve, STATION_SEARCH_RUN_POLL_INTERVAL_MS))
+  }
+
+  throw new Error('Data Explorer Station Search is still running. Please try again in a moment.')
+}
+
 async function runStationSearch() {
   if (!selectedSite.value || !selectedProject.value || selectedStations.value.length === 0) return
 
@@ -1740,6 +1769,19 @@ async function runStationSearch() {
   })
 
   stationSearchRunId.value = run.run_id
+  queryClient.setQueryData(queryKeys.iplas.stationSearchRun(run.run_id), run)
+
+  const completedRun = await waitForStationSearchRunCompletion(run.run_id)
+  const firstStationWithRecords = completedRun.stations.find((station) => station.total_records > 0)
+  const firstStation = firstStationWithRecords ?? completedRun.stations[0]
+
+  if (firstStation) {
+    const nextActiveIndex = groupedByStation.value.findIndex(
+      (stationGroup) => stationGroup.stationName === firstStation.station,
+    )
+    activeStationTab.value = nextActiveIndex >= 0 ? nextActiveIndex : 0
+    await initializeServerPagination(firstStation.station)
+  }
 }
 
 /**
