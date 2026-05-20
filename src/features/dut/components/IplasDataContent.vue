@@ -884,7 +884,7 @@ const groupedByStation = computed<StationGroup[]>(() => {
   const groups: Record<string, StationGroup> = {}
 
   for (const record of testItemData.value) {
-    const stationName = record.TSP || record.station || 'Unknown Station'
+    const stationName = record.TSP || record.station
     if (!groups[stationName]) {
       const stationInfo = stations.value.find(
         (s: Station) =>
@@ -1067,7 +1067,7 @@ watch(
   groupedByStation,
   (groups: StationGroup[]) => {
     for (const group of groups) {
-      const filteredRecords = getActiveStationPaginationState(group.stationName).items
+      const filteredRecords = group.records
       for (let i = 0; i < filteredRecords.length; i++) {
         const key = `${group.stationName}-${i}`
         // Only set if not already set
@@ -1403,8 +1403,7 @@ async function downloadSelectedRecordsCsv(): Promise<void> {
       { record: CsvTestItemData | CompactCsvTestItemData; stationName: string }
     >()
     for (const group of groupedByStation.value) {
-      const state = getActiveStationPaginationState(group.stationName)
-      for (const record of state.items) {
+      for (const record of group.records) {
         const recordKey = `${record.ISN}_${record['Test Start Time']}`
         recordMap.set(recordKey, { record, stationName: group.stationName })
       }
@@ -1469,8 +1468,7 @@ async function downloadSelectedBatch(downloadType: 'txt' | 'csv' | 'all'): Promi
       { record: CsvTestItemData | CompactCsvTestItemData; stationName: string }
     >()
     for (const group of groupedByStation.value) {
-      const state = getActiveStationPaginationState(group.stationName)
-      for (const record of state.items) {
+      for (const record of group.records) {
         const recordKey = `${record.ISN}_${record['Test Start Time']}`
         recordMap.set(recordKey, { record, stationName: group.stationName })
       }
