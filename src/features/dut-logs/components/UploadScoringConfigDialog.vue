@@ -492,10 +492,16 @@ function isConfigCustomized(config: RescoreScoringConfig, defaultConfig: Rescore
 }
 
 function buildAppliedConfigs(): RescoreScoringConfig[] {
+  const hasExplicitIncludeScope = scoringConfigs.value.some(
+    (config) => getItemScopeMode(config.test_item_name) === 'included',
+  )
+
   return scoringConfigs.value.flatMap((config) => {
     const defaultConfig = createDefaultConfig(config.test_item_name)
     const scopeMode = getItemScopeMode(config.test_item_name)
-    const shouldEmit = scopeMode !== 'auto' || isConfigCustomized(config, defaultConfig)
+    const shouldEmit = hasExplicitIncludeScope
+      || scopeMode !== 'auto'
+      || isConfigCustomized(config, defaultConfig)
 
     if (!shouldEmit) {
       return []
@@ -504,7 +510,7 @@ function buildAppliedConfigs(): RescoreScoringConfig[] {
     return [{
       ...config,
       min_score: globalMinScore.value ?? config.min_score,
-      enabled: scopeMode !== 'excluded',
+      enabled: hasExplicitIncludeScope ? scopeMode === 'included' : scopeMode !== 'excluded',
     }]
   })
 }
