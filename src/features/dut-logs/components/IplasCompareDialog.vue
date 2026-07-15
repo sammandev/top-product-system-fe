@@ -238,6 +238,7 @@ import type {
   ParsedTestItemEnhanced,
   RescoreItemResult,
   RescoreScoringConfig,
+  UploadLogScopeMode,
   UploadScoringConfigApplyPayload,
 } from '@/features/dut-logs/composables/useTestLogUpload'
 import { useTestLogUpload } from '@/features/dut-logs/composables/useTestLogUpload'
@@ -249,6 +250,8 @@ const props = defineProps<{
   isn: string | null
   uploadTestItems: ParsedTestItemEnhanced[]
   scoringConfigs?: RescoreScoringConfig[]
+  scopeMode?: UploadLogScopeMode
+  includedTestItemNames?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -308,6 +311,8 @@ const iplasOverallScore = ref<number | null>(null)
 
 const showScoringConfig = ref(false)
 const localScoringConfigs = ref<RescoreScoringConfig[]>([])
+const localScopeMode = ref<UploadLogScopeMode>('default')
+const localIncludedTestItemNames = ref<string[]>([])
 
 const customScoringCount = computed(
   () =>
@@ -354,6 +359,8 @@ const scoringDialogTestItems = computed<ParsedTestItemEnhanced[]>(() => {
 
 function handleScoringConfigApply(payload: UploadScoringConfigApplyPayload) {
   localScoringConfigs.value = payload.configs
+  localScopeMode.value = payload.scopeMode
+  localIncludedTestItemNames.value = payload.includedTestItems
   rescoreAllItems()
 }
 
@@ -478,12 +485,28 @@ const comparisonItems = computed<ComparisonItem[]>(() => {
   const uploadItemMap = new Map<string, ParsedTestItemEnhanced>()
   const iplasItemMap = new Map<string, IplasIsnTestItem>()
   const processedKeys = new Set<string>()
+  const includedNames = new Set(localIncludedTestItemNames.value.map((name) => name.toLowerCase()))
+  const configMap = new Map(localScoringConfigs.value.map((config) => [config.test_item_name.toLowerCase(), config]))
+
+  const isIncludedTestItem = (name: string): boolean => {
+    if (localScopeMode.value === 'include') {
+      return includedNames.has(name.toLowerCase())
+    }
+
+    if (localScopeMode.value === 'exclude') {
+      return configMap.get(name.toLowerCase())?.enabled !== false
+    }
+
+    return true
+  }
 
   props.uploadTestItems.forEach((item) => {
+    if (!isIncludedTestItem(item.test_item)) return
     uploadItemMap.set(item.test_item.toLowerCase(), item)
   })
 
   iplasTestItems.value.forEach((item) => {
+    if (!isIncludedTestItem(item.NAME)) return
     iplasItemMap.set(item.NAME.toLowerCase(), item)
   })
 
@@ -725,6 +748,8 @@ watch(
         }
 
         initializeScoringConfigs()
+        localScopeMode.value = props.scopeMode ?? 'default'
+        localIncludedTestItemNames.value = [...(props.includedTestItemNames || [])]
         await rescoreAllItems()
       } catch (error: unknown) {
         errorMessage.value = error instanceof Error ? error.message : 'Failed to fetch iPLAS data'

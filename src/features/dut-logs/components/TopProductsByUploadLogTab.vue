@@ -126,6 +126,8 @@
         :compare-result="compareResult"
         :scoring-configs="appliedScoringConfigs"
         :device-scope="selectedDeviceScope"
+        :scope-mode="scoringScopeMode"
+        :included-test-item-names="includedTestItemNames"
       />
     </section>
   </section>
@@ -546,6 +548,7 @@ import {
   type RescoreItemResult,
   type RescoreScoringConfig,
   type TestLogParseResponseEnhanced,
+  type UploadLogScopeMode,
   type UploadScoringConfigApplyPayload,
   useTestLogUpload,
 } from '@/features/dut-logs/composables/useTestLogUpload'
@@ -599,6 +602,8 @@ const extractedDevices = ref<string[]>([])
 const testItemStationsMap = ref<Map<string, Set<string>>>(new Map()) // Maps test item -> stations
 const appliedScoringConfigs = ref<RescoreScoringConfig[]>([])
 const selectedDeviceScope = ref<string[]>([])
+const scoringScopeMode = ref<UploadLogScopeMode>('default')
+const includedTestItemNames = ref<string[]>([])
 
 // Score breakdown dialog (new universal scoring)
 const showBreakdownDialog = ref(false)
@@ -811,6 +816,16 @@ const comparisonTableItems = computed(() => {
     )
   }
 
+  if (scoringScopeMode.value === 'include') {
+    const includedNames = new Set(includedTestItemNames.value.map((name) => name.toLowerCase()))
+    items = items.filter((item) => includedNames.has(item.test_item.toLowerCase()))
+  } else if (scoringScopeMode.value === 'exclude') {
+    const scoringConfigMap = new Map(
+      appliedScoringConfigs.value.map((config) => [config.test_item_name.toLowerCase(), config]),
+    )
+    items = items.filter((item) => scoringConfigMap.get(item.test_item.toLowerCase())?.enabled !== false)
+  }
+
   // Apply criteria filters
   if (itemFilterType.value === 'criteria') {
     items = items.filter((item) => hasMeaningfulUploadLogCriteria(item.usl, item.lsl))
@@ -1006,6 +1021,8 @@ const handleConfigureScoring = async () => {
 const handleScoringConfigApply = (payload: UploadScoringConfigApplyPayload) => {
   appliedScoringConfigs.value = payload.configs
   selectedDeviceScope.value = payload.deviceScope
+  scoringScopeMode.value = payload.scopeMode
+  includedTestItemNames.value = payload.includedTestItems
 }
 
 /**
@@ -1013,6 +1030,8 @@ const handleScoringConfigApply = (payload: UploadScoringConfigApplyPayload) => {
  */
 const clearScoringConfigs = () => {
   appliedScoringConfigs.value = []
+  scoringScopeMode.value = 'default'
+  includedTestItemNames.value = []
 }
 
 // ============================================
@@ -1188,6 +1207,8 @@ const handleReset = () => {
   extractedDevices.value = []
   appliedScoringConfigs.value = []
   selectedDeviceScope.value = []
+  scoringScopeMode.value = 'default'
+  includedTestItemNames.value = []
   // UPDATED: Clear iPLAS comparison state
   iplasDataByIsn.value = new Map()
   iplasScoredByIsn.value = new Map()

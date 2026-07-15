@@ -149,9 +149,13 @@ export interface RescoreScoringConfig {
   max_deviation?: number
 }
 
+export type UploadLogScopeMode = 'default' | 'include' | 'exclude'
+
 export interface UploadScoringConfigApplyPayload {
   configs: RescoreScoringConfig[]
   deviceScope: string[]
+  scopeMode: UploadLogScopeMode
+  includedTestItems: string[]
 }
 
 export function hasMeaningfulUploadLogLimit(limit: number | null | undefined): boolean {

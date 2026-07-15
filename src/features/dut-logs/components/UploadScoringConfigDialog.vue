@@ -985,9 +985,20 @@ function resetAll() {
 
 // Handlers
 function handleApply() {
+  const hasExplicitIncludeScope = scoringConfigs.value.some(
+    (config) => getItemScopeMode(config.test_item_name) === 'included',
+  )
+  const hasExplicitExcludeScope = scoringConfigs.value.some(
+    (config) => getItemScopeMode(config.test_item_name) === 'excluded',
+  )
+
   emit('apply', {
     configs: buildAppliedConfigs(),
     deviceScope: [...selectedDevices.value],
+    scopeMode: hasExplicitIncludeScope ? 'include' : hasExplicitExcludeScope ? 'exclude' : 'default',
+    includedTestItems: scoringConfigs.value
+      .filter((config) => getItemScopeMode(config.test_item_name) === 'included')
+      .map((config) => config.test_item_name),
   })
   dialogOpen.value = false
 }

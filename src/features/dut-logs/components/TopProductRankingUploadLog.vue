@@ -347,6 +347,8 @@
       :isn="comparisonIsn"
       :upload-test-items="selectedTestItems"
       :scoring-configs="scoringConfigs"
+      :scope-mode="props.scopeMode"
+      :included-test-item-names="props.includedTestItemNames"
     />
 
     <AppDialog
@@ -666,6 +668,7 @@ import type {
   ParsedTestItemEnhanced,
   RescoreScoringConfig,
   TestLogParseResponseEnhanced,
+  UploadLogScopeMode,
 } from '@/features/dut-logs/composables/useTestLogUpload'
 import {
   createTopProduct,
@@ -687,6 +690,8 @@ const props = defineProps<{
   compareResult?: CompareResponseEnhanced | null
   scoringConfigs?: RescoreScoringConfig[]
   deviceScope?: string[]
+  scopeMode?: UploadLogScopeMode
+  includedTestItemNames?: string[]
 }>()
 
 interface RankingItem {
@@ -979,6 +984,25 @@ const filteredRankings = computed(() => {
 
 const scoringConfigMap = computed(() => new Map((props.scoringConfigs || []).map((config) => [config.test_item_name, config])))
 
+const includedTestItemNameSet = computed(
+  () => new Set((props.includedTestItemNames || []).map((name) => name.toLowerCase())),
+)
+
+function isIncludedTestItem(name: string): boolean {
+  if (props.scopeMode === 'include') {
+    return includedTestItemNameSet.value.has(name.toLowerCase())
+  }
+
+  if (props.scopeMode === 'exclude') {
+    const config = props.scoringConfigs?.find(
+      (entry) => entry.test_item_name.toLowerCase() === name.toLowerCase(),
+    )
+    return config?.enabled !== false
+  }
+
+  return true
+}
+
 function hasUploadLogLimitValue(limit: number | null | undefined): boolean {
   return limit !== null && limit !== undefined
 }
@@ -1204,11 +1228,12 @@ const openRankingItem = (item: RankingItem) => {
   selectedRankingItem.value = item
 
   if (props.parseResult?.parsed_items_enhanced) {
-    selectedTestItems.value = props.parseResult.parsed_items_enhanced
+    selectedTestItems.value = props.parseResult.parsed_items_enhanced.filter((testItem) => isIncludedTestItem(testItem.test_item))
   } else if (props.compareResult) {
     const isnTestItems: ParsedTestItemEnhanced[] = []
 
     props.compareResult.comparison_value_items?.forEach((compareItem) => {
+      if (!isIncludedTestItem(compareItem.test_item)) return
       const perIsnData = compareItem.per_isn_data.find((data) => data.isn === item.isn)
       if (perIsnData) {
         isnTestItems.push({
@@ -1229,6 +1254,7 @@ const openRankingItem = (item: RankingItem) => {
     })
 
     props.compareResult.comparison_non_value_items?.forEach((compareItem) => {
+      if (!isIncludedTestItem(compareItem.test_item)) return
       const perIsnData = compareItem.per_isn_data.find((data) => data.isn === item.isn)
       if (perIsnData) {
         isnTestItems.push({
@@ -1388,13 +1414,14 @@ function getTestItemsForIsn(isn: string | null): ParsedTestItemEnhanced[] {
   if (!isn) return []
 
   if (props.parseResult?.parsed_items_enhanced) {
-    return props.parseResult.parsed_items_enhanced
+    return props.parseResult.parsed_items_enhanced.filter((testItem) => isIncludedTestItem(testItem.test_item))
   }
 
   if (props.compareResult) {
     const items: ParsedTestItemEnhanced[] = []
 
     props.compareResult.comparison_value_items?.forEach((compareItem) => {
+      if (!isIncludedTestItem(compareItem.test_item)) return
       const perIsnData = compareItem.per_isn_data.find((data) => data.isn === isn)
       if (perIsnData) {
         items.push({
@@ -1415,6 +1442,7 @@ function getTestItemsForIsn(isn: string | null): ParsedTestItemEnhanced[] {
     })
 
     props.compareResult.comparison_non_value_items?.forEach((compareItem) => {
+      if (!isIncludedTestItem(compareItem.test_item)) return
       const perIsnData = compareItem.per_isn_data.find((data) => data.isn === isn)
       if (perIsnData) {
         items.push({
