@@ -45,7 +45,7 @@ describe('top product Excel export', () => {
       makeRecord({ isn: 'DUT-TIE-A', overallScore: 8, sourceOrder: 0 }),
     ])
 
-    const sheet = workbook.worksheets[0]
+    const sheet = workbook.worksheets[0]!
     expect(sheet.name).toBe('Station-1')
     expect(sheet.getCell('A10').value).toBe('TEST ITEM')
     expect(sheet.getCell('E10').value).toBe('Weight')
@@ -192,16 +192,18 @@ describe('top product Excel export', () => {
       comparison_non_value_items: [],
     }
 
+    const includedItem = compareResult.comparison_value_items[0]!
     const records = createTopProductExcelRecordsFromComparison(
       compareResult,
-      [compareResult.comparison_value_items[0]],
+      [includedItem],
       ['DUT-A'],
     )
 
     expect(records).toHaveLength(1)
-    expect(records[0].isn).toBe('DUT-A')
-    expect(records[0].items).toHaveLength(1)
-    expect(records[0].items[0]).toMatchObject({ target: 10, weight: 2, deviation: 0, score: 8 })
+    const exportedRecord = records[0]!
+    expect(exportedRecord.isn).toBe('DUT-A')
+    expect(exportedRecord.items).toHaveLength(1)
+    expect(exportedRecord.items[0]).toMatchObject({ target: 10, weight: 2, deviation: 0, score: 8 })
   })
 
   it('uses scope-filtered Upload Log item fields in a single record', () => {

@@ -83,9 +83,26 @@ export function createTopProductExcelRecordsFromComparison(
   const selectedIsnSet = selectedIsns?.length ? new Set(selectedIsns) : null
 
   return compareResult.file_summaries
-    .map((summary, sourceOrder) => {
+    .map((summary, sourceOrder): TopProductExcelRecord | null => {
       const isn = summary.isn
       if (!isn || (selectedIsnSet && !selectedIsnSet.has(isn))) return null
+
+      const recordItems: TopProductExcelItem[] = []
+      items.forEach((item) => {
+        const perIsn = item.per_isn_data.find((data) => data.isn === isn)
+        if (!perIsn) return
+
+        recordItems.push({
+          testItem: item.test_item,
+          ucl: item.usl,
+          lcl: item.lsl,
+          target: perIsn.score_breakdown?.target ?? item.baseline,
+          weight: perIsn.score_breakdown?.weight ?? 1,
+          value: perIsn.value,
+          deviation: perIsn.score_breakdown?.deviation ?? perIsn.deviation,
+          score: perIsn.score,
+        })
+      })
 
       return {
         isn,
@@ -100,23 +117,7 @@ export function createTopProductExcelRecordsFromComparison(
         station: summary.metadata.station || 'Results',
         overallScore: summary.avg_score,
         sourceOrder,
-        items: items
-          .map((item) => {
-            const perIsn = item.per_isn_data.find((data) => data.isn === isn)
-            if (!perIsn) return null
-
-            return {
-              testItem: item.test_item,
-              ucl: item.usl,
-              lcl: item.lsl,
-              target: perIsn.score_breakdown?.target ?? item.baseline,
-              weight: perIsn.score_breakdown?.weight ?? 1,
-              value: perIsn.value,
-              deviation: perIsn.score_breakdown?.deviation ?? perIsn.deviation,
-              score: perIsn.score,
-            }
-          })
-          .filter((item): item is TopProductExcelItem => item !== null),
+        items: recordItems,
       }
     })
     .filter((record): record is TopProductExcelRecord => record !== null)

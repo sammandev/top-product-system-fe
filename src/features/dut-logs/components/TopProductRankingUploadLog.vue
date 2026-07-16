@@ -683,6 +683,7 @@ import {
   createTopProductExcelRecordFromUploadLog,
   createTopProductExcelRecordsFromComparison,
   downloadTopProductWorkbook,
+  type TopProductExcelRecord,
 } from '../utils/topProductExcelExport'
 import IplasCompareDialog from './IplasCompareDialog.vue'
 
@@ -1345,7 +1346,7 @@ async function exportRankingToExcel() {
       .map((item) => item.isn)
       .filter((isn): isn is string => Boolean(isn))
 
-    let records = []
+    let records: TopProductExcelRecord[] = []
     if (props.parseResult) {
       const parseIsn = props.parseResult.isn
       records =
