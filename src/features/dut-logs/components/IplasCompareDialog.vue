@@ -243,6 +243,10 @@ import type {
 } from '@/features/dut-logs/composables/useTestLogUpload'
 import { useTestLogUpload } from '@/features/dut-logs/composables/useTestLogUpload'
 import { AppDataGrid, AppDialog, AppSelect } from '@/shared'
+import {
+  buildTopProductWorkbook,
+  downloadTopProductWorkbook,
+} from '../utils/topProductExcelExport'
 import UploadScoringConfigDialog from './UploadScoringConfigDialog.vue'
 
 const props = defineProps<{
@@ -272,6 +276,8 @@ interface ComparisonItem {
   iplas_target?: number | null
   upload_deviation?: number | null
   iplas_deviation?: number | null
+  upload_weight?: number
+  iplas_weight?: number
   status: 'match' | 'upload-only' | 'iplas-only'
 }
 
@@ -540,6 +546,8 @@ const comparisonItems = computed<ComparisonItem[]>(() => {
       iplas_target: iplasScored?.target ?? null,
       upload_deviation: uploadScored?.deviation ?? null,
       iplas_deviation: iplasScored?.deviation ?? null,
+      upload_weight: uploadScored?.weight ?? 1,
+      iplas_weight: iplasScored?.weight ?? 1,
       status,
     }
   }
@@ -770,45 +778,38 @@ function getScoreColor(score: number): string {
 async function exportToExcel() {
   exporting.value = true
   try {
-    const exportData = filteredComparisonItems.value.map((item) => ({
-      'Test Item': item.test_item,
-      UCL: item.usl ?? '',
-      LCL: item.lsl ?? '',
-      'Uploaded Value': item.upload_value ?? '',
-      'iPLAS Value': item.iplas_value ?? '',
-      'Uploaded Score': item.upload_score ?? '',
-      'iPLAS Score': item.iplas_score ?? '',
-      Status: item.status,
-    }))
+    const createRecord = (source: 'upload' | 'iplas') => ({
+      isn: `${props.isn || 'UNKNOWN'} (${source === 'upload' ? 'UPLOAD' : 'ONLINE'})`,
+      project: '',
+      tsp: props.isn || 'Comparison',
+      deviceId: '',
+      errorCode: '',
+      errorName: 'N/A',
+      type: source === 'upload' ? 'OFFLINE' : 'ONLINE',
+      testStartTime: '',
+      testEndTime: '',
+      station: props.isn || 'Comparison',
+      overallScore: source === 'upload' ? uploadOverallScore.value : iplasOverallScore.value,
+      sourceOrder: source === 'upload' ? 0 : 1,
+      items: filteredComparisonItems.value
+        .filter((item) => source === 'upload' ? item.status !== 'iplas-only' : item.status !== 'upload-only')
+        .map((item) => ({
+          testItem: item.test_item,
+          ucl: item.usl,
+          lcl: item.lsl,
+          target: source === 'upload' ? item.upload_target ?? null : item.iplas_target ?? null,
+          weight: source === 'upload' ? item.upload_weight ?? 1 : item.iplas_weight ?? 1,
+          value: source === 'upload' ? item.upload_value : item.iplas_value,
+          deviation: source === 'upload' ? item.upload_deviation ?? null : item.iplas_deviation ?? null,
+          score: source === 'upload' ? item.upload_score ?? null : item.iplas_score ?? null,
+        })),
+    })
 
-    const ExcelJS = await import('exceljs')
-    const workbook = new (ExcelJS.default || ExcelJS).Workbook()
-    const worksheet = workbook.addWorksheet(props.isn || 'Comparison')
-
-    if (exportData.length > 0) {
-      const rows = exportData as Array<Record<string, unknown>>
-      const headers = Object.keys(rows[0] ?? {})
-      worksheet.addRow(headers)
-      rows.forEach((item) => {
-        worksheet.addRow(headers.map((header) => item[header] ?? ''))
-      })
-    }
+    const workbook = buildTopProductWorkbook([createRecord('upload'), createRecord('iplas')])
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
     const filename = `iPLAS_Compare_${props.isn}_${timestamp}.xlsx`
-
-    const buffer = await workbook.xlsx.writeBuffer()
-    const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    await downloadTopProductWorkbook(workbook, filename)
   } catch (error: unknown) {
     console.error('Export failed:', error)
     errorMessage.value = `Export failed: ${error instanceof Error ? error.message : 'Unknown error'}`

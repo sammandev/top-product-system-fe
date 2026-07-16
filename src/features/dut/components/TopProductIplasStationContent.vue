@@ -170,8 +170,6 @@
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import {
-  type ExportRecord,
-  type ExportTestItem,
   iplasProxyApi,
 } from '@/features/dut-logs/api/iplasProxyApi'
 import type {
@@ -192,6 +190,11 @@ import { AppPanel, AppSelect } from '@/shared/ui'
 import { getErrorMessage } from '@/shared/utils'
 import { getApiErrorDetail } from '@/shared/utils/error'
 import { isStatusPass } from '@/shared/utils/helpers'
+import {
+  buildTopProductWorkbook,
+  createTopProductExcelRecordFromIplas,
+  downloadTopProductWorkbook,
+} from '@/features/dut-logs/utils/topProductExcelExport'
 import { dutApi } from '../api/dut.api'
 import { useScoring } from '../composables/useScoring'
 import { evaluateForcedFailure, type ForcedFailureItemDetail } from '../utils/iplasForcedFailure'
@@ -710,43 +713,9 @@ async function handleExportRecords(payload: {
 }): Promise<void> {
   if (payload.records.length === 0) return
 
-  // Transform CsvTestItemData to ExportRecord format
-  const exportRecords: ExportRecord[] = payload.records.map((record) => {
-    const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-    const station = record.TSP || record.station
-
-    // Map test items from the TestItem array
-    const testItems: ExportTestItem[] = (record.TestItem || []).map((item) => ({
-      NAME: item.NAME,
-      STATUS: item.STATUS || '',
-      VALUE: item.VALUE || '',
-      UCL: item.UCL || '',
-      LCL: item.LCL || '',
-    }))
-
-    return {
-      ISN: isn,
-      Project: record.Project || '',
-      Station: station,
-      DeviceId: record.DeviceId,
-      Line: record.Line || 'NA',
-      ErrorCode: record.ErrorCode || '',
-      ErrorName: record.ErrorName || '',
-      Type: 'ONLINE',
-      TestStartTime: record['Test Start Time'] || '',
-      TestEndTime: record['Test end Time'] || '',
-      TestItems: testItems,
-    }
-  })
-
   try {
-    const response = await iplasProxyApi.exportTestItems({
-      records: exportRecords,
-      format: 'xlsx', // Default to XLSX for multi-sheet support
-      filename_prefix: generateExportFilename(),
-    })
-
-    iplasProxyApi.downloadExportFile(response)
+    const workbook = buildTopProductWorkbook(buildScoredExportRecords(payload.records))
+    await downloadTopProductWorkbook(workbook, `${generateExportFilename()}.xlsx`)
   } catch (error) {
     console.error('Export failed:', error)
   }
@@ -761,47 +730,31 @@ async function handleExportAllRecords(payload: {
 
   exportingAll.value = true
   try {
-    // Transform CsvTestItemData to ExportRecord format
-    const exportRecords: ExportRecord[] = payload.records.map((record) => {
-      const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
-      const station = record.TSP || record.station
-
-      // Map test items from the TestItem array
-      const testItems: ExportTestItem[] = (record.TestItem || []).map((item) => ({
-        NAME: item.NAME,
-        STATUS: item.STATUS || '',
-        VALUE: item.VALUE || '',
-        UCL: item.UCL || '',
-        LCL: item.LCL || '',
-      }))
-
-      return {
-        ISN: isn,
-        Project: record.Project || '',
-        Station: station,
-        DeviceId: record.DeviceId,
-        Line: record.Line || 'NA',
-        ErrorCode: record.ErrorCode || '',
-        ErrorName: record.ErrorName || '',
-        Type: 'ONLINE',
-        TestStartTime: record['Test Start Time'] || '',
-        TestEndTime: record['Test end Time'] || '',
-        TestItems: testItems,
-      }
-    })
-
-    const response = await iplasProxyApi.exportTestItems({
-      records: exportRecords,
-      format: 'xlsx', // XLSX for multi-sheet support (each station is a sheet)
-      filename_prefix: generateExportFilename(),
-    })
-
-    iplasProxyApi.downloadExportFile(response)
+    const workbook = buildTopProductWorkbook(buildScoredExportRecords(payload.records))
+    await downloadTopProductWorkbook(workbook, `${generateExportFilename()}.xlsx`)
   } catch (error) {
     console.error('Export all failed:', error)
   } finally {
     exportingAll.value = false
   }
+}
+
+function buildScoredExportRecords(records: CsvTestItemData[]) {
+  return records.map((record, sourceOrder) => {
+    const recordIndex = testItemData.value.findIndex(
+      (candidate) =>
+        candidate === record ||
+        (candidate.ISN === record.ISN &&
+          candidate.DeviceId === record.DeviceId &&
+          candidate['Test end Time'] === record['Test end Time']),
+    )
+
+    return createTopProductExcelRecordFromIplas(
+      record,
+      recordIndex >= 0 ? scoredRecords.value[recordIndex] : undefined,
+      sourceOrder,
+    )
+  })
 }
 
 // Handle save selected records to database

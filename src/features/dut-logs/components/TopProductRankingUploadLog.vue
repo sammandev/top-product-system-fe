@@ -678,6 +678,12 @@ import {
 } from '@/features/top-products/api/topProducts.api'
 import { AppDataGrid, AppDialog, AppPanel, AppSelect, getApiErrorDetail } from '@/shared'
 import { useNotification } from '@/shared/composables/useNotification'
+import {
+  buildTopProductWorkbook,
+  createTopProductExcelRecordFromUploadLog,
+  createTopProductExcelRecordsFromComparison,
+  downloadTopProductWorkbook,
+} from '../utils/topProductExcelExport'
 import IplasCompareDialog from './IplasCompareDialog.vue'
 
 dayjs.extend(utc)
@@ -1335,47 +1341,39 @@ async function exportRankingToExcel() {
   try {
     const itemsToExport =
       selectedRankingItems.value.length > 0 ? selectedRankingItems.value : filteredRankings.value
+    const selectedIsns = itemsToExport
+      .map((item) => item.isn)
+      .filter((isn): isn is string => Boolean(isn))
 
-    const exportData = itemsToExport.map((item, index) => ({
-      Rank: index + 1,
-      'DUT ISN': item.isn || 'N/A',
-      'Test Date': formatTestDate(item.test_date),
-      'Duration (s)': item.duration_seconds ?? '',
-      'Test Station': item.station,
-      Device: item.device || 'N/A',
-      Status: item.status,
-      'Test Result': item.result || 'N/A',
-      'Overall Score': item.score.toFixed(2),
-    }))
-
-    const ExcelJS = await import('exceljs')
-    const workbook = new (ExcelJS.default || ExcelJS).Workbook()
-    const worksheet = workbook.addWorksheet('Ranking')
-
-    if (exportData.length > 0) {
-      const rows = exportData as Array<Record<string, unknown>>
-      const headers = Object.keys(rows[0] ?? {})
-      worksheet.addRow(headers)
-      rows.forEach((item) => {
-        worksheet.addRow(headers.map((header) => item[header] ?? ''))
-      })
+    let records = []
+    if (props.parseResult) {
+      const parseIsn = props.parseResult.isn
+      records =
+        selectedIsns.length === 0 || (parseIsn !== null && selectedIsns.includes(parseIsn))
+          ? [
+              createTopProductExcelRecordFromUploadLog(
+                props.parseResult,
+                props.parseResult.parsed_items_enhanced.filter((item) => isIncludedTestItem(item.test_item)),
+              ),
+            ]
+          : []
+    } else if (props.compareResult) {
+      const sourceItems = [
+        ...props.compareResult.comparison_value_items,
+        ...props.compareResult.comparison_non_value_items,
+      ].filter((item) => isIncludedTestItem(item.test_item))
+      records = createTopProductExcelRecordsFromComparison(
+        props.compareResult,
+        sourceItems,
+        selectedIsns,
+      )
     }
+
+    const workbook = buildTopProductWorkbook(records)
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
     const filename = `Top_Product_Ranking_${timestamp}.xlsx`
-
-    const buffer = await workbook.xlsx.writeBuffer()
-    const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    await downloadTopProductWorkbook(workbook, filename)
   } catch (error: unknown) {
     console.error('Export failed:', error)
   } finally {

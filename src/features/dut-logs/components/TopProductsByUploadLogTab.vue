@@ -560,6 +560,11 @@ import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import { getErrorMessage } from '@/shared/utils'
 import { downloadUploadLogCriteriaTemplate } from '../utils/criteriaTemplate'
+import {
+  buildTopProductWorkbook,
+  createTopProductExcelRecordsFromComparison,
+  downloadTopProductWorkbook,
+} from '../utils/topProductExcelExport'
 import CriteriaBuilderDialog from './CriteriaBuilderDialog.vue'
 import TopProductRankingUploadLog from './TopProductRankingUploadLog.vue'
 import UploadScoringConfigDialog from './UploadScoringConfigDialog.vue'
@@ -1241,56 +1246,26 @@ const getScoreColor = (score: number): string => {
 async function exportComparisonToExcel() {
   exportingComparison.value = true
   try {
-    const items = comparisonTableItems.value
-    const isns = displayedIsns.value
+    if (!compareResult.value) return
 
-    // Build export data with dynamic columns
-    const exportData = items.map((item: Record<string, unknown>) => {
-      const row: Record<string, unknown> = {
-        'Test Item': item.test_item,
-        UCL: item.usl ?? '',
-        LCL: item.lsl ?? '',
-      }
-
-      isns.forEach((isn, idx) => {
-        row[`${isn} Uploaded Value`] = item[`uploaded_val_${idx}`] ?? ''
-        row[`${isn} iPLAS Value`] = item[`iplas_val_${idx}`] ?? ''
-        row[`${isn} Uploaded Score`] = item[`uploaded_score_${idx}`] ?? ''
-        row[`${isn} iPLAS Score`] = item[`iplas_score_${idx}`] ?? ''
-      })
-
-      return row
-    })
-
-    const ExcelJS = await import('exceljs')
-    const workbook = new (ExcelJS.default || ExcelJS).Workbook()
-    const worksheet = workbook.addWorksheet('Comparison')
-
-    if (exportData.length > 0) {
-      const rows = exportData as Array<Record<string, unknown>>
-      const headers = Object.keys(rows[0] ?? {})
-      worksheet.addRow(headers)
-      rows.forEach((item) => {
-        worksheet.addRow(headers.map((header) => item[header] ?? ''))
-      })
-    }
+    const exportedItemNames = new Set(
+      comparisonTableItems.value.map((item) => String(item.test_item).toLowerCase()),
+    )
+    const sourceItems = [
+      ...(compareResult.value.comparison_value_items || []),
+      ...(compareResult.value.comparison_non_value_items || []),
+    ].filter((item) => exportedItemNames.has(item.test_item.toLowerCase()))
+    const records = createTopProductExcelRecordsFromComparison(
+      compareResult.value,
+      sourceItems,
+      displayedIsns.value,
+    )
+    const workbook = buildTopProductWorkbook(records)
 
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
     const filename = `Test_Item_Comparison_${timestamp}.xlsx`
-
-    const buffer = await workbook.xlsx.writeBuffer()
-    const blob = new Blob([buffer], {
-      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    await downloadTopProductWorkbook(workbook, filename)
   } catch (err: unknown) {
     console.error('Export failed:', err)
     showErrorNotification(`Export failed: ${getErrorMessage(err) || 'Unknown error'}`)
