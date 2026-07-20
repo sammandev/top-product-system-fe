@@ -88,6 +88,7 @@ cd /path/to/top-product-system-fe
 
 export TOP_PRODUCT_EDGE_DIR="$(dirname "$(pwd)")/deployment-infra/edge-proxy"
 export TOP_PRODUCT_EDGE_NETWORK=ast-tools-edge
+export TOP_PRODUCT_EDGE_SUBNET=172.19.0.0/16
 
 git fetch origin --prune
 git pull --ff-only origin main

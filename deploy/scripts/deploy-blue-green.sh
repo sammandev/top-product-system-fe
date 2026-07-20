@@ -8,6 +8,7 @@ COMPOSE_FILE="$FRONTEND_DIR/deploy/compose/docker-compose.blue-green.yml"
 
 EDGE_DIR="${TOP_PRODUCT_EDGE_DIR:-}"
 EDGE_NETWORK="${TOP_PRODUCT_EDGE_NETWORK:-ast-tools-edge}"
+EDGE_SUBNET="${TOP_PRODUCT_EDGE_SUBNET:-172.19.0.0/16}"
 EDGE_TEMPLATE_DIR="$FRONTEND_DIR/deploy/server-template/edge-proxy"
 
 SKIP_BUILD=false
@@ -27,7 +28,7 @@ for arg in "$@"; do
       ;;
     -h|--help)
       echo "Usage: ./deploy-blue-green.sh [--skip-build] [--keep-old] [--skip-cleanup]"
-      echo "Environment: TOP_PRODUCT_EDGE_DIR=/path/to/edge-proxy TOP_PRODUCT_EDGE_NETWORK=${EDGE_NETWORK}"
+      echo "Environment: TOP_PRODUCT_EDGE_DIR=/path/to/edge-proxy TOP_PRODUCT_EDGE_NETWORK=${EDGE_NETWORK} TOP_PRODUCT_EDGE_SUBNET=${EDGE_SUBNET}"
       echo "The default sibling edge-proxy directory is created from the repository template when missing."
       exit 0
       ;;
@@ -189,11 +190,14 @@ wait_for_health() {
 
 ensure_edge_network() {
   if [ -f "$EDGE_SCRIPT_DIR/ensure-network.sh" ]; then
-    TOP_PRODUCT_EDGE_NETWORK="$EDGE_NETWORK" bash "$EDGE_SCRIPT_DIR/ensure-network.sh"
+    TOP_PRODUCT_EDGE_NETWORK="$EDGE_NETWORK" \
+      TOP_PRODUCT_EDGE_SUBNET="$EDGE_SUBNET" \
+      bash "$EDGE_SCRIPT_DIR/ensure-network.sh"
     return
   fi
 
-  docker network inspect "$EDGE_NETWORK" >/dev/null 2>&1 || docker network create "$EDGE_NETWORK" >/dev/null
+  docker network inspect "$EDGE_NETWORK" >/dev/null 2>&1 || \
+    docker network create --driver bridge --subnet "$EDGE_SUBNET" "$EDGE_NETWORK" >/dev/null
 }
 
 switch_frontend_color() {

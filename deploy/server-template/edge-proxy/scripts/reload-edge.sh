@@ -6,7 +6,8 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 EDGE_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 COMPOSE_FILE="$EDGE_DIR/docker-compose.yml"
 
-bash "$SCRIPT_DIR/ensure-network.sh"
+TOP_PRODUCT_EDGE_SUBNET="${TOP_PRODUCT_EDGE_SUBNET:-172.19.0.0/16}" \
+	bash "$SCRIPT_DIR/ensure-network.sh"
 
 echo "Ensuring edge proxy container matches current compose config"
 docker compose -f "$COMPOSE_FILE" up -d edge-proxy
