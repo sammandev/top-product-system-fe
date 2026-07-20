@@ -4,8 +4,8 @@ This is the production deployment flow for `top-product-system-fe`.
 
 ## Ports
 
-- Public frontend: `http://172.18.220.56:9090`
-- Public backend: `http://172.18.220.56:7070`
+- Public frontend: `http://10.176.2.139:9090`
+- Public backend: `http://10.176.2.139:7070`
 - Internal frontend slot port: `19090`
 
 The top-product deployment does not use public ports `3333` or `8008`.
@@ -119,8 +119,8 @@ bash ./deploy/scripts/deploy-primevue.sh --keep-old
 cd /data/ptb/TOP_PROD/deployment-infra/edge-proxy
 bash ./scripts/status.sh
 
-curl -I http://172.18.220.56:9090/healthz
-curl -I http://172.18.220.56:9090/
+curl -I http:176.2.139:9090/healthz
+curl -I http://10.176.2.139:9090/
 ```
 
 You should see:

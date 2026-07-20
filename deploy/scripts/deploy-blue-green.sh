@@ -275,7 +275,7 @@ echo "Edge proxy home: $EDGE_DIR"
 echo "Active color: ${ACTIVE_COLOR:-none}"
 echo "Target color: $TARGET_COLOR"
 echo "Frontend checkout: $(git branch --show-current || echo detached) @ $(git rev-parse --short HEAD)"
-echo "Backend API URL for this build: ${VITE_API_BASE_URL:-http://172.18.220.56:7070}"
+echo "Backend API URL for this build: ${VITE_API_BASE_URL:-http://10.176.2.139:7070}"
 
 ensure_edge_network
 
