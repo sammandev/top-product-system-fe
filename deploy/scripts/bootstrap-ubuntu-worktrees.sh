@@ -2,8 +2,13 @@
 
 set -euo pipefail
 
-CANONICAL_FRONTEND_DIR="${TOP_PRODUCT_FRONTEND_MAIN_DIR:-/data/ptb/TOP_PROD/top-product-system-fe}"
-VUETIFY_WORKTREE_DIR="${TOP_PRODUCT_FRONTEND_VUETIFY_DIR:-/data/ptb/TOP_PROD/top-product-system-fe-vuetify}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+
+CANONICAL_FRONTEND_DIR="${TOP_PRODUCT_FRONTEND_MAIN_DIR:-$PROJECT_DIR}"
+CANONICAL_PARENT_DIR="$(dirname "$CANONICAL_FRONTEND_DIR")"
+CANONICAL_NAME="$(basename "$CANONICAL_FRONTEND_DIR")"
+VUETIFY_WORKTREE_DIR="${TOP_PRODUCT_FRONTEND_VUETIFY_DIR:-$CANONICAL_PARENT_DIR/${CANONICAL_NAME}-vuetify}"
 REMOTE_MAIN_BRANCH="${TOP_PRODUCT_FRONTEND_MAIN_BRANCH:-main}"
 REMOTE_VUETIFY_BRANCH="${TOP_PRODUCT_FRONTEND_VUETIFY_BRANCH:-original-vuetify}"
 
@@ -61,6 +66,7 @@ ensure_branch_up_to_date() {
 
 ensure_vuetify_worktree() {
   if [ ! -d "$VUETIFY_WORKTREE_DIR" ]; then
+    mkdir -p "$(dirname "$VUETIFY_WORKTREE_DIR")"
     git -C "$CANONICAL_FRONTEND_DIR" worktree add "$VUETIFY_WORKTREE_DIR" "origin/$REMOTE_VUETIFY_BRANCH"
   fi
 

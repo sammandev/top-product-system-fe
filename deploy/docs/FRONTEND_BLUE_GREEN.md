@@ -12,11 +12,12 @@ The top-product deployment does not use public ports `3333` or `8008`.
 
 ## Layout
 
-Use this server layout:
+The scripts derive the checkout from their own location, so the repository can
+live under any parent directory. The default layout is:
 
-- PrimeVue checkout: `/data/ptb/TOP_PROD/top-product-system-fe`
-- Optional Vuetify fallback worktree: `/data/ptb/TOP_PROD/top-product-system-fe-vuetify`
-- Shared edge proxy home: `/data/ptb/TOP_PROD/deployment-infra/edge-proxy`
+- PrimeVue checkout: the current repository directory
+- Optional Vuetify fallback worktree: one sibling directory named `<project>-vuetify`
+- Shared edge proxy home: one sibling `deployment-infra/edge-proxy` directory
 
 The frontend repo owns the release image, the blue-green deploy scripts, and the edge-proxy template.
 
@@ -25,7 +26,7 @@ The frontend repo owns the release image, the blue-green deploy scripts, and the
 ### 1. Prepare the PrimeVue checkout
 
 ```bash
-cd /data/ptb/TOP_PROD/top-product-system-fe
+cd /path/to/top-product-system-fe
 git config core.filemode false
 git fetch origin --prune
 git switch main
@@ -37,13 +38,12 @@ nano .env.production
 ### 2. Optional Vuetify fallback worktree
 
 ```bash
-cd /data/ptb/TOP_PROD/top-product-system-fe
+FRONTEND_DIR="$(cd /path/to/top-product-system-fe && pwd)"
 
-if [ ! -d ../top-product-system-fe-vuetify ]; then
-  git worktree add ../top-product-system-fe-vuetify origin/original-vuetify
-fi
+bash "$FRONTEND_DIR/deploy/scripts/bootstrap-ubuntu-worktrees.sh"
 
-cd /data/ptb/TOP_PROD/top-product-system-fe-vuetify
+VUETIFY_DIR="$(dirname "$FRONTEND_DIR")/$(basename "$FRONTEND_DIR")-vuetify"
+cd "$VUETIFY_DIR"
 git config core.filemode false
 
 if git show-ref --verify --quiet refs/heads/original-vuetify; then
@@ -60,11 +60,13 @@ git pull --ff-only origin original-vuetify
 The edge proxy owns public port `9090`. Until it exists, the frontend will not be reachable even if a blue or green slot is healthy.
 
 ```bash
-mkdir -p /data/ptb/TOP_PROD/deployment-infra
-rm -rf /data/ptb/TOP_PROD/deployment-infra/edge-proxy
-cp -r /data/ptb/TOP_PROD/top-product-system-fe/deploy/server-template/edge-proxy /data/ptb/TOP_PROD/deployment-infra/edge-proxy
+FRONTEND_DIR="$(cd /path/to/top-product-system-fe && pwd)"
+EDGE_DIR="$(dirname "$FRONTEND_DIR")/deployment-infra/edge-proxy"
+mkdir -p "$(dirname "$EDGE_DIR")"
+rm -rf "$EDGE_DIR"
+cp -r "$FRONTEND_DIR/deploy/server-template/edge-proxy" "$EDGE_DIR"
 
-cd /data/ptb/TOP_PROD/deployment-infra/edge-proxy
+cd "$EDGE_DIR"
 bash ./scripts/bootstrap-edge.sh
 bash ./scripts/status.sh
 ```
@@ -79,9 +81,9 @@ Notes:
 Use the PrimeVue checkout only.
 
 ```bash
-cd /data/ptb/TOP_PROD/top-product-system-fe
+cd /path/to/top-product-system-fe
 
-export TOP_PRODUCT_EDGE_DIR=/data/ptb/TOP_PROD/deployment-infra/edge-proxy
+export TOP_PRODUCT_EDGE_DIR="$(dirname "$(pwd)")/deployment-infra/edge-proxy"
 export TOP_PRODUCT_EDGE_NETWORK=ast-tools-edge
 
 git fetch origin --prune
@@ -116,10 +118,12 @@ bash ./deploy/scripts/deploy-primevue.sh --keep-old
 ## Check
 
 ```bash
-cd /data/ptb/TOP_PROD/deployment-infra/edge-proxy
+FRONTEND_DIR="$(cd /path/to/top-product-system-fe && pwd)"
+EDGE_DIR="$(dirname "$FRONTEND_DIR")/deployment-infra/edge-proxy"
+cd "$EDGE_DIR"
 bash ./scripts/status.sh
 
-curl -I http:176.2.139:9090/healthz
+curl -I http://10.176.2.139:9090/healthz
 curl -I http://10.176.2.139:9090/
 ```
 
@@ -135,7 +139,7 @@ You should see:
 Rollback is only a proxy switch. No rebuild is required.
 
 ```bash
-cd /data/ptb/TOP_PROD/deployment-infra/edge-proxy
+cd deployment-infra/edge-proxy
 bash ./scripts/switch-frontend-color.sh blue
 bash ./scripts/switch-frontend-color.sh green
 ```
@@ -149,7 +153,7 @@ Use the color that points to the last known good frontend slot.
 Usually means the edge proxy is pointing at a missing or unhealthy slot. Run:
 
 ```bash
-cd /data/ptb/TOP_PROD/deployment-infra/edge-proxy
+cd deployment-infra/edge-proxy
 bash ./scripts/status.sh
 ```
 

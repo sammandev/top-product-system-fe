@@ -2,7 +2,9 @@
 
 set -euo pipefail
 
-CANONICAL_FRONTEND_DIR="${TOP_PRODUCT_FRONTEND_MAIN_DIR:-/data/ptb/TOP_PROD/top-product-system-fe}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(cd "$SCRIPT_DIR/../.." && pwd)"
+CANONICAL_FRONTEND_DIR="${TOP_PRODUCT_FRONTEND_MAIN_DIR:-$PROJECT_DIR}"
 DEPLOY_SCRIPT_RELATIVE="deploy/scripts/deploy-blue-green.sh"
 
 usage() {
