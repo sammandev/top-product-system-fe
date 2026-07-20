@@ -13,7 +13,7 @@ services:
       - ./nginx/upstreams:/etc/nginx/upstreams:ro
       - edge_proxy_logs:/var/log/nginx
     healthcheck:
-      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://localhost:9090/healthz || exit 1"]
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1:9090/healthz || exit 1"]
       interval: 30s
       timeout: 10s
       retries: 3
