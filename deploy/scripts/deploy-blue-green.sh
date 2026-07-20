@@ -8,6 +8,7 @@ COMPOSE_FILE="$FRONTEND_DIR/deploy/compose/docker-compose.blue-green.yml"
 
 EDGE_DIR="${TOP_PRODUCT_EDGE_DIR:-}"
 EDGE_NETWORK="${TOP_PRODUCT_EDGE_NETWORK:-ast-tools-edge}"
+EDGE_TEMPLATE_DIR="$FRONTEND_DIR/deploy/server-template/edge-proxy"
 
 SKIP_BUILD=false
 KEEP_OLD=false
@@ -27,6 +28,7 @@ for arg in "$@"; do
     -h|--help)
       echo "Usage: ./deploy-blue-green.sh [--skip-build] [--keep-old] [--skip-cleanup]"
       echo "Environment: TOP_PRODUCT_EDGE_DIR=/path/to/edge-proxy TOP_PRODUCT_EDGE_NETWORK=${EDGE_NETWORK}"
+      echo "The default sibling edge-proxy directory is created from the repository template when missing."
       exit 0
       ;;
     *)
@@ -107,6 +109,27 @@ discover_edge_dir() {
       return
     fi
   done
+
+  echo "$FRONTEND_DIR/../deployment-infra/edge-proxy"
+}
+
+ensure_edge_dir() {
+  if [ ! -d "$EDGE_DIR" ]; then
+    if [ ! -d "$EDGE_TEMPLATE_DIR" ]; then
+      echo "Missing edge-proxy template: $EDGE_TEMPLATE_DIR"
+      exit 1
+    fi
+
+    echo "Bootstrapping shared edge-proxy home: $EDGE_DIR"
+    mkdir -p "$(dirname "$EDGE_DIR")"
+    cp -R "$EDGE_TEMPLATE_DIR" "$EDGE_DIR"
+  fi
+
+  if [ ! -f "$EDGE_DIR/docker-compose.yml" ] || [ ! -f "$EDGE_DIR/scripts/switch-frontend-color.sh" ]; then
+    echo "Invalid edge-proxy home: $EDGE_DIR"
+    echo "Expected docker-compose.yml and scripts/switch-frontend-color.sh."
+    exit 1
+  fi
 }
 
 EDGE_DIR="$(discover_edge_dir || true)"
@@ -115,11 +138,7 @@ cd "$FRONTEND_DIR"
 
 run_preflight_checks
 
-if [ -z "$EDGE_DIR" ]; then
-  echo "Unable to locate the shared edge-proxy home."
-  echo "Set TOP_PRODUCT_EDGE_DIR to the separate deployment-infra edge-proxy path."
-  exit 1
-fi
+ensure_edge_dir
 
 EDGE_SCRIPT_DIR="$EDGE_DIR/scripts"
 STATE_FILE="$EDGE_DIR/state/frontend.color"

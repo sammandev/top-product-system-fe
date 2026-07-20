@@ -55,9 +55,12 @@ fi
 git pull --ff-only origin original-vuetify
 ```
 
-### 3. Bootstrap the edge proxy
+### 3. Edge proxy
 
-The edge proxy owns public port `9090`. Until it exists, the frontend will not be reachable even if a blue or green slot is healthy.
+The edge proxy owns public port `9090`. The deployment scripts automatically
+create the default sibling directory from the repository template when it does
+not exist. The following commands are optional if you want to initialize or
+inspect it before the first deployment.
 
 ```bash
 FRONTEND_DIR="$(cd /path/to/top-product-system-fe && pwd)"
@@ -159,7 +162,8 @@ bash ./scripts/status.sh
 
 ### `Missing switch-frontend-color.sh`
 
-The edge-proxy home was not bootstrapped or you pointed `TOP_PRODUCT_EDGE_DIR` at the wrong path.
+The edge-proxy home could not be created from the repository template, or you
+pointed `TOP_PRODUCT_EDGE_DIR` at the wrong path.
 
 ### Dirty git tree during deploy
 
