@@ -4,12 +4,59 @@
       v-model="fullscreen"
       width="98vw"
       :breakpoints="dialogBreakpoints"
+      :showFooter="false"
+      sticky-header
       title="Complete Ranking"
       description="Review the full upload-log ranking set."
       class="top-product-ranking-upload-log__dialog"
     >
+      <template #header-actions>
+        <span class="top-product-ranking-upload-log__pill top-product-ranking-upload-log__pill--neutral">
+          {{ filteredRankings.length }} rows
+        </span>
+        <span class="top-product-ranking-upload-log__pill top-product-ranking-upload-log__pill--cool">
+          {{ selectedRankingItems.length }} selected
+        </span>
+        <button
+          type="button"
+          class="top-product-ranking-upload-log__header-action"
+          :disabled="selectedRankingItems.length === 0 || savingToDb"
+          @click="saveSelectedToDatabase"
+        >
+          <Icon :icon="savingToDb ? 'mdi:loading' : 'mdi:database-plus'" :class="{ 'top-product-ranking-upload-log__spin': savingToDb }" />
+          <span>Save</span>
+        </button>
+        <button
+          type="button"
+          class="top-product-ranking-upload-log__header-action"
+          :disabled="exportingRanking"
+          @click="exportRankingToExcel"
+        >
+          <Icon :icon="exportingRanking ? 'mdi:loading' : 'mdi:microsoft-excel'" :class="{ 'top-product-ranking-upload-log__spin': exportingRanking }" />
+          <span>Export</span>
+        </button>
+      </template>
 
       <div class="top-product-ranking-upload-log__workspace top-product-ranking-upload-log__workspace--fullscreen">
+        <section class="top-product-ranking-upload-log__dialog-summary-grid">
+          <article class="top-product-ranking-upload-log__stat-card top-product-ranking-upload-log__stat-card--cool">
+            <small>Active View</small>
+            <strong>{{ activeStationLabel }}</strong>
+          </article>
+          <article class="top-product-ranking-upload-log__stat-card">
+            <small>Visible Rows</small>
+            <strong>{{ filteredRankings.length }}</strong>
+          </article>
+          <article class="top-product-ranking-upload-log__stat-card top-product-ranking-upload-log__stat-card--warm">
+            <small>Selected Rows</small>
+            <strong>{{ selectedRankingItems.length }}</strong>
+          </article>
+          <article class="top-product-ranking-upload-log__stat-card" :class="failedRankingCount > 0 ? 'top-product-ranking-upload-log__stat-card--danger' : 'top-product-ranking-upload-log__stat-card--success'">
+            <small>Attention</small>
+            <strong>{{ failedRankingCount }}</strong>
+          </article>
+        </section>
+
         <section class="top-product-ranking-upload-log__station-tabs">
           <button
             type="button"
@@ -56,6 +103,23 @@
             <span>Test Result</span>
             <AppSelect v-model="resultFilter" :options="resultFilterSelectOptions" :searchable="false" />
           </label>
+          <div class="top-product-ranking-upload-log__field top-product-ranking-upload-log__field--actions">
+            <span>Filters</span>
+            <div class="top-product-ranking-upload-log__action-row">
+              <span class="top-product-ranking-upload-log__badge top-product-ranking-upload-log__badge--neutral">
+                {{ activeRankingFilterCount }} active
+              </span>
+              <button
+                v-if="hasActiveRankingFilters"
+                type="button"
+                class="top-product-ranking-upload-log__ghost-button"
+                @click="resetRankingFilters"
+              >
+                <Icon icon="mdi:filter-off" />
+                <span>Clear</span>
+              </button>
+            </div>
+          </div>
         </section>
 
         <AppDataGrid
@@ -107,6 +171,7 @@
               type="button"
               class="top-product-ranking-upload-log__score-button"
               :class="scoreBadgeClass(data.score)"
+              title="View overall score breakdown"
               @click.stop="showScoreBreakdownForIsn(data)"
             >
               <span>{{ data.score.toFixed(2) }}</span>
@@ -422,71 +487,73 @@
 
     <AppDialog
       v-model="showBreakdownDialog"
-      v-model:fullscreen="breakdownFullscreen"
-      width="min(94vw, 44rem)"
-      fullscreen-width="96vw"
+      width="min(92vw, 34rem)"
       :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
-      fullscreenable
       :showFooter="false"
-      :title="selectedTestItem?.test_item || 'Score Breakdown'"
-      description="Review the scoring inputs and final score for this test item."
+      sticky-header
+      title="Score Breakdown"
+      :description="selectedTestItem?.test_item || 'Test Item'"
       class="top-product-ranking-upload-log__dialog top-product-ranking-upload-log__dialog--breakdown"
     >
 
       <div v-if="selectedTestItem?.score_breakdown" class="top-product-ranking-upload-log__breakdown-shell">
-        <section class="top-product-ranking-upload-log__summary-grid">
-          <article class="top-product-ranking-upload-log__summary-card">
-            <small>Actual Value</small>
-            <strong>{{ selectedTestItem.value }}</strong>
-          </article>
-          <article class="top-product-ranking-upload-log__summary-card">
-            <small>Score</small>
-            <strong>{{ selectedTestItem.score?.toFixed(2) ?? 'N/A' }}</strong>
-          </article>
-          <article class="top-product-ranking-upload-log__summary-card">
-            <small>Scoring Type</small>
-            <strong>{{ selectedTestItem.score_breakdown.scoring_type ?? 'N/A' }}</strong>
-          </article>
+        <section class="top-product-ranking-upload-log__breakdown-name-card">
+          <span class="top-product-ranking-upload-log__breakdown-name-text">{{ selectedTestItem.test_item }}</span>
         </section>
 
-        <div class="top-product-ranking-upload-log__detail-table">
-          <div class="top-product-ranking-upload-log__detail-row">
-            <span>Scoring Type</span>
-            <strong>{{ selectedTestItem.score_breakdown.scoring_type }}</strong>
+        <section class="top-product-ranking-upload-log__breakdown-rows-container">
+          <div v-for="row in breakdownRows" :key="row.key" class="top-product-ranking-upload-log__breakdown-row">
+            <div class="top-product-ranking-upload-log__breakdown-row-left">
+              <span class="top-product-ranking-upload-log__breakdown-row-icon" :class="getBreakdownIconClass(row)">
+                <Icon :icon="getBreakdownRowIcon(row)" />
+              </span>
+              <span class="top-product-ranking-upload-log__breakdown-row-label">{{ row.label }}</span>
+            </div>
+            <div class="top-product-ranking-upload-log__breakdown-row-right">
+              <span
+                v-if="row.valueTone === 'score'"
+                class="top-product-ranking-upload-log__score-chip"
+                :class="scoreBadgeClass(selectedTestItem.score ?? 0)"
+              >
+                {{ row.value }}
+              </span>
+              <span
+                v-else-if="row.valueTone === 'algorithm'"
+                class="top-product-ranking-upload-log__breakdown-value-pill top-product-ranking-upload-log__breakdown-value-pill--cool"
+              >
+                {{ row.value }}
+              </span>
+              <span
+                v-else-if="row.valueTone === 'policy'"
+                class="top-product-ranking-upload-log__breakdown-value-pill top-product-ranking-upload-log__breakdown-value-pill--neutral"
+              >
+                {{ row.value }}
+              </span>
+              <span
+                v-else
+                class="top-product-ranking-upload-log__breakdown-value-text"
+                :class="{ 'top-product-ranking-upload-log__breakdown-value--warning': row.valueTone === 'warning' }"
+              >
+                {{ row.value }}
+              </span>
+            </div>
           </div>
-          <div v-if="selectedTestItem.score_breakdown.ucl !== null && selectedTestItem.score_breakdown.ucl !== undefined" class="top-product-ranking-upload-log__detail-row">
-            <span>UCL (Upper Limit)</span>
-            <strong>{{ selectedTestItem.score_breakdown.ucl }}</strong>
+        </section>
+
+        <details class="top-product-ranking-upload-log__explanation-card">
+          <summary>
+            <span>
+              <Icon icon="mdi:help-circle-outline" /> How is this score calculated?
+            </span>
+          </summary>
+          <div class="top-product-ranking-upload-log__explanation-body">
+            <div class="top-product-ranking-upload-log__formula-panel top-product-ranking-upload-log__formula-panel--compact">
+              <div class="top-product-ranking-upload-log__metric-label">Formula</div>
+              <div class="top-product-ranking-upload-log__formula-equation">{{ getUploadScoringFormula(selectedTestItem.score_breakdown.scoring_type) }}</div>
+            </div>
+            <p>{{ getUploadScoringExplanation(selectedTestItem.score_breakdown.scoring_type) }}</p>
           </div>
-          <div v-if="selectedTestItem.score_breakdown.lcl !== null && selectedTestItem.score_breakdown.lcl !== undefined" class="top-product-ranking-upload-log__detail-row">
-            <span>LCL (Lower Limit)</span>
-            <strong>{{ selectedTestItem.score_breakdown.lcl }}</strong>
-          </div>
-          <div v-if="selectedTestItem.score_breakdown.target !== null && selectedTestItem.score_breakdown.target !== undefined" class="top-product-ranking-upload-log__detail-row">
-            <span>Target</span>
-            <strong>{{ selectedTestItem.score_breakdown.target?.toFixed(2) }}</strong>
-          </div>
-          <div v-if="selectedTestItem.score_breakdown.actual !== null && selectedTestItem.score_breakdown.actual !== undefined" class="top-product-ranking-upload-log__detail-row">
-            <span>Actual Value</span>
-            <strong>{{ selectedTestItem.score_breakdown.actual }}</strong>
-          </div>
-          <div v-if="selectedTestItem.score_breakdown.deviation !== null && selectedTestItem.score_breakdown.deviation !== undefined" class="top-product-ranking-upload-log__detail-row">
-            <span>Deviation</span>
-            <strong>{{ selectedTestItem.score_breakdown.deviation?.toFixed(2) }}</strong>
-          </div>
-          <div v-if="selectedTestItem.score_breakdown.policy" class="top-product-ranking-upload-log__detail-row">
-            <span>Policy</span>
-            <strong>{{ selectedTestItem.score_breakdown.policy }}</strong>
-          </div>
-          <div class="top-product-ranking-upload-log__detail-row">
-            <span>Weight</span>
-            <strong>{{ selectedTestItem.score_breakdown.weight ?? 1.0 }}</strong>
-          </div>
-          <div class="top-product-ranking-upload-log__detail-row top-product-ranking-upload-log__detail-row--highlight">
-            <span>Score (0-10)</span>
-            <strong>{{ selectedTestItem.score_breakdown.score?.toFixed(2) ?? 'N/A' }}</strong>
-          </div>
-        </div>
+        </details>
       </div>
     </AppDialog>
 
@@ -594,6 +661,23 @@
             <span>Test Result</span>
             <AppSelect v-model="resultFilter" :options="resultFilterSelectOptions" :searchable="false" />
           </label>
+          <div class="top-product-ranking-upload-log__field top-product-ranking-upload-log__field--actions">
+            <span>Filters</span>
+            <div class="top-product-ranking-upload-log__action-row">
+              <span class="top-product-ranking-upload-log__badge top-product-ranking-upload-log__badge--neutral">
+                {{ activeRankingFilterCount }} active
+              </span>
+              <button
+                v-if="hasActiveRankingFilters"
+                type="button"
+                class="top-product-ranking-upload-log__ghost-button"
+                @click="resetRankingFilters"
+              >
+                <Icon icon="mdi:filter-off" />
+                <span>Clear</span>
+              </button>
+            </div>
+          </div>
         </section>
 
         <AppDataGrid
@@ -645,6 +729,7 @@
               type="button"
               class="top-product-ranking-upload-log__score-button"
               :class="scoreBadgeClass(data.score)"
+              title="View overall score breakdown"
               @click.stop="showScoreBreakdownForIsn(data)"
             >
               <span>{{ data.score.toFixed(2) }}</span>
@@ -719,6 +804,13 @@ interface ForcedFailItemRow {
   threshold: number
 }
 
+interface BreakdownGridRow {
+  key: string
+  label: string
+  value: string
+  valueTone?: 'score' | 'algorithm' | 'policy' | 'warning'
+}
+
 const dialogBreakpoints = {
   '1400px': '96vw',
   '960px': '98vw',
@@ -742,7 +834,6 @@ const selectedRankingItem = ref<RankingItem | null>(null)
 const selectedTestItems = ref<ParsedTestItemEnhanced[]>([])
 
 const showBreakdownDialog = ref(false)
-const breakdownFullscreen = ref(false)
 const selectedTestItem = ref<ParsedTestItemEnhanced | null>(null)
 const showOverallScoreDialog = ref(false)
 const showForcedFailDialog = ref(false)
@@ -989,6 +1080,22 @@ const filteredRankings = computed(() => {
   return filtered
 })
 
+const activeStationLabel = computed(() => (stationTab.value === 'all' ? 'All Stations' : stationTab.value))
+
+const failedRankingCount = computed(
+  () => filteredRankings.value.filter((item) => isFailResult(item.result)).length,
+)
+
+const activeRankingFilterCount = computed(() => {
+  let count = stationTab.value === 'all' ? 0 : 1
+  if (searchQuery.value.trim()) count += 1
+  if (scoreFilterType.value && scoreFilterValue.value !== null) count += 1
+  if (resultFilter.value) count += 1
+  return count
+})
+
+const hasActiveRankingFilters = computed(() => activeRankingFilterCount.value > 0)
+
 const scoringConfigMap = computed(() => new Map((props.scoringConfigs || []).map((config) => [config.test_item_name, config])))
 
 const includedTestItemNameSet = computed(
@@ -1110,6 +1217,76 @@ const overallScoreDetails = computed(() => {
   }
 })
 
+const breakdownRows = computed<BreakdownGridRow[]>(() => {
+  const item = selectedTestItem.value
+
+  if (!item?.score_breakdown) {
+    return []
+  }
+
+  const breakdown = item.score_breakdown
+  const rows: BreakdownGridRow[] = [
+    {
+      key: 'ucl',
+      label: 'Upper Criteria Limit (UCL)',
+      value: formatBreakdownNumber(breakdown.ucl ?? item.usl),
+    },
+    {
+      key: 'lcl',
+      label: 'Lower Criteria Limit (LCL)',
+      value: formatBreakdownNumber(breakdown.lcl ?? item.lsl),
+    },
+    {
+      key: 'actual',
+      label: 'Measured Value',
+      value: formatBreakdownNumber(breakdown.actual ?? item.numeric_value, item.value),
+    },
+    {
+      key: 'target',
+      label: `Target (${getTargetLabel(breakdown.policy)})`,
+      value: formatBreakdownNumber(breakdown.target ?? item.target),
+    },
+    {
+      key: 'scoringType',
+      label: 'Scoring Algorithm',
+      value: formatScoringAlgorithm(breakdown.scoring_type),
+      valueTone: 'algorithm',
+    },
+    {
+      key: 'weight',
+      label: 'Score Weight',
+      value: formatBreakdownNumber(breakdown.weight ?? 1),
+    },
+  ]
+
+  if (breakdown.deviation !== null && breakdown.deviation !== undefined) {
+    rows.push({
+      key: 'deviation',
+      label: 'Deviation from Target',
+      value: formatBreakdownNumber(breakdown.deviation),
+      valueTone: Math.abs(breakdown.deviation) > 1 ? 'warning' : undefined,
+    })
+  }
+
+  if (breakdown.policy) {
+    rows.push({
+      key: 'policy',
+      label: 'Policy',
+      value: formatPolicyLabel(breakdown.policy),
+      valueTone: 'policy',
+    })
+  }
+
+  rows.push({
+    key: 'score',
+    label: 'Final Score',
+    value: formatUploadScore(item.score ?? breakdown.score),
+    valueTone: 'score',
+  })
+
+  return rows
+})
+
 function getConfiguredMinScore(item: ParsedTestItemEnhanced): number | null {
   const minScore = scoringConfigMap.value.get(item.test_item)?.min_score
   return minScore === null || minScore === undefined ? null : minScore * 10
@@ -1160,7 +1337,7 @@ watch(showTestItemsDialog, (isOpen) => {
 
 watch(showBreakdownDialog, (isOpen) => {
   if (!isOpen) {
-    breakdownFullscreen.value = false
+    selectedTestItem.value = null
   }
 })
 
@@ -1231,7 +1408,7 @@ const copyIsnToClipboard = async (isn: string | null) => {
   }
 }
 
-const openRankingItem = (item: RankingItem) => {
+const selectRankingItem = (item: RankingItem) => {
   selectedRankingItem.value = item
 
   if (props.parseResult?.parsed_items_enhanced) {
@@ -1283,7 +1460,10 @@ const openRankingItem = (item: RankingItem) => {
 
     selectedTestItems.value = isnTestItems
   }
+}
 
+const openRankingItem = (item: RankingItem) => {
+  selectRankingItem(item)
   showTestItemsDialog.value = true
 }
 
@@ -1321,7 +1501,8 @@ const showScoreBreakdown = (item: ParsedTestItemEnhanced) => {
 }
 
 const showScoreBreakdownForIsn = (item: RankingItem) => {
-  openRankingItem(item)
+  selectRankingItem(item)
+  showOverallScoreDialog.value = true
 }
 
 const openOverallScoreDialog = () => {
@@ -1528,6 +1709,119 @@ function scoreBadgeClass(score: number): string {
   return 'top-product-ranking-upload-log__score-button--error'
 }
 
+function resetRankingFilters() {
+  stationTab.value = 'all'
+  searchQuery.value = ''
+  scoreFilterType.value = null
+  scoreFilterValue.value = null
+  resultFilter.value = null
+}
+
+function formatUploadScore(score: number | null | undefined): string {
+  if (score === null || score === undefined) return '-'
+  return score.toFixed(2)
+}
+
+function formatBreakdownNumber(value: number | null | undefined, fallback = '-'): string {
+  if (value === null || value === undefined || Number.isNaN(value)) return fallback
+  return Number.isInteger(value) ? String(value) : value.toFixed(2)
+}
+
+function formatScoringAlgorithm(type: string | undefined): string {
+  switch (type) {
+    case 'symmetrical':
+      return 'Symmetrical'
+    case 'asymmetrical':
+      return 'Asymmetrical'
+    case 'per_mask':
+      return 'Near-Zero'
+    case 'evm':
+      return 'EVM'
+    case 'throughput':
+      return 'Throughput'
+    case 'binary':
+      return 'Binary'
+    default:
+      return type || 'System Default'
+  }
+}
+
+function formatPolicyLabel(policy: string): string {
+  if (policy === 'higher') return 'Higher is better'
+  if (policy === 'lower') return 'Lower is better'
+  return 'Symmetrical'
+}
+
+function getTargetLabel(policy: string | null | undefined): string {
+  if (policy === 'higher') return 'higher is better'
+  if (policy === 'lower') return 'lower is better'
+  return 'centered'
+}
+
+function getBreakdownRowIcon(row: BreakdownGridRow): string {
+  const iconMap: Record<string, string> = {
+    ucl: 'mdi:arrow-up-bold',
+    lcl: 'mdi:arrow-down-bold',
+    actual: 'mdi:speedometer',
+    target: 'mdi:crosshairs-gps',
+    scoringType: 'mdi:function-variant',
+    weight: 'mdi:weight',
+    deviation: 'mdi:delta',
+    policy: 'mdi:shield-check-outline',
+    score: 'mdi:star',
+  }
+  return iconMap[row.key] ?? 'mdi:information-outline'
+}
+
+function getBreakdownIconClass(row: BreakdownGridRow): string {
+  const classMap: Record<string, string> = {
+    ucl: 'top-product-ranking-upload-log__breakdown-row-icon--red',
+    lcl: 'top-product-ranking-upload-log__breakdown-row-icon--orange',
+    actual: 'top-product-ranking-upload-log__breakdown-row-icon--blue',
+    target: 'top-product-ranking-upload-log__breakdown-row-icon--green',
+    scoringType: 'top-product-ranking-upload-log__breakdown-row-icon--purple',
+    weight: 'top-product-ranking-upload-log__breakdown-row-icon--muted',
+    deviation: 'top-product-ranking-upload-log__breakdown-row-icon--amber',
+    policy: 'top-product-ranking-upload-log__breakdown-row-icon--muted',
+    score: 'top-product-ranking-upload-log__breakdown-row-icon--star',
+  }
+  return classMap[row.key] ?? ''
+}
+
+function getUploadScoringFormula(scoringType: string | undefined): string {
+  switch (scoringType) {
+    case 'asymmetrical':
+      return 'Score = directional distance from target, adjusted by policy'
+    case 'per_mask':
+      return 'Score = 10 when value is near zero, then decreases toward UCL'
+    case 'evm':
+      return 'Score = 10 when EVM is low, then decreases as it approaches UCL'
+    case 'throughput':
+      return 'Score = 10 when throughput is high, with LCL as the minimum bound'
+    case 'binary':
+      return 'Score = PASS ? 10 : 0'
+    default:
+      return 'Score = 10 x (1 - distance from target / allowed distance)'
+  }
+}
+
+function getUploadScoringExplanation(scoringType: string | undefined): string {
+  switch (scoringType) {
+    case 'asymmetrical':
+      return 'This item uses a configured target and policy, so the score favors values on the preferred side of the target while still respecting the available limits.'
+    case 'per_mask':
+      return 'Near-zero items are best when the measured value is closest to zero. Higher values reduce the score as they approach the upper limit.'
+    case 'evm':
+      return 'EVM items favor lower measured values. The score drops as the value moves toward the upper criteria limit.'
+    case 'throughput':
+      return 'Throughput items favor higher measured values. Values below the lower criteria limit receive a lower score.'
+    case 'binary':
+      return 'Binary items are scored directly from their PASS or FAIL result.'
+    default:
+      return 'Symmetrical scoring uses the midpoint between limits as the target and lowers the score as the measurement moves away from that center.'
+  }
+}
+
 function resultBadgeClass(result: string | null): string {
   const color = getResultColor(result)
   if (color === 'success') return 'top-product-ranking-upload-log__badge--success'
@@ -1611,11 +1905,16 @@ function rankingRowClass(row: Record<string, unknown>) {
 }
 
 .top-product-ranking-upload-log__stat-grid,
+.top-product-ranking-upload-log__dialog-summary-grid,
 .top-product-ranking-upload-log__summary-grid,
 .top-product-ranking-upload-log__filter-grid {
   display: grid;
   gap: 0.85rem;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.top-product-ranking-upload-log__dialog-summary-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .top-product-ranking-upload-log__overall-summary-grid {
@@ -1639,6 +1938,16 @@ function rankingRowClass(row: Record<string, unknown>) {
 .top-product-ranking-upload-log__stat-card--warm,
 .top-product-ranking-upload-log__summary-card--highlight {
   background: rgba(184, 118, 38, 0.1);
+}
+
+.top-product-ranking-upload-log__stat-card--success {
+  background: rgba(15, 118, 110, 0.1);
+  border-color: rgba(15, 118, 110, 0.2);
+}
+
+.top-product-ranking-upload-log__stat-card--danger {
+  background: rgba(189, 64, 64, 0.12);
+  border-color: rgba(189, 64, 64, 0.24);
 }
 
 .top-product-ranking-upload-log__stat-card small,
@@ -1857,6 +2166,16 @@ function rankingRowClass(row: Record<string, unknown>) {
   padding: 0.35rem 0.75rem;
 }
 
+.top-product-ranking-upload-log__score-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .top-product-ranking-upload-log__score-button--success {
   background: rgba(15, 118, 110, 0.12);
   color: var(--app-accent);
@@ -1970,6 +2289,163 @@ function rankingRowClass(row: Record<string, unknown>) {
   line-height: 1.15;
 }
 
+.top-product-ranking-upload-log__breakdown-name-card,
+.top-product-ranking-upload-log__explanation-card,
+.top-product-ranking-upload-log__formula-panel {
+  border: 1px solid var(--app-border);
+  border-radius: 0.9rem;
+  background: var(--app-panel);
+}
+
+.top-product-ranking-upload-log__breakdown-name-card {
+  padding: 0.9rem 1rem;
+}
+
+.top-product-ranking-upload-log__breakdown-name-text {
+  display: block;
+  color: var(--app-ink);
+  font-weight: 800;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.top-product-ranking-upload-log__breakdown-rows-container {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.top-product-ranking-upload-log__breakdown-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.8rem;
+  align-items: center;
+  border: 1px solid var(--app-border);
+  border-radius: 0.85rem;
+  padding: 0.7rem 0.8rem;
+  background: var(--app-panel-strong);
+}
+
+.top-product-ranking-upload-log__breakdown-row-left,
+.top-product-ranking-upload-log__breakdown-row-right,
+.top-product-ranking-upload-log__explanation-card summary span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  min-width: 0;
+}
+
+.top-product-ranking-upload-log__breakdown-row-right {
+  justify-content: flex-end;
+}
+
+.top-product-ranking-upload-log__breakdown-row-icon {
+  display: inline-flex;
+  width: 1.8rem;
+  height: 1.8rem;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: rgba(120, 129, 143, 0.12);
+  color: #4f5d6d;
+}
+
+.top-product-ranking-upload-log__breakdown-row-icon--red {
+  background: rgba(189, 64, 64, 0.12);
+  color: #8f2020;
+}
+
+.top-product-ranking-upload-log__breakdown-row-icon--orange,
+.top-product-ranking-upload-log__breakdown-row-icon--amber {
+  background: rgba(184, 118, 38, 0.14);
+  color: #8f5314;
+}
+
+.top-product-ranking-upload-log__breakdown-row-icon--blue {
+  background: rgba(40, 96, 163, 0.12);
+  color: #1f4e86;
+}
+
+.top-product-ranking-upload-log__breakdown-row-icon--green,
+.top-product-ranking-upload-log__breakdown-row-icon--star {
+  background: rgba(15, 118, 110, 0.12);
+  color: var(--app-accent);
+}
+
+.top-product-ranking-upload-log__breakdown-row-icon--purple {
+  background: rgba(99, 102, 241, 0.12);
+  color: #4f46e5;
+}
+
+.top-product-ranking-upload-log__breakdown-row-label {
+  color: var(--app-muted);
+  font-weight: 700;
+}
+
+.top-product-ranking-upload-log__breakdown-value-text,
+.top-product-ranking-upload-log__breakdown-value-pill {
+  color: var(--app-ink);
+  font-weight: 800;
+  text-align: right;
+}
+
+.top-product-ranking-upload-log__breakdown-value-pill {
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+}
+
+.top-product-ranking-upload-log__breakdown-value-pill--cool {
+  background: rgba(40, 96, 163, 0.1);
+  color: #1f4e86;
+}
+
+.top-product-ranking-upload-log__breakdown-value-pill--neutral {
+  background: rgba(120, 129, 143, 0.12);
+  color: #4f5d6d;
+}
+
+.top-product-ranking-upload-log__breakdown-value--warning {
+  color: #8f5314;
+}
+
+.top-product-ranking-upload-log__explanation-card {
+  padding: 0.85rem 1rem;
+}
+
+.top-product-ranking-upload-log__explanation-card summary {
+  cursor: pointer;
+  color: var(--app-ink);
+  font-weight: 800;
+}
+
+.top-product-ranking-upload-log__explanation-body {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.8rem;
+  color: var(--app-muted);
+  line-height: 1.55;
+}
+
+.top-product-ranking-upload-log__formula-panel {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.8rem;
+  background: var(--app-panel-strong);
+}
+
+.top-product-ranking-upload-log__metric-label {
+  color: var(--app-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.top-product-ranking-upload-log__formula-equation {
+  color: var(--app-ink);
+  font-family: ui-monospace, SFMono-Regular, Consolas, 'Liberation Mono', monospace;
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
 .top-product-ranking-upload-log__row--fail :deep(td) {
   background: rgba(189, 64, 64, 0.04);
 }
@@ -2007,12 +2483,24 @@ function rankingRowClass(row: Record<string, unknown>) {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .top-product-ranking-upload-log__dialog-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .top-product-ranking-upload-log__detail-row {
     grid-template-columns: 1fr;
   }
 
   .top-product-ranking-upload-log__contribution-table .top-product-ranking-upload-log__detail-row {
     grid-template-columns: 1fr;
+  }
+
+  .top-product-ranking-upload-log__breakdown-row {
+    grid-template-columns: 1fr;
+  }
+
+  .top-product-ranking-upload-log__breakdown-row-right {
+    justify-content: flex-start;
   }
 }
 </style>

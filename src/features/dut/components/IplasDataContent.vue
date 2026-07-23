@@ -279,7 +279,10 @@
 
       <template #panel-isn>
         <section class="iplas-content-pane">
-          <IplasIsnSearchContent v-if="searchMode === 'isn'" />
+          <IplasIsnSearchContent
+            v-if="searchMode === 'isn'"
+            @show-settings="emit('show-settings')"
+          />
         </section>
       </template>
     </AppTabs>

@@ -16,7 +16,10 @@
 
             <AppTabs v-model="activeTab" :items="tabItems" class="data-explorer-tabs">
                 <template #panel-iplas>
-                    <IplasDataContent v-if="activeTab === 'iplas'" />
+                    <IplasDataContent
+                        v-if="activeTab === 'iplas'"
+                        @show-settings="showIplasSettingsDialog = true"
+                    />
                 </template>
 
                 <template #panel-internal>
@@ -31,22 +34,28 @@
                     </div>
                 </template>
             </AppTabs>
+
+            <IplasSettingsDialog v-model="showIplasSettingsDialog" />
         </div>
     </DefaultLayout>
 </template>
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { defineAsyncComponent } from 'vue'
+import { defineAsyncComponent, ref } from 'vue'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 
 const IplasDataContent = defineAsyncComponent(() => import('../components/IplasDataContent.vue'))
+const IplasSettingsDialog = defineAsyncComponent(
+  () => import('../components/IplasSettingsDialog.vue'),
+)
 const InternalDataContent = defineAsyncComponent(
   () => import('../components/InternalDataContent.vue'),
 )
 
 const activeTab = useTabPersistence<'iplas' | 'internal'>('tab', 'iplas')
+const showIplasSettingsDialog = ref(false)
 
 const tabItems = [
   { value: 'iplas', label: 'iPLAS Data', icon: 'mdi:cloud-download-outline' },

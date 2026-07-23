@@ -246,10 +246,15 @@
     </template>
   </AppDialog>
 
-  <AppDialog :model-value="singleItemScoringDialog"
-    :title="singleConfigItem ? 'Configure Scoring' : 'Configure Scoring'" :description="singleConfigItem ?? ''"
-    width="min(92vw, 32rem)" persistent @update:modelValue="singleItemScoringDialog = $event">
+  <AppDialog :model-value="singleItemScoringDialog" title="Configure Scoring"
+    :description="singleConfigItem ? `Test Item: ${singleConfigItem}` : 'Test Item'" width="min(92vw, 36rem)"
+    persistent @update:modelValue="singleItemScoringDialog = $event">
     <div v-if="singleConfigItem" class="upload-scoring-dialog__modal-stack">
+      <section class="upload-scoring-dialog__test-item-card">
+        <small>Test Item</small>
+        <strong :title="singleConfigItem">{{ singleConfigItem }}</strong>
+      </section>
+
       <label class="upload-scoring-dialog__field">
         <span>Analysis Scope</span>
         <AppSelect :model-value="getItemScopeMode(singleConfigItem)" :options="itemScopeSelectOptions"
@@ -257,7 +262,7 @@
       </label>
 
       <label class="upload-scoring-dialog__field">
-        <span>Scoring Type</span>
+        <span>Scoring Algorithm</span>
         <AppSelect :model-value="getSingleDialogConfig()?.scoring_type ?? 'symmetrical'"
           :options="scoringTypeSelectOptions" :searchable="false"
           @update:model-value="updateSingleDialogScoringType($event as RescoreScoringConfig['scoring_type'])" />
@@ -269,18 +274,18 @@
       </div>
 
       <label v-if="getSingleDialogConfig()?.scoring_type === 'asymmetrical'" class="upload-scoring-dialog__field">
-        <span>Policy</span>
+        <span>Scoring Policy</span>
         <AppSelect :model-value="getSingleDialogConfig()?.policy ?? 'symmetrical'" :options="policySelectOptions"
           :searchable="false"
           @update:model-value="updateSingleDialogPolicy($event as RescoreScoringConfig['policy'])" />
       </label>
 
       <label v-if="getSingleDialogConfig()?.scoring_type === 'asymmetrical'" class="upload-scoring-dialog__field">
-        <span>Custom Target</span>
+        <span>Target Value</span>
         <input :value="getSingleDialogConfig()?.target ?? ''" type="number"
           placeholder="Leave empty for midpoint auto-detection"
           @input="updateSingleDialogTarget(toOptionalNumber(($event.target as HTMLInputElement).value))" />
-        <small>Leave empty for auto-detection from the midpoint of UCL and LCL.</small>
+        <small>Leave empty to use the midpoint of UCL and LCL.</small>
       </label>
 
       <label class="upload-scoring-dialog__field">
@@ -295,7 +300,15 @@
         <input :value="getSingleDialogMinScoreValue()" type="number" min="0" max="10" step="0.1"
           placeholder="Leave empty to ignore low-score filtering"
           @input="updateSingleDialogMinScore(($event.target as HTMLInputElement).value)" />
-        <small>Exclude this item from aggregate analysis when its score falls below the threshold.</small>
+        <small>Items below this threshold mark the DUT as Min. Score Fail.</small>
+      </label>
+
+      <label class="upload-scoring-dialog__field">
+        <span>Maximum Deviation</span>
+        <input :value="getSingleDialogMaxDeviationValue()" type="number" min="0" step="0.01"
+          placeholder="Leave empty to disable deviation fail"
+          @input="updateSingleDialogMaxDeviation(($event.target as HTMLInputElement).value)" />
+        <small>If the measured deviation exceeds this value, the DUT is marked as Deviation Fail.</small>
       </label>
 
       <AppPanel v-if="singleDialogSpecs" title="Item Specifications" tone="warm" compact-header>
@@ -909,6 +922,20 @@ function updateSingleDialogMinScore(rawValue: string) {
 
   const parsed = toOptionalNumber(rawValue)
   config.min_score = parsed === undefined ? undefined : clampNumber(parsed, 0, 10) / 10
+}
+
+function getSingleDialogMaxDeviationValue(): string {
+  const maxDeviation = getSingleDialogConfig()?.max_deviation
+  if (maxDeviation === null || maxDeviation === undefined) return ''
+  return String(maxDeviation)
+}
+
+function updateSingleDialogMaxDeviation(rawValue: string) {
+  const config = getSingleDialogConfig()
+  if (!config) return
+
+  const parsed = toOptionalNumber(rawValue)
+  config.max_deviation = parsed === undefined ? undefined : Math.max(0, parsed)
 }
 
 function getGlobalMinScoreValue(): string {
@@ -1605,6 +1632,27 @@ watch(
 .upload-scoring-dialog__modal-stack {
   display: grid;
   gap: 1rem;
+}
+
+.upload-scoring-dialog__test-item-card {
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.95rem;
+  padding: 0.9rem 1rem;
+  background: var(--app-panel-strong);
+}
+
+.upload-scoring-dialog__test-item-card small {
+  color: var(--app-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.upload-scoring-dialog__test-item-card strong {
+  color: var(--app-ink);
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .upload-scoring-dialog__spec-grid {

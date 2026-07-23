@@ -9,6 +9,13 @@
           <span v-else class="iplas-isn-pill iplas-isn-pill--primary">
             {{ bulkModeIdentifiers.length }} parsed
           </span>
+          <button
+            type="button"
+            class="iplas-isn-button iplas-isn-button--ghost"
+            @click="emit('show-settings')"
+          >
+            iPLAS Settings
+          </button>
           <button type="button" class="iplas-isn-button iplas-isn-button--ghost"
             :disabled="loadingIsnSearch || !canClearAll" @click="clearAll">
             Clear All
@@ -514,6 +521,8 @@ import { isStatusPass } from '@/shared/utils/helpers'
 import IplasTestItemsFullscreenDialog, {
   type NormalizedRecord,
 } from './IplasTestItemsFullscreenDialog.vue'
+
+const emit = defineEmits<(e: 'show-settings') => void>()
 
 // ============================================================================
 // Timezone Utilities for ISN Search API
