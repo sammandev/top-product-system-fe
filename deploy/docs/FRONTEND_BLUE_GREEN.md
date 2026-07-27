@@ -166,6 +166,21 @@ bash ./scripts/status.sh
 The edge-proxy home could not be created from the repository template, or you
 pointed `TOP_PRODUCT_EDGE_DIR` at the wrong path.
 
+### Nginx warns `worker_connections exceed open file resource limit`
+
+The edge proxy must be recreated with the template compose file so Docker applies
+the `nofile` ulimit used by Nginx. After updating the edge-proxy home from the
+latest template, run:
+
+```bash
+cd deployment-infra/edge-proxy
+docker compose up -d --force-recreate edge-proxy
+bash ./scripts/reload-edge.sh
+```
+
+Then `nginx -t` should report syntax success without the worker connection
+warning.
+
 ### Dirty git tree during deploy
 
 Run this once in each frontend worktree:
