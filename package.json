@@ -23,6 +23,7 @@
     "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
+    "@fontsource/inter": "^5.3.0",
     "@iconify/vue": "^5.0.0",
     "@primeuix/themes": "^2.0.3",
     "@sentry/vue": "^10.45.0",
