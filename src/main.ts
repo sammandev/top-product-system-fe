@@ -1,10 +1,11 @@
-import { createApp } from 'vue'
-import { captureFrontendException, initializeSentry, installAppProviders } from '@/app/providers'
+import { createApp, defineAsyncComponent } from 'vue'
+import { installAppProviders } from '@/app/providers'
+import { envConfig } from '@/core/config/env.config'
 import router from '@/core/router'
-import { useAppConfigStore } from '@/core/stores/appConfig.store'
-import { useAuthStore } from '@/features/auth/stores/auth.store'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
-import { applyThemePreferences, getStoredThemePreferences } from '@/shared/composables'
+import {
+  applyThemePreferences,
+  getStoredThemePreferences,
+} from '@/shared/composables/useThemeState'
 import App from './App.vue'
 
 // Import global styles
@@ -12,34 +13,66 @@ import './app/styles/index.css'
 import './assets/main.css'
 
 const app = createApp(App)
+const DefaultLayout = defineAsyncComponent(() => import('@/layouts/DefaultLayout.vue'))
+let sentryProviderPromise: Promise<typeof import('@/app/providers/sentry')> | null = null
 
-// Register global layout component used by 23+ views
+function loadSentryProvider() {
+  sentryProviderPromise ??= import('@/app/providers/sentry')
+  return sentryProviderPromise
+}
+
+function initializeErrorTracking() {
+  if (!envConfig.sentryDsn) {
+    return
+  }
+
+  void loadSentryProvider().then(({ initializeSentry }) => {
+    initializeSentry(app, router)
+  })
+}
+
+function captureRuntimeException(error: unknown) {
+  if (!envConfig.sentryDsn) {
+    return
+  }
+
+  void loadSentryProvider().then(({ captureFrontendException }) => {
+    captureFrontendException(error)
+  })
+}
+
 app.component('DefaultLayout', DefaultLayout)
 
-initializeSentry(app, router)
+initializeErrorTracking()
 installAppProviders(app, router)
 applyThemePreferences(getStoredThemePreferences(), { persist: false })
 
 app.config.errorHandler = (error, _instance, info) => {
   console.error('Vue error:', error, info)
-  captureFrontendException(error)
+  captureRuntimeException(error)
 }
 
 window.addEventListener('unhandledrejection', (event) => {
   console.error('Unhandled promise rejection:', event.reason)
-  captureFrontendException(event.reason)
+  captureRuntimeException(event.reason)
 })
 
 window.addEventListener('error', (event) => {
   console.error('Window error:', event.error || event.message)
-  captureFrontendException(event.error || event.message)
+  captureRuntimeException(event.error || event.message)
 })
 
-// Initialize stores
-const authStore = useAuthStore()
-authStore.initialize()
-
-const appConfigStore = useAppConfigStore()
-appConfigStore.initialize()
+function initializeRuntimeStores() {
+  void import('@/features/auth/stores/auth.store').then(({ useAuthStore }) => {
+    void useAuthStore().initialize()
+  })
+  void import('@/core/stores/appConfig.store').then(({ useAppConfigStore }) => {
+    void useAppConfigStore().initialize()
+  })
+}
 
 app.mount('#app')
+
+window.requestAnimationFrame(() => {
+  window.setTimeout(initializeRuntimeStores, 0)
+})

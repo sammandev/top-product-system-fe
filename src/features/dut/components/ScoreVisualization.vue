@@ -37,7 +37,8 @@
 import type { EChartsOption } from 'echarts'
 import { computed, ref } from 'vue'
 import type { TopProduct } from '@/core/types'
-import { AppPanel, AppTabs, VChart } from '@/shared/ui'
+import { AppPanel, AppTabs } from '@/shared/ui'
+import { VChart } from '@/shared/ui/charts'
 
 interface ChartTabItem {
   value: ChartKey

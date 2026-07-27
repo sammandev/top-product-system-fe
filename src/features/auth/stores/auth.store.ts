@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import type { ExternalLoginRequest, LoginRequest, User } from '@/core/types'
-import { getApiErrorDetail, getErrorStatus } from '@/shared/utils'
+import { getApiErrorDetail, getErrorStatus } from '@/shared/utils/error'
 import { authApi } from '../api/auth.api'
 
 /**

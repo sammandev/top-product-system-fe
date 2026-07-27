@@ -33,7 +33,8 @@
 import type { EChartsOption } from 'echarts'
 import { computed, type PropType, ref, watch } from 'vue'
 import type { GroupScores } from '@/core/types'
-import { AppPanel, AppSelect, VChart } from '@/shared/ui'
+import { AppPanel, AppSelect } from '@/shared/ui'
+import { VChart } from '@/shared/ui/charts'
 
 const props = defineProps({
   groupScores: {

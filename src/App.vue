@@ -4,7 +4,7 @@
 </template>
 
 <script setup lang="ts">
-import { AppToastHost } from '@/shared'
+import AppToastHost from '@/shared/ui/toast/AppToastHost.vue'
 </script>
 
 <style>

@@ -18,7 +18,8 @@
 import type { EChartsOption } from 'echarts'
 import { computed, type PropType } from 'vue'
 import type { OverallGroupScores } from '@/core/types'
-import { AppPanel, VChart } from '@/shared/ui'
+import { AppPanel } from '@/shared/ui'
+import { VChart } from '@/shared/ui/charts'
 
 const props = defineProps({
   overallGroupScores: {

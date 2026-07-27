@@ -1,4 +1,3 @@
-export * from './charts'
 export * from './data-grid'
 export * from './dialog'
 export * from './forms'

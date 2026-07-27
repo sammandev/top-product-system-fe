@@ -5,7 +5,7 @@
  */
 
 import { ref } from 'vue'
-import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
+import { getApiErrorDetail, getErrorMessage } from '@/shared/utils/error'
 
 /**
  * Loading state composable

@@ -206,6 +206,7 @@ import { useRoute, useRouter } from 'vue-router'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useMenuAccessStore } from '@/features/admin/stores/menuAccess.store'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
+import { useDrawerState } from '@/shared/composables/useDrawerState'
 import {
   resolveThemeMode,
   THEME_PRESET_OPTIONS,
@@ -214,9 +215,8 @@ import {
   type ThemePresetName,
   type ThemePrimaryName,
   type ThemeSurfaceName,
-  useDrawerState,
   useThemeState,
-} from '@/shared/composables'
+} from '@/shared/composables/useThemeState'
 
 interface MenuItem {
   title: string
