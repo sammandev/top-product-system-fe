@@ -189,8 +189,8 @@
                 <div class="app-config-notice app-config-notice--info">
                   <strong>Activation rules</strong>
                   <p>
-                    Only one token per site can be active at a time. Active tokens override
-                    environment variable configuration.
+                    Only one iPLAS token can be active at a time. Broad iPLAS searches use the
+                    active token and do not query inactive sites.
                   </p>
                 </div>
 
@@ -388,8 +388,15 @@
           </template>
         </AppTabs>
 
-      <AppDialog v-model="iplasDialogOpen" :title="iplasDialogTitle" width="36rem">
-        <form class="app-config-dialog-form" @submit.prevent="handleSaveIplas">
+      <AppDialog v-model="iplasDialogOpen" :title="iplasDialogTitle" width="36rem" :showFooter="false">
+        <template #header-actions>
+          <button type="submit" form="iplas-token-form" class="app-config-button app-config-button--primary"
+            :disabled="iplasSaving">
+            {{ iplasSaving ? 'Saving...' : 'Save Token' }}
+          </button>
+        </template>
+
+        <form id="iplas-token-form" class="app-config-dialog-form" @submit.prevent="handleSaveIplas">
           <div class="app-config-field-grid">
             <label class="app-config-field">
               <span>Site</span>
@@ -418,20 +425,18 @@
             <strong>Save failed</strong>
             <p>{{ iplasFormError }}</p>
           </div>
-
-          <div class="app-config-dialog-footer">
-            <button type="button" class="app-config-button app-config-button--ghost" @click="closeIplasDialog">
-              Cancel
-            </button>
-            <button type="submit" class="app-config-button app-config-button--primary" :disabled="iplasSaving">
-              {{ iplasSaving ? 'Saving...' : 'Save Token' }}
-            </button>
-          </div>
         </form>
       </AppDialog>
 
-      <AppDialog v-model="sfistspDialogOpen" :title="sfistspDialogTitle" width="38rem">
-        <form class="app-config-dialog-form" @submit.prevent="handleSaveSfistsp">
+      <AppDialog v-model="sfistspDialogOpen" :title="sfistspDialogTitle" width="38rem" :showFooter="false">
+        <template #header-actions>
+          <button type="submit" form="sfistsp-config-form" class="app-config-button app-config-button--primary"
+            :disabled="sfistspSaving">
+            {{ sfistspSaving ? 'Saving...' : 'Save Config' }}
+          </button>
+        </template>
+
+        <form id="sfistsp-config-form" class="app-config-dialog-form" @submit.prevent="handleSaveSfistsp">
           <div class="app-config-field-grid">
             <label class="app-config-field">
               <span>Base URL</span>
@@ -474,20 +479,18 @@
             <strong>Save failed</strong>
             <p>{{ sfistspFormError }}</p>
           </div>
-
-          <div class="app-config-dialog-footer">
-            <button type="button" class="app-config-button app-config-button--ghost" @click="closeSfistspDialog">
-              Cancel
-            </button>
-            <button type="submit" class="app-config-button app-config-button--primary" :disabled="sfistspSaving">
-              {{ sfistspSaving ? 'Saving...' : 'Save Config' }}
-            </button>
-          </div>
         </form>
       </AppDialog>
 
-      <AppDialog v-model="guestDialogOpen" :title="guestDialogTitle" width="38rem">
-        <form class="app-config-dialog-form" @submit.prevent="handleSaveGuest">
+      <AppDialog v-model="guestDialogOpen" :title="guestDialogTitle" width="38rem" :showFooter="false">
+        <template #header-actions>
+          <button type="submit" form="guest-credential-form" class="app-config-button app-config-button--primary"
+            :disabled="guestSaving">
+            {{ guestSaving ? 'Saving...' : 'Save Guest' }}
+          </button>
+        </template>
+
+        <form id="guest-credential-form" class="app-config-dialog-form" @submit.prevent="handleSaveGuest">
           <div class="app-config-field-grid">
             <label class="app-config-field">
               <span>Username</span>
@@ -516,15 +519,6 @@
           <div v-if="guestFormError" class="app-config-notice app-config-notice--error">
             <strong>Save failed</strong>
             <p>{{ guestFormError }}</p>
-          </div>
-
-          <div class="app-config-dialog-footer">
-            <button type="button" class="app-config-button app-config-button--ghost" @click="closeGuestDialog">
-              Cancel
-            </button>
-            <button type="submit" class="app-config-button app-config-button--primary" :disabled="guestSaving">
-              {{ guestSaving ? 'Saving...' : 'Save Guest' }}
-            </button>
           </div>
         </form>
       </AppDialog>

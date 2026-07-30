@@ -74,13 +74,14 @@
                     <label class="top-product-db-field">
                         <span>Projects</span>
                         <AppMultiSelect v-model="projectFilterModel" :options="projectFilterOptions"
-                            placeholder="Select projects..." @change="debouncedFetch" />
+                            placeholder="Select projects..." @change="handleProjectFiltersChange" />
                     </label>
 
                     <label class="top-product-db-field">
                         <span>Stations</span>
                         <AppMultiSelect v-model="stationFilterModel" :options="stationFilterOptions"
-                            placeholder="Select stations..." @change="debouncedFetch" />
+                            :placeholder="hasProjectFilter ? 'Select stations...' : 'Select projects first...'"
+                            :disabled="!hasProjectFilter" @change="debouncedFetch" />
                     </label>
 
                     <label class="top-product-db-field">
@@ -135,7 +136,7 @@
                     dataKey="id" :selection="selectedProducts" selectionMode="multiple"
                     :showSelectionColumn="canBulkDelete" :paginator="true" :rowsPerPage="pagination.page_size"
                     :rowsPerPageOptions="pageSizeOptions" :totalRecords="pagination.total" :lazy="true"
-                    :first="(pagination.page - 1) * pagination.page_size" :sortField="filters.sort_by"
+                    :first="(pagination.page - 1) * pagination.page_size" :sortField="appliedFilters.sort_by"
                     :sortOrder="gridSortOrder" scrollHeight="38rem"
                     @update:selection="selectedProducts = ($event as TopProductItem[]) || []"
                     @row-click="handleGridRowClick" @page="handleGridPage" @sort="handleGridSort">
@@ -566,6 +567,7 @@ const filters = ref<TopProductListParams>({
   sort_by: 'created_at',
   sort_desc: true,
 })
+const appliedFilters = ref<TopProductListParams>(cloneTopProductFilters(filters.value))
 
 const projectFilterModel = computed<string[]>({
   get: () => filters.value.projects ?? [],
@@ -584,32 +586,41 @@ const stationFilterModel = computed<string[]>({
 const pageSizeOptions = [10, 20, 50, 100]
 
 const listParams = computed<TopProductListParams>(() => ({
-  page: pagination.value.page,
-  page_size: pagination.value.page_size,
-  ...filters.value,
+    page: pagination.value.page,
+    page_size: pagination.value.page_size,
+    ...appliedFilters.value,
 }))
+
+const hasProjectFilter = computed(() => projectFilterModel.value.length > 0)
+const stationProjectParams = computed(() => [...projectFilterModel.value].sort())
 
 const productsQuery = useQuery({
   queryKey: computed(() => queryKeys.topProducts.list({ ...listParams.value })),
   queryFn: () => getTopProductsList(listParams.value),
   placeholderData: keepPreviousData,
+  staleTime: 30_000,
 })
 
 const statsQuery = useQuery({
   queryKey: queryKeys.topProducts.stats(),
   queryFn: getTopProductsStats,
+  staleTime: 60_000,
+  refetchOnWindowFocus: false,
 })
 
 const projectsQuery = useQuery({
   queryKey: queryKeys.topProducts.projects(),
   queryFn: getUniqueProjects,
   staleTime: 5 * 60_000,
+  refetchOnWindowFocus: false,
 })
 
 const stationsQuery = useQuery({
-  queryKey: queryKeys.topProducts.stations(),
-  queryFn: getUniqueStations,
+  queryKey: computed(() => queryKeys.topProducts.stations({ projects: stationProjectParams.value })),
+  queryFn: () => getUniqueStations(stationProjectParams.value),
+  enabled: hasProjectFilter,
   staleTime: 5 * 60_000,
+  refetchOnWindowFocus: false,
 })
 
 const deleteMutation = useMutation({
@@ -640,7 +651,7 @@ const projectFilterOptions = computed(() =>
 )
 const stationFilterOptions = computed(() =>
   (stationsQuery.data.value ?? []).map((station) => ({
-    label: station.project ? `${station.label} (${station.project})` : station.label,
+        label: station.label,
     value: station.value,
   })),
 )
@@ -662,7 +673,7 @@ const canBulkDelete = computed(() => {
 /**
  * Dynamic headers — same base headers for all users.
  */
-const gridSortOrder = computed(() => (filters.value.sort_desc ? -1 : 1))
+const gridSortOrder = computed(() => (appliedFilters.value.sort_desc ? -1 : 1))
 const deleting = computed(() => deleteMutation.isPending.value)
 const bulkDeleting = computed(() => bulkDeleteMutation.isPending.value)
 
@@ -790,7 +801,7 @@ async function viewDetail(productId: number) {
 }
 
 function clearFilters() {
-  filters.value = {
+    const nextFilters = {
     dut_isn: undefined,
     projects: [],
     stations: [],
@@ -798,7 +809,16 @@ function clearFilters() {
     sort_by: 'created_at',
     sort_desc: true,
   }
+    filters.value = nextFilters
+    appliedFilters.value = cloneTopProductFilters(nextFilters)
   pagination.value.page = 1
+}
+
+function handleProjectFiltersChange() {
+    if ((filters.value.stations ?? []).length > 0) {
+        filters.value.stations = []
+    }
+    debouncedFetch()
 }
 
 function refreshData() {
@@ -826,8 +846,26 @@ let debounceTimer: number | undefined
 function debouncedFetch() {
   clearTimeout(debounceTimer)
   debounceTimer = setTimeout(() => {
+        applyFilters()
+    }, 400) as unknown as number
+}
+
+function applyFilters() {
     pagination.value.page = 1
-  }, 500) as unknown as number
+    appliedFilters.value = cloneTopProductFilters(filters.value)
+}
+
+function cloneTopProductFilters(source: TopProductListParams): TopProductListParams {
+    const dutIsn = source.dut_isn?.trim()
+
+    return {
+        dut_isn: dutIsn || undefined,
+        projects: [...(source.projects ?? [])],
+        stations: [...(source.stations ?? [])],
+        min_score: source.min_score,
+        sort_by: source.sort_by ?? 'created_at',
+        sort_desc: source.sort_desc ?? true,
+    }
 }
 
 // ===== Computed & Helpers =====
@@ -900,7 +938,7 @@ function handleGridSort(event: unknown) {
 
   filters.value.sort_by = sortEvent.sortField
   filters.value.sort_desc = sortEvent.sortOrder !== 1
-  pagination.value.page = 1
+    applyFilters()
 }
 
 function handleGridRowClick(event: unknown) {
@@ -1036,6 +1074,23 @@ watch(
     selectedProducts.value = []
   },
   { immediate: true },
+)
+
+watch(
+    () => stationsQuery.data.value,
+    (stations) => {
+        if (!stations || !hasProjectFilter.value || (filters.value.stations ?? []).length === 0) return
+
+        const availableStations = new Set(stations.map((station) => station.value))
+        const validStations = (filters.value.stations ?? []).filter((station) =>
+            availableStations.has(station),
+        )
+
+        if (validStations.length === filters.value.stations?.length) return
+
+        filters.value.stations = validStations
+        debouncedFetch()
+    },
 )
 
 onBeforeUnmount(() => {

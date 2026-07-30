@@ -25,7 +25,10 @@ export const queryKeys = {
     stats: () => [...queryKeys.topProducts.all, 'stats'] as const,
     detail: (id: number) => [...queryKeys.topProducts.all, 'detail', id] as const,
     projects: () => [...queryKeys.topProducts.all, 'filters', 'projects'] as const,
-    stations: () => [...queryKeys.topProducts.all, 'filters', 'stations'] as const,
+    stations: (params?: unknown) =>
+      params === undefined
+        ? ([...queryKeys.topProducts.all, 'filters', 'stations'] as const)
+        : ([...queryKeys.topProducts.all, 'filters', 'stations', params] as const),
   },
   iplas: {
     all: ['iplas'] as const,

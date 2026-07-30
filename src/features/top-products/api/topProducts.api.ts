@@ -154,8 +154,10 @@ export async function getUniqueProjects(): Promise<ProjectOption[]> {
   return response.data
 }
 
-export async function getUniqueStations(): Promise<StationOption[]> {
-  const response = await apiClient.get('/api/top-products/filters/stations')
+export async function getUniqueStations(projects: string[] = []): Promise<StationOption[]> {
+  const response = await apiClient.get('/api/top-products/filters/stations', {
+    params: projects.length > 0 ? { projects } : undefined,
+  })
   return response.data
 }
 
