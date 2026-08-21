@@ -1,4 +1,4 @@
-import ExcelJS from 'exceljs'
+import type ExcelJS from 'exceljs'
 import type { CsvTestItemData } from '../composables/useIplasApi'
 import type {
   CompareItemEnhanced,
@@ -6,6 +6,7 @@ import type {
   TestLogParseResponseEnhanced,
 } from '../composables/useTestLogUpload'
 import type { RecordScoreResult } from '@/features/dut/types/scoring.types'
+import { createWorkbook } from '@/shared/utils/excel'
 
 export type TopProductExcelCell = string | number | null | undefined
 
@@ -355,8 +356,10 @@ function addSheet(
   return worksheet
 }
 
-export function buildTopProductWorkbook(records: TopProductExcelRecord[]): ExcelJS.Workbook {
-  const workbook = new ExcelJS.Workbook()
+export async function buildTopProductWorkbook(
+  records: TopProductExcelRecord[],
+): Promise<ExcelJS.Workbook> {
+  const workbook = await createWorkbook()
   const recordsByStation = new Map<string, TopProductExcelRecord[]>()
 
   records.forEach((record, index) => {

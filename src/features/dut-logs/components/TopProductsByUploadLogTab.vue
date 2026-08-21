@@ -1260,7 +1260,7 @@ async function exportComparisonToExcel() {
       sourceItems,
       displayedIsns.value,
     )
-    const workbook = buildTopProductWorkbook(records)
+    const workbook = await buildTopProductWorkbook(records)
 
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)

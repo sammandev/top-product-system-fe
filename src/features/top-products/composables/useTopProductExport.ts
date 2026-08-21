@@ -2,10 +2,7 @@
  * Composable for exporting Top Products data to various formats
  */
 
-import ExcelJS from 'exceljs'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import { addSheetFromRows, downloadWorkbook } from '@/shared/utils/excel'
+import { addSheetFromRows, createWorkbook, downloadWorkbook } from '@/shared/utils/excel'
 
 export interface TopProductExportItem {
   dut_isn: string
@@ -33,7 +30,7 @@ export function useTopProductExport() {
    */
   const exportToExcel = async (product: TopProductExportItem) => {
     try {
-      const workbook = new ExcelJS.Workbook()
+      const workbook = await createWorkbook()
 
       // Product Overview Sheet
       const overviewData = [
@@ -94,6 +91,10 @@ export function useTopProductExport() {
    */
   const exportToPDF = async (product: TopProductExportItem) => {
     try {
+      const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ])
       const doc = new jsPDF()
       const pageWidth = doc.internal.pageSize.getWidth()
 

@@ -1551,7 +1551,7 @@ async function exportRankingToExcel() {
       )
     }
 
-    const workbook = buildTopProductWorkbook(records)
+    const workbook = await buildTopProductWorkbook(records)
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
     const filename = `Top_Product_Ranking_${timestamp}.xlsx`

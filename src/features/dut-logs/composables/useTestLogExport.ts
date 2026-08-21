@@ -2,10 +2,7 @@
  * Composable for exporting test log results to various formats
  */
 
-import ExcelJS from 'exceljs'
-import jsPDF from 'jspdf'
-import autoTable from 'jspdf-autotable'
-import { addSheetFromRows, downloadWorkbook } from '@/shared/utils/excel'
+import { addSheetFromRows, createWorkbook, downloadWorkbook } from '@/shared/utils/excel'
 import { sortTestItems } from '../utils/sorting'
 import type { CompareResponseEnhanced, TestLogParseResponseEnhanced } from './useTestLogUpload'
 
@@ -18,7 +15,7 @@ export function useTestLogExport() {
     mode: 'PARSING' | 'COMPARE',
   ) => {
     try {
-      const workbook = new ExcelJS.Workbook()
+      const workbook = await createWorkbook()
 
       if (mode === 'PARSING') {
         const parseData = data as TestLogParseResponseEnhanced
@@ -230,6 +227,10 @@ export function useTestLogExport() {
     mode: 'PARSING' | 'COMPARE',
   ) => {
     try {
+      const [{ jsPDF }, { default: autoTable }] = await Promise.all([
+        import('jspdf'),
+        import('jspdf-autotable'),
+      ])
       const doc = new jsPDF()
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
 

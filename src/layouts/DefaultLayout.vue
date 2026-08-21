@@ -25,7 +25,8 @@
             <!-- Group with children -->
             <div v-if="item.children">
               <button class="sidebar__item" :class="{ 'sidebar__item--active': isGroupActive(item) }" type="button"
-                :title="sidebarExpanded ? undefined : item.title" @click="toggleGroup(item)">
+                :title="sidebarExpanded ? undefined : item.title" @click="toggleGroup(item)"
+                @mouseenter="prefetchGroup(item)" @focus="prefetchGroup(item)">
                 <Icon class="sidebar__item-icon" :icon="normalizeIcon(item.icon)" />
                 <span v-if="sidebarExpanded" class="sidebar__item-label">{{ item.title }}</span>
                 <Icon v-if="sidebarExpanded" class="sidebar__item-chevron" :class="{ 'rotate-180': isGroupOpen(item) }"
@@ -35,7 +36,8 @@
               <div v-if="sidebarExpanded && isGroupOpen(item)" class="sidebar__children">
                 <router-link v-for="child in item.children" :key="child.path" class="sidebar__item sidebar__item--child"
                   :class="{ 'sidebar__item--active': isItemActive(child) }" :to="child.path || '/'"
-                  @click="handleNavigationSelection">
+                  @click="handleNavigationSelection" @mouseenter="prefetchRoute(child.path)"
+                  @focus="prefetchRoute(child.path)">
                   <Icon class="sidebar__item-icon sidebar__item-icon--sm" :icon="normalizeIcon(child.icon)" />
                   <span class="sidebar__item-label">{{ child.title }}</span>
                 </router-link>
@@ -45,7 +47,8 @@
             <!-- Single item -->
             <router-link v-else class="sidebar__item" :class="{ 'sidebar__item--active': isItemActive(item) }"
               :title="sidebarExpanded ? undefined : item.title" :to="item.path || '/'"
-              @click="handleNavigationSelection">
+              @click="handleNavigationSelection" @mouseenter="prefetchRoute(item.path)"
+              @focus="prefetchRoute(item.path)">
               <Icon class="sidebar__item-icon" :icon="normalizeIcon(item.icon)" />
               <span v-if="sidebarExpanded" class="sidebar__item-label">{{ item.title }}</span>
             </router-link>
@@ -203,6 +206,7 @@ import { storeToRefs } from 'pinia'
 import SelectButton from 'primevue/selectbutton'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { prefetchRoute, prefetchRoutesWhenIdle } from '@/core/router/prefetch'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useMenuAccessStore } from '@/features/admin/stores/menuAccess.store'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
@@ -491,6 +495,11 @@ function toggleGroup(item: MenuItem) {
   openGroups.value = [...openGroups.value, key]
 }
 
+function prefetchGroup(item: MenuItem) {
+  prefetchRoute(item.path)
+  for (const child of item.children ?? []) prefetchRoute(child.path)
+}
+
 function normalizeIcon(icon: string | undefined) {
   if (!icon) return 'solar:widget-5-bold-duotone'
   if (icon.startsWith('mdi:')) return icon
@@ -605,6 +614,18 @@ onMounted(() => {
   }
   void syncMenus()
 })
+
+watch(
+  navigationSections,
+  (sections) => {
+    prefetchRoutesWhenIdle(
+      sections.flatMap((section) =>
+        section.items.flatMap((item) => [item.path, ...(item.children ?? []).map((c) => c.path)]),
+      ),
+    )
+  },
+  { immediate: true },
+)
 
 onBeforeUnmount(() => {
   systemThemeMediaQuery?.removeEventListener('change', handleSystemThemeChange)

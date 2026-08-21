@@ -12,37 +12,28 @@ function manualChunks(id: string): string | undefined {
     return undefined
   }
 
-  if (
-    normalizedId.includes('/vue/') ||
-    normalizedId.includes('/@vue/') ||
-    normalizedId.includes('/vue-router/') ||
-    normalizedId.includes('/pinia/')
-  ) {
+  // Package path relative to its node_modules root, e.g. "@iconify/vue/dist/..".
+  const pkgPath = normalizedId.split('/node_modules/').pop() ?? ''
+
+  if (/^(?:vue|vue-router|pinia)\//.test(pkgPath) || pkgPath.startsWith('@vue/')) {
     return 'vendor-vue'
   }
 
-  if (normalizedId.includes('/primevue/') || normalizedId.includes('/@primeuix/')) {
-    return 'vendor-primevue'
-  }
-
-  if (normalizedId.includes('/@iconify/')) {
+  if (pkgPath.startsWith('@iconify/')) {
     return 'vendor-icons'
   }
 
-  if (normalizedId.includes('/@tanstack/')) {
+  if (pkgPath.startsWith('@tanstack/')) {
     return 'vendor-query'
   }
 
-  if (
-    normalizedId.includes('/axios/') ||
-    normalizedId.includes('/dayjs/') ||
-    normalizedId.includes('/lodash-es/') ||
-    normalizedId.includes('/zod/') ||
-    normalizedId.includes('/@vueuse/')
-  ) {
+  if (/^(?:axios|dayjs|lodash-es|zod)\//.test(pkgPath) || pkgPath.startsWith('@vueuse/')) {
     return 'vendor-utils'
   }
 
+  // PrimeVue is deliberately left unchunked: grouping every component into one
+  // vendor chunk drags the whole library into the initial load even though the
+  // app entry only needs primevue/config. Rollup splits it per route instead.
   return undefined
 }
 

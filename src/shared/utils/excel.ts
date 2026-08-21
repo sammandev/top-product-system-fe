@@ -2,6 +2,13 @@ import type ExcelJS from 'exceljs'
 
 type ExcelCell = string | number | boolean | null | undefined
 
+// ExcelJS is ~900 KB, so it is loaded on demand instead of with the page chunk.
+export async function createWorkbook(): Promise<ExcelJS.Workbook> {
+  const module = await import('exceljs')
+  const runtime = module.default ?? module
+  return new runtime.Workbook()
+}
+
 function normalizeCell(value: unknown): ExcelCell {
   if (value === null || value === undefined) return ''
   if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {

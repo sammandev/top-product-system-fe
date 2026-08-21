@@ -38,7 +38,7 @@ const makeRecord = (overrides: Partial<TopProductExcelRecord>): TopProductExcelR
 
 describe('top product Excel export', () => {
   it('orders DUT groups by descending score and keeps stable ties and nulls last', async () => {
-    const workbook = buildTopProductWorkbook([
+    const workbook = await buildTopProductWorkbook([
       makeRecord({ isn: 'DUT-TIE-B', overallScore: 8, sourceOrder: 1 }),
       makeRecord({ isn: 'DUT-NULL', overallScore: null, sourceOrder: 2 }),
       makeRecord({ isn: 'DUT-HIGH', overallScore: 9, sourceOrder: 3 }),

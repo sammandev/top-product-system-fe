@@ -1705,7 +1705,7 @@ async function handleExportRecords(payload: {
   if (payload.records.length === 0) return
 
   try {
-    const workbook = buildTopProductWorkbook(buildScoredExportRecords(payload.records))
+    const workbook = await buildTopProductWorkbook(buildScoredExportRecords(payload.records))
     await downloadTopProductWorkbook(workbook, `${generateExportFilename()}.xlsx`)
   } catch (err) {
     console.error('Export failed:', err)
@@ -1721,7 +1721,7 @@ async function handleExportAllRecords(payload: {
 
   exportingAll.value = true
   try {
-    const workbook = buildTopProductWorkbook(buildScoredExportRecords(payload.records))
+    const workbook = await buildTopProductWorkbook(buildScoredExportRecords(payload.records))
     await downloadTopProductWorkbook(workbook, `${generateExportFilename()}.xlsx`)
   } catch (err) {
     console.error('Export all failed:', err)

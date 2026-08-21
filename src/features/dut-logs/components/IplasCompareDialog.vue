@@ -805,7 +805,7 @@ async function exportToExcel() {
         })),
     })
 
-    const workbook = buildTopProductWorkbook([createRecord('upload'), createRecord('iplas')])
+    const workbook = await buildTopProductWorkbook([createRecord('upload'), createRecord('iplas')])
 
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
     const filename = `iPLAS_Compare_${props.isn}_${timestamp}.xlsx`

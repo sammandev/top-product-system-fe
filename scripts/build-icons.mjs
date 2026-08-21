@@ -15,8 +15,30 @@ const srcDir = join(root, 'src')
 const outFile = join(srcDir, 'core', 'icons.generated.ts')
 
 const PREFIXES = ['mdi', 'solar']
-const ICON_RE = /["'`:](mdi|solar):([a-z0-9-]+)["'`]/g
+// Icons are written both as `mdi:foo` (Iconify form) and `mdi-foo` (legacy form
+// normalized at runtime by normalizeIcon()). Both must be bundled.
+const ICON_RE = /["'`](?:mdi|solar)[:-][a-z0-9-]+["'`]/g
+const ICON_PARTS_RE = /^["'`](mdi|solar)[:-]([a-z0-9-]+)["'`]$/
 const SCAN_EXTENSIONS = new Set(['.vue', '.ts'])
+
+// Menu icons are stored in the backend database and served by
+// /api/admin/menu-access/my-menus, so they never appear in the source scan.
+// Keep in sync with DEFAULT_MENUS in top-product-system-be menu_access.py.
+const BACKEND_MENU_ICONS = {
+  mdi: [
+    'view-dashboard',
+    'trophy',
+    'circle-small',
+    'database-search',
+    'file-upload',
+    'compare',
+    'file-chart',
+    'file-swap',
+    'shield-lock',
+    'delete-sweep',
+  ],
+  solar: [],
+}
 
 function* walk(dir) {
   for (const entry of readdirSync(dir)) {
@@ -32,11 +54,16 @@ function* walk(dir) {
 
 const used = new Map(PREFIXES.map((p) => [p, new Set()]))
 
+for (const [prefix, names] of Object.entries(BACKEND_MENU_ICONS)) {
+  for (const name of names) used.get(prefix)?.add(name)
+}
+
 for (const file of walk(srcDir)) {
   if (file === outFile) continue
   const content = readFileSync(file, 'utf8')
-  for (const match of content.matchAll(ICON_RE)) {
-    used.get(match[1])?.add(match[2])
+  for (const token of content.match(ICON_RE) ?? []) {
+    const parts = ICON_PARTS_RE.exec(token)
+    if (parts) used.get(parts[1])?.add(parts[2])
   }
 }
 
