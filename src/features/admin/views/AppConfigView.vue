@@ -388,8 +388,12 @@
           </template>
         </AppTabs>
 
-      <AppDialog v-model="iplasDialogOpen" :title="iplasDialogTitle" width="36rem" :showFooter="false">
-        <template #header-actions>
+      <AppDialog v-model="iplasDialogOpen" :title="iplasDialogTitle" width="36rem">
+        <template #footer>
+          <button type="button" class="app-config-button app-config-button--ghost" :disabled="iplasSaving"
+            @click="closeIplasDialog">
+            Cancel
+          </button>
           <button type="submit" form="iplas-token-form" class="app-config-button app-config-button--primary"
             :disabled="iplasSaving">
             {{ iplasSaving ? 'Saving...' : 'Save Token' }}
@@ -428,8 +432,12 @@
         </form>
       </AppDialog>
 
-      <AppDialog v-model="sfistspDialogOpen" :title="sfistspDialogTitle" width="38rem" :showFooter="false">
-        <template #header-actions>
+      <AppDialog v-model="sfistspDialogOpen" :title="sfistspDialogTitle" width="38rem">
+        <template #footer>
+          <button type="button" class="app-config-button app-config-button--ghost" :disabled="sfistspSaving"
+            @click="closeSfistspDialog">
+            Cancel
+          </button>
           <button type="submit" form="sfistsp-config-form" class="app-config-button app-config-button--primary"
             :disabled="sfistspSaving">
             {{ sfistspSaving ? 'Saving...' : 'Save Config' }}
@@ -482,8 +490,12 @@
         </form>
       </AppDialog>
 
-      <AppDialog v-model="guestDialogOpen" :title="guestDialogTitle" width="38rem" :showFooter="false">
-        <template #header-actions>
+      <AppDialog v-model="guestDialogOpen" :title="guestDialogTitle" width="38rem">
+        <template #footer>
+          <button type="button" class="app-config-button app-config-button--ghost" :disabled="guestSaving"
+            @click="closeGuestDialog">
+            Cancel
+          </button>
           <button type="submit" form="guest-credential-form" class="app-config-button app-config-button--primary"
             :disabled="guestSaving">
             {{ guestSaving ? 'Saving...' : 'Save Guest' }}

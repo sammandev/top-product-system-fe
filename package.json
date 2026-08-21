@@ -9,6 +9,8 @@
     "build": "vue-tsc -b && vite build",
     "preview": "vite preview",
     "docs:primevue": "node scripts/sync-primevue-docs.mjs",
+    "icons:build": "node scripts/build-icons.mjs",
+    "prebuild": "node scripts/build-icons.mjs",
     "lint": "biome check . --diagnostic-level=warn",
     "lint:fix": "biome check . --write",
     "format": "biome format .",
@@ -52,6 +54,8 @@
   },
   "devDependencies": {
     "@biomejs/biome": "^2.4.8",
+    "@iconify/json": "^2.2.518",
+    "@iconify/utils": "^3.1.4",
     "@playwright/test": "^1.58.2",
     "@tailwindcss/vite": "^4.2.3",
     "@types/lodash-es": "^4.17.12",

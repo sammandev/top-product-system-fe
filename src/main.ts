@@ -7,6 +7,10 @@ import {
   getStoredThemePreferences,
 } from '@/shared/composables/useThemeState'
 import App from './App.vue'
+import { registerOfflineIcons } from './core/icons.generated'
+
+// Register offline icon data so @iconify/vue never calls api.iconify.design
+registerOfflineIcons()
 
 // Import global styles
 import './app/styles/index.css'
