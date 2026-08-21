@@ -1,5 +1,6 @@
 export * from './data-grid'
 export * from './dialog'
+export * from './feedback'
 export * from './forms'
 export * from './panel'
 export * from './progress'

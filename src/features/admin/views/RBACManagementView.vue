@@ -162,26 +162,29 @@
                   <div class="rbac-management-actions">
                     <button
                       type="button"
+                      :aria-label="`View details for role ${slotProps.data.name}`"
                       title="View role details"
                       @click="showRoleDetails(slotProps.data.id as number)"
                     >
-                      <Icon icon="mdi:card-account-details-outline" />
+                      <Icon icon="mdi:card-account-details-outline" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
+                      :aria-label="`Edit role ${slotProps.data.name}`"
                       title="Edit role"
                       @click="handleEditRole(slotProps.data.id as number)"
                     >
-                      <Icon icon="mdi:pencil-outline" />
+                      <Icon icon="mdi:pencil-outline" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
                       class="is-danger"
+                      :aria-label="`Delete role ${slotProps.data.name}`"
                       title="Delete role"
                       :disabled="slotProps.data.name === 'admin'"
                       @click="confirmDeleteRole(slotProps.data as Role)"
                     >
-                      <Icon icon="mdi:delete-outline" />
+                      <Icon icon="mdi:delete-outline" aria-hidden="true" />
                     </button>
                   </div>
                 </template>
@@ -246,25 +249,28 @@
                   <div class="rbac-management-actions">
                     <button
                       type="button"
+                      :aria-label="`View details for permission ${slotProps.data.name}`"
                       title="View permission details"
                       @click="showPermissionDetails(slotProps.data.id as number)"
                     >
-                      <Icon icon="mdi:card-account-details-outline" />
+                      <Icon icon="mdi:card-account-details-outline" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
+                      :aria-label="`Edit permission ${slotProps.data.name}`"
                       title="Edit permission"
                       @click="handleEditPermission(slotProps.data.id as number)"
                     >
-                      <Icon icon="mdi:pencil-outline" />
+                      <Icon icon="mdi:pencil-outline" aria-hidden="true" />
                     </button>
                     <button
                       type="button"
                       class="is-danger"
+                      :aria-label="`Delete permission ${slotProps.data.name}`"
                       title="Delete permission"
                       @click="confirmDeletePermission(slotProps.data as Permission)"
                     >
-                      <Icon icon="mdi:delete-outline" />
+                      <Icon icon="mdi:delete-outline" aria-hidden="true" />
                     </button>
                   </div>
                 </template>
@@ -285,104 +291,88 @@
         </template>
       </AppTabs>
 
-    <AppDialog v-model:visible="roleDialogOpen" :title="roleDialogTitle" width="42rem">
-      <form class="rbac-management-dialog-form" @submit.prevent="saveRole">
-        <label class="rbac-management-field">
-          <span>Role Name</span>
-          <input v-model="roleForm.name" type="text" autocomplete="off" placeholder="data_analyst">
-        </label>
+    <AppFormDialog
+      v-model="roleDialogOpen"
+      :title="roleDialogTitle"
+      description="Roles bundle permissions so access can be granted in one step."
+      size="lg"
+      :submit-label="roleDialogSubmitLabel"
+      :busy="dialogLoading"
+      :submit-disabled="!roleForm.name.trim()"
+      :error="dialogError"
+      @submit="saveRole"
+      @cancel="closeRoleDialog"
+    >
+      <template #footer-aside>
+        <span>{{ roleForm.permissions.length }} of {{ permissions.length }} permissions selected</span>
+      </template>
 
-        <label class="rbac-management-field">
-          <span>Description</span>
-          <textarea
-            v-model="roleForm.description"
-            rows="3"
-            placeholder="Describe what this role can do"
-          />
-        </label>
+      <AppFormField v-slot="{ id, describedBy }" label="Role Name" required hint="Lowercase with underscores, for example data_analyst.">
+        <input :id="id" v-model="roleForm.name" :aria-describedby="describedBy" type="text" autocomplete="off" placeholder="data_analyst">
+      </AppFormField>
 
-        <div class="rbac-management-field">
-          <span>Assigned Permissions</span>
-          <div class="rbac-management-permission-picker">
-            <label
-              v-for="permissionItem in permissions"
-              :key="permissionItem.id"
-              class="rbac-management-permission-option"
-              :class="isRolePermissionSelected(permissionItem.name) ? 'is-selected' : ''"
+      <AppFormField v-slot="{ id }" label="Description" show-optional>
+        <textarea
+          :id="id"
+          v-model="roleForm.description"
+          rows="3"
+          placeholder="Describe what this role can do"
+        />
+      </AppFormField>
+
+      <AppFormField label="Assigned Permissions">
+        <div class="rbac-management-permission-picker">
+          <label
+            v-for="permissionItem in permissions"
+            :key="permissionItem.id"
+            class="rbac-management-permission-option"
+            :class="isRolePermissionSelected(permissionItem.name) ? 'is-selected' : ''"
+          >
+            <input
+              :checked="isRolePermissionSelected(permissionItem.name)"
+              type="checkbox"
+              @change="toggleRolePermission(permissionItem.name)"
             >
-              <input
-                :checked="isRolePermissionSelected(permissionItem.name)"
-                type="checkbox"
-                @change="toggleRolePermission(permissionItem.name)"
-              >
-              <span>{{ permissionItem.name }}</span>
-            </label>
-          </div>
+            <span>{{ permissionItem.name }}</span>
+          </label>
         </div>
+      </AppFormField>
+    </AppFormDialog>
 
-        <div v-if="dialogError" class="rbac-management-dialog-error">
-          {{ dialogError }}
-        </div>
+    <AppFormDialog
+      v-model="permissionDialogOpen"
+      :title="permissionDialogTitle"
+      description="Permissions are the smallest unit of access and are assigned to roles."
+      :submit-label="permissionDialogSubmitLabel"
+      :busy="dialogLoading"
+      :submit-disabled="!permissionForm.name.trim()"
+      :error="dialogError"
+      @submit="savePermission"
+      @cancel="closePermissionDialog"
+    >
+      <AppFormField v-slot="{ id, describedBy }" label="Permission Name" required hint="Use a verb_noun pattern, for example read_reports.">
+        <input :id="id" v-model="permissionForm.name" :aria-describedby="describedBy" type="text" autocomplete="off" placeholder="read_reports">
+      </AppFormField>
 
-        <div class="rbac-management-dialog-footer">
-          <button
-            type="button"
-            class="rbac-management-button rbac-management-button--ghost"
-            @click="closeRoleDialog"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="rbac-management-button rbac-management-button--primary"
-            :disabled="dialogLoading"
-          >
-            {{ dialogLoading ? 'Saving...' : roleDialogSubmitLabel }}
-          </button>
-        </div>
-      </form>
-    </AppDialog>
+      <AppFormField v-slot="{ id }" label="Description" show-optional>
+        <textarea
+          :id="id"
+          v-model="permissionForm.description"
+          rows="3"
+          placeholder="Describe what this permission allows"
+        />
+      </AppFormField>
+    </AppFormDialog>
 
-    <AppDialog v-model:visible="permissionDialogOpen" :title="permissionDialogTitle" width="34rem">
-      <form class="rbac-management-dialog-form" @submit.prevent="savePermission">
-        <label class="rbac-management-field">
-          <span>Permission Name</span>
-          <input v-model="permissionForm.name" type="text" autocomplete="off" placeholder="read_reports">
-        </label>
-
-        <label class="rbac-management-field">
-          <span>Description</span>
-          <textarea
-            v-model="permissionForm.description"
-            rows="3"
-            placeholder="Describe what this permission allows"
-          />
-        </label>
-
-        <div v-if="dialogError" class="rbac-management-dialog-error">
-          {{ dialogError }}
-        </div>
-
-        <div class="rbac-management-dialog-footer">
-          <button
-            type="button"
-            class="rbac-management-button rbac-management-button--ghost"
-            @click="closePermissionDialog"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            class="rbac-management-button rbac-management-button--primary"
-            :disabled="dialogLoading"
-          >
-            {{ dialogLoading ? 'Saving...' : permissionDialogSubmitLabel }}
-          </button>
-        </div>
-      </form>
-    </AppDialog>
-
-    <AppDialog v-model:visible="roleDetailsDialogOpen" title="Role Details" width="48rem">
+    <AppFormDialog
+      v-model="roleDetailsDialogOpen"
+      title="Role Details"
+      size="lg"
+      submit-label="Edit Role"
+      cancel-label="Close"
+      :submit-disabled="!selectedRoleDetails"
+      @submit="selectedRoleDetails && editRoleFromDetails(selectedRoleDetails.id)"
+    >
       <div v-if="selectedRoleDetails" class="rbac-management-detail-stack">
         <section class="rbac-management-detail-panel">
           <div class="rbac-management-detail-panel__header">
@@ -452,26 +442,18 @@
           </dl>
         </section>
 
-        <div class="rbac-management-dialog-footer">
-          <button
-            type="button"
-            class="rbac-management-button rbac-management-button--ghost"
-            @click="roleDetailsDialogOpen = false"
-          >
-            Close
-          </button>
-          <button
-            type="button"
-            class="rbac-management-button rbac-management-button--primary"
-            @click="editRoleFromDetails(selectedRoleDetails.id)"
-          >
-            Edit Role
-          </button>
-        </div>
       </div>
-    </AppDialog>
+    </AppFormDialog>
 
-    <AppDialog v-model:visible="permissionDetailsDialogOpen" title="Permission Details" width="42rem">
+    <AppFormDialog
+      v-model="permissionDetailsDialogOpen"
+      title="Permission Details"
+      size="lg"
+      submit-label="Edit Permission"
+      cancel-label="Close"
+      :submit-disabled="!selectedPermissionDetails"
+      @submit="selectedPermissionDetails && editPermissionFromDetails(selectedPermissionDetails.id)"
+    >
       <div v-if="selectedPermissionDetails" class="rbac-management-detail-stack">
         <section class="rbac-management-detail-panel">
           <div class="rbac-management-detail-panel__header">
@@ -501,66 +483,21 @@
             </span>
           </div>
         </section>
-
-        <div class="rbac-management-dialog-footer">
-          <button
-            type="button"
-            class="rbac-management-button rbac-management-button--ghost"
-            @click="permissionDetailsDialogOpen = false"
-          >
-            Close
-          </button>
-          <button
-            type="button"
-            class="rbac-management-button rbac-management-button--primary"
-            @click="editPermissionFromDetails(selectedPermissionDetails.id)"
-          >
-            Edit Permission
-          </button>
-        </div>
       </div>
-    </AppDialog>
+    </AppFormDialog>
 
-    <AppDialog v-model:visible="deleteDialogOpen" :title="deleteDialogTitle" width="32rem">
-      <div class="rbac-management-delete-stack">
-        <div class="rbac-management-notice rbac-management-notice--warning rbac-management-notice--inline">
-          <div>
-            <strong>Destructive action</strong>
-            <p>{{ deleteDialogMessage }}</p>
-          </div>
-        </div>
-
-        <label class="rbac-management-field">
-          <span>Type DELETE to confirm</span>
-          <input
-            v-model="deleteConfirmation"
-            type="text"
-            autocomplete="off"
-            placeholder="DELETE"
-            @keyup.enter="handleConfirmDelete"
-          >
-        </label>
-
-        <div class="rbac-management-dialog-footer">
-          <button
-            type="button"
-            class="rbac-management-button rbac-management-button--ghost"
-            :disabled="deleting"
-            @click="closeDeleteDialog"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="rbac-management-button rbac-management-button--danger"
-            :disabled="deleteConfirmation !== 'DELETE' || deleting"
-            @click="handleConfirmDelete"
-          >
-            {{ deleting ? 'Deleting...' : deleteDialogActionLabel }}
-          </button>
-        </div>
-      </div>
-    </AppDialog>
+    <AppConfirmDialog
+      v-model="deleteDialogOpen"
+      v-model:typed-value="deleteConfirmation"
+      :title="deleteDialogTitle"
+      :confirm-label="deleteDialogActionLabel"
+      :busy="deleting"
+      require-typed
+      @confirm="handleConfirmDelete"
+      @cancel="closeDeleteDialog"
+    >
+      {{ deleteDialogMessage }}
+    </AppConfirmDialog>
     </section>
   </DefaultLayout>
 </template>
@@ -573,7 +510,9 @@ import { queryKeys } from '@/core/query'
 import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
-import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
+import AppConfirmDialog from '@/shared/ui/dialog/AppConfirmDialog.vue'
+import AppFormDialog from '@/shared/ui/dialog/AppFormDialog.vue'
+import AppFormField from '@/shared/ui/forms/AppFormField.vue'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
 import type { Permission, PermissionDetail, RBACStats, Role, RoleDetail } from '../api/admin.api'

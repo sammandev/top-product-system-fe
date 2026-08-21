@@ -212,15 +212,15 @@
 
                   <template #cell-actions="{ data }">
                     <div class="app-config-actions">
-                      <button v-if="!data.is_active" type="button" title="Activate token"
+                      <button v-if="!data.is_active" type="button" :aria-label="`Activate token for ${data.site}`" title="Activate token"
                         @click="handleActivateIplas(data.id)">
-                        <Icon icon="mdi:check-circle-outline" />
+                        <Icon icon="mdi:check-circle-outline" aria-hidden="true" />
                       </button>
-                      <button type="button" title="Edit token" @click="openIplasDialog(data)">
-                        <Icon icon="mdi:pencil-outline" />
+                      <button type="button" :aria-label="`Edit token for ${data.site}`" title="Edit token" @click="openIplasDialog(data)">
+                        <Icon icon="mdi:pencil-outline" aria-hidden="true" />
                       </button>
-                      <button type="button" class="is-danger" title="Delete token" @click="confirmDeleteIplas(data)">
-                        <Icon icon="mdi:delete-outline" />
+                      <button type="button" class="is-danger" :aria-label="`Delete token for ${data.site}`" title="Delete token" @click="confirmDeleteIplas(data)">
+                        <Icon icon="mdi:delete-outline" aria-hidden="true" />
                       </button>
                     </div>
                   </template>
@@ -287,15 +287,15 @@
 
                   <template #cell-actions="{ data }">
                     <div class="app-config-actions">
-                      <button v-if="!data.is_active" type="button" title="Activate config"
+                      <button v-if="!data.is_active" type="button" :aria-label="`Activate configuration ${data.program_id}`" title="Activate config"
                         @click="handleActivateSfistsp(data.id)">
-                        <Icon icon="mdi:check-circle-outline" />
+                        <Icon icon="mdi:check-circle-outline" aria-hidden="true" />
                       </button>
-                      <button type="button" title="Edit config" @click="openSfistspDialog(data)">
-                        <Icon icon="mdi:pencil-outline" />
+                      <button type="button" :aria-label="`Edit configuration ${data.program_id}`" title="Edit config" @click="openSfistspDialog(data)">
+                        <Icon icon="mdi:pencil-outline" aria-hidden="true" />
                       </button>
-                      <button type="button" class="is-danger" title="Delete config" @click="confirmDeleteSfistsp(data)">
-                        <Icon icon="mdi:delete-outline" />
+                      <button type="button" class="is-danger" :aria-label="`Delete configuration ${data.program_id}`" title="Delete config" @click="confirmDeleteSfistsp(data)">
+                        <Icon icon="mdi:delete-outline" aria-hidden="true" />
                       </button>
                     </div>
                   </template>
@@ -357,16 +357,16 @@
 
                   <template #cell-actions="{ data }">
                     <div class="app-config-actions">
-                      <button v-if="!data.is_active" type="button" title="Activate credential"
+                      <button v-if="!data.is_active" type="button" :aria-label="`Activate credential ${data.username_masked}`" title="Activate credential"
                         @click="handleActivateGuest(data.id)">
-                        <Icon icon="mdi:check-circle-outline" />
+                        <Icon icon="mdi:check-circle-outline" aria-hidden="true" />
                       </button>
-                      <button type="button" title="Edit credential" @click="openGuestDialog(data)">
-                        <Icon icon="mdi:pencil-outline" />
+                      <button type="button" :aria-label="`Edit credential ${data.username_masked}`" title="Edit credential" @click="openGuestDialog(data)">
+                        <Icon icon="mdi:pencil-outline" aria-hidden="true" />
                       </button>
-                      <button type="button" class="is-danger" title="Delete credential"
+                      <button type="button" class="is-danger" :aria-label="`Delete credential ${data.username_masked}`" title="Delete credential"
                         @click="confirmDeleteGuest(data)">
-                        <Icon icon="mdi:delete-outline" />
+                        <Icon icon="mdi:delete-outline" aria-hidden="true" />
                       </button>
                     </div>
                   </template>
@@ -388,171 +388,148 @@
           </template>
         </AppTabs>
 
-      <AppDialog v-model="iplasDialogOpen" :title="iplasDialogTitle" width="36rem">
-        <template #footer>
-          <button type="button" class="app-config-button app-config-button--ghost" :disabled="iplasSaving"
-            @click="closeIplasDialog">
-            Cancel
-          </button>
-          <button type="submit" form="iplas-token-form" class="app-config-button app-config-button--primary"
-            :disabled="iplasSaving">
-            {{ iplasSaving ? 'Saving...' : 'Save Token' }}
-          </button>
-        </template>
+      <AppFormDialog
+        v-model="iplasDialogOpen"
+        :title="iplasDialogTitle"
+        description="Only one token per site can be active at a time."
+        size="lg"
+        submit-label="Save Token"
+        :busy="iplasSaving"
+        :error="iplasFormError"
+        @submit="handleSaveIplas"
+        @cancel="closeIplasDialog"
+      >
+        <div class="app-config-field-grid">
+          <AppFormField v-slot="{ id }" label="Site" required>
+            <input :id="id" v-model="iplasForm.site" type="text" autocomplete="off" placeholder="PLANT-01">
+          </AppFormField>
 
-        <form id="iplas-token-form" class="app-config-dialog-form" @submit.prevent="handleSaveIplas">
-          <div class="app-config-field-grid">
-            <label class="app-config-field">
-              <span>Site</span>
-              <input v-model="iplasForm.site" type="text" autocomplete="off" placeholder="PLANT-01">
-            </label>
-
-            <label class="app-config-field">
-              <span>Base URL</span>
-              <input v-model="iplasForm.base_url" type="url" autocomplete="off"
-                placeholder="https://iplas.internal.example">
-            </label>
-          </div>
-
-          <label class="app-config-field">
-            <span>Label</span>
-            <input v-model="iplasForm.label" type="text" autocomplete="off" placeholder="Optional display label">
-          </label>
-
-          <label class="app-config-field">
-            <span>Token Value</span>
-            <textarea v-model="iplasForm.token_value" rows="5"
-              :placeholder="editingIplasId ? 'Leave blank to keep the current token value.' : 'Paste the API token'" />
-          </label>
-
-          <div v-if="iplasFormError" class="app-config-notice app-config-notice--error">
-            <strong>Save failed</strong>
-            <p>{{ iplasFormError }}</p>
-          </div>
-        </form>
-      </AppDialog>
-
-      <AppDialog v-model="sfistspDialogOpen" :title="sfistspDialogTitle" width="38rem">
-        <template #footer>
-          <button type="button" class="app-config-button app-config-button--ghost" :disabled="sfistspSaving"
-            @click="closeSfistspDialog">
-            Cancel
-          </button>
-          <button type="submit" form="sfistsp-config-form" class="app-config-button app-config-button--primary"
-            :disabled="sfistspSaving">
-            {{ sfistspSaving ? 'Saving...' : 'Save Config' }}
-          </button>
-        </template>
-
-        <form id="sfistsp-config-form" class="app-config-dialog-form" @submit.prevent="handleSaveSfistsp">
-          <div class="app-config-field-grid">
-            <label class="app-config-field">
-              <span>Base URL</span>
-              <input v-model="sfistspForm.base_url" type="url" autocomplete="off"
-                placeholder="https://sfistsp.internal.example">
-            </label>
-
-            <label class="app-config-field">
-              <span>Program ID</span>
-              <input v-model="sfistspForm.program_id" type="text" autocomplete="off" placeholder="program-id">
-            </label>
-          </div>
-
-          <div class="app-config-field-grid">
-            <label class="app-config-field">
-              <span>Program Password</span>
-              <div class="app-config-password-field">
-                <input v-model="sfistspForm.program_password" :type="showSfistspPassword ? 'text' : 'password'"
-                  autocomplete="new-password"
-                  :placeholder="editingSfistspId ? 'Leave blank to keep the current password.' : 'Enter password'">
-                <button type="button" @click="showSfistspPassword = !showSfistspPassword">
-                  <Icon :icon="showSfistspPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'" />
-                </button>
-              </div>
-            </label>
-
-            <label class="app-config-field">
-              <span>Timeout (seconds)</span>
-              <input v-model="sfistspForm.timeout" type="number" min="1" step="1" autocomplete="off"
-                placeholder="30">
-            </label>
-          </div>
-
-          <label class="app-config-field">
-            <span>Label</span>
-            <input v-model="sfistspForm.label" type="text" autocomplete="off" placeholder="Optional display label">
-          </label>
-
-          <div v-if="sfistspFormError" class="app-config-notice app-config-notice--error">
-            <strong>Save failed</strong>
-            <p>{{ sfistspFormError }}</p>
-          </div>
-        </form>
-      </AppDialog>
-
-      <AppDialog v-model="guestDialogOpen" :title="guestDialogTitle" width="38rem">
-        <template #footer>
-          <button type="button" class="app-config-button app-config-button--ghost" :disabled="guestSaving"
-            @click="closeGuestDialog">
-            Cancel
-          </button>
-          <button type="submit" form="guest-credential-form" class="app-config-button app-config-button--primary"
-            :disabled="guestSaving">
-            {{ guestSaving ? 'Saving...' : 'Save Guest' }}
-          </button>
-        </template>
-
-        <form id="guest-credential-form" class="app-config-dialog-form" @submit.prevent="handleSaveGuest">
-          <div class="app-config-field-grid">
-            <label class="app-config-field">
-              <span>Username</span>
-              <input v-model="guestForm.username" type="text" autocomplete="off"
-                :placeholder="editingGuestId ? 'Leave blank to keep the current username.' : 'guest-user'">
-            </label>
-
-            <label class="app-config-field">
-              <span>Password</span>
-              <div class="app-config-password-field">
-                <input v-model="guestForm.password" :type="showGuestPassword ? 'text' : 'password'"
-                  autocomplete="new-password"
-                  :placeholder="editingGuestId ? 'Leave blank to keep the current password.' : 'Enter password'">
-                <button type="button" @click="showGuestPassword = !showGuestPassword">
-                  <Icon :icon="showGuestPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'" />
-                </button>
-              </div>
-            </label>
-          </div>
-
-          <label class="app-config-field">
-            <span>Label</span>
-            <input v-model="guestForm.label" type="text" autocomplete="off" placeholder="Optional display label">
-          </label>
-
-          <div v-if="guestFormError" class="app-config-notice app-config-notice--error">
-            <strong>Save failed</strong>
-            <p>{{ guestFormError }}</p>
-          </div>
-        </form>
-      </AppDialog>
-
-      <AppDialog v-model="deleteDialogOpen" :title="deleteDialogTitle" width="30rem">
-        <div class="app-config-dialog-form">
-          <div class="app-config-notice app-config-notice--warning">
-            <strong>Destructive action</strong>
-            <p>{{ deleteDialogMessage }}</p>
-          </div>
-
-          <div class="app-config-dialog-footer">
-            <button type="button" class="app-config-button app-config-button--ghost" @click="closeDeleteDialog">
-              Cancel
-            </button>
-            <button type="button" class="app-config-button app-config-button--danger" :disabled="deleteLoading"
-              @click="handleConfirmDelete">
-              {{ deleteLoading ? 'Deleting...' : 'Delete' }}
-            </button>
-          </div>
+          <AppFormField v-slot="{ id }" label="Base URL" required>
+            <input :id="id" v-model="iplasForm.base_url" type="url" autocomplete="off"
+              placeholder="https://iplas.internal.example">
+          </AppFormField>
         </div>
-      </AppDialog>
+
+        <AppFormField v-slot="{ id }" label="Label" show-optional>
+          <input :id="id" v-model="iplasForm.label" type="text" autocomplete="off" placeholder="Optional display label">
+        </AppFormField>
+
+        <AppFormField
+          v-slot="{ id, describedBy }"
+          label="Token Value"
+          :required="!editingIplasId"
+          :hint="editingIplasId ? 'Leave blank to keep the current token value.' : ''"
+        >
+          <textarea :id="id" v-model="iplasForm.token_value" :aria-describedby="describedBy" rows="5"
+            :placeholder="editingIplasId ? 'Leave blank to keep the current token value.' : 'Paste the API token'" />
+        </AppFormField>
+      </AppFormDialog>
+
+      <AppFormDialog
+        v-model="sfistspDialogOpen"
+        :title="sfistspDialogTitle"
+        description="Only one SFISTSP configuration can be active at a time."
+        size="lg"
+        submit-label="Save Config"
+        :busy="sfistspSaving"
+        :error="sfistspFormError"
+        @submit="handleSaveSfistsp"
+        @cancel="closeSfistspDialog"
+      >
+        <div class="app-config-field-grid">
+          <AppFormField v-slot="{ id }" label="Base URL" required>
+            <input :id="id" v-model="sfistspForm.base_url" type="url" autocomplete="off"
+              placeholder="https://sfistsp.internal.example">
+          </AppFormField>
+
+          <AppFormField v-slot="{ id }" label="Program ID" required>
+            <input :id="id" v-model="sfistspForm.program_id" type="text" autocomplete="off" placeholder="program-id">
+          </AppFormField>
+        </div>
+
+        <div class="app-config-field-grid">
+          <AppFormField
+            v-slot="{ id, describedBy }"
+            label="Program Password"
+            :required="!editingSfistspId"
+            :hint="editingSfistspId ? 'Leave blank to keep the current password.' : ''"
+          >
+            <div class="app-config-password-field">
+              <input :id="id" v-model="sfistspForm.program_password" :aria-describedby="describedBy"
+                :type="showSfistspPassword ? 'text' : 'password'" autocomplete="new-password"
+                :placeholder="editingSfistspId ? 'Leave blank to keep the current password.' : 'Enter password'">
+              <button type="button" :aria-label="showSfistspPassword ? 'Hide password' : 'Show password'"
+                @click="showSfistspPassword = !showSfistspPassword">
+                <Icon :icon="showSfistspPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'" aria-hidden="true" />
+              </button>
+            </div>
+          </AppFormField>
+
+          <AppFormField v-slot="{ id }" label="Timeout (seconds)" required>
+            <input :id="id" v-model="sfistspForm.timeout" type="number" min="1" step="1" autocomplete="off"
+              placeholder="30">
+          </AppFormField>
+        </div>
+
+        <AppFormField v-slot="{ id }" label="Label" show-optional>
+          <input :id="id" v-model="sfistspForm.label" type="text" autocomplete="off" placeholder="Optional display label">
+        </AppFormField>
+      </AppFormDialog>
+
+      <AppFormDialog
+        v-model="guestDialogOpen"
+        :title="guestDialogTitle"
+        description="Guest credentials let visitors browse without a personal account."
+        size="lg"
+        submit-label="Save Guest"
+        :busy="guestSaving"
+        :error="guestFormError"
+        @submit="handleSaveGuest"
+        @cancel="closeGuestDialog"
+      >
+        <div class="app-config-field-grid">
+          <AppFormField
+            v-slot="{ id, describedBy }"
+            label="Username"
+            :required="!editingGuestId"
+            :hint="editingGuestId ? 'Leave blank to keep the current username.' : ''"
+          >
+            <input :id="id" v-model="guestForm.username" :aria-describedby="describedBy" type="text" autocomplete="off"
+              :placeholder="editingGuestId ? 'Leave blank to keep the current username.' : 'guest-user'">
+          </AppFormField>
+
+          <AppFormField
+            v-slot="{ id, describedBy }"
+            label="Password"
+            :required="!editingGuestId"
+            :hint="editingGuestId ? 'Leave blank to keep the current password.' : ''"
+          >
+            <div class="app-config-password-field">
+              <input :id="id" v-model="guestForm.password" :aria-describedby="describedBy"
+                :type="showGuestPassword ? 'text' : 'password'" autocomplete="new-password"
+                :placeholder="editingGuestId ? 'Leave blank to keep the current password.' : 'Enter password'">
+              <button type="button" :aria-label="showGuestPassword ? 'Hide password' : 'Show password'"
+                @click="showGuestPassword = !showGuestPassword">
+                <Icon :icon="showGuestPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'" aria-hidden="true" />
+              </button>
+            </div>
+          </AppFormField>
+        </div>
+
+        <AppFormField v-slot="{ id }" label="Label" show-optional>
+          <input :id="id" v-model="guestForm.label" type="text" autocomplete="off" placeholder="Optional display label">
+        </AppFormField>
+      </AppFormDialog>
+
+      <AppConfirmDialog
+        v-model="deleteDialogOpen"
+        :title="deleteDialogTitle"
+        :busy="deleteLoading"
+        @confirm="handleConfirmDelete"
+        @cancel="closeDeleteDialog"
+      >
+        {{ deleteDialogMessage }}
+      </AppConfirmDialog>
     </section>
   </DefaultLayout>
 </template>
@@ -582,8 +559,10 @@ import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useNotification } from '@/shared/composables/useNotification'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
-import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
+import AppConfirmDialog from '@/shared/ui/dialog/AppConfirmDialog.vue'
+import AppFormDialog from '@/shared/ui/dialog/AppFormDialog.vue'
 import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
+import AppFormField from '@/shared/ui/forms/AppFormField.vue'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 
 type ConfigTab = 'general' | 'branding' | 'iplas' | 'sfistsp' | 'guest'

@@ -140,17 +140,17 @@
 
                 <template #cell-actions="slotProps">
                   <div class="user-management-actions">
-                    <button type="button" title="View details" @click="showUserDetails(slotProps.data as User)">
-                      <Icon icon="mdi:card-account-details-outline" />
+                    <button type="button" :aria-label="`View details for ${slotProps.data.username}`" title="View details" @click="showUserDetails(slotProps.data as User)">
+                      <Icon icon="mdi:card-account-details-outline" aria-hidden="true" />
                     </button>
-                    <button type="button" title="Edit user" @click="editUser(slotProps.data as User)">
-                      <Icon icon="mdi:pencil-outline" />
+                    <button type="button" :aria-label="`Edit ${slotProps.data.username}`" title="Edit user" @click="editUser(slotProps.data as User)">
+                      <Icon icon="mdi:pencil-outline" aria-hidden="true" />
                     </button>
-                    <button type="button" title="Reset password" @click="openResetPasswordDialog(slotProps.data as User)">
-                      <Icon icon="mdi:lock-reset" />
+                    <button type="button" :aria-label="`Reset password for ${slotProps.data.username}`" title="Reset password" @click="openResetPasswordDialog(slotProps.data as User)">
+                      <Icon icon="mdi:lock-reset" aria-hidden="true" />
                     </button>
-                    <button type="button" class="is-danger" title="Delete user" @click="confirmDelete(slotProps.data as User)">
-                      <Icon icon="mdi:delete-outline" />
+                    <button type="button" class="is-danger" :aria-label="`Delete ${slotProps.data.username}`" title="Delete user" @click="confirmDelete(slotProps.data as User)">
+                      <Icon icon="mdi:delete-outline" aria-hidden="true" />
                     </button>
                   </div>
                 </template>
@@ -260,18 +260,20 @@
                     <button
                       v-if="slotProps.data.role !== 'developer'"
                       type="button"
+                      :aria-label="`Edit access for ${slotProps.data.username}`"
                       title="Edit access"
                       @click="openAccessEditDialog(slotProps.data as AccessControlUser)"
                     >
-                      <Icon icon="mdi:account-cog-outline" />
+                      <Icon icon="mdi:account-cog-outline" aria-hidden="true" />
                     </button>
                     <button
                       v-if="slotProps.data.role !== 'developer'"
                       type="button"
+                      :aria-label="`Menu permissions for ${slotProps.data.username}`"
                       title="Menu permissions"
                       @click="openPermissionsDialog(slotProps.data as AccessControlUser)"
                     >
-                      <Icon icon="mdi:shield-key-outline" />
+                      <Icon icon="mdi:shield-key-outline" aria-hidden="true" />
                     </button>
                     <span v-if="slotProps.data.role === 'developer'" class="user-management-badge user-management-badge--muted">
                       Protected
@@ -291,11 +293,14 @@
         </template>
       </AppTabs>
 
-    <AppDialog
+    <AppFormDialog
       v-model="detailsDialog"
       title="User Details"
       :description="selectedUser ? `Review the current profile for ${selectedUser.username}.` : ''"
-      width="min(92vw, 48rem)"
+      size="lg"
+      submit-label="Edit User"
+      cancel-label="Close"
+      @submit="editUserFromDetails"
     >
       <div v-if="selectedUser" class="user-management-dialog-grid">
         <section class="user-management-dialog-card">
@@ -317,180 +322,127 @@
           </div>
         </section>
       </div>
-      <template #footer>
-        <div class="user-management-dialog-footer">
-          <button type="button" class="user-management-button user-management-button--ghost" @click="detailsDialog = false">
-            Close
-          </button>
-          <button type="button" class="user-management-button user-management-button--primary" @click="editUserFromDetails">
-            Edit User
-          </button>
-        </div>
-      </template>
-    </AppDialog>
+    </AppFormDialog>
 
-    <AppDialog
+    <AppConfirmDialog
       v-model="deleteDialog"
-      title="Confirm User Deletion"
-      description="This action permanently removes the selected user. Type DELETE to continue."
-      persistent
-      width="min(92vw, 32rem)"
+      v-model:typed-value="deleteConfirmation"
+      title="Delete user"
+      description="The account and its access records are removed for good."
+      :target="userToDelete ? `${userToDelete.username} · ${userToDelete.email || 'No email'} · ${userToDelete.role || 'user'}` : ''"
+      target-label="User to delete"
+      confirm-label="Delete User"
+      :busy="deleting"
+      require-typed
+      @confirm="handleDeleteUser"
+      @cancel="cancelDelete"
     >
-      <div class="user-management-dialog-stack">
-        <div class="user-management-inline-warning">
-          <strong>Target user</strong>
-          <p>{{ userToDelete?.username || 'N/A' }} · {{ userToDelete?.email || 'No email' }} · {{ userToDelete?.role || 'user' }}</p>
-        </div>
+      Deleting this user revokes their sessions immediately. This cannot be undone.
+    </AppConfirmDialog>
 
-        <label class="user-management-field">
-          <span>Type DELETE to confirm</span>
-          <input v-model="deleteConfirmation" type="text" placeholder="DELETE" @keyup.enter="handleDeleteUser">
-        </label>
-      </div>
-      <template #footer>
-        <div class="user-management-dialog-footer">
-          <button type="button" class="user-management-button user-management-button--ghost" :disabled="deleting" @click="cancelDelete">
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="user-management-button user-management-button--danger"
-            :disabled="deleteConfirmation !== 'DELETE' || deleting"
-            @click="handleDeleteUser"
-          >
-            {{ deleting ? 'Deleting...' : 'Delete User' }}
-          </button>
-        </div>
-      </template>
-    </AppDialog>
-
-    <AppDialog
+    <AppFormDialog
       v-model="dialog"
       :title="editMode ? 'Edit User' : 'Create User'"
       :description="editMode ? 'Update account identity, role, and active status.' : 'Create a new account for the system.'"
-      width="min(92vw, 38rem)"
+      size="lg"
+      submit-label="Save User"
+      :busy="loading"
+      :submit-disabled="!currentUserFormValid"
+      @submit="saveUser"
     >
       <div class="user-management-form-grid">
-        <label class="user-management-field">
-          <span>Username</span>
-          <input v-model="currentUser.username" type="text" :disabled="editMode" placeholder="Username">
-        </label>
+        <AppFormField v-slot="{ id }" label="Username" required>
+          <input :id="id" v-model="currentUser.username" type="text" :disabled="editMode" placeholder="Username">
+        </AppFormField>
 
-        <label class="user-management-field">
-          <span>Email</span>
-          <input v-model="currentUser.email" type="email" placeholder="Email address">
-        </label>
+        <AppFormField v-slot="{ id }" label="Email" show-optional>
+          <input :id="id" v-model="currentUser.email" type="email" placeholder="Email address">
+        </AppFormField>
 
-        <label class="user-management-field user-management-field--full">
-          <span>{{ editMode ? 'New Password (Optional)' : 'Password' }}</span>
-          <input v-model="currentUser.password" type="password" :placeholder="editMode ? 'Leave blank to keep the current password' : 'Set an initial password'">
-        </label>
+        <AppFormField
+          v-slot="{ id, describedBy }"
+          :label="editMode ? 'New Password' : 'Password'"
+          :required="!editMode"
+          :show-optional="editMode"
+          :hint="editMode ? 'Leave blank to keep the current password.' : 'The user can change this after first sign-in.'"
+          full
+        >
+          <input :id="id" v-model="currentUser.password" :aria-describedby="describedBy" type="password" :placeholder="editMode ? 'Leave blank to keep the current password' : 'Set an initial password'">
+        </AppFormField>
 
-        <label class="user-management-field">
-          <span>Role</span>
-          <AppSelect v-model="currentUser.role" :options="userRoleSelectOptions" :searchable="false" />
-        </label>
+        <AppFormField v-slot="{ id }" label="Role" required>
+          <AppSelect :input-id="id" v-model="currentUser.role" :options="userRoleSelectOptions" :searchable="false" />
+        </AppFormField>
 
         <label class="user-management-toggle">
           <input v-model="currentUser.is_active" type="checkbox">
           <span>Active account</span>
         </label>
       </div>
+    </AppFormDialog>
 
-      <template #footer>
-        <div class="user-management-dialog-footer">
-          <button type="button" class="user-management-button user-management-button--ghost" @click="dialog = false">
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="user-management-button user-management-button--primary"
-            :disabled="!currentUserFormValid || loading"
-            @click="saveUser"
-          >
-            {{ loading ? 'Saving...' : 'Save User' }}
-          </button>
-        </div>
-      </template>
-    </AppDialog>
-
-    <AppDialog
+    <AppFormDialog
       v-model="resetPasswordDialog"
       title="Reset Password"
       :description="passwordResetUser ? `Set a new password for ${passwordResetUser.username}.` : ''"
-      width="min(92vw, 34rem)"
+      submit-label="Reset Password"
+      busy-label="Resetting…"
+      :busy="resettingPassword"
+      :submit-disabled="!passwordResetValid"
+      :error="passwordResetMismatch ? 'Both passwords must match.' : ''"
+      @submit="submitPasswordReset"
+      @cancel="closeResetPasswordDialog"
     >
       <div class="user-management-dialog-stack">
-        <label class="user-management-field">
-          <span>New Password</span>
-          <input v-model="passwordResetForm.password" type="password" placeholder="Enter new password">
-        </label>
-        <label class="user-management-field">
-          <span>Confirm Password</span>
-          <input v-model="passwordResetForm.confirmPassword" type="password" placeholder="Confirm new password" @keyup.enter="submitPasswordReset">
-        </label>
+        <AppFormField v-slot="{ id }" label="New Password" required>
+          <input :id="id" v-model="passwordResetForm.password" type="password" placeholder="Enter new password">
+        </AppFormField>
+        <AppFormField v-slot="{ id }" label="Confirm Password" required>
+          <input :id="id" v-model="passwordResetForm.confirmPassword" type="password" placeholder="Confirm new password">
+        </AppFormField>
       </div>
+    </AppFormDialog>
 
-      <template #footer>
-        <div class="user-management-dialog-footer">
-          <button type="button" class="user-management-button user-management-button--ghost" @click="closeResetPasswordDialog">
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="user-management-button user-management-button--primary"
-            :disabled="!passwordResetValid || resettingPassword"
-            @click="submitPasswordReset"
-          >
-            {{ resettingPassword ? 'Resetting...' : 'Reset Password' }}
-          </button>
-        </div>
-      </template>
-    </AppDialog>
-
-    <AppDialog
+    <AppFormDialog
       v-model="acEditDialog"
       title="Edit Access"
       :description="acEditingUser ? `Adjust the role and status for ${acEditingUser.username}.` : ''"
-      width="min(92vw, 34rem)"
+      submit-label="Save Access"
+      :busy="acSaving"
       persistent
+      @submit="saveUserAccess"
     >
       <div class="user-management-form-grid">
-        <label class="user-management-field">
-          <span>Role</span>
-          <AppSelect v-model="acEditForm.role" :options="accessRoleSelectOptions" :searchable="false" />
-        </label>
+        <AppFormField v-slot="{ id }" label="Role" required full>
+          <AppSelect :input-id="id" v-model="acEditForm.role" :options="accessRoleSelectOptions" :searchable="false" />
+        </AppFormField>
 
         <label class="user-management-toggle">
           <input v-model="acEditForm.is_active" type="checkbox">
           <span>Active account</span>
         </label>
 
-        <label class="user-management-toggle user-management-toggle--full">
+        <label class="user-management-toggle">
           <input v-model="acEditForm.is_ptb_admin" type="checkbox">
           <span>PTB Admin</span>
         </label>
       </div>
+    </AppFormDialog>
 
-      <template #footer>
-        <div class="user-management-dialog-footer">
-          <button type="button" class="user-management-button user-management-button--ghost" @click="acEditDialog = false">
-            Cancel
-          </button>
-          <button type="button" class="user-management-button user-management-button--primary" :disabled="acSaving" @click="saveUserAccess">
-            {{ acSaving ? 'Saving...' : 'Save Access' }}
-          </button>
-        </div>
-      </template>
-    </AppDialog>
-
-    <AppDialog
+    <AppFormDialog
       v-model="permissionsDialog"
       title="Menu Permissions"
       :description="permissionsUser ? `Configure resource permissions for ${permissionsUser.username}.` : ''"
-      width="min(94vw, 56rem)"
+      size="xl"
+      submit-label="Save Permissions"
+      :busy="acSaving"
       persistent
+      @submit="savePermissions"
     >
+      <template #footer-aside>
+        <span>{{ selectedPermissionCount }} of {{ totalPermissionCount }} permissions selected</span>
+      </template>
+
       <div class="user-management-permissions-actions">
         <button type="button" class="user-management-button user-management-button--secondary" @click="selectAllPermissions">
           Select All
@@ -517,6 +469,7 @@
             <template #body="slotProps">
               <input
                 class="user-management-permission-checkbox"
+                :aria-label="`${capitalize(action)} ${formatResourceName(slotProps.data.resource)}`"
                 :checked="hasPermission(slotProps.data.resource, action)"
                 type="checkbox"
                 @change="togglePermission(slotProps.data.resource, action, ($event.target as HTMLInputElement).checked)"
@@ -525,18 +478,7 @@
           </Column>
         </DataTable>
       </div>
-
-      <template #footer>
-        <div class="user-management-dialog-footer">
-          <button type="button" class="user-management-button user-management-button--ghost" @click="permissionsDialog = false">
-            Cancel
-          </button>
-          <button type="button" class="user-management-button user-management-button--primary" :disabled="acSaving" @click="savePermissions">
-            {{ acSaving ? 'Saving...' : 'Save Permissions' }}
-          </button>
-        </div>
-      </template>
-    </AppDialog>
+    </AppFormDialog>
     </section>
   </DefaultLayout>
 </template>
@@ -550,7 +492,7 @@ import { computed, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { queryKeys } from '@/core/query'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
-import { AppDataGrid, AppDialog, AppSelect, AppTabs } from '@/shared'
+import { AppConfirmDialog, AppDataGrid, AppFormDialog, AppFormField, AppSelect, AppTabs } from '@/shared'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import { getApiErrorDetail } from '@/shared/utils'
 import {
@@ -798,6 +740,24 @@ const passwordResetValid = computed(() => {
     passwordResetForm.value.password === passwordResetForm.value.confirmPassword
   )
 })
+
+const passwordResetMismatch = computed(
+  () =>
+    passwordResetForm.value.confirmPassword.length > 0 &&
+    passwordResetForm.value.password !== passwordResetForm.value.confirmPassword,
+)
+
+const totalPermissionCount = computed(
+  () => acAvailableResources.value.length * acAvailableActions.value.length,
+)
+
+const selectedPermissionCount = computed(() =>
+  acAvailableResources.value.reduce(
+    (total, resource) =>
+      total + acAvailableActions.value.filter((action) => hasPermission(resource, action)).length,
+    0,
+  ),
+)
 
 async function loadUsers() {
   const result = await usersQuery.refetch()
