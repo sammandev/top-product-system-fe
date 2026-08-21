@@ -1338,6 +1338,11 @@ async function fetchTestItems(): Promise<void> {
         console.warn(`Failed to fetch device IDs for ${config.displayName}, falling back to ALL`)
         deviceIds = ['ALL']
       }
+
+      // An empty list would skip the fetch loop entirely and look like "no data".
+      if (deviceIds.length === 0) {
+        deviceIds = ['ALL']
+      }
     }
 
     const includeFilters = config.includedTestItems?.length ? config.includedTestItems : undefined
