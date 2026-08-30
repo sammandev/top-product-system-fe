@@ -310,9 +310,9 @@ async function handleCleanup() {
     width: 3.4rem;
     height: 3.4rem;
     border-radius: 1.1rem;
-    background: linear-gradient(135deg, var(--system-cleanup-warning-soft), var(--system-cleanup-danger-soft));
+    background: var(--system-cleanup-warning-soft);
     color: var(--system-cleanup-warning);
-    box-shadow: var(--app-shadow-soft);
+    box-shadow: none;
 }
 
 .system-cleanup-header__icon-glyph {
@@ -335,36 +335,24 @@ async function handleCleanup() {
     display: grid;
     grid-template-columns: minmax(0, 1.15fr) minmax(20rem, 0.85fr);
     gap: 1rem;
+    align-items: start;
 }
 
 .system-cleanup-layout__side {
     display: grid;
     gap: 1rem;
+    align-content: start;
 }
 
 .system-cleanup-panel {
     display: grid;
     gap: 1rem;
+    align-content: start;
     border: 1px solid var(--app-border);
     border-radius: 0.75rem;
     padding: 1.2rem;
-    background:
-        radial-gradient(circle at top right, var(--system-cleanup-warning-soft), transparent 34%),
-        var(--app-panel-strong);
-    box-shadow: var(--app-shadow-soft);
-}
-
-.system-cleanup-panel--success {
-    background:
-        radial-gradient(circle at top right, var(--system-cleanup-success-soft), transparent 34%),
-        var(--app-panel-strong);
-}
-
-.system-cleanup-panel--cool,
-.system-cleanup-panel--info {
-    background:
-        radial-gradient(circle at top right, var(--system-cleanup-info-soft), transparent 34%),
-        var(--app-panel-strong);
+    background: var(--app-panel-strong);
+    box-shadow: none;
 }
 
 .system-cleanup-panel__header {
@@ -516,9 +504,7 @@ async function handleCleanup() {
 
 .system-cleanup-preset--active {
     border-color: var(--system-cleanup-warning);
-    background: linear-gradient(180deg, var(--system-cleanup-warning-soft), var(--app-panel-strong));
-    box-shadow: 0 0 0 4px var(--system-cleanup-warning-line);
-    transform: translateY(-1px);
+    background: var(--system-cleanup-warning-soft);
 }
 
 .system-cleanup-summary-card,
@@ -562,11 +548,11 @@ async function handleCleanup() {
     justify-content: center;
     gap: 0.6rem;
     border: 0;
-    border-radius: 999px;
-    padding: 0.95rem 1.4rem;
-    font-weight: 700;
+    border-radius: 0.65rem;
+    padding: 0.6rem 1rem;
+    font-weight: 600;
     cursor: pointer;
-    transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+    transition: background 0.15s ease, opacity 0.15s ease;
 }
 
 .system-cleanup-button__icon {
@@ -574,13 +560,12 @@ async function handleCleanup() {
 }
 
 .system-cleanup-button--warning {
-    background: linear-gradient(135deg, var(--system-cleanup-warning), var(--system-cleanup-danger));
+    background: var(--system-cleanup-danger);
     color: white;
-    box-shadow: 0 18px 30px var(--system-cleanup-danger-soft);
 }
 
-.system-cleanup-button:hover:not(:disabled) {
-    transform: translateY(-1px);
+.system-cleanup-button--warning:hover:not(:disabled) {
+    filter: brightness(0.92);
 }
 
 .system-cleanup-button:disabled {
@@ -601,6 +586,11 @@ async function handleCleanup() {
 
 .system-cleanup-steps {
     padding-left: 1.25rem;
+}
+
+.system-cleanup-steps li strong {
+    display: block;
+    margin-bottom: 0.2rem;
 }
 
 .system-cleanup-notice {

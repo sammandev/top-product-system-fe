@@ -62,17 +62,17 @@
                 <strong>{{ stats.total_users }}</strong>
                 <small>All accounts currently stored in the system.</small>
               </article>
-              <article class="user-management-stat-card user-management-stat-card--success">
+              <article class="user-management-stat-card">
                 <span>Active Users</span>
                 <strong>{{ stats.active_users }}</strong>
                 <small>Accounts that can still authenticate.</small>
               </article>
-              <article class="user-management-stat-card user-management-stat-card--cool">
+              <article class="user-management-stat-card">
                 <span>Online Now</span>
                 <strong>{{ stats.online_users }}</strong>
                 <small>Users with current recent session activity.</small>
               </article>
-              <article class="user-management-stat-card user-management-stat-card--warm">
+              <article class="user-management-stat-card">
                 <span>New This Month</span>
                 <strong>{{ stats.new_users }}</strong>
                 <small>Accounts created during the current month.</small>
@@ -291,6 +291,12 @@
             </section>
           </section>
         </template>
+
+        <template #panel-catalog>
+          <div class="user-management-tab-content">
+            <RolesPermissionsPanel />
+          </div>
+        </template>
       </AppTabs>
 
     <AppFormDialog
@@ -488,7 +494,7 @@ import { Icon } from '@iconify/vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import Column from 'primevue/column'
 import DataTable from 'primevue/datatable'
-import { computed, onMounted, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { queryKeys } from '@/core/query'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
@@ -506,11 +512,15 @@ import {
 
 type UserDraft = Partial<User> & { password?: string }
 
+const RolesPermissionsPanel = defineAsyncComponent(
+  () => import('../components/RolesPermissionsPanel.vue'),
+)
+
 const router = useRouter()
 const authStore = useAuthStore()
 const queryClient = useQueryClient()
 
-const activeTab = useTabPersistence<'users' | 'roles'>('tab', 'users')
+const activeTab = useTabPersistence<'users' | 'roles' | 'catalog'>('tab', 'users')
 const error = ref('')
 const success = ref('')
 
@@ -635,6 +645,7 @@ const tabItems = computed(() => {
   const items = [{ value: 'users', label: 'Users', icon: 'mdi-account-group' }]
   if (authStore.isSuperAdmin) {
     items.push({ value: 'roles', label: 'Roles & Access', icon: 'mdi-shield-account' })
+    items.push({ value: 'catalog', label: 'Role Catalog', icon: 'mdi-shield-key' })
   }
   return items
 })
@@ -1141,7 +1152,7 @@ watch(activeTab, (tab) => {
 })
 
 onMounted(() => {
-  if (!authStore.isSuperAdmin && activeTab.value === 'roles') {
+  if (!authStore.isSuperAdmin && activeTab.value !== 'users') {
     activeTab.value = 'users'
   }
 
@@ -1210,9 +1221,9 @@ onMounted(() => {
   width: 3.4rem;
   height: 3.4rem;
   border-radius: 1.1rem;
-  background: linear-gradient(135deg, var(--user-management-accent-soft), var(--user-management-warning-soft));
+  background: var(--user-management-accent-soft);
   color: var(--user-management-accent);
-  box-shadow: var(--app-shadow-soft);
+  box-shadow: none;
 }
 
 .user-management-header__icon :deep(svg) {
@@ -1238,9 +1249,9 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 0.55rem;
-  border-radius: 999px;
-  padding: 0.9rem 1.25rem;
-  font-weight: 700;
+  border-radius: 0.65rem;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
 }
 
 .user-management-button :deep(svg) {
@@ -1249,9 +1260,13 @@ onMounted(() => {
 }
 
 .user-management-button--primary {
-  background: linear-gradient(135deg, var(--user-management-accent), var(--user-management-warning));
+  background: var(--user-management-accent);
   color: white;
-  box-shadow: 0 16px 28px var(--user-management-accent-soft);
+  box-shadow: none;
+}
+
+.user-management-button--primary:hover:not(:disabled) {
+  background: var(--app-accent-strong);
 }
 
 .user-management-button--secondary,
@@ -1259,13 +1274,13 @@ onMounted(() => {
   background: var(--app-panel-strong);
   color: var(--app-ink);
   border: 1px solid var(--app-border);
-  box-shadow: var(--app-shadow-soft);
+  box-shadow: none;
 }
 
 .user-management-button--danger {
-  background: linear-gradient(135deg, var(--user-management-danger), var(--user-management-warning));
+  background: var(--user-management-danger);
   color: white;
-  box-shadow: 0 16px 28px var(--user-management-danger-soft);
+  box-shadow: none;
 }
 
 .user-management-button:hover:not(:disabled),
@@ -1350,27 +1365,7 @@ onMounted(() => {
 .user-management-stat-card {
   display: grid;
   gap: 0.35rem;
-  background:
-    radial-gradient(circle at top right, var(--user-management-accent-soft), transparent 34%),
-    var(--app-panel-strong);
-}
-
-.user-management-stat-card--success {
-  background:
-    radial-gradient(circle at top right, var(--user-management-success-soft), transparent 34%),
-    var(--app-panel-strong);
-}
-
-.user-management-stat-card--cool {
-  background:
-    radial-gradient(circle at top right, var(--user-management-info-soft), transparent 34%),
-    var(--app-panel-strong);
-}
-
-.user-management-stat-card--warm {
-  background:
-    radial-gradient(circle at top right, var(--user-management-warning-soft), transparent 34%),
-    var(--app-panel-strong);
+  background: var(--app-panel-strong);
 }
 
 .user-management-stat-card span,
@@ -1392,9 +1387,7 @@ onMounted(() => {
 .user-management-panel {
   display: grid;
   gap: 1rem;
-  background:
-    radial-gradient(circle at top right, var(--user-management-accent-soft), transparent 34%),
-    var(--app-panel-strong);
+  background: var(--app-panel-strong);
 }
 
 .user-management-panel__header--compact {
@@ -1472,7 +1465,7 @@ onMounted(() => {
   width: 2.35rem;
   height: 2.35rem;
   border-radius: 999px;
-  background: linear-gradient(135deg, var(--user-management-accent-soft), var(--user-management-info-soft));
+  background: var(--user-management-accent-soft);
   color: var(--user-management-accent);
   font-weight: 700;
 }

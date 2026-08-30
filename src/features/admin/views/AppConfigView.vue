@@ -1317,10 +1317,9 @@ onMounted(async () => {
   width: 3rem;
   height: 3rem;
   border-radius: 1rem;
-  background: linear-gradient(135deg, var(--app-config-accent), var(--app-config-info));
-  color: white;
+  background: var(--app-config-accent-soft);
+  color: var(--app-config-accent);
   font-size: 1.4rem;
-  box-shadow: 0 18px 32px var(--app-config-accent-soft);
 }
 
 .app-config-header__eyebrow {
@@ -1364,8 +1363,8 @@ onMounted(async () => {
   gap: 1.25rem;
   padding: 1.5rem;
   border: 1px solid var(--app-border);
-  border-radius: 1.25rem;
-  background: linear-gradient(180deg, var(--app-panel-strong), var(--app-panel));
+  border-radius: 0.75rem;
+  background: var(--app-panel-strong);
 }
 
 .app-config-panel--preview {
@@ -1556,19 +1555,18 @@ onMounted(async () => {
   transition: transform 0.18s ease, box-shadow 0.18s ease, background 0.18s ease;
 }
 
-.app-config-button:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
 .app-config-button:disabled {
   opacity: 0.65;
   cursor: not-allowed;
 }
 
 .app-config-button--primary {
-  background: linear-gradient(135deg, var(--app-config-accent), var(--app-config-info));
-  box-shadow: 0 18px 28px var(--app-config-accent-soft);
+  background: var(--app-config-accent);
   color: white;
+}
+
+.app-config-button--primary:hover:not(:disabled) {
+  background: var(--app-accent-strong);
 }
 
 .app-config-button--ghost {
@@ -1588,9 +1586,10 @@ onMounted(async () => {
   flex-direction: column;
   gap: 0.4rem;
   padding: 1rem 1.25rem;
-  border-radius: 1rem;
-  background: linear-gradient(145deg, var(--app-config-accent-strong), var(--app-config-info));
-  color: white;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-surface);
+  color: var(--app-ink);
 }
 
 .app-config-preview-card__label,
@@ -1598,7 +1597,7 @@ onMounted(async () => {
   font-size: 0.75rem;
   letter-spacing: 0;
   text-transform: none;
-  color: rgb(226 232 240 / 0.72);
+  color: var(--app-muted);
 }
 
 .app-config-preview-card strong {
@@ -1608,7 +1607,7 @@ onMounted(async () => {
 .app-config-preview-card small,
 .app-config-preview-card p {
   margin: 0;
-  color: rgb(226 232 240 / 0.84);
+  color: var(--app-muted);
 }
 
 .app-config-meta-list {

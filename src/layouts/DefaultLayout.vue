@@ -312,12 +312,11 @@ const staticSystemItems: MenuItem[] = [
     icon: 'mdi-shield-lock',
     children: [
       { title: 'User Management', icon: 'mdi-circle-small', path: '/admin/users' },
-      { title: 'Roles & Permissions', icon: 'mdi-circle-small', path: '/admin/rbac' },
       { title: 'Menu Access', icon: 'mdi-circle-small', path: '/admin/menu-access' },
       { title: 'App Configuration', icon: 'mdi-circle-small', path: '/admin/app-config' },
+      { title: 'System Cleanup', icon: 'mdi-circle-small', path: '/admin/cleanup' },
     ],
   },
-  { title: 'System Cleanup', icon: 'mdi-delete-sweep', path: '/admin/cleanup' },
 ]
 
 const resolvedThemeMode = computed(() => resolveThemeMode(themePreferences.value.mode))

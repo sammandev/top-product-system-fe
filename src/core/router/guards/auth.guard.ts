@@ -118,7 +118,6 @@ function routePathToResource(path: string): string | undefined {
     '/conversion/dvt-to-mc2': 'conversion',
     '/activity': 'activity',
     '/admin/users': 'admin_users',
-    '/admin/rbac': 'admin_rbac',
     '/admin/cleanup': 'admin_cleanup',
     '/admin/app-config': 'admin_config',
     '/admin/menu-access': 'admin_menu_access',

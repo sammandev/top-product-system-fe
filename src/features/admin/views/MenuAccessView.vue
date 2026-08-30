@@ -116,8 +116,8 @@
                           Protected
                         </span>
                       </div>
-                      <p>{{ menu.description || menu.path }}</p>
-                      <small>{{ menu.path }}</small>
+                      <p v-if="menu.description">{{ menu.description }}</p>
+                      <small>{{ menu.path || 'Group heading' }}</small>
                     </div>
                   </label>
                 </div>
@@ -485,9 +485,9 @@ watch(
   width: 3.4rem;
   height: 3.4rem;
   border-radius: 1.1rem;
-  background: linear-gradient(135deg, var(--menu-access-accent-soft), var(--menu-access-info-soft));
+  background: var(--menu-access-accent-soft);
   color: var(--menu-access-accent);
-  box-shadow: var(--app-shadow-soft);
+  box-shadow: none;
 }
 
 .menu-access-header__icon :deep(svg) {
@@ -506,11 +506,11 @@ watch(
   justify-content: center;
   gap: 0.55rem;
   border: 0;
-  border-radius: 0.5rem;
-  padding: 0.9rem 1.25rem;
-  font-weight: 700;
+  border-radius: 0.65rem;
+  padding: 0.6rem 1rem;
+  font-weight: 600;
   cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, opacity 0.15s ease;
 }
 
 .menu-access-button :deep(svg) {
@@ -519,20 +519,25 @@ watch(
 }
 
 .menu-access-button--primary {
-  background: linear-gradient(135deg, var(--menu-access-accent), var(--menu-access-info));
+  background: var(--menu-access-accent);
   color: white;
-  box-shadow: 0 16px 28px var(--menu-access-accent-soft);
+  box-shadow: none;
+}
+
+.menu-access-button--primary:hover:not(:disabled) {
+  background: var(--app-accent-strong);
 }
 
 .menu-access-button--secondary {
   background: var(--app-panel-strong);
   color: var(--app-ink);
   border: 1px solid var(--app-border);
-  box-shadow: var(--app-shadow-soft);
+  box-shadow: none;
 }
 
-.menu-access-button:hover:not(:disabled) {
-  transform: translateY(-1px);
+.menu-access-button--secondary:hover:not(:disabled) {
+  border-color: var(--menu-access-accent);
+  color: var(--app-accent-strong);
 }
 
 .menu-access-button:disabled {
@@ -610,6 +615,7 @@ watch(
   display: grid;
   grid-template-columns: minmax(0, 1.2fr) minmax(18rem, 0.8fr);
   gap: 1rem;
+  align-items: start;
 }
 
 .menu-access-tab-content,
@@ -629,9 +635,7 @@ watch(
 }
 
 .menu-access-section {
-  background:
-    radial-gradient(circle at top right, var(--menu-access-accent-soft), transparent 34%),
-    var(--app-panel-strong);
+  background: var(--app-panel-strong);
 }
 
 .menu-access-section__copy {
@@ -683,9 +687,7 @@ watch(
 
 .menu-access-option--active {
   border-color: var(--app-accent);
-  background: linear-gradient(180deg, var(--menu-access-accent-soft), var(--app-panel-strong));
-  box-shadow: 0 0 0 4px var(--app-ring);
-  transform: translateY(-1px);
+  background: var(--menu-access-accent-soft);
 }
 
 .menu-access-option--disabled {
@@ -731,17 +733,13 @@ watch(
 .menu-access-sidebar-panel {
   display: grid;
   gap: 1rem;
-}
-
-.menu-access-sidebar-panel--cool {
-  background:
-    radial-gradient(circle at top right, var(--menu-access-info-soft), transparent 34%),
-    var(--app-panel-strong);
+  align-content: start;
 }
 
 .menu-access-sidebar-panel__header {
   display: grid;
   gap: 0.35rem;
+  align-content: start;
 }
 
 .menu-access-sidebar-panel__eyebrow {

@@ -37,7 +37,7 @@ const displayWidth = computed(() => Math.max(clampedValue.value, props.minVisibl
 }
 
 .app-progress__bar {
-  background: linear-gradient(90deg, var(--app-accent), rgba(45, 212, 191, 0.8));
+  background: var(--app-accent);
   transition: width 0.2s ease;
 }
 </style>

@@ -59,15 +59,9 @@ const hasHeader = computed(() =>
 </script>
 
 <style scoped>
-.app-panel--warm {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--app-info) 3%, transparent), color-mix(in srgb, var(--app-info) 1.5%, transparent)), var(--app-panel-strong);
-}
-
-.app-panel--cool {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--app-info) 3.5%, transparent), color-mix(in srgb, var(--app-info) 2%, transparent)), var(--app-panel-strong);
-}
-
+.app-panel--warm,
+.app-panel--cool,
 .app-panel--success {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--app-success) 3.5%, transparent), color-mix(in srgb, var(--app-success) 2%, transparent)), var(--app-panel-strong);
+  background: var(--app-panel-strong);
 }
 </style>

@@ -51,14 +51,14 @@ export const adminRoutes: RouteRecordRaw[] = [
       },
     },
   },
+  // The role catalog is now a tab inside User Management.
   {
     path: '/admin/rbac',
-    name: 'RBACManagement',
-    component: () => import('../views/RBACManagementView.vue'),
-    meta: {
-      requiresAuth: true,
-      requiresAdmin: true,
-      title: 'Roles & Permissions',
+    redirect: {
+      path: '/admin/users',
+      query: {
+        tab: 'catalog',
+      },
     },
   },
 ]

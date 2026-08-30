@@ -1,52 +1,5 @@
 <template>
-  <DefaultLayout>
-    <section class="rbac-management-page">
-      <div class="rbac-management-header">
-      <div class="rbac-management-header__copy">
-        <div class="rbac-management-header__icon">
-          <Icon icon="mdi:shield-account-outline" />
-        </div>
-        <div>
-          <p class="rbac-management-header__eyebrow">Admin Control Center</p>
-          <h1>Roles And Permissions</h1>
-          <p>
-            Manage the role catalog, reusable permissions, and detailed assignment visibility from
-            one admin workspace.
-          </p>
-        </div>
-      </div>
-
-      <div class="rbac-management-header__actions">
-        <button
-          v-if="activeTab === 'roles'"
-          type="button"
-          class="rbac-management-button rbac-management-button--primary"
-          @click="openCreateRoleDialog"
-        >
-          <Icon icon="mdi:shield-plus-outline" />
-          <span>Add Role</span>
-        </button>
-        <button
-          v-else
-          type="button"
-          class="rbac-management-button rbac-management-button--secondary"
-          @click="openCreatePermissionDialog"
-        >
-          <Icon icon="mdi:lock-plus-outline" />
-          <span>Add Permission</span>
-        </button>
-        <button
-          type="button"
-          class="rbac-management-button rbac-management-button--ghost"
-          :disabled="loading"
-          @click="loadData"
-        >
-          <Icon icon="mdi:refresh" />
-          <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
-        </button>
-      </div>
-    </div>
-
+  <section class="rbac-management-page">
     <div v-if="error" class="rbac-management-notice rbac-management-notice--error">
       <div>
         <strong>Admin action failed</strong>
@@ -63,27 +16,59 @@
       <button type="button" @click="success = ''">Dismiss</button>
     </div>
 
-    <div class="rbac-management-stats-grid">
-      <article class="rbac-management-stat-card">
-        <span>Total Roles</span>
-        <strong>{{ stats.total_roles }}</strong>
-        <small>Reusable role records available across the platform.</small>
-      </article>
-      <article class="rbac-management-stat-card rbac-management-stat-card--success">
-        <span>Total Permissions</span>
-        <strong>{{ stats.total_permissions }}</strong>
-        <small>Permission capabilities currently defined in the system.</small>
-      </article>
-      <article class="rbac-management-stat-card rbac-management-stat-card--cool">
-        <span>Users With Roles</span>
-        <strong>{{ stats.users_with_roles }}</strong>
-        <small>Accounts already assigned to at least one active role.</small>
-      </article>
-      <article class="rbac-management-stat-card rbac-management-stat-card--warm">
-        <span>Active Sessions</span>
-        <strong>{{ stats.active_sessions }}</strong>
-        <small>Current session activity tracked against authenticated users.</small>
-      </article>
+    <div class="rbac-management-toolbar">
+      <div class="rbac-management-stats-grid">
+        <article class="rbac-management-stat-card">
+          <span>Total Roles</span>
+          <strong>{{ stats.total_roles }}</strong>
+          <small>Reusable role records available across the platform.</small>
+        </article>
+        <article class="rbac-management-stat-card">
+          <span>Total Permissions</span>
+          <strong>{{ stats.total_permissions }}</strong>
+          <small>Permission capabilities currently defined in the system.</small>
+        </article>
+        <article class="rbac-management-stat-card">
+          <span>Users With Roles</span>
+          <strong>{{ stats.users_with_roles }}</strong>
+          <small>Accounts already assigned to at least one active role.</small>
+        </article>
+        <article class="rbac-management-stat-card">
+          <span>Active Sessions</span>
+          <strong>{{ stats.active_sessions }}</strong>
+          <small>Current session activity tracked against authenticated users.</small>
+        </article>
+      </div>
+
+      <div class="rbac-management-toolbar__actions">
+        <button
+          v-if="activeTab === 'roles'"
+          type="button"
+          class="rbac-management-button rbac-management-button--primary"
+          @click="openCreateRoleDialog"
+        >
+          <Icon icon="mdi:shield-plus-outline" aria-hidden="true" />
+          <span>Add Role</span>
+        </button>
+        <button
+          v-else
+          type="button"
+          class="rbac-management-button rbac-management-button--primary"
+          @click="openCreatePermissionDialog"
+        >
+          <Icon icon="mdi:lock-plus-outline" aria-hidden="true" />
+          <span>Add Permission</span>
+        </button>
+        <button
+          type="button"
+          class="rbac-management-button rbac-management-button--ghost"
+          :disabled="loading"
+          @click="loadData"
+        >
+          <Icon icon="mdi:refresh" aria-hidden="true" />
+          <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
+        </button>
+      </div>
     </div>
 
     <AppTabs v-model="activeTab" :items="tabItems" scrollable>
@@ -498,8 +483,7 @@
     >
       {{ deleteDialogMessage }}
     </AppConfirmDialog>
-    </section>
-  </DefaultLayout>
+  </section>
 </template>
 
 <script setup lang="ts">
@@ -507,7 +491,6 @@ import { Icon } from '@iconify/vue'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/vue-query'
 import { computed, reactive, ref } from 'vue'
 import { queryKeys } from '@/core/query'
-import DefaultLayout from '@/layouts/DefaultLayout.vue'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import AppConfirmDialog from '@/shared/ui/dialog/AppConfirmDialog.vue'
@@ -521,7 +504,7 @@ import { adminApi } from '../api/admin.api'
 type DialogMode = 'create' | 'edit'
 type DeleteTarget = 'role' | 'permission' | null
 
-const activeTab = useTabPersistence('tab', 'roles')
+const activeTab = useTabPersistence('catalogTab', 'roles')
 const tabItems = [
   { label: 'Roles', value: 'roles' },
   { label: 'Permissions', value: 'permissions' },
@@ -1017,60 +1000,16 @@ function formatDate(dateString: string) {
   --rbac-danger-line: var(--app-danger-line);
 }
 
-.rbac-management-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+.rbac-management-toolbar {
+  display: grid;
   gap: 1rem;
-  margin-bottom: 1.5rem;
+  margin-bottom: 1.25rem;
 }
 
-.rbac-management-header__copy {
+.rbac-management-toolbar__actions {
   display: flex;
-  gap: 1rem;
-  align-items: flex-start;
-}
-
-.rbac-management-header__icon {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 1rem;
-  background: linear-gradient(135deg, var(--rbac-accent), var(--rbac-info));
-  color: white;
-  font-size: 1.45rem;
-  box-shadow: 0 18px 32px var(--rbac-accent-soft);
-}
-
-.rbac-management-header__eyebrow {
-  margin: 0 0 0.35rem;
-  font-size: 0.72rem;
-  letter-spacing: 0;
-  text-transform: none;
-  color: var(--rbac-accent);
-  font-weight: 700;
-}
-
-.rbac-management-header h1 {
-  margin: 0;
-  font-size: clamp(1.8rem, 2.5vw, 2.35rem);
-  color: var(--app-ink);
-}
-
-.rbac-management-header p:last-child {
-  max-width: 45rem;
-  margin: 0.45rem 0 0;
-  color: var(--app-muted);
-  line-height: 1.6;
-}
-
-.rbac-management-header__actions {
-  display: flex;
-  gap: 0.75rem;
+  gap: 0.5rem;
   flex-wrap: wrap;
-  justify-content: flex-end;
 }
 
 .rbac-management-button {
@@ -1078,18 +1017,14 @@ function formatDate(dateString: string) {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 2.75rem;
-  padding: 0.75rem 1rem;
-  border-radius: 0.9rem;
+  min-height: 2.4rem;
+  padding: 0.6rem 1rem;
+  border-radius: 0.65rem;
   border: 1px solid transparent;
   font: inherit;
   font-weight: 600;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
-}
-
-.rbac-management-button:hover:not(:disabled) {
-  transform: translateY(-1px);
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
 .rbac-management-button:disabled {
@@ -1098,20 +1033,30 @@ function formatDate(dateString: string) {
 }
 
 .rbac-management-button--primary {
-  background: linear-gradient(135deg, var(--rbac-accent), var(--rbac-info));
+  background: var(--rbac-accent);
   color: white;
-  box-shadow: 0 18px 32px var(--rbac-accent-soft);
+}
+
+.rbac-management-button--primary:hover:not(:disabled) {
+  background: var(--rbac-accent-strong);
 }
 
 .rbac-management-button--secondary {
-  background: linear-gradient(135deg, var(--rbac-accent), var(--rbac-accent-strong));
-  color: white;
+  background: var(--app-panel-strong);
+  border-color: var(--app-border);
+  color: var(--app-ink);
 }
 
 .rbac-management-button--ghost {
   background: var(--app-panel-strong);
   border-color: var(--app-border);
   color: var(--app-ink);
+}
+
+.rbac-management-button--ghost:hover:not(:disabled),
+.rbac-management-button--secondary:hover:not(:disabled) {
+  border-color: var(--rbac-accent);
+  color: var(--rbac-accent-strong);
 }
 
 .rbac-management-button--danger {
@@ -1180,8 +1125,7 @@ function formatDate(dateString: string) {
   padding: 1.2rem;
   border-radius: 0.75rem;
   border: 1px solid var(--app-border);
-  background: linear-gradient(180deg, var(--app-panel-strong), var(--app-panel));
-  box-shadow: 0 16px 36px rgb(15 23 42 / 0.06);
+  background: var(--app-panel-strong);
 }
 
 .rbac-management-stat-card span {
@@ -1202,18 +1146,6 @@ function formatDate(dateString: string) {
   line-height: 1.5;
 }
 
-.rbac-management-stat-card--success {
-  background: linear-gradient(180deg, var(--rbac-success-soft), var(--app-panel-strong));
-}
-
-.rbac-management-stat-card--cool {
-  background: linear-gradient(180deg, var(--rbac-info-soft), var(--app-panel-strong));
-}
-
-.rbac-management-stat-card--warm {
-  background: linear-gradient(180deg, var(--rbac-warning-soft), var(--app-panel-strong));
-}
-
 .rbac-management-tab-content {
   display: grid;
   gap: 1rem;
@@ -1225,8 +1157,8 @@ function formatDate(dateString: string) {
   gap: 1rem;
   padding: 1.25rem;
   border: 1px solid var(--app-border);
-  border-radius: 1.25rem;
-  background: linear-gradient(180deg, var(--app-panel-strong), var(--app-panel));
+  border-radius: 0.75rem;
+  background: var(--app-panel-strong);
 }
 
 .rbac-management-panel__header {
@@ -1558,12 +1490,7 @@ function formatDate(dateString: string) {
 }
 
 @media (max-width: 720px) {
-  .rbac-management-header,
-  .rbac-management-header__copy {
-    flex-direction: column;
-  }
-
-  .rbac-management-header__actions,
+  .rbac-management-toolbar__actions,
   .rbac-management-dialog-footer {
     width: 100%;
   }
