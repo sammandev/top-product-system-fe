@@ -117,7 +117,7 @@ describe('useAuth Composable', () => {
   })
 
   describe('login method', () => {
-    it('should call store login and navigate to dashboard', async () => {
+    it('should call store login and navigate to top products analysis', async () => {
       const authStore = useAuthStore()
       const { login } = useAuth()
 
@@ -137,7 +137,7 @@ describe('useAuth Composable', () => {
         username: 'test',
         password: 'pass',
       })
-      expect(pushSpy).toHaveBeenCalledWith('/dashboard')
+      expect(pushSpy).toHaveBeenCalledWith('/dut/top-products/analysis')
     })
 
     it('should navigate to redirect URL if provided', async () => {
@@ -176,7 +176,7 @@ describe('useAuth Composable', () => {
   })
 
   describe('externalLogin method', () => {
-    it('should call store externalLogin and navigate to dashboard', async () => {
+    it('should call store externalLogin and navigate to top products analysis', async () => {
       const authStore = useAuthStore()
       const { externalLogin } = useAuth()
 
@@ -205,7 +205,7 @@ describe('useAuth Composable', () => {
         dut_username: 'dutuser',
         dut_password: 'dutpass',
       })
-      expect(pushSpy).toHaveBeenCalledWith('/dashboard')
+      expect(pushSpy).toHaveBeenCalledWith('/dut/top-products/analysis')
     })
 
     it('should handle external login without DUT credentials', async () => {

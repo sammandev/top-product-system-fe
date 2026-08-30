@@ -7,20 +7,22 @@ import { vi } from 'vitest'
  * Configures the testing environment with necessary mocks and global settings.
  */
 
-// Mock window.matchMedia for responsive component behavior
-Object.defineProperty(window, 'matchMedia', {
-  writable: true,
-  value: vi.fn().mockImplementation((query) => ({
-    matches: false,
-    media: query,
-    onchange: null,
-    addListener: vi.fn(),
-    removeListener: vi.fn(),
-    addEventListener: vi.fn(),
-    removeEventListener: vi.fn(),
-    dispatchEvent: vi.fn(),
-  })),
-})
+if (typeof window !== 'undefined') {
+  // Mock window.matchMedia for responsive component behavior
+  Object.defineProperty(window, 'matchMedia', {
+    writable: true,
+    value: vi.fn().mockImplementation((query) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    })),
+  })
+}
 
 // Mock IntersectionObserver for components that depend on visibility tracking
 // biome-ignore lint/suspicious/noExplicitAny: globalThis mock assignment requires any cast
@@ -66,9 +68,11 @@ const localStorageMock = (() => {
   }
 })()
 
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock,
-})
+if (typeof window !== 'undefined') {
+  Object.defineProperty(window, 'localStorage', {
+    value: localStorageMock,
+  })
+}
 
 // Configure Vue Test Utils globally
 config.global.stubs = {

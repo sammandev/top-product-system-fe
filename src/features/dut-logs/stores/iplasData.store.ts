@@ -29,8 +29,8 @@ import {
   type StreamMetadata,
   type StreamProgress,
 } from '../api/streamReader'
+import { fetchIplasIsnSearchQuery, getIplasTokenQueryScope } from '../composables/useIplasQueries'
 import { useIplasSettings } from '../composables/useIplasSettings'
-import { fetchIplasIsnSearchQuery } from '../composables/useIplasQueries'
 import {
   clearAllRecords,
   getPagedRecords,
@@ -265,7 +265,8 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     project: string,
     forceRefresh = false,
   ): Promise<IplasStation[]> {
-    const cacheKey = `${site}::${project}`
+    const token = getUserToken()
+    const cacheKey = `${site}::${project}::${getIplasTokenQueryScope(token)}`
 
     if (!forceRefresh && stationsCache.has(cacheKey)) {
       // biome-ignore lint/style/noNonNullAssertion: checked via stationsCache.has(cacheKey) above
@@ -280,7 +281,7 @@ export const useIplasDataStore = defineStore('iplasData', () => {
       const response = await iplasProxyApi.getStations({
         site,
         project,
-        token: getUserToken(),
+        token,
       })
       stations.value = response.data
       stationsCache.set(cacheKey, response.data)

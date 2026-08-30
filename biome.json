@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.8/schema.json",
+  "$schema": "./node_modules/@biomejs/biome/configuration_schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -19,7 +19,7 @@
   "linter": {
     "enabled": true,
     "rules": {
-      "recommended": true,
+      "preset": "recommended",
       "correctness": {
         "noUnusedImports": "warn",
         "noUnusedVariables": "warn",
@@ -27,7 +27,6 @@
         "noUnreachable": "warn"
       },
       "suspicious": {
-        "recommended": true,
         "noExplicitAny": "warn",
         "useIterableCallbackReturn": "warn"
       },

@@ -2,6 +2,8 @@ import { createApp, defineAsyncComponent } from 'vue'
 import { installAppProviders } from '@/app/providers'
 import { envConfig } from '@/core/config/env.config'
 import router from '@/core/router'
+import { useAppConfigStore } from '@/core/stores/appConfig.store'
+import { useAuthStore } from '@/features/auth/stores/auth.store'
 import {
   applyThemePreferences,
   getStoredThemePreferences,
@@ -67,12 +69,8 @@ window.addEventListener('error', (event) => {
 })
 
 function initializeRuntimeStores() {
-  void import('@/features/auth/stores/auth.store').then(({ useAuthStore }) => {
-    void useAuthStore().initialize()
-  })
-  void import('@/core/stores/appConfig.store').then(({ useAppConfigStore }) => {
-    void useAppConfigStore().initialize()
-  })
+  void useAuthStore().initialize()
+  void useAppConfigStore().initialize()
 }
 
 app.mount('#app')

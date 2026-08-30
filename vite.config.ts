@@ -3,7 +3,15 @@ import tailwindcss from '@tailwindcss/vite'
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 
-const optimizeDepEntries = ['index.html']
+const optimizeDepEntries = [
+  'index.html',
+  'src/**/*.{vue,ts}',
+  '!src/**/*.d.ts',
+  '!src/**/*.spec.ts',
+  '!src/**/*.test.ts',
+  '!src/**/__tests__/**',
+  '!src/test/**',
+]
 
 function manualChunks(id: string): string | undefined {
   const normalizedId = id.replace(/\\/g, '/')
