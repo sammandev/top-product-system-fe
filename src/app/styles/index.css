@@ -152,7 +152,7 @@
         --p-select-transition-duration,
         var(--p-inputtext-transition-duration, var(--p-form-field-transition-duration, 0.2s))
       );
-    color-scheme: light dark;
+    color-scheme: light;
   }
 
   .app-themed-datetime-input {
@@ -248,5 +248,39 @@
   .app-dark .app-themed-input {
     color-scheme: dark;
     --app-themed-input-picker-filter: invert(1);
+  }
+
+  .p-select,
+  .p-select-overlay {
+    border-color: var(--app-border);
+    background: var(--app-panel-strong);
+    color: var(--app-ink);
+    color-scheme: light;
+  }
+
+  .p-select-label,
+  .p-select-option,
+  .p-select-empty-message {
+    color: var(--app-ink);
+  }
+
+  .p-select-label.p-placeholder {
+    color: var(--app-muted);
+  }
+
+  .p-select-option:hover,
+  .p-select-option.p-focus {
+    background: var(--app-accent-soft);
+    color: var(--app-ink);
+  }
+
+  .p-select-option.p-selected {
+    background: color-mix(in srgb, var(--app-accent) 14%, var(--app-panel));
+    color: var(--app-accent-strong);
+  }
+
+  .app-dark .p-select,
+  .app-dark .p-select-overlay {
+    color-scheme: dark;
   }
 }

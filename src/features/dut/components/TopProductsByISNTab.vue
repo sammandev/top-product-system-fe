@@ -1,149 +1,108 @@
 <template>
   <section class="top-products-isn-shell">
-    <section class="top-products-isn-intake">
-      <div class="top-products-isn-section__header">
-        <div>
-          <p class="top-products-isn-section__eyebrow">Input</p>
-          <h2>Analyze By DUT ISN</h2>
-          <p class="top-products-isn-section__description">
-            Add DUTs, then narrow the run with optional station and criteria scope.
-          </p>
-        </div>
-      </div>
+    <section class="top-products-isn-workflow">
+      <div class="top-products-isn-step" :class="{ 'is-complete': dutISNs.length > 0 }">
+        <header class="top-products-isn-step__header">
+          <span class="top-products-isn-step__index">1</span>
+          <div>
+            <p>DUT identifiers</p>
+            <span>Add one or more ISNs to resolve site, model, and available stations.</span>
+          </div>
+        </header>
       <DUTISNInput ref="dutISNInputRef" v-model="dutISNs" v-model:site-identifiers="siteIdentifier"
-        v-model:model-identifiers="modelIdentifier" :max-i-s-ns="20" collapse-scope />
+        v-model:model-identifiers="modelIdentifier" :max-i-s-ns="20" :show-scope-editor="false" />
 
-      <div class="top-products-isn-runbar">
-        <div class="top-products-isn-stat-row">
-          <span>{{ dutISNs.length }} DUT{{ dutISNs.length === 1 ? '' : 's' }}</span>
-          <span>{{ selectedStations.length > 0 ? `${selectedStations.length} selected stations` : 'All stations' }}</span>
-          <span>{{ criteriaFileActual ? 'Custom criteria' : 'Default criteria' }}</span>
+        <div v-if="dutISNs.length > 0" class="top-products-isn-resolved-scope">
+          <div>
+            <span>Site</span>
+            <strong>{{ loadingStations ? 'Resolving...' : siteIdentifierValue || 'Not found' }}</strong>
+          </div>
+          <div>
+            <span>Model</span>
+            <strong>{{ loadingStations ? 'Resolving...' : modelIdentifierValue || 'Not found' }}</strong>
+          </div>
+          <div>
+            <span>Available stations</span>
+            <strong>{{ loadingStations ? 'Resolving...' : availableStations.length }}</strong>
+          </div>
         </div>
-        <button type="button" class="top-products-isn-primary-button" :disabled="loading || !canAnalyze"
-          @click="handleAnalyze">
-          {{ loading ? 'Analyzing...' : 'Analyze DUTs' }}
-        </button>
       </div>
 
-      <div v-if="attemptedAnalysis && !canAnalyze" class="top-products-isn-notice top-products-isn-notice--warning">
-        Please add at least one DUT ISN to continue.
-      </div>
-    </section>
-
-    <div class="top-products-isn-grid">
-      <details class="top-products-isn-accordion">
-        <summary>
+      <div class="top-products-isn-step"
+        :class="{ 'is-locked': dutISNs.length === 0, 'is-complete': selectedStations.length > 0 }">
+        <header class="top-products-isn-step__header">
+          <span class="top-products-isn-step__index">2</span>
           <div>
             <p>Station scope</p>
-            <span>{{ selectedStations.length > 0 ? `${selectedStations.length} selected` : 'Optional - all stations' }}</span>
+            <span>{{ dutISNs.length > 0 ? 'Required. Select at least one station.' : 'Add DUT identifiers first.' }}</span>
           </div>
-        </summary>
-        <div class="top-products-isn-accordion__body top-products-isn-accordion__body--stacked">
-          <div class="top-products-isn-input-row">
-            <label class="top-products-isn-field">
-              <span>Add station</span>
-              <div class="top-products-isn-entry-row">
-                <input v-model="stationEntry" type="text" list="top-products-isn-stations"
-                  placeholder="Type a station name and press Enter" @keydown="handleStationEntryKeydown"
-                  @blur="commitStationEntry">
-                <button type="button" @click="commitStationEntry">Add</button>
-              </div>
-            </label>
-            <datalist id="top-products-isn-stations">
-              <option v-for="station in availableStations" :key="station" :value="station" />
-            </datalist>
-          </div>
+        </header>
 
-          <p v-if="loadingStations" class="top-products-isn-inline-note">Loading stations from DUT summaries...</p>
-          <p v-else-if="availableStations.length === 0" class="top-products-isn-inline-note">
-            Stations appear after DUT summaries load. You can still enter one manually.
-          </p>
-
-          <div v-else class="top-products-isn-choice-grid">
-            <button v-for="station in availableStations" :key="station" type="button" class="top-products-isn-choice"
-              :class="{ 'is-active': selectedStations.includes(station) }" @click="toggleStation(station)">
-              {{ station }}
-            </button>
-          </div>
-
-          <div v-if="selectedStations.length > 0" class="top-products-isn-token-row">
-            <button v-for="station in selectedStations" :key="station" type="button" class="top-products-isn-token"
-              @click="removeStation(station)">
-              <span>{{ station }}</span>
-              <span aria-hidden="true">x</span>
-            </button>
-
-            <button type="button" class="top-products-isn-link" @click="selectedStations = []">
-              Clear stations
-            </button>
-          </div>
-        </div>
-      </details>
-
-      <details class="top-products-isn-accordion">
-        <summary>
-          <div>
-            <p>Criteria file</p>
-            <span>{{ criteriaFileActual ? criteriaFileActual.name : 'Optional - default rules' }}</span>
-          </div>
-        </summary>
-        <div class="top-products-isn-accordion__body top-products-isn-accordion__body--stacked">
-          <button type="button" class="top-products-isn-link top-products-isn-template-link" @click="downloadCriteriaTemplate">
-            Download template
-          </button>
-
-          <AppFilePicker v-model="criteriaFile" label="Criteria JSON File" accept=".json,application/json"
-            helperText="Leave empty to use the default rules."
-            placeholder="Drop a criteria file here or browse from disk." />
-
-          <div v-if="criteriaFileActual" class="top-products-isn-file-summary">
-            <strong>{{ criteriaFileActual.name }}</strong>
-            <span>{{ formatFileSize(criteriaFileActual.size) }}</span>
-          </div>
-        </div>
-      </details>
-    </div>
-
-    <details class="top-products-isn-accordion">
-      <summary>
-        <div>
-          <p>Universal Filters</p>
-          <span>Shared device and test-item filters for all stations.</span>
-        </div>
-      </summary>
-
-      <div class="top-products-isn-accordion__body">
-        <div class="top-products-isn-filter-grid">
-          <label class="top-products-isn-field top-products-isn-field--full">
-            <span>Device Identifiers</span>
-            <textarea v-model="deviceIdentifiersText" rows="3" placeholder="e.g. 1351, 614670 or one value per line" />
-            <small>Shared across all stations unless overridden.</small>
-          </label>
-
-          <label class="top-products-isn-field">
-            <span>Include Test Items</span>
-            <textarea v-model="testItemFiltersText" rows="4" placeholder="e.g. WiFi_TX_POW.*" />
-            <small>Regex patterns to include matching test items.</small>
-          </label>
-
-          <label class="top-products-isn-field">
-            <span>Exclude Test Items</span>
-            <textarea v-model="excludeTestItemFiltersText" rows="4" placeholder="e.g. WiFi_PA_POW_OLD.*" />
-            <small>Regex patterns to remove matching test items.</small>
-          </label>
+        <p v-if="loadingStations" class="top-products-isn-inline-note">Loading stations from DUT summaries...</p>
+        <AppMultiSelect v-else v-model="selectedStations" :options="stationSelectOptions"
+          placeholder="Select required station(s)" :disabled="dutISNs.length === 0 || availableStations.length === 0" />
+        <div v-if="dutISNs.length > 0 && !loadingStations && availableStations.length === 0"
+          class="top-products-isn-notice top-products-isn-notice--warning">
+          No stations resolved for selected DUT identifiers.
         </div>
       </div>
-    </details>
 
-    <details v-if="selectedStations.length > 0" class="top-products-isn-accordion">
-      <summary>
-        <div>
-          <p>Per-Station Filter Configuration</p>
-          <span>Override the shared filters for specific stations.</span>
+      <details class="top-products-isn-accordion top-products-isn-options">
+        <summary>
+          <div>
+            <p>3 &nbsp; Analysis options</p>
+            <span>Optional criteria, device, and test-item filters.</span>
+          </div>
+        </summary>
+        <div class="top-products-isn-accordion__body top-products-isn-accordion__body--stacked">
+          <section class="top-products-isn-option-group">
+            <div class="top-products-isn-option-group__header">
+              <div>
+                <strong>Criteria file</strong>
+                <span>{{ criteriaFileActual ? criteriaFileActual.name : 'Default rules' }}</span>
+              </div>
+              <button type="button" class="top-products-isn-link" @click="downloadCriteriaTemplate">
+                Download template
+              </button>
+            </div>
+            <AppFilePicker v-model="criteriaFile" label="Criteria JSON File" accept=".json,application/json"
+              helperText="Leave empty to use the default rules."
+              placeholder="Drop a criteria file here or browse from disk." />
+          </section>
+
+          <section class="top-products-isn-option-group">
+            <div class="top-products-isn-option-group__header">
+              <div>
+                <strong>Universal filters</strong>
+                <span>Applied to every selected station.</span>
+              </div>
+            </div>
+            <div class="top-products-isn-filter-grid">
+              <label class="top-products-isn-field top-products-isn-field--full">
+                <span>Device Identifiers</span>
+                <textarea v-model="deviceIdentifiersText" rows="3" placeholder="e.g. 1351, 614670 or one value per line" />
+              </label>
+              <label class="top-products-isn-field">
+                <span>Include Test Items</span>
+                <textarea v-model="testItemFiltersText" rows="4" placeholder="e.g. WiFi_TX_POW.*" />
+              </label>
+              <label class="top-products-isn-field">
+                <span>Exclude Test Items</span>
+                <textarea v-model="excludeTestItemFiltersText" rows="4" placeholder="e.g. WiFi_PA_POW_OLD.*" />
+              </label>
+            </div>
+          </section>
         </div>
-      </summary>
+      </details>
 
-      <div class="top-products-isn-accordion__body top-products-isn-accordion__body--stacked">
+      <details v-if="selectedStations.length > 0" class="top-products-isn-accordion">
+        <summary>
+          <div>
+            <p>Per-station filters</p>
+            <span>Override universal filters for specific stations.</span>
+          </div>
+        </summary>
+        <div class="top-products-isn-accordion__body top-products-isn-accordion__body--stacked">
         <div class="top-products-isn-notice">
           Leave a station empty to inherit the shared rules.
         </div>
@@ -161,7 +120,24 @@
           </section>
         </div>
       </div>
-    </details>
+      </details>
+
+      <footer class="top-products-isn-runbar">
+        <div class="top-products-isn-stat-row">
+          <span>{{ dutISNs.length }} DUT{{ dutISNs.length === 1 ? '' : 's' }}</span>
+          <span>{{ selectedStations.length }} station{{ selectedStations.length === 1 ? '' : 's' }}</span>
+          <span>{{ criteriaFileActual ? 'Custom criteria' : 'Default criteria' }}</span>
+        </div>
+        <button type="button" class="top-products-isn-primary-button" :disabled="loading || !canAnalyze"
+          @click="handleAnalyze">
+          {{ loading ? 'Analyzing...' : 'Analyze DUTs' }}
+        </button>
+      </footer>
+
+      <div v-if="attemptedAnalysis && !canAnalyze" class="top-products-isn-notice top-products-isn-notice--warning">
+        Add at least one DUT ISN and select at least one station.
+      </div>
+    </section>
 
     <div v-if="error" class="top-products-isn-notice top-products-isn-notice--error">
       <div>
@@ -182,6 +158,7 @@
 <script setup lang="ts">
 import { computed, nextTick, provide, ref, watch } from 'vue'
 import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
+import AppMultiSelect from '@/shared/ui/forms/AppMultiSelect.vue'
 import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
 import { dutApi } from '../api/dut.api'
 import { dutTopProductApi } from '../api/dutTopProduct.api'
@@ -228,13 +205,16 @@ const dutISNInputRef = ref<InstanceType<typeof DUTISNInput> | null>(null)
 const resultsSection = ref<HTMLElement | null>(null)
 const dutISNs = ref<string[]>([])
 const selectedStations = ref<string[]>([])
-const stationEntry = ref('')
 const criteriaFile = ref<File[] | File | null>(null)
 const siteIdentifier = ref<string[]>([])
 const modelIdentifier = ref<string[]>([])
 const deviceIdentifiers = ref<string[]>([])
 const testItemFilters = ref<string[]>([])
 const excludeTestItemFilters = ref<string[]>([])
+
+const stationSelectOptions = computed(() =>
+  availableStations.value.map((station) => ({ label: station, value: station })),
+)
 
 const loading = ref(false)
 const loadingStations = ref(false)
@@ -308,40 +288,6 @@ function parseMultilineValues(value: string): string[] {
         .filter(Boolean),
     ),
   ]
-}
-
-function commitStationEntry() {
-  const nextStations = parseMultilineValues(stationEntry.value)
-
-  if (nextStations.length === 0) {
-    stationEntry.value = ''
-    return
-  }
-
-  selectedStations.value = [...new Set([...selectedStations.value, ...nextStations])]
-  stationEntry.value = ''
-}
-
-function handleStationEntryKeydown(event: KeyboardEvent) {
-  if (event.key !== 'Enter' && event.key !== ',') {
-    return
-  }
-
-  event.preventDefault()
-  commitStationEntry()
-}
-
-function toggleStation(station: string) {
-  if (selectedStations.value.includes(station)) {
-    selectedStations.value = selectedStations.value.filter((entry) => entry !== station)
-    return
-  }
-
-  selectedStations.value = [...selectedStations.value, station]
-}
-
-function removeStation(station: string) {
-  selectedStations.value = selectedStations.value.filter((entry) => entry !== station)
 }
 
 // Helper function to fetch all test items for stations
@@ -574,7 +520,7 @@ watch(
 )
 
 // Computed
-const canAnalyze = computed(() => dutISNs.value.length > 0)
+const canAnalyze = computed(() => dutISNs.value.length > 0 && selectedStations.value.length > 0)
 const hasResults = computed(() => results.value !== null)
 
 // Methods
@@ -1063,6 +1009,106 @@ function formatFileSize(bytes: number): string {
   gap: 1rem;
 }
 
+.top-products-isn-workflow {
+  display: grid;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.top-products-isn-step {
+  display: grid;
+  grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr);
+  gap: 1rem 1.25rem;
+  padding: 1.15rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.top-products-isn-step.is-locked {
+  background: var(--app-surface);
+  opacity: 0.58;
+}
+
+.top-products-isn-step__header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.top-products-isn-step__index {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 auto;
+  border: 1px solid var(--app-border);
+  border-radius: 50%;
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.top-products-isn-step.is-complete .top-products-isn-step__index {
+  border-color: var(--app-success-line);
+  background: var(--app-success-soft);
+  color: var(--app-success-strong);
+}
+
+.top-products-isn-step__header p,
+.top-products-isn-step__header span {
+  display: block;
+  margin: 0;
+}
+
+.top-products-isn-step__header p {
+  color: var(--app-ink);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.top-products-isn-step__header div > span {
+  margin-top: 0.2rem;
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.top-products-isn-step > .dut-isn-input,
+.top-products-isn-step > .app-multi-select,
+.top-products-isn-step > .top-products-isn-inline-note,
+.top-products-isn-step > .top-products-isn-notice,
+.top-products-isn-resolved-scope {
+  grid-column: 2;
+}
+
+.top-products-isn-resolved-scope {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 1px solid var(--app-border);
+}
+
+.top-products-isn-resolved-scope > div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.75rem;
+  border-left: 1px solid var(--app-border);
+}
+
+.top-products-isn-resolved-scope > div:first-child {
+  border-left: 0;
+}
+
+.top-products-isn-resolved-scope span {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+}
+
+.top-products-isn-resolved-scope strong {
+  color: var(--app-ink);
+  overflow-wrap: anywhere;
+}
+
 .top-products-isn-intake {
   display: grid;
   gap: 0.85rem;
@@ -1074,8 +1120,8 @@ function formatFileSize(bytes: number): string {
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
-  padding-top: 0.85rem;
-  border-top: 1px solid var(--app-border);
+  padding: 1rem 1.15rem;
+  background: var(--app-surface);
 }
 
 .top-products-isn-section {
@@ -1305,10 +1351,45 @@ function formatFileSize(bytes: number): string {
 }
 
 .top-products-isn-accordion {
-  border: 1px solid var(--app-border);
-  border-radius: 0.9rem;
+  border: 0;
+  border-bottom: 1px solid var(--app-border);
+  border-radius: 0;
   background: var(--app-panel);
   overflow: hidden;
+}
+
+.top-products-isn-option-group {
+  display: grid;
+  gap: 0.85rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--app-border);
+}
+
+.top-products-isn-option-group:first-child {
+  padding-top: 0;
+  border-top: 0;
+}
+
+.top-products-isn-option-group__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.top-products-isn-option-group__header strong,
+.top-products-isn-option-group__header span {
+  display: block;
+}
+
+.top-products-isn-option-group__header strong {
+  color: var(--app-ink);
+}
+
+.top-products-isn-option-group__header span {
+  margin-top: 0.15rem;
+  color: var(--app-muted);
+  font-size: 0.78rem;
 }
 
 .top-products-isn-accordion summary {
@@ -1417,6 +1498,18 @@ function formatFileSize(bytes: number): string {
   .top-products-isn-station-config-grid {
     grid-template-columns: 1fr;
   }
+
+  .top-products-isn-step {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .top-products-isn-step > .dut-isn-input,
+  .top-products-isn-step > .app-multi-select,
+  .top-products-isn-step > .top-products-isn-inline-note,
+  .top-products-isn-step > .top-products-isn-notice,
+  .top-products-isn-resolved-scope {
+    grid-column: 1;
+  }
 }
 
 @media (max-width: 720px) {
@@ -1438,6 +1531,19 @@ function formatFileSize(bytes: number): string {
   .top-products-isn-accordion__body {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+
+  .top-products-isn-resolved-scope {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .top-products-isn-resolved-scope > div {
+    border-top: 1px solid var(--app-border);
+    border-left: 0;
+  }
+
+  .top-products-isn-resolved-scope > div:first-child {
+    border-top: 0;
   }
 }
 </style>

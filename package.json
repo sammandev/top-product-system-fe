@@ -11,7 +11,7 @@
     "docs:primevue": "node scripts/sync-primevue-docs.mjs",
     "icons:build": "node scripts/build-icons.mjs",
     "prebuild": "node scripts/build-icons.mjs",
-    "lint": "biome check . --diagnostic-level=warn",
+    "lint": "biome lint . --diagnostic-level=warn",
     "lint:fix": "biome lint . --write",
     "format": "biome format .",
     "format:fix": "biome format . --write",

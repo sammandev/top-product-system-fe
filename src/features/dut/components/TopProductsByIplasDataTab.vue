@@ -29,6 +29,7 @@
         <TopProductIplasIsnContent
           :is-active="searchMode === 'isn'"
           ranking-target="#top-products-iplas-results-slot"
+          @show-settings="showSettingsDialog = true"
         />
       </template>
     </AppTabs>

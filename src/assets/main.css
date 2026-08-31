@@ -138,7 +138,10 @@ body {
 /* Shared high-frequency query forms */
 .app-query-form {
   display: grid;
-  border-block: 1px solid var(--app-border);
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel);
+  overflow: hidden;
   container-type: inline-size;
 }
 
@@ -146,7 +149,7 @@ body {
   display: grid;
   grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr);
   gap: 1.25rem;
-  padding: 1rem 0;
+  padding: 1.1rem;
   border-top: 1px solid var(--app-border);
 }
 
@@ -156,6 +159,7 @@ body {
 
 .app-query-form__section.is-locked {
   opacity: 0.55;
+  background: var(--app-surface);
 }
 
 .app-query-form__step {
@@ -251,7 +255,9 @@ body {
 
 .app-query-form__footer {
   justify-content: flex-end;
-  padding: 1rem 0 0;
+  padding: 1rem 1.1rem;
+  border-top: 1px solid var(--app-border);
+  background: var(--app-surface);
 }
 
 .app-query-form__error {

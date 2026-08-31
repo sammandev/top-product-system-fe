@@ -1,5 +1,5 @@
 <template>
-  <AppPanel tone="cool">
+  <div class="dut-isn-input">
     <div class="dut-isn-input__stack">
       <div class="dut-isn-input__toggle-row">
         <button type="button" class="dut-isn-input__toggle-chip" :class="{ 'is-active': inputMode === 'multiple' }"
@@ -48,7 +48,7 @@
         </div>
       </section>
 
-      <details class="dut-isn-input__scope" :open="!collapseScope">
+      <details v-if="showScopeEditor" class="dut-isn-input__scope" :open="!collapseScope">
         <summary v-if="collapseScope">
           <span>Site and model scope</span>
           <small>Optional constraints</small>
@@ -56,47 +56,16 @@
       <div class="dut-isn-input__grid">
         <label class="dut-isn-input__field">
           <span>Site Identifier (Optional)</span>
-          <div class="dut-isn-input__entry-row">
-            <input v-model="siteEntry" type="text" list="dut-isn-input-sites" placeholder="Auto-populated from DUT ISNs"
-              @keydown.enter.prevent="commitSiteEntry" @blur="commitSiteEntry" />
-            <!-- <button type="button" class="dut-isn-input__button dut-isn-input__button--ghost" @click="commitSiteEntry">
-              Add
-            </button> -->
-          </div>
-          <datalist id="dut-isn-input-sites">
-            <option v-for="site in availableSites" :key="site" :value="site" />
-          </datalist>
-          <small>Sites detected from selected ISNs. Add or remove tokens to refine the scope.</small>
-          <div v-if="selectedSites.length > 0" class="dut-isn-input__token-row">
-            <button v-for="site in selectedSites" :key="site" type="button"
-              class="dut-isn-input__token dut-isn-input__token--info" @click="removeSite(site)">
-              <span>{{ site }}</span>
-              <span aria-hidden="true">x</span>
-            </button>
-          </div>
+          <AppMultiSelect v-model="selectedSites" :options="availableSiteOptions"
+            placeholder="All detected sites" />
+          <small>Sites detected from selected ISNs. Leave empty to keep scope unconstrained.</small>
         </label>
 
         <label class="dut-isn-input__field">
           <span>Model Identifier (Optional)</span>
-          <div class="dut-isn-input__entry-row">
-            <input v-model="modelEntry" type="text" list="dut-isn-input-models"
-              placeholder="Auto-populated from DUT ISNs" @keydown.enter.prevent="commitModelEntry"
-              @blur="commitModelEntry" />
-            <!-- <button type="button" class="dut-isn-input__button dut-isn-input__button--ghost" @click="commitModelEntry">
-              Add
-            </button> -->
-          </div>
-          <datalist id="dut-isn-input-models">
-            <option v-for="model in availableModels" :key="model" :value="model" />
-          </datalist>
+          <AppMultiSelect v-model="selectedModels" :options="availableModelOptions"
+            placeholder="All detected models" />
           <small>Models detected from selected ISNs. Leave empty to keep the parent flow unconstrained.</small>
-          <div v-if="selectedModels.length > 0" class="dut-isn-input__token-row">
-            <button v-for="model in selectedModels" :key="model" type="button"
-              class="dut-isn-input__token dut-isn-input__token--info" @click="removeModel(model)">
-              <span>{{ model }}</span>
-              <span aria-hidden="true">x</span>
-            </button>
-          </div>
         </label>
       </div>
       </details>
@@ -105,12 +74,12 @@
         {{ validationMessage }}
       </div>
     </div>
-  </AppPanel>
+  </div>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { AppPanel } from '@/shared/ui'
+import AppMultiSelect from '@/shared/ui/forms/AppMultiSelect.vue'
 
 // Props
 interface Props {
@@ -119,6 +88,7 @@ interface Props {
   siteIdentifiers?: string[]
   modelIdentifiers?: string[]
   collapseScope?: boolean
+  showScopeEditor?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -126,6 +96,7 @@ const props = withDefaults(defineProps<Props>(), {
   siteIdentifiers: () => [],
   modelIdentifiers: () => [],
   collapseScope: false,
+  showScopeEditor: true,
 })
 
 // Emits
@@ -149,29 +120,21 @@ const selectedSites = ref<string[]>(props.siteIdentifiers)
 const selectedModels = ref<string[]>(props.modelIdentifiers)
 const availableSites = ref<string[]>([])
 const availableModels = ref<string[]>([])
-const siteEntry = ref('')
-const modelEntry = ref('')
 
 // Computed
 const isValid = computed(() => {
   return selectedISNs.value.length > 0 && selectedISNs.value.length <= props.maxISNs
 })
+const availableSiteOptions = computed(() =>
+  availableSites.value.map((site) => ({ label: site, value: site })),
+)
+const availableModelOptions = computed(() =>
+  availableModels.value.map((model) => ({ label: model, value: model })),
+)
 
 // Methods
 function sanitizeToken(value: string): string {
   return value.replace(/[^A-Za-z0-9]/g, '').trim()
-}
-
-function normalizeFreeformToken(value: string): string {
-  return value.trim()
-}
-
-function addUniqueValue(items: string[], value: string): string[] {
-  if (!value || items.includes(value)) {
-    return items
-  }
-
-  return [...items, value]
 }
 
 function commitISNEntry() {
@@ -235,36 +198,8 @@ function parseBulkISNs() {
   }, 3000)
 }
 
-function commitSiteEntry() {
-  const nextValue = normalizeFreeformToken(siteEntry.value)
-  siteEntry.value = ''
-  if (!nextValue) {
-    return
-  }
-
-  selectedSites.value = addUniqueValue(selectedSites.value, nextValue)
-}
-
-function commitModelEntry() {
-  const nextValue = normalizeFreeformToken(modelEntry.value)
-  modelEntry.value = ''
-  if (!nextValue) {
-    return
-  }
-
-  selectedModels.value = addUniqueValue(selectedModels.value, nextValue)
-}
-
 function removeISN(index: number) {
   selectedISNs.value.splice(index, 1)
-}
-
-function removeSite(site: string) {
-  selectedSites.value = selectedSites.value.filter((item) => item !== site)
-}
-
-function removeModel(model: string) {
-  selectedModels.value = selectedModels.value.filter((item) => item !== model)
 }
 
 function clearAll() {
@@ -413,6 +348,13 @@ defineExpose({
   justify-content: space-between;
 }
 
+.dut-isn-input__section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
 .dut-isn-input__grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
@@ -448,6 +390,13 @@ defineExpose({
 
 .dut-isn-input__field textarea {
   resize: vertical;
+}
+
+.dut-isn-input__field input:focus,
+.dut-isn-input__field textarea:focus {
+  outline: none;
+  border-color: var(--app-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--app-accent) 15%, transparent);
 }
 
 .dut-isn-input__button,

@@ -1740,6 +1740,11 @@ async function handleSearch(): Promise<void> {
   border-color: rgba(15, 118, 110, 0.16);
 }
 
+.iplas-isn-button {
+  min-height: 2.75rem;
+  border-radius: 0.75rem;
+}
+
 .iplas-isn-unified-card,
 .iplas-isn-notice,
 .iplas-isn-reference-panel {

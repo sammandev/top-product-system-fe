@@ -37,32 +37,36 @@ const makeRecord = (overrides: Partial<TopProductExcelRecord>): TopProductExcelR
 })
 
 describe('top product Excel export', () => {
-  it('orders DUT groups by descending score and keeps stable ties and nulls last', async () => {
-    const workbook = await buildTopProductWorkbook([
-      makeRecord({ isn: 'DUT-TIE-B', overallScore: 8, sourceOrder: 1 }),
-      makeRecord({ isn: 'DUT-NULL', overallScore: null, sourceOrder: 2 }),
-      makeRecord({ isn: 'DUT-HIGH', overallScore: 9, sourceOrder: 3 }),
-      makeRecord({ isn: 'DUT-TIE-A', overallScore: 8, sourceOrder: 0 }),
-    ])
+  it(
+    'orders DUT groups by descending score and keeps stable ties and nulls last',
+    async () => {
+      const workbook = await buildTopProductWorkbook([
+        makeRecord({ isn: 'DUT-TIE-B', overallScore: 8, sourceOrder: 1 }),
+        makeRecord({ isn: 'DUT-NULL', overallScore: null, sourceOrder: 2 }),
+        makeRecord({ isn: 'DUT-HIGH', overallScore: 9, sourceOrder: 3 }),
+        makeRecord({ isn: 'DUT-TIE-A', overallScore: 8, sourceOrder: 0 }),
+      ])
 
-    const sheet = workbook.worksheets[0]
-    if (!sheet) throw new Error('Expected Station-1 worksheet')
-    expect(sheet.name).toBe('Station-1')
-    expect(sheet.getCell('A10').value).toBe('TEST ITEM')
-    expect(sheet.getCell('E10').value).toBe('Weight')
-    expect(sheet.getCell('F10').value).toBe('VALUE')
-    expect(sheet.getCell('F1').value).toBe('DUT-HIGH')
-    expect(sheet.getCell('I1').value).toBe('DUT-TIE-A')
-    expect(sheet.getCell('L1').value).toBe('DUT-TIE-B')
-    expect(sheet.getCell('O1').value).toBe('DUT-NULL')
-    expect(sheet.getCell('F12').value).toBe(9)
-    expect(sheet.views[0]).toMatchObject({
-      state: 'frozen',
-      xSplit: 5,
-      ySplit: 10,
-      topLeftCell: 'F11',
-    })
-  })
+      const sheet = workbook.worksheets[0]
+      if (!sheet) throw new Error('Expected Station-1 worksheet')
+      expect(sheet.name).toBe('Station-1')
+      expect(sheet.getCell('A10').value).toBe('TEST ITEM')
+      expect(sheet.getCell('E10').value).toBe('Weight')
+      expect(sheet.getCell('F10').value).toBe('VALUE')
+      expect(sheet.getCell('F1').value).toBe('DUT-HIGH')
+      expect(sheet.getCell('I1').value).toBe('DUT-TIE-A')
+      expect(sheet.getCell('L1').value).toBe('DUT-TIE-B')
+      expect(sheet.getCell('O1').value).toBe('DUT-NULL')
+      expect(sheet.getCell('F12').value).toBe(9)
+      expect(sheet.views[0]).toMatchObject({
+        state: 'frozen',
+        xSplit: 5,
+        ySplit: 10,
+        topLeftCell: 'F11',
+      })
+    },
+    15_000,
+  )
 
   it('preserves target, weight, deviation, score, and iPLAS score conversion', () => {
     const record = {

@@ -284,7 +284,7 @@ const selectedProject = ref<string | null>(null)
 const stationConfigs = ref<Record<string, StationConfig>>({})
 
 // Date range preset
-const dateRangePreset = ref<string | null>(null)
+const dateRangePreset = ref<string | null>('current_shift')
 const dateRangePresets = [
   { title: 'Current Shift', value: 'current_shift' },
   { title: 'Today', value: 'today' },
@@ -386,6 +386,16 @@ const dateRangePresetOptions = computed(() =>
     value: preset.value,
   })),
 )
+
+function applyDefaultSite(force = false): void {
+  if (!force && selectedSite.value && uniqueSites.value.includes(selectedSite.value)) return
+  const nextSite =
+    uniqueSites.value.find((site) => site.toUpperCase() === 'PTB') ?? uniqueSites.value[0] ?? null
+  if (selectedSite.value !== nextSite) {
+    selectedSite.value = nextSite
+    handleSiteChange()
+  }
+}
 
 const configuredStationsCount = computed(() => {
   return Object.keys(stationConfigs.value).length
@@ -1318,17 +1328,17 @@ async function handleProjectChange(): Promise<void> {
 
 async function handleRefresh(): Promise<void> {
   await fetchSiteProjects(true)
+  applyDefaultSite()
 
   if (selectedSite.value && selectedProject.value) {
     await fetchStations(selectedSite.value, selectedProject.value, true)
   }
 }
 
-function handleClearAll(): void {
-  dateRangePreset.value = null
-  startTime.value = ''
-  endTime.value = ''
-  selectedSite.value = null
+async function handleClearAll(): Promise<void> {
+  dateRangePreset.value = 'current_shift'
+  await applyDateRangePreset()
+  applyDefaultSite(true)
   selectedProject.value = null
   stationConfigs.value = {}
   clearTestItemData()
@@ -1419,7 +1429,8 @@ async function fetchTestItems(): Promise<void> {
 
 // Initialize
 onMounted(async () => {
-  await fetchSiteProjects()
+  await Promise.all([fetchSiteProjects(), applyDateRangePreset()])
+  applyDefaultSite()
 })
 
 // Cleanup on unmount to free memory

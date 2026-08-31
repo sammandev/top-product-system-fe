@@ -4,6 +4,11 @@
       <template #header-aside>
         <div class="top-product-iplas-isn-header-actions">
           <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--ghost"
+            @click="emit('show-settings')">
+            <Icon icon="mdi:cog-outline" />
+            <span>iPLAS Settings</span>
+          </button>
+          <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--ghost"
             :disabled="loadingStationLookup || loadingTestItems || !canClearAll" @click="handleClearAll">
             <Icon icon="mdi:close-circle-outline" />
             <span>Clear All</span>
@@ -332,6 +337,8 @@ const props = withDefaults(
     isActive: false,
   },
 )
+
+const emit = defineEmits<(event: 'show-settings') => void>()
 
 const { showSuccess, showError: showErrorNotification } = useNotification()
 const { apiToken } = useIplasSettings()
@@ -2017,6 +2024,10 @@ onUnmounted(() => {
 .top-product-iplas-isn-button--ghost {
   background: var(--app-surface);
   border-color: rgba(15, 118, 110, 0.16);
+}
+
+.top-product-iplas-isn-button {
+  border-radius: 0.75rem;
 }
 
 .top-product-iplas-isn-toggle-card,

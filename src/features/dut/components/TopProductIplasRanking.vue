@@ -31,7 +31,24 @@
     <AppTabs v-model="selectedTab" :items="stationTabItems">
       <template v-for="item in stationTabItems" :key="String(item.value)" #[`panel-${item.value}`]>
         <section class="ranking-panel">
-          <div class="ranking-filter-grid">
+          <section class="ranking-filter-panel">
+            <header class="ranking-filter-header">
+              <div>
+                <strong>Filter station records</strong>
+                <span>{{ filteredRanking.length }} of {{ rankingByStation[String(item.value)]?.length || 0 }} records shown</span>
+              </div>
+              <div class="ranking-filter-actions">
+                <span class="ranking-pill ranking-pill--muted">
+                  {{ getUniqueDevices(String(item.value)).length }} device IDs
+                </span>
+                <button v-if="hasActiveFilters" type="button" class="ranking-button ranking-button--ghost"
+                  @click="clearAllFilters">
+                  Clear Filters
+                </button>
+              </div>
+            </header>
+
+            <div class="ranking-filter-grid">
             <label class="ranking-field">
               <span>Search Records</span>
               <input v-model="searchQuery" class="app-themed-input" type="text" placeholder="Search ISN, Device ID, Error Code...">
@@ -39,19 +56,8 @@
 
             <label class="ranking-field">
               <span>Device IDs</span>
-              <input v-model="deviceFilterEntry" class="app-themed-input" type="text" list="ranking-device-filter-options"
-                placeholder="Type a device and press Enter" @keydown.enter.prevent="commitDeviceFilter"
-                @blur="commitDeviceFilter">
-              <datalist id="ranking-device-filter-options">
-                <option v-for="device in getUniqueDevices(String(item.value))" :key="device" :value="device" />
-              </datalist>
-              <div v-if="deviceFilter.length > 0" class="ranking-token-row">
-                <button v-for="device in deviceFilter" :key="device" type="button" class="ranking-token"
-                  @click="removeDeviceFilter(device)">
-                  <span>{{ device }}</span>
-                  <span aria-hidden="true">x</span>
-                </button>
-              </div>
+              <AppMultiSelect v-model="deviceFilter" :options="deviceFilterOptions"
+                placeholder="All device IDs" />
             </label>
 
             <template v-if="hasScores">
@@ -69,16 +75,11 @@
                   placeholder="0-10" :disabled="!scoreFilterType">
               </label>
             </template>
-
-            <div class="ranking-filter-actions">
-              <button v-if="hasActiveFilters" type="button" class="ranking-button ranking-button--ghost"
-                @click="clearAllFilters">
-                Clear Filters
-              </button>
-              <span v-if="hasActiveFilters" class="ranking-pill ranking-pill--primary">{{ activeFilterCount }}
-                active</span>
+              <div v-if="hasActiveFilters" class="ranking-filter-state">
+                <span class="ranking-pill ranking-pill--primary">{{ activeFilterCount }} active</span>
+              </div>
             </div>
-          </div>
+          </section>
 
           <div class="ranking-table-shell">
             <AppDataGrid :columns="gridColumns" :rows="filteredRanking" data-key="key" :selection="selectedItems"
@@ -177,7 +178,7 @@ import { Icon } from '@iconify/vue'
 import { useDebounceFn } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 import type { CsvTestItemData } from '@/features/dut-logs/composables/useIplasApi'
-import { AppPanel, AppSelect, AppTabs } from '@/shared/ui'
+import { AppMultiSelect, AppPanel, AppSelect, AppTabs } from '@/shared/ui'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import { adjustIplasDisplayTime, isStatusPass } from '@/shared/utils/helpers'
 import { getScoreColor } from '../types/scoring.types'
@@ -234,7 +235,6 @@ const searchQuery = ref<string>('')
 // Debounced search query for performance - actual filtering uses this
 const debouncedSearchQuery = ref<string>('')
 const deviceFilter = ref<string[]>([])
-const deviceFilterEntry = ref('')
 
 // Score filter state
 const scoreFilterType = ref<string | null>(null)
@@ -259,6 +259,7 @@ watch(searchQuery, (value) => updateDebouncedSearch(value))
 // Clear selection when tab changes
 watch(selectedTab, () => {
   selectedItems.value = []
+  deviceFilter.value = []
 })
 
 // Parse score range input (e.g., "8-10") into min/max values
@@ -536,6 +537,10 @@ function getUniqueDevices(stationName: string): string[] {
   return Array.from(devices)
 }
 
+const deviceFilterOptions = computed(() =>
+  getUniqueDevices(selectedTab.value).map((device) => ({ label: device, value: device })),
+)
+
 // Filtered ranking (uses debounced search for better performance)
 const filteredRanking = computed(() => {
   const currentStation = selectedTab.value
@@ -622,25 +627,10 @@ function clearAllFilters() {
   searchQuery.value = ''
   debouncedSearchQuery.value = ''
   deviceFilter.value = []
-  deviceFilterEntry.value = ''
   scoreFilterType.value = null
   scoreFilterValue.value = null
   scoreFilterValue2.value = null
   scoreRangeInput.value = ''
-}
-
-function commitDeviceFilter() {
-  const value = deviceFilterEntry.value.trim()
-  deviceFilterEntry.value = ''
-  if (!value || deviceFilter.value.includes(value)) {
-    return
-  }
-
-  deviceFilter.value = [...deviceFilter.value, value]
-}
-
-function removeDeviceFilter(device: string) {
-  deviceFilter.value = deviceFilter.value.filter((value) => value !== device)
 }
 
 function handleScoreFilterTypeChange() {
@@ -866,6 +856,7 @@ function scoreTone(score: number) {
 
 .ranking-panel {
   min-width: 0;
+  gap: 1rem;
 }
 
 .ranking-actions,
@@ -883,9 +874,48 @@ function scoreTone(score: number) {
   justify-content: end;
 }
 
+.ranking-filter-panel {
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.ranking-filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+.ranking-filter-header strong,
+.ranking-filter-header > div > span {
+  display: block;
+}
+
+.ranking-filter-header strong {
+  color: var(--app-ink);
+}
+
+.ranking-filter-header > div > span {
+  margin-top: 0.15rem;
+  color: var(--app-muted);
+  font-size: 0.76rem;
+}
+
 .ranking-filter-grid {
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
-  padding: 1rem 0.75rem;
+  align-items: end;
+  padding: 1rem;
+}
+
+.ranking-filter-state {
+  display: flex;
+  align-items: end;
+  min-height: 2.75rem;
 }
 
 .ranking-field span {
@@ -913,7 +943,7 @@ function scoreTone(score: number) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2.6rem;
+  min-height: 2.75rem;
   border-radius: 0.75rem;
   border: 1px solid var(--app-border);
   background: var(--app-panel);
@@ -930,8 +960,8 @@ function scoreTone(score: number) {
 }
 
 .ranking-inline-icon {
-  width: 2.6rem;
-  min-width: 2.6rem;
+  width: 2.75rem;
+  min-width: 2.75rem;
   padding: 0;
   font-size: 1.05rem;
 }
@@ -1092,6 +1122,11 @@ function scoreTone(score: number) {
 
   .ranking-actions {
     justify-content: start;
+  }
+
+  .ranking-filter-header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

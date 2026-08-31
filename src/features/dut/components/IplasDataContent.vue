@@ -406,7 +406,7 @@ const stationDeviceIds = ref<Record<string, string[]>>({})
 const loadingDevicesByStation = ref<Record<string, boolean>>({})
 
 // Date range preset
-const dateRangePreset = ref<string | null>(null)
+const dateRangePreset = ref<string | null>('current_shift')
 const dateRangePresets = [
   { title: 'Current Shift', value: 'current_shift' },
   { title: 'Today', value: 'today' },
@@ -873,6 +873,16 @@ const siteSelectOptions = computed(() => [
     value: site,
   })),
 ])
+
+function applyDefaultSite(): void {
+  if (selectedSite.value && uniqueSites.value.includes(selectedSite.value)) return
+  const nextSite =
+    uniqueSites.value.find((site) => site.toUpperCase() === 'PTB') ?? uniqueSites.value[0] ?? null
+  if (selectedSite.value !== nextSite) {
+    selectedSite.value = nextSite
+    handleSiteChange()
+  }
+}
 
 const projectSelectOptions = computed(() => [
   { label: 'Select a project', value: null },
@@ -1767,11 +1777,13 @@ async function runStationSearch() {
 
 async function handleRefresh() {
   await fetchSiteProjects(true)
+  applyDefaultSite()
 }
 
 // Initialize
 onMounted(async () => {
-  await fetchSiteProjects()
+  await Promise.all([fetchSiteProjects(), applyDateRangePreset(dateRangePreset.value)])
+  applyDefaultSite()
 })
 
 // Cleanup on unmount to free memory

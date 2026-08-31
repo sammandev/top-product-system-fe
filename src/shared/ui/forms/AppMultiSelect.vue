@@ -10,7 +10,6 @@
     :disabled="props.disabled"
     :showClear="props.modelValue.length > 0"
     multiple
-    checkmark
     emptyMessage="No results found"
     emptyFilterMessage="No results found"
     optionLabel="label"
@@ -24,6 +23,12 @@
     <template #value="{ value, placeholder: valuePlaceholder }">
       <span :class="{ 'app-multi-select__placeholder': !Array.isArray(value) || value.length === 0 }">
         {{ formatSelectedValue(value, valuePlaceholder) }}
+      </span>
+    </template>
+    <template #option="{ option, selected }">
+      <span class="app-multi-select__option">
+        <span class="app-multi-select__checkbox" :class="{ 'is-selected': selected }" aria-hidden="true" />
+        <span>{{ option.label }}</span>
       </span>
     </template>
   </Select>
@@ -81,5 +86,40 @@ function handleChange(event: { value: (string | number)[] }) {
 
 .app-multi-select__placeholder {
   color: var(--app-muted);
+}
+
+.app-multi-select__option {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.app-multi-select__checkbox {
+  display: grid;
+  place-items: center;
+  width: 1.1rem;
+  height: 1.1rem;
+  flex: 0 0 auto;
+  border: 1px solid var(--app-border);
+  border-radius: 0.25rem;
+  background: var(--app-panel-strong);
+  color: var(--app-panel);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.app-multi-select__checkbox.is-selected {
+  border-color: var(--app-accent);
+  background: var(--app-accent);
+}
+
+.app-multi-select__checkbox.is-selected::after {
+  width: 0.28rem;
+  height: 0.52rem;
+  border-right: 2px solid var(--app-panel);
+  border-bottom: 2px solid var(--app-panel);
+  content: "";
+  transform: rotate(45deg) translate(-1px, -1px);
 }
 </style>
