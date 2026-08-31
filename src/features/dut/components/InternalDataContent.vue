@@ -3,12 +3,6 @@
         <AppPanel eyebrow="Search" title="DUT ISN Search" tone="cool" split-header compact-header>
             <template #header-aside>
                 <div class="internal-data-header-actions">
-                    <span v-if="inputMode === 'multiple'" class="internal-data-context-pill">
-                        {{ multipleModeIdentifiers.length }} ready for multi-search
-                    </span>
-                    <span v-else class="internal-data-context-pill internal-data-context-pill--cool">
-                        {{ bulkModeIdentifiers.length }} parsed from bulk input
-                    </span>
                     <button type="button" class="internal-data-button internal-data-button--ghost"
                         :disabled="loading || !hasSearchState" @click="clearAll">
                         <Icon icon="mdi:close-circle-outline" />
@@ -108,7 +102,7 @@
                 </span>
             </template>
 
-            <AppTabs v-model="activeISNTabKey" :items="isnTabItems" scrollable>
+            <AppTabs v-model="activeISNTabKey" :items="isnTabItems">
                 <template v-for="(isnGroup, index) in groupedByISN" :key="isnGroup.isn" #[`panel-isn-${index}`]>
                     <section class="internal-data-result-pane">
                         <div class="internal-data-summary-bar">
@@ -450,42 +444,42 @@ import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 import { getErrorStatus } from '@/shared/utils'
 
 interface TestRecord {
-    id: number
-    test_date: string
-    test_duration: number
-    test_result: number
-    error_item: string
-    device_id: number
-    device_id__name: string
-    dut_id: number
-    dut_id__isn: string
-    site_name: string
+  id: number
+  test_date: string
+  test_duration: number
+  test_result: number
+  error_item: string
+  device_id: number
+  device_id__name: string
+  dut_id: number
+  dut_id__isn: string
+  site_name: string
 }
 
 interface Station {
-    id: number
-    name: string
-    status: number
-    order: number
-    model_id: number
-    site_name: string
-    model_name: string
-    data: TestRecord[]
-    dut_isn: string
-    dut_id: number
+  id: number
+  name: string
+  status: number
+  order: number
+  model_id: number
+  site_name: string
+  model_name: string
+  data: TestRecord[]
+  dut_isn: string
+  dut_id: number
 }
 
 interface TestRecordsResponse {
-    site_name: string
-    model_name: string
-    record_data: Station[]
+  site_name: string
+  model_name: string
+  record_data: Station[]
 }
 
 interface ISNGroupedRecords {
-    isn: string
-    site_name: string
-    model_name: string
-    record_data: Station[]
+  isn: string
+  site_name: string
+  model_name: string
+  record_data: Station[]
 }
 
 const dutIsn = ref('')
@@ -504,428 +498,428 @@ const carouselModels = ref<Record<number, number>>({})
 const { showSuccess: showSuccessNotification } = useNotification()
 
 const activeISNTabKey = computed({
-    get: () => `isn-${activeISNTab.value}`,
-    set: (value: string) => {
-        const match = value.match(/^isn-(\d+)$/)
-        activeISNTab.value = match ? Number(match[1]) : 0
-    },
+  get: () => `isn-${activeISNTab.value}`,
+  set: (value: string) => {
+    const match = value.match(/^isn-(\d+)$/)
+    activeISNTab.value = match ? Number(match[1]) : 0
+  },
 })
 
 const isnTabItems = computed(() => {
-    return groupedByISN.value.map((group, index) => ({
-        value: `isn-${index}`,
-        label: group.isn,
-        icon: 'mdi:barcode',
-    }))
+  return groupedByISN.value.map((group, index) => ({
+    value: `isn-${index}`,
+    label: group.isn,
+    icon: 'mdi:barcode',
+  }))
 })
 
 const viewModeOptions = [
-    { value: 'grid' as const, label: 'Grid', icon: 'mdi:view-grid' },
-    { value: 'list' as const, label: 'List', icon: 'mdi:view-list' },
-    { value: 'table' as const, label: 'Table', icon: 'mdi:table' },
-    { value: 'compact' as const, label: 'Compact', icon: 'mdi:view-compact' },
+  { value: 'grid' as const, label: 'Grid', icon: 'mdi:view-grid' },
+  { value: 'list' as const, label: 'List', icon: 'mdi:view-list' },
+  { value: 'table' as const, label: 'Table', icon: 'mdi:table' },
+  { value: 'compact' as const, label: 'Compact', icon: 'mdi:view-compact' },
 ]
 
 const activeViewModeDescription = computed(() => {
-    switch (viewMode.value) {
-        case 'grid':
-            return 'Grid mode highlights one active record per station.'
-        case 'list':
-            return 'List mode keeps every record visible without collapsible shells.'
-        case 'table':
-            return 'Table mode uses the shared grid wrapper for requirement comparison.'
-        case 'compact':
-            return 'Compact mode scans dense station cards without expansion panels.'
-        default:
-            return ''
-    }
+  switch (viewMode.value) {
+    case 'grid':
+      return 'Grid mode highlights one active record per station.'
+    case 'list':
+      return 'List mode keeps every record visible without collapsible shells.'
+    case 'table':
+      return 'Table mode uses the shared grid wrapper for requirement comparison.'
+    case 'compact':
+      return 'Compact mode scans dense station cards without expansion panels.'
+    default:
+      return ''
+  }
 })
 
 const bulkModeIdentifiers = computed(() => parseBulkIdentifiers(dutIsn.value))
 
 const multipleModeIdentifiers = computed(() =>
-    normalizeIdentifierList([
-        ...selectedISNs.value.map((value) => String(value)),
-        multipleIsnSearchText.value,
-    ]),
+  normalizeIdentifierList([
+    ...selectedISNs.value.map((value) => String(value)),
+    multipleIsnSearchText.value,
+  ]),
 )
 
 const hasSearchState = computed(() => {
-    return (
-        groupedByISN.value.length > 0 ||
-        testRecords.value !== null ||
-        multipleModeIdentifiers.value.length > 0 ||
-        parseBulkIdentifiers(dutIsn.value).length > 0
-    )
+  return (
+    groupedByISN.value.length > 0 ||
+    testRecords.value !== null ||
+    multipleModeIdentifiers.value.length > 0 ||
+    parseBulkIdentifiers(dutIsn.value).length > 0
+  )
 })
 
 // Table headers for table view
 const tableHeaders = [
-    { title: 'Record', key: 'record_number', sortable: true },
-    { title: 'Device', key: 'device_id__name', sortable: true },
-    { title: 'DUT ISN', key: 'dut_id__isn', sortable: true },
-    { title: 'Status', key: 'status', sortable: false },
-    { title: 'Duration', key: 'test_duration', sortable: true },
-    { title: 'Test Date', key: 'test_date', sortable: true },
-    { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const },
+  { title: 'Record', key: 'record_number', sortable: true },
+  { title: 'Device', key: 'device_id__name', sortable: true },
+  { title: 'DUT ISN', key: 'dut_id__isn', sortable: true },
+  { title: 'Status', key: 'status', sortable: false },
+  { title: 'Duration', key: 'test_duration', sortable: true },
+  { title: 'Test Date', key: 'test_date', sortable: true },
+  { title: 'Actions', key: 'actions', sortable: false, align: 'end' as const },
 ]
 
 const internalTableColumns = [
-    { key: 'record_number', header: 'Record', field: 'record_number' },
-    { key: 'device_id__name', header: 'Device', field: 'device_id__name' },
-    { key: 'dut_id__isn', header: 'DUT ISN', field: 'dut_id__isn' },
-    { key: 'status', header: 'Status', field: 'status' },
-    { key: 'test_duration', header: 'Duration', field: 'test_duration' },
-    { key: 'test_date', header: 'Test Date', field: 'test_date' },
-    { key: 'actions', header: 'Actions', field: 'actions' },
+  { key: 'record_number', header: 'Record', field: 'record_number' },
+  { key: 'device_id__name', header: 'Device', field: 'device_id__name' },
+  { key: 'dut_id__isn', header: 'DUT ISN', field: 'dut_id__isn' },
+  { key: 'status', header: 'Status', field: 'status' },
+  { key: 'test_duration', header: 'Duration', field: 'test_duration' },
+  { key: 'test_date', header: 'Test Date', field: 'test_date' },
+  { key: 'actions', header: 'Actions', field: 'actions' },
 ]
 
 const normalizeIdentifierList = (values: string[]): string[] => {
-    const identifiers = new Set<string>()
+  const identifiers = new Set<string>()
 
-    for (const value of values) {
-        for (const part of value.split(/[\n,\s]+/)) {
-            const trimmed = part.trim()
-            if (trimmed) {
-                identifiers.add(trimmed)
-            }
-        }
+  for (const value of values) {
+    for (const part of value.split(/[\n,\s]+/)) {
+      const trimmed = part.trim()
+      if (trimmed) {
+        identifiers.add(trimmed)
+      }
     }
+  }
 
-    return Array.from(identifiers)
+  return Array.from(identifiers)
 }
 
 const parseBulkIdentifiers = (input: string): string[] => {
-    return normalizeIdentifierList(input.split(/[\n,\s]+/))
+  return normalizeIdentifierList(input.split(/[\n,\s]+/))
 }
 
 const getCurrentInputIdentifiers = (): string[] => {
-    if (inputMode.value === 'multiple') {
-        return multipleModeIdentifiers.value
-    }
+  if (inputMode.value === 'multiple') {
+    return multipleModeIdentifiers.value
+  }
 
-    return parseBulkIdentifiers(dutIsn.value)
+  return parseBulkIdentifiers(dutIsn.value)
 }
 
 const commitPendingMultipleIdentifier = () => {
-    const nextIdentifiers = normalizeIdentifierList([
-        ...selectedISNs.value,
-        multipleIsnSearchText.value,
-    ])
+  const nextIdentifiers = normalizeIdentifierList([
+    ...selectedISNs.value,
+    multipleIsnSearchText.value,
+  ])
 
-    if (nextIdentifiers.length === selectedISNs.value.length && !multipleIsnSearchText.value.trim()) {
-        return
-    }
+  if (nextIdentifiers.length === selectedISNs.value.length && !multipleIsnSearchText.value.trim()) {
+    return
+  }
 
-    selectedISNs.value = nextIdentifiers
-    multipleIsnSearchText.value = ''
+  selectedISNs.value = nextIdentifiers
+  multipleIsnSearchText.value = ''
 }
 
 const handleMultipleIdentifierInput = () => {
-    if (!/[\n,\s]/.test(multipleIsnSearchText.value)) {
-        return
-    }
+  if (!/[\n,\s]/.test(multipleIsnSearchText.value)) {
+    return
+  }
 
-    commitPendingMultipleIdentifier()
+  commitPendingMultipleIdentifier()
 }
 
 const removeSelectedISN = (identifier: string) => {
-    selectedISNs.value = selectedISNs.value.filter((value) => value !== identifier)
+  selectedISNs.value = selectedISNs.value.filter((value) => value !== identifier)
 }
 
 const submitMultipleSearch = async () => {
-    if (multipleIsnSearchText.value.trim()) {
-        commitPendingMultipleIdentifier()
-    }
+  if (multipleIsnSearchText.value.trim()) {
+    commitPendingMultipleIdentifier()
+  }
 
-    await fetchTestRecords()
+  await fetchTestRecords()
 }
 
 const handleMultipleInputKeydown = async (event: KeyboardEvent) => {
-    if (event.key === ',' || event.key === 'Enter') {
-        if (loading.value) {
-            event.preventDefault()
-            return
-        }
-
-        if (multipleIsnSearchText.value.trim()) {
-            event.preventDefault()
-            commitPendingMultipleIdentifier()
-            return
-        }
-    }
-
-    if (
-        event.key === 'Backspace' &&
-        !multipleIsnSearchText.value.trim() &&
-        selectedISNs.value.length > 0
-    ) {
-        selectedISNs.value = selectedISNs.value.slice(0, -1)
-    }
-
-    if (event.key === 'Enter' && multipleModeIdentifiers.value.length > 0) {
-        event.preventDefault()
-        await fetchTestRecords()
-    }
-}
-
-const handleMultipleIsnsEnter = async (event: KeyboardEvent) => {
+  if (event.key === ',' || event.key === 'Enter') {
     if (loading.value) {
-        event.preventDefault()
-        return
+      event.preventDefault()
+      return
     }
 
     if (multipleIsnSearchText.value.trim()) {
-        return
+      event.preventDefault()
+      commitPendingMultipleIdentifier()
+      return
     }
+  }
 
-    if (multipleModeIdentifiers.value.length === 0) {
-        return
-    }
+  if (
+    event.key === 'Backspace' &&
+    !multipleIsnSearchText.value.trim() &&
+    selectedISNs.value.length > 0
+  ) {
+    selectedISNs.value = selectedISNs.value.slice(0, -1)
+  }
 
+  if (event.key === 'Enter' && multipleModeIdentifiers.value.length > 0) {
     event.preventDefault()
     await fetchTestRecords()
+  }
+}
+
+const handleMultipleIsnsEnter = async (event: KeyboardEvent) => {
+  if (loading.value) {
+    event.preventDefault()
+    return
+  }
+
+  if (multipleIsnSearchText.value.trim()) {
+    return
+  }
+
+  if (multipleModeIdentifiers.value.length === 0) {
+    return
+  }
+
+  event.preventDefault()
+  await fetchTestRecords()
 }
 
 const fetchTestRecords = async () => {
-    const isnList = getCurrentInputIdentifiers()
+  const isnList = getCurrentInputIdentifiers()
 
-    if (isnList.length === 0) {
-        error.value = 'Please enter at least one valid ISN'
-        return
+  if (isnList.length === 0) {
+    error.value = 'Please enter at least one valid ISN'
+    return
+  }
+
+  loading.value = true
+  error.value = null
+
+  try {
+    // Fetch all ISNs in parallel
+    const responses = await Promise.all(
+      isnList.map((isn) =>
+        apiClient
+          .get<TestRecordsResponse>(`/api/dut/records/${isn}`)
+          .then((response) => ({ isn, data: response.data, success: true }))
+          .catch((err) => {
+            console.warn(`Failed to fetch records for ISN ${isn}:`, err)
+            return { isn, data: null, success: false }
+          }),
+      ),
+    )
+
+    // Separate successful responses
+    const validResponses = responses.filter((r) => r.success && r.data)
+
+    if (validResponses.length === 0) {
+      throw new Error('Failed to fetch records for all ISNs')
     }
 
-    loading.value = true
-    error.value = null
+    // Store fetched ISNs for reference
+    fetchedISNs.value = isnList
 
-    try {
-        // Fetch all ISNs in parallel
-        const responses = await Promise.all(
-            isnList.map((isn) =>
-                apiClient
-                    .get<TestRecordsResponse>(`/api/dut/records/${isn}`)
-                    .then((response) => ({ isn, data: response.data, success: true }))
-                    .catch((err) => {
-                        console.warn(`Failed to fetch records for ISN ${isn}:`, err)
-                        return { isn, data: null, success: false }
-                    }),
-            ),
-        )
+    // Group results by ISN
+    groupedByISN.value = validResponses.map((response) => ({
+      isn: response.isn,
+      site_name: response.data?.site_name ?? '',
+      model_name: response.data?.model_name ?? '',
+      record_data: response.data?.record_data ?? [],
+    }))
 
-        // Separate successful responses
-        const validResponses = responses.filter((r) => r.success && r.data)
-
-        if (validResponses.length === 0) {
-            throw new Error('Failed to fetch records for all ISNs')
-        }
-
-        // Store fetched ISNs for reference
-        fetchedISNs.value = isnList
-
-        // Group results by ISN
-        groupedByISN.value = validResponses.map((response) => ({
-            isn: response.isn,
-            site_name: response.data?.site_name ?? '',
-            model_name: response.data?.model_name ?? '',
-            record_data: response.data?.record_data ?? [],
-        }))
-
-        // Use first response for backward compatibility (testRecords still used in template)
-        const firstValid = validResponses[0]
-        if (!firstValid || !firstValid.data) {
-            throw new Error('No valid data in response')
-        }
-        testRecords.value = firstValid.data
-    } catch (err: unknown) {
-        // Show user-friendly error message
-        if (getErrorStatus(err) === 400) {
-            error.value = 'Invalid ISN or no records found. Please check the ISN and try again.'
-        } else if (getErrorStatus(err) === 404) {
-            error.value = 'No test records found for the provided ISN.'
-        } else if ((getErrorStatus(err) ?? 0) >= 500) {
-            error.value = 'Server error. Please try again later.'
-        } else {
-            error.value = 'Failed to fetch test records. Please check your connection and try again.'
-        }
-        testRecords.value = null
-    } finally {
-        loading.value = false
+    // Use first response for backward compatibility (testRecords still used in template)
+    const firstValid = validResponses[0]
+    if (!firstValid?.data) {
+      throw new Error('No valid data in response')
     }
+    testRecords.value = firstValid.data
+  } catch (err: unknown) {
+    // Show user-friendly error message
+    if (getErrorStatus(err) === 400) {
+      error.value = 'Invalid ISN or no records found. Please check the ISN and try again.'
+    } else if (getErrorStatus(err) === 404) {
+      error.value = 'No test records found for the provided ISN.'
+    } else if ((getErrorStatus(err) ?? 0) >= 500) {
+      error.value = 'Server error. Please try again later.'
+    } else {
+      error.value = 'Failed to fetch test records. Please check your connection and try again.'
+    }
+    testRecords.value = null
+  } finally {
+    loading.value = false
+  }
 }
 
 const handleDownload = async (downloadInfo: { station: Station; record: TestRecord }) => {
-    downloadingRecordId.value = downloadInfo.record.id
-    error.value = null
+  downloadingRecordId.value = downloadInfo.record.id
+  error.value = null
 
-    try {
-        const response = await apiClient.post(
-            '/api/dut/test-log/download',
-            {
-                info_list: [
-                    {
-                        isn: downloadInfo.record.dut_id__isn,
-                        time: formatTimeForExternal2(downloadInfo.record.test_date),
-                        deviceid: downloadInfo.record.device_id__name,
-                        station: downloadInfo.station.name,
-                    },
-                ],
-                site: downloadInfo.station.site_name,
-                project: downloadInfo.station.model_name,
-            },
-            { responseType: 'blob' },
-        )
+  try {
+    const response = await apiClient.post(
+      '/api/dut/test-log/download',
+      {
+        info_list: [
+          {
+            isn: downloadInfo.record.dut_id__isn,
+            time: formatTimeForExternal2(downloadInfo.record.test_date),
+            deviceid: downloadInfo.record.device_id__name,
+            station: downloadInfo.station.name,
+          },
+        ],
+        site: downloadInfo.station.site_name,
+        project: downloadInfo.station.model_name,
+      },
+      { responseType: 'blob' },
+    )
 
-        // Create download link
-        const url = window.URL.createObjectURL(new Blob([response.data]))
-        const link = document.createElement('a')
-        link.href = url
+    // Create download link
+    const url = window.URL.createObjectURL(new Blob([response.data]))
+    const link = document.createElement('a')
+    link.href = url
 
-        // Extract filename from Content-Disposition or use default
-        const contentDisposition = response.headers['content-disposition']
-        const defaultFilename = `${downloadInfo.record.dut_id__isn}_${downloadInfo.station.name}.zip`
-        const filename = contentDisposition
-            ? (contentDisposition.split('filename=')[1]?.replace(/"/g, '') ?? defaultFilename)
-            : defaultFilename
+    // Extract filename from Content-Disposition or use default
+    const contentDisposition = response.headers['content-disposition']
+    const defaultFilename = `${downloadInfo.record.dut_id__isn}_${downloadInfo.station.name}.zip`
+    const filename = contentDisposition
+      ? (contentDisposition.split('filename=')[1]?.replace(/"/g, '') ?? defaultFilename)
+      : defaultFilename
 
-        link.setAttribute('download', filename)
-        document.body.appendChild(link)
-        link.click()
-        link.remove()
-        window.URL.revokeObjectURL(url)
+    link.setAttribute('download', filename)
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
 
-        showSuccessNotification('Test log downloaded successfully!')
-    } catch (err: unknown) {
-        // Show user-friendly error message
-        if (getErrorStatus(err) === 404) {
-            error.value = 'Test log file not found. It may have been deleted or moved.'
-        } else if ((getErrorStatus(err) ?? 0) >= 500) {
-            error.value = 'Server error while downloading. Please try again later.'
-        } else {
-            error.value = 'Failed to download test log. Please try again.'
-        }
-    } finally {
-        downloadingRecordId.value = null
+    showSuccessNotification('Test log downloaded successfully!')
+  } catch (err: unknown) {
+    // Show user-friendly error message
+    if (getErrorStatus(err) === 404) {
+      error.value = 'Test log file not found. It may have been deleted or moved.'
+    } else if ((getErrorStatus(err) ?? 0) >= 500) {
+      error.value = 'Server error while downloading. Please try again later.'
+    } else {
+      error.value = 'Failed to download test log. Please try again.'
     }
+  } finally {
+    downloadingRecordId.value = null
+  }
 }
 
 const formatTimeForExternal2 = (isoDate: string): string => {
-    // Convert UTC time to local timezone + 1 hour for UTC+7 (making it UTC+8)
-    const date = new Date(isoDate)
+  // Convert UTC time to local timezone + 1 hour for UTC+7 (making it UTC+8)
+  const date = new Date(isoDate)
 
-    // Add 1 hour (3600000 ms) to the local time for UTC+7 timezone
-    const adjustedDate = new Date(date.getTime() + 3600000)
+  // Add 1 hour (3600000 ms) to the local time for UTC+7 timezone
+  const adjustedDate = new Date(date.getTime() + 3600000)
 
-    const year = adjustedDate.getFullYear()
-    const month = String(adjustedDate.getMonth() + 1).padStart(2, '0')
-    const day = String(adjustedDate.getDate()).padStart(2, '0')
-    const hours = String(adjustedDate.getHours()).padStart(2, '0')
-    const minutes = String(adjustedDate.getMinutes()).padStart(2, '0')
-    const seconds = String(adjustedDate.getSeconds()).padStart(2, '0')
+  const year = adjustedDate.getFullYear()
+  const month = String(adjustedDate.getMonth() + 1).padStart(2, '0')
+  const day = String(adjustedDate.getDate()).padStart(2, '0')
+  const hours = String(adjustedDate.getHours()).padStart(2, '0')
+  const minutes = String(adjustedDate.getMinutes()).padStart(2, '0')
+  const seconds = String(adjustedDate.getSeconds()).padStart(2, '0')
 
-    return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`
+  return `${year}/${month}/${day} ${hours}:${minutes}:${seconds}`
 }
 
 const formatDate = (isoDate: string): string => {
-    return new Date(isoDate).toLocaleString()
+  return new Date(isoDate).toLocaleString()
 }
 
 // Clear all data
 const clearAll = () => {
-    dutIsn.value = ''
-    selectedISNs.value = []
-    multipleIsnSearchText.value = ''
-    testRecords.value = null
-    groupedByISN.value = []
-    fetchedISNs.value = []
-    error.value = null
+  dutIsn.value = ''
+  selectedISNs.value = []
+  multipleIsnSearchText.value = ''
+  testRecords.value = null
+  groupedByISN.value = []
+  fetchedISNs.value = []
+  error.value = null
 }
 
 // Helper to get sorted stations for an ISN group
 const getSortedStations = (isnGroup: ISNGroupedRecords) => {
-    return [...isnGroup.record_data].sort((a, b) => a.order - b.order)
+  return [...isnGroup.record_data].sort((a, b) => a.order - b.order)
 }
 
 const getGroupRecordCount = (isnGroup: ISNGroupedRecords): number => {
-    return isnGroup.record_data.reduce((total, station) => total + station.data.length, 0)
+  return isnGroup.record_data.reduce((total, station) => total + station.data.length, 0)
 }
 
 const getGroupErrorCount = (isnGroup: ISNGroupedRecords): number => {
-    return isnGroup.record_data.reduce((total, station) => total + getErrorCount(station), 0)
+  return isnGroup.record_data.reduce((total, station) => total + getErrorCount(station), 0)
 }
 
 const getStationTableRows = (station: Station) => {
-    return getReversedData(station.data).map((record, idx) => ({
-        ...record,
-        record_number: station.data.length - idx,
-        status: record.test_result === 1 ? 'PASS' : record.error_item || 'FAIL',
-        actions: 'download',
-    }))
+  return getReversedData(station.data).map((record, idx) => ({
+    ...record,
+    record_number: station.data.length - idx,
+    status: record.test_result === 1 ? 'PASS' : record.error_item || 'FAIL',
+    actions: 'download',
+  }))
 }
 
 // Helper to get the latest record from a station
 const getLatestRecord = (station: Station): TestRecord | null => {
-    if (station.data.length === 0) return null
-    return station.data[station.data.length - 1] || null
+  if (station.data.length === 0) return null
+  return station.data[station.data.length - 1] || null
 }
 
 // Helper to initialize carousel at latest record for a station
 const initializeCarousel = (stationId: number, dataLength: number) => {
-    if (!(stationId in carouselModels.value) && dataLength > 1) {
-        carouselModels.value[stationId] = dataLength - 1 // Start at last record
-    }
+  if (!(stationId in carouselModels.value) && dataLength > 1) {
+    carouselModels.value[stationId] = dataLength - 1 // Start at last record
+  }
 }
 
 const getStationCarouselIndex = (station: Station): number => {
-    if (station.data.length <= 1) {
-        return 0
-    }
+  if (station.data.length <= 1) {
+    return 0
+  }
 
-    const currentIndex = carouselModels.value[station.id]
+  const currentIndex = carouselModels.value[station.id]
 
-    if (typeof currentIndex !== 'number') {
-        return station.data.length - 1
-    }
+  if (typeof currentIndex !== 'number') {
+    return station.data.length - 1
+  }
 
-    return Math.min(Math.max(currentIndex, 0), station.data.length - 1)
+  return Math.min(Math.max(currentIndex, 0), station.data.length - 1)
 }
 
 const setStationCarouselIndex = (station: Station, index: number) => {
-    if (station.data.length === 0) {
-        return
-    }
+  if (station.data.length === 0) {
+    return
+  }
 
-    carouselModels.value[station.id] = Math.min(Math.max(index, 0), station.data.length - 1)
+  carouselModels.value[station.id] = Math.min(Math.max(index, 0), station.data.length - 1)
 }
 
 const getActiveStationRecord = (station: Station): TestRecord | null => {
-    if (station.data.length === 0) {
-        return null
-    }
+  if (station.data.length === 0) {
+    return null
+  }
 
-    return (
-        station.data[getStationCarouselIndex(station)] || station.data[station.data.length - 1] || null
-    )
+  return (
+    station.data[getStationCarouselIndex(station)] || station.data[station.data.length - 1] || null
+  )
 }
 
 // Helper to get reversed data (latest first) for list and table views
 const getReversedData = (data: TestRecord[]) => {
-    return [...data].reverse()
+  return [...data].reverse()
 }
 
 // Helper to calculate error count for a station
 const getErrorCount = (station: Station): number => {
-    return station.data.filter((record) => record.test_result !== 1).length
+  return station.data.filter((record) => record.test_result !== 1).length
 }
 
 // Helper to check if latest record has error
 const hasLatestError = (station: Station): boolean => {
-    if (station.data.length === 0) return false
-    // Sort by test_date descending and check the first one
-    const sortedData = [...station.data].sort(
-        (a, b) => new Date(b.test_date).getTime() - new Date(a.test_date).getTime(),
-    )
-    const latestRecord = sortedData[0]
-    return latestRecord ? latestRecord.test_result !== 1 : false
+  if (station.data.length === 0) return false
+  // Sort by test_date descending and check the first one
+  const sortedData = [...station.data].sort(
+    (a, b) => new Date(b.test_date).getTime() - new Date(a.test_date).getTime(),
+  )
+  const latestRecord = sortedData[0]
+  return latestRecord ? latestRecord.test_result !== 1 : false
 }
 </script>
 
@@ -991,6 +985,27 @@ const hasLatestError = (station: Station): boolean => {
     gap: 0.65rem;
 }
 
+.internal-data-mode-toggle {
+    width: fit-content;
+    gap: 0.2rem;
+    padding: 0.22rem;
+    border: 1px solid var(--app-border);
+    border-radius: 0.6rem;
+    background: var(--app-surface);
+}
+
+.internal-data-mode-toggle__button {
+    min-height: 2.75rem;
+    border: 0;
+    border-radius: 0.4rem;
+    background: transparent;
+}
+
+.internal-data-mode-toggle__button--active {
+    background: var(--app-panel);
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--app-ink) 12%, transparent);
+}
+
 .internal-data-mode-toggle__button,
 .internal-data-view-toggle__button {
     background: var(--app-panel);
@@ -1046,10 +1061,7 @@ const hasLatestError = (station: Station): boolean => {
 .internal-data-input-card {
     display: grid;
     gap: 0.85rem;
-    border: 1px solid var(--app-border);
-    border-radius: 0.9rem;
-    padding: 0.9rem;
-    background: var(--app-panel);
+    padding-top: 0.15rem;
 }
 
 .internal-data-input-card--textarea {

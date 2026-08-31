@@ -14,60 +14,78 @@
         </div>
       </template>
 
-      <div class="top-product-iplas-station-stack">
-        <div class="top-product-iplas-station-grid top-product-iplas-station-grid--two">
-          <label class="top-product-iplas-station-field">
-            <span>Site</span>
-            <AppSelect v-model="selectedSite" :options="siteSelectOptions" placeholder="Select a site"
-              :disabled="loading || loadingStations" @change="handleSiteChange" />
-          </label>
-
-          <label class="top-product-iplas-station-field">
-            <span>Project</span>
-            <AppSelect v-model="selectedProject" :options="projectSelectOptions" placeholder="Select a project"
-              :disabled="!selectedSite || loading || loadingStations" @change="handleProjectChange" />
-          </label>
-        </div>
-
-        <div class="top-product-iplas-station-grid top-product-iplas-station-grid--three">
-          <label class="top-product-iplas-station-field">
-            <span>Date Range Preset</span>
-            <AppSelect v-model="dateRangePreset" :options="dateRangePresetOptions" :searchable="false"
-              @change="void applyDateRangePreset()" />
-          </label>
-
-          <label class="top-product-iplas-station-field">
-            <span>Start Time</span>
-            <input
-              v-model="startTime"
-              type="datetime-local"
-              class="top-product-iplas-station-datetime-input app-themed-input app-themed-datetime-input"
-              @click="openNativeDateTimePicker"
-            />
-          </label>
-
-          <label class="top-product-iplas-station-field">
-            <span>End Time</span>
-            <input
-              v-model="endTime"
-              type="datetime-local"
-              class="top-product-iplas-station-datetime-input app-themed-input app-themed-datetime-input"
-              @click="openNativeDateTimePicker"
-            />
-          </label>
-        </div>
-
-        <div class="top-product-iplas-station-action-card">
-          <div>
-            <strong>Configure Stations</strong>
-            <p>Set device scope and scoring for each station.</p>
+      <div class="app-query-form">
+        <section class="app-query-form__section" :class="{ 'is-complete': hasValidTimeRange }">
+          <header class="app-query-form__step">
+            <span class="app-query-form__step-index">1</span>
+            <div>
+              <strong>Time window</strong>
+              <small>Required before choosing data scope.</small>
+            </div>
+          </header>
+          <div class="app-query-form__fields app-query-form__fields--three">
+            <label class="top-product-iplas-station-field">
+              <span>Preset</span>
+              <AppSelect v-model="dateRangePreset" :options="dateRangePresetOptions" placeholder="Choose a range"
+                :searchable="false" @change="void applyDateRangePreset()" />
+            </label>
+            <label class="top-product-iplas-station-field">
+              <span>Start Time</span>
+              <input v-model="startTime" type="datetime-local"
+                class="top-product-iplas-station-datetime-input app-themed-input app-themed-datetime-input"
+                @click="openNativeDateTimePicker" />
+            </label>
+            <label class="top-product-iplas-station-field">
+              <span>End Time</span>
+              <input v-model="endTime" type="datetime-local"
+                class="top-product-iplas-station-datetime-input app-themed-input app-themed-datetime-input"
+                @click="openNativeDateTimePicker" />
+            </label>
+            <p v-if="startTime && endTime && !hasValidTimeRange" class="app-query-form__error">
+              End time must be later than start time.
+            </p>
           </div>
-          <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--secondary"
-            :disabled="!selectedSite || !selectedProject || loadingStations" @click="openStationSelectionDialog">
-            {{ loadingStations ? 'Loading...' : 'Configure Stations' }}
-            <strong v-if="configuredStationsCount > 0">{{ configuredStationsCount }}</strong>
-          </button>
-        </div>
+        </section>
+
+        <section class="app-query-form__section" :class="{ 'is-locked': !hasValidTimeRange, 'is-complete': selectedSite && selectedProject }">
+          <header class="app-query-form__step">
+            <span class="app-query-form__step-index">2</span>
+            <div>
+              <strong>Site and project</strong>
+              <small>{{ hasValidTimeRange ? 'Choose where to search.' : 'Complete time window first.' }}</small>
+            </div>
+          </header>
+          <div class="app-query-form__fields app-query-form__fields--two">
+            <label class="top-product-iplas-station-field">
+              <span>Site</span>
+              <AppSelect v-model="selectedSite" :options="siteSelectOptions" placeholder="Select a site"
+                :disabled="!hasValidTimeRange || loading || loadingStations" @change="handleSiteChange" />
+            </label>
+            <label class="top-product-iplas-station-field">
+              <span>Project</span>
+              <AppSelect v-model="selectedProject" :options="projectSelectOptions" placeholder="Select a project"
+                :disabled="!hasValidTimeRange || !selectedSite || loading || loadingStations" @change="handleProjectChange" />
+            </label>
+          </div>
+        </section>
+
+        <section class="app-query-form__section" :class="{ 'is-locked': !selectedSite || !selectedProject }">
+          <header class="app-query-form__step">
+            <span class="app-query-form__step-index">3</span>
+            <div>
+              <strong>Stations</strong>
+              <small>Choose stations, devices, and scoring.</small>
+            </div>
+          </header>
+          <div class="app-query-form__body">
+            <div class="app-query-form__action-row">
+              <span>{{ configuredStationsCount > 0 ? `${configuredStationsCount} configured` : 'No stations configured' }}</span>
+              <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--secondary"
+                :disabled="!hasValidTimeRange || !selectedSite || !selectedProject || loadingStations"
+                @click="openStationSelectionDialog">
+                {{ loadingStations ? 'Loading...' : configuredStationsCount > 0 ? 'Edit Stations' : 'Configure Stations' }}
+              </button>
+            </div>
 
         <section v-if="configuredStationsCount > 0" class="top-product-iplas-station-summary-panel">
           <div class="top-product-iplas-station-summary-panel__header">
@@ -102,8 +120,10 @@
             </article>
           </div>
         </section>
+          </div>
+        </section>
 
-        <div class="top-product-iplas-station-footer-actions">
+        <div class="app-query-form__footer top-product-iplas-station-footer-actions">
           <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--ghost"
             :disabled="loading" @click="handleClearAll">
             Clear All
@@ -169,9 +189,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, onMounted, onUnmounted, ref } from 'vue'
-import {
-  iplasProxyApi,
-} from '@/features/dut-logs/api/iplasProxyApi'
+import { iplasProxyApi } from '@/features/dut-logs/api/iplasProxyApi'
 import type {
   CsvTestItemData,
   DownloadCsvLogInfo,
@@ -179,7 +197,11 @@ import type {
   TestItem,
 } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
-import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
+import {
+  buildTopProductWorkbook,
+  createTopProductExcelRecordFromIplas,
+  downloadTopProductWorkbook,
+} from '@/features/dut-logs/utils/topProductExcelExport'
 import {
   createTopProductsBulk,
   type TopProductCreate,
@@ -190,11 +212,6 @@ import { AppPanel, AppSelect } from '@/shared/ui'
 import { getErrorMessage } from '@/shared/utils'
 import { getApiErrorDetail } from '@/shared/utils/error'
 import { isStatusPass } from '@/shared/utils/helpers'
-import {
-  buildTopProductWorkbook,
-  createTopProductExcelRecordFromIplas,
-  downloadTopProductWorkbook,
-} from '@/features/dut-logs/utils/topProductExcelExport'
 import { dutApi } from '../api/dut.api'
 import { useScoring } from '../composables/useScoring'
 import { evaluateForcedFailure, type ForcedFailureItemDetail } from '../utils/iplasForcedFailure'
@@ -267,7 +284,7 @@ const selectedProject = ref<string | null>(null)
 const stationConfigs = ref<Record<string, StationConfig>>({})
 
 // Date range preset
-const dateRangePreset = ref<string>('current_shift')
+const dateRangePreset = ref<string | null>(null)
 const dateRangePresets = [
   { title: 'Current Shift', value: 'current_shift' },
   { title: 'Today', value: 'today' },
@@ -398,12 +415,20 @@ const currentStationConfig = computed(() => {
 
 const canFetchData = computed(() => {
   return (
+    hasValidTimeRange.value &&
     selectedSite.value &&
     selectedProject.value &&
     configuredStationsCount.value > 0 &&
     startTime.value &&
     endTime.value
   )
+})
+
+const hasValidTimeRange = computed(() => {
+  if (!startTime.value || !endTime.value) return false
+  const start = new Date(startTime.value)
+  const end = new Date(endTime.value)
+  return !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start
 })
 
 function formatCacheTimestamp(value: string | null | undefined): string {
@@ -465,6 +490,7 @@ async function getObservableIplasNow(): Promise<Date> {
 
 // Apply date range preset
 async function applyDateRangePreset(): Promise<void> {
+  if (!dateRangePreset.value) return
   const now = dateRangePreset.value === 'current_shift' ? await getObservableIplasNow() : new Date()
   let start = new Date()
   let end = new Date()
@@ -1299,6 +1325,9 @@ async function handleRefresh(): Promise<void> {
 }
 
 function handleClearAll(): void {
+  dateRangePreset.value = null
+  startTime.value = ''
+  endTime.value = ''
   selectedSite.value = null
   selectedProject.value = null
   stationConfigs.value = {}
@@ -1391,14 +1420,6 @@ async function fetchTestItems(): Promise<void> {
 // Initialize
 onMounted(async () => {
   await fetchSiteProjects()
-  await applyDateRangePreset()
-
-  // UPDATED: Set default site based on connected iPLAS server
-  const { selectedServer } = useIplasSettings()
-  const serverId = selectedServer.value?.id?.toUpperCase()
-  if (serverId && uniqueSites.value.includes(serverId) && !selectedSite.value) {
-    selectedSite.value = serverId
-  }
 })
 
 // Cleanup on unmount to free memory

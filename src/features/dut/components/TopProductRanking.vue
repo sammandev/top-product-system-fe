@@ -17,7 +17,7 @@
       </div>
     </template>
 
-    <AppTabs v-model="selectedTab" :items="stationTabItems" scrollable>
+    <AppTabs v-model="selectedTab" :items="stationTabItems">
       <template v-for="item in stationTabItems" :key="String(item.value)" #[`panel-${item.value}`]>
         <section v-if="selectedTab === String(item.value)" class="top-product-ranking__station-panel">
           <div class="top-product-ranking__station-hero">

@@ -84,7 +84,9 @@ const emit = defineEmits<{
 }>()
 
 const canConfirm = computed(
-  () => !props.requireTyped || props.typedValue.trim().toUpperCase() === props.typedPhrase.toUpperCase(),
+  () =>
+    !props.requireTyped ||
+    props.typedValue.trim().toUpperCase() === props.typedPhrase.toUpperCase(),
 )
 
 function handleVisibility(value: boolean) {

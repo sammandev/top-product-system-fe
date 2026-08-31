@@ -15,6 +15,24 @@ export interface AppConfigUpdateRequest {
   tab_title?: string | null
 }
 
+export interface PrimeUILicenseStatus {
+  configured: boolean
+  valid: boolean
+  validation_error: string | null
+  license_masked: string | null
+  product: string | null
+  tier: string | null
+  license_type: string | null
+  issued_at: string | null
+  expires_at: string | null
+  updated_at: string | null
+  updated_by: string | null
+}
+
+export interface PrimeUILicenseUpdateRequest {
+  license_key: string
+}
+
 // ===== iPLAS Token Types =====
 
 export interface IplasToken {

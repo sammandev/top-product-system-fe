@@ -59,7 +59,7 @@
     </section>
 
     <div v-else class="menu-access-layout">
-      <AppTabs v-model="activeTab" :items="roleTabItems" scrollable>
+      <AppTabs v-model="activeTab" :items="roleTabItems">
           <template v-for="role in availableRoles" :key="role" #[`panel-${role}`]>
             <div class="menu-access-tab-content">
               <section

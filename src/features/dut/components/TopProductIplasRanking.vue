@@ -28,7 +28,7 @@
       </div>
     </template>
 
-    <AppTabs v-model="selectedTab" :items="stationTabItems" scrollable>
+    <AppTabs v-model="selectedTab" :items="stationTabItems">
       <template v-for="item in stationTabItems" :key="String(item.value)" #[`panel-${item.value}`]>
         <section class="ranking-panel">
           <div class="ranking-filter-grid">
@@ -812,10 +812,7 @@ function buildScoreKey(record: CsvTestItemData, stationName: string): string {
 
 function hasResolvedScore(item: RankingItem): boolean {
   const scores = props.scores ?? {}
-  return Object.prototype.hasOwnProperty.call(
-    scores,
-    buildScoreKey(item.originalRecord, item.stationName),
-  )
+  return Object.hasOwn(scores, buildScoreKey(item.originalRecord, item.stationName))
 }
 
 function isPendingCalculation(item: RankingItem): boolean {

@@ -53,7 +53,7 @@
       <button type="button" @click="success = ''">Dismiss</button>
     </div>
 
-    <AppTabs v-model="activeTab" :items="tabItems" scrollable>
+    <AppTabs v-model="activeTab" :items="tabItems">
         <template #panel-users>
           <div class="user-management-tab-content">
             <div class="user-management-stats-grid">
@@ -498,7 +498,14 @@ import { computed, defineAsyncComponent, onMounted, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { queryKeys } from '@/core/query'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
-import { AppConfirmDialog, AppDataGrid, AppFormDialog, AppFormField, AppSelect, AppTabs } from '@/shared'
+import {
+  AppConfirmDialog,
+  AppDataGrid,
+  AppFormDialog,
+  AppFormField,
+  AppSelect,
+  AppTabs,
+} from '@/shared'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import { getApiErrorDetail } from '@/shared/utils'
 import {

@@ -859,9 +859,13 @@ const filteredTestItems = computed(() => {
   let items = selectedTestItems.value
 
   if (testItemFilterType.value === 'criteria') {
-    items = items.filter((item) => hasUploadLogLimitValue(item.usl) || hasUploadLogLimitValue(item.lsl))
+    items = items.filter(
+      (item) => hasUploadLogLimitValue(item.usl) || hasUploadLogLimitValue(item.lsl),
+    )
   } else if (testItemFilterType.value === 'non-criteria') {
-    items = items.filter((item) => !hasUploadLogLimitValue(item.usl) && !hasUploadLogLimitValue(item.lsl))
+    items = items.filter(
+      (item) => !hasUploadLogLimitValue(item.usl) && !hasUploadLogLimitValue(item.lsl),
+    )
   }
 
   if (testItemSearch.value) {
@@ -974,9 +978,21 @@ const testItemGridColumns = [
 ]
 
 const forcedFailGridColumns = [
-  { key: 'test_item', field: 'test_item', header: 'Test Item', sortable: true, style: { width: '24rem' } },
+  {
+    key: 'test_item',
+    field: 'test_item',
+    header: 'Test Item',
+    sortable: true,
+    style: { width: '24rem' },
+  },
   { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '10rem' } },
-  { key: 'threshold', field: 'threshold', header: 'Minimum', sortable: true, style: { width: '10rem' } },
+  {
+    key: 'threshold',
+    field: 'threshold',
+    header: 'Minimum',
+    sortable: true,
+    style: { width: '10rem' },
+  },
 ]
 
 const rankings = computed<RankingItem[]>(() => {
@@ -1080,7 +1096,9 @@ const filteredRankings = computed(() => {
   return filtered
 })
 
-const activeStationLabel = computed(() => (stationTab.value === 'all' ? 'All Stations' : stationTab.value))
+const activeStationLabel = computed(() =>
+  stationTab.value === 'all' ? 'All Stations' : stationTab.value,
+)
 
 const failedRankingCount = computed(
   () => filteredRankings.value.filter((item) => isFailResult(item.result)).length,
@@ -1096,7 +1114,9 @@ const activeRankingFilterCount = computed(() => {
 
 const hasActiveRankingFilters = computed(() => activeRankingFilterCount.value > 0)
 
-const scoringConfigMap = computed(() => new Map((props.scoringConfigs || []).map((config) => [config.test_item_name, config])))
+const scoringConfigMap = computed(
+  () => new Map((props.scoringConfigs || []).map((config) => [config.test_item_name, config])),
+)
 
 const includedTestItemNameSet = computed(
   () => new Set((props.includedTestItemNames || []).map((name) => name.toLowerCase())),
@@ -1125,15 +1145,22 @@ const selectedForcedFailItems = computed<ForcedFailItemRow[]>(() => {
   return selectedTestItems.value.flatMap((item) => {
     const minScore = getConfiguredMinScore(item)
 
-    if (minScore === null || item.score === null || item.score === undefined || item.score >= minScore) {
+    if (
+      minScore === null ||
+      item.score === null ||
+      item.score === undefined ||
+      item.score >= minScore
+    ) {
       return []
     }
 
-    return [{
-      test_item: item.test_item,
-      score: item.score,
-      threshold: minScore,
-    }]
+    return [
+      {
+        test_item: item.test_item,
+        score: item.score,
+        threshold: minScore,
+      },
+    ]
   })
 })
 
@@ -1143,7 +1170,9 @@ const filteredForcedFailItems = computed(() => {
     return selectedForcedFailItems.value
   }
 
-  return selectedForcedFailItems.value.filter((item) => item.test_item.toLowerCase().includes(query))
+  return selectedForcedFailItems.value.filter((item) =>
+    item.test_item.toLowerCase().includes(query),
+  )
 })
 
 const hasSelectedForcedFail = computed(() => selectedForcedFailItems.value.length > 0)
@@ -1172,9 +1201,10 @@ const overallScoreDetails = computed(() => {
     const weight = config?.weight ?? item.score_breakdown?.weight ?? 1
     const enabled = config?.enabled !== false
     const hasScore = item.score !== null && item.score !== undefined
-    const passesMinScore = config?.min_score === undefined || config?.min_score === null || !hasScore
-      ? true
-      : (item.score as number) >= config.min_score * 10
+    const passesMinScore =
+      config?.min_score === undefined || config?.min_score === null || !hasScore
+        ? true
+        : (item.score as number) >= config.min_score * 10
     const included = enabled && hasScore && passesMinScore
     const weightedScore = included ? (item.score as number) * weight : 0
 
@@ -1189,7 +1219,9 @@ const overallScoreDetails = computed(() => {
 
     const statusClass = included
       ? 'top-product-ranking-upload-log__badge--success'
-      : (!passesMinScore ? 'top-product-ranking-upload-log__badge--error' : 'top-product-ranking-upload-log__badge--warning')
+      : !passesMinScore
+        ? 'top-product-ranking-upload-log__badge--error'
+        : 'top-product-ranking-upload-log__badge--warning'
 
     return {
       test_item: item.test_item,
@@ -1204,7 +1236,10 @@ const overallScoreDetails = computed(() => {
   })
 
   const includedContributors = contributors.filter((contributor) => contributor.included)
-  const weightedSum = includedContributors.reduce((sum, contributor) => sum + contributor.weightedScore, 0)
+  const weightedSum = includedContributors.reduce(
+    (sum, contributor) => sum + contributor.weightedScore,
+    0,
+  )
   const totalWeight = includedContributors.reduce((sum, contributor) => sum + contributor.weight, 0)
 
   return {
@@ -1310,7 +1345,8 @@ function testItemStatusLabel(item: ParsedTestItemEnhanced): string {
 
 function testItemStatusClass(item: ParsedTestItemEnhanced): string {
   if (isTestItemScoreFail(item)) return 'top-product-ranking-upload-log__badge--error'
-  if (item.score !== null && item.score !== undefined) return 'top-product-ranking-upload-log__badge--success'
+  if (item.score !== null && item.score !== undefined)
+    return 'top-product-ranking-upload-log__badge--success'
   return 'top-product-ranking-upload-log__badge--neutral'
 }
 
@@ -1412,7 +1448,9 @@ const selectRankingItem = (item: RankingItem) => {
   selectedRankingItem.value = item
 
   if (props.parseResult?.parsed_items_enhanced) {
-    selectedTestItems.value = props.parseResult.parsed_items_enhanced.filter((testItem) => isIncludedTestItem(testItem.test_item))
+    selectedTestItems.value = props.parseResult.parsed_items_enhanced.filter((testItem) =>
+      isIncludedTestItem(testItem.test_item),
+    )
   } else if (props.compareResult) {
     const isnTestItems: ParsedTestItemEnhanced[] = []
 
@@ -1535,7 +1573,9 @@ async function exportRankingToExcel() {
           ? [
               createTopProductExcelRecordFromUploadLog(
                 props.parseResult,
-                props.parseResult.parsed_items_enhanced.filter((item) => isIncludedTestItem(item.test_item)),
+                props.parseResult.parsed_items_enhanced.filter((item) =>
+                  isIncludedTestItem(item.test_item),
+                ),
               ),
             ]
           : []
@@ -1594,7 +1634,9 @@ function getTestItemsForIsn(isn: string | null): ParsedTestItemEnhanced[] {
   if (!isn) return []
 
   if (props.parseResult?.parsed_items_enhanced) {
-    return props.parseResult.parsed_items_enhanced.filter((testItem) => isIncludedTestItem(testItem.test_item))
+    return props.parseResult.parsed_items_enhanced.filter((testItem) =>
+      isIncludedTestItem(testItem.test_item),
+    )
   }
 
   if (props.compareResult) {

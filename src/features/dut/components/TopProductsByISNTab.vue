@@ -1,6 +1,6 @@
 <template>
   <section class="top-products-isn-shell">
-    <section class="top-products-isn-section">
+    <section class="top-products-isn-intake">
       <div class="top-products-isn-section__header">
         <div>
           <p class="top-products-isn-section__eyebrow">Input</p>
@@ -11,84 +11,100 @@
         </div>
       </div>
       <DUTISNInput ref="dutISNInputRef" v-model="dutISNs" v-model:site-identifiers="siteIdentifier"
-        v-model:model-identifiers="modelIdentifier" :max-i-s-ns="20" />
+        v-model:model-identifiers="modelIdentifier" :max-i-s-ns="20" collapse-scope />
+
+      <div class="top-products-isn-runbar">
+        <div class="top-products-isn-stat-row">
+          <span>{{ dutISNs.length }} DUT{{ dutISNs.length === 1 ? '' : 's' }}</span>
+          <span>{{ selectedStations.length > 0 ? `${selectedStations.length} selected stations` : 'All stations' }}</span>
+          <span>{{ criteriaFileActual ? 'Custom criteria' : 'Default criteria' }}</span>
+        </div>
+        <button type="button" class="top-products-isn-primary-button" :disabled="loading || !canAnalyze"
+          @click="handleAnalyze">
+          {{ loading ? 'Analyzing...' : 'Analyze DUTs' }}
+        </button>
+      </div>
+
+      <div v-if="attemptedAnalysis && !canAnalyze" class="top-products-isn-notice top-products-isn-notice--warning">
+        Please add at least one DUT ISN to continue.
+      </div>
     </section>
 
     <div class="top-products-isn-grid">
-      <section class="top-products-isn-section">
-        <div class="top-products-isn-section__header">
+      <details class="top-products-isn-accordion">
+        <summary>
           <div>
-            <p class="top-products-isn-section__eyebrow">Stations</p>
-            <h2>Station Selection</h2>
-            <p class="top-products-isn-section__description">
-              Optional. Leave empty to evaluate all available stations.
-            </p>
+            <p>Station scope</p>
+            <span>{{ selectedStations.length > 0 ? `${selectedStations.length} selected` : 'Optional - all stations' }}</span>
+          </div>
+        </summary>
+        <div class="top-products-isn-accordion__body top-products-isn-accordion__body--stacked">
+          <div class="top-products-isn-input-row">
+            <label class="top-products-isn-field">
+              <span>Add station</span>
+              <div class="top-products-isn-entry-row">
+                <input v-model="stationEntry" type="text" list="top-products-isn-stations"
+                  placeholder="Type a station name and press Enter" @keydown="handleStationEntryKeydown"
+                  @blur="commitStationEntry">
+                <button type="button" @click="commitStationEntry">Add</button>
+              </div>
+            </label>
+            <datalist id="top-products-isn-stations">
+              <option v-for="station in availableStations" :key="station" :value="station" />
+            </datalist>
+          </div>
+
+          <p v-if="loadingStations" class="top-products-isn-inline-note">Loading stations from DUT summaries...</p>
+          <p v-else-if="availableStations.length === 0" class="top-products-isn-inline-note">
+            Stations appear after DUT summaries load. You can still enter one manually.
+          </p>
+
+          <div v-else class="top-products-isn-choice-grid">
+            <button v-for="station in availableStations" :key="station" type="button" class="top-products-isn-choice"
+              :class="{ 'is-active': selectedStations.includes(station) }" @click="toggleStation(station)">
+              {{ station }}
+            </button>
+          </div>
+
+          <div v-if="selectedStations.length > 0" class="top-products-isn-token-row">
+            <button v-for="station in selectedStations" :key="station" type="button" class="top-products-isn-token"
+              @click="removeStation(station)">
+              <span>{{ station }}</span>
+              <span aria-hidden="true">x</span>
+            </button>
+
+            <button type="button" class="top-products-isn-link" @click="selectedStations = []">
+              Clear stations
+            </button>
           </div>
         </div>
-        <div class="top-products-isn-input-row">
-          <label class="top-products-isn-field">
-            <span>Add station</span>
-            <div class="top-products-isn-entry-row">
-              <input v-model="stationEntry" type="text" list="top-products-isn-stations"
-                placeholder="Type a station name and press Enter" @keydown="handleStationEntryKeydown"
-                @blur="commitStationEntry">
-              <button type="button" @click="commitStationEntry">Add</button>
-            </div>
-          </label>
-          <datalist id="top-products-isn-stations">
-            <option v-for="station in availableStations" :key="station" :value="station" />
-          </datalist>
-        </div>
+      </details>
 
-        <p v-if="loadingStations" class="top-products-isn-inline-note">Loading stations from DUT summaries...</p>
-        <p v-else-if="availableStations.length === 0" class="top-products-isn-inline-note">
-          Stations appear here after DUT summaries load. You can still type a station manually.
-        </p>
-
-        <div v-else class="top-products-isn-choice-grid">
-          <button v-for="station in availableStations" :key="station" type="button" class="top-products-isn-choice"
-            :class="{ 'is-active': selectedStations.includes(station) }" @click="toggleStation(station)">
-            {{ station }}
-          </button>
-        </div>
-
-        <div v-if="selectedStations.length > 0" class="top-products-isn-token-row">
-          <button v-for="station in selectedStations" :key="station" type="button" class="top-products-isn-token"
-            @click="removeStation(station)">
-            <span>{{ station }}</span>
-            <span aria-hidden="true">x</span>
-          </button>
-
-          <button type="button" class="top-products-isn-link" @click="selectedStations = []">
-            Clear stations
-          </button>
-        </div>
-      </section>
-
-      <section class="top-products-isn-section">
-        <div class="top-products-isn-section__header top-products-isn-section__header--split">
+      <details class="top-products-isn-accordion">
+        <summary>
           <div>
-            <p class="top-products-isn-section__eyebrow">Criteria</p>
-            <h2>Criteria Configuration</h2>
-            <p class="top-products-isn-section__description">Optional JSON criteria file.</p>
+            <p>Criteria file</p>
+            <span>{{ criteriaFileActual ? criteriaFileActual.name : 'Optional - default rules' }}</span>
           </div>
-          <button type="button" class="top-products-isn-link" @click="downloadCriteriaTemplate">
+        </summary>
+        <div class="top-products-isn-accordion__body top-products-isn-accordion__body--stacked">
+          <button type="button" class="top-products-isn-link top-products-isn-template-link" @click="downloadCriteriaTemplate">
             Download template
           </button>
-        </div>
 
-        <AppFilePicker v-model="criteriaFile" label="Criteria JSON File" accept=".json,application/json"
-          helperText="Leave empty to use the default rules."
-          placeholder="Drop a criteria file here or browse from disk." />
+          <AppFilePicker v-model="criteriaFile" label="Criteria JSON File" accept=".json,application/json"
+            helperText="Leave empty to use the default rules."
+            placeholder="Drop a criteria file here or browse from disk." />
 
-        <div v-if="criteriaFileActual" class="top-products-isn-file-summary">
-          <strong>{{ criteriaFileActual.name }}</strong>
-          <span>{{ formatFileSize(criteriaFileActual.size) }}</span>
+          <div v-if="criteriaFileActual" class="top-products-isn-file-summary">
+            <strong>{{ criteriaFileActual.name }}</strong>
+            <span>{{ formatFileSize(criteriaFileActual.size) }}</span>
+          </div>
         </div>
-      </section>
+      </details>
     </div>
 
-    <details class="top-products-isn-accordion" open>
+    <details class="top-products-isn-accordion">
       <summary>
         <div>
           <p>Universal Filters</p>
@@ -146,34 +162,6 @@
         </div>
       </div>
     </details>
-
-    <section class="top-products-isn-section">
-      <div class="top-products-isn-section__header top-products-isn-section__header--split">
-        <div>
-          <p class="top-products-isn-section__eyebrow">Run</p>
-          <h2>Top Product Analysis</h2>
-          <p class="top-products-isn-section__description">
-            Run the current DUT set through the Top Product pipeline.
-          </p>
-        </div>
-        <div class="top-products-isn-stat-row">
-          <span>{{ dutISNs.length }} DUT{{ dutISNs.length === 1 ? '' : 's' }}</span>
-          <span>{{ selectedStations.length || availableStations.length || 0 }} station scope</span>
-          <span>{{ criteriaFileActual ? 'Custom criteria' : 'Default criteria' }}</span>
-        </div>
-      </div>
-
-      <div class="top-products-isn-actions">
-        <button type="button" class="top-products-isn-primary-button" :disabled="loading || !canAnalyze"
-          @click="handleAnalyze">
-          {{ loading ? 'Analyzing...' : 'Analyze DUTs' }}
-        </button>
-      </div>
-
-      <div v-if="attemptedAnalysis && !canAnalyze" class="top-products-isn-notice top-products-isn-notice--warning">
-        Please add at least one DUT ISN to continue.
-      </div>
-    </section>
 
     <div v-if="error" class="top-products-isn-notice top-products-isn-notice--error">
       <div>
@@ -764,7 +752,7 @@ async function scrollToResults() {
 }
 
 function handleExport() {
-  if (!results.value || !results.value.results || results.value.results.length === 0) {
+  if (!results.value?.results || results.value.results.length === 0) {
     console.warn('No results to export')
     return
   }
@@ -1075,6 +1063,21 @@ function formatFileSize(bytes: number): string {
   gap: 1rem;
 }
 
+.top-products-isn-intake {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.top-products-isn-runbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding-top: 0.85rem;
+  border-top: 1px solid var(--app-border);
+}
+
 .top-products-isn-section {
   display: grid;
   gap: 1rem;
@@ -1255,6 +1258,11 @@ function formatFileSize(bytes: number): string {
   color: var(--app-accent);
   cursor: pointer;
   font-weight: 700;
+}
+
+.top-products-isn-template-link {
+  justify-self: start;
+  min-height: 2.75rem;
 }
 
 .top-products-isn-file-summary,

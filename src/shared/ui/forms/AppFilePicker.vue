@@ -343,6 +343,10 @@ function formatBytes(bytes: number) {
   gap: 0.5rem;
 }
 
+.app-file-picker__actions :deep(.p-button) {
+  min-height: 2.75rem;
+}
+
 .app-file-picker--drag .app-file-picker__surface {
   border-color: var(--app-accent);
   transform: translateY(-1px);

@@ -169,7 +169,7 @@
                     </button>
                 </template>
 
-                <AppTabs v-model="activeISNTab" :items="isnTabItems" scrollable>
+                <AppTabs v-model="activeISNTab" :items="isnTabItems">
                     <template v-for="(isnGroup, index) in groupedByISN" :key="isnGroup.isn" #[`panel-${index}`]>
                         <section class="test-log-view__result-pane">
                             <div class="test-log-view__summary-row">
@@ -769,7 +769,7 @@ const fetchTestRecords = async () => {
 
     // Use first response for backward compatibility (testRecords still used in template)
     const firstValid = validResponses[0]
-    if (!firstValid || !firstValid.data) {
+    if (!firstValid?.data) {
       throw new Error('No valid data in response')
     }
     testRecords.value = firstValid.data

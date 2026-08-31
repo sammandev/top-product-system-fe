@@ -2,6 +2,7 @@ export const queryKeys = {
   appConfig: {
     all: ['app-config'] as const,
     general: () => [...queryKeys.appConfig.all, 'general'] as const,
+    primeUiLicense: () => [...queryKeys.appConfig.all, 'primeui-license'] as const,
     iplasTokens: () => [...queryKeys.appConfig.all, 'iplas-tokens'] as const,
     sfistspConfigs: () => [...queryKeys.appConfig.all, 'sfistsp'] as const,
     guestCredentials: () => [...queryKeys.appConfig.all, 'guest-credentials'] as const,

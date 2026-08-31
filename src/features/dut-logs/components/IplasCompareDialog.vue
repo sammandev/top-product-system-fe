@@ -243,10 +243,7 @@ import type {
 } from '@/features/dut-logs/composables/useTestLogUpload'
 import { useTestLogUpload } from '@/features/dut-logs/composables/useTestLogUpload'
 import { AppDataGrid, AppDialog, AppSelect } from '@/shared'
-import {
-  buildTopProductWorkbook,
-  downloadTopProductWorkbook,
-} from '../utils/topProductExcelExport'
+import { buildTopProductWorkbook, downloadTopProductWorkbook } from '../utils/topProductExcelExport'
 import UploadScoringConfigDialog from './UploadScoringConfigDialog.vue'
 
 const props = defineProps<{
@@ -492,7 +489,9 @@ const comparisonItems = computed<ComparisonItem[]>(() => {
   const iplasItemMap = new Map<string, IplasIsnTestItem>()
   const processedKeys = new Set<string>()
   const includedNames = new Set(localIncludedTestItemNames.value.map((name) => name.toLowerCase()))
-  const configMap = new Map(localScoringConfigs.value.map((config) => [config.test_item_name.toLowerCase(), config]))
+  const configMap = new Map(
+    localScoringConfigs.value.map((config) => [config.test_item_name.toLowerCase(), config]),
+  )
 
   const isIncludedTestItem = (name: string): boolean => {
     if (localScopeMode.value === 'include') {
@@ -792,16 +791,19 @@ async function exportToExcel() {
       overallScore: source === 'upload' ? uploadOverallScore.value : iplasOverallScore.value,
       sourceOrder: source === 'upload' ? 0 : 1,
       items: filteredComparisonItems.value
-        .filter((item) => source === 'upload' ? item.status !== 'iplas-only' : item.status !== 'upload-only')
+        .filter((item) =>
+          source === 'upload' ? item.status !== 'iplas-only' : item.status !== 'upload-only',
+        )
         .map((item) => ({
           testItem: item.test_item,
           ucl: item.usl,
           lcl: item.lsl,
-          target: source === 'upload' ? item.upload_target ?? null : item.iplas_target ?? null,
-          weight: source === 'upload' ? item.upload_weight ?? 1 : item.iplas_weight ?? 1,
+          target: source === 'upload' ? (item.upload_target ?? null) : (item.iplas_target ?? null),
+          weight: source === 'upload' ? (item.upload_weight ?? 1) : (item.iplas_weight ?? 1),
           value: source === 'upload' ? item.upload_value : item.iplas_value,
-          deviation: source === 'upload' ? item.upload_deviation ?? null : item.iplas_deviation ?? null,
-          score: source === 'upload' ? item.upload_score ?? null : item.iplas_score ?? null,
+          deviation:
+            source === 'upload' ? (item.upload_deviation ?? null) : (item.iplas_deviation ?? null),
+          score: source === 'upload' ? (item.upload_score ?? null) : (item.iplas_score ?? null),
         })),
     })
 

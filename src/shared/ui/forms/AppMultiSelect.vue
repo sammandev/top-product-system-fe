@@ -1,5 +1,5 @@
 <template>
-  <MultiSelect
+  <Select
     v-bind="attrs"
     :modelValue="props.modelValue"
     :options="props.options"
@@ -8,10 +8,9 @@
     :filterPlaceholder="props.searchable ? 'Search...' : undefined"
     :autoFilterFocus="props.searchable"
     :disabled="props.disabled"
-    :maxSelectedLabels="1"
     :showClear="props.modelValue.length > 0"
-    showToggleAll
-    selectedItemsLabel="{0} selected"
+    multiple
+    checkmark
     emptyMessage="No results found"
     emptyFilterMessage="No results found"
     optionLabel="label"
@@ -21,11 +20,17 @@
     class="app-multi-select w-full"
     @update:modelValue="handleUpdate"
     @change="handleChange"
-  />
+  >
+    <template #value="{ value, placeholder: valuePlaceholder }">
+      <span :class="{ 'app-multi-select__placeholder': !Array.isArray(value) || value.length === 0 }">
+        {{ formatSelectedValue(value, valuePlaceholder) }}
+      </span>
+    </template>
+  </Select>
 </template>
 
 <script setup lang="ts">
-import MultiSelect from 'primevue/multiselect'
+import Select from 'primevue/select'
 import { useAttrs } from 'vue'
 import type { SelectOption } from './AppSelect.vue'
 
@@ -53,6 +58,13 @@ const emit = defineEmits<{
 
 const attrs = useAttrs()
 
+function formatSelectedValue(value: unknown, valuePlaceholder: string): string {
+  if (!Array.isArray(value) || value.length === 0) return valuePlaceholder
+  if (value.length > 1) return `${value.length} selected`
+  const selected = props.options.find((option) => option.value === value[0])
+  return selected?.label || String(value[0])
+}
+
 function handleUpdate(value: (string | number)[]) {
   emit('update:modelValue', value)
 }
@@ -65,5 +77,9 @@ function handleChange(event: { value: (string | number)[] }) {
 <style scoped>
 .app-multi-select {
   width: 100%;
+}
+
+.app-multi-select__placeholder {
+  color: var(--app-muted);
 }
 </style>

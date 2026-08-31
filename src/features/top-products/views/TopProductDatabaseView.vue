@@ -586,9 +586,9 @@ const stationFilterModel = computed<string[]>({
 const pageSizeOptions = [10, 20, 50, 100]
 
 const listParams = computed<TopProductListParams>(() => ({
-    page: pagination.value.page,
-    page_size: pagination.value.page_size,
-    ...appliedFilters.value,
+  page: pagination.value.page,
+  page_size: pagination.value.page_size,
+  ...appliedFilters.value,
 }))
 
 const hasProjectFilter = computed(() => projectFilterModel.value.length > 0)
@@ -616,7 +616,9 @@ const projectsQuery = useQuery({
 })
 
 const stationsQuery = useQuery({
-  queryKey: computed(() => queryKeys.topProducts.stations({ projects: stationProjectParams.value })),
+  queryKey: computed(() =>
+    queryKeys.topProducts.stations({ projects: stationProjectParams.value }),
+  ),
   queryFn: () => getUniqueStations(stationProjectParams.value),
   enabled: hasProjectFilter,
   staleTime: 5 * 60_000,
@@ -651,7 +653,7 @@ const projectFilterOptions = computed(() =>
 )
 const stationFilterOptions = computed(() =>
   (stationsQuery.data.value ?? []).map((station) => ({
-        label: station.label,
+    label: station.label,
     value: station.value,
   })),
 )
@@ -801,7 +803,7 @@ async function viewDetail(productId: number) {
 }
 
 function clearFilters() {
-    const nextFilters = {
+  const nextFilters = {
     dut_isn: undefined,
     projects: [],
     stations: [],
@@ -809,16 +811,16 @@ function clearFilters() {
     sort_by: 'created_at',
     sort_desc: true,
   }
-    filters.value = nextFilters
-    appliedFilters.value = cloneTopProductFilters(nextFilters)
+  filters.value = nextFilters
+  appliedFilters.value = cloneTopProductFilters(nextFilters)
   pagination.value.page = 1
 }
 
 function handleProjectFiltersChange() {
-    if ((filters.value.stations ?? []).length > 0) {
-        filters.value.stations = []
-    }
-    debouncedFetch()
+  if ((filters.value.stations ?? []).length > 0) {
+    filters.value.stations = []
+  }
+  debouncedFetch()
 }
 
 function refreshData() {
@@ -846,26 +848,26 @@ let debounceTimer: number | undefined
 function debouncedFetch() {
   clearTimeout(debounceTimer)
   debounceTimer = setTimeout(() => {
-        applyFilters()
-    }, 400) as unknown as number
+    applyFilters()
+  }, 400) as unknown as number
 }
 
 function applyFilters() {
-    pagination.value.page = 1
-    appliedFilters.value = cloneTopProductFilters(filters.value)
+  pagination.value.page = 1
+  appliedFilters.value = cloneTopProductFilters(filters.value)
 }
 
 function cloneTopProductFilters(source: TopProductListParams): TopProductListParams {
-    const dutIsn = source.dut_isn?.trim()
+  const dutIsn = source.dut_isn?.trim()
 
-    return {
-        dut_isn: dutIsn || undefined,
-        projects: [...(source.projects ?? [])],
-        stations: [...(source.stations ?? [])],
-        min_score: source.min_score,
-        sort_by: source.sort_by ?? 'created_at',
-        sort_desc: source.sort_desc ?? true,
-    }
+  return {
+    dut_isn: dutIsn || undefined,
+    projects: [...(source.projects ?? [])],
+    stations: [...(source.stations ?? [])],
+    min_score: source.min_score,
+    sort_by: source.sort_by ?? 'created_at',
+    sort_desc: source.sort_desc ?? true,
+  }
 }
 
 // ===== Computed & Helpers =====
@@ -938,7 +940,7 @@ function handleGridSort(event: unknown) {
 
   filters.value.sort_by = sortEvent.sortField
   filters.value.sort_desc = sortEvent.sortOrder !== 1
-    applyFilters()
+  applyFilters()
 }
 
 function handleGridRowClick(event: unknown) {
@@ -1077,20 +1079,20 @@ watch(
 )
 
 watch(
-    () => stationsQuery.data.value,
-    (stations) => {
-        if (!stations || !hasProjectFilter.value || (filters.value.stations ?? []).length === 0) return
+  () => stationsQuery.data.value,
+  (stations) => {
+    if (!stations || !hasProjectFilter.value || (filters.value.stations ?? []).length === 0) return
 
-        const availableStations = new Set(stations.map((station) => station.value))
-        const validStations = (filters.value.stations ?? []).filter((station) =>
-            availableStations.has(station),
-        )
+    const availableStations = new Set(stations.map((station) => station.value))
+    const validStations = (filters.value.stations ?? []).filter((station) =>
+      availableStations.has(station),
+    )
 
-        if (validStations.length === filters.value.stations?.length) return
+    if (validStations.length === filters.value.stations?.length) return
 
-        filters.value.stations = validStations
-        debouncedFetch()
-    },
+    filters.value.stations = validStations
+    debouncedFetch()
+  },
 )
 
 onBeforeUnmount(() => {

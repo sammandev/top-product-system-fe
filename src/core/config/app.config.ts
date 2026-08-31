@@ -57,6 +57,9 @@ export const APP_CONFIG = {
     animationDuration: 200,
     sidebarWidth: 256,
     sidebarRailWidth: 72,
+    primeUiLicense:
+      import.meta.env.VITE_PRIMEUI_LICENSE_KEY ||
+      'eyJpZCI6IjAxMDM2ZWFkLWUwMDQtNDBkZS1iOTYwLTA3MzA5Y2Y1NDZmNCIsInByb2R1Y3QiOiJwcmltZXVpIiwidGllciI6ImNvbW11bml0eSIsInR5cGUiOiJkZXYiLCJpYXQiOjE3ODgxNDA3ODgsImV4cCI6MTgxOTY3Njc4OH0.X5l-48cdnExPgSPInRN_RNTqCdjRn3vVjx_NqdYLfy7vyK1F19r3KqPA_X5oiE4cDMNBBUUe_9kdEkc1BwhqCg',
   },
 
   // Theme

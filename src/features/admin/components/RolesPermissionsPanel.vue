@@ -71,7 +71,7 @@
       </div>
     </div>
 
-    <AppTabs v-model="activeTab" :items="tabItems" scrollable>
+    <AppTabs v-model="activeTab" :items="tabItems">
         <template #panel-roles>
           <section class="rbac-management-tab-content">
             <section class="rbac-management-panel">

@@ -12,7 +12,7 @@
     "icons:build": "node scripts/build-icons.mjs",
     "prebuild": "node scripts/build-icons.mjs",
     "lint": "biome check . --diagnostic-level=warn",
-    "lint:fix": "biome check . --write",
+    "lint:fix": "biome lint . --write",
     "format": "biome format .",
     "format:fix": "biome format . --write",
     "type-check": "vue-tsc -b --noEmit",

@@ -10,6 +10,8 @@ import type {
   IplasTokenCreateRequest,
   IplasTokenListResponse,
   IplasTokenUpdateRequest,
+  PrimeUILicenseStatus,
+  PrimeUILicenseUpdateRequest,
   SfistspConfigCreateRequest,
   SfistspConfigItem,
   SfistspConfigListResponse,
@@ -39,6 +41,16 @@ export const appConfigApi = {
 
   async deleteFavicon(): Promise<{ message: string }> {
     const { data } = await apiClient.delete<{ message: string }>(`${BASE}/favicon`)
+    return data
+  },
+
+  async getPrimeUiLicense(): Promise<PrimeUILicenseStatus> {
+    const { data } = await apiClient.get<PrimeUILicenseStatus>(`${BASE}/primeui-license`)
+    return data
+  },
+
+  async updatePrimeUiLicense(payload: PrimeUILicenseUpdateRequest): Promise<PrimeUILicenseStatus> {
+    const { data } = await apiClient.put<PrimeUILicenseStatus>(`${BASE}/primeui-license`, payload)
     return data
   },
 

@@ -3,8 +3,8 @@ import type { RecordScoreResult } from '@/features/dut/types/scoring.types'
 import {
   buildTopProductWorkbook,
   createTopProductExcelRecordFromIplas,
-  createTopProductExcelRecordsFromComparison,
   createTopProductExcelRecordFromUploadLog,
+  createTopProductExcelRecordsFromComparison,
   type TopProductExcelRecord,
 } from './topProductExcelExport'
 
@@ -45,7 +45,8 @@ describe('top product Excel export', () => {
       makeRecord({ isn: 'DUT-TIE-A', overallScore: 8, sourceOrder: 0 }),
     ])
 
-    const sheet = workbook.worksheets[0]!
+    const sheet = workbook.worksheets[0]
+    if (!sheet) throw new Error('Expected Station-1 worksheet')
     expect(sheet.name).toBe('Station-1')
     expect(sheet.getCell('A10').value).toBe('TEST ITEM')
     expect(sheet.getCell('E10').value).toBe('Weight')
@@ -55,7 +56,12 @@ describe('top product Excel export', () => {
     expect(sheet.getCell('L1').value).toBe('DUT-TIE-B')
     expect(sheet.getCell('O1').value).toBe('DUT-NULL')
     expect(sheet.getCell('F12').value).toBe(9)
-    expect(sheet.views[0]).toMatchObject({ state: 'frozen', xSplit: 5, ySplit: 10, topLeftCell: 'F11' })
+    expect(sheet.views[0]).toMatchObject({
+      state: 'frozen',
+      xSplit: 5,
+      ySplit: 10,
+      topLeftCell: 'F11',
+    })
   })
 
   it('preserves target, weight, deviation, score, and iPLAS score conversion', () => {
@@ -192,7 +198,8 @@ describe('top product Excel export', () => {
       comparison_non_value_items: [],
     }
 
-    const includedItem = compareResult.comparison_value_items[0]!
+    const includedItem = compareResult.comparison_value_items[0]
+    if (!includedItem) throw new Error('Expected included comparison item')
     const records = createTopProductExcelRecordsFromComparison(
       compareResult,
       [includedItem],
@@ -200,7 +207,8 @@ describe('top product Excel export', () => {
     )
 
     expect(records).toHaveLength(1)
-    const exportedRecord = records[0]!
+    const exportedRecord = records[0]
+    if (!exportedRecord) throw new Error('Expected exported record')
     expect(exportedRecord.isn).toBe('DUT-A')
     expect(exportedRecord.items).toHaveLength(1)
     expect(exportedRecord.items[0]).toMatchObject({ target: 10, weight: 2, deviation: 0, score: 8 })

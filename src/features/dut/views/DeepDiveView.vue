@@ -85,7 +85,7 @@
         description="Review each DUT by station, then inspect overall subgroup scores, the hierarchical tree, and the category heatmap."
         tone="success"
       >
-        <AppTabs v-model="selectedTab" :items="resultTabItems" scrollable>
+        <AppTabs v-model="selectedTab" :items="resultTabItems">
           <template v-for="result in results" :key="result.dut_isn" #[`panel-${result.dut_isn}`]>
             <section v-if="getDUTError(result.dut_isn)" class="deep-dive-view__notice deep-dive-view__notice--danger">
               <div>

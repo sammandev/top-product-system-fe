@@ -557,7 +557,8 @@ const filteredTestItemEntries = computed(() => {
   return filteredTestItems.value.map((item: TestItemInfo) => {
     const isIncluded = includedSet.value.has(item.name)
     const isExcluded = excludedSet.value.has(item.name)
-    const scoringConfig = isIncluded && isCriteriaTestItem(item) ? getTestItemScoringConfig(item.name) : null
+    const scoringConfig =
+      isIncluded && isCriteriaTestItem(item) ? getTestItemScoringConfig(item.name) : null
     const scoringInfo = scoringConfig ? getScoringTypeInfo(scoringConfig.scoringType) : null
 
     return {
@@ -1043,8 +1044,7 @@ function applyBulkScoringConfig(): void {
 
   // Apply to all selected criteria test items (has VALUE + UCL or LCL)
   const criteriaItems = uniqueAvailableTestItems.value.filter(
-    (item: TestItemInfo) =>
-      isCriteriaTestItem(item) && includedTestItems.value.includes(item.name),
+    (item: TestItemInfo) => isCriteriaTestItem(item) && includedTestItems.value.includes(item.name),
   )
 
   for (const item of criteriaItems) {

@@ -23,7 +23,6 @@ if (typeof window !== 'undefined') {
     })),
   })
 }
-
 // Mock IntersectionObserver for components that depend on visibility tracking
 // biome-ignore lint/suspicious/noExplicitAny: globalThis mock assignment requires any cast
 ;(globalThis as any).IntersectionObserver = class IntersectionObserver {

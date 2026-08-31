@@ -828,7 +828,9 @@ const comparisonTableItems = computed(() => {
     const scoringConfigMap = new Map(
       appliedScoringConfigs.value.map((config) => [config.test_item_name.toLowerCase(), config]),
     )
-    items = items.filter((item) => scoringConfigMap.get(item.test_item.toLowerCase())?.enabled !== false)
+    items = items.filter(
+      (item) => scoringConfigMap.get(item.test_item.toLowerCase())?.enabled !== false,
+    )
   }
 
   // Apply criteria filters
@@ -1094,13 +1096,14 @@ const rescoreIplasData = async () => {
         )
       : records[0]
 
-    if (!stationRecord || !stationRecord.test_item.length) continue
+    if (!stationRecord?.test_item.length) continue
 
     // UPDATED: Filter to only criteria items (with limits) or explicitly configured items
     const testItems = stationRecord.test_item
       .filter((t) => {
-        const hasLimits = hasMeaningfulUploadLogLimit(t.UCL ? parseFloat(t.UCL) : null)
-          || hasMeaningfulUploadLogLimit(t.LCL ? parseFloat(t.LCL) : null)
+        const hasLimits =
+          hasMeaningfulUploadLogLimit(t.UCL ? parseFloat(t.UCL) : null) ||
+          hasMeaningfulUploadLogLimit(t.LCL ? parseFloat(t.LCL) : null)
         return hasLimits || explicitlyConfigured.has(t.NAME)
       })
       .map((t) => ({

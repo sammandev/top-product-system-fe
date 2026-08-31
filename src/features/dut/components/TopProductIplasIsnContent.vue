@@ -3,12 +3,6 @@
     <AppPanel eyebrow="Search" title="ISN Search" tone="cool" split-header compact-header>
       <template #header-aside>
         <div class="top-product-iplas-isn-header-actions">
-          <span v-if="inputMode === 'multiple'" class="top-product-iplas-isn-pill top-product-iplas-isn-pill--muted">
-            {{ multipleModeIdentifiers.length }} ready for multi-search
-          </span>
-          <span v-else class="top-product-iplas-isn-pill top-product-iplas-isn-pill--primary">
-            {{ bulkModeIdentifiers.length }} parsed from bulk input
-          </span>
           <button type="button" class="top-product-iplas-isn-button top-product-iplas-isn-button--ghost"
             :disabled="loadingStationLookup || loadingTestItems || !canClearAll" @click="handleClearAll">
             <Icon icon="mdi:close-circle-outline" />
@@ -18,7 +12,7 @@
       </template>
 
       <div class="top-product-iplas-isn-stack">
-        <div class="top-product-iplas-isn-toolbar">
+        <div class="top-product-iplas-isn-toolbar app-search-form__toolbar">
           <div class="top-product-iplas-isn-toggle-row">
             <button type="button" class="top-product-iplas-isn-toggle-chip"
               :class="{ 'is-active': inputMode === 'multiple' }" @click="inputMode = 'multiple'">
@@ -32,20 +26,13 @@
             </button>
           </div>
 
-          <button type="button" class="top-product-iplas-isn-unified-card"
-            :class="{ 'is-active': enableUnifiedSearch }" :aria-pressed="enableUnifiedSearch"
-            @click="enableUnifiedSearch = !enableUnifiedSearch">
-            <span class="top-product-iplas-isn-unified-card__icon">
-              <Icon icon="mdi:link-variant" />
-            </span>
+          <label class="app-search-form__toggle">
+            <input v-model="enableUnifiedSearch" type="checkbox">
             <span class="top-product-iplas-isn-unified-card__copy">
               <strong>Unified Search</strong>
-              <small>{{ enableUnifiedSearch ? 'ISN, SSN, and MAC enabled' : 'Only entered identifiers' }}</small>
+              <small>Match ISN, SSN, and MAC references</small>
             </span>
-            <span class="top-product-iplas-isn-unified-card__switch" aria-hidden="true">
-              <span></span>
-            </span>
-          </button>
+          </label>
         </div>
 
         <section v-if="inputMode === 'multiple'" class="top-product-iplas-isn-input-shell">
@@ -294,10 +281,10 @@ import {
   evaluateForcedFailure,
   type ForcedFailureItemDetail,
 } from '@/features/dut/utils/iplasForcedFailure'
-import type { IplasDownloadCsvLogInfo } from '@/features/dut-logs/api/iplasProxyApi'
-import {
-  type IplasIsnProjectInfo,
-  type IplasIsnSearchRecord,
+import type {
+  IplasDownloadCsvLogInfo,
+  IplasIsnProjectInfo,
+  IplasIsnSearchRecord,
 } from '@/features/dut-logs/api/iplasProxyApi'
 import {
   lookupIsnsBatch,
@@ -315,6 +302,11 @@ import {
 } from '@/features/dut-logs/composables/useIplasQueries'
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import {
+  buildTopProductWorkbook,
+  createTopProductExcelRecordFromIplas,
+  downloadTopProductWorkbook,
+} from '@/features/dut-logs/utils/topProductExcelExport'
+import {
   createTopProductsBulk,
   type TopProductCreate,
   type TopProductMeasurementCreate,
@@ -324,11 +316,6 @@ import { AppPanel } from '@/shared/ui'
 import { getErrorMessage } from '@/shared/utils'
 import { getApiErrorDetail } from '@/shared/utils/error'
 import { isStatusPass } from '@/shared/utils/helpers'
-import {
-  buildTopProductWorkbook,
-  createTopProductExcelRecordFromIplas,
-  downloadTopProductWorkbook,
-} from '@/features/dut-logs/utils/topProductExcelExport'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
 import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
@@ -475,7 +462,8 @@ const isnLoadingState = computed<{
     return {
       badge: 'Preparing ranking',
       title: 'Building the ISN ranking dataset...',
-      description: 'Applying the configured station, device, and test-item filters before score calculation starts.',
+      description:
+        'Applying the configured station, device, and test-item filters before score calculation starts.',
       meta: `${configuredStationsCount.value} station${configuredStationsCount.value === 1 ? '' : 's'} selected for this ISN search.`,
     }
   }
@@ -981,7 +969,10 @@ async function lookupSfistspReferences(isnList: string[], showMatches = true): P
  */
 async function fetchStationListFromIsn(identifier: string): Promise<Station[]> {
   try {
-    const response = await fetchIplasStationsFromIsnQuery({ isn: identifier, token: getUserToken() })
+    const response = await fetchIplasStationsFromIsnQuery({
+      isn: identifier,
+      token: getUserToken(),
+    })
 
     if (!response.isn_info.found) {
       console.warn(`Station list not found for identifier: ${identifier}`)
@@ -1882,10 +1873,7 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-isn-input-card {
-  border: 1px solid var(--app-border);
-  border-radius: 0.9rem;
-  background: var(--app-panel);
-  padding: 0.9rem;
+  padding-top: 0.15rem;
 }
 
 .top-product-iplas-isn-input-card--textarea textarea {
@@ -1998,6 +1986,26 @@ onUnmounted(() => {
   background: var(--app-accent-soft);
   border-color: rgba(15, 118, 110, 0.24);
   color: var(--app-accent);
+}
+
+.top-product-iplas-isn-toggle-row {
+  gap: 0.2rem;
+  padding: 0.22rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.6rem;
+  background: var(--app-surface);
+}
+
+.top-product-iplas-isn-toggle-row .top-product-iplas-isn-toggle-chip {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+}
+
+.top-product-iplas-isn-toggle-row .top-product-iplas-isn-toggle-chip.is-active {
+  background: var(--app-panel);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--app-ink) 12%, transparent);
 }
 
 .top-product-iplas-isn-button--secondary {

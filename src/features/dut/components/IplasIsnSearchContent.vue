@@ -3,12 +3,6 @@
     <AppPanel eyebrow="Search" title="ISN Search" tone="cool" split-header compact-header>
       <template #header-aside>
         <div class="iplas-isn-header-actions">
-          <span v-if="inputMode === 'multiple'" class="iplas-isn-pill iplas-isn-pill--neutral">
-            {{ multipleModeIdentifiers.length }} ready for multi-search
-          </span>
-          <span v-else class="iplas-isn-pill iplas-isn-pill--primary">
-            {{ bulkModeIdentifiers.length }} parsed from bulk input
-          </span>
           <button
             type="button"
             class="iplas-isn-button iplas-isn-button--ghost"
@@ -26,7 +20,7 @@
       </template>
 
       <div class="iplas-isn-stack">
-        <div class="iplas-isn-toolbar">
+        <div class="iplas-isn-toolbar app-search-form__toolbar">
           <div class="iplas-isn-toggle-row">
             <button type="button" class="iplas-isn-toggle-chip" :class="{ 'is-active': inputMode === 'multiple' }"
               @click="inputMode = 'multiple'">
@@ -40,17 +34,13 @@
             </button>
           </div>
 
-          <button type="button" class="iplas-isn-unified-card" :class="{ 'is-active': enableUnifiedSearch }"
-            :aria-pressed="enableUnifiedSearch" @click="enableUnifiedSearch = !enableUnifiedSearch">
-            <span class="iplas-isn-unified-card__icon">
-              <Icon icon="mdi:link-variant" />
-            </span>
+          <label class="app-search-form__toggle">
+            <input v-model="enableUnifiedSearch" type="checkbox">
             <span class="iplas-isn-unified-card__copy">
               <strong>Unified Search</strong>
-              <small>{{ enableUnifiedSearch ? 'ISN, SSN, and MAC enabled' : 'Only entered identifiers' }}</small>
+              <small>Match ISN, SSN, and MAC references</small>
             </span>
-            <span class="iplas-isn-unified-card__switch" aria-hidden="true"><span /></span>
-          </button>
+          </label>
         </div>
 
         <section v-if="inputMode === 'multiple'" class="iplas-isn-input-shell">
@@ -217,7 +207,7 @@
         </div>
       </template>
 
-      <AppTabs v-model="activeISNTab" :items="isnTabItems" scrollable>
+      <AppTabs v-model="activeISNTab" :items="isnTabItems">
         <template v-for="(isnGroup, isnIndex) in groupedByISN" :key="isnGroup.isn" v-slot:[`panel-${isnIndex}`]>
           <section class="iplas-isn-results-pane">
             <div class="iplas-isn-results-toolbar">
@@ -1543,10 +1533,10 @@ async function handleSearch(): Promise<void> {
       try {
         // Get unique ISNs from records to fetch station info
         const uniqueIsns = [...new Set(allRecords.map((r) => r.isn))]
-        if (uniqueIsns.length === 1) {
-          // biome-ignore lint/style/noNonNullAssertion: length === 1 guarantees index 0 exists
+        const firstUniqueIsn = uniqueIsns[0]
+        if (uniqueIsns.length === 1 && firstUniqueIsn) {
           const stationsResponse = await fetchIplasStationsFromIsnQuery({
-            isn: uniqueIsns[0]!,
+            isn: firstUniqueIsn,
             token: getUserToken(),
           })
           for (const station of stationsResponse.stations) {
@@ -1706,6 +1696,26 @@ async function handleSearch(): Promise<void> {
   color: var(--app-accent);
 }
 
+.iplas-isn-toggle-row {
+  gap: 0.2rem;
+  padding: 0.22rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.6rem;
+  background: var(--app-surface);
+}
+
+.iplas-isn-toggle-row .iplas-isn-toggle-chip {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+}
+
+.iplas-isn-toggle-row .iplas-isn-toggle-chip.is-active {
+  background: var(--app-panel);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--app-ink) 12%, transparent);
+}
+
 .iplas-isn-toggle-chip,
 .iplas-isn-button,
 .iplas-isn-token {
@@ -1847,10 +1857,7 @@ async function handleSearch(): Promise<void> {
 }
 
 .iplas-isn-input-card {
-  border: 1px solid var(--app-border);
-  border-radius: 0.9rem;
-  background: var(--app-panel);
-  padding: 0.9rem;
+  padding-top: 0.15rem;
 }
 
 .iplas-isn-input-card--textarea textarea {

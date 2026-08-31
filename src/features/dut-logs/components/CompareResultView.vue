@@ -420,7 +420,7 @@ function openScoreBreakdown(testItem: string, isnIndex: number) {
   const compareItem = props.result.comparison_value_items.find(
     (item) => item.test_item === testItem,
   )
-  if (!compareItem || !compareItem.per_isn_data[isnIndex]) return
+  if (!compareItem?.per_isn_data[isnIndex]) return
 
   const isnData = compareItem.per_isn_data[isnIndex]
   if (!isnData.score_breakdown) return

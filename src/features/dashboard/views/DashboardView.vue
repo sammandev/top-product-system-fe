@@ -20,9 +20,9 @@
           <div class="dashboard-hero__actions">
             <p class="dashboard-hero__meta">{{ loading ? 'Refreshing snapshot...' : 'Auto-cached · refreshes in background' }}</p>
 
-            <Button :disabled="loading" :loading="loading" severity="secondary" @click="refreshStats">
+            <Button :disabled="loading" severity="secondary" @click="refreshStats">
               <span class="dashboard-button__content">
-                <Icon icon="mdi:refresh" />
+                <Icon :icon="loading ? 'mdi:loading' : 'mdi:refresh'" :class="{ 'dashboard-spin': loading }" />
                 <span>Refresh snapshot</span>
               </span>
             </Button>
@@ -706,6 +706,16 @@ function formatStorageAmount(amount: number) {
   height: 100%;
   border-radius: inherit;
   background: linear-gradient(90deg, var(--dashboard-accent), var(--dashboard-accent-strong));
+}
+
+.dashboard-spin {
+  animation: dashboard-spin 0.8s linear infinite;
+}
+
+@keyframes dashboard-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @media (max-width: 1200px) {

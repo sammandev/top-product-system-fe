@@ -10,9 +10,9 @@
           </p>
         </div>
 
-        <Button :disabled="loading" :loading="loading" severity="secondary" @click="loadActivities(1)">
+        <Button :disabled="loading" severity="secondary" @click="loadActivities(1)">
           <span class="activity-button-content">
-            <Icon icon="mdi:refresh" />
+            <Icon :icon="loading ? 'mdi:loading' : 'mdi:refresh'" :class="{ 'activity-spin': loading }" />
             <span>Refresh feed</span>
           </span>
         </Button>
@@ -757,6 +757,16 @@ function formatTime(timestamp: string): string {
   50% {
     opacity: 1;
     transform: scale(1.2);
+  }
+}
+
+.activity-spin {
+  animation: activity-spin 0.8s linear infinite;
+}
+
+@keyframes activity-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 

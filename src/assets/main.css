@@ -134,3 +134,214 @@ body {
   overflow-wrap: anywhere;
   word-break: normal;
 }
+
+/* Shared high-frequency query forms */
+.app-query-form {
+  display: grid;
+  border-block: 1px solid var(--app-border);
+  container-type: inline-size;
+}
+
+.app-query-form__section {
+  display: grid;
+  grid-template-columns: minmax(10rem, 13rem) minmax(0, 1fr);
+  gap: 1.25rem;
+  padding: 1rem 0;
+  border-top: 1px solid var(--app-border);
+}
+
+.app-query-form__section:first-child {
+  border-top: 0;
+}
+
+.app-query-form__section.is-locked {
+  opacity: 0.55;
+}
+
+.app-query-form__step {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.65rem;
+}
+
+.app-query-form__step-index {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  flex: 0 0 auto;
+  border: 1px solid var(--app-border);
+  border-radius: 50%;
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  font-weight: 800;
+}
+
+.app-query-form__section.is-complete .app-query-form__step-index {
+  border-color: var(--app-success-line);
+  background: var(--app-success-soft);
+  color: var(--app-success-strong);
+}
+
+.app-query-form__step div,
+.app-query-form__body {
+  min-width: 0;
+}
+
+.app-query-form__step strong,
+.app-query-form__step small {
+  display: block;
+}
+
+.app-query-form__step strong {
+  color: var(--app-ink);
+  font-size: 0.9rem;
+}
+
+.app-query-form__step small {
+  margin-top: 0.2rem;
+  color: var(--app-muted);
+  font-size: 0.74rem;
+  line-height: 1.4;
+}
+
+.app-query-form__fields {
+  display: grid;
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.app-query-form__fields > *,
+.app-query-form__fields input,
+.app-query-form__fields .app-select {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.app-query-form__fields input {
+  min-height: 2.75rem;
+}
+
+.app-query-form__fields--two {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.app-query-form__fields--three {
+  grid-template-columns: minmax(10rem, 0.8fr) repeat(2, minmax(12rem, 1fr));
+}
+
+.app-query-form__body {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.app-query-form__action-row,
+.app-query-form__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.app-query-form__action-row > span {
+  color: var(--app-muted);
+  font-size: 0.8rem;
+}
+
+.app-query-form__footer {
+  justify-content: flex-end;
+  padding: 1rem 0 0;
+}
+
+.app-query-form__error {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: var(--app-danger);
+  font-size: 0.76rem;
+}
+
+@media (max-width: 760px) {
+  .app-query-form__section,
+  .app-query-form__fields--two,
+  .app-query-form__fields--three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container (max-width: 60rem) {
+  .app-query-form__section {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@container (max-width: 44rem) {
+  .app-query-form__fields--two,
+  .app-query-form__fields--three {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.app-search-form__toolbar {
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.app-search-form__toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-height: 2.75rem;
+  color: var(--app-ink);
+  cursor: pointer;
+}
+
+.app-search-form__toggle input {
+  appearance: none;
+  width: 2.35rem;
+  height: 1.35rem;
+  flex: 0 0 auto;
+  padding: 0.16rem;
+  border: 1px solid var(--app-border);
+  border-radius: 999px;
+  background: var(--app-surface);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+.app-search-form__toggle input::before {
+  display: block;
+  width: 0.92rem;
+  height: 0.92rem;
+  border-radius: 50%;
+  background: var(--app-muted);
+  content: "";
+  transition:
+    transform 0.15s ease,
+    background-color 0.15s ease;
+}
+
+.app-search-form__toggle input:checked {
+  border-color: var(--app-accent);
+  background: var(--app-accent);
+}
+
+.app-search-form__toggle input:checked::before {
+  transform: translateX(0.98rem);
+  background: var(--app-panel);
+}
+
+.app-search-form__toggle input:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}
+
+.app-search-form__toggle small {
+  display: block;
+  margin-top: 0.1rem;
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  font-weight: 500;
+}

@@ -1,12 +1,12 @@
 import type ExcelJS from 'exceljs'
+import type { RecordScoreResult } from '@/features/dut/types/scoring.types'
+import { createWorkbook } from '@/shared/utils/excel'
 import type { CsvTestItemData } from '../composables/useIplasApi'
 import type {
   CompareItemEnhanced,
   CompareResponseEnhanced,
   TestLogParseResponseEnhanced,
 } from '../composables/useTestLogUpload'
-import type { RecordScoreResult } from '@/features/dut/types/scoring.types'
-import { createWorkbook } from '@/shared/utils/excel'
 
 export type TopProductExcelCell = string | number | null | undefined
 
@@ -188,13 +188,29 @@ const border = {
   right: { style: 'thin' as const, color: { argb: 'FF000000' } },
 }
 
-const headerFill = { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FFD9E1F2' } }
-const scoreFill = { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FFD9D9D9' } }
-const passFill = { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FFC6EFCE' } }
-const failFill = { type: 'pattern' as const, pattern: 'solid' as const, fgColor: { argb: 'FFFFC7CE' } }
+const headerFill = {
+  type: 'pattern' as const,
+  pattern: 'solid' as const,
+  fgColor: { argb: 'FFD9E1F2' },
+}
+const scoreFill = {
+  type: 'pattern' as const,
+  pattern: 'solid' as const,
+  fgColor: { argb: 'FFD9D9D9' },
+}
+const passFill = {
+  type: 'pattern' as const,
+  pattern: 'solid' as const,
+  fgColor: { argb: 'FFC6EFCE' },
+}
+const failFill = {
+  type: 'pattern' as const,
+  pattern: 'solid' as const,
+  fgColor: { argb: 'FFFFC7CE' },
+}
 
 function normalizeSheetName(name: string, usedNames: Set<string>): string {
-  const baseName = (name || 'Results').replace(/[:\\/?*\[\]]/g, '_').slice(0, 31) || 'Results'
+  const baseName = (name || 'Results').replace(/[:\\/?*[\]]/g, '_').slice(0, 31) || 'Results'
   let nextName = baseName
   let suffix = 2
 
@@ -228,7 +244,11 @@ function styleRange(
   rowNumber: number,
   startColumn: number,
   endColumn: number,
-  style: { fill?: ExcelJS.Fill; font?: Partial<ExcelJS.Font>; alignment?: Partial<ExcelJS.Alignment> },
+  style: {
+    fill?: ExcelJS.Fill
+    font?: Partial<ExcelJS.Font>
+    alignment?: Partial<ExcelJS.Alignment>
+  },
 ) {
   for (let column = startColumn; column <= endColumn; column += 1) {
     const cell = worksheet.getCell(rowNumber, column)
@@ -251,7 +271,10 @@ function getItemsByName(records: TopProductExcelRecord[]): TopProductExcelItem[]
   return Array.from(items.values())
 }
 
-function findItem(record: TopProductExcelRecord, testItem: string): TopProductExcelItem | undefined {
+function findItem(
+  record: TopProductExcelRecord,
+  testItem: string,
+): TopProductExcelItem | undefined {
   return record.items.find((item) => item.testItem === testItem)
 }
 
@@ -290,7 +313,7 @@ function addSheet(
   const headerRow = metadataRows.length + 1
   const headers = ['TEST ITEM', 'UCL', 'LCL', 'Target', 'Weight']
   worksheet.getRow(headerRow).values = headers
-  records.forEach((record, recordIndex) => {
+  records.forEach((_record, recordIndex) => {
     const startColumn = fixedColumnCount + recordIndex * groupWidth + 1
     worksheet.getCell(headerRow, startColumn).value = 'VALUE'
     worksheet.getCell(headerRow, startColumn + 1).value = 'DEV'
@@ -346,7 +369,8 @@ function addSheet(
 
   worksheet.getColumn(1).width = 36
   for (let column = 2; column <= 11; column += 1) worksheet.getColumn(column).width = 9.28515625
-  for (let column = 12; column <= lastColumn; column += 1) worksheet.getColumn(column).width = 13.5703125
+  for (let column = 12; column <= lastColumn; column += 1)
+    worksheet.getColumn(column).width = 13.5703125
   worksheet.views = [{ state: 'frozen', xSplit: 5, ySplit: 10, topLeftCell: 'F11' }]
   worksheet.autoFilter = {
     from: { row: headerRow, column: 1 },

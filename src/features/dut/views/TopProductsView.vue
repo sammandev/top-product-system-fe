@@ -27,7 +27,7 @@
       <button type="button" @click="clearError">Dismiss</button>
     </div>
 
-    <AppTabs v-model="activeTab" :items="tabItems" scrollable class="top-products-tabs">
+    <AppTabs v-model="activeTab" :items="tabItems" class="top-products-tabs">
       <template #panel-iplas-data>
         <TopProductsByIplasDataTab v-if="activeTab === 'iplas-data'" />
       </template>

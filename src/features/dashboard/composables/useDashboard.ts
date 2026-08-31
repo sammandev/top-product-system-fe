@@ -215,7 +215,7 @@ export function useDashboard() {
 
   // Recent Activity
   const recentActivities = computed<ActivityItem[]>(() => {
-    if (!dashboardData.value || !dashboardData.value.recent_activities.length) {
+    if (!dashboardData.value?.recent_activities.length) {
       return [
         {
           title: 'No Recent Activity',

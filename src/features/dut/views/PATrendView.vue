@@ -132,7 +132,7 @@
             <button type="button" @click="dutStore.paTrendError = null">Dismiss</button>
         </div>
 
-        <AppTabs v-model="activeTab" :items="tabItems" scrollable class="pa-trend-tabs">
+        <AppTabs v-model="activeTab" :items="tabItems" class="pa-trend-tabs">
             <template #panel-auto>
                 <PATrendResultsCard :data="dutStore.paTrendAutoData" :loading="dutStore.paTrendLoading"
                     title="Auto Trend Results" type="auto" />

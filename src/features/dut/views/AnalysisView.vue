@@ -150,7 +150,7 @@
           </div>
         </div>
 
-        <AppTabs v-model="activeResultTab" :items="resultTabItems" scrollable>
+        <AppTabs v-model="activeResultTab" :items="resultTabItems">
           <template v-for="result in results" :key="result.dut_isn" #[`panel-${result.dut_isn}`]>
             <section class="analysis-view-result-pane">
               <AppPanel eyebrow="DUT Result" :title="`DUT ${result.dut_isn}`"

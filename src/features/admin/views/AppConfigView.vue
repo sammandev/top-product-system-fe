@@ -10,13 +10,13 @@
             <p class="app-config-header__eyebrow">Admin Control Center</p>
             <h1>App Configuration</h1>
             <p>
-              Maintain logo, environment overrides, and guest access from one tabbed admin workspace.
+              Maintain branding, frontend licensing, environment overrides, and guest access.
             </p>
           </div>
         </div>
       </div>
 
-      <AppTabs v-model="activeTab" :items="configTabs" scrollable>
+      <AppTabs v-model="activeTab" :items="configTabs">
           <template #panel-general>
             <div class="app-config-tab-content app-config-tab-content--split">
               <section class="app-config-panel app-config-panel--form">
@@ -168,6 +168,109 @@
                   </div>
                 </div>
               </section>
+            </div>
+          </template>
+
+          <template #panel-primeui>
+            <div class="app-config-tab-content app-config-tab-content--split">
+              <section class="app-config-panel app-config-panel--form">
+                <div class="app-config-panel__header">
+                  <div>
+                    <p class="app-config-panel__eyebrow">Frontend License</p>
+                    <h2>PrimeUI Community License</h2>
+                  </div>
+                  <span class="app-config-chip" :class="primeUiLicenseValid ? 'is-success' : 'is-danger'">
+                    {{ primeUiLicenseValid ? 'Active' : 'Action required' }}
+                  </span>
+                </div>
+
+                <div class="app-config-license-summary">
+                  <div>
+                    <span>Source</span>
+                    <strong>{{ primeUiLicenseStatus?.configured ? 'Database override' : 'Bundled fallback' }}</strong>
+                  </div>
+                  <div>
+                    <span>Tier</span>
+                    <strong>{{ primeUiLicenseTier }}</strong>
+                  </div>
+                  <div>
+                    <span>Expires</span>
+                    <strong>{{ primeUiLicenseExpiryLabel }}</strong>
+                  </div>
+                </div>
+
+                <div class="app-config-notice"
+                  :class="primeUiLicenseDaysRemaining <= 30 ? 'app-config-notice--warning' : 'app-config-notice--info'">
+                  <strong>{{ primeUiLicenseDaysRemaining > 0 ? `${primeUiLicenseDaysRemaining} days remaining` : 'License expired' }}</strong>
+                  <p>Community licenses renew annually. Add the replacement key here before the expiry date.</p>
+                </div>
+
+                <form class="app-config-form" @submit.prevent="handlePrimeUiLicenseSave">
+                  <label class="app-config-field">
+                    <span>New License Key</span>
+                    <div class="app-config-password-field">
+                      <input v-model="primeUiLicenseKey" :type="showPrimeUiLicense ? 'text' : 'password'"
+                        autocomplete="off" placeholder="Paste the renewed PrimeUI license key">
+                      <button type="button" :aria-label="showPrimeUiLicense ? 'Hide license key' : 'Show license key'"
+                        :title="showPrimeUiLicense ? 'Hide key' : 'Show key'"
+                        @click="showPrimeUiLicense = !showPrimeUiLicense">
+                        <Icon :icon="showPrimeUiLicense ? 'mdi:eye-off-outline' : 'mdi:eye-outline'" />
+                      </button>
+                    </div>
+                    <small>The key is encrypted in the application database. It becomes active on the next page load.</small>
+                  </label>
+
+                  <div v-if="primeUiLicenseError" class="app-config-notice app-config-notice--error">
+                    <strong>License update failed</strong>
+                    <p>{{ primeUiLicenseError }}</p>
+                  </div>
+
+                  <div class="app-config-button-row">
+                    <button type="submit" class="app-config-button app-config-button--primary"
+                      :disabled="primeUiLicenseSaving || primeUiLicenseKey.trim().length < 32">
+                      <Icon :icon="primeUiLicenseSaving ? 'mdi:loading' : 'mdi:key-change'"
+                        :class="{ 'app-config-spin': primeUiLicenseSaving }" />
+                      <span>{{ primeUiLicenseSaving ? 'Validating...' : 'Update License' }}</span>
+                    </button>
+                    <button v-if="primeUiNeedsReload" type="button" class="app-config-button app-config-button--ghost"
+                      @click="reloadApplication">
+                      <Icon icon="mdi:reload" />
+                      <span>Reload to Apply</span>
+                    </button>
+                  </div>
+                </form>
+              </section>
+
+              <aside class="app-config-panel app-config-panel--preview">
+                <div class="app-config-panel__header">
+                  <div>
+                    <p class="app-config-panel__eyebrow">Runtime</p>
+                    <h2>Current License</h2>
+                  </div>
+                </div>
+                <dl class="app-config-meta-list">
+                  <div>
+                    <dt>Key</dt>
+                    <dd><code class="app-config-code">{{ primeUiLicenseMasked }}</code></dd>
+                  </div>
+                  <div>
+                    <dt>Product</dt>
+                    <dd>PrimeUI</dd>
+                  </div>
+                  <div>
+                    <dt>License type</dt>
+                    <dd>{{ primeUiLicenseType }}</dd>
+                  </div>
+                  <div v-if="primeUiLicenseStatus?.updated_by">
+                    <dt>Updated by</dt>
+                    <dd>{{ primeUiLicenseStatus.updated_by }}</dd>
+                  </div>
+                </dl>
+                <div v-if="primeUiLicenseLoading" class="app-config-notice app-config-notice--info">
+                  <strong>Checking license</strong>
+                  <p>Loading the database-managed PrimeUI status.</p>
+                </div>
+              </aside>
             </div>
           </template>
 
@@ -540,6 +643,7 @@ import { useQuery, useQueryClient } from '@tanstack/vue-query'
 import { storeToRefs } from 'pinia'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { appConfigApi } from '@/core/api/appConfigApi'
+import { APP_CONFIG } from '@/core/config'
 import { queryKeys } from '@/core/query'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import type {
@@ -550,6 +654,7 @@ import type {
   IplasToken,
   IplasTokenCreateRequest,
   IplasTokenUpdateRequest,
+  PrimeUILicenseStatus,
   SfistspConfigCreateRequest,
   SfistspConfigItem,
   SfistspConfigUpdateRequest,
@@ -565,7 +670,7 @@ import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
 import AppFormField from '@/shared/ui/forms/AppFormField.vue'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 
-type ConfigTab = 'general' | 'branding' | 'iplas' | 'sfistsp' | 'guest'
+type ConfigTab = 'general' | 'branding' | 'primeui' | 'iplas' | 'sfistsp' | 'guest'
 type DeleteTarget = 'iplas' | 'sfistsp' | 'guest' | null
 
 type IplasFormState = {
@@ -593,6 +698,7 @@ const activeTab = useTabPersistence<ConfigTab>('tab', 'general')
 const configTabs: Array<{ label: string; value: ConfigTab }> = [
   { label: 'General', value: 'general' },
   { label: 'Branding', value: 'branding' },
+  { label: 'PrimeUI', value: 'primeui' },
   { label: 'iPLAS', value: 'iplas' },
   { label: 'SFISTSP', value: 'sfistsp' },
   { label: 'Guest', value: 'guest' },
@@ -617,6 +723,12 @@ const faviconLoading = ref(false)
 const faviconError = ref('')
 const faviconSuccess = ref('')
 const faviconFile = ref<File | File[] | null>(null)
+
+const primeUiLicenseKey = ref('')
+const primeUiLicenseSaving = ref(false)
+const primeUiLicenseError = ref('')
+const primeUiNeedsReload = ref(false)
+const showPrimeUiLicense = ref(false)
 
 const iplasError = ref('')
 const iplasTokens = ref<IplasToken[]>([])
@@ -711,9 +823,56 @@ const guestCredentialsQuery = useQuery({
   enabled: computed(() => activeTab.value === 'guest'),
 })
 
+const primeUiLicenseQuery = useQuery({
+  queryKey: queryKeys.appConfig.primeUiLicense(),
+  queryFn: appConfigApi.getPrimeUiLicense,
+  enabled: computed(() => activeTab.value === 'primeui'),
+  retry: false,
+})
+
 const iplasLoading = computed(() => iplasTokensQuery.isFetching.value)
 const sfistspLoading = computed(() => sfistspConfigsQuery.isFetching.value)
 const guestLoading = computed(() => guestCredentialsQuery.isFetching.value)
+const primeUiLicenseLoading = computed(() => primeUiLicenseQuery.isFetching.value)
+const primeUiLicenseStatus = computed<PrimeUILicenseStatus | null>(
+  () => primeUiLicenseQuery.data.value ?? null,
+)
+
+const bundledPrimeUiClaims = decodePrimeUiLicenseClaims(APP_CONFIG.ui.primeUiLicense)
+const primeUiLicenseExpiresAt = computed(() => {
+  return primeUiLicenseStatus.value?.configured
+    ? primeUiLicenseStatus.value.expires_at
+    : bundledPrimeUiClaims.expiresAt
+})
+const primeUiLicenseValid = computed(() => {
+  if (primeUiLicenseStatus.value?.configured) return primeUiLicenseStatus.value.valid
+  return Boolean(
+    primeUiLicenseExpiresAt.value && new Date(primeUiLicenseExpiresAt.value) > new Date(),
+  )
+})
+const primeUiLicenseDaysRemaining = computed(() => {
+  if (!primeUiLicenseExpiresAt.value) return 0
+  return Math.max(
+    0,
+    Math.ceil((new Date(primeUiLicenseExpiresAt.value).getTime() - Date.now()) / 86_400_000),
+  )
+})
+const primeUiLicenseExpiryLabel = computed(() => formatDate(primeUiLicenseExpiresAt.value))
+const primeUiLicenseTier = computed(() =>
+  formatPrimeUiClaim(primeUiLicenseStatus.value?.tier || bundledPrimeUiClaims.tier, 'Community'),
+)
+const primeUiLicenseType = computed(() =>
+  formatPrimeUiClaim(
+    primeUiLicenseStatus.value?.license_type || bundledPrimeUiClaims.type,
+    'Development',
+  ),
+)
+const primeUiLicenseMasked = computed(() => {
+  return (
+    primeUiLicenseStatus.value?.license_masked ||
+    `Bundled key ending ${APP_CONFIG.ui.primeUiLicense.slice(-3)}`
+  )
+})
 
 const appName = computed(() => config.value?.name || 'Top Product System')
 const appVersion = computed(() => config.value?.version || '')
@@ -778,6 +937,56 @@ function populateGeneralForm() {
 function resetGeneralForm() {
   generalError.value = ''
   populateGeneralForm()
+}
+
+function decodePrimeUiLicenseClaims(licenseKey: string): {
+  expiresAt: string | null
+  tier: string | null
+  type: string | null
+} {
+  try {
+    const encoded = licenseKey.split('.')[0]
+    if (!encoded) return { expiresAt: null, tier: null, type: null }
+    const normalized = encoded.replace(/-/g, '+').replace(/_/g, '/')
+    const claims = JSON.parse(atob(normalized)) as Record<string, unknown>
+    return {
+      expiresAt: typeof claims.exp === 'number' ? new Date(claims.exp * 1000).toISOString() : null,
+      tier: typeof claims.tier === 'string' ? claims.tier : null,
+      type: typeof claims.type === 'string' ? claims.type : null,
+    }
+  } catch {
+    return { expiresAt: null, tier: null, type: null }
+  }
+}
+
+function formatPrimeUiClaim(value: string | null | undefined, fallback: string): string {
+  if (!value) return fallback
+  if (value.toLowerCase() === 'dev') return 'Development'
+  return value.charAt(0).toUpperCase() + value.slice(1)
+}
+
+async function handlePrimeUiLicenseSave() {
+  primeUiLicenseSaving.value = true
+  primeUiLicenseError.value = ''
+
+  try {
+    const status = await appConfigApi.updatePrimeUiLicense({
+      license_key: primeUiLicenseKey.value.trim(),
+    })
+    queryClient.setQueryData(queryKeys.appConfig.primeUiLicense(), status)
+    primeUiLicenseKey.value = ''
+    showPrimeUiLicense.value = false
+    primeUiNeedsReload.value = true
+    showSnackbar('PrimeUI license updated. Reload the app to apply it.', 'success')
+  } catch (error) {
+    primeUiLicenseError.value = getErrorMessage(error, 'Failed to update PrimeUI license.')
+  } finally {
+    primeUiLicenseSaving.value = false
+  }
+}
+
+function reloadApplication() {
+  window.location.reload()
 }
 
 async function handleGeneralSave() {
@@ -1405,6 +1614,38 @@ onMounted(async () => {
   gap: 1rem;
 }
 
+.app-config-license-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-block: 1px solid var(--app-border);
+}
+
+.app-config-license-summary > div {
+  display: grid;
+  gap: 0.2rem;
+  padding: 0.9rem;
+  border-left: 1px solid var(--app-border);
+}
+
+.app-config-license-summary > div:first-child {
+  border-left: 0;
+}
+
+.app-config-license-summary span,
+.app-config-license-summary strong {
+  overflow-wrap: anywhere;
+}
+
+.app-config-license-summary span {
+  color: var(--app-muted);
+  font-size: 0.75rem;
+}
+
+.app-config-license-summary strong {
+  color: var(--app-ink);
+  font-size: 0.9rem;
+}
+
 .app-config-field {
   display: flex;
   flex-direction: column;
@@ -1475,8 +1716,8 @@ onMounted(async () => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.5rem;
-  height: 2.5rem;
+  width: 2.75rem;
+  height: 2.75rem;
   border-radius: 999px;
 }
 
@@ -1729,6 +1970,21 @@ onMounted(async () => {
   color: var(--app-muted);
 }
 
+.app-config-chip.is-danger {
+  background: var(--app-config-danger-soft);
+  color: var(--app-config-danger);
+}
+
+.app-config-spin {
+  animation: app-config-spin 0.8s linear infinite;
+}
+
+@keyframes app-config-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .app-config-code {
   font-size: 0.8rem;
   font-family: 'Consolas', 'Monaco', monospace;
@@ -1783,6 +2039,19 @@ onMounted(async () => {
 
   .app-config-actions {
     justify-content: flex-start;
+  }
+
+  .app-config-license-summary {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .app-config-license-summary > div {
+    border-top: 1px solid var(--app-border);
+    border-left: 0;
+  }
+
+  .app-config-license-summary > div:first-child {
+    border-top: 0;
   }
 }
 </style>

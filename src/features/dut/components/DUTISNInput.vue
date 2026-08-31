@@ -48,6 +48,11 @@
         </div>
       </section>
 
+      <details class="dut-isn-input__scope" :open="!collapseScope">
+        <summary v-if="collapseScope">
+          <span>Site and model scope</span>
+          <small>Optional constraints</small>
+        </summary>
       <div class="dut-isn-input__grid">
         <label class="dut-isn-input__field">
           <span>Site Identifier (Optional)</span>
@@ -94,6 +99,7 @@
           </div>
         </label>
       </div>
+      </details>
 
       <div v-if="validationMessage" class="dut-isn-input__notice" :class="`dut-isn-input__notice--${validationType}`">
         {{ validationMessage }}
@@ -112,12 +118,14 @@ interface Props {
   maxISNs?: number
   siteIdentifiers?: string[]
   modelIdentifiers?: string[]
+  collapseScope?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
   maxISNs: 10,
   siteIdentifiers: () => [],
   modelIdentifiers: () => [],
+  collapseScope: false,
 })
 
 // Emits
@@ -392,6 +400,15 @@ defineExpose({
   align-items: center;
 }
 
+.dut-isn-input__toggle-row {
+  width: fit-content;
+  gap: 0.2rem;
+  padding: 0.22rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.6rem;
+  background: var(--app-surface);
+}
+
 .dut-isn-input__entry-row--end {
   justify-content: space-between;
 }
@@ -422,7 +439,7 @@ defineExpose({
 .dut-isn-input__field textarea {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
+  border-radius: 0.5rem;
   background: var(--app-panel-strong);
   color: var(--app-ink);
   padding: 0.8rem 0.9rem;
@@ -437,8 +454,8 @@ defineExpose({
 .dut-isn-input__toggle-chip,
 .dut-isn-input__token,
 .dut-isn-input__link {
-  min-height: 2.7rem;
-  border-radius: 0.95rem;
+  min-height: 2.75rem;
+  border-radius: 0.5rem;
   border: 1px solid var(--app-border);
   background: var(--app-panel);
   color: var(--app-ink);
@@ -471,6 +488,41 @@ defineExpose({
   color: var(--app-canvas);
 }
 
+.dut-isn-input__toggle-row .dut-isn-input__toggle-chip {
+  border: 0;
+  background: transparent;
+}
+
+.dut-isn-input__toggle-row .dut-isn-input__toggle-chip.is-active {
+  background: var(--app-panel);
+  color: var(--app-accent);
+  box-shadow: 0 1px 3px color-mix(in srgb, var(--app-ink) 12%, transparent);
+}
+
+.dut-isn-input__scope {
+  border-top: 1px solid var(--app-border);
+}
+
+.dut-isn-input__scope summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  min-height: 2.75rem;
+  color: var(--app-ink);
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.dut-isn-input__scope summary small {
+  color: var(--app-muted);
+  font-weight: 500;
+}
+
+.dut-isn-input__scope[open] .dut-isn-input__grid {
+  padding-top: 0.8rem;
+}
+
 .dut-isn-input__button--ghost,
 .dut-isn-input__link,
 .dut-isn-input__token {
@@ -478,10 +530,7 @@ defineExpose({
 }
 
 .dut-isn-input__section {
-  padding: 1rem;
-  border: 1px solid var(--app-border);
-  border-radius: 1rem;
-  background: var(--app-panel);
+  padding-block: 0.4rem;
 }
 
 .dut-isn-input__token {

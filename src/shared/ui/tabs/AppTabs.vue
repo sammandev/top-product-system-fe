@@ -2,7 +2,6 @@
   <Tabs
     v-bind="attrs"
     :value="modelValue"
-    :scrollable="scrollable"
     class="app-tabs"
     @update:value="emit('update:modelValue', $event)"
   >
@@ -50,11 +49,9 @@ withDefaults(
   defineProps<{
     modelValue: string | number
     items: readonly AppTabItem[]
-    scrollable?: boolean
     variant?: 'underline' | 'segmented'
   }>(),
   {
-    scrollable: false,
     variant: 'underline',
   },
 )

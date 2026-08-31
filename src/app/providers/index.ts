@@ -5,12 +5,12 @@ import { installPrimeVue } from './primevue'
 import { installQueryClient } from './query-client'
 import { installRouter } from './router'
 
-export { primeVueOptions } from './primevue'
+export { primeVueOptions, resolvePrimeUiLicense } from './primevue'
 export { createAppQueryClient, queryClient } from './query-client'
 
-export function installAppProviders(app: App, router: Router) {
+export function installAppProviders(app: App, router: Router, primeUiLicense?: string) {
   app.use(pinia)
   installRouter(app, router)
-  installPrimeVue(app)
+  installPrimeVue(app, primeUiLicense)
   installQueryClient(app)
 }

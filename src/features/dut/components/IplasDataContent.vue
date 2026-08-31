@@ -24,59 +24,80 @@
               </div>
             </template>
 
-            <div class="iplas-selection-shell">
-              <div class="iplas-control-grid iplas-control-grid--two">
-                <label class="iplas-field">
-                  <span>Site</span>
-                  <AppSelect v-model="selectedSite" :options="siteSelectOptions" :disabled="loading" @change="handleSiteChange" />
-                </label>
-
-                <label class="iplas-field">
-                  <span>Project</span>
-                  <AppSelect v-model="selectedProject" :options="projectSelectOptions" :disabled="!selectedSite || loadingStations"
-                    @change="handleProjectChange" />
-                </label>
-              </div>
-
-              <div class="iplas-control-grid iplas-control-grid--three">
-                <label class="iplas-field">
-                  <span>Date Range</span>
-                  <AppSelect v-model="dateRangePreset" :options="dateRangePresetSelectOptions" :searchable="false" @change="applyDateRangePreset(dateRangePreset)" />
-                </label>
-
-                <label class="iplas-field">
-                  <span>Start Time</span>
-                  <input
-                    v-model="startTime"
-                    type="datetime-local"
-                    class="iplas-datetime-input app-themed-input app-themed-datetime-input"
-                    @click="openNativeDateTimePicker"
-                  />
-                </label>
-
-                <label class="iplas-field">
-                  <span>End Time</span>
-                  <input
-                    v-model="endTime"
-                    type="datetime-local"
-                    class="iplas-datetime-input app-themed-input app-themed-datetime-input"
-                    @click="openNativeDateTimePicker"
-                  />
-                </label>
-              </div>
-
-              <div class="iplas-action-card">
-                <div>
-                  <strong>Configure Stations</strong>
-                  <p>Select stations, device IDs, and status filters for iPLAS search.</p>
+            <div class="app-query-form">
+              <section class="app-query-form__section" :class="{ 'is-complete': hasValidTimeRange }">
+                <header class="app-query-form__step">
+                  <span class="app-query-form__step-index">1</span>
+                  <div>
+                    <strong>Time window</strong>
+                    <small>Required before choosing data scope.</small>
+                  </div>
+                </header>
+                <div class="app-query-form__fields app-query-form__fields--three">
+                  <label class="iplas-field">
+                    <span>Preset</span>
+                    <AppSelect v-model="dateRangePreset" :options="dateRangePresetSelectOptions"
+                      placeholder="Choose a range" :searchable="false" @change="applyDateRangePreset(dateRangePreset)" />
+                  </label>
+                  <label class="iplas-field">
+                    <span>Start Time</span>
+                    <input v-model="startTime" type="datetime-local"
+                      class="iplas-datetime-input app-themed-input app-themed-datetime-input"
+                      @click="openNativeDateTimePicker" />
+                  </label>
+                  <label class="iplas-field">
+                    <span>End Time</span>
+                    <input v-model="endTime" type="datetime-local"
+                      class="iplas-datetime-input app-themed-input app-themed-datetime-input"
+                      @click="openNativeDateTimePicker" />
+                  </label>
+                  <p v-if="startTime && endTime && !hasValidTimeRange" class="app-query-form__error">
+                    End time must be later than start time.
+                  </p>
                 </div>
-                <button type="button" class="iplas-button iplas-button--secondary"
-                  :disabled="!selectedSite || !selectedProject || loadingStations" @click="openStationSelectionDialog">
-                  <Icon icon="mdi:tune-variant" />
-                  <span>{{ loadingStations ? 'Loading...' : 'Configure Stations' }}</span>
-                  <strong v-if="selectedStations.length > 0">{{ selectedStations.length }}</strong>
-                </button>
-              </div>
+              </section>
+
+              <section class="app-query-form__section"
+                :class="{ 'is-locked': !hasValidTimeRange, 'is-complete': selectedSite && selectedProject }">
+                <header class="app-query-form__step">
+                  <span class="app-query-form__step-index">2</span>
+                  <div>
+                    <strong>Site and project</strong>
+                    <small>{{ hasValidTimeRange ? 'Choose where to search.' : 'Complete time window first.' }}</small>
+                  </div>
+                </header>
+                <div class="app-query-form__fields app-query-form__fields--two">
+                  <label class="iplas-field">
+                    <span>Site</span>
+                    <AppSelect v-model="selectedSite" :options="siteSelectOptions"
+                      :disabled="!hasValidTimeRange || loading" @change="handleSiteChange" />
+                  </label>
+                  <label class="iplas-field">
+                    <span>Project</span>
+                    <AppSelect v-model="selectedProject" :options="projectSelectOptions"
+                      :disabled="!hasValidTimeRange || !selectedSite || loadingStations" @change="handleProjectChange" />
+                  </label>
+                </div>
+              </section>
+
+              <section class="app-query-form__section" :class="{ 'is-locked': !selectedSite || !selectedProject }">
+                <header class="app-query-form__step">
+                  <span class="app-query-form__step-index">3</span>
+                  <div>
+                    <strong>Stations</strong>
+                    <small>Choose stations, devices, and status filters.</small>
+                  </div>
+                </header>
+                <div class="app-query-form__body">
+                  <div class="app-query-form__action-row">
+                    <span>{{ selectedStations.length > 0 ? `${selectedStations.length} configured` : 'No stations configured' }}</span>
+                    <button type="button" class="iplas-button iplas-button--secondary"
+                      :disabled="!hasValidTimeRange || !selectedSite || !selectedProject || loadingStations"
+                      @click="openStationSelectionDialog">
+                      <Icon icon="mdi:tune-variant" />
+                      <span>{{ loadingStations ? 'Loading...' : selectedStations.length > 0 ? 'Edit Stations' : 'Configure Stations' }}</span>
+                    </button>
+                  </div>
 
               <section v-if="selectedProject" class="iplas-summary-panel">
                 <div class="iplas-summary-panel__header">
@@ -121,8 +142,7 @@
                 </div>
               </section>
 
-              <section v-if="selectedStations.length > 0" class="iplas-fetch-panel">
-                <div class="iplas-fetch-panel__actions">
+                  <div v-if="selectedStations.length > 0" class="app-query-form__footer">
                   <button type="button" class="iplas-button iplas-button--primary" :disabled="stationSearchRunLoading"
                     @click="fetchTestItems">
                     <Icon :icon="stationSearchRunLoading ? 'mdi:loading' : 'mdi:database-search-outline'"
@@ -130,7 +150,7 @@
                     <span>Search Test Data</span>
                     <strong>({{ selectedStations.length }} station{{ selectedStations.length > 1 ? 's' : '' }})</strong>
                   </button>
-                </div>
+                  </div>
 
                 <div v-if="stationSearchRunLoading" class="iplas-progress-card">
                   <div class="iplas-progress-card__spinner" />
@@ -141,6 +161,7 @@
                     </strong>
                     <p>Using the same station/device query path as Top Product, without scoring.</p>
                   </div>
+                </div>
                 </div>
               </section>
 
@@ -189,7 +210,7 @@
               </div>
             </div>
 
-            <AppTabs v-model="activeStationTabKey" :items="regularStationTabItems" scrollable>
+            <AppTabs v-model="activeStationTabKey" :items="regularStationTabItems">
               <template v-for="(stationGroup, stationIndex) in groupedByStation" :key="stationGroup.stationName"
                 #[`panel-station-${stationIndex}`]>
                 <div class="iplas-result-summary-card">
@@ -304,7 +325,6 @@
 import { Icon } from '@iconify/vue'
 import { useDebounceFn } from '@vueuse/core'
 import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
-import { iplasProxyApi } from '@/features/dut-logs/api/iplasProxyApi'
 import type {
   CsvTestItemData,
   DownloadAttachmentInfo,
@@ -312,9 +332,9 @@ import type {
   TestItem,
 } from '@/features/dut-logs/api/iplasApi'
 import type { CompactCsvTestItemData } from '@/features/dut-logs/api/iplasProxyApi'
+import { iplasProxyApi } from '@/features/dut-logs/api/iplasProxyApi'
 import type { DownloadCsvLogInfo } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
-import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { useNotification } from '@/shared/composables/useNotification'
 import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 import AppPanel from '@/shared/ui/panel/AppPanel.vue'
@@ -386,7 +406,7 @@ const stationDeviceIds = ref<Record<string, string[]>>({})
 const loadingDevicesByStation = ref<Record<string, boolean>>({})
 
 // Date range preset
-const dateRangePreset = ref<string>('current_shift')
+const dateRangePreset = ref<string | null>(null)
 const dateRangePresets = [
   { title: 'Current Shift', value: 'current_shift' },
   { title: 'Today', value: 'today' },
@@ -440,7 +460,16 @@ const lastStationSearchRequestSummary = ref<{
   }>
 } | null>(null)
 
-const stationSearchRunLoading = computed(() => stationSearchInProgress.value || loadingTestItems.value)
+const stationSearchRunLoading = computed(
+  () => stationSearchInProgress.value || loadingTestItems.value,
+)
+
+const hasValidTimeRange = computed(() => {
+  if (!startTime.value || !endTime.value) return false
+  const start = new Date(startTime.value)
+  const end = new Date(endTime.value)
+  return !Number.isNaN(start.getTime()) && !Number.isNaN(end.getTime()) && end > start
+})
 
 const stationSearchPossiblyTruncated = computed(() => possiblyTruncated.value)
 
@@ -578,7 +607,8 @@ async function getDateRangeForPreset(preset: string): Promise<{ start: Date; end
 /**
  * Apply selected date range preset
  */
-async function applyDateRangePreset(preset: string): Promise<void> {
+async function applyDateRangePreset(preset: string | null): Promise<void> {
+  if (!preset) return
   const { start, end } = await getDateRangeForPreset(preset)
   startTime.value = getLocalTimeString(start)
   endTime.value = getLocalTimeString(end)
@@ -758,7 +788,10 @@ function updateSelectedStations(nextSelectedStations: string[]): void {
 function handleStationSelectionConfirm(result: StationSelectionResult): void {
   updateSelectedStations(result.stations)
   stationDeviceIds.value = Object.fromEntries(
-    result.stations.map((stationValue) => [stationValue, [...(result.deviceIds[stationValue] || [])]]),
+    result.stations.map((stationValue) => [
+      stationValue,
+      [...(result.deviceIds[stationValue] || [])],
+    ]),
   )
   stationTestStatus.value = Object.fromEntries(
     result.stations.map((stationValue) => [stationValue, result.testStatus[stationValue] || 'ALL']),
@@ -1596,7 +1629,11 @@ async function runStationSearch() {
   const begintime = new Date(startTime.value)
   const endtime = new Date(endTime.value)
 
-  if (Number.isNaN(begintime.getTime()) || Number.isNaN(endtime.getTime()) || endtime <= begintime) {
+  if (
+    Number.isNaN(begintime.getTime()) ||
+    Number.isNaN(endtime.getTime()) ||
+    endtime <= begintime
+  ) {
     error.value = 'Please select a valid Station Search time range before running the query.'
     return
   }
@@ -1656,7 +1693,8 @@ async function runStationSearch() {
     const resolvedStations = await Promise.all(deviceIdPromises)
 
     if (resolvedStations.length === 0) {
-      error.value = 'No station selections could be resolved for the current Data Explorer Station Search request.'
+      error.value =
+        'No station selections could be resolved for the current Data Explorer Station Search request.'
       return
     }
 
@@ -1676,7 +1714,10 @@ async function runStationSearch() {
 
     stationSearchProgress.value = {
       processed: 0,
-      total: resolvedStations.reduce((total, entry) => total + Math.max(entry.deviceIds.length, 1), 0),
+      total: resolvedStations.reduce(
+        (total, entry) => total + Math.max(entry.deviceIds.length, 1),
+        0,
+      ),
     }
 
     for (const { stationInfo, deviceIds } of resolvedStations) {
@@ -1731,14 +1772,6 @@ async function handleRefresh() {
 // Initialize
 onMounted(async () => {
   await fetchSiteProjects()
-  await applyDateRangePreset(dateRangePreset.value)
-
-  // UPDATED: Set default site based on connected iPLAS server
-  const { selectedServer } = useIplasSettings()
-  const serverId = selectedServer.value?.id?.toUpperCase()
-  if (serverId && uniqueSites.value.includes(serverId) && !selectedSite.value) {
-    selectedSite.value = serverId
-  }
 })
 
 // Cleanup on unmount to free memory

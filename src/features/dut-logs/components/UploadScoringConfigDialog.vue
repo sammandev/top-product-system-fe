@@ -399,11 +399,19 @@ const globalMinScore = ref<number | undefined>(0.65)
 
 const selectedCount = computed(() => selectedItemNames.value.size)
 const hasActiveSelectionMode = computed(() => true)
-const activeSelectionLabel = computed(() => activeSelectionMode.value === 'excluded' ? 'Exclude' : 'Include')
-const activeSelectionActionLabel = computed(() => activeSelectionMode.value === 'excluded' ? 'Exclude' : 'Include')
-const activeSelectionScopeLabel = computed(() => activeSelectionMode.value === 'excluded' ? 'Exclude' : 'Include')
+const activeSelectionLabel = computed(() =>
+  activeSelectionMode.value === 'excluded' ? 'Exclude' : 'Include',
+)
+const activeSelectionActionLabel = computed(() =>
+  activeSelectionMode.value === 'excluded' ? 'Exclude' : 'Include',
+)
+const activeSelectionScopeLabel = computed(() =>
+  activeSelectionMode.value === 'excluded' ? 'Exclude' : 'Include',
+)
 const testItemMap = computed(() => new Map(props.testItems.map((item) => [item.test_item, item])))
-const configMap = computed(() => new Map(scoringConfigs.value.map((config) => [config.test_item_name, config])))
+const configMap = computed(
+  () => new Map(scoringConfigs.value.map((config) => [config.test_item_name, config])),
+)
 const selectedStationValue = computed({
   get: () => selectedStation.value ?? '',
   set: (value: string) => {
@@ -493,15 +501,20 @@ function createDefaultConfig(name: string): RescoreScoringConfig {
   }
 }
 
-function isConfigCustomized(config: RescoreScoringConfig, defaultConfig: RescoreScoringConfig): boolean {
-  return config.scoring_type !== defaultConfig.scoring_type
-    || config.weight !== defaultConfig.weight
-    || (config.policy ?? 'symmetrical') !== (defaultConfig.policy ?? 'symmetrical')
-    || config.target !== defaultConfig.target
-    || config.limit_score !== defaultConfig.limit_score
-    || config.alpha !== defaultConfig.alpha
-    || config.min_score !== defaultConfig.min_score
-    || config.max_deviation !== defaultConfig.max_deviation
+function isConfigCustomized(
+  config: RescoreScoringConfig,
+  defaultConfig: RescoreScoringConfig,
+): boolean {
+  return (
+    config.scoring_type !== defaultConfig.scoring_type ||
+    config.weight !== defaultConfig.weight ||
+    (config.policy ?? 'symmetrical') !== (defaultConfig.policy ?? 'symmetrical') ||
+    config.target !== defaultConfig.target ||
+    config.limit_score !== defaultConfig.limit_score ||
+    config.alpha !== defaultConfig.alpha ||
+    config.min_score !== defaultConfig.min_score ||
+    config.max_deviation !== defaultConfig.max_deviation
+  )
 }
 
 function buildAppliedConfigs(): RescoreScoringConfig[] {
@@ -512,19 +525,20 @@ function buildAppliedConfigs(): RescoreScoringConfig[] {
   return scoringConfigs.value.flatMap((config) => {
     const defaultConfig = createDefaultConfig(config.test_item_name)
     const scopeMode = getItemScopeMode(config.test_item_name)
-    const shouldEmit = hasExplicitIncludeScope
-      || scopeMode !== 'auto'
-      || isConfigCustomized(config, defaultConfig)
+    const shouldEmit =
+      hasExplicitIncludeScope || scopeMode !== 'auto' || isConfigCustomized(config, defaultConfig)
 
     if (!shouldEmit) {
       return []
     }
 
-    return [{
-      ...config,
-      min_score: globalMinScore.value ?? config.min_score,
-      enabled: hasExplicitIncludeScope ? scopeMode === 'included' : scopeMode !== 'excluded',
-    }]
+    return [
+      {
+        ...config,
+        min_score: globalMinScore.value ?? config.min_score,
+        enabled: hasExplicitIncludeScope ? scopeMode === 'included' : scopeMode !== 'excluded',
+      },
+    ]
   })
 }
 
@@ -669,31 +683,46 @@ function getSelectableConfigs(configs: RescoreScoringConfig[]): RescoreScoringCo
 }
 
 const selectableFilteredCount = computed(() => getSelectableConfigs(filteredConfigs.value).length)
-const selectableFilteredCriteriaCount = computed(() =>
-  getSelectableConfigs(filteredConfigs.value).filter((config) => isItemCriteria(config.test_item_name)).length,
+const selectableFilteredCriteriaCount = computed(
+  () =>
+    getSelectableConfigs(filteredConfigs.value).filter((config) =>
+      isItemCriteria(config.test_item_name),
+    ).length,
 )
-const selectableFilteredNonCriteriaCount = computed(() =>
-  getSelectableConfigs(filteredConfigs.value).filter((config) => !isItemCriteria(config.test_item_name)).length,
+const selectableFilteredNonCriteriaCount = computed(
+  () =>
+    getSelectableConfigs(filteredConfigs.value).filter(
+      (config) => !isItemCriteria(config.test_item_name),
+    ).length,
 )
-const selectableDisplayedCriteriaCount = computed(() =>
-  getSelectableConfigs(filteredConfigs.value).filter((config) => isItemCriteria(config.test_item_name)).length,
+const selectableDisplayedCriteriaCount = computed(
+  () =>
+    getSelectableConfigs(filteredConfigs.value).filter((config) =>
+      isItemCriteria(config.test_item_name),
+    ).length,
 )
-const includedScopedCount = computed(() =>
-  scoringConfigs.value.filter((config) => getItemScopeMode(config.test_item_name) === 'included').length,
+const includedScopedCount = computed(
+  () =>
+    scoringConfigs.value.filter((config) => getItemScopeMode(config.test_item_name) === 'included')
+      .length,
 )
-const excludedScopedCount = computed(() =>
-  scoringConfigs.value.filter((config) => getItemScopeMode(config.test_item_name) === 'excluded').length,
+const excludedScopedCount = computed(
+  () =>
+    scoringConfigs.value.filter((config) => getItemScopeMode(config.test_item_name) === 'excluded')
+      .length,
 )
 const activeScopeCount = computed(() => {
   if (!activeSelectionMode.value) {
     return 0
   }
 
-  return scoringConfigs.value.filter((config) => getItemScopeMode(config.test_item_name) === activeSelectionMode.value).length
+  return scoringConfigs.value.filter(
+    (config) => getItemScopeMode(config.test_item_name) === activeSelectionMode.value,
+  ).length
 })
 
-const scoreFailCount = computed(() =>
-  scoringConfigs.value.filter((config) => isItemScoreFail(config.test_item_name)).length,
+const scoreFailCount = computed(
+  () => scoringConfigs.value.filter((config) => isItemScoreFail(config.test_item_name)).length,
 )
 
 function getTestItem(name: string): ParsedTestItemEnhanced | undefined {
@@ -807,7 +836,9 @@ function selectNonCriteriaItems() {
 function clearSelection() {
   const currentMode = activeSelectionMode.value
   if (currentMode) {
-    const names = [...selectedItemNames.value].filter((name) => getItemScopeMode(name) === currentMode)
+    const names = [...selectedItemNames.value].filter(
+      (name) => getItemScopeMode(name) === currentMode,
+    )
     setScopeModes(names, 'auto')
   }
 
@@ -976,9 +1007,8 @@ function applyBulkScoringConfig() {
         c.target = undefined
       }
 
-      c.min_score = bulkMinScore.value === undefined
-        ? undefined
-        : clampNumber(bulkMinScore.value, 0, 10) / 10
+      c.min_score =
+        bulkMinScore.value === undefined ? undefined : clampNumber(bulkMinScore.value, 0, 10) / 10
     }
   })
 
@@ -1022,7 +1052,11 @@ function handleApply() {
   emit('apply', {
     configs: buildAppliedConfigs(),
     deviceScope: [...selectedDevices.value],
-    scopeMode: hasExplicitIncludeScope ? 'include' : hasExplicitExcludeScope ? 'exclude' : 'default',
+    scopeMode: hasExplicitIncludeScope
+      ? 'include'
+      : hasExplicitExcludeScope
+        ? 'exclude'
+        : 'default',
     includedTestItems: scoringConfigs.value
       .filter((config) => getItemScopeMode(config.test_item_name) === 'included')
       .map((config) => config.test_item_name),

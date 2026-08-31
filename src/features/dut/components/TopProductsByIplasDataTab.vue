@@ -15,7 +15,7 @@
       </span>
     </div>
 
-    <AppTabs v-model="searchMode" :items="tabItems" scrollable class="top-products-iplas-tabs">
+    <AppTabs v-model="searchMode" :items="tabItems" class="top-products-iplas-tabs">
       <template #panel-station>
         <TopProductIplasStationContent
           :is-active="searchMode === 'station'"
