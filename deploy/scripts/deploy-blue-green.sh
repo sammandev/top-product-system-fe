@@ -40,12 +40,43 @@ for arg in "$@"; do
 done
 
 require_clean_git_tree() {
+  local allowed_env_output=""
+  local dirty_output=""
+  local path
+  local status_line
   local status_output
 
   status_output="$(git status --porcelain --untracked-files=normal 2>/dev/null || true)"
-  if [ -n "$status_output" ]; then
+
+  while IFS= read -r status_line; do
+    [ -z "$status_line" ] && continue
+    path="${status_line:3}"
+
+    case "$path" in
+      .env|.env.*)
+        case "$path" in
+          *.example|*.sample|*.template)
+            dirty_output+="${dirty_output:+$'\n'}$status_line"
+            ;;
+          *)
+            allowed_env_output+="${allowed_env_output:+$'\n'}$status_line"
+            ;;
+        esac
+        ;;
+      *)
+        dirty_output+="${dirty_output:+$'\n'}$status_line"
+        ;;
+    esac
+  done <<< "$status_output"
+
+  if [ -n "$allowed_env_output" ]; then
+    echo "Allowing local runtime environment file changes:"
+    echo "$allowed_env_output"
+  fi
+
+  if [ -n "$dirty_output" ]; then
     echo "Refusing to deploy with a dirty git tree in $FRONTEND_DIR"
-    echo "$status_output"
+    echo "$dirty_output"
     echo "Commit, stash, or discard the local changes first."
     exit 1
   fi

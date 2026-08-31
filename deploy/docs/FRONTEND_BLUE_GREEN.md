@@ -100,6 +100,9 @@ set +a
 bash ./deploy/scripts/deploy-primevue.sh
 ```
 
+Local changes to root runtime files such as `.env.production` are allowed during preflight.
+Changes to source files and tracked templates such as `.env.production.example` still block deployment.
+
 This will:
 
 - build the inactive frontend slot
