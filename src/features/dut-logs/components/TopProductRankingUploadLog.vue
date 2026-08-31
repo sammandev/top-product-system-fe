@@ -2,7 +2,7 @@
   <div class="top-product-ranking-upload-log">
     <AppDialog
       v-model="fullscreen"
-      width="98vw"
+      width="min(98vw, 100rem)"
       :breakpoints="dialogBreakpoints"
       :showFooter="false"
       sticky-header
@@ -38,26 +38,14 @@
       </template>
 
       <div class="top-product-ranking-upload-log__workspace top-product-ranking-upload-log__workspace--fullscreen">
-        <section class="top-product-ranking-upload-log__dialog-summary-grid">
-          <article class="top-product-ranking-upload-log__stat-card top-product-ranking-upload-log__stat-card--cool">
-            <small>Active View</small>
-            <strong>{{ activeStationLabel }}</strong>
-          </article>
-          <article class="top-product-ranking-upload-log__stat-card">
-            <small>Visible Rows</small>
-            <strong>{{ filteredRankings.length }}</strong>
-          </article>
-          <article class="top-product-ranking-upload-log__stat-card top-product-ranking-upload-log__stat-card--warm">
-            <small>Selected Rows</small>
-            <strong>{{ selectedRankingItems.length }}</strong>
-          </article>
-          <article class="top-product-ranking-upload-log__stat-card" :class="failedRankingCount > 0 ? 'top-product-ranking-upload-log__stat-card--danger' : 'top-product-ranking-upload-log__stat-card--success'">
-            <small>Attention</small>
-            <strong>{{ failedRankingCount }}</strong>
-          </article>
-        </section>
+        <dl class="top-product-ranking-upload-log__dialog-summary-grid">
+          <div><dt>Active View</dt><dd>{{ activeStationLabel }}</dd></div>
+          <div><dt>Visible Rows</dt><dd>{{ filteredRankings.length }}</dd></div>
+          <div><dt>Selected</dt><dd>{{ selectedRankingItems.length }}</dd></div>
+          <div :class="{ 'has-attention': failedRankingCount > 0 }"><dt>Attention</dt><dd>{{ failedRankingCount }}</dd></div>
+        </dl>
 
-        <section class="top-product-ranking-upload-log__station-tabs">
+        <section class="top-product-ranking-upload-log__station-tabs" aria-label="Filter ranking by station">
           <button
             type="button"
             class="top-product-ranking-upload-log__station-tab"
@@ -80,7 +68,7 @@
           </button>
         </section>
 
-        <section class="top-product-ranking-upload-log__filter-grid">
+        <section class="top-product-ranking-upload-log__filter-grid top-product-ranking-upload-log__filter-grid--dialog">
           <label class="top-product-ranking-upload-log__field top-product-ranking-upload-log__field--wide">
             <span>Search</span>
             <input v-model="searchQuery" class="app-themed-input" type="text" placeholder="ISN, device, station, or test date">
@@ -1952,6 +1940,7 @@ function rankingRowClass(row: Record<string, unknown>) {
 
 .top-product-ranking-upload-log__workspace--fullscreen {
   min-height: calc(100vh - 12rem);
+  gap: 0.75rem;
 }
 
 .top-product-ranking-upload-log__stat-grid,
@@ -1965,6 +1954,43 @@ function rankingRowClass(row: Record<string, unknown>) {
 
 .top-product-ranking-upload-log__dialog-summary-grid {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  margin: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.top-product-ranking-upload-log__dialog-summary-grid > div {
+  min-width: 0;
+  padding: 0.7rem 0.9rem;
+  border-left: 1px solid var(--app-border);
+}
+
+.top-product-ranking-upload-log__dialog-summary-grid > div:first-child {
+  border-left: 0;
+}
+
+.top-product-ranking-upload-log__dialog-summary-grid dt {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.top-product-ranking-upload-log__dialog-summary-grid dd {
+  margin: 0.2rem 0 0;
+  overflow: hidden;
+  color: var(--app-ink);
+  font-size: 1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-product-ranking-upload-log__dialog-summary-grid .has-attention dd {
+  color: var(--app-danger);
 }
 
 .top-product-ranking-upload-log__overall-summary-grid {
@@ -2152,6 +2178,27 @@ function rankingRowClass(row: Record<string, unknown>) {
   gap: 0.45rem;
 }
 
+.top-product-ranking-upload-log__filter-grid--dialog {
+  padding: 0.8rem;
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-surface);
+}
+
+.top-product-ranking-upload-log__workspace--fullscreen .top-product-ranking-upload-log__station-tabs {
+  flex-wrap: nowrap;
+  padding-bottom: 0.2rem;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.top-product-ranking-upload-log__workspace--fullscreen .top-product-ranking-upload-log__station-tab {
+  flex: 0 0 auto;
+  min-height: 2.5rem;
+  border-radius: 0.5rem;
+}
+
 .top-product-ranking-upload-log__field--wide {
   grid-column: span 2;
 }
@@ -2177,6 +2224,15 @@ function rankingRowClass(row: Record<string, unknown>) {
   padding: 0.72rem 0.82rem;
   background: var(--app-panel);
   color: var(--app-ink);
+}
+
+.top-product-ranking-upload-log__filter-grid--dialog :deep(.app-select.p-select),
+.top-product-ranking-upload-log__filter-grid--dialog .app-themed-input {
+  width: 100%;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  border-radius: 0.5rem;
+  box-sizing: border-box;
 }
 
 .top-product-ranking-upload-log__station-tab,
@@ -2535,6 +2591,14 @@ function rankingRowClass(row: Record<string, unknown>) {
 
   .top-product-ranking-upload-log__dialog-summary-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .top-product-ranking-upload-log__dialog-summary-grid > div:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .top-product-ranking-upload-log__dialog-summary-grid > div:nth-child(n + 3) {
+    border-top: 1px solid var(--app-border);
   }
 
   .top-product-ranking-upload-log__detail-row {

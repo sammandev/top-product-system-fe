@@ -185,7 +185,6 @@
         <label class="upload-log-comparison__field upload-log-comparison__field--wide">
           <span>ISNs To Compare</span>
           <AppMultiSelect v-model="selectedCompareIsns" :options="compareIsnSelectOptions" placeholder="All detected ISNs" />
-          <small>Leave empty to compare all detected ISNs.</small>
         </label>
 
         <label class="upload-log-comparison__field">
@@ -210,7 +209,9 @@
       <DataTable
         :value="comparisonTableItems"
         paginator
-        :rows="25"
+        :rows="comparisonItemsPerPage"
+        :rowsPerPageOptions="comparisonRowsPerPageOptions"
+        @update:rows="comparisonItemsPerPage = $event"
         dataKey="test_item"
         scrollable
         scrollHeight="840px"
@@ -354,6 +355,8 @@
           :value="comparisonTableItems"
           paginator
           :rows="comparisonItemsPerPage"
+          :rowsPerPageOptions="comparisonRowsPerPageOptions"
+          @update:rows="comparisonItemsPerPage = $event"
           dataKey="test_item"
           scrollable
           scrollHeight="calc(100vh - 18rem)"
@@ -567,6 +570,11 @@ import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import { getErrorMessage } from '@/shared/utils'
 import { downloadUploadLogCriteriaTemplate } from '../utils/criteriaTemplate'
 import {
+  findIplasTestItem,
+  getIplasRecordsForIsn,
+  resolveIplasStationRecord,
+} from '../utils/iplasComparison'
+import {
   buildTopProductWorkbook,
   createTopProductExcelRecordsFromComparison,
   downloadTopProductWorkbook,
@@ -593,7 +601,8 @@ const criteriaBuilderOpen = ref(false)
 const itemFilterType = ref<string>('all')
 const searchQuery = ref('')
 const exportingComparison = ref(false)
-const comparisonItemsPerPage = ref(100)
+const comparisonItemsPerPage = ref(25)
+const comparisonRowsPerPageOptions = [10, 25, 50, 100]
 
 // UPDATED: iPLAS comparison state
 const iplasDataByIsn = ref<Map<string, IplasIsnSearchRecord[]>>(new Map())
@@ -864,19 +873,11 @@ const comparisonTableItems = computed(() => {
       row[`uploaded_score_${idx}`] = perIsn?.score ?? null
 
       // iPLAS data from fetched records
-      const iplasRecords = iplasDataByIsn.value.get(isn)
+      const iplasRecords = getIplasRecordsForIsn(iplasDataByIsn.value, isn)
       if (iplasRecords && iplasRecords.length > 0) {
-        const stationRecord = selectedIplasStation.value
-          ? iplasRecords.find(
-              (r) =>
-                r.display_station_name === selectedIplasStation.value ||
-                r.station_name === selectedIplasStation.value,
-            )
-          : iplasRecords[0]
+        const stationRecord = resolveIplasStationRecord(iplasRecords, selectedIplasStation.value)
         if (stationRecord) {
-          const iplasItem = stationRecord.test_item.find(
-            (t) => t.NAME.toLowerCase() === item.test_item.toLowerCase(),
-          )
+          const iplasItem = findIplasTestItem(stationRecord, item.test_item)
           row[`iplas_val_${idx}`] = iplasItem?.VALUE ?? null
         }
       }
@@ -1063,10 +1064,11 @@ const fetchIplasForComparison = async () => {
     const results = await searchByIsnBatch(isns)
     iplasDataByIsn.value = results
 
-    // Auto-select first available station
-    const stations = iplasStationOptions.value
-    if (stations.length > 0 && !selectedIplasStation.value) {
-      selectedIplasStation.value = stations[0] ?? null
+    if (
+      selectedIplasStation.value &&
+      !iplasStationOptions.value.includes(selectedIplasStation.value)
+    ) {
+      selectedIplasStation.value = null
     }
 
     // Rescore iPLAS data with current scoring configs
@@ -1093,14 +1095,8 @@ const rescoreIplasData = async () => {
   const explicitlyConfigured = new Set(appliedScoringConfigs.value.map((c) => c.test_item_name))
 
   for (const isn of isns) {
-    const records = iplasDataByIsn.value.get(isn) || []
-    const stationRecord = selectedIplasStation.value
-      ? records.find(
-          (r) =>
-            r.display_station_name === selectedIplasStation.value ||
-            r.station_name === selectedIplasStation.value,
-        )
-      : records[0]
+    const records = getIplasRecordsForIsn(iplasDataByIsn.value, isn)
+    const stationRecord = resolveIplasStationRecord(records, selectedIplasStation.value)
 
     if (!stationRecord?.test_item.length) continue
 

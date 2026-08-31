@@ -5,8 +5,15 @@
     @update:modelValue="emit('update:modelValue', $event)">
 
     <div class="criteria-builder-dialog__grid">
-      <div class="criteria-builder-dialog__stack">
-        <AppPanel eyebrow="Rule Editor" title="Add Or Edit Rule" tone="cool" compact-header>
+      <section class="criteria-builder-dialog__section criteria-builder-dialog__section--editor">
+        <header class="criteria-builder-dialog__section-header">
+          <span class="criteria-builder-dialog__section-icon"><Icon icon="mdi:tune-variant" /></span>
+          <div>
+            <p>Rule Editor</p>
+            <h3>{{ editingIndex !== null ? 'Edit Rule' : 'Add Rule' }}</h3>
+          </div>
+        </header>
+
           <div class="criteria-builder-dialog__form-grid">
             <label class="criteria-builder-dialog__field criteria-builder-dialog__field--wide">
               <span>Test Item Pattern</span>
@@ -36,16 +43,38 @@
           <div class="criteria-builder-dialog__actions">
             <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--primary"
               :disabled="!canAddRule" @click="addRule">
+              <Icon :icon="editingIndex !== null ? 'mdi:content-save-outline' : 'mdi:plus'" />
               {{ editingIndex !== null ? 'Update' : 'Add' }} Rule
             </button>
             <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--ghost"
               @click="resetCurrentRule">
+              <Icon icon="mdi:refresh" />
               Clear
             </button>
           </div>
-        </AppPanel>
+      </section>
 
-        <AppPanel eyebrow="Rule Set" :title="`Rules (${rules.length})`" tone="warm" compact-header>
+      <section class="criteria-builder-dialog__section criteria-builder-dialog__section--preview">
+        <header class="criteria-builder-dialog__section-header">
+          <span class="criteria-builder-dialog__section-icon"><Icon icon="mdi:code-json" /></span>
+          <div>
+            <p>Generated Payload</p>
+            <h3>JSON Preview</h3>
+          </div>
+          <span class="criteria-builder-dialog__count">{{ rules.length }} rule{{ rules.length === 1 ? '' : 's' }}</span>
+        </header>
+        <textarea class="criteria-builder-dialog__preview" :value="jsonPreview" readonly rows="18"></textarea>
+      </section>
+
+      <section class="criteria-builder-dialog__section criteria-builder-dialog__section--rules">
+        <header class="criteria-builder-dialog__section-header">
+          <span class="criteria-builder-dialog__section-icon"><Icon icon="mdi:format-list-bulleted" /></span>
+          <div>
+            <p>Rule Set</p>
+            <h3>Rules ({{ rules.length }})</h3>
+          </div>
+        </header>
+
           <div v-if="rules.length > 0" class="criteria-builder-dialog__rule-list">
             <article v-for="(rule, index) in rules" :key="index" class="criteria-builder-dialog__rule-card"
               :class="{ 'is-editing': editingIndex === index }">
@@ -56,10 +85,12 @@
               <div class="criteria-builder-dialog__rule-actions">
                 <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--ghost"
                   @click="editRule(index)">
+                  <Icon icon="mdi:pencil-outline" />
                   Edit
                 </button>
                 <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--danger"
                   @click="removeRule(index)">
+                  <Icon icon="mdi:delete-outline" />
                   Remove
                 </button>
               </div>
@@ -68,22 +99,19 @@
           <div v-else class="criteria-builder-dialog__empty-state">
             No rules added yet. Add your first rule above.
           </div>
-        </AppPanel>
-      </div>
-
-      <AppPanel eyebrow="Generated Payload" title="JSON Preview" tone="success" compact-header>
-        <textarea class="criteria-builder-dialog__preview" :value="jsonPreview" readonly rows="25"></textarea>
-      </AppPanel>
+      </section>
     </div>
 
     <template #footer>
       <div class="criteria-builder-dialog__footer">
         <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--success"
           :disabled="rules.length === 0" @click="downloadFile">
+          <Icon icon="mdi:download" />
           Download JSON File
         </button>
         <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--primary"
           :disabled="rules.length === 0" @click="saveAndUse">
+          <Icon icon="mdi:check" />
           Save & Use
         </button>
         <button type="button" class="criteria-builder-dialog__button criteria-builder-dialog__button--ghost"
@@ -98,7 +126,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref } from 'vue'
-import { AppDialog, AppPanel } from '@/shared'
+import { AppDialog } from '@/shared'
 import { buildUploadLogCriteriaJson, type UploadLogCriteriaRule } from '../utils/criteriaTemplate'
 
 const props = defineProps<{
@@ -296,16 +324,16 @@ const handleClose = () => {
 .criteria-builder-dialog__icon-button,
 .criteria-builder-dialog__button {
   border: 1px solid var(--app-border);
-  border-radius: 999px;
+  border-radius: 0.5rem;
   background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
-  transition: transform 140ms ease, border-color 140ms ease, background 140ms ease;
+  transition: border-color 120ms ease-out, background-color 120ms ease-out;
 }
 
 .criteria-builder-dialog__icon-button:hover,
 .criteria-builder-dialog__button:hover {
-  transform: translateY(-1px);
+  border-color: var(--app-accent);
 }
 
 .criteria-builder-dialog__icon-button {
@@ -317,8 +345,77 @@ const handleClose = () => {
 }
 
 .criteria-builder-dialog__grid {
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: minmax(0, 1.1fr) minmax(20rem, 0.9fr);
+  gap: 0.85rem;
   align-items: stretch;
+}
+
+.criteria-builder-dialog__section {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+}
+
+.criteria-builder-dialog__section--editor {
+  border-left: 3px solid var(--app-accent);
+}
+
+.criteria-builder-dialog__section--preview {
+  background: var(--app-surface);
+}
+
+.criteria-builder-dialog__section--rules {
+  grid-column: 1 / -1;
+}
+
+.criteria-builder-dialog__section-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.criteria-builder-dialog__section-header p,
+.criteria-builder-dialog__section-header h3 {
+  margin: 0;
+}
+
+.criteria-builder-dialog__section-header p {
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.criteria-builder-dialog__section-header h3 {
+  margin-top: 0.15rem;
+  color: var(--app-ink);
+  font-size: 1rem;
+}
+
+.criteria-builder-dialog__section-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.4rem;
+  background: var(--app-info-soft);
+  color: var(--app-info);
+}
+
+.criteria-builder-dialog__count {
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  background: var(--app-panel-strong);
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
 }
 
 .criteria-builder-dialog__stack {
@@ -356,7 +453,7 @@ const handleClose = () => {
 .criteria-builder-dialog__preview {
   width: 100%;
   border: 1px solid var(--app-border);
-  border-radius: 0.9rem;
+  border-radius: 0.5rem;
   background: var(--app-panel);
   color: var(--app-ink);
   padding: 0.82rem 0.95rem;
@@ -378,6 +475,8 @@ const handleClose = () => {
   justify-content: center;
   padding: 0.75rem 1rem;
   font-weight: 700;
+  gap: 0.4rem;
+  min-height: 2.75rem;
 }
 
 .criteria-builder-dialog__button--primary {
@@ -404,15 +503,24 @@ const handleClose = () => {
 
 .criteria-builder-dialog__rule-list {
   display: grid;
-  gap: 0.75rem;
+  gap: 0;
+  max-height: 20rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  overflow-y: auto;
 }
 
 .criteria-builder-dialog__rule-card {
   align-items: flex-start;
-  border: 1px solid var(--app-border);
-  border-radius: 1rem;
+  border: 0;
+  border-top: 1px solid var(--app-border);
+  border-radius: 0;
   background: var(--app-panel);
   padding: 0.85rem 1rem;
+}
+
+.criteria-builder-dialog__rule-card:first-child {
+  border-top: 0;
 }
 
 .criteria-builder-dialog__rule-card.is-editing {
@@ -423,10 +531,12 @@ const handleClose = () => {
 .criteria-builder-dialog__rule-copy {
   display: grid;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 .criteria-builder-dialog__rule-copy strong {
   color: var(--app-ink);
+  overflow-wrap: anywhere;
 }
 
 .criteria-builder-dialog__rule-copy span,
@@ -435,7 +545,8 @@ const handleClose = () => {
 }
 
 .criteria-builder-dialog__preview {
-  min-height: 32rem;
+  min-height: 22rem;
+  height: 100%;
   resize: vertical;
   font-family: 'Courier New', monospace;
   font-size: 0.875rem;
@@ -452,6 +563,39 @@ const handleClose = () => {
 
   .criteria-builder-dialog__field {
     flex-basis: 100%;
+  }
+
+  .criteria-builder-dialog__grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .criteria-builder-dialog__section--rules {
+    grid-column: 1;
+  }
+
+  .criteria-builder-dialog__preview {
+    min-height: 14rem;
+  }
+}
+
+@media (max-width: 640px) {
+  .criteria-builder-dialog__footer,
+  .criteria-builder-dialog__rule-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .criteria-builder-dialog__button {
+    width: 100%;
+  }
+
+  .criteria-builder-dialog__section-header {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .criteria-builder-dialog__count {
+    grid-column: 2;
+    justify-self: start;
   }
 }
 </style>
