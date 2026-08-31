@@ -678,11 +678,28 @@ watch(scoreFilterType, (value) => {
 .top-product-ranking__field input,
 .top-product-ranking__field select {
   width: 100%;
+  height: 2.75rem;
+  box-sizing: border-box;
   border: 1px solid var(--app-border);
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   background: var(--app-panel);
   color: var(--app-ink);
   padding: 0.74rem 0.85rem;
+  font: inherit;
+}
+
+.top-product-ranking__field :deep(.app-select.p-select) {
+  width: 100%;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  border-radius: 0.5rem;
+  box-sizing: border-box;
+}
+
+.top-product-ranking__field :deep(.app-select .p-select-label) {
+  display: flex;
+  align-items: center;
+  padding-block: 0;
 }
 
 .top-product-ranking__field input:focus,

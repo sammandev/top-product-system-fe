@@ -4,7 +4,7 @@
     width="min(94vw, 56rem)"
     :breakpoints="dialogBreakpoints"
     title="Score Breakdown"
-    description="Inspect the active formula, thresholds, and calculation inputs for this test item."
+    description="Formula, inputs, and final score for selected test item."
     class="score-breakdown-dialog"
   >
 
@@ -23,9 +23,9 @@
           <strong :class="getScoreColorClass(item.score)">{{ item.score?.toFixed(2) }}</strong>
         </article>
         <article class="score-breakdown-dialog__summary-card">
-          <small>Scoring Method</small>
+          <small>Category</small>
           <span class="score-breakdown-dialog__pill" :class="getCategoryToneClass(item.score_breakdown.category || '')">
-            {{ item.score_breakdown.method }}
+            {{ item.score_breakdown.category || 'General' }}
           </span>
         </article>
       </section>
@@ -152,15 +152,6 @@
         </div>
       </section>
 
-      <div class="score-breakdown-dialog__footer">
-        <button
-          type="button"
-          class="score-breakdown-dialog__button score-breakdown-dialog__button--ghost"
-          @click="dialogOpen = false"
-        >
-          Close
-        </button>
-      </div>
     </div>
   </AppDialog>
 </template>
@@ -500,29 +491,36 @@ const getDeviationColorClass = (deviation: number): string => {
 .score-breakdown-dialog__body {
   display: grid;
   gap: 1rem;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
 }
 
 .score-breakdown-dialog__summary-grid {
   display: grid;
-  gap: 0.85rem;
-  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  grid-column: 1 / -1;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+  overflow: hidden;
 }
 
-.score-breakdown-dialog__summary-card,
 .score-breakdown-dialog__panel {
   border: 1px solid var(--app-border);
-  border-radius: 1.15rem;
+  border-radius: 0.5rem;
   background: var(--app-panel);
 }
 
 .score-breakdown-dialog__summary-card {
   display: grid;
   gap: 0.35rem;
-  padding: 1rem;
+  min-width: 0;
+  padding: 0.8rem 1rem;
+  border-left: 1px solid var(--app-border);
 }
 
-.score-breakdown-dialog__summary-card--highlight {
-  background: linear-gradient(145deg, rgba(15, 118, 110, 0.12), var(--app-panel));
+.score-breakdown-dialog__summary-card:first-child {
+  border-left: 0;
 }
 
 .score-breakdown-dialog__summary-card small,
@@ -533,6 +531,13 @@ const getDeviationColorClass = (deviation: number): string => {
 .score-breakdown-dialog__summary-card strong,
 .score-breakdown-dialog__detail-row strong {
   color: var(--app-ink);
+}
+
+.score-breakdown-dialog__summary-card strong {
+  overflow: hidden;
+  font-variant-numeric: tabular-nums;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .score-breakdown-dialog__panel {
@@ -550,7 +555,7 @@ const getDeviationColorClass = (deviation: number): string => {
 .score-breakdown-dialog__panel-header {
   justify-content: space-between;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .score-breakdown-dialog__panel-title,
@@ -574,6 +579,7 @@ const getDeviationColorClass = (deviation: number): string => {
 .score-breakdown-dialog__formula-surface {
   background: var(--app-surface);
   border: 1px solid var(--app-border);
+  overflow-x: auto;
 }
 
 .score-breakdown-dialog__formula-surface--custom {
@@ -618,7 +624,7 @@ const getDeviationColorClass = (deviation: number): string => {
 .score-breakdown-dialog__detail-table {
   display: grid;
   border: 1px solid var(--app-border);
-  border-radius: 1rem;
+  border-radius: 0.5rem;
   overflow: hidden;
 }
 
@@ -626,7 +632,7 @@ const getDeviationColorClass = (deviation: number): string => {
   display: grid;
   grid-template-columns: minmax(11rem, 15rem) 1fr;
   gap: 1rem;
-  padding: 0.85rem 1rem;
+  padding: 0.65rem 0.8rem;
   border-top: 1px solid var(--app-border);
   background: var(--app-panel);
 }
@@ -644,7 +650,7 @@ const getDeviationColorClass = (deviation: number): string => {
 }
 
 .formula-container {
-  min-height: 80px;
+  min-height: 5rem;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -697,6 +703,38 @@ const getDeviationColorClass = (deviation: number): string => {
 
   .score-breakdown-dialog__detail-row {
     grid-template-columns: 1fr;
+  }
+
+  .score-breakdown-dialog__body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .score-breakdown-dialog__summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .score-breakdown-dialog__summary-card:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .score-breakdown-dialog__summary-card:nth-child(n + 3) {
+    border-top: 1px solid var(--app-border);
+  }
+}
+
+@media (max-width: 480px) {
+  .score-breakdown-dialog__summary-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .score-breakdown-dialog__summary-card,
+  .score-breakdown-dialog__summary-card:nth-child(n + 3) {
+    border-top: 1px solid var(--app-border);
+    border-left: 0;
+  }
+
+  .score-breakdown-dialog__summary-card:first-child {
+    border-top: 0;
   }
 }
 </style>
