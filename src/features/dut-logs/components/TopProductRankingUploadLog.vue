@@ -558,6 +558,7 @@
     </AppDialog>
 
     <AppPanel
+      class="top-product-ranking-upload-log__panel"
       eyebrow="Upload Log Ranking"
       title="Top Product Ranking By Overall Score"
       description="Rank uploaded DUT logs, save winners, and drill into test-item details."
@@ -1894,6 +1895,13 @@ function rankingRowClass(row: Record<string, unknown>) {
   gap: 1rem;
 }
 
+.top-product-ranking-upload-log__panel {
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
 .top-product-ranking-upload-log__dialog-header,
 .top-product-ranking-upload-log__section-header {
   display: flex;
@@ -1968,7 +1976,7 @@ function rankingRowClass(row: Record<string, unknown>) {
   display: grid;
   gap: 0.35rem;
   border: 1px solid var(--app-border);
-  border-radius: 0.85rem;
+  border-radius: 0.5rem;
   padding: 0.9rem;
   background: var(--app-panel);
 }

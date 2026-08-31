@@ -1,7 +1,7 @@
 <template>
   <AppDialog
     v-model="dialogOpen"
-    width="min(94vw, 56rem)"
+    width="min(94vw, 64rem)"
     :breakpoints="dialogBreakpoints"
     title="Score Breakdown"
     description="Formula, inputs, and final score for selected test item."
@@ -9,11 +9,12 @@
   >
 
     <div v-if="item && item.score_breakdown" class="score-breakdown-dialog__body">
+      <section class="score-breakdown-dialog__test-item">
+        <small>Test Item</small>
+        <strong>{{ item.test_item }}</strong>
+      </section>
+
       <section class="score-breakdown-dialog__summary-grid">
-        <article class="score-breakdown-dialog__summary-card score-breakdown-dialog__summary-card--highlight">
-          <small>Test Item</small>
-          <strong>{{ item.test_item }}</strong>
-        </article>
         <article class="score-breakdown-dialog__summary-card">
           <small>Actual Value</small>
           <strong>{{ item.value }}</strong>
@@ -491,13 +492,35 @@ const getDeviationColorClass = (deviation: number): string => {
 .score-breakdown-dialog__body {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.score-breakdown-dialog__test-item {
+  display: grid;
+  gap: 0.35rem;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-accent);
+  border-radius: 0.5rem;
+  background: var(--app-surface);
+}
+
+.score-breakdown-dialog__test-item small {
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.score-breakdown-dialog__test-item strong {
+  color: var(--app-ink);
+  font-size: 1rem;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .score-breakdown-dialog__summary-grid {
   display: grid;
-  grid-column: 1 / -1;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0;
   border: 1px solid var(--app-border);
   border-radius: 0.5rem;
@@ -705,36 +728,24 @@ const getDeviationColorClass = (deviation: number): string => {
     grid-template-columns: 1fr;
   }
 
-  .score-breakdown-dialog__body {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .score-breakdown-dialog__summary-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .score-breakdown-dialog__summary-card:nth-child(odd) {
-    border-left: 0;
-  }
-
-  .score-breakdown-dialog__summary-card:nth-child(n + 3) {
-    border-top: 1px solid var(--app-border);
-  }
-}
-
-@media (max-width: 480px) {
   .score-breakdown-dialog__summary-grid {
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .score-breakdown-dialog__summary-card,
-  .score-breakdown-dialog__summary-card:nth-child(n + 3) {
+  .score-breakdown-dialog__summary-card {
     border-top: 1px solid var(--app-border);
     border-left: 0;
   }
 
   .score-breakdown-dialog__summary-card:first-child {
     border-top: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .score-breakdown-dialog__panel,
+  .score-breakdown-dialog__test-item {
+    padding: 0.8rem;
   }
 }
 </style>

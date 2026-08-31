@@ -1,17 +1,21 @@
 <template>
   <section class="upload-log-shell">
     <AppPanel
+      class="upload-log-shell__workspace"
       eyebrow="Upload Workspace"
-      title="Upload And Configure"
-      description="Stage raw DUT logs, apply optional JSON criteria, then run the existing upload-log analysis and ranking workflow."
+      title="Analyze Upload Logs"
+      description="Add DUT logs, optionally adjust criteria and scoring, then run analysis."
       tone="cool"
     >
       <div class="upload-log-shell__grid">
-        <AppPanel
-          eyebrow="Input Logs"
-          title="Upload Test Logs"
-          description="Accepts .txt, .zip, .rar, and .7z files. Archive inputs continue through the existing compare pipeline."
-        >
+        <section class="upload-log-shell__input-section">
+          <header class="upload-log-shell__section-header">
+            <span class="upload-log-shell__step">1</span>
+            <div>
+              <h3>Test Logs</h3>
+              <p>Upload TXT, ZIP, RAR, or 7Z files.</p>
+            </div>
+          </header>
           <AppFilePicker
             v-model="logFiles"
             label="Test log files"
@@ -25,20 +29,20 @@
           <p v-if="logFiles && logFiles.length > 0" class="upload-log-shell__helper-text">
             {{ logFiles.length }} {{ logFiles.length === 1 ? 'file' : 'files' }} selected
           </p>
-        </AppPanel>
+        </section>
 
-        <AppPanel
-          eyebrow="Optional Criteria"
-          title="Custom Criteria"
-          description="Upload a JSON criteria file, or generate one with the builder before analysis."
-          tone="warm"
-          splitHeader
-        >
-          <template #header-aside>
+        <section class="upload-log-shell__input-section">
+          <header class="upload-log-shell__section-header upload-log-shell__section-header--split">
+            <span class="upload-log-shell__step">2</span>
+            <div>
+              <h3>Criteria</h3>
+              <p>Optional JSON rules. Empty uses default criteria.</p>
+            </div>
             <button type="button" class="upload-log-shell__link" @click="downloadCriteriaTemplate">
+              <Icon icon="mdi:download" />
               Download template
             </button>
-          </template>
+          </header>
 
           <AppFilePicker
             v-model="criteriaFile"
@@ -60,9 +64,10 @@
             :disabled="loading"
             @click="openCriteriaBuilder"
           >
+            <Icon icon="mdi:tune-variant" />
             Build Criteria
           </button>
-        </AppPanel>
+        </section>
       </div>
 
       <div class="upload-log-shell__actions">
@@ -72,6 +77,7 @@
           :disabled="!canAnalyze || loading"
           @click="handleAnalyze"
         >
+          <Icon :icon="loading ? 'mdi:loading' : 'mdi:chart-box-outline'" :class="{ 'upload-log-shell__spin': loading }" />
           {{ loading ? 'Analyzing...' : 'Analyze Log(s)' }}
         </button>
 
@@ -81,6 +87,7 @@
           :disabled="!hasFiles || loading"
           @click="handleConfigureScoring"
         >
+          <Icon :icon="extractingItems ? 'mdi:loading' : 'mdi:function-variant'" :class="{ 'upload-log-shell__spin': extractingItems }" />
           <span>{{ extractingItems ? 'Preparing...' : 'Configure Scoring' }}</span>
           <span v-if="appliedScoringConfigs.length > 0" class="upload-log-shell__pill">
             {{ appliedScoringConfigs.length }}
@@ -93,6 +100,7 @@
           :disabled="loading"
           @click="handleReset"
         >
+          <Icon icon="mdi:refresh" />
           Reset
         </button>
       </div>
@@ -134,6 +142,7 @@
 
   <section v-if="hasResults && isMultipleFiles" class="upload-log-comparison-section">
     <AppPanel
+      class="upload-log-comparison__panel"
       eyebrow="Cross-Log Comparison"
       title="Test Item Comparison"
       description="Compare uploaded values and rescored iPLAS values across the current log batch."
@@ -152,9 +161,11 @@
             :disabled="exportingComparison"
             @click="exportComparisonToExcel"
           >
+            <Icon icon="mdi:microsoft-excel" />
             {{ exportingComparison ? 'Exporting...' : 'Export' }}
           </button>
           <button type="button" class="upload-log-comparison__ghost-button" @click="comparisonFullscreen = true">
+            <Icon icon="mdi:fullscreen" />
             Fullscreen
           </button>
         </div>
@@ -292,14 +303,11 @@
     </AppPanel>
   </section>
 
-  <div v-if="comparisonFullscreen" class="upload-log-comparison-overlay" role="dialog" aria-modal="true">
-    <div class="upload-log-comparison-overlay__backdrop" @click="comparisonFullscreen = false" />
-    <section class="upload-log-comparison-overlay__panel">
-      <header class="upload-log-comparison-overlay__header">
-        <div>
-          <p class="upload-log-comparison-overlay__eyebrow">Fullscreen Comparison</p>
-          <h2>Test Item Comparison</h2>
-        </div>
+  <AppDialog v-model="comparisonFullscreen" width="98vw" :breakpoints="{ '960px': '100vw' }"
+    :show-footer="false" sticky-header title="Test Item Comparison"
+    description="Compare uploaded and iPLAS values across detected ISNs."
+    class="upload-log-comparison__dialog">
+      <template #header-actions>
         <div class="upload-log-comparison__header-actions">
           <span class="upload-log-comparison__pill upload-log-comparison__pill--info">{{ totalFiles }} files</span>
           <button
@@ -308,13 +316,11 @@
             :disabled="exportingComparison"
             @click="exportComparisonToExcel"
           >
+            <Icon icon="mdi:microsoft-excel" />
             {{ exportingComparison ? 'Exporting...' : 'Export' }}
           </button>
-          <button type="button" class="upload-log-comparison__ghost-button" @click="comparisonFullscreen = false">
-            Close
-          </button>
         </div>
-      </header>
+      </template>
 
       <div class="upload-log-comparison__filters upload-log-comparison__filters--fullscreen">
         <label class="upload-log-comparison__field">
@@ -343,7 +349,7 @@
         </label>
       </div>
 
-      <div class="upload-log-comparison-overlay__table-wrap">
+      <div class="upload-log-comparison__table-wrap">
         <DataTable
           :value="comparisonTableItems"
           paginator
@@ -438,8 +444,7 @@
           </template>
         </DataTable>
       </div>
-    </section>
-  </div>
+  </AppDialog>
 
   <AppDialog
     v-model="showBreakdownDialog"
@@ -530,6 +535,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import Column from 'primevue/column'
 import ColumnGroup from 'primevue/columngroup'
 import DataTable from 'primevue/datatable'
@@ -1363,10 +1369,77 @@ watch(selectedDeviceScope, async () => {
   gap: 1rem;
 }
 
+.upload-log-shell__workspace,
+.upload-log-comparison__panel {
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
 .upload-log-shell__grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+}
+
+.upload-log-shell__input-section {
+  display: grid;
+  align-content: start;
+  gap: 1rem;
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-surface);
+}
+
+.upload-log-shell__input-section:first-child {
+  border-left-color: var(--app-accent);
+}
+
+.upload-log-shell__section-header {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0.75rem;
+}
+
+.upload-log-shell__section-header--split {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.upload-log-shell__section-header h3,
+.upload-log-shell__section-header p {
+  margin: 0;
+}
+
+.upload-log-shell__section-header h3 {
+  color: var(--app-ink);
+  font-size: 1rem;
+}
+
+.upload-log-shell__section-header p {
+  margin-top: 0.2rem;
+  color: var(--app-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+
+.upload-log-shell__step {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 50%;
+  background: var(--app-panel);
+  color: var(--app-accent);
+  font-size: 0.75rem;
+  font-weight: 800;
+  line-height: 1;
 }
 
 .upload-log-shell__actions,
@@ -1380,6 +1453,8 @@ watch(selectedDeviceScope, async () => {
   display: grid;
   grid-template-columns: minmax(0, 6fr) minmax(0, 4fr) minmax(8rem, 2fr);
   gap: 0.75rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--app-border);
 }
 
 .upload-log-shell__helper-text {
@@ -1412,17 +1487,17 @@ watch(selectedDeviceScope, async () => {
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  min-height: 2.85rem;
+  min-height: 2.75rem;
   padding: 0.78rem 1rem;
-  border-radius: 0.95rem;
+  border-radius: 0.5rem;
   border: 1px solid transparent;
   cursor: pointer;
-  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  transition: border-color 120ms ease-out, background-color 120ms ease-out;
 }
 
 .upload-log-shell__ghost-button:hover:not(:disabled),
 .upload-log-shell__primary-button:hover:not(:disabled) {
-  transform: translateY(-1px);
+  border-color: var(--app-accent);
 }
 
 .upload-log-shell__ghost-button:disabled,
@@ -1435,13 +1510,11 @@ watch(selectedDeviceScope, async () => {
   border-color: var(--app-border);
   background: var(--app-panel);
   color: var(--app-ink);
-  box-shadow: var(--app-shadow-soft);
 }
 
 .upload-log-shell__primary-button {
-  background: linear-gradient(135deg, #0f766e, #2860a3);
-  color: white;
-  box-shadow: 0 16px 30px rgba(15, 118, 110, 0.18);
+  background: var(--app-accent);
+  color: var(--app-canvas);
 }
 
 .upload-log-shell__action-button--analyze,
@@ -1466,8 +1539,7 @@ watch(selectedDeviceScope, async () => {
 
 .upload-log-shell__notice,
 .upload-log-shell__summary {
-  border: 1px solid var(--app-border);
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
 }
 
 .upload-log-shell__notice {
@@ -1490,11 +1562,14 @@ watch(selectedDeviceScope, async () => {
 }
 
 .upload-log-shell__summary {
-  padding: 1rem;
-  background: var(--app-panel);
+  min-width: 0;
 }
 
 .upload-log-shell__link {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  min-height: 2.75rem;
   border: 0;
   background: transparent;
   color: var(--app-accent);
@@ -1508,8 +1583,7 @@ watch(selectedDeviceScope, async () => {
 
 .upload-log-comparison__header-actions,
 .upload-log-comparison__filters,
-.upload-log-breakdown__summary-grid,
-.upload-log-comparison-overlay__header {
+.upload-log-breakdown__summary-grid {
   display: flex;
   gap: 0.75rem;
 }
@@ -1539,16 +1613,15 @@ watch(selectedDeviceScope, async () => {
   min-height: 2.65rem;
   padding: 0.72rem 0.95rem;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
+  border-radius: 0.5rem;
   background: var(--app-panel);
   color: var(--app-ink);
   cursor: pointer;
-  box-shadow: var(--app-shadow-soft);
-  transition: transform 0.18s ease, box-shadow 0.18s ease, opacity 0.18s ease;
+  transition: border-color 120ms ease-out, background-color 120ms ease-out, opacity 120ms ease-out;
 }
 
 .upload-log-comparison__ghost-button:hover:not(:disabled) {
-  transform: translateY(-1px);
+  border-color: var(--app-accent);
 }
 
 .upload-log-comparison__ghost-button:disabled {
@@ -1574,6 +1647,11 @@ watch(selectedDeviceScope, async () => {
 
 .upload-log-comparison__filters {
   flex-wrap: wrap;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-surface);
 }
 
 .upload-log-comparison__field {
@@ -1590,7 +1668,6 @@ watch(selectedDeviceScope, async () => {
 .upload-log-comparison__field span,
 .upload-log-breakdown__summary-grid span,
 .upload-log-breakdown__table td:first-child,
-.upload-log-comparison-overlay__eyebrow,
 .upload-log-breakdown__eyebrow {
   color: var(--app-muted);
   font-size: 0.76rem;
@@ -1602,12 +1679,23 @@ watch(selectedDeviceScope, async () => {
 .upload-log-comparison__field select,
 .upload-log-comparison__field input {
   width: 100%;
+  height: 2.75rem;
+  box-sizing: border-box;
   border: 1px solid var(--app-border);
-  border-radius: 0.95rem;
+  border-radius: 0.5rem;
   padding: 0.76rem 0.9rem;
   font: inherit;
   color: var(--app-ink);
   background: var(--app-panel-strong);
+}
+
+.upload-log-comparison__field :deep(.app-select.p-select),
+.upload-log-comparison__field :deep(.app-multi-select.p-select) {
+  width: 100%;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  border-radius: 0.5rem;
+  box-sizing: border-box;
 }
 
 .upload-log-comparison__field select[multiple] {
@@ -1640,11 +1728,20 @@ watch(selectedDeviceScope, async () => {
 }
 
 .upload-log-comparison__table :deep(.p-datatable) {
-  border-radius: 1.25rem;
+  border-radius: 0.5rem;
   overflow: hidden;
   border: 1px solid var(--app-border);
   background: var(--app-panel);
-  box-shadow: var(--app-shadow-soft);
+}
+
+.upload-log-shell__spin {
+  animation: upload-log-shell-spin 0.8s linear infinite;
+}
+
+@keyframes upload-log-shell-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .upload-log-comparison__table :deep(.p-datatable-header),
@@ -1673,39 +1770,6 @@ watch(selectedDeviceScope, async () => {
   text-align: left;
 }
 
-.upload-log-comparison-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 80;
-}
-
-.upload-log-comparison-overlay__backdrop {
-  position: absolute;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.48);
-  backdrop-filter: blur(6px);
-}
-
-.upload-log-comparison-overlay__panel {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  gap: 1rem;
-  height: calc(100vh - 2rem);
-  margin: 1rem;
-  padding: 1rem;
-  border: 1px solid var(--app-border);
-  border-radius: 0.75rem;
-  background: var(--app-panel);
-  box-shadow: var(--app-shadow);
-}
-
-.upload-log-comparison-overlay__header {
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.upload-log-comparison-overlay__header h2,
 .upload-log-breakdown__header h2 {
   margin: 0.2rem 0 0;
   color: var(--app-ink);
@@ -1715,8 +1779,9 @@ watch(selectedDeviceScope, async () => {
   padding: 0 0.1rem;
 }
 
-.upload-log-comparison-overlay__table-wrap {
+.upload-log-comparison__table-wrap {
   min-height: 0;
+  overflow: hidden;
 }
 
 .upload-log-breakdown__header {
@@ -1824,7 +1889,6 @@ watch(selectedDeviceScope, async () => {
 @media (max-width: 720px) {
   .upload-log-shell__notice,
   .upload-log-comparison__header-actions,
-  .upload-log-comparison-overlay__header,
   .upload-log-breakdown__header {
     flex-direction: column;
     align-items: stretch;
@@ -1834,15 +1898,20 @@ watch(selectedDeviceScope, async () => {
     grid-template-columns: 1fr;
   }
 
+  .upload-log-shell__section-header--split {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .upload-log-shell__section-header--split .upload-log-shell__link {
+    grid-column: 2;
+    justify-self: start;
+  }
+
   .upload-log-shell__ghost-button,
   .upload-log-shell__primary-button,
   .upload-log-comparison__ghost-button {
     width: 100%;
   }
 
-  .upload-log-comparison-overlay__panel {
-    height: calc(100vh - 1rem);
-    margin: 0.5rem;
-  }
 }
 </style>
