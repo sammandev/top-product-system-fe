@@ -43,6 +43,16 @@
           </div>
 
           <section v-if="getStationRanking(String(item.value)).length > 0" class="top-product-ranking__workspace">
+            <header class="top-product-ranking__filter-header">
+              <div>
+                <strong>Filter station ranking</strong>
+                <span>Showing {{ filteredRanking.length }} of {{ getStationRanking(String(item.value)).length }} DUTs</span>
+              </div>
+              <button v-if="hasActiveFilters" type="button"
+                class="top-product-ranking__button top-product-ranking__button--ghost" @click="clearAllFilters">
+                Clear filters
+              </button>
+            </header>
             <div class="top-product-ranking__filter-grid">
               <label class="top-product-ranking__field top-product-ranking__field--wide">
                 <span>Search</span>
@@ -99,18 +109,11 @@
               <button v-if="siteFilter" type="button" class="top-product-ranking__token" @click="siteFilter = null">
                 Site: {{ siteFilter }}
               </button>
-              <button type="button" class="top-product-ranking__button top-product-ranking__button--ghost" @click="clearAllFilters">
-                Clear All
-              </button>
             </div>
 
             <div v-if="filteredRanking.length === 0" class="top-product-ranking__notice top-product-ranking__notice--info">
               No results match the current filters.
             </div>
-            <p v-else class="top-product-ranking__results-copy">
-              Showing {{ filteredRanking.length }} of {{ getStationRanking(String(item.value)).length }} DUT(s)
-            </p>
-
             <AppDataGrid
               :columns="rankingGridColumns"
               :rows="filteredRankingRows"
@@ -119,6 +122,7 @@
               :rowsPerPage="10"
               :rowsPerPageOptions="rowsPerPageOptions"
               scrollHeight="40rem"
+              :table-style="{ minWidth: '64rem' }"
               :rowClass="getRankingRowClass"
               emptyMessage="No ranking rows available for this station."
               @row-click="handleGridRowClick($event, String(item.value))"
@@ -577,6 +581,39 @@ watch(scoreFilterType, (value) => {
   min-width: 0;
 }
 
+.top-product-ranking__workspace {
+  gap: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.top-product-ranking__filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+.top-product-ranking__filter-header strong,
+.top-product-ranking__filter-header span {
+  display: block;
+}
+
+.top-product-ranking__filter-header strong {
+  color: var(--app-ink);
+}
+
+.top-product-ranking__filter-header span {
+  margin-top: 0.15rem;
+  color: var(--app-muted);
+  font-size: 0.76rem;
+}
+
 .top-product-ranking__summary-pills,
 .top-product-ranking__station-pills,
 .top-product-ranking__active-filters {
@@ -588,10 +625,7 @@ watch(scoreFilterType, (value) => {
   justify-content: space-between;
   gap: 1rem;
   align-items: flex-start;
-  border: 1px solid var(--app-border);
-  border-radius: 0.7rem;
-  background: var(--app-panel);
-  padding: 0.9rem 1rem;
+  padding: 0.25rem 0 0;
 }
 
 .top-product-ranking__section-eyebrow,
@@ -615,6 +649,8 @@ watch(scoreFilterType, (value) => {
 
 .top-product-ranking__filter-grid {
   grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  align-items: end;
+  padding: 1rem;
 }
 
 .top-product-ranking__field {
@@ -663,8 +699,8 @@ watch(scoreFilterType, (value) => {
 }
 
 .top-product-ranking__pill--primary {
-  background: rgba(40, 96, 163, 0.12);
-  color: #1f4e86;
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .top-product-ranking__pill--success,
@@ -675,20 +711,20 @@ watch(scoreFilterType, (value) => {
 
 .top-product-ranking__pill--warning,
 .top-product-ranking__score-pill--warning {
-  background: rgba(184, 118, 38, 0.16);
-  color: #8f5314;
+  background: var(--app-warning-soft);
+  color: var(--app-warning);
 }
 
 .top-product-ranking__pill--danger,
 .top-product-ranking__score-pill--danger,
 .top-product-ranking__rank-pill--danger {
-  background: rgba(189, 64, 64, 0.14);
-  color: #8f2020;
+  background: var(--app-danger-soft);
+  color: var(--app-danger);
 }
 
 .top-product-ranking__pill--neutral {
   background: rgba(120, 129, 143, 0.12);
-  color: #4f5d6d;
+  color: var(--app-muted);
 }
 
 .top-product-ranking__score-pill,
@@ -697,8 +733,8 @@ watch(scoreFilterType, (value) => {
 }
 
 .top-product-ranking__score-pill--primary {
-  background: rgba(40, 96, 163, 0.12);
-  color: #1f4e86;
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .top-product-ranking__score-pill--lime {
@@ -735,16 +771,17 @@ watch(scoreFilterType, (value) => {
 .top-product-ranking__token {
   border: 1px solid var(--app-border);
   background: var(--app-panel);
-  color: #4f5d6d;
+  color: var(--app-muted);
   cursor: pointer;
 }
 
 .top-product-ranking__button {
+  min-height: 2.75rem;
   padding: 0.72rem 0.95rem;
 }
 
 .top-product-ranking__button--ghost {
-  border-radius: 999px;
+  border-radius: 0.7rem;
 }
 
 .top-product-ranking__token {
@@ -757,8 +794,9 @@ watch(scoreFilterType, (value) => {
 }
 
 .top-product-ranking__notice--info {
-  background: rgba(40, 96, 163, 0.08);
-  color: #1f4e86;
+  margin: 0 1rem 1rem;
+  background: var(--app-info-soft);
+  color: var(--app-info);
 }
 
 .top-product-ranking__workspace :deep(.p-datatable-table-container),
@@ -814,6 +852,11 @@ watch(scoreFilterType, (value) => {
 
   .top-product-ranking__field--wide {
     grid-column: span 1;
+  }
+
+  .top-product-ranking__filter-header {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
 </style>

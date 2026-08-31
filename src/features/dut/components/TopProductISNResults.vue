@@ -7,6 +7,8 @@
       fullscreen-width="98vw"
       :breakpoints="dialogBreakpoints"
       fullscreenable
+      :show-footer="false"
+      sticky-header
       title="Measurement Details"
       description="Review station measurements and scores."
       class="top-product-isn-results__dialog"
@@ -199,7 +201,7 @@
           </label>
         </section>
 
-        <div class="top-product-isn-results__table-shell">
+        <div v-if="measurementContentReady" class="top-product-isn-results__table-shell">
           <DataTable
             v-if="selectedMeasurement"
             :value="filteredMeasurements"
@@ -311,16 +313,24 @@
             </template>
           </DataTable>
         </div>
+        <div v-else class="top-product-isn-results__dialog-loading">
+          <Icon icon="mdi:loading" />
+          <span>Preparing measurement table...</span>
+        </div>
       </div>
     </AppDialog>
 
     <AppDialog
       v-model="comparisonFullscreen"
-      width="96vw"
+      width="min(96vw, 90rem)"
       :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
       :title="`Comparison: ${selectedCompareStation ? comparisonStationTitle : 'Select a Station'}`"
       description="Compare measured values and scores across DUTs."
+      :show-footer="false"
+      fullscreenable
+      sticky-header
       class="top-product-isn-results__dialog"
+      @show="handleComparisonDialogShown"
     >
 
       <div class="top-product-isn-results__comparison-shell top-product-isn-results__comparison-shell--fullscreen">
@@ -355,11 +365,12 @@
           </label>
         </section>
 
-        <div v-if="selectedCompareStation && filteredComparisonData.length > 0" class="top-product-isn-results__table-shell">
+        <div v-if="comparisonContentReady && selectedCompareStation && filteredComparisonData.length > 0"
+          class="top-product-isn-results__table-shell">
           <DataTable
             :value="filteredComparisonData"
             paginator
-            :rows="50"
+            :rows="25"
             dataKey="test_item"
             scrollable
             scrollHeight="calc(100vh - 22rem)"
@@ -440,6 +451,10 @@
             </template>
           </DataTable>
         </div>
+        <div v-else-if="!comparisonContentReady" class="top-product-isn-results__dialog-loading">
+          <Icon icon="mdi:loading" />
+          <span>Preparing comparison table...</span>
+        </div>
         <div v-else class="top-product-isn-results__empty-state">
           <Icon icon="mdi:table-search" />
           <strong>{{ selectedCompareStation ? 'No comparison rows available' : 'Select a station to compare DUTs' }}</strong>
@@ -460,35 +475,34 @@
       :category-formulas="props.categoryFormulas"
     />
 
-    <AppPanel
-      eyebrow="Results"
-      title="Analysis Results"
-      :description="`${enhancedResults.length} DUT ${enhancedResults.length === 1 ? 'result' : 'results'} ready for ranking and drilldown.`"
-      tone="cool"
-      splitHeader
-    >
-      <template #header-aside>
+    <section class="top-product-isn-results__overview">
+      <header class="top-product-isn-results__section-header">
+        <div>
+          <p>Results</p>
+          <h2>Analysis Results</h2>
+          <span>{{ enhancedResults.length }} DUT {{ enhancedResults.length === 1 ? 'result' : 'results' }} ready for review.</span>
+        </div>
         <button type="button" class="top-product-isn-results__primary-button" @click="$emit('export')">
           <Icon icon="mdi:download" />
           <span>Export</span>
         </button>
-      </template>
+      </header>
 
-      <div class="top-product-isn-results__stat-grid">
-        <article class="top-product-isn-results__stat-card">
-          <small>DUTs Analyzed</small>
-          <strong>{{ enhancedResults.length }}</strong>
-        </article>
-        <article class="top-product-isn-results__stat-card top-product-isn-results__stat-card--success">
-          <small>Total Station Results</small>
-          <strong>{{ totalStations }}</strong>
-        </article>
-        <article class="top-product-isn-results__stat-card top-product-isn-results__stat-card--warning">
-          <small>Failed DUTs</small>
-          <strong>{{ failedDUTsCount }}</strong>
-        </article>
-      </div>
-    </AppPanel>
+      <dl class="top-product-isn-results__stat-grid">
+        <div class="top-product-isn-results__stat-card">
+          <dt>DUTs Analyzed</dt>
+          <dd>{{ enhancedResults.length }}</dd>
+        </div>
+        <div class="top-product-isn-results__stat-card">
+          <dt>Station Results</dt>
+          <dd>{{ totalStations }}</dd>
+        </div>
+        <div class="top-product-isn-results__stat-card">
+          <dt>Failed DUTs</dt>
+          <dd>{{ failedDUTsCount }}</dd>
+        </div>
+      </dl>
+    </section>
 
     <TopProductRanking
       v-if="enhancedResults.length > 0"
@@ -508,21 +522,19 @@
       </div>
     </section>
 
-    <AppPanel
-      v-if="enhancedResults.length > 1"
-      eyebrow="Comparison"
-      title="Compare Test Results"
-      description="Choose a shared station, then compare measured values and scores."
-      splitHeader
-      tone="warm"
-    >
-      <template #header-aside>
+    <section v-if="enhancedResults.length > 1" class="top-product-isn-results__section">
+      <header class="top-product-isn-results__section-header">
+        <div>
+          <p>Comparison</p>
+          <h2>Compare Test Results</h2>
+          <span>Choose shared station, then compare measured values and scores.</span>
+        </div>
         <div class="top-product-isn-results__panel-actions">
           <button
             v-if="selectedCompareStation && comparisonData.length > 0"
             type="button"
             class="top-product-isn-results__ghost-button"
-            @click="comparisonFullscreen = true"
+            @click="openComparisonFullscreen"
           >
             <Icon icon="mdi:fullscreen" />
             <span>Expanded View</span>
@@ -536,7 +548,7 @@
             <span>{{ showComparison ? 'Collapse' : 'Expand' }}</span>
           </button>
         </div>
-      </template>
+      </header>
 
       <div v-if="showComparison" class="top-product-isn-results__comparison-shell">
         <section class="top-product-isn-results__filter-grid">
@@ -570,7 +582,8 @@
           </label>
         </section>
 
-        <div v-if="selectedCompareStation && filteredComparisonData.length > 0" class="top-product-isn-results__table-shell">
+        <div v-if="!comparisonFullscreen && selectedCompareStation && filteredComparisonData.length > 0"
+          class="top-product-isn-results__table-shell">
           <DataTable
             :value="filteredComparisonData"
             paginator
@@ -666,11 +679,20 @@
           </p>
         </div>
       </div>
-    </AppPanel>
+    </section>
 
-    <section v-if="enhancedResults.length > 0" class="top-product-isn-results__dut-stack">
-      <details
-        v-for="(result, index) in enhancedResults"
+    <section v-if="enhancedResults.length > 0" class="top-product-isn-results__station-section">
+      <header class="top-product-isn-results__section-header">
+        <div>
+          <p>Stations</p>
+          <h2>Station Results</h2>
+          <span>Expand a DUT to inspect station outcomes and measurements.</span>
+        </div>
+      </header>
+
+      <div class="top-product-isn-results__dut-stack">
+        <details
+        v-for="result in enhancedResults"
         :key="result.dut_isn"
         class="top-product-isn-results__dut-disclosure"
         :open="openDutPanels.includes(result.dut_isn)"
@@ -680,7 +702,7 @@
           <div class="top-product-isn-results__dut-summary">
             <div>
               <p class="top-product-isn-results__dut-title">{{ result.dut_isn }}</p>
-              <span>{{ result.site_name }} / {{ result.model_name }} • {{ result.test_result.length }} station(s)</span>
+              <span>{{ result.site_name }} / {{ result.model_name }} · {{ result.test_result.length }} station(s)</span>
             </div>
             <div class="top-product-isn-results__badge-row">
               <span class="top-product-isn-results__badge top-product-isn-results__badge--neutral">
@@ -692,16 +714,12 @@
               >
                 {{ hasErrorInResult(result) ? 'Has Errors' : 'Clean Pass' }}
               </span>
+              <Icon class="top-product-isn-results__disclosure-icon" icon="mdi:chevron-down" />
             </div>
           </div>
         </summary>
 
-        <AppPanel
-          :eyebrow="index === 0 ? 'Primary DUT' : 'DUT'"
-          title="Station Results"
-          :description="`Inspect the station outcomes for ${result.dut_isn} and open measurement detail when needed.`"
-          tone="default"
-        >
+        <section class="top-product-isn-results__station-results">
           <AppDataGrid
             :columns="stationColumns"
             :rows="result.test_result"
@@ -710,6 +728,7 @@
             :rowsPerPage="10"
             :rowClass="stationRowClass"
             scrollHeight="28rem"
+            :table-style="{ minWidth: '44rem' }"
           >
             <template #cell-station_name="{ data }">
               <div class="top-product-isn-results__station-cell">
@@ -759,8 +778,9 @@
               <div class="top-product-isn-results__empty-inline">No station results are available for this DUT.</div>
             </template>
           </AppDataGrid>
-        </AppPanel>
+        </section>
       </details>
+      </div>
     </section>
 
     <AppPanel
@@ -814,6 +834,7 @@ defineEmits<(e: 'export') => void>()
 
 const measurementDialog = ref(false)
 const isFullscreen = ref(false)
+const measurementContentReady = ref(false)
 const selectedMeasurement = ref<{ dutISN: string; station: TopProductStationResult } | null>(null)
 
 const scoreBreakdownDialog = ref(false)
@@ -835,10 +856,11 @@ const limitFilter = ref<string | null>(null)
 const loadingIdentifiers = ref(false)
 const linkedIdentifiers = ref<string[]>([])
 
-const showComparison = ref(false)
+const showComparison = ref(true)
 const selectedCompareStation = ref<string | null>(null)
 const comparisonSearch = ref('')
 const comparisonFullscreen = ref(false)
+const comparisonContentReady = ref(false)
 const comparisonScoreFilter = ref<string | null>(null)
 const comparisonLimitFilter = ref<string | null>(null)
 
@@ -890,13 +912,36 @@ watch(measurementDialog, async (isOpen) => {
   if (isOpen && selectedMeasurement.value?.dutISN) {
     await fetchLinkedIdentifiers(selectedMeasurement.value.dutISN)
   } else if (!isOpen) {
+    measurementContentReady.value = false
     linkedIdentifiers.value = []
     measurementSearch.value = ''
     scoreFilter.value = null
     limitFilter.value = null
     isFullscreen.value = false
+    window.setTimeout(() => {
+      if (!measurementDialog.value) selectedMeasurement.value = null
+    }, 200)
   }
 })
+
+watch(comparisonFullscreen, (isOpen) => {
+  if (!isOpen) comparisonContentReady.value = false
+})
+
+function deferHeavyContent(callback: () => void): void {
+  window.requestAnimationFrame(() => window.requestAnimationFrame(callback))
+}
+
+function openComparisonFullscreen(): void {
+  comparisonContentReady.value = false
+  comparisonFullscreen.value = true
+}
+
+function handleComparisonDialogShown(): void {
+  deferHeavyContent(() => {
+    if (comparisonFullscreen.value) comparisonContentReady.value = true
+  })
+}
 
 function parseMeasurements(data: unknown[]): TopProductMeasurement[] {
   if (!data || data.length === 0) return []
@@ -970,7 +1015,6 @@ const enhancedResults = computed(() => {
     ...result,
     test_result: result.test_result.map((station) => ({
       ...station,
-      measurement: parseMeasurements(station.data),
       measurement_count: Number(station.metadata?.measurement_count || station.data?.length || 0),
       device_name: station.device,
     })),
@@ -1493,8 +1537,18 @@ function handleRankingRowClick(payload: { isn: string; stationName: string }) {
 }
 
 function showMeasurements(dutISN: string, station: TopProductStationResult) {
-  selectedMeasurement.value = { dutISN, station }
+  measurementContentReady.value = false
+  selectedMeasurement.value = {
+    dutISN,
+    station: {
+      ...station,
+      measurement: parseMeasurements(station.data),
+    },
+  }
   measurementDialog.value = true
+  deferHeavyContent(() => {
+    measurementContentReady.value = true
+  })
 }
 
 function handleDutDisclosureToggle(dutIsn: string, event: Event) {
@@ -1567,6 +1621,57 @@ function stationRowClass(row: Record<string, unknown>) {
   gap: 1rem;
 }
 
+.top-product-isn-results__overview,
+.top-product-isn-results__section,
+.top-product-isn-results__station-section {
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.top-product-isn-results__section-header,
+.top-product-isn-results__station-results-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1rem 1.1rem;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+.top-product-isn-results__section-header p,
+.top-product-isn-results__station-results-header p,
+.top-product-isn-results__section-header h2,
+.top-product-isn-results__station-results-header h3,
+.top-product-isn-results__section-header span,
+.top-product-isn-results__station-results-header span {
+  margin: 0;
+}
+
+.top-product-isn-results__section-header p,
+.top-product-isn-results__station-results-header p {
+  color: var(--app-accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.top-product-isn-results__section-header h2,
+.top-product-isn-results__station-results-header h3 {
+  margin-top: 0.15rem;
+  color: var(--app-ink);
+  font-size: 1rem;
+}
+
+.top-product-isn-results__section-header div > span,
+.top-product-isn-results__station-results-header div > span {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--app-muted);
+  font-size: 0.78rem;
+}
+
 .top-product-isn-results__dialog-header {
   display: flex;
   justify-content: space-between;
@@ -1619,6 +1724,35 @@ function stationRowClass(row: Record<string, unknown>) {
   display: grid;
   gap: 0.85rem;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.top-product-isn-results__overview .top-product-isn-results__stat-grid {
+  gap: 0;
+  padding: 0;
+}
+
+.top-product-isn-results__overview .top-product-isn-results__stat-card {
+  border: 0;
+  border-left: 1px solid var(--app-border);
+  border-radius: 0;
+  padding: 0.9rem 1.1rem;
+}
+
+.top-product-isn-results__overview .top-product-isn-results__stat-card dd {
+  margin: 0;
+  color: var(--app-ink);
+  font-size: 1.3rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.top-product-isn-results__overview .top-product-isn-results__stat-card dt {
+  color: var(--app-muted);
+  font-size: 0.78rem;
+}
+
+.top-product-isn-results__overview .top-product-isn-results__stat-card:first-child {
+  border-left: 0;
 }
 
 .top-product-isn-results__summary-card,
@@ -1741,6 +1875,32 @@ function stationRowClass(row: Record<string, unknown>) {
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
 }
 
+.top-product-isn-results__comparison-shell--fullscreen > .top-product-isn-results__filter-grid,
+.top-product-isn-results__dialog-body > .top-product-isn-results__filter-grid {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding: 0.8rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.7rem;
+  background: var(--app-surface);
+}
+
+.top-product-isn-results__comparison-shell {
+  padding: 1rem;
+}
+
+.top-product-isn-results__section > .top-product-isn-results__comparison-shell {
+  gap: 0.85rem;
+}
+
+.top-product-isn-results__section > .top-product-isn-results__comparison-shell > .top-product-isn-results__filter-grid {
+  padding: 0.85rem;
+  border-left: 3px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-surface);
+}
+
 .top-product-isn-results__field {
   display: grid;
   gap: 0.45rem;
@@ -1774,7 +1934,7 @@ function stationRowClass(row: Record<string, unknown>) {
 
 .top-product-isn-results__table-shell {
   border: 1px solid var(--app-border);
-  border-radius: 0.9rem;
+  border-radius: 0.5rem;
   overflow: hidden;
   background: var(--app-panel);
 }
@@ -1864,7 +2024,8 @@ function stationRowClass(row: Record<string, unknown>) {
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  border-radius: 999px;
+  min-height: 2.75rem;
+  border-radius: 0.7rem;
   padding: 0.65rem 1rem;
   font-weight: 700;
   cursor: pointer;
@@ -1911,20 +2072,59 @@ function stationRowClass(row: Record<string, unknown>) {
 
 .top-product-isn-results__dut-stack {
   display: grid;
-  gap: 1rem;
+  gap: 0;
 }
 
 .top-product-isn-results__dut-disclosure {
-  border: 1px solid var(--app-border);
-  border-radius: 0.7rem;
+  border: 0;
+  border-top: 1px solid var(--app-border);
+  border-radius: 0;
   background: var(--app-panel);
   overflow: hidden;
+}
+
+.top-product-isn-results__dut-disclosure:first-child {
+  border-top: 0;
 }
 
 .top-product-isn-results__dut-disclosure summary {
   list-style: none;
   cursor: pointer;
   padding: 1rem 1.1rem;
+  transition: background-color 120ms ease-out;
+}
+
+.top-product-isn-results__dut-disclosure summary:hover {
+  background: var(--app-surface);
+}
+
+.top-product-isn-results__station-results {
+  border-top: 1px solid var(--app-border);
+  background: var(--app-panel);
+}
+
+.top-product-isn-results__station-results > .app-data-grid {
+  border: 0;
+  border-radius: 0;
+}
+
+.top-product-isn-results__dialog-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  min-height: 10rem;
+  color: var(--app-muted);
+}
+
+.top-product-isn-results__dialog-loading svg {
+  animation: top-product-isn-results-spin 0.8s linear infinite;
+}
+
+@keyframes top-product-isn-results-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .top-product-isn-results__dut-disclosure summary::-webkit-details-marker {
@@ -1936,6 +2136,16 @@ function stationRowClass(row: Record<string, unknown>) {
   justify-content: space-between;
   gap: 1rem;
   align-items: center;
+}
+
+.top-product-isn-results__disclosure-icon {
+  flex: 0 0 auto;
+  color: var(--app-muted);
+  transition: transform 160ms ease-out;
+}
+
+.top-product-isn-results__dut-disclosure[open] .top-product-isn-results__disclosure-icon {
+  transform: rotate(180deg);
 }
 
 .top-product-isn-results__dut-title {
@@ -1975,7 +2185,9 @@ function stationRowClass(row: Record<string, unknown>) {
 
 @media (max-width: 960px) {
   .top-product-isn-results__dialog-header,
-  .top-product-isn-results__dut-summary {
+  .top-product-isn-results__dut-summary,
+  .top-product-isn-results__section-header,
+  .top-product-isn-results__station-results-header {
     flex-direction: column;
     align-items: stretch;
   }
@@ -1983,6 +2195,15 @@ function stationRowClass(row: Record<string, unknown>) {
   .top-product-isn-results__meta-card--wide,
   .top-product-isn-results__field--wide {
     grid-column: span 1;
+  }
+
+  .top-product-isn-results__overview .top-product-isn-results__stat-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .top-product-isn-results__overview .top-product-isn-results__stat-card {
+    border-top: 1px solid var(--app-border);
+    border-left: 0;
   }
 }
 </style>

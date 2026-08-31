@@ -48,18 +48,22 @@
       </div>
 
       <details class="top-products-isn-accordion top-products-isn-options">
-        <summary>
+        <summary class="top-products-isn-options__summary">
+          <span class="top-products-isn-step__index">3</span>
           <div>
-            <p>3 &nbsp; Analysis options</p>
+            <p>Analysis options</p>
             <span>Optional criteria, device, and test-item filters.</span>
           </div>
         </summary>
         <div class="top-products-isn-accordion__body top-products-isn-accordion__body--stacked">
           <section class="top-products-isn-option-group">
             <div class="top-products-isn-option-group__header">
-              <div>
+              <div class="top-products-isn-option-group__title">
+                <span class="top-products-isn-option-group__index">01</span>
+                <div>
                 <strong>Criteria file</strong>
                 <span>{{ criteriaFileActual ? criteriaFileActual.name : 'Default rules' }}</span>
+                </div>
               </div>
               <button type="button" class="top-products-isn-link" @click="downloadCriteriaTemplate">
                 Download template
@@ -72,15 +76,20 @@
 
           <section class="top-products-isn-option-group">
             <div class="top-products-isn-option-group__header">
-              <div>
+              <div class="top-products-isn-option-group__title">
+                <span class="top-products-isn-option-group__index">02</span>
+                <div>
                 <strong>Universal filters</strong>
                 <span>Applied to every selected station.</span>
+                </div>
               </div>
             </div>
             <div class="top-products-isn-filter-grid">
               <label class="top-products-isn-field top-products-isn-field--full">
                 <span>Device Identifiers</span>
-                <textarea v-model="deviceIdentifiersText" rows="3" placeholder="e.g. 1351, 614670 or one value per line" />
+                <AppMultiSelect v-model="deviceIdentifiers" :options="universalDeviceOptions"
+                  placeholder="All available devices" :disabled="loadingDevices" />
+                <small>{{ loadingDevices ? 'Loading device identifiers...' : 'Search devices from selected stations. Empty includes all devices.' }}</small>
               </label>
               <label class="top-products-isn-field">
                 <span>Include Test Items</span>
@@ -92,34 +101,38 @@
               </label>
             </div>
           </section>
-        </div>
-      </details>
 
-      <details v-if="selectedStations.length > 0" class="top-products-isn-accordion">
-        <summary>
-          <div>
-            <p>Per-station filters</p>
-            <span>Override universal filters for specific stations.</span>
-          </div>
-        </summary>
-        <div class="top-products-isn-accordion__body top-products-isn-accordion__body--stacked">
-        <div class="top-products-isn-notice">
-          Leave a station empty to inherit the shared rules.
-        </div>
+          <section v-if="selectedStations.length > 0" class="top-products-isn-option-group">
+            <div class="top-products-isn-option-group__header">
+              <div class="top-products-isn-option-group__title">
+                <span class="top-products-isn-option-group__index">03</span>
+                <div>
+                <strong>Per-station filters</strong>
+                <span>Optional overrides. Unchanged stations inherit universal filters.</span>
+                </div>
+              </div>
+              <span class="top-products-isn-option-count">{{ selectedStations.length }} station{{ selectedStations.length === 1 ? '' : 's' }}</span>
+            </div>
 
-        <div v-if="loadingTestItems || loadingDevices" class="top-products-isn-loading-bar" />
+            <div v-if="loadingTestItems || loadingDevices" class="top-products-isn-loading-bar" />
 
-        <div class="top-products-isn-station-config-grid">
-          <section v-for="station in selectedStations" :key="station" class="top-products-isn-station-config-card">
-            <header>
-              <strong>{{ station }}</strong>
-            </header>
-            <StationFilterConfig :station-identifier="station" :station-name="station"
-              :available-test-items="stationTestItems[station] || []" :available-devices="stationDevices[station] || []"
-              :loading="loadingTestItems || loadingDevices" v-model="stationFilterConfigs[station]" />
+            <div class="top-products-isn-station-config-list">
+              <details v-for="station in selectedStations" :key="station"
+                class="top-products-isn-station-config-card">
+                <summary>
+                  <div>
+                    <strong>{{ station }}</strong>
+                    <span>{{ getStationFilterSummary(station) }}</span>
+                  </div>
+                </summary>
+                <StationFilterConfig :station-identifier="station" :station-name="station"
+                  :available-test-items="stationTestItems[station] || []"
+                  :available-devices="stationDevices[station] || []"
+                  :loading="loadingTestItems || loadingDevices" v-model="stationFilterConfigs[station]" />
+              </details>
+            </div>
           </section>
         </div>
-      </div>
       </details>
 
       <footer class="top-products-isn-runbar">
@@ -216,6 +229,22 @@ const stationSelectOptions = computed(() =>
   availableStations.value.map((station) => ({ label: station, value: station })),
 )
 
+const universalDeviceOptions = computed(() =>
+  [...new Set(selectedStations.value.flatMap((station) => stationDevices.value[station] || []))]
+    .sort((first, second) => first.localeCompare(second))
+    .map((device) => ({ label: device, value: device })),
+)
+
+function getStationFilterSummary(station: string): string {
+  const config = stationFilterConfigs.value[station]
+  if (!config) return 'Inherits universal filters'
+  const devices = config.device_identifiers?.length ?? 0
+  const include = config.test_item_filters?.length ?? 0
+  const exclude = config.exclude_test_item_filters?.length ?? 0
+  if (devices + include + exclude === 0) return 'Inherits universal filters'
+  return `${devices} devices, ${include} include, ${exclude} exclude`
+}
+
 const loading = ref(false)
 const loadingStations = ref(false)
 const loadingTestItems = ref(false)
@@ -256,13 +285,6 @@ const siteIdentifierValue = computed(() => {
 
 const modelIdentifierValue = computed(() => {
   return modelIdentifier.value.length > 0 ? modelIdentifier.value[0] : undefined
-})
-
-const deviceIdentifiersText = computed({
-  get: () => deviceIdentifiers.value.join('\n'),
-  set: (value: string) => {
-    deviceIdentifiers.value = parseMultilineValues(value)
-  },
 })
 
 const testItemFiltersText = computed({
@@ -843,17 +865,17 @@ async function exportToExcelZip(ExcelJS: any, JSZip: any) {
       worksheet.addRow(scoreRow)
 
       // Data table headers
-      // For single DUT: [Test_Items],[USL],[LSL],[Measured],[Deviation],,[Score]
-      // For multiple DUTs: [Test_Items],[USL],[LSL],[Measured],[Measured],...,[Deviation],[Deviation],...,Score_ISN1,Score_ISN2,...
+      // For single DUT: [Test_Items],[USL],[LSL],[VALUE],[Deviation],,[Score]
+      // For multiple DUTs: [Test_Items],[USL],[LSL],[VALUE],[VALUE],...,[Deviation],[Deviation],...,Score_ISN1,Score_ISN2,...
       // biome-ignore lint/suspicious/noExplicitAny: Excel row contains mixed string/number values
       let headerRow: any[]
       if (duts.length === 1) {
-        headerRow = ['[Test_Items]', '[USL]', '[LSL]', '[Measured]', '[Deviation]', '', '[Score]']
+        headerRow = ['[Test_Items]', '[USL]', '[LSL]', '[VALUE]', '[Deviation]', '', '[Score]']
       } else {
         headerRow = ['[Test_Items]', '[USL]', '[LSL]']
-        // Add [Measured] columns for each DUT
+        // Add [VALUE] columns for each DUT
         duts.forEach(() => {
-          headerRow.push('[Measured]')
+          headerRow.push('[VALUE]')
         })
         // Add [Deviation] columns for each DUT
         duts.forEach((dut) => {
@@ -1037,8 +1059,9 @@ function formatFileSize(bytes: number): string {
 }
 
 .top-products-isn-step__index {
-  display: grid;
-  place-items: center;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 1.75rem;
   height: 1.75rem;
   flex: 0 0 auto;
@@ -1047,6 +1070,9 @@ function formatFileSize(bytes: number): string {
   color: var(--app-muted);
   font-size: 0.75rem;
   font-weight: 800;
+  line-height: 1;
+  text-align: center;
+  padding-top: 1px;
 }
 
 .top-products-isn-step.is-complete .top-products-isn-step__index {
@@ -1055,8 +1081,8 @@ function formatFileSize(bytes: number): string {
   color: var(--app-success-strong);
 }
 
-.top-products-isn-step__header p,
-.top-products-isn-step__header span {
+.top-products-isn-step__header div > p,
+.top-products-isn-step__header div > span {
   display: block;
   margin: 0;
 }
@@ -1360,21 +1386,38 @@ function formatFileSize(bytes: number): string {
 
 .top-products-isn-option-group {
   display: grid;
-  gap: 0.85rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--app-border);
+  gap: 1rem;
+  padding: 1rem;
+  border-left: 3px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-surface);
 }
 
-.top-products-isn-option-group:first-child {
-  padding-top: 0;
-  border-top: 0;
+.top-products-isn-option-group:focus-within {
+  border-left-color: var(--app-accent);
 }
 
 .top-products-isn-option-group__header {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
+  gap: 1rem;
+}
+
+.top-products-isn-option-group__title {
+  display: flex;
+  align-items: flex-start;
   gap: 0.75rem;
+  min-width: 0;
+}
+
+.top-products-isn-option-group__index {
+  flex: 0 0 auto;
+  color: var(--app-accent) !important;
+  font-size: 0.72rem !important;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+  line-height: 1.4;
 }
 
 .top-products-isn-option-group__header strong,
@@ -1382,14 +1425,24 @@ function formatFileSize(bytes: number): string {
   display: block;
 }
 
+.top-products-isn-option-count {
+  flex: 0 0 auto;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  background: var(--app-accent-soft);
+  color: var(--app-accent-strong) !important;
+  font-weight: 700;
+}
+
 .top-products-isn-option-group__header strong {
   color: var(--app-ink);
 }
 
 .top-products-isn-option-group__header span {
-  margin-top: 0.15rem;
+  margin-top: 0.2rem;
   color: var(--app-muted);
   font-size: 0.78rem;
+  line-height: 1.4;
 }
 
 .top-products-isn-accordion summary {
@@ -1418,13 +1471,27 @@ function formatFileSize(bytes: number): string {
   line-height: 1.5;
 }
 
+.top-products-isn-options__summary {
+  display: grid !important;
+  grid-template-columns: auto minmax(0, 1fr);
+  justify-content: start !important;
+  gap: 0.65rem !important;
+}
+
+.top-products-isn-options__summary > .top-products-isn-step__index {
+  display: inline-flex;
+  margin: 0;
+  color: var(--app-muted);
+  line-height: 1;
+}
+
 .top-products-isn-accordion__body {
-  padding: 0 1.15rem 1.15rem;
+  padding: 0 1.15rem 1.25rem 3.55rem;
 }
 
 .top-products-isn-accordion__body--stacked {
   display: grid;
-  gap: 1rem;
+  gap: 0.85rem;
 }
 
 .top-products-isn-loading-bar {
@@ -1435,19 +1502,38 @@ function formatFileSize(bytes: number): string {
   animation: top-products-isn-loading 1.1s linear infinite;
 }
 
-.top-products-isn-station-config-grid {
-  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+.top-products-isn-station-config-list {
+  display: grid;
+  gap: 0.65rem;
 }
 
 .top-products-isn-station-config-card {
   border: 1px solid var(--app-border);
-  border-radius: 0.7rem;
-  padding: 0.9rem;
+  border-radius: 0.65rem;
   background: var(--app-panel);
+  overflow: hidden;
 }
 
-.top-products-isn-station-config-card header {
-  margin-bottom: 0.85rem;
+.top-products-isn-station-config-card > summary {
+  display: block;
+  min-height: 2.75rem;
+  padding: 0.75rem 0.9rem;
+  background: var(--app-surface);
+}
+
+.top-products-isn-station-config-card > summary strong,
+.top-products-isn-station-config-card > summary span {
+  display: block;
+}
+
+.top-products-isn-station-config-card > summary strong {
+  color: var(--app-ink);
+}
+
+.top-products-isn-station-config-card > summary span {
+  margin-top: 0.15rem;
+  color: var(--app-muted);
+  font-size: 0.75rem;
 }
 
 .top-products-isn-primary-button {
@@ -1495,10 +1581,6 @@ function formatFileSize(bytes: number): string {
 
   .top-products-isn-grid,
   .top-products-isn-filter-grid,
-  .top-products-isn-station-config-grid {
-    grid-template-columns: 1fr;
-  }
-
   .top-products-isn-step {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -1531,6 +1613,10 @@ function formatFileSize(bytes: number): string {
   .top-products-isn-accordion__body {
     padding-left: 1rem;
     padding-right: 1rem;
+  }
+
+  .top-products-isn-option-group__header {
+    flex-direction: column;
   }
 
   .top-products-isn-resolved-scope {

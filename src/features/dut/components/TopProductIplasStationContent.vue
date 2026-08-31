@@ -74,7 +74,7 @@
             <span class="app-query-form__step-index">3</span>
             <div>
               <strong>Stations</strong>
-              <small>Choose stations, devices, and scoring.</small>
+              <small>Choose stations, devices, items, and scoring.</small>
             </div>
           </header>
           <div class="app-query-form__body">
