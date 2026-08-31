@@ -12,6 +12,7 @@
       title="Measurement Details"
       description="Review station measurements and scores."
       class="top-product-isn-results__dialog"
+      @show="handleMeasurementDialogShown"
     >
 
       <div
@@ -19,159 +20,57 @@
         class="top-product-isn-results__dialog-body"
         :class="{ 'top-product-isn-results__dialog-body--fullscreen': isFullscreen }"
       >
-        <section class="top-product-isn-results__summary-grid">
-          <article class="top-product-isn-results__summary-card top-product-isn-results__summary-card--highlight">
-            <span class="top-product-isn-results__summary-icon">
-              <Icon icon="mdi:barcode" />
-            </span>
+        <section class="top-product-isn-results__measurement-overview">
+          <header class="top-product-isn-results__measurement-heading">
             <div>
               <small>DUT ISN</small>
               <strong>{{ selectedMeasurement.dutISN }}</strong>
             </div>
-          </article>
-
-          <article class="top-product-isn-results__summary-card">
-            <span class="top-product-isn-results__summary-icon">
-              <Icon icon="mdi:factory" />
+            <span class="top-product-isn-results__badge"
+              :class="selectedMeasurement.station.error_item ? 'top-product-isn-results__badge--error' : 'top-product-isn-results__badge--success'">
+              <Icon :icon="selectedMeasurement.station.error_item ? 'mdi:alert-circle' : 'mdi:check-circle'" />
+              {{ selectedMeasurement.station.error_item || 'Pass' }}
             </span>
+          </header>
+
+          <dl class="top-product-isn-results__measurement-facts">
+            <div><dt>Station</dt><dd>{{ selectedMeasurement.station.station_name }}</dd></div>
+            <div><dt>Device</dt><dd>{{ selectedMeasurement.station.device || 'N/A' }}</dd></div>
+            <div><dt>Test Date</dt><dd>{{ formatDate(selectedMeasurement.station.test_date) }}</dd></div>
+            <div><dt>Duration</dt><dd>{{ selectedMeasurement.station.test_duration ? `${selectedMeasurement.station.test_duration.toFixed(2)}s` : 'N/A' }}</dd></div>
+            <div><dt>Test Items</dt><dd>{{ selectedMeasurement.station.measurement_count || 0 }}</dd></div>
+            <div><dt>Overall Score</dt><dd>{{ selectedMeasurement.station.error_item ? 'N/A' : selectedMeasurement.station.overall_data_score.toFixed(2) }}</dd></div>
+          </dl>
+
+          <footer class="top-product-isn-results__measurement-footer">
             <div>
-              <small>Station</small>
-              <strong>{{ selectedMeasurement.station.station_name }}</strong>
-            </div>
-          </article>
-
-          <article class="top-product-isn-results__summary-card">
-            <span class="top-product-isn-results__summary-icon">
-              <Icon icon="mdi:chip" />
-            </span>
-            <div>
-              <small>Device</small>
-              <strong>{{ selectedMeasurement.station.device || 'N/A' }}</strong>
-            </div>
-          </article>
-
-          <article class="top-product-isn-results__summary-card">
-            <span class="top-product-isn-results__summary-icon">
-              <Icon icon="mdi:calendar-clock" />
-            </span>
-            <div>
-              <small>Test Date</small>
-              <strong>{{ formatDate(selectedMeasurement.station.test_date) }}</strong>
-            </div>
-          </article>
-        </section>
-
-        <section class="top-product-isn-results__meta-grid">
-          <article class="top-product-isn-results__meta-card top-product-isn-results__meta-card--wide">
-            <div class="top-product-isn-results__meta-headline">
-              <Icon icon="mdi:identifier" />
-              <strong>SN Reference</strong>
-            </div>
-
-            <div v-if="loadingIdentifiers" class="top-product-isn-results__inline-note">
-              Loading linked identifiers...
-            </div>
-            <div v-else class="top-product-isn-results__token-row">
-              <button
-                type="button"
-                class="top-product-isn-results__token top-product-isn-results__token--cool"
-                @click="copyToClipboard(selectedMeasurement.dutISN)"
-              >
-                {{ selectedMeasurement.dutISN }}
-              </button>
-
-              <details v-if="otherLinkedISNs.length > 0" class="top-product-isn-results__linked-details">
-                <summary>
-                  {{ allLinkedISNs.length }} linked ISN{{ allLinkedISNs.length === 1 ? '' : 's' }}
-                </summary>
-                <div class="top-product-isn-results__linked-list">
-                  <button
-                    v-for="identifier in otherLinkedISNs"
-                    :key="identifier"
-                    type="button"
-                    class="top-product-isn-results__token"
-                    @click="copyToClipboard(identifier)"
-                  >
-                    {{ identifier }}
-                  </button>
-                </div>
-              </details>
-            </div>
-          </article>
-
-          <article class="top-product-isn-results__meta-card">
-            <div class="top-product-isn-results__meta-headline">
-              <Icon icon="mdi:timer" />
-              <strong>Duration</strong>
-            </div>
-            <p>
-              {{ selectedMeasurement.station.test_duration
-                ? `${selectedMeasurement.station.test_duration.toFixed(2)}s`
-                : 'N/A' }}
-            </p>
-          </article>
-
-          <article class="top-product-isn-results__meta-card">
-            <div class="top-product-isn-results__meta-headline">
-              <Icon icon="mdi:list-box" />
-              <strong>Test Items</strong>
-            </div>
-            <p>{{ selectedMeasurement.station.measurement_count || 0 }}</p>
-          </article>
-
-          <article class="top-product-isn-results__meta-card">
-            <div class="top-product-isn-results__meta-headline">
-              <Icon icon="mdi:flag-checkered" />
-              <strong>Result Counts</strong>
+              <small>Linked identifiers</small>
+              <div v-if="loadingIdentifiers" class="top-product-isn-results__inline-note">Loading...</div>
+              <div v-else class="top-product-isn-results__token-row">
+                <button type="button" class="top-product-isn-results__token top-product-isn-results__token--cool"
+                  title="Copy identifier" @click="copyToClipboard(selectedMeasurement.dutISN)">
+                  {{ selectedMeasurement.dutISN }}
+                </button>
+                <details v-if="otherLinkedISNs.length > 0" class="top-product-isn-results__linked-details">
+                  <summary>{{ allLinkedISNs.length }} linked</summary>
+                  <div class="top-product-isn-results__linked-list">
+                    <button v-for="identifier in otherLinkedISNs" :key="identifier" type="button"
+                      class="top-product-isn-results__token" @click="copyToClipboard(identifier)">
+                      {{ identifier }}
+                    </button>
+                  </div>
+                </details>
+              </div>
             </div>
             <div class="top-product-isn-results__badge-row">
-              <span class="top-product-isn-results__badge top-product-isn-results__badge--neutral">
-                Total {{ selectedMeasurement.station.test_count || 0 }}
-              </span>
-              <span class="top-product-isn-results__badge top-product-isn-results__badge--success">
-                Pass {{ selectedMeasurement.station.pass_count || 0 }}
-              </span>
-              <span class="top-product-isn-results__badge top-product-isn-results__badge--error">
-                Fail {{ selectedMeasurement.station.fail_count || 0 }}
-              </span>
+              <span class="top-product-isn-results__badge top-product-isn-results__badge--neutral">Total {{ selectedMeasurement.station.test_count || 0 }}</span>
+              <span class="top-product-isn-results__badge top-product-isn-results__badge--success">Pass {{ selectedMeasurement.station.pass_count || 0 }}</span>
+              <span class="top-product-isn-results__badge top-product-isn-results__badge--error">Fail {{ selectedMeasurement.station.fail_count || 0 }}</span>
             </div>
-          </article>
+          </footer>
         </section>
 
-        <section class="top-product-isn-results__status-grid">
-          <article
-            class="top-product-isn-results__status-card"
-            :class="selectedMeasurement.station.error_item ? 'top-product-isn-results__status-card--error' : 'top-product-isn-results__status-card--success'"
-          >
-            <div class="top-product-isn-results__meta-headline">
-              <Icon :icon="selectedMeasurement.station.error_item ? 'mdi:alert-circle' : 'mdi:check-circle'" />
-              <strong>Latest Test Status</strong>
-            </div>
-            <p>
-              {{ selectedMeasurement.station.error_item || 'No Errors' }}
-            </p>
-          </article>
-
-          <article class="top-product-isn-results__status-card">
-            <div class="top-product-isn-results__meta-headline">
-              <Icon icon="mdi:star" />
-              <strong>Overall Score</strong>
-            </div>
-            <div v-if="selectedMeasurement.station.error_item" class="top-product-isn-results__score-na">
-              <span>N/A</span>
-              <small>Can't be calculated because the DUT failed.</small>
-            </div>
-            <span
-              v-else
-              class="top-product-isn-results__badge"
-              :class="badgeToneClass(getScoreColor(selectedMeasurement.station.overall_data_score))"
-            >
-              {{ selectedMeasurement.station.overall_data_score.toFixed(2) }}
-            </span>
-          </article>
-        </section>
-
-        <section class="top-product-isn-results__filter-grid">
+        <section class="top-product-isn-results__filter-grid top-product-isn-results__measurement-filters">
           <label class="top-product-isn-results__field top-product-isn-results__field--wide">
             <span>Search Measurements</span>
             <input
@@ -1546,8 +1445,11 @@ function showMeasurements(dutISN: string, station: TopProductStationResult) {
     },
   }
   measurementDialog.value = true
+}
+
+function handleMeasurementDialogShown(): void {
   deferHeavyContent(() => {
-    measurementContentReady.value = true
+    if (measurementDialog.value) measurementContentReady.value = true
   })
 }
 
@@ -1717,6 +1619,78 @@ function stationRowClass(row: Record<string, unknown>) {
   min-height: calc(100vh - 12rem);
 }
 
+.top-product-isn-results__measurement-overview {
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.top-product-isn-results__measurement-heading,
+.top-product-isn-results__measurement-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+}
+
+.top-product-isn-results__measurement-heading {
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+.top-product-isn-results__measurement-heading small,
+.top-product-isn-results__measurement-heading strong,
+.top-product-isn-results__measurement-footer small {
+  display: block;
+}
+
+.top-product-isn-results__measurement-heading small,
+.top-product-isn-results__measurement-footer small,
+.top-product-isn-results__measurement-facts dt {
+  color: var(--app-muted);
+  font-size: 0.75rem;
+}
+
+.top-product-isn-results__measurement-heading strong {
+  margin-top: 0.15rem;
+  color: var(--app-ink);
+  font-size: 1rem;
+}
+
+.top-product-isn-results__measurement-facts {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0;
+}
+
+.top-product-isn-results__measurement-facts > div {
+  min-width: 0;
+  padding: 0.8rem 1rem;
+  border-right: 1px solid var(--app-border);
+}
+
+.top-product-isn-results__measurement-facts > div:last-child {
+  border-right: 0;
+}
+
+.top-product-isn-results__measurement-facts dd {
+  margin: 0.2rem 0 0;
+  overflow: hidden;
+  color: var(--app-ink);
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-product-isn-results__measurement-footer {
+  align-items: flex-end;
+  border-top: 1px solid var(--app-border);
+}
+
 .top-product-isn-results__summary-grid,
 .top-product-isn-results__meta-grid,
 .top-product-isn-results__status-grid,
@@ -1873,6 +1847,14 @@ function stationRowClass(row: Record<string, unknown>) {
   display: grid;
   gap: 0.85rem;
   grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.top-product-isn-results__measurement-filters {
+  grid-template-columns: minmax(16rem, 2fr) repeat(2, minmax(10rem, 1fr)) minmax(14rem, 1fr);
+}
+
+.top-product-isn-results__measurement-filters > .top-product-isn-results__field--wide {
+  grid-column: span 1;
 }
 
 .top-product-isn-results__comparison-shell--fullscreen > .top-product-isn-results__filter-grid,
@@ -2197,6 +2179,26 @@ function stationRowClass(row: Record<string, unknown>) {
     grid-column: span 1;
   }
 
+  .top-product-isn-results__measurement-facts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .top-product-isn-results__measurement-facts > div {
+    border-bottom: 1px solid var(--app-border);
+  }
+
+  .top-product-isn-results__measurement-facts > div:nth-child(3n) {
+    border-right: 0;
+  }
+
+  .top-product-isn-results__measurement-facts > div:nth-last-child(-n + 3) {
+    border-bottom: 0;
+  }
+
+  .top-product-isn-results__measurement-filters {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .top-product-isn-results__overview .top-product-isn-results__stat-grid {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -2204,6 +2206,30 @@ function stationRowClass(row: Record<string, unknown>) {
   .top-product-isn-results__overview .top-product-isn-results__stat-card {
     border-top: 1px solid var(--app-border);
     border-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
+  .top-product-isn-results__measurement-heading,
+  .top-product-isn-results__measurement-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .top-product-isn-results__measurement-facts,
+  .top-product-isn-results__measurement-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .top-product-isn-results__measurement-facts > div,
+  .top-product-isn-results__measurement-facts > div:nth-child(3n),
+  .top-product-isn-results__measurement-facts > div:nth-last-child(-n + 3) {
+    border-right: 0;
+    border-bottom: 1px solid var(--app-border);
+  }
+
+  .top-product-isn-results__measurement-facts > div:last-child {
+    border-bottom: 0;
   }
 }
 </style>

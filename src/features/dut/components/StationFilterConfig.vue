@@ -1,7 +1,7 @@
 <template>
-  <AppDialog v-model="testItemDialog" width="min(92vw, 64rem)" :breakpoints="{ '960px': '96vw', '640px': '98vw' }"
+  <AppDialog v-model="testItemDialog" width="min(92vw, 48rem)" :breakpoints="{ '960px': '94vw', '640px': '100vw' }"
     :title="`${dialogFilterType === 'include' ? 'Include' : 'Exclude'} Test Items`"
-    description="Search and apply grouped test-item patterns for this station.">
+    :description="`${stationName || stationIdentifier} · Search individual items or grouped patterns.`">
 
     <div class="station-filter-config__dialog-body">
       <label class="station-filter-config__field">
@@ -9,37 +9,36 @@
         <input v-model="dialogSearch" type="text" placeholder="Type to search..." />
       </label>
 
-      <div class="station-filter-config__toolbar-row">
+      <div class="station-filter-config__dialog-toolbar">
+        <span>{{ dialogFilteredItems.length }} available</span>
+        <div>
         <button type="button" class="station-filter-config__button station-filter-config__button--ghost"
           @click="selectAllDialogItems">
-          Select All
-        </button>
-        <button type="button" class="station-filter-config__button station-filter-config__button--ghost"
-          @click="invertDialogSelection">
-          Select Inverse
+          Select visible
         </button>
         <button type="button" class="station-filter-config__button station-filter-config__button--ghost"
           @click="deselectAllDialogItems">
-          Deselect All
+          Clear visible
         </button>
-        <span class="station-filter-config__pill station-filter-config__pill--primary">{{ dialogSelectedCount }} selected</span>
-      </div>
-
-      <div class="station-filter-config__dialog-list">
-        <button v-for="item in dialogFilteredItems" :key="item" type="button" class="station-filter-config__dialog-item"
-          :class="{ 'is-selected': isDialogItemSelected(item) }" @click="toggleDialogItem(item)">
-          <span class="station-filter-config__checkbox" :class="{ 'is-selected': isDialogItemSelected(item) }">
-            <Icon v-if="isDialogItemSelected(item)" icon="mdi:check" />
-          </span>
-          <span class="station-filter-config__dialog-item-copy">{{ formatPatternLabel(item) }}</span>
-          <span v-if="getGroupedItemCount(item)" class="station-filter-config__pill station-filter-config__pill--info">
-            {{ getGroupedItemCount(item) }} items
-          </span>
-        </button>
-        <div v-if="dialogFilteredItems.length === 0" class="station-filter-config__empty-state">
-          No matching test items found.
         </div>
       </div>
+
+      <VirtualScroller v-if="dialogFilteredItems.length > 0" :items="dialogFilteredItems" :itemSize="48"
+        class="station-filter-config__dialog-list" aria-label="Available test items">
+        <template #item="{ item }">
+          <button type="button" class="station-filter-config__dialog-item"
+            :class="{ 'is-selected': isDialogItemSelected(item) }" @click="toggleDialogItem(item)">
+            <span class="station-filter-config__checkbox" :class="{ 'is-selected': isDialogItemSelected(item) }">
+              <Icon v-if="isDialogItemSelected(item)" icon="mdi:check" />
+            </span>
+            <span class="station-filter-config__dialog-item-copy">{{ formatPatternLabel(item) }}</span>
+            <span v-if="getGroupedItemCount(item)" class="station-filter-config__pill station-filter-config__pill--info">
+              {{ getGroupedItemCount(item) }} items
+            </span>
+          </button>
+        </template>
+      </VirtualScroller>
+      <div v-else class="station-filter-config__empty-state">No matching test items found.</div>
     </div>
 
     <template #footer>
@@ -50,7 +49,7 @@
         </button>
         <button type="button" class="station-filter-config__button station-filter-config__button--primary"
           @click="applyDialogSelection">
-          Apply
+          Apply {{ dialogSelectedCount }} item{{ dialogSelectedCount === 1 ? '' : 's' }}
         </button>
       </div>
     </template>
@@ -59,7 +58,7 @@
   <section class="station-filter-config">
     <div class="station-filter-config__toolbar">
       <p class="station-filter-config__summary">
-        {{ hasFilters ? `${localDeviceIdentifiers.length} devices, ${localTestItemFilters.length} include, ${localExcludeTestItemFilters.length} exclude` : 'No overrides. Universal filters apply.' }}
+        {{ hasFilters ? `${localDeviceIdentifiers.length} devices, ${localTestItemFilters.length} include, ${localExcludeTestItemFilters.length} exclude` : 'All devices and test items included.' }}
       </p>
       <button v-if="hasFilters" type="button"
         class="station-filter-config__button station-filter-config__button--ghost" @click="clearFilters">
@@ -73,7 +72,7 @@
         <AppMultiSelect v-model="localDeviceIdentifiers" :options="availableDeviceOptions"
           placeholder="All available devices" :disabled="loading" :searchable="true"
           :virtualScrollerOptions="{ itemSize: 40 }" />
-        <small>{{ loading ? 'Loading device identifiers...' : 'Search and select devices. Empty inherits universal scope.' }}</small>
+        <small>{{ loading ? 'Loading device identifiers...' : 'Search and select devices. Empty includes all devices.' }}</small>
       </label>
 
       <div class="station-filter-config__rule-grid">
@@ -81,15 +80,16 @@
           <div class="station-filter-config__rule-header">
             <div>
               <strong>Include Test Items</strong>
-              <span>{{ localTestItemFilters.length }} selected</span>
+              <span>Keep matching measurements · {{ localTestItemFilters.length }} selected</span>
             </div>
             <button type="button" class="station-filter-config__button station-filter-config__button--ghost"
               @click="openTestItemDialog('include')">
-              Choose
+              Choose items
             </button>
           </div>
           <div class="station-filter-config__input-row">
-            <input v-model="includePatternInput" type="text" placeholder="Add regex pattern"
+            <input v-model="includePatternInput" class="station-filter-config__pattern-input" type="text"
+              aria-label="Add include regex pattern" placeholder="Add regex pattern"
               @keydown.enter.prevent="commitPatternDraft('include')" @keydown.",".prevent="commitPatternDraft('include')" />
             <button type="button" class="station-filter-config__button station-filter-config__button--success"
               @click="commitPatternDraft('include')">Add</button>
@@ -107,15 +107,16 @@
           <div class="station-filter-config__rule-header">
             <div>
               <strong>Exclude Test Items</strong>
-              <span>{{ localExcludeTestItemFilters.length }} selected</span>
+              <span>Remove matching measurements · {{ localExcludeTestItemFilters.length }} selected</span>
             </div>
             <button type="button" class="station-filter-config__button station-filter-config__button--ghost"
               @click="openTestItemDialog('exclude')">
-              Choose
+              Choose items
             </button>
           </div>
           <div class="station-filter-config__input-row">
-            <input v-model="excludePatternInput" type="text" placeholder="Add regex pattern"
+            <input v-model="excludePatternInput" class="station-filter-config__pattern-input" type="text"
+              aria-label="Add exclude regex pattern" placeholder="Add regex pattern"
               @keydown.enter.prevent="commitPatternDraft('exclude')" @keydown.",".prevent="commitPatternDraft('exclude')" />
             <button type="button" class="station-filter-config__button station-filter-config__button--danger"
               @click="commitPatternDraft('exclude')">Add</button>
@@ -136,6 +137,7 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
+import VirtualScroller from 'primevue/virtualscroller'
 import { computed, nextTick, ref, watch } from 'vue'
 import { AppDialog, AppMultiSelect } from '@/shared'
 import type { StationFilterConfig, TestItem } from '../types/dutTopProduct.types'
@@ -589,16 +591,6 @@ function deselectAllDialogItems() {
   })
 }
 
-function invertDialogSelection() {
-  dialogFilteredItems.value.forEach((item) => {
-    if (dialogSelectedItems.value.has(item)) {
-      dialogSelectedItems.value.delete(item)
-    } else {
-      dialogSelectedItems.value.add(item)
-    }
-  })
-}
-
 function applyDialogSelection() {
   const selectedArray = Array.from(dialogSelectedItems.value)
 
@@ -783,7 +775,18 @@ function clearFilters() {
   align-content: start;
   gap: 0.75rem;
   min-width: 0;
-  padding: 0;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-surface);
+}
+
+.station-filter-config__rule-card:first-child {
+  border-left: 3px solid var(--app-success);
+}
+
+.station-filter-config__rule-card:last-child {
+  border-left: 3px solid var(--app-danger);
 }
 
 .station-filter-config__summary {
@@ -798,6 +801,19 @@ function clearFilters() {
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
+}
+
+.station-filter-config__dialog-toolbar,
+.station-filter-config__dialog-toolbar > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.station-filter-config__dialog-toolbar > span {
+  color: var(--app-muted);
+  font-size: 0.8rem;
 }
 
 .station-filter-config__dialog-header h2,
@@ -839,6 +855,23 @@ function clearFilters() {
 
 .station-filter-config__input-row {
   gap: 0.65rem;
+}
+
+.station-filter-config__pattern-input {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  padding: 0.72rem 0.82rem;
+  background: var(--app-panel);
+  color: var(--app-ink);
+  font: inherit;
+}
+
+.station-filter-config__pattern-input:focus {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
 }
 
 .station-filter-config__field input {
@@ -1045,11 +1078,21 @@ function clearFilters() {
 }
 
 .station-filter-config__dialog-list {
-  display: grid;
-  gap: 0.65rem;
-  max-height: 32rem;
+  height: min(25rem, 52vh);
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-panel);
   overflow: auto;
-  padding-right: 0.25rem;
+}
+
+.station-filter-config__dialog-list :deep(.p-virtualscroller-content) {
+  padding: 0.25rem;
+}
+
+.station-filter-config__dialog-list .station-filter-config__dialog-item {
+  height: 2.75rem;
+  border-color: transparent;
+  border-radius: 0.35rem;
 }
 
 .station-filter-config__checkbox {
@@ -1070,7 +1113,10 @@ function clearFilters() {
 
 .station-filter-config__dialog-item-copy {
   flex: 1;
+  overflow: hidden;
   text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @media (max-width: 900px) {
@@ -1089,6 +1135,12 @@ function clearFilters() {
 
   .station-filter-config__toolbar {
     align-items: flex-start;
+  }
+
+  .station-filter-config__dialog-toolbar,
+  .station-filter-config__dialog-toolbar > div {
+    align-items: stretch;
+    flex-direction: column;
   }
 }
 </style>

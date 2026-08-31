@@ -1,5 +1,6 @@
 <template>
   <AppPanel
+    class="top-product-ranking"
     eyebrow="Results"
     title="Ranking by Station"
     description="Review scored DUTs and failures by station."
@@ -561,6 +562,13 @@ watch(scoreFilterType, (value) => {
 </script>
 
 <style scoped>
+.top-product-ranking {
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
 .top-product-ranking__summary-pills,
 .top-product-ranking__station-hero,
 .top-product-ranking__station-pills,
@@ -584,7 +592,7 @@ watch(scoreFilterType, (value) => {
 .top-product-ranking__workspace {
   gap: 0;
   border: 1px solid var(--app-border);
-  border-radius: 0.75rem;
+  border-radius: 0.5rem;
   background: var(--app-panel);
   overflow: hidden;
 }
@@ -624,8 +632,11 @@ watch(scoreFilterType, (value) => {
 .top-product-ranking__station-hero {
   justify-content: space-between;
   gap: 1rem;
-  align-items: flex-start;
-  padding: 0.25rem 0 0;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-surface);
 }
 
 .top-product-ranking__section-eyebrow,
@@ -645,6 +656,8 @@ watch(scoreFilterType, (value) => {
 
 .top-product-ranking__station-hero h3 {
   margin: 0.2rem 0 0;
+  color: var(--app-ink);
+  font-size: 1rem;
 }
 
 .top-product-ranking__filter-grid {

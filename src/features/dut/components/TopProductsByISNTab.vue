@@ -52,7 +52,7 @@
           <span class="top-products-isn-step__index">3</span>
           <div>
             <p>Analysis options</p>
-            <span>Optional criteria, device, and test-item filters.</span>
+            <span>Optional criteria and station-specific filters.</span>
           </div>
         </summary>
         <div class="top-products-isn-accordion__body top-products-isn-accordion__body--stacked">
@@ -74,41 +74,13 @@
               placeholder="Drop a criteria file here or browse from disk." />
           </section>
 
-          <section class="top-products-isn-option-group">
+          <section v-if="selectedStations.length > 0" class="top-products-isn-option-group">
             <div class="top-products-isn-option-group__header">
               <div class="top-products-isn-option-group__title">
                 <span class="top-products-isn-option-group__index">02</span>
                 <div>
-                <strong>Universal filters</strong>
-                <span>Applied to every selected station.</span>
-                </div>
-              </div>
-            </div>
-            <div class="top-products-isn-filter-grid">
-              <label class="top-products-isn-field top-products-isn-field--full">
-                <span>Device Identifiers</span>
-                <AppMultiSelect v-model="deviceIdentifiers" :options="universalDeviceOptions"
-                  placeholder="All available devices" :disabled="loadingDevices" />
-                <small>{{ loadingDevices ? 'Loading device identifiers...' : 'Search devices from selected stations. Empty includes all devices.' }}</small>
-              </label>
-              <label class="top-products-isn-field">
-                <span>Include Test Items</span>
-                <textarea v-model="testItemFiltersText" rows="4" placeholder="e.g. WiFi_TX_POW.*" />
-              </label>
-              <label class="top-products-isn-field">
-                <span>Exclude Test Items</span>
-                <textarea v-model="excludeTestItemFiltersText" rows="4" placeholder="e.g. WiFi_PA_POW_OLD.*" />
-              </label>
-            </div>
-          </section>
-
-          <section v-if="selectedStations.length > 0" class="top-products-isn-option-group">
-            <div class="top-products-isn-option-group__header">
-              <div class="top-products-isn-option-group__title">
-                <span class="top-products-isn-option-group__index">03</span>
-                <div>
                 <strong>Per-station filters</strong>
-                <span>Optional overrides. Unchanged stations inherit universal filters.</span>
+                <span>Choose devices and test items for each station. Empty fields include all data.</span>
                 </div>
               </div>
               <span class="top-products-isn-option-count">{{ selectedStations.length }} station{{ selectedStations.length === 1 ? '' : 's' }}</span>
@@ -221,27 +193,18 @@ const selectedStations = ref<string[]>([])
 const criteriaFile = ref<File[] | File | null>(null)
 const siteIdentifier = ref<string[]>([])
 const modelIdentifier = ref<string[]>([])
-const deviceIdentifiers = ref<string[]>([])
-const testItemFilters = ref<string[]>([])
-const excludeTestItemFilters = ref<string[]>([])
 
 const stationSelectOptions = computed(() =>
   availableStations.value.map((station) => ({ label: station, value: station })),
 )
 
-const universalDeviceOptions = computed(() =>
-  [...new Set(selectedStations.value.flatMap((station) => stationDevices.value[station] || []))]
-    .sort((first, second) => first.localeCompare(second))
-    .map((device) => ({ label: device, value: device })),
-)
-
 function getStationFilterSummary(station: string): string {
   const config = stationFilterConfigs.value[station]
-  if (!config) return 'Inherits universal filters'
+  if (!config) return 'All devices and test items'
   const devices = config.device_identifiers?.length ?? 0
   const include = config.test_item_filters?.length ?? 0
   const exclude = config.exclude_test_item_filters?.length ?? 0
-  if (devices + include + exclude === 0) return 'Inherits universal filters'
+  if (devices + include + exclude === 0) return 'All devices and test items'
   return `${devices} devices, ${include} include, ${exclude} exclude`
 }
 
@@ -286,31 +249,6 @@ const siteIdentifierValue = computed(() => {
 const modelIdentifierValue = computed(() => {
   return modelIdentifier.value.length > 0 ? modelIdentifier.value[0] : undefined
 })
-
-const testItemFiltersText = computed({
-  get: () => testItemFilters.value.join('\n'),
-  set: (value: string) => {
-    testItemFilters.value = parseMultilineValues(value)
-  },
-})
-
-const excludeTestItemFiltersText = computed({
-  get: () => excludeTestItemFilters.value.join('\n'),
-  set: (value: string) => {
-    excludeTestItemFilters.value = parseMultilineValues(value)
-  },
-})
-
-function parseMultilineValues(value: string): string[] {
-  return [
-    ...new Set(
-      value
-        .split(/[\n,]+/)
-        .map((entry) => entry.trim())
-        .filter(Boolean),
-    ),
-  ]
-}
 
 // Helper function to fetch all test items for stations
 async function fetchAllTestItems(stationIds: string[], targetMap: Record<string, TestItem[]>) {
@@ -575,10 +513,6 @@ async function handleAnalyze() {
       stations: selectedStations.value.length > 0 ? selectedStations.value : undefined,
       site_identifier: siteIdentifierValue.value,
       model_identifier: modelIdentifierValue.value,
-      device_identifiers: deviceIdentifiers.value.length > 0 ? deviceIdentifiers.value : undefined,
-      test_item_filters: testItemFilters.value.length > 0 ? testItemFilters.value : undefined,
-      exclude_test_item_filters:
-        excludeTestItemFilters.value.length > 0 ? excludeTestItemFilters.value : undefined,
       station_filters: Object.keys(stationFilters).length > 0 ? stationFilters : undefined,
       criteria_file: criteriaFileActual.value,
     })
@@ -625,10 +559,6 @@ async function handleAnalyzeWithPATrends() {
       stations: selectedStations.value.length > 0 ? selectedStations.value : undefined,
       site_identifier: siteIdentifierValue.value,
       model_identifier: modelIdentifierValue.value,
-      device_identifiers: deviceIdentifiers.value.length > 0 ? deviceIdentifiers.value : undefined,
-      test_item_filters: testItemFilters.value.length > 0 ? testItemFilters.value : undefined,
-      exclude_test_item_filters:
-        excludeTestItemFilters.value.length > 0 ? excludeTestItemFilters.value : undefined,
       station_filters: Object.keys(stationFilters).length > 0 ? stationFilters : undefined,
       criteria_file: criteriaFileActual.value,
     })
@@ -676,10 +606,6 @@ async function handleAnalyzeHierarchical() {
       stations: selectedStations.value.length > 0 ? selectedStations.value : undefined,
       site_identifier: siteIdentifierValue.value,
       model_identifier: modelIdentifierValue.value,
-      device_identifiers: deviceIdentifiers.value.length > 0 ? deviceIdentifiers.value : undefined,
-      test_item_filters: testItemFilters.value.length > 0 ? testItemFilters.value : undefined,
-      exclude_test_item_filters:
-        excludeTestItemFilters.value.length > 0 ? excludeTestItemFilters.value : undefined,
       station_filters: Object.keys(stationFilters).length > 0 ? stationFilters : undefined,
       criteria_file: criteriaFileActual.value,
     })
