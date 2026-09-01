@@ -22,11 +22,10 @@
               <span>Site / Model</span>
               <strong>{{ scope.site }} / {{ scope.model }}</strong>
             </div>
-            <div>
-              <span>DUT identifiers</span>
-              <strong>{{ scope.isns.join(', ') }}</strong>
+            <div class="top-product-isn-scope-meta">
+              <span class="top-product-isn-scope-badge">{{ scope.isns.length }} DUT{{ scope.isns.length === 1 ? '' : 's' }}</span>
+              <span class="top-product-isn-scope-badge top-product-isn-scope-badge--station">{{ scope.stations.length }} station{{ scope.stations.length === 1 ? '' : 's' }}</span>
             </div>
-            <span>{{ scope.stations.length }} station{{ scope.stations.length === 1 ? '' : 's' }}</span>
           </article>
         </div>
       </div>
@@ -51,12 +50,20 @@
         </div>
       </div>
 
-      <details class="top-products-isn-accordion top-products-isn-options">
-        <summary class="top-products-isn-options__summary">
+      <details
+        ref="analysisOptionsRef"
+        class="top-products-isn-accordion top-products-isn-options"
+        :class="{ 'is-locked': selectedStations.length === 0 }"
+      >
+        <summary
+          class="top-products-isn-options__summary"
+          :class="{ 'is-disabled': selectedStations.length === 0 }"
+          @click="handleOptionsSummaryClick"
+        >
           <span class="top-products-isn-step__index">3</span>
           <div>
             <p>Analysis options</p>
-            <span>Optional criteria and station-specific filters.</span>
+            <span>{{ selectedStations.length > 0 ? 'Optional criteria and station-specific filters.' : 'Select station scope first.' }}</span>
           </div>
           <Icon class="top-products-isn-disclosure-icon" icon="mdi:chevron-down" />
         </summary>
@@ -206,6 +213,7 @@ const processedResults = computed(() => {
 
 // State
 const dutISNInputRef = ref<InstanceType<typeof DUTISNInput> | null>(null)
+const analysisOptionsRef = ref<HTMLDetailsElement | null>(null)
 const resultsSection = ref<HTMLElement | null>(null)
 const dutISNs = ref<string[]>([])
 const selectedStations = ref<string[]>([])
@@ -213,6 +221,12 @@ const criteriaFile = ref<File[] | File | null>(null)
 const siteIdentifier = ref<string[]>([])
 const modelIdentifier = ref<string[]>([])
 const dutScopes = ref<Array<{ isn: string; site: string; model: string; stations: string[] }>>([])
+
+function handleOptionsSummaryClick(event: MouseEvent) {
+  if (selectedStations.value.length === 0) {
+    event.preventDefault()
+  }
+}
 
 const stationSelectOptions = computed(() =>
   availableStations.value.map((station) => ({ label: station, value: station })),
@@ -234,9 +248,7 @@ const dutScopeGroups = computed(() => {
       stations: [],
     }
     group.isns.push(scope.isn)
-    group.stations = [...new Set([...group.stations, ...scope.stations])].sort((first, second) =>
-      first.localeCompare(second),
-    )
+    group.stations = [...new Set([...group.stations, ...scope.stations])]
     groups.set(key, group)
   })
 
@@ -410,6 +422,9 @@ watch(
   selectedStations,
   async (newStations) => {
     if (newStations.length === 0) {
+      if (analysisOptionsRef.value) {
+        analysisOptionsRef.value.open = false
+      }
       stationTestItems.value = {}
       stationDevices.value = {}
       stationFilterConfigs.value = {}
@@ -1106,8 +1121,10 @@ function formatFileSize(bytes: number): string {
 }
 
 .top-products-isn-resolved-scope > article {
-  display: grid;
-  grid-template-columns: minmax(10rem, 0.8fr) minmax(14rem, 1.2fr) auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
   border-top: 1px solid var(--app-border);
 }
 
@@ -1119,6 +1136,31 @@ function formatFileSize(bytes: number): string {
   display: grid;
   gap: 0.2rem;
   min-width: 0;
+}
+
+.top-product-isn-scope-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
+}
+
+.top-product-isn-scope-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  background: var(--app-surface-accent, var(--app-surface));
+  border: 1px solid var(--app-border);
+  color: var(--app-ink);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.top-product-isn-scope-badge--station {
+  background: var(--app-info-soft, rgba(14, 165, 233, 0.1));
+  border-color: var(--app-info-line, rgba(14, 165, 233, 0.3));
+  color: var(--app-info, #0284c7);
 }
 
 .top-products-isn-resolved-scope span {
@@ -1465,6 +1507,15 @@ function formatFileSize(bytes: number): string {
   margin-top: 0.25rem;
   color: var(--app-muted);
   line-height: 1.5;
+}
+
+.top-products-isn-options.is-locked {
+  background: var(--app-surface);
+  opacity: 0.58;
+}
+
+.top-products-isn-options__summary.is-disabled {
+  cursor: not-allowed;
 }
 
 .top-products-isn-options__summary {

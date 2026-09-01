@@ -249,7 +249,7 @@
             <strong>Sum of included measurement scores / Included measurements</strong>
           </div>
           <p>
-            Backend includes every measurement remaining after criteria, include, and exclude filters.
+            System includes every measurement remaining after criteria, include, and exclude filters.
             Each measurement receives a score from 0 to 10. Scores are added, divided by included
             measurement count, then rounded to two decimal places.
           </p>
@@ -348,70 +348,139 @@
             stripedRows
             class="top-product-isn-results__data-table app-interactive-datatable"
           >
-            <Column
-              v-for="column in comparisonHeaders"
-              :key="column.key"
-              :field="column.key"
-              :header="column.title"
-              :sortable="column.sortable"
-              :frozen="comparisonLockedColumns.includes(column.key)"
-              alignFrozen="left"
-              :style="getComparisonColumnStyle(column.key)"
-            >
-              <template v-if="column.key === 'test_item'" #body="slotProps">
+            <ColumnGroup type="header">
+              <Row>
+                <Column header="Test Item" :rowspan="2" sortable field="test_item" :frozen="comparisonLockedColumns.includes('test_item')" alignFrozen="left" :style="getComparisonColumnStyle('test_item')" />
+                <Column header="USL" :rowspan="2" sortable field="usl" :frozen="comparisonLockedColumns.includes('usl')" alignFrozen="left" :style="getComparisonColumnStyle('usl')" />
+                <Column header="LSL" :rowspan="2" sortable field="lsl" :frozen="comparisonLockedColumns.includes('lsl')" alignFrozen="left" :style="getComparisonColumnStyle('lsl')" />
+                <Column header="Target" :rowspan="2" field="target" :frozen="comparisonLockedColumns.includes('target')" alignFrozen="left" :style="getComparisonColumnStyle('target')" />
+                <Column
+                  v-for="dut in relevantDUTResults"
+                  :key="`grp-fs-${dut.dut_isn}`"
+                  :header="dut.dut_isn"
+                  :colspan="3"
+                  class="top-product-isn-results__th-group"
+                />
+                <Column
+                  v-if="relevantDUTResults.length > 1"
+                  header="Meas. Max Diff"
+                  :rowspan="2"
+                  sortable
+                  field="measured_max_diff"
+                  :frozen="comparisonLockedColumns.includes('measured_max_diff')"
+                  alignFrozen="left"
+                  :style="getComparisonColumnStyle('measured_max_diff')"
+                />
+              </Row>
+              <Row>
+                <template v-for="dut in relevantDUTResults" :key="`sub-fs-${dut.dut_isn}`">
+                  <Column header="Meas." sortable :field="`measured_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`measured_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`measured_${dut.dut_isn}`)" />
+                  <Column header="Δ Meas. & Target" sortable :field="`delta_mt_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`delta_mt_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`delta_mt_${dut.dut_isn}`)" />
+                  <Column header="Score" sortable :field="`score_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`score_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`score_${dut.dut_isn}`)" />
+                </template>
+              </Row>
+            </ColumnGroup>
+
+            <Column field="test_item" :frozen="comparisonLockedColumns.includes('test_item')" alignFrozen="left" :style="getComparisonColumnStyle('test_item')">
+              <template #body="slotProps">
                 <span class="top-product-isn-results__strong">{{ slotProps.data.test_item }}</span>
               </template>
+            </Column>
 
-              <template v-else-if="column.key === 'usl' || column.key === 'lsl' || column.key === 'target'" #body="slotProps">
-                <span class="top-product-isn-results__muted">{{ slotProps.data[column.key] ?? '-' }}</span>
+            <Column field="usl" :frozen="comparisonLockedColumns.includes('usl')" alignFrozen="left" :style="getComparisonColumnStyle('usl')">
+              <template #body="slotProps">
+                <span class="top-product-isn-results__muted">{{ slotProps.data.usl ?? '-' }}</span>
               </template>
+            </Column>
 
-              <template v-else-if="column.key === 'measured_max_diff'" #body="slotProps">
+            <Column field="lsl" :frozen="comparisonLockedColumns.includes('lsl')" alignFrozen="left" :style="getComparisonColumnStyle('lsl')">
+              <template #body="slotProps">
+                <span class="top-product-isn-results__muted">{{ slotProps.data.lsl ?? '-' }}</span>
+              </template>
+            </Column>
+
+            <Column field="target" :frozen="comparisonLockedColumns.includes('target')" alignFrozen="left" :style="getComparisonColumnStyle('target')">
+              <template #body="slotProps">
+                <span class="top-product-isn-results__muted">{{ slotProps.data.target || '-' }}</span>
+              </template>
+            </Column>
+
+            <template v-for="dut in relevantDUTResults" :key="`body-fs-${dut.dut_isn}`">
+              <Column
+                :field="`measured_${dut.dut_isn}`"
+                :frozen="comparisonLockedColumns.includes(`measured_${dut.dut_isn}`)"
+                alignFrozen="left"
+                :style="getComparisonColumnStyle(`measured_${dut.dut_isn}`)"
+              >
+                <template #body="slotProps">
+                  <span
+                    v-if="slotProps.data[`measured_${dut.dut_isn}`] !== null && slotProps.data[`measured_${dut.dut_isn}`] !== undefined && slotProps.data[`measured_${dut.dut_isn}`] !== 'N/A'"
+                    class="top-product-isn-results__badge"
+                    :class="badgeToneClass(getMeasuredValueColor(slotProps.data[`measured_${dut.dut_isn}`], slotProps.data.usl, slotProps.data.lsl))"
+                  >
+                    {{ slotProps.data[`measured_${dut.dut_isn}`] }}
+                  </span>
+                  <span v-else class="top-product-isn-results__muted">N/A</span>
+                </template>
+              </Column>
+
+              <Column
+                :field="`delta_mt_${dut.dut_isn}`"
+                :frozen="comparisonLockedColumns.includes(`delta_mt_${dut.dut_isn}`)"
+                alignFrozen="left"
+                :style="getComparisonColumnStyle(`delta_mt_${dut.dut_isn}`)"
+              >
+                <template #body="slotProps">
+                  <span
+                    v-if="slotProps.data[`delta_mt_${dut.dut_isn}`] !== undefined && slotProps.data[`delta_mt_${dut.dut_isn}`] !== null"
+                    class="top-product-isn-results__badge"
+                    :class="badgeToneClass(getDeltaColor(slotProps.data[`delta_mt_${dut.dut_isn}`]))"
+                  >
+                    {{ slotProps.data[`delta_mt_${dut.dut_isn}`].toFixed(2) }}
+                  </span>
+                  <span v-else class="top-product-isn-results__muted">N/A</span>
+                </template>
+              </Column>
+
+              <Column
+                :field="`score_${dut.dut_isn}`"
+                :frozen="comparisonLockedColumns.includes(`score_${dut.dut_isn}`)"
+                alignFrozen="left"
+                :style="getComparisonColumnStyle(`score_${dut.dut_isn}`)"
+              >
+                <template #body="slotProps">
+                  <button
+                    type="button"
+                    class="top-product-isn-results__badge top-product-isn-results__score-button"
+                    :class="badgeToneClass(getScoreColor(slotProps.data[`score_${dut.dut_isn}`]))"
+                    :disabled="!slotProps.data[`breakdown_${dut.dut_isn}`]"
+                    @click="slotProps.data[`breakdown_${dut.dut_isn}`] && handleComparisonScoreClick(slotProps.data, dut.dut_isn)"
+                  >
+                    <span>
+                      {{ slotProps.data[`score_${dut.dut_isn}`] !== undefined ? slotProps.data[`score_${dut.dut_isn}`].toFixed(2) : 'N/A' }}
+                    </span>
+                    <Icon v-if="slotProps.data[`breakdown_${dut.dut_isn}`]" icon="mdi:information-outline" />
+                  </button>
+                </template>
+              </Column>
+            </template>
+
+            <Column
+              v-if="relevantDUTResults.length > 1"
+              field="measured_max_diff"
+              :frozen="comparisonLockedColumns.includes('measured_max_diff')"
+              alignFrozen="left"
+              :style="getComparisonColumnStyle('measured_max_diff')"
+            >
+              <template #body="slotProps">
                 <span
-                  v-if="slotProps.data.measured_max_diff !== null"
+                  v-if="slotProps.data.measured_max_diff !== null && slotProps.data.measured_max_diff !== undefined"
                   class="top-product-isn-results__badge"
                   :class="badgeToneClass(getDeltaColor(slotProps.data.measured_max_diff))"
                 >
                   {{ slotProps.data.measured_max_diff.toFixed(2) }}
                 </span>
                 <span v-else class="top-product-isn-results__muted">N/A</span>
-              </template>
-
-              <template v-else-if="column.key.startsWith('measured_')" #body="slotProps">
-                <span
-                  v-if="slotProps.data[column.key] !== null && slotProps.data[column.key] !== undefined && slotProps.data[column.key] !== 'N/A'"
-                  class="top-product-isn-results__badge"
-                  :class="badgeToneClass(getMeasuredValueColor(slotProps.data[column.key], slotProps.data.usl, slotProps.data.lsl))"
-                >
-                  {{ slotProps.data[column.key] }}
-                </span>
-                <span v-else class="top-product-isn-results__muted">N/A</span>
-              </template>
-
-              <template v-else-if="column.key.startsWith('delta_mt_')" #body="slotProps">
-                <span
-                  v-if="slotProps.data[column.key] !== undefined && slotProps.data[column.key] !== null"
-                  class="top-product-isn-results__badge"
-                  :class="badgeToneClass(getDeltaColor(slotProps.data[column.key]))"
-                >
-                  {{ slotProps.data[column.key].toFixed(2) }}
-                </span>
-                <span v-else class="top-product-isn-results__muted">N/A</span>
-              </template>
-
-              <template v-else-if="column.key.startsWith('score_')" #body="slotProps">
-                <button
-                  type="button"
-                  class="top-product-isn-results__badge top-product-isn-results__score-button"
-                  :class="badgeToneClass(getScoreColor(slotProps.data[column.key]))"
-                  :disabled="!slotProps.data[`breakdown_${column.key.replace('score_', '')}`]"
-                  @click="slotProps.data[`breakdown_${column.key.replace('score_', '')}`] && handleComparisonScoreClick(slotProps.data, column.key.replace('score_', ''))"
-                >
-                  <span>
-                    {{ slotProps.data[column.key] !== undefined ? slotProps.data[column.key].toFixed(2) : 'N/A' }}
-                  </span>
-                  <Icon v-if="slotProps.data[`breakdown_${column.key.replace('score_', '')}`]" icon="mdi:information-outline" />
-                </button>
               </template>
             </Column>
 
@@ -566,70 +635,139 @@
             stripedRows
             class="top-product-isn-results__data-table app-interactive-datatable"
           >
-            <Column
-              v-for="column in comparisonHeaders"
-              :key="column.key"
-              :field="column.key"
-              :header="column.title"
-              :sortable="column.sortable"
-              :frozen="comparisonLockedColumns.includes(column.key)"
-              alignFrozen="left"
-              :style="getComparisonColumnStyle(column.key)"
-            >
-              <template v-if="column.key === 'test_item'" #body="slotProps">
+            <ColumnGroup type="header">
+              <Row>
+                <Column header="Test Item" :rowspan="2" sortable field="test_item" :frozen="comparisonLockedColumns.includes('test_item')" alignFrozen="left" :style="getComparisonColumnStyle('test_item')" />
+                <Column header="USL" :rowspan="2" sortable field="usl" :frozen="comparisonLockedColumns.includes('usl')" alignFrozen="left" :style="getComparisonColumnStyle('usl')" />
+                <Column header="LSL" :rowspan="2" sortable field="lsl" :frozen="comparisonLockedColumns.includes('lsl')" alignFrozen="left" :style="getComparisonColumnStyle('lsl')" />
+                <Column header="Target" :rowspan="2" field="target" :frozen="comparisonLockedColumns.includes('target')" alignFrozen="left" :style="getComparisonColumnStyle('target')" />
+                <Column
+                  v-for="dut in relevantDUTResults"
+                  :key="`grp-inline-${dut.dut_isn}`"
+                  :header="dut.dut_isn"
+                  :colspan="3"
+                  class="top-product-isn-results__th-group"
+                />
+                <Column
+                  v-if="relevantDUTResults.length > 1"
+                  header="Meas. Max Diff"
+                  :rowspan="2"
+                  sortable
+                  field="measured_max_diff"
+                  :frozen="comparisonLockedColumns.includes('measured_max_diff')"
+                  alignFrozen="left"
+                  :style="getComparisonColumnStyle('measured_max_diff')"
+                />
+              </Row>
+              <Row>
+                <template v-for="dut in relevantDUTResults" :key="`sub-inline-${dut.dut_isn}`">
+                  <Column header="Meas." sortable :field="`measured_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`measured_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`measured_${dut.dut_isn}`)" />
+                  <Column header="Δ Meas. & Target" sortable :field="`delta_mt_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`delta_mt_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`delta_mt_${dut.dut_isn}`)" />
+                  <Column header="Score" sortable :field="`score_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`score_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`score_${dut.dut_isn}`)" />
+                </template>
+              </Row>
+            </ColumnGroup>
+
+            <Column field="test_item" :frozen="comparisonLockedColumns.includes('test_item')" alignFrozen="left" :style="getComparisonColumnStyle('test_item')">
+              <template #body="slotProps">
                 <span class="top-product-isn-results__strong">{{ slotProps.data.test_item }}</span>
               </template>
+            </Column>
 
-              <template v-else-if="column.key === 'usl' || column.key === 'lsl' || column.key === 'target'" #body="slotProps">
-                <span class="top-product-isn-results__muted">{{ slotProps.data[column.key] ?? '-' }}</span>
+            <Column field="usl" :frozen="comparisonLockedColumns.includes('usl')" alignFrozen="left" :style="getComparisonColumnStyle('usl')">
+              <template #body="slotProps">
+                <span class="top-product-isn-results__muted">{{ slotProps.data.usl ?? '-' }}</span>
               </template>
+            </Column>
 
-              <template v-else-if="column.key === 'measured_max_diff'" #body="slotProps">
+            <Column field="lsl" :frozen="comparisonLockedColumns.includes('lsl')" alignFrozen="left" :style="getComparisonColumnStyle('lsl')">
+              <template #body="slotProps">
+                <span class="top-product-isn-results__muted">{{ slotProps.data.lsl ?? '-' }}</span>
+              </template>
+            </Column>
+
+            <Column field="target" :frozen="comparisonLockedColumns.includes('target')" alignFrozen="left" :style="getComparisonColumnStyle('target')">
+              <template #body="slotProps">
+                <span class="top-product-isn-results__muted">{{ slotProps.data.target || '-' }}</span>
+              </template>
+            </Column>
+
+            <template v-for="dut in relevantDUTResults" :key="`body-inline-${dut.dut_isn}`">
+              <Column
+                :field="`measured_${dut.dut_isn}`"
+                :frozen="comparisonLockedColumns.includes(`measured_${dut.dut_isn}`)"
+                alignFrozen="left"
+                :style="getComparisonColumnStyle(`measured_${dut.dut_isn}`)"
+              >
+                <template #body="slotProps">
+                  <span
+                    v-if="slotProps.data[`measured_${dut.dut_isn}`] !== null && slotProps.data[`measured_${dut.dut_isn}`] !== undefined && slotProps.data[`measured_${dut.dut_isn}`] !== 'N/A'"
+                    class="top-product-isn-results__badge"
+                    :class="badgeToneClass(getMeasuredValueColor(slotProps.data[`measured_${dut.dut_isn}`], slotProps.data.usl, slotProps.data.lsl))"
+                  >
+                    {{ slotProps.data[`measured_${dut.dut_isn}`] }}
+                  </span>
+                  <span v-else class="top-product-isn-results__muted">N/A</span>
+                </template>
+              </Column>
+
+              <Column
+                :field="`delta_mt_${dut.dut_isn}`"
+                :frozen="comparisonLockedColumns.includes(`delta_mt_${dut.dut_isn}`)"
+                alignFrozen="left"
+                :style="getComparisonColumnStyle(`delta_mt_${dut.dut_isn}`)"
+              >
+                <template #body="slotProps">
+                  <span
+                    v-if="slotProps.data[`delta_mt_${dut.dut_isn}`] !== undefined && slotProps.data[`delta_mt_${dut.dut_isn}`] !== null"
+                    class="top-product-isn-results__badge"
+                    :class="badgeToneClass(getDeltaColor(slotProps.data[`delta_mt_${dut.dut_isn}`]))"
+                  >
+                    {{ slotProps.data[`delta_mt_${dut.dut_isn}`].toFixed(2) }}
+                  </span>
+                  <span v-else class="top-product-isn-results__muted">N/A</span>
+                </template>
+              </Column>
+
+              <Column
+                :field="`score_${dut.dut_isn}`"
+                :frozen="comparisonLockedColumns.includes(`score_${dut.dut_isn}`)"
+                alignFrozen="left"
+                :style="getComparisonColumnStyle(`score_${dut.dut_isn}`)"
+              >
+                <template #body="slotProps">
+                  <button
+                    type="button"
+                    class="top-product-isn-results__badge top-product-isn-results__score-button"
+                    :class="badgeToneClass(getScoreColor(slotProps.data[`score_${dut.dut_isn}`]))"
+                    :disabled="!slotProps.data[`breakdown_${dut.dut_isn}`]"
+                    @click="slotProps.data[`breakdown_${dut.dut_isn}`] && handleComparisonScoreClick(slotProps.data, dut.dut_isn)"
+                  >
+                    <span>
+                      {{ slotProps.data[`score_${dut.dut_isn}`] !== undefined ? slotProps.data[`score_${dut.dut_isn}`].toFixed(2) : 'N/A' }}
+                    </span>
+                    <Icon v-if="slotProps.data[`breakdown_${dut.dut_isn}`]" icon="mdi:information-outline" />
+                  </button>
+                </template>
+              </Column>
+            </template>
+
+            <Column
+              v-if="relevantDUTResults.length > 1"
+              field="measured_max_diff"
+              :frozen="comparisonLockedColumns.includes('measured_max_diff')"
+              alignFrozen="left"
+              :style="getComparisonColumnStyle('measured_max_diff')"
+            >
+              <template #body="slotProps">
                 <span
-                  v-if="slotProps.data.measured_max_diff !== null"
+                  v-if="slotProps.data.measured_max_diff !== null && slotProps.data.measured_max_diff !== undefined"
                   class="top-product-isn-results__badge"
                   :class="badgeToneClass(getDeltaColor(slotProps.data.measured_max_diff))"
                 >
                   {{ slotProps.data.measured_max_diff.toFixed(2) }}
                 </span>
                 <span v-else class="top-product-isn-results__muted">N/A</span>
-              </template>
-
-              <template v-else-if="column.key.startsWith('measured_')" #body="slotProps">
-                <span
-                  v-if="slotProps.data[column.key] !== null && slotProps.data[column.key] !== undefined && slotProps.data[column.key] !== 'N/A'"
-                  class="top-product-isn-results__badge"
-                  :class="badgeToneClass(getMeasuredValueColor(slotProps.data[column.key], slotProps.data.usl, slotProps.data.lsl))"
-                >
-                  {{ slotProps.data[column.key] }}
-                </span>
-                <span v-else class="top-product-isn-results__muted">N/A</span>
-              </template>
-
-              <template v-else-if="column.key.startsWith('delta_mt_')" #body="slotProps">
-                <span
-                  v-if="slotProps.data[column.key] !== undefined && slotProps.data[column.key] !== null"
-                  class="top-product-isn-results__badge"
-                  :class="badgeToneClass(getDeltaColor(slotProps.data[column.key]))"
-                >
-                  {{ slotProps.data[column.key].toFixed(2) }}
-                </span>
-                <span v-else class="top-product-isn-results__muted">N/A</span>
-              </template>
-
-              <template v-else-if="column.key.startsWith('score_')" #body="slotProps">
-                <button
-                  type="button"
-                  class="top-product-isn-results__badge top-product-isn-results__score-button"
-                  :class="badgeToneClass(getScoreColor(slotProps.data[column.key]))"
-                  :disabled="!slotProps.data[`breakdown_${column.key.replace('score_', '')}`]"
-                  @click="slotProps.data[`breakdown_${column.key.replace('score_', '')}`] && handleComparisonScoreClick(slotProps.data, column.key.replace('score_', ''))"
-                >
-                  <span>
-                    {{ slotProps.data[column.key] !== undefined ? slotProps.data[column.key].toFixed(2) : 'N/A' }}
-                  </span>
-                  <Icon v-if="slotProps.data[`breakdown_${column.key.replace('score_', '')}`]" icon="mdi:information-outline" />
-                </button>
               </template>
             </Column>
 
@@ -772,7 +910,9 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import Column from 'primevue/column'
+import ColumnGroup from 'primevue/columngroup'
 import DataTable from 'primevue/datatable'
+import Row from 'primevue/row'
 import { computed, ref, watch } from 'vue'
 import ScoreBreakdownDialog from '@/features/dut-logs/components/ScoreBreakdownDialog.vue'
 import { AppDialog, AppMultiSelect, AppPanel, AppSelect } from '@/shared/ui'
@@ -997,54 +1137,36 @@ const enhancedResults = computed(() => {
 const comparisonStations = computed(() => {
   if (enhancedResults.value.length === 0) return []
 
-  const siteModelGroups = new Map<string, typeof enhancedResults.value>()
+  const stationMap = new Map<string, { station: string; model: string; site: string }>()
 
   enhancedResults.value.forEach((result) => {
-    const key = `${result.site_name || 'Unknown'}|${result.model_name || 'Unknown'}`
-    if (!siteModelGroups.has(key)) {
-      siteModelGroups.set(key, [])
-    }
-    siteModelGroups.get(key)?.push(result)
-  })
+    const site = result.site_name || 'Unknown'
+    const model = result.model_name || 'Unknown'
 
-  const stationOptions: Array<{
-    value: string
-    title: string
-    raw: { station: string; site: string; model: string }
-  }> = []
-
-  siteModelGroups.forEach((dutGroup) => {
-    if (dutGroup.length === 0) return
-
-    const firstDUT = dutGroup[0]
-    if (!firstDUT) return
-
-    const potentialStations = new Map<string, { station: string; site: string; model: string }>()
-
-    firstDUT.test_result.forEach((station) => {
-      potentialStations.set(station.station_name, {
-        station: station.station_name,
-        site: firstDUT.site_name || 'Unknown',
-        model: firstDUT.model_name || 'Unknown',
-      })
-    })
-
-    potentialStations.forEach((stationInfo, stationName) => {
-      const existsInAllDUTs = dutGroup.every((dut) =>
-        dut.test_result.some((station) => station.station_name === stationName),
-      )
-
-      if (existsInAllDUTs) {
-        stationOptions.push({
-          value: stationName,
-          title: stationName,
-          raw: stationInfo,
+    result.test_result.forEach((station) => {
+      const stationName = station.station_name
+      if (!stationMap.has(stationName)) {
+        stationMap.set(stationName, {
+          station: stationName,
+          model,
+          site,
         })
       }
     })
   })
 
-  return stationOptions.sort((a, b) => a.title.localeCompare(b.title))
+  return Array.from(stationMap.values()).map((info) => {
+    const title =
+      info.model && info.model !== 'Unknown' ? `${info.model} / ${info.station}` : info.station
+
+    return {
+      value: info.station,
+      title,
+      model: info.model,
+      station: info.station,
+      raw: info,
+    }
+  })
 })
 
 const comparisonStationOptions = computed(() => [
@@ -1054,6 +1176,28 @@ const comparisonStationOptions = computed(() => [
     value: station.value,
   })),
 ])
+
+const relevantDUTResults = computed(() => {
+  if (!selectedCompareStation.value) return []
+  return enhancedResults.value.filter((result) =>
+    result.test_result.some((station) => station.station_name === selectedCompareStation.value),
+  )
+})
+
+watch(
+  comparisonStations,
+  (stations) => {
+    if (stations.length === 0) {
+      selectedCompareStation.value = null
+    } else if (
+      !selectedCompareStation.value ||
+      !stations.some((s) => s.value === selectedCompareStation.value)
+    ) {
+      selectedCompareStation.value = stations[0]?.value ?? null
+    }
+  },
+  { immediate: true },
+)
 
 watch(
   enhancedResults,
@@ -1067,13 +1211,6 @@ watch(
       const firstResult = value[0]
       if (firstResult) {
         openDutPanels.value = [firstResult.dut_isn]
-      }
-    }
-
-    if (!selectedCompareStation.value) {
-      const firstStation = comparisonStations.value[0]
-      if (firstStation) {
-        selectedCompareStation.value = firstStation.value
       }
     }
   },
@@ -1197,31 +1334,22 @@ const comparisonHeaders = computed(() => {
     { title: 'Target', key: 'target', sortable: false },
   ]
 
-  const measuredHeaders = enhancedResults.value.map((result) => ({
-    title: `Meas. ${result.dut_isn}`,
-    key: `measured_${result.dut_isn}`,
-    sortable: false,
-  }))
+  const dutHeaders = relevantDUTResults.value.flatMap((result) => [
+    { title: `${result.dut_isn} - Meas.`, key: `measured_${result.dut_isn}`, sortable: false },
+    {
+      title: `${result.dut_isn} - Δ Meas. & Target`,
+      key: `delta_mt_${result.dut_isn}`,
+      sortable: false,
+    },
+    { title: `${result.dut_isn} - Score`, key: `score_${result.dut_isn}`, sortable: true },
+  ])
 
-  const actMaxDiffHeader = {
-    title: 'Meas.Max Diff',
-    key: 'measured_max_diff',
-    sortable: true,
-  }
+  const actMaxDiffHeader =
+    relevantDUTResults.value.length > 1
+      ? [{ title: 'Meas. Max Diff', key: 'measured_max_diff', sortable: true }]
+      : []
 
-  const deltaHeaders = enhancedResults.value.map((result) => ({
-    title: `Δ Meas. & Target ${result.dut_isn}`,
-    key: `delta_mt_${result.dut_isn}`,
-    sortable: false,
-  }))
-
-  const scoreHeaders = enhancedResults.value.map((result) => ({
-    title: `Score ${result.dut_isn}`,
-    key: `score_${result.dut_isn}`,
-    sortable: true,
-  }))
-
-  return [...baseHeaders, ...measuredHeaders, actMaxDiffHeader, ...deltaHeaders, ...scoreHeaders]
+  return [...baseHeaders, ...dutHeaders, ...actMaxDiffHeader]
 })
 
 const comparisonColumnOptions = computed(() =>
@@ -1239,12 +1367,12 @@ const comparisonColumnSelectOptions = computed(() =>
 )
 
 const comparisonData = computed(() => {
-  if (!selectedCompareStation.value) return []
+  if (!selectedCompareStation.value || relevantDUTResults.value.length === 0) return []
 
   let canonicalOrder: string[] = []
-  const firstResult = enhancedResults.value[0]
-  if (firstResult) {
-    const firstStation = firstResult.test_result.find(
+  const firstDUTWithStation = relevantDUTResults.value[0]
+  if (firstDUTWithStation) {
+    const firstStation = firstDUTWithStation.test_result.find(
       (station) => station.station_name === selectedCompareStation.value,
     )
     if (firstStation) {
@@ -1256,7 +1384,7 @@ const comparisonData = computed(() => {
   // biome-ignore lint/suspicious/noExplicitAny: dynamic comparison data with computed DUT-specific keys
   const testItemMap = new Map<string, any>()
 
-  enhancedResults.value.forEach((result) => {
+  relevantDUTResults.value.forEach((result) => {
     const station = result.test_result.find(
       (entry) => entry.station_name === selectedCompareStation.value,
     )
@@ -1300,9 +1428,9 @@ const comparisonData = computed(() => {
   const comparisonItems = Array.from(testItemMap.values()).map((item) => {
     const measuredValues: number[] = []
 
-    enhancedResults.value.forEach((result) => {
+    relevantDUTResults.value.forEach((result) => {
       const measured = item[`measured_${result.dut_isn}`]
-      if (measured !== undefined && measured !== '') {
+      if (measured !== undefined && measured !== '' && measured !== 'N/A') {
         const measuredNum = parseFloat(measured)
         if (!Number.isNaN(measuredNum)) {
           measuredValues.push(measuredNum)
@@ -1332,7 +1460,7 @@ const filteredComparisonData = computed(() => {
 
   if (comparisonScoreFilter.value) {
     filtered = filtered.filter((item) => {
-      return enhancedResults.value.some((result) => {
+      return relevantDUTResults.value.some((result) => {
         const score = item[`score_${result.dut_isn}`]
         if (score === undefined) return false
 
@@ -1346,7 +1474,7 @@ const filteredComparisonData = computed(() => {
 
   if (comparisonLimitFilter.value) {
     filtered = filtered.filter((item) => {
-      return enhancedResults.value.some((result) => {
+      return relevantDUTResults.value.some((result) => {
         const measured = item[`measured_${result.dut_isn}`]
         if (!measured || measured === 'N/A') return false
 
@@ -2141,6 +2269,13 @@ function stationRowClass(row: Record<string, unknown>) {
 .top-product-isn-results__data-table :deep(.p-datatable-thead > tr > th) {
   white-space: normal;
   line-height: 1.3;
+}
+
+.top-product-isn-results__data-table :deep(.top-product-isn-results__th-group) {
+  text-align: center;
+  background: var(--app-surface);
+  font-weight: 700;
+  border-bottom: 1px solid var(--app-border);
 }
 
 .top-product-isn-results__data-table :deep(.p-datatable-tbody > tr > td) {

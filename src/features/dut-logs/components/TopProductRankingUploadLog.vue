@@ -415,7 +415,6 @@
     >
       <div v-if="overallScoreDetails" class="top-product-ranking-upload-log__breakdown-shell">
         <section v-if="hasSelectedForcedFail" class="top-product-ranking-upload-log__notice top-product-ranking-upload-log__notice--danger">
-          <Icon icon="mdi:alert-octagon" />
           <strong>Forced Fail DUT:</strong>
           <span>{{ forcedFailSummaryText }}. The displayed overall score is kept for ranking context, but the test result is forced to Min. Score Fail.</span>
         </section>

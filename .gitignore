@@ -12,7 +12,10 @@ dist
 dist-ssr
 *.local
 .dev-resources/
-.github/
+.github/*
+!.github/copilot-instructions.md
+!.github/instructions/
+!.github/instructions/*.instructions.md
 opencode.json
 skills-lock.json
 
