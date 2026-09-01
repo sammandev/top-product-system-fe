@@ -363,19 +363,19 @@
                 />
                 <Column
                   v-if="relevantDUTResults.length > 1"
-                  header="Meas. Max Diff"
+                  header="Avg. Value"
                   :rowspan="2"
                   sortable
-                  field="measured_max_diff"
-                  :frozen="comparisonLockedColumns.includes('measured_max_diff')"
+                  field="avg_value"
+                  :frozen="comparisonLockedColumns.includes('avg_value')"
                   alignFrozen="left"
-                  :style="getComparisonColumnStyle('measured_max_diff')"
+                  :style="getComparisonColumnStyle('avg_value')"
                 />
               </Row>
               <Row>
                 <template v-for="dut in relevantDUTResults" :key="`sub-fs-${dut.dut_isn}`">
-                  <Column header="Meas." sortable :field="`measured_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`measured_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`measured_${dut.dut_isn}`)" />
-                  <Column header="Δ Meas. & Target" sortable :field="`delta_mt_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`delta_mt_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`delta_mt_${dut.dut_isn}`)" />
+                  <Column header="Value" sortable :field="`measured_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`measured_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`measured_${dut.dut_isn}`)" />
+                  <Column header="Value-Target" sortable :field="`delta_mt_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`delta_mt_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`delta_mt_${dut.dut_isn}`)" />
                   <Column header="Score" sortable :field="`score_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`score_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`score_${dut.dut_isn}`)" />
                 </template>
               </Row>
@@ -467,18 +467,17 @@
 
             <Column
               v-if="relevantDUTResults.length > 1"
-              field="measured_max_diff"
-              :frozen="comparisonLockedColumns.includes('measured_max_diff')"
+              field="avg_value"
+              :frozen="comparisonLockedColumns.includes('avg_value')"
               alignFrozen="left"
-              :style="getComparisonColumnStyle('measured_max_diff')"
+              :style="getComparisonColumnStyle('avg_value')"
             >
               <template #body="slotProps">
                 <span
-                  v-if="slotProps.data.measured_max_diff !== null && slotProps.data.measured_max_diff !== undefined"
-                  class="top-product-isn-results__badge"
-                  :class="badgeToneClass(getDeltaColor(slotProps.data.measured_max_diff))"
+                  v-if="slotProps.data.avg_value !== null && slotProps.data.avg_value !== undefined"
+                  class="top-product-isn-results__badge top-product-isn-results__badge--neutral"
                 >
-                  {{ slotProps.data.measured_max_diff.toFixed(2) }}
+                  {{ slotProps.data.avg_value.toFixed(2) }}
                 </span>
                 <span v-else class="top-product-isn-results__muted">N/A</span>
               </template>
@@ -569,6 +568,16 @@
         </div>
         <div class="top-product-isn-results__panel-actions">
           <button
+            v-if="selectedCompareStation && filteredComparisonData.length > 0"
+            type="button"
+            class="top-product-isn-results__ghost-button"
+            :disabled="exportingComparison"
+            @click="exportComparisonToExcel"
+          >
+            <Icon :icon="exportingComparison ? 'mdi:loading' : 'mdi:microsoft-excel'" :class="{ 'top-product-isn-results__spin': exportingComparison }" />
+            <span>{{ exportingComparison ? 'Exporting...' : 'Export Excel' }}</span>
+          </button>
+          <button
             v-if="selectedCompareStation && comparisonData.length > 0"
             type="button"
             class="top-product-isn-results__ghost-button"
@@ -625,7 +634,7 @@
           <DataTable
             :value="filteredComparisonData"
             paginator
-            :rows="15"
+            :rows="25"
             :rowsPerPageOptions="tableRowsPerPageOptions"
             dataKey="test_item"
             scrollable
@@ -650,19 +659,19 @@
                 />
                 <Column
                   v-if="relevantDUTResults.length > 1"
-                  header="Meas. Max Diff"
+                  header="Avg. Value"
                   :rowspan="2"
                   sortable
-                  field="measured_max_diff"
-                  :frozen="comparisonLockedColumns.includes('measured_max_diff')"
+                  field="avg_value"
+                  :frozen="comparisonLockedColumns.includes('avg_value')"
                   alignFrozen="left"
-                  :style="getComparisonColumnStyle('measured_max_diff')"
+                  :style="getComparisonColumnStyle('avg_value')"
                 />
               </Row>
               <Row>
                 <template v-for="dut in relevantDUTResults" :key="`sub-inline-${dut.dut_isn}`">
-                  <Column header="Meas." sortable :field="`measured_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`measured_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`measured_${dut.dut_isn}`)" />
-                  <Column header="Δ Meas. & Target" sortable :field="`delta_mt_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`delta_mt_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`delta_mt_${dut.dut_isn}`)" />
+                  <Column header="Value" sortable :field="`measured_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`measured_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`measured_${dut.dut_isn}`)" />
+                  <Column header="Value-Target" sortable :field="`delta_mt_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`delta_mt_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`delta_mt_${dut.dut_isn}`)" />
                   <Column header="Score" sortable :field="`score_${dut.dut_isn}`" :frozen="comparisonLockedColumns.includes(`score_${dut.dut_isn}`)" alignFrozen="left" :style="getComparisonColumnStyle(`score_${dut.dut_isn}`)" />
                 </template>
               </Row>
@@ -754,18 +763,17 @@
 
             <Column
               v-if="relevantDUTResults.length > 1"
-              field="measured_max_diff"
-              :frozen="comparisonLockedColumns.includes('measured_max_diff')"
+              field="avg_value"
+              :frozen="comparisonLockedColumns.includes('avg_value')"
               alignFrozen="left"
-              :style="getComparisonColumnStyle('measured_max_diff')"
+              :style="getComparisonColumnStyle('avg_value')"
             >
               <template #body="slotProps">
                 <span
-                  v-if="slotProps.data.measured_max_diff !== null && slotProps.data.measured_max_diff !== undefined"
-                  class="top-product-isn-results__badge"
-                  :class="badgeToneClass(getDeltaColor(slotProps.data.measured_max_diff))"
+                  v-if="slotProps.data.avg_value !== null && slotProps.data.avg_value !== undefined"
+                  class="top-product-isn-results__badge top-product-isn-results__badge--neutral"
                 >
-                  {{ slotProps.data.measured_max_diff.toFixed(2) }}
+                  {{ slotProps.data.avg_value.toFixed(2) }}
                 </span>
                 <span v-else class="top-product-isn-results__muted">N/A</span>
               </template>
@@ -1235,8 +1243,8 @@ const measurementHeaders = [
   { title: 'USL', key: 'usl', sortable: true },
   { title: 'LSL', key: 'lsl', sortable: true },
   { title: 'Target', key: 'target', sortable: false },
-  { title: 'Meas.', key: 'actual', sortable: false },
-  { title: 'Δ Meas. & Target', key: 'delta_actual_target', sortable: false },
+  { title: 'Value', key: 'actual', sortable: false },
+  { title: 'Value-Target', key: 'delta_actual_target', sortable: false },
   { title: 'Score', key: 'score', sortable: true },
 ]
 
@@ -1335,21 +1343,21 @@ const comparisonHeaders = computed(() => {
   ]
 
   const dutHeaders = relevantDUTResults.value.flatMap((result) => [
-    { title: `${result.dut_isn} - Meas.`, key: `measured_${result.dut_isn}`, sortable: false },
+    { title: `${result.dut_isn} - Value`, key: `measured_${result.dut_isn}`, sortable: false },
     {
-      title: `${result.dut_isn} - Δ Meas. & Target`,
+      title: `${result.dut_isn} - Value-Target`,
       key: `delta_mt_${result.dut_isn}`,
       sortable: false,
     },
     { title: `${result.dut_isn} - Score`, key: `score_${result.dut_isn}`, sortable: true },
   ])
 
-  const actMaxDiffHeader =
+  const avgValueHeader =
     relevantDUTResults.value.length > 1
-      ? [{ title: 'Meas. Max Diff', key: 'measured_max_diff', sortable: true }]
+      ? [{ title: 'Avg. Value', key: 'avg_value', sortable: true }]
       : []
 
-  return [...baseHeaders, ...dutHeaders, ...actMaxDiffHeader]
+  return [...baseHeaders, ...dutHeaders, ...avgValueHeader]
 })
 
 const comparisonColumnOptions = computed(() =>
@@ -1438,12 +1446,14 @@ const comparisonData = computed(() => {
       }
     })
 
+    const avgValue =
+      measuredValues.length > 0
+        ? measuredValues.reduce((sum, v) => sum + v, 0) / measuredValues.length
+        : null
+
     return {
       ...item,
-      measured_max_diff:
-        measuredValues.length > 1
-          ? Math.max(...measuredValues) - Math.min(...measuredValues)
-          : null,
+      avg_value: avgValue,
     }
   })
 
@@ -1720,11 +1730,116 @@ function getComparisonColumnStyle(key: string) {
   if (key === 'test_item') return 'min-width: 16rem; width: 16rem;'
   if (key === 'usl' || key === 'lsl') return 'min-width: 7rem; width: 7rem;'
   if (key === 'target') return 'min-width: 8rem; width: 8rem;'
-  if (key === 'measured_max_diff') return 'min-width: 11rem; width: 11rem;'
+  if (key === 'avg_value' || key === 'measured_max_diff') return 'min-width: 10rem; width: 10rem;'
   if (key.startsWith('measured_')) return 'min-width: 10rem; width: 10rem;'
   if (key.startsWith('delta_mt_')) return 'min-width: 12rem; width: 12rem;'
   if (key.startsWith('score_')) return 'min-width: 10rem; width: 10rem;'
   return 'min-width: 10rem;'
+}
+
+const exportingComparison = ref(false)
+
+async function exportComparisonToExcel(): Promise<void> {
+  if (!selectedCompareStation.value || filteredComparisonData.value.length === 0) return
+
+  exportingComparison.value = true
+  try {
+    const ExcelJS = (await import('exceljs')).default || (await import('exceljs'))
+    const workbook = new ExcelJS.Workbook()
+    const sheetName = (selectedCompareStation.value || 'Comparison')
+      .replace(/[:\\/?*[\]]/g, '_')
+      .substring(0, 31)
+    const worksheet = workbook.addWorksheet(sheetName)
+
+    // Header metadata rows
+    worksheet.addRow(['Station Comparison Report'])
+    worksheet.addRow(['Station', selectedCompareStation.value])
+    worksheet.addRow(['Total Items', filteredComparisonData.value.length])
+    worksheet.addRow(['Export Date', formatDate(new Date(), 'YYYY-MM-DD HH:mm:ss')])
+    worksheet.addRow([])
+
+    // Table Header Rows (2 rows like in UI)
+    const headerRow1: string[] = ['Test Item', 'USL', 'LSL', 'Target']
+    const headerRow2: string[] = ['', '', '', '']
+
+    relevantDUTResults.value.forEach((dut) => {
+      headerRow1.push(dut.dut_isn, '', '')
+      headerRow2.push('Value', 'Value-Target', 'Score')
+    })
+
+    if (relevantDUTResults.value.length > 1) {
+      headerRow1.push('Avg. Value')
+      headerRow2.push('')
+    }
+
+    const r1 = worksheet.addRow(headerRow1)
+    const r2 = worksheet.addRow(headerRow2)
+
+    r1.font = { bold: true }
+    r2.font = { bold: true }
+
+    for (let c = 1; c <= 4; c += 1) {
+      worksheet.mergeCells(r1.number, c, r2.number, c)
+    }
+
+    let colIndex = 5
+    relevantDUTResults.value.forEach(() => {
+      worksheet.mergeCells(r1.number, colIndex, r1.number, colIndex + 2)
+      colIndex += 3
+    })
+
+    if (relevantDUTResults.value.length > 1) {
+      worksheet.mergeCells(r1.number, colIndex, r2.number, colIndex)
+    }
+
+    filteredComparisonData.value.forEach((item) => {
+      const rowData: (string | number | null)[] = [
+        item.test_item,
+        item.usl ?? '',
+        item.lsl ?? '',
+        item.target ?? '',
+      ]
+
+      relevantDUTResults.value.forEach((dut) => {
+        const val = item[`measured_${dut.dut_isn}`]
+        const delta = item[`delta_mt_${dut.dut_isn}`]
+        const score = item[`score_${dut.dut_isn}`]
+
+        rowData.push(
+          val !== undefined && val !== null ? val : '',
+          delta !== undefined && delta !== null ? Number(delta.toFixed(2)) : '',
+          score !== undefined && score !== null ? Number(score.toFixed(2)) : '',
+        )
+      })
+
+      if (relevantDUTResults.value.length > 1) {
+        rowData.push(
+          item.avg_value !== null && item.avg_value !== undefined
+            ? Number(item.avg_value.toFixed(2))
+            : '',
+        )
+      }
+
+      worksheet.addRow(rowData)
+    })
+
+    const buffer = await workbook.xlsx.writeBuffer()
+    const blob = new Blob([buffer], {
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `comparison_${selectedCompareStation.value.replace(/[^a-zA-Z0-9_-]/g, '_')}_${formatDate(new Date(), 'YYYY-MM-DD_HHmmss')}.xlsx`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  } catch (err) {
+    console.error('Failed to export comparison:', err)
+  } finally {
+    exportingComparison.value = false
+  }
 }
 
 function stationRowClass(row: Record<string, unknown>) {

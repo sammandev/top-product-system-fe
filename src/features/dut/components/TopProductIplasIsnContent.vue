@@ -85,7 +85,7 @@
               placeholder="Paste multiple ISNs, SSNs, or MACs separated by newlines, commas, or spaces"
               @keydown="handleIdentifierShortcut" />
             <small class="top-product-iplas-isn-helper-copy">Bulk input accepts one-per-line, comma-separated, or
-              space-separated identifiers. Press Enter to search, or Ctrl+Shift+Enter for ISN Ref.</small>
+              space-separated identifiers. Press Ctrl+Enter to search, or Ctrl+Shift+Enter for ISN Ref.</small>
           </label>
 
           <div class="top-product-iplas-isn-bulk-footer">
@@ -695,21 +695,38 @@ async function handleIdentifierShortcut(event: KeyboardEvent): Promise<void> {
     return
   }
 
-  const shouldLookupReferences = event.ctrlKey && event.shiftKey && !event.altKey && !event.metaKey
-  const shouldSearch = !event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey
+  const isCtrl = event.ctrlKey || event.metaKey
+  const isShift = event.shiftKey
+
+  if (inputMode.value === 'bulk') {
+    if (isCtrl && isShift) {
+      event.preventDefault()
+      if (loadingSfistsp.value || bulkModeIdentifiers.value.length === 0) {
+        return
+      }
+      await handleLookupReferences()
+    } else if (isCtrl && !isShift) {
+      event.preventDefault()
+      if (loadingStationLookup.value || bulkModeIdentifiers.value.length === 0) {
+        return
+      }
+      await handleLookupStations()
+    }
+    return
+  }
+
+  const shouldLookupReferences = isCtrl && isShift && !event.altKey
+  const shouldSearch = !isCtrl && !isShift && !event.altKey
 
   if (!shouldLookupReferences && !shouldSearch) {
     return
   }
 
   event.preventDefault()
-
-  if (inputMode.value === 'multiple') {
-    commitMultipleIdentifier()
-  }
+  commitMultipleIdentifier()
 
   if (shouldLookupReferences) {
-    if (loadingSfistsp.value) {
+    if (loadingSfistsp.value || multipleModeIdentifiers.value.length === 0) {
       return
     }
 
@@ -717,7 +734,7 @@ async function handleIdentifierShortcut(event: KeyboardEvent): Promise<void> {
     return
   }
 
-  if (loadingStationLookup.value) {
+  if (loadingStationLookup.value || multipleModeIdentifiers.value.length === 0) {
     return
   }
 

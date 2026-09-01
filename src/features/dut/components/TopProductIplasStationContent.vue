@@ -4,12 +4,14 @@
       <template #header-aside>
         <div class="top-product-iplas-station-header-actions">
           <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--ghost"
-            :disabled="loading" @click="handleRefresh">
-            {{ loading ? 'Refreshing...' : 'Refresh' }}
+            @click="emit('show-settings')">
+            <Icon icon="mdi:cog-outline" />
+            <span>iPLAS Settings</span>
           </button>
           <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--ghost"
-            @click="emit('show-settings')">
-            iPLAS Settings
+            :disabled="loading" @click="handleRefresh">
+            <Icon icon="mdi:refresh" :class="{ 'top-product-iplas-station-spin': loading }" />
+            <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
           </button>
         </div>
       </template>

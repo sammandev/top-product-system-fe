@@ -24,9 +24,10 @@
       <label v-else class="dut-isn-input__field">
         <span>Bulk ISN Input</span>
         <textarea v-model="bulkText" rows="5"
-          placeholder="Paste multiple ISNs, one per line, comma-separated, or space-separated" />
+          placeholder="Paste multiple ISNs, one per line, comma-separated, or space-separated"
+          @keydown="handleBulkKeydown" />
         <div class="dut-isn-input__entry-row dut-isn-input__entry-row--end">
-          <small>Paste ISNs separated by newlines, commas, or spaces.</small>
+          <small>Paste ISNs separated by newlines, commas, or spaces. Press Ctrl+Enter to parse.</small>
           <button type="button" class="dut-isn-input__button dut-isn-input__button--primary" :disabled="!bulkText"
             @click="parseBulkISNs">
             Parse
@@ -34,7 +35,7 @@
         </div>
       </label>
 
-      <section v-if="selectedISNs.length > 0" class="dut-isn-input__section">
+      <section v-if="showSelectedTokens && selectedISNs.length > 0" class="dut-isn-input__section">
         <div class="dut-isn-input__section-header">
           <strong>Selected ISNs ({{ selectedISNs.length }})</strong>
           <button type="button" class="dut-isn-input__link" @click="clearAll">Clear All</button>
@@ -90,6 +91,7 @@ interface Props {
   modelIdentifiers?: string[]
   collapseScope?: boolean
   showScopeEditor?: boolean
+  showSelectedTokens?: boolean
 }
 
 const props = withDefaults(defineProps<Props>(), {
@@ -98,6 +100,7 @@ const props = withDefaults(defineProps<Props>(), {
   modelIdentifiers: () => [],
   collapseScope: false,
   showScopeEditor: true,
+  showSelectedTokens: true,
 })
 
 // Emits
@@ -169,6 +172,14 @@ function parseISNText(value: string): string[] {
     .split(/[\n,\s]+/)
     .map((isn) => sanitizeToken(isn))
     .filter((isn) => isn.length > 0)
+}
+
+function handleBulkKeydown(event: KeyboardEvent) {
+  if (event.isComposing || event.key !== 'Enter') return
+  if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey) {
+    event.preventDefault()
+    parseBulkISNs()
+  }
 }
 
 function parseBulkISNs() {

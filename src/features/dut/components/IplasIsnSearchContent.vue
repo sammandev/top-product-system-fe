@@ -87,7 +87,7 @@
               placeholder="Paste multiple ISNs, SSNs, or MACs separated by newlines, commas, or spaces"
               @keydown="handleIdentifierShortcut" />
             <small class="iplas-isn-helper-copy">Bulk input accepts one-per-line, comma-separated, or space-separated
-              identifiers. Press Enter to search, or Ctrl+Shift+Enter for ISN Ref.</small>
+              identifiers. Press Ctrl+Enter to search, or Ctrl+Shift+Enter for ISN Ref.</small>
           </label>
 
           <div class="iplas-isn-bulk-footer">
@@ -779,21 +779,38 @@ async function handleIdentifierShortcut(event: KeyboardEvent): Promise<void> {
     return
   }
 
-  const shouldLookupReferences = event.ctrlKey && event.shiftKey && !event.altKey && !event.metaKey
-  const shouldSearch = !event.ctrlKey && !event.shiftKey && !event.altKey && !event.metaKey
+  const isCtrl = event.ctrlKey || event.metaKey
+  const isShift = event.shiftKey
+
+  if (inputMode.value === 'bulk') {
+    if (isCtrl && isShift) {
+      event.preventDefault()
+      if (loadingSfistspLookup.value || bulkModeIdentifiers.value.length === 0) {
+        return
+      }
+      await handleSfistspLookup()
+    } else if (isCtrl && !isShift) {
+      event.preventDefault()
+      if (isSearching.value || loadingIsnSearch.value || bulkModeIdentifiers.value.length === 0) {
+        return
+      }
+      await handleSearch()
+    }
+    return
+  }
+
+  const shouldLookupReferences = isCtrl && isShift && !event.altKey
+  const shouldSearch = !isCtrl && !isShift && !event.altKey
 
   if (!shouldLookupReferences && !shouldSearch) {
     return
   }
 
   event.preventDefault()
-
-  if (inputMode.value === 'multiple') {
-    commitMultipleIdentifier()
-  }
+  commitMultipleIdentifier()
 
   if (shouldLookupReferences) {
-    if (loadingSfistspLookup.value) {
+    if (loadingSfistspLookup.value || multipleModeIdentifiers.value.length === 0) {
       return
     }
 
@@ -801,7 +818,7 @@ async function handleIdentifierShortcut(event: KeyboardEvent): Promise<void> {
     return
   }
 
-  if (isSearching.value || loadingIsnSearch.value) {
+  if (isSearching.value || loadingIsnSearch.value || multipleModeIdentifiers.value.length === 0) {
     return
   }
 

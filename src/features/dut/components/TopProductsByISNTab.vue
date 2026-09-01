@@ -10,21 +10,45 @@
           </div>
         </header>
       <DUTISNInput ref="dutISNInputRef" v-model="dutISNs" v-model:site-identifiers="siteIdentifier"
-        v-model:model-identifiers="modelIdentifier" :max-i-s-ns="20" :show-scope-editor="false" />
+        v-model:model-identifiers="modelIdentifier" :max-i-s-ns="20" :show-scope-editor="false"
+        :show-selected-tokens="false" />
 
         <div v-if="dutISNs.length > 0" class="top-products-isn-resolved-scope">
-          <header>
-            <span>{{ loadingStations ? 'Resolving DUT scopes...' : `${dutScopeGroups.length} site / model scope${dutScopeGroups.length === 1 ? '' : 's'}` }}</span>
-            <strong>{{ loadingStations ? '—' : `${availableStations.length} unique stations` }}</strong>
-          </header>
-          <article v-for="scope in dutScopeGroups" :key="scope.key">
-            <div>
-              <span>Site / Model</span>
-              <strong>{{ scope.site }} / {{ scope.model }}</strong>
+          <header class="top-product-isn-scope-header">
+            <div class="top-product-isn-scope-header__left">
+              <span>{{ loadingStations ? 'Resolving DUT scopes...' : `${dutScopeGroups.length} site / model scope${dutScopeGroups.length === 1 ? '' : 's'}` }}</span>
+              <small v-if="!loadingStations">({{ dutISNs.length }} ISN{{ dutISNs.length === 1 ? '' : 's' }} selected)</small>
             </div>
-            <div class="top-product-isn-scope-meta">
-              <span class="top-product-isn-scope-badge">{{ scope.isns.length }} DUT{{ scope.isns.length === 1 ? '' : 's' }}</span>
-              <span class="top-product-isn-scope-badge top-product-isn-scope-badge--station">{{ scope.stations.length }} station{{ scope.stations.length === 1 ? '' : 's' }}</span>
+            <div class="top-product-isn-scope-header__right">
+              <strong>{{ loadingStations ? '—' : `${availableStations.length} unique stations` }}</strong>
+              <button v-if="!loadingStations && dutISNs.length > 0" type="button" class="top-product-isn-scope-clear-btn" @click="clearAllDUTs">
+                Clear all
+              </button>
+            </div>
+          </header>
+          <article v-for="scope in dutScopeGroups" :key="scope.key" class="top-product-isn-scope-card">
+            <div class="top-product-isn-scope-card__header">
+              <div>
+                <span>Site / Model</span>
+                <strong>{{ scope.site }} / {{ scope.model }}</strong>
+              </div>
+              <div class="top-product-isn-scope-meta">
+                <span class="top-product-isn-scope-badge">{{ scope.isns.length }} DUT{{ scope.isns.length === 1 ? '' : 's' }}</span>
+                <span class="top-product-isn-scope-badge top-product-isn-scope-badge--station">{{ scope.stations.length }} station{{ scope.stations.length === 1 ? '' : 's' }}</span>
+              </div>
+            </div>
+            <div class="top-product-isn-scope-token-row">
+              <button
+                v-for="isn in scope.isns"
+                :key="isn"
+                type="button"
+                class="top-product-isn-scope-token"
+                :title="`Remove ${isn}`"
+                @click="removeScopeISN(isn)"
+              >
+                <span>{{ isn }}</span>
+                <Icon icon="mdi:close" aria-hidden="true" />
+              </button>
             </div>
           </article>
         </div>
@@ -156,19 +180,29 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, nextTick, provide, ref, watch } from 'vue'
+import {
+  buildTopProductWorkbook,
+  downloadTopProductWorkbook,
+  type TopProductExcelRecord,
+} from '@/features/dut-logs/utils/topProductExcelExport'
 import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
 import AppMultiSelect from '@/shared/ui/forms/AppMultiSelect.vue'
 import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
+import { formatDate } from '@/shared/utils/helpers'
 import { dutApi } from '../api/dut.api'
 import { dutTopProductApi } from '../api/dutTopProduct.api'
 import { useFormulaSelector } from '../composables/useFormulaSelector'
 import type {
   DUTTestSummary,
+  ScoreBreakdown,
   StationDeviceList,
   StationFilterConfig as StationFilterConfigType,
   StationTestItemList,
   TestItem,
   TopProductBatchResponse,
+  TopProductMeasurement,
+  TopProductResult,
+  TopProductStationResult,
 } from '../types/dutTopProduct.types'
 import { downloadCriteriaJsonTemplate } from '../utils/criteriaTemplate'
 // biome-ignore lint/style/useImportType: value import required for template component resolution
@@ -226,6 +260,14 @@ function handleOptionsSummaryClick(event: MouseEvent) {
   if (selectedStations.value.length === 0) {
     event.preventDefault()
   }
+}
+
+function removeScopeISN(isn: string) {
+  dutISNs.value = dutISNs.value.filter((item) => item !== isn)
+}
+
+function clearAllDUTs() {
+  dutISNs.value = []
 }
 
 const stationSelectOptions = computed(() =>
@@ -452,30 +494,30 @@ watch(
             .forEach((station) => {
               const key = station.station_name || String(station.station_id)
               if (station.error) {
-                console.warn(`Station ${key} returned error:`, station.error)
-              } else {
-                // Only include value test items (exclude nonvalue_bin and nonvalue for filter dropdown)
-                const valueTestItems: TestItem[] = []
+                // Station not applicable or nonvalue items unavailable; ignore without spamming console
+                return
+              }
+              // Only include value test items (exclude nonvalue_bin and nonvalue for filter dropdown)
+              const valueTestItems: TestItem[] = []
 
-                // Add value test items only
-                if (station.value_test_items && station.value_test_items.length > 0) {
-                  station.value_test_items.forEach((item) => {
-                    valueTestItems.push({
-                      id: 0,
-                      name: item.name,
-                      upperlimit: item.usl,
-                      lowerlimit: item.lsl,
-                      status: item.status ? 1 : null,
-                    })
+              // Add value test items only
+              if (station.value_test_items && station.value_test_items.length > 0) {
+                station.value_test_items.forEach((item) => {
+                  valueTestItems.push({
+                    id: 0,
+                    name: item.name,
+                    upperlimit: item.usl,
+                    lowerlimit: item.lsl,
+                    status: item.status ? 1 : null,
                   })
-                }
+                })
+              }
 
-                if (valueTestItems.length > 0) {
-                  const mergedItems = [...(testItemsMap[key] || []), ...valueTestItems]
-                  testItemsMap[key] = [
-                    ...new Map(mergedItems.map((item) => [item.name, item])).values(),
-                  ]
-                }
+              if (valueTestItems.length > 0) {
+                const mergedItems = [...(testItemsMap[key] || []), ...valueTestItems]
+                testItemsMap[key] = [
+                  ...new Map(mergedItems.map((item) => [item.name, item])).values(),
+                ]
               }
             })
         } catch (err) {
@@ -710,295 +752,123 @@ async function scrollToResults() {
   }
 }
 
-function handleExport() {
-  if (!results.value?.results || results.value.results.length === 0) {
+function parseMeasurements(data: unknown[]): TopProductMeasurement[] {
+  if (!data || data.length === 0) return []
+
+  const measurements: TopProductMeasurement[] = []
+
+  for (let index = 0; index < data.length; index += 1) {
+    const item = data[index]
+    if (!item) continue
+
+    const isObjectFormat =
+      typeof item === 'object' && item !== null && !Array.isArray(item) && 'test_item' in item
+
+    let testItem: string
+    let usl: number | null
+    let lsl: number | null
+    let actual: number
+    let target: number | null
+    let systemScore: number
+    let breakdown: ScoreBreakdown | null
+
+    if (isObjectFormat) {
+      const objectItem = item as Record<string, unknown>
+      testItem = String(objectItem.test_item || '')
+      usl = objectItem.usl !== null && objectItem.usl !== undefined ? Number(objectItem.usl) : null
+      lsl = objectItem.lsl !== null && objectItem.lsl !== undefined ? Number(objectItem.lsl) : null
+      actual =
+        objectItem.actual !== null && objectItem.actual !== undefined
+          ? Number(objectItem.actual)
+          : 0
+
+      breakdown =
+        objectItem.score_breakdown && typeof objectItem.score_breakdown === 'object'
+          ? (objectItem.score_breakdown as ScoreBreakdown)
+          : null
+
+      systemScore = breakdown?.final_score ?? (breakdown as { score?: number } | null)?.score ?? 0
+      target = breakdown?.target_used ?? null
+    } else {
+      const row = item as Array<string | number | null | ScoreBreakdown>
+      if (row.length < 6) continue
+
+      testItem = String(row[0] || '')
+      usl = row[1] !== null ? Number(row[1]) : null
+      lsl = row[2] !== null ? Number(row[2]) : null
+      actual = row[3] !== null && row[3] !== undefined ? Number(row[3]) : 0
+      target = row[4] !== null ? Number(row[4]) : null
+      systemScore = Number(row[5] || 0)
+      breakdown = row[6] && typeof row[6] === 'object' ? (row[6] as ScoreBreakdown) : null
+    }
+
+    measurements.push({
+      test_item: testItem,
+      usl,
+      lsl,
+      actual: String(actual),
+      target: target !== null ? String(target) : null,
+      expected: target !== null ? String(target) : null,
+      score: systemScore,
+      breakdown,
+      systemScore,
+      scoreSource: 'system',
+    })
+  }
+
+  return measurements
+}
+
+async function handleExport() {
+  const currentResults = processedResults.value?.results
+  if (!currentResults || currentResults.length === 0) {
     console.warn('No results to export')
     return
   }
 
-  // Dynamic import for exceljs and jszip
-  Promise.all([import('exceljs'), import('jszip')])
-    .then(([ExcelJS, JSZip]) => {
-      exportToExcelZip(ExcelJS.default || ExcelJS, JSZip.default || JSZip)
-    })
-    .catch((err) => {
-      console.error('Failed to load export libraries:', err)
-      alert('Failed to load export libraries. Please ensure exceljs and jszip are installed.')
-    })
-}
+  try {
+    const records: TopProductExcelRecord[] = []
 
-// biome-ignore lint/suspicious/noExplicitAny: dynamically imported ExcelJS library
-async function exportToExcelZip(ExcelJS: any, JSZip: any) {
-  // Helper function to parse measurements from latest_data array (new API format)
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic measurement data from backend API
-  function parseMeasurements(latest_data: Array<any>) {
-    if (!latest_data || latest_data.length === 0) {
-      return []
-    }
-    const measurements = []
-    for (let i = 0; i < latest_data.length; i++) {
-      const item = latest_data[i]
-      if (!item) continue
-      // New API format: {test_item, usl, lsl, actual, score_breakdown}
-      const score = item.score_breakdown?.final_score ?? 0
-      const deviation = item.score_breakdown?.deviation
-      measurements.push({
-        test_item: String(item.test_item || ''),
-        usl: item.usl,
-        lsl: item.lsl,
-        actual: String(item.actual || ''),
-        target: item.score_breakdown?.target_used,
-        deviation: deviation !== undefined && deviation !== null ? Number(deviation) : undefined,
-        score: Number(score),
+    currentResults.forEach((result: TopProductResult) => {
+      ;(result.test_result || []).forEach((station: TopProductStationResult) => {
+        const measurements = parseMeasurements(station.data || [])
+        const items = measurements.map((m) => ({
+          testItem: m.test_item,
+          ucl: m.usl,
+          lcl: m.lsl,
+          target: m.target !== null ? Number(m.target) : null,
+          weight: (m.breakdown as { weight?: number } | null | undefined)?.weight ?? 1,
+          value: m.actual,
+          deviation: m.breakdown?.deviation ?? null,
+          score: m.score,
+        }))
+
+        records.push({
+          isn: result.dut_isn,
+          project: result.model_name || '',
+          tsp: station.station_name,
+          deviceId: station.device || '',
+          errorCode: station.error_item && station.error_item.trim() !== '' ? 'FAIL' : 'PASS',
+          errorName: station.error_item || 'N/A',
+          type: 'ONLINE',
+          testStartTime: station.test_date || '',
+          testEndTime: station.test_date || '',
+          station: station.station_name,
+          overallScore:
+            station.error_item && station.error_item.trim() !== ''
+              ? null
+              : station.overall_data_score,
+          items,
+        })
       })
-    }
-    return measurements
+    })
+
+    const workbook = await buildTopProductWorkbook(records)
+    const filename = `top-products-analysis-${formatDate(new Date(), 'YYYY-MM-DD_HHmmss')}.xlsx`
+    await downloadTopProductWorkbook(workbook, filename)
+  } catch (err) {
+    console.error('Failed to export top product results:', err)
   }
-
-  // Group data by Site and Model
-  // biome-ignore lint/suspicious/noExplicitAny: dynamic export data with computed measurements
-  const groupedData = new Map<string, Map<string, any[]>>()
-
-  results.value?.results.forEach((result) => {
-    const site = result.site_name || 'Unknown_Site'
-    const model = result.model_name || 'Unknown_Model'
-    const groupKey = `${site}_${model}`
-
-    if (!groupedData.has(groupKey)) {
-      groupedData.set(groupKey, new Map())
-    }
-
-    // biome-ignore lint/style/noNonNullAssertion: key was just inserted in the check above
-    const siteModelGroup = groupedData.get(groupKey)!
-
-    result.test_result.forEach((station) => {
-      const stationName = station.station_name
-
-      if (!siteModelGroup.has(stationName)) {
-        siteModelGroup.set(stationName, [])
-      }
-
-      siteModelGroup.get(stationName)?.push({
-        dut_isn: result.dut_isn,
-        site_name: result.site_name,
-        model_name: result.model_name,
-        station_name: station.station_name,
-        station_id: station.station_id,
-        test_date: station.test_date,
-        device: station.device,
-        overall_score:
-          station.error_item && station.error_item.trim() !== ''
-            ? 'N/A'
-            : station.overall_data_score.toFixed(2),
-        measurements: parseMeasurements(station.data || []),
-        error_item: station.error_item,
-      })
-    })
-  })
-
-  // Create ZIP file
-  const zip = new JSZip()
-
-  // Process each Site/Model group
-  for (const [groupKey, stations] of groupedData.entries()) {
-    const workbook = new ExcelJS.Workbook()
-
-    // Process each station
-    for (const [stationName, duts] of stations.entries()) {
-      // Collect all unique test items across all DUTs
-      const allTestItems = new Set<string>()
-      duts.forEach((dut) => {
-        // biome-ignore lint/suspicious/noExplicitAny: dynamic measurement from parseMeasurements
-        dut.measurements.forEach((m: any) => allTestItems.add(m.test_item))
-      })
-      const testItems = Array.from(allTestItems)
-
-      // Sanitize sheet name (Excel limits: 31 chars, no special characters)
-      let sheetName = stationName.replace(/[:\\/?*[\]]/g, '_').substring(0, 31)
-
-      // Create worksheet
-      const worksheet = workbook.addWorksheet(sheetName)
-
-      // Header rows with metadata - format: Label,,,Value1,Value2,...
-      // Test Date row
-      const testDateRow = ['Test Date', '', '']
-      duts.forEach((dut) => testDateRow.push(dut.test_date))
-      worksheet.addRow(testDateRow)
-
-      // Site row
-      const siteRow = ['Site', '', '']
-      duts.forEach((dut) => siteRow.push(dut.site_name || ''))
-      worksheet.addRow(siteRow)
-
-      // Model row
-      const modelRow = ['Model', '', '']
-      duts.forEach((dut) => modelRow.push(dut.model_name || ''))
-      worksheet.addRow(modelRow)
-
-      // Station Name row
-      const stationRow = ['Station Name', '', '']
-      duts.forEach(() => stationRow.push(stationName))
-      worksheet.addRow(stationRow)
-
-      // Device row
-      const deviceRow = ['Device', '', '']
-      duts.forEach((dut) => deviceRow.push(dut.device || ''))
-      worksheet.addRow(deviceRow)
-
-      // DUT ISN row
-      const isnRow = ['DUT ISN', '', '']
-      duts.forEach((dut) => isnRow.push(dut.dut_isn))
-      worksheet.addRow(isnRow)
-
-      // Overall Score row
-      const scoreRow = ['Overall Score', '', '']
-      duts.forEach((dut) => scoreRow.push(dut.overall_score))
-      worksheet.addRow(scoreRow)
-
-      // Data table headers
-      // For single DUT: [Test_Items],[USL],[LSL],[VALUE],[Deviation],,[Score]
-      // For multiple DUTs: [Test_Items],[USL],[LSL],[VALUE],[VALUE],...,[Deviation],[Deviation],...,Score_ISN1,Score_ISN2,...
-      // biome-ignore lint/suspicious/noExplicitAny: Excel row contains mixed string/number values
-      let headerRow: any[]
-      if (duts.length === 1) {
-        headerRow = ['[Test_Items]', '[USL]', '[LSL]', '[VALUE]', '[Deviation]', '', '[Score]']
-      } else {
-        headerRow = ['[Test_Items]', '[USL]', '[LSL]']
-        // Add [VALUE] columns for each DUT
-        duts.forEach(() => {
-          headerRow.push('[VALUE]')
-        })
-        // Add [Deviation] columns for each DUT
-        duts.forEach((dut) => {
-          headerRow.push(`Deviation_${dut.dut_isn}`)
-        })
-        headerRow.push('') // Empty column separator
-        // Add Score columns for each DUT
-        duts.forEach((dut) => {
-          headerRow.push(`Score_${dut.dut_isn}`)
-        })
-      }
-      worksheet.addRow(headerRow)
-
-      // Data rows - one row per test item
-      testItems.forEach((testItem) => {
-        // biome-ignore lint/suspicious/noExplicitAny: Excel row contains mixed string/number values
-        const row: any[] = [testItem]
-
-        if (duts.length === 1) {
-          // Single DUT: Test_Item, USL, LSL, Measured, Deviation, empty, Score
-          // biome-ignore lint/suspicious/noExplicitAny: dynamic measurement from parseMeasurements
-          const measurement = duts[0].measurements.find((m: any) => m.test_item === testItem)
-          if (measurement) {
-            // biome-ignore lint/suspicious/noExplicitAny: deviation may not exist on all measurement shapes
-            const deviation = (measurement as any).deviation ?? ''
-            row.push(
-              measurement.usl !== null ? measurement.usl : '',
-              measurement.lsl !== null ? measurement.lsl : '',
-              measurement.actual || '',
-              deviation !== '' ? deviation.toFixed(2) : '',
-              '', // Empty column
-              measurement.score.toFixed(2),
-            )
-          } else {
-            row.push('', '', '', '', '', '')
-          }
-        } else {
-          // Multiple DUTs: Test_Item, USL, LSL, Measured1, Measured2, ..., Deviation1, Deviation2, ..., empty, Score1, Score2, ...
-          // Get USL and LSL from first DUT (should be same across all DUTs)
-          // biome-ignore lint/suspicious/noExplicitAny: dynamic measurement from parseMeasurements
-          const firstMeasurement = duts[0].measurements.find((m: any) => m.test_item === testItem)
-          if (firstMeasurement) {
-            row.push(
-              firstMeasurement.usl !== null ? firstMeasurement.usl : '',
-              firstMeasurement.lsl !== null ? firstMeasurement.lsl : '',
-            )
-          } else {
-            row.push('', '')
-          }
-
-          // Add Measured values for all DUTs
-          duts.forEach((dut) => {
-            // biome-ignore lint/suspicious/noExplicitAny: dynamic measurement from parseMeasurements
-            const measurement = dut.measurements.find((m: any) => m.test_item === testItem)
-            if (measurement) {
-              row.push(measurement.actual || '')
-            } else {
-              row.push('')
-            }
-          })
-
-          // Add Deviation values for all DUTs
-          duts.forEach((dut) => {
-            // biome-ignore lint/suspicious/noExplicitAny: dynamic measurement from parseMeasurements
-            const measurement = dut.measurements.find((m: any) => m.test_item === testItem)
-            // biome-ignore lint/suspicious/noExplicitAny: deviation may not exist on all measurement shapes
-            if (measurement && (measurement as any).deviation !== undefined) {
-              // biome-ignore lint/suspicious/noExplicitAny: deviation may not exist on all measurement shapes
-              row.push((measurement as any).deviation.toFixed(2))
-            } else {
-              row.push('')
-            }
-          })
-
-          row.push('') // Empty column separator
-
-          // Add Score values for all DUTs
-          duts.forEach((dut) => {
-            // biome-ignore lint/suspicious/noExplicitAny: dynamic measurement from parseMeasurements
-            const measurement = dut.measurements.find((m: any) => m.test_item === testItem)
-            if (measurement) {
-              row.push(measurement.score.toFixed(2))
-            } else {
-              row.push('')
-            }
-          })
-        }
-
-        worksheet.addRow(row)
-      })
-    }
-
-    // Generate Excel file buffer
-    const excelBuffer = await workbook.xlsx.writeBuffer()
-
-    // Create filename with format: <Model>_<Site>_YYYY_MM_DD_HHmmss.xlsx
-    const now = new Date()
-    const year = now.getFullYear()
-    const month = String(now.getMonth() + 1).padStart(2, '0')
-    const day = String(now.getDate()).padStart(2, '0')
-    const hours = String(now.getHours()).padStart(2, '0')
-    const minutes = String(now.getMinutes()).padStart(2, '0')
-    const seconds = String(now.getSeconds()).padStart(2, '0')
-    const timestamp = `${year}_${month}_${day}_${hours}${minutes}${seconds}`
-
-    // Extract model and site from groupKey (format: Site_Model)
-    const [site, model] = groupKey.split('_')
-    const fileName = `${model}_${site}_${timestamp}.xlsx`
-
-    // Add to ZIP
-    zip.file(fileName, excelBuffer)
-  }
-
-  // Generate ZIP with maximum compression and download
-  const zipBlob = await zip.generateAsync({
-    type: 'blob',
-    compression: 'DEFLATE',
-    compressionOptions: {
-      level: 9, // Maximum compression level
-    },
-  })
-  const url = URL.createObjectURL(zipBlob)
-  const link = document.createElement('a')
-  link.href = url
-
-  const timestamp = new Date().toISOString().replace(/[:.]/g, '_').slice(0, 19).replace('T', '_')
-  link.download = `TopProducts_Export_${timestamp}.zip`
-
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  URL.revokeObjectURL(url)
 }
 
 function downloadCriteriaTemplate() {
@@ -1106,36 +976,93 @@ function formatFileSize(bytes: number): string {
   overflow: hidden;
 }
 
-.top-products-isn-resolved-scope > header,
-.top-products-isn-resolved-scope > article {
+.top-product-isn-scope-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   padding: 0.75rem 0.9rem;
-}
-
-.top-products-isn-resolved-scope > header {
   background: var(--app-surface);
   border-bottom: 1px solid var(--app-border);
 }
 
-.top-products-isn-resolved-scope > article {
+.top-product-isn-scope-header__left,
+.top-product-isn-scope-header__right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.top-product-isn-scope-header__left small {
+  color: var(--app-muted);
+  font-size: 0.75rem;
+}
+
+.top-product-isn-scope-clear-btn {
+  background: transparent;
+  border: 0;
+  color: var(--app-danger, #ef4444);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.25rem;
+}
+
+.top-product-isn-scope-clear-btn:hover {
+  background: var(--app-danger-soft, rgba(239, 68, 68, 0.1));
+}
+
+.top-product-isn-scope-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border-top: 1px solid var(--app-border);
+}
+
+.top-product-isn-scope-card:first-of-type {
+  border-top: 0;
+}
+
+.top-product-isn-scope-card__header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  border-top: 1px solid var(--app-border);
 }
 
-.top-products-isn-resolved-scope > article:first-of-type {
-  border-top: 0;
-}
-
-.top-products-isn-resolved-scope article > div {
+.top-product-isn-scope-card__header > div {
   display: grid;
   gap: 0.2rem;
   min-width: 0;
+}
+
+.top-product-isn-scope-token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.top-product-isn-scope-token {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.65rem;
+  border-radius: 999px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  color: var(--app-ink);
+  font-size: 0.78rem;
+  font-family: var(--app-font-mono, monospace);
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.top-product-isn-scope-token:hover {
+  border-color: var(--app-danger-line, #ef4444);
+  background: var(--app-danger-soft, rgba(239, 68, 68, 0.1));
+  color: var(--app-danger, #ef4444);
 }
 
 .top-product-isn-scope-meta {

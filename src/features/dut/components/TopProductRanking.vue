@@ -24,7 +24,7 @@
           <div class="top-product-ranking__station-hero">
             <div>
               <p class="top-product-ranking__section-eyebrow">Station</p>
-              <h3>{{ String(item.value) }}</h3>
+              <h3>{{ getStationDisplayName(String(item.value)) }}</h3>
             </div>
 
             <div class="top-product-ranking__station-pills">
@@ -306,10 +306,27 @@ const rankingByStation = computed(() => {
 
 const stationNames = computed(() => Object.keys(rankingByStation.value))
 
+const stationModelMap = computed(() => {
+  const map: Record<string, string> = {}
+  props.results.forEach((result) => {
+    ;(result.test_result || []).forEach((station) => {
+      if (station.station_name && result.model_name && !map[station.station_name]) {
+        map[station.station_name] = result.model_name
+      }
+    })
+  })
+  return map
+})
+
+function getStationDisplayName(stationName: string): string {
+  const model = stationModelMap.value[stationName]
+  return model && model !== 'Unknown' ? `${model} / ${stationName}` : stationName
+}
+
 const stationTabItems = computed(() =>
   stationNames.value.map((station) => ({
     value: station,
-    label: station,
+    label: getStationDisplayName(station),
     icon: 'mdi:factory',
     count: rankingByStation.value[station]?.length ?? 0,
   })),

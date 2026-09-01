@@ -125,9 +125,9 @@ export function useTestLogExport() {
 
           // Measurement columns
           firstValueItem.per_isn_data.forEach((isn) => {
-            valueHeaders.push(`Meas. ${isn.isn || 'N/A'}`)
+            valueHeaders.push(`Value ${isn.isn || 'N/A'}`)
           })
-          valueHeaders.push('Max. Meas.', 'Min. Meas.')
+          valueHeaders.push('Max. Value', 'Min. Value')
 
           // Deviation columns
           firstValueItem.per_isn_data.forEach((isn) => {
@@ -517,14 +517,14 @@ export function useTestLogExport() {
           // Sort items using custom test item ordering
           const sortedItems = sortTestItems(reclassifiedValueItems)
 
-          // Headers: Test Item | USL | LSL | Target | Meas. DM... | Meas. DM... | ... | Max. Meas. | Min. Meas. | Dev. DM... | Dev. DM... | ... | Max. Deviation | Avg. Deviation | Score DM... | Score DM... | ... | Avg. Score
+          // Headers: Test Item | USL | LSL | Target | Value DM... | Value DM... | ... | Max. Value | Min. Value | Dev. DM... | Dev. DM... | ... | Max. Deviation | Avg. Deviation | Score DM... | Score DM... | ... | Avg. Score
           tsvContent += 'Test Item\tUSL\tLSL\tTarget'
 
           // Measurement columns
           firstItem.per_isn_data.forEach((isn) => {
-            tsvContent += `\tMeas. ${isn.isn || 'N/A'}`
+            tsvContent += `\tValue ${isn.isn || 'N/A'}`
           })
-          tsvContent += '\tMax. Meas.\tMin. Meas.'
+          tsvContent += '\tMax. Value\tMin. Value'
 
           // Deviation columns
           firstItem.per_isn_data.forEach((isn) => {

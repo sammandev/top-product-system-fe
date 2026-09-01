@@ -88,8 +88,8 @@
             </div>
             <div v-else class="compare-result-view__muted">N/A</div>
           </template>
-          <template #cell-max_meas="{ data }"><span class="compare-result-view__muted">{{ getMaxMeasurement(data as CompareItemEnhanced) }}</span></template>
-          <template #cell-min_meas="{ data }"><span class="compare-result-view__muted">{{ getMinMeasurement(data as CompareItemEnhanced) }}</span></template>
+          <template #cell-max_value="{ data }"><span class="compare-result-view__muted">{{ getMaxMeasurement(data as CompareItemEnhanced) }}</span></template>
+          <template #cell-min_value="{ data }"><span class="compare-result-view__muted">{{ getMinMeasurement(data as CompareItemEnhanced) }}</span></template>
           <template #cell-avg_deviation="{ data }"><span :class="getDeviationClass(data.avg_deviation as number | null | undefined)">{{ formatDeviation(data.avg_deviation as number | null | undefined) }}</span></template>
           <template #cell-avg_score="{ data }"><span v-if="data.avg_score !== null" class="compare-result-view__score-pill" :class="scorePillClass(Number(data.avg_score))">{{ Number(data.avg_score).toFixed(2) }}</span><span v-else class="compare-result-view__muted">N/A</span></template>
         </AppDataGrid>
@@ -168,8 +168,8 @@
           </div>
           <div v-else class="compare-result-view__muted">N/A</div>
         </template>
-        <template #cell-max_meas="{ data }"><span class="compare-result-view__muted">{{ getMaxMeasurement(data as CompareItemEnhanced) }}</span></template>
-        <template #cell-min_meas="{ data }"><span class="compare-result-view__muted">{{ getMinMeasurement(data as CompareItemEnhanced) }}</span></template>
+        <template #cell-max_value="{ data }"><span class="compare-result-view__muted">{{ getMaxMeasurement(data as CompareItemEnhanced) }}</span></template>
+        <template #cell-min_value="{ data }"><span class="compare-result-view__muted">{{ getMinMeasurement(data as CompareItemEnhanced) }}</span></template>
         <template #cell-avg_deviation="{ data }"><span :class="getDeviationClass(data.avg_deviation as number | null | undefined)">{{ formatDeviation(data.avg_deviation as number | null | undefined) }}</span></template>
         <template #cell-avg_score="{ data }"><span v-if="data.avg_score !== null" class="compare-result-view__score-pill" :class="scorePillClass(Number(data.avg_score))">{{ Number(data.avg_score).toFixed(2) }}</span><span v-else class="compare-result-view__muted">N/A</span></template>
       </AppDataGrid>
@@ -270,15 +270,15 @@ const valueHeaders = computed(() => {
   ]
 
   const isnHeaders = firstItem.per_isn_data.map((isnData, index) => ({
-    title: `Meas.\n${isnData.isn || 'N/A'}`,
+    title: `Value\n${isnData.isn || 'N/A'}`,
     key: `isn_${index}`,
     sortable: false,
     width: '120px',
   }))
 
   const aggregateHeaders = [
-    { title: 'Max. Meas.', key: 'max_meas', sortable: false, width: '100px' },
-    { title: 'Min. Meas.', key: 'min_meas', sortable: false, width: '100px' },
+    { title: 'Max. Value', key: 'max_value', sortable: false, width: '100px' },
+    { title: 'Min. Value', key: 'min_value', sortable: false, width: '100px' },
     { title: 'Avg. Dev', key: 'avg_deviation', sortable: true, width: '100px' },
     { title: 'Avg. Score', key: 'avg_score', sortable: true, width: '100px' },
   ]

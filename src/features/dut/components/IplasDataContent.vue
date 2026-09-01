@@ -14,12 +14,13 @@
           <AppPanel eyebrow="Scope" title="Station Search" tone="cool" split-header>
             <template #header-aside>
               <div class="iplas-header-actions">
-                  <button type="button" class="iplas-button iplas-button--ghost" :disabled="loading" @click="handleRefresh">
+                <button type="button" class="iplas-button iplas-button--ghost" @click="emit('show-settings')">
+                  <Icon icon="mdi:cog-outline" />
+                  <span>iPLAS Settings</span>
+                </button>
+                <button type="button" class="iplas-button iplas-button--ghost" :disabled="loading" @click="handleRefresh">
                   <Icon :icon="loading ? 'mdi:loading' : 'mdi:refresh'" :class="{ 'iplas-spin': loading }" />
                   <span>{{ loading ? 'Refreshing...' : 'Refresh' }}</span>
-                </button>
-                <button type="button" class="iplas-button iplas-button--ghost" @click="emit('show-settings')">
-                  iPLAS Settings
                 </button>
               </div>
             </template>

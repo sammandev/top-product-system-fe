@@ -64,10 +64,9 @@
                     for="internal-data-bulk-input">
                     <span class="internal-data-input-label">Bulk ISN Input</span>
                     <textarea id="internal-data-bulk-input" v-model="dutIsn" class="internal-data-textarea" rows="6"
-                        placeholder="Paste multiple ISNs (one per line, comma-separated, or space-separated)&#10;Example:&#10;260884980003907&#10;DM2527470036123&#10;260884980003908" />
-                    <p class="internal-data-helper-copy">Paste ISNs separated by newlines, commas, or spaces. Duplicates
-                        are
-                        collapsed automatically.</p>
+                        placeholder="Paste multiple ISNs (one per line, comma-separated, or space-separated)&#10;Example:&#10;260884980003907&#10;DM2527470036123&#10;260884980003908"
+                        @keydown="handleBulkKeydown" />
+                    <p class="internal-data-helper-copy">Paste ISNs separated by newlines, commas, or spaces. Press Ctrl+Enter to search.</p>
                 </label>
 
                 <div class="internal-data-bulk-footer">
@@ -679,6 +678,16 @@ const handleMultipleIsnsEnter = async (event: KeyboardEvent) => {
 
   event.preventDefault()
   await fetchTestRecords()
+}
+
+function handleBulkKeydown(event: KeyboardEvent) {
+  if (event.isComposing || event.key !== 'Enter') return
+  if ((event.ctrlKey || event.metaKey) && !event.shiftKey && !event.altKey) {
+    event.preventDefault()
+    if (!loading.value && bulkModeIdentifiers.value.length > 0) {
+      void fetchTestRecords()
+    }
+  }
 }
 
 const fetchTestRecords = async () => {
