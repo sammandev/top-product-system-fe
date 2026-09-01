@@ -443,6 +443,7 @@ const currentStationTestItems = ref<TestItemInfo[]>([])
 const loadingCurrentStationTestItems = ref(false)
 const testItemsError = ref<string | null>(null)
 const testItemNamesCache = ref<Map<string, TestItemInfo[]>>(new Map())
+const deviceIdsCache = ref<Map<string, string[]>>(new Map())
 
 // ============================================================================
 // State: Data Fetching & Results
@@ -1958,6 +1959,7 @@ function handleClearAll(): void {
   recordScores.value = {}
   forcedFailures.value = {}
   testItemNamesCache.value.clear()
+  deviceIdsCache.value.clear()
 }
 
 onMounted(() => {
