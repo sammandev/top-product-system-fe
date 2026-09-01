@@ -28,13 +28,22 @@
           </header>
           <article v-for="scope in dutScopeGroups" :key="scope.key" class="top-product-isn-scope-card">
             <div class="top-product-isn-scope-card__header">
-              <div>
-                <span>Site / Model</span>
-                <strong>{{ scope.site }} / {{ scope.model }}</strong>
+              <div class="top-product-isn-scope-title-box">
+                <Icon icon="mdi:chip" class="top-product-isn-scope-icon" />
+                <div>
+                  <span>Site / Model</span>
+                  <strong>{{ scope.site }} / {{ scope.model }}</strong>
+                </div>
               </div>
               <div class="top-product-isn-scope-meta">
-                <span class="top-product-isn-scope-badge">{{ scope.isns.length }} DUT{{ scope.isns.length === 1 ? '' : 's' }}</span>
-                <span class="top-product-isn-scope-badge top-product-isn-scope-badge--station">{{ scope.stations.length }} station{{ scope.stations.length === 1 ? '' : 's' }}</span>
+                <span class="top-product-isn-scope-badge top-product-isn-scope-badge--dut">
+                  <Icon icon="mdi:devices" />
+                  <span>{{ scope.isns.length }} DUT{{ scope.isns.length === 1 ? '' : 's' }}</span>
+                </span>
+                <span class="top-product-isn-scope-badge top-product-isn-scope-badge--station">
+                  <Icon icon="mdi:factory" />
+                  <span>{{ scope.stations.length }} station{{ scope.stations.length === 1 ? '' : 's' }}</span>
+                </span>
               </div>
             </div>
             <div class="top-product-isn-scope-token-row">
@@ -1032,9 +1041,22 @@ function formatFileSize(bytes: number): string {
   gap: 1rem;
 }
 
-.top-product-isn-scope-card__header > div {
+.top-product-isn-scope-title-box {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.top-product-isn-scope-icon {
+  font-size: 1.4rem;
+  color: var(--app-accent, #0f766e);
+  flex-shrink: 0;
+}
+
+.top-product-isn-scope-title-box > div {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.15rem;
   min-width: 0;
 }
 
@@ -1075,18 +1097,24 @@ function formatFileSize(bytes: number): string {
 .top-product-isn-scope-badge {
   display: inline-flex;
   align-items: center;
-  padding: 0.2rem 0.6rem;
+  gap: 0.35rem;
+  padding: 0.28rem 0.65rem;
   border-radius: 999px;
-  background: var(--app-surface-accent, var(--app-surface));
   border: 1px solid var(--app-border);
-  color: var(--app-ink);
-  font-size: 0.75rem;
-  font-weight: 600;
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.top-product-isn-scope-badge--dut {
+  background: var(--app-accent-soft, rgba(15, 118, 110, 0.08));
+  border-color: color-mix(in srgb, var(--app-accent) 20%, var(--app-border));
+  color: var(--app-accent, #0f766e);
 }
 
 .top-product-isn-scope-badge--station {
-  background: var(--app-info-soft, rgba(14, 165, 233, 0.1));
-  border-color: var(--app-info-line, rgba(14, 165, 233, 0.3));
+  background: var(--app-info-soft, rgba(14, 165, 233, 0.08));
+  border-color: var(--app-info-line, rgba(14, 165, 233, 0.25));
   color: var(--app-info, #0284c7);
 }
 

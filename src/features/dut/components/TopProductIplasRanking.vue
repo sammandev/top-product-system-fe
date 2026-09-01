@@ -513,7 +513,17 @@ const rankingByStation = computed(() => {
 const totalRecords = computed(() => props.records.length)
 
 function getStationDisplayName(stationName: string): string {
-  return props.stationDisplayNames?.[stationName] || stationName
+  if (props.stationDisplayNames?.[stationName]) {
+    return props.stationDisplayNames[stationName]
+  }
+  const matchingRecord = props.records.find(
+    (r) => r.station === stationName || r.TSP === stationName,
+  )
+  const model = matchingRecord?.Project || matchingRecord?.Model
+  if (model && model !== 'Unknown' && !stationName.includes(' / ')) {
+    return `${model} / ${stationName}`
+  }
+  return stationName
 }
 
 function hasStationErrors(stationName: string): boolean {

@@ -1,7 +1,7 @@
 <template>
   <AppDialog :model-value="internalShow" v-model:fullscreen="isFullscreen" width="min(96vw, 72rem)"
     fullscreen-width="98vw" :breakpoints="{ '1200px': '96vw', '760px': '98vw' }" fullscreenable persistent
-    :title="`Configure Station: ${station?.display_station_name ?? ''}`"
+    :title="`Configure Station: ${station?.display_station_name ?? ''}${((station as any)?.project || project) ? ' (' + ((station as any)?.project || project) + ')' : ''}`"
     @update:modelValue="internalShow = $event" @hide="handleClose">
 
     <section class="station-config-body" :class="{ 'station-config-body--fullscreen': isFullscreen }">

@@ -1544,7 +1544,11 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-station-button {
-  padding: 0.62rem 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.88rem;
 }
 
 .top-product-iplas-station-button--secondary {
@@ -1555,7 +1559,7 @@ onUnmounted(() => {
 .top-product-iplas-station-button:hover,
 .top-product-iplas-station-token-card:hover,
 .top-product-iplas-station-remove:hover {
-  border-color: var(--app-accent);
+  border-color: rgba(15, 118, 110, 0.24);
 }
 
 .top-product-iplas-station-button--primary {
@@ -1571,7 +1575,12 @@ onUnmounted(() => {
 }
 
 .top-product-iplas-station-button--ghost {
-  background: var(--app-panel);
+  background: var(--app-surface);
+  border-color: rgba(15, 118, 110, 0.16);
+}
+
+.top-product-iplas-station-spin {
+  animation: top-product-iplas-station-spin 0.9s linear infinite;
 }
 
 .top-product-iplas-station-pill {

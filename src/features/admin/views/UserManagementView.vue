@@ -1,95 +1,147 @@
 <template>
   <DefaultLayout>
     <section class="user-management-page">
-    <div class="user-management-header mb-6">
-      <div class="user-management-header__copy">
-        <div class="user-management-header__icon">
-          <Icon icon="mdi:account-group-outline" />
+      <div class="user-management-header mb-6">
+        <div class="user-management-header__copy">
+          <div class="user-management-header__icon">
+            <Icon icon="mdi:account-group-outline" />
+          </div>
+          <div>
+            <h1 class="text-h4 mb-2">User Management</h1>
+            <p class="text-medium-emphasis mb-0">
+              Manage account lifecycle, access roles, and menu permissions from one admin workspace.
+            </p>
+          </div>
         </div>
-        <div>
-          <h1 class="text-h4 mb-2">User Management</h1>
-          <p class="text-medium-emphasis mb-0">
-            Manage account lifecycle, access roles, and menu permissions from one admin workspace.
-          </p>
+
+        <div class="user-management-header__actions">
+          <button
+            v-if="activeTab === 'users'"
+            type="button"
+            class="user-management-button user-management-button--primary"
+            @click="openCreateDialog"
+          >
+            <Icon icon="mdi:account-plus-outline" />
+            <span>Add User</span>
+          </button>
+          <button
+            v-if="activeTab === 'roles'"
+            type="button"
+            class="user-management-button user-management-button--secondary"
+            :disabled="acLoading"
+            @click="loadAccessControlData"
+          >
+            <Icon :icon="acLoading ? 'mdi:loading' : 'mdi:refresh'" :class="{ 'animate-spin': acLoading }" />
+            <span>{{ acLoading ? 'Refreshing...' : 'Refresh Access Data' }}</span>
+          </button>
         </div>
       </div>
 
-      <div class="user-management-header__actions">
-        <button
-          v-if="activeTab === 'users'"
-          type="button"
-          class="user-management-button user-management-button--primary"
-          @click="openCreateDialog"
-        >
-          <Icon icon="mdi:account-plus-outline" />
-          <span>Add User</span>
-        </button>
-        <button
-          v-if="activeTab === 'roles'"
-          type="button"
-          class="user-management-button user-management-button--secondary"
-          :disabled="acLoading"
-          @click="loadAccessControlData"
-        >
-          <Icon icon="mdi:refresh" />
-          <span>{{ acLoading ? 'Refreshing...' : 'Refresh Access Data' }}</span>
+      <div v-if="error" class="user-management-notice user-management-notice--error mb-4" role="alert">
+        <div class="user-management-notice__content">
+          <Icon icon="mdi:alert-circle-outline" class="user-management-notice__icon" />
+          <div>
+            <strong>Admin action failed</strong>
+            <p>{{ error }}</p>
+          </div>
+        </div>
+        <button type="button" aria-label="Dismiss error notice" @click="error = ''">
+          <Icon icon="mdi:close" />
         </button>
       </div>
-    </div>
 
-    <div v-if="error" class="user-management-notice user-management-notice--error mb-4">
-      <div>
-        <strong>Admin action failed</strong>
-        <p>{{ error }}</p>
+      <div v-if="success" class="user-management-notice user-management-notice--success mb-4" role="status">
+        <div class="user-management-notice__content">
+          <Icon icon="mdi:check-circle-outline" class="user-management-notice__icon" />
+          <div>
+            <strong>Update complete</strong>
+            <p>{{ success }}</p>
+          </div>
+        </div>
+        <button type="button" aria-label="Dismiss success notice" @click="success = ''">
+          <Icon icon="mdi:close" />
+        </button>
       </div>
-      <button type="button" @click="error = ''">Dismiss</button>
-    </div>
 
-    <div v-if="success" class="user-management-notice user-management-notice--success mb-4">
-      <div>
-        <strong>Update complete</strong>
-        <p>{{ success }}</p>
-      </div>
-      <button type="button" @click="success = ''">Dismiss</button>
-    </div>
-
-    <AppTabs v-model="activeTab" :items="tabItems">
+      <AppTabs v-model="activeTab" :items="tabItems">
         <template #panel-users>
           <div class="user-management-tab-content">
             <div class="user-management-stats-grid">
               <article class="user-management-stat-card">
-                <span>Total Users</span>
+                <div class="user-management-stat-card__top">
+                  <span>Total Users</span>
+                  <div class="user-management-stat-card__icon user-management-stat-card__icon--primary">
+                    <Icon icon="mdi:account-group-outline" />
+                  </div>
+                </div>
                 <strong>{{ stats.total_users }}</strong>
-                <small>All accounts currently stored in the system.</small>
+                <small>All accounts stored in system</small>
               </article>
+
               <article class="user-management-stat-card">
-                <span>Active Users</span>
+                <div class="user-management-stat-card__top">
+                  <span>Active Users</span>
+                  <div class="user-management-stat-card__icon user-management-stat-card__icon--success">
+                    <Icon icon="mdi:account-check-outline" />
+                  </div>
+                </div>
                 <strong>{{ stats.active_users }}</strong>
-                <small>Accounts that can still authenticate.</small>
+                <small>Can authenticate and access tools</small>
               </article>
+
               <article class="user-management-stat-card">
-                <span>Online Now</span>
+                <div class="user-management-stat-card__top">
+                  <span class="inline-flex items-center gap-1.5">
+                    <span class="user-management-live-dot" />
+                    Online Now
+                  </span>
+                  <div class="user-management-stat-card__icon user-management-stat-card__icon--info">
+                    <Icon icon="mdi:account-clock-outline" />
+                  </div>
+                </div>
                 <strong>{{ stats.online_users }}</strong>
-                <small>Users with current recent session activity.</small>
+                <small>Recent authenticated session activity</small>
               </article>
+
               <article class="user-management-stat-card">
-                <span>New This Month</span>
+                <div class="user-management-stat-card__top">
+                  <span>New This Month</span>
+                  <div class="user-management-stat-card__icon user-management-stat-card__icon--warning">
+                    <Icon icon="mdi:account-plus-outline" />
+                  </div>
+                </div>
                 <strong>{{ stats.new_users }}</strong>
-                <small>Accounts created during the current month.</small>
+                <small>Created during current calendar month</small>
               </article>
             </div>
 
             <section class="user-management-panel">
               <div class="user-management-panel__header user-management-panel__header--compact">
-                <div>
-                  <p class="user-management-panel__eyebrow">Directory</p>
-                  <h2>User Accounts</h2>
+                <div class="flex items-center gap-2.5">
+                  <div>
+                    <p class="user-management-panel__eyebrow">Directory</p>
+                    <h2>User Accounts</h2>
+                  </div>
+                  <span class="user-management-count-pill">{{ filteredUsers.length }} users</span>
                 </div>
 
-                <label class="user-management-search">
-                  <Icon icon="mdi:magnify" />
-                  <input v-model="search" type="search" placeholder="Search by username, email, or role">
-                </label>
+                <div class="user-management-search">
+                  <Icon icon="mdi:magnify" class="user-management-search__icon" />
+                  <input
+                    v-model="search"
+                    type="search"
+                    placeholder="Search by username, email, or role..."
+                  >
+                  <button
+                    v-if="search"
+                    type="button"
+                    class="user-management-search__clear"
+                    aria-label="Clear search"
+                    @click="search = ''"
+                  >
+                    <Icon icon="mdi:close-circle" />
+                  </button>
+                </div>
               </div>
 
               <AppDataGrid
@@ -109,15 +161,16 @@
                     <span class="user-management-avatar">
                       {{ getInitial(String(slotProps.data.username || 'U')) }}
                     </span>
-                    <span>
-                      <strong>{{ slotProps.data.username }}</strong>
-                      <small>{{ slotProps.data.email || 'No email' }}</small>
+                    <span class="user-management-user-cell__info">
+                      <strong class="user-management-user-cell__name">{{ slotProps.data.username }}</strong>
+                      <small class="user-management-user-cell__email">{{ slotProps.data.email || 'No email configured' }}</small>
                     </span>
                   </button>
                 </template>
 
                 <template #cell-role="slotProps">
                   <span class="user-management-badge" :class="getRoleBadgeClass(String(slotProps.data.role || 'user'))">
+                    <Icon :icon="getRoleIcon(String(slotProps.data.role || 'user'))" class="mr-1" />
                     {{ String(slotProps.data.role || 'user').toUpperCase() }}
                   </span>
                 </template>
@@ -128,28 +181,63 @@
                     class="user-management-status-toggle"
                     :class="slotProps.data.is_active ? 'is-active' : 'is-inactive'"
                     :disabled="togglingUserId === slotProps.data.id"
+                    :title="slotProps.data.is_active ? 'Click to deactivate user' : 'Click to activate user'"
                     @click="toggleUserStatus(slotProps.data as User)"
                   >
+                    <Icon
+                      v-if="togglingUserId === slotProps.data.id"
+                      icon="mdi:loading"
+                      class="animate-spin mr-1"
+                    />
+                    <Icon
+                      v-else
+                      :icon="slotProps.data.is_active ? 'mdi:check-circle' : 'mdi:close-circle'"
+                      class="mr-1"
+                    />
                     {{ togglingUserId === slotProps.data.id ? 'Updating...' : slotProps.data.is_active ? 'Active' : 'Inactive' }}
                   </button>
                 </template>
 
                 <template #cell-last_login="slotProps">
-                  {{ formatDate(slotProps.data.last_login as string | null) }}
+                  <span class="user-management-time-cell">
+                    <Icon icon="mdi:clock-outline" class="user-management-time-cell__icon" />
+                    {{ formatDate(slotProps.data.last_login as string | null) }}
+                  </span>
                 </template>
 
                 <template #cell-actions="slotProps">
                   <div class="user-management-actions">
-                    <button type="button" :aria-label="`View details for ${slotProps.data.username}`" title="View details" @click="showUserDetails(slotProps.data as User)">
+                    <button
+                      type="button"
+                      :aria-label="`View details for ${slotProps.data.username}`"
+                      title="View user details"
+                      @click="showUserDetails(slotProps.data as User)"
+                    >
                       <Icon icon="mdi:card-account-details-outline" aria-hidden="true" />
                     </button>
-                    <button type="button" :aria-label="`Edit ${slotProps.data.username}`" title="Edit user" @click="editUser(slotProps.data as User)">
+                    <button
+                      type="button"
+                      :aria-label="`Edit ${slotProps.data.username}`"
+                      title="Edit user profile"
+                      @click="editUser(slotProps.data as User)"
+                    >
                       <Icon icon="mdi:pencil-outline" aria-hidden="true" />
                     </button>
-                    <button type="button" :aria-label="`Reset password for ${slotProps.data.username}`" title="Reset password" @click="openResetPasswordDialog(slotProps.data as User)">
+                    <button
+                      type="button"
+                      :aria-label="`Reset password for ${slotProps.data.username}`"
+                      title="Reset user password"
+                      @click="openResetPasswordDialog(slotProps.data as User)"
+                    >
                       <Icon icon="mdi:lock-reset" aria-hidden="true" />
                     </button>
-                    <button type="button" class="is-danger" :aria-label="`Delete ${slotProps.data.username}`" title="Delete user" @click="confirmDelete(slotProps.data as User)">
+                    <button
+                      type="button"
+                      class="is-danger"
+                      :aria-label="`Delete ${slotProps.data.username}`"
+                      title="Delete user account"
+                      @click="confirmDelete(slotProps.data as User)"
+                    >
                       <Icon icon="mdi:delete-outline" aria-hidden="true" />
                     </button>
                   </div>
@@ -157,8 +245,19 @@
 
                 <template #empty>
                   <div class="user-management-empty-state">
-                    <strong>No users found.</strong>
-                    <p>Adjust the search or create a new account.</p>
+                    <div class="user-management-empty-state__icon">
+                      <Icon icon="mdi:account-search-outline" />
+                    </div>
+                    <strong>No users found</strong>
+                    <p>Adjust search filters or create a new user account.</p>
+                    <button
+                      v-if="search"
+                      type="button"
+                      class="user-management-button user-management-button--secondary mt-2"
+                      @click="search = ''"
+                    >
+                      Clear Search
+                    </button>
                   </div>
                 </template>
               </AppDataGrid>
@@ -170,15 +269,31 @@
           <section class="user-management-tab-content">
             <section class="user-management-panel">
               <div class="user-management-panel__header user-management-panel__header--compact">
-                <div>
-                  <p class="user-management-panel__eyebrow">Access Control</p>
-                  <h2>Role And Permission Review</h2>
+                <div class="flex items-center gap-2.5">
+                  <div>
+                    <p class="user-management-panel__eyebrow">Access Control</p>
+                    <h2>Role & Permission Review</h2>
+                  </div>
+                  <span class="user-management-count-pill">{{ filteredAcUsers.length }} users</span>
                 </div>
 
-                <label class="user-management-search">
-                  <Icon icon="mdi:magnify" />
-                  <input v-model="acSearch" type="search" placeholder="Search users, roles, or flags">
-                </label>
+                <div class="user-management-search">
+                  <Icon icon="mdi:magnify" class="user-management-search__icon" />
+                  <input
+                    v-model="acSearch"
+                    type="search"
+                    placeholder="Search users, roles, or flags..."
+                  >
+                  <button
+                    v-if="acSearch"
+                    type="button"
+                    class="user-management-search__clear"
+                    aria-label="Clear access search"
+                    @click="acSearch = ''"
+                  >
+                    <Icon icon="mdi:close-circle" />
+                  </button>
+                </div>
               </div>
 
               <div v-if="acLoading && acUsers.length === 0" class="user-management-loading-state">
@@ -201,58 +316,72 @@
                     <span class="user-management-avatar user-management-avatar--small">
                       {{ getInitial(String(slotProps.data.username || 'U')) }}
                     </span>
-                    <span>
-                      <strong>{{ slotProps.data.username }}</strong>
-                      <small v-if="slotProps.data.email">{{ slotProps.data.email }}</small>
+                    <span class="user-management-user-cell__info">
+                      <strong class="user-management-user-cell__name">{{ slotProps.data.username }}</strong>
+                      <small v-if="slotProps.data.email" class="user-management-user-cell__email">{{ slotProps.data.email }}</small>
                     </span>
                   </div>
                 </template>
 
                 <template #cell-role="slotProps">
                   <span class="user-management-badge" :class="getRoleBadgeClass(String(slotProps.data.role || 'user'))">
+                    <Icon :icon="getRoleIcon(String(slotProps.data.role || 'user'))" class="mr-1" />
                     {{ String(slotProps.data.role || 'user').toUpperCase() }}
                   </span>
                 </template>
 
                 <template #cell-is_active="slotProps">
                   <span class="user-management-badge" :class="slotProps.data.is_active ? 'user-management-badge--success' : 'user-management-badge--danger'">
+                    <Icon :icon="slotProps.data.is_active ? 'mdi:check-circle' : 'mdi:close-circle'" class="mr-1" />
                     {{ slotProps.data.is_active ? 'Active' : 'Inactive' }}
                   </span>
                 </template>
 
                 <template #cell-flags="slotProps">
                   <div class="user-management-flag-list">
-                    <span v-if="slotProps.data.is_ptb_admin" class="user-management-badge user-management-badge--info">PTB Admin</span>
-                    <span v-if="slotProps.data.is_superuser" class="user-management-badge user-management-badge--purple">Superuser</span>
-                    <span v-if="slotProps.data.is_staff" class="user-management-badge user-management-badge--teal">Staff</span>
-                    <span v-if="slotProps.data.is_admin" class="user-management-badge user-management-badge--warning">Admin</span>
-                    <span v-if="!hasAnyFlags(slotProps.data as AccessControlUser)" class="user-management-badge user-management-badge--muted">None</span>
+                    <span v-if="slotProps.data.is_ptb_admin" class="user-management-badge user-management-badge--info">
+                      <Icon icon="mdi:shield-star-outline" class="mr-1" />PTB Admin
+                    </span>
+                    <span v-if="slotProps.data.is_superuser" class="user-management-badge user-management-badge--purple">
+                      <Icon icon="mdi:crown-outline" class="mr-1" />Superuser
+                    </span>
+                    <span v-if="slotProps.data.is_staff" class="user-management-badge user-management-badge--teal">
+                      <Icon icon="mdi:badge-account-outline" class="mr-1" />Staff
+                    </span>
+                    <span v-if="slotProps.data.is_admin" class="user-management-badge user-management-badge--warning">
+                      <Icon icon="mdi:shield-account-outline" class="mr-1" />Admin
+                    </span>
+                    <span v-if="!hasAnyFlags(slotProps.data as AccessControlUser)" class="user-management-badge user-management-badge--muted">
+                      None
+                    </span>
                   </div>
                 </template>
 
                 <template #cell-menu_permissions="slotProps">
                   <span v-if="slotProps.data.role === 'developer'" class="user-management-inline-note user-management-inline-note--success">
-                    Full access (Developer)
+                    <Icon icon="mdi:shield-check" class="mr-1" />Full access (Developer)
                   </span>
                   <span v-else-if="slotProps.data.role === 'superadmin'" class="user-management-inline-note user-management-inline-note--info">
-                    Full access (Super Admin)
+                    <Icon icon="mdi:shield-check" class="mr-1" />Full access (Super Admin)
                   </span>
                   <span v-else-if="slotProps.data.role === 'admin'" class="user-management-inline-note user-management-inline-note--warning">
-                    Admin access
+                    <Icon icon="mdi:shield-outline" class="mr-1" />Admin access
                   </span>
                   <span v-else-if="slotProps.data.role === 'guest'" class="user-management-inline-note">
-                    Guest (limited)
+                    <Icon icon="mdi:account-outline" class="mr-1" />Guest (limited)
                   </span>
-                  <span v-else-if="!slotProps.data.menu_permissions" class="user-management-inline-note">
-                    Not configured
+                  <span v-else-if="!slotProps.data.menu_permissions" class="user-management-inline-note user-management-inline-note--muted">
+                    <Icon icon="mdi:help-circle-outline" class="mr-1" />Not configured
                   </span>
-                  <span v-else class="user-management-inline-note">
-                    {{ Object.keys(slotProps.data.menu_permissions).length }} resources
+                  <span v-else class="user-management-inline-note user-management-inline-note--primary">
+                    <Icon icon="mdi:format-list-checks" class="mr-1" />{{ Object.keys(slotProps.data.menu_permissions).length }} resources
                   </span>
                 </template>
 
                 <template #cell-last_login="slotProps">
-                  {{ formatDateFull(slotProps.data.last_login as string | null) }}
+                  <span class="user-management-time-cell">
+                    {{ formatDateFull(slotProps.data.last_login as string | null) }}
+                  </span>
                 </template>
 
                 <template #cell-actions="slotProps">
@@ -261,7 +390,7 @@
                       v-if="slotProps.data.role !== 'developer'"
                       type="button"
                       :aria-label="`Edit access for ${slotProps.data.username}`"
-                      title="Edit access"
+                      title="Edit role and access flags"
                       @click="openAccessEditDialog(slotProps.data as AccessControlUser)"
                     >
                       <Icon icon="mdi:account-cog-outline" aria-hidden="true" />
@@ -270,21 +399,24 @@
                       v-if="slotProps.data.role !== 'developer'"
                       type="button"
                       :aria-label="`Menu permissions for ${slotProps.data.username}`"
-                      title="Menu permissions"
+                      title="Configure menu permissions"
                       @click="openPermissionsDialog(slotProps.data as AccessControlUser)"
                     >
                       <Icon icon="mdi:shield-key-outline" aria-hidden="true" />
                     </button>
                     <span v-if="slotProps.data.role === 'developer'" class="user-management-badge user-management-badge--muted">
-                      Protected
+                      <Icon icon="mdi:lock" class="mr-1" />Protected
                     </span>
                   </div>
                 </template>
 
                 <template #empty>
                   <div class="user-management-empty-state">
-                    <strong>No access-control users found.</strong>
-                    <p>Refresh the dataset or adjust the search.</p>
+                    <div class="user-management-empty-state__icon">
+                      <Icon icon="mdi:shield-search" />
+                    </div>
+                    <strong>No access-control users found</strong>
+                    <p>Refresh dataset or adjust search query.</p>
                   </div>
                 </template>
               </AppDataGrid>
@@ -299,192 +431,463 @@
         </template>
       </AppTabs>
 
-    <AppFormDialog
-      v-model="detailsDialog"
-      title="User Details"
-      :description="selectedUser ? `Review the current profile for ${selectedUser.username}.` : ''"
-      size="lg"
-      submit-label="Edit User"
-      cancel-label="Close"
-      @submit="editUserFromDetails"
-    >
-      <div v-if="selectedUser" class="user-management-dialog-grid">
-        <section class="user-management-dialog-card">
-          <p class="user-management-dialog-card__eyebrow">Basic</p>
-          <div class="user-management-detail-list">
-            <div><span>Username</span><strong>{{ selectedUser.username }}</strong></div>
-            <div><span>Email</span><strong>{{ selectedUser.email || 'No email' }}</strong></div>
-            <div><span>Status</span><strong>{{ selectedUser.is_active ? 'Active' : 'Inactive' }}</strong></div>
-            <div><span>Role</span><strong>{{ String(selectedUser.role || 'user').toUpperCase() }}</strong></div>
-          </div>
-        </section>
-
-        <section class="user-management-dialog-card">
-          <p class="user-management-dialog-card__eyebrow">Activity</p>
-          <div class="user-management-detail-list">
-            <div><span>Last Login</span><strong>{{ formatDateFull(selectedUser.last_login) }}</strong></div>
-            <div><span>Created</span><strong>{{ formatDateFull(selectedUser.created_at) }}</strong></div>
-            <div><span>Updated</span><strong>{{ formatDateFull(selectedUser.updated_at) }}</strong></div>
-          </div>
-        </section>
-      </div>
-    </AppFormDialog>
-
-    <AppConfirmDialog
-      v-model="deleteDialog"
-      v-model:typed-value="deleteConfirmation"
-      title="Delete user"
-      description="The account and its access records are removed for good."
-      :target="userToDelete ? `${userToDelete.username} · ${userToDelete.email || 'No email'} · ${userToDelete.role || 'user'}` : ''"
-      target-label="User to delete"
-      confirm-label="Delete User"
-      :busy="deleting"
-      require-typed
-      @confirm="handleDeleteUser"
-      @cancel="cancelDelete"
-    >
-      Deleting this user revokes their sessions immediately. This cannot be undone.
-    </AppConfirmDialog>
-
-    <AppFormDialog
-      v-model="dialog"
-      :title="editMode ? 'Edit User' : 'Create User'"
-      :description="editMode ? 'Update account identity, role, and active status.' : 'Create a new account for the system.'"
-      size="lg"
-      submit-label="Save User"
-      :busy="loading"
-      :submit-disabled="!currentUserFormValid"
-      @submit="saveUser"
-    >
-      <div class="user-management-form-grid">
-        <AppFormField v-slot="{ id }" label="Username" required>
-          <input :id="id" v-model="currentUser.username" type="text" :disabled="editMode" placeholder="Username">
-        </AppFormField>
-
-        <AppFormField v-slot="{ id }" label="Email" show-optional>
-          <input :id="id" v-model="currentUser.email" type="email" placeholder="Email address">
-        </AppFormField>
-
-        <AppFormField
-          v-slot="{ id, describedBy }"
-          :label="editMode ? 'New Password' : 'Password'"
-          :required="!editMode"
-          :show-optional="editMode"
-          :hint="editMode ? 'Leave blank to keep the current password.' : 'The user can change this after first sign-in.'"
-          full
-        >
-          <input :id="id" v-model="currentUser.password" :aria-describedby="describedBy" type="password" :placeholder="editMode ? 'Leave blank to keep the current password' : 'Set an initial password'">
-        </AppFormField>
-
-        <AppFormField v-slot="{ id }" label="Role" required>
-          <AppSelect :input-id="id" v-model="currentUser.role" :options="userRoleSelectOptions" :searchable="false" />
-        </AppFormField>
-
-        <label class="user-management-toggle">
-          <input v-model="currentUser.is_active" type="checkbox">
-          <span>Active account</span>
-        </label>
-      </div>
-    </AppFormDialog>
-
-    <AppFormDialog
-      v-model="resetPasswordDialog"
-      title="Reset Password"
-      :description="passwordResetUser ? `Set a new password for ${passwordResetUser.username}.` : ''"
-      submit-label="Reset Password"
-      busy-label="Resetting…"
-      :busy="resettingPassword"
-      :submit-disabled="!passwordResetValid"
-      :error="passwordResetMismatch ? 'Both passwords must match.' : ''"
-      @submit="submitPasswordReset"
-      @cancel="closeResetPasswordDialog"
-    >
-      <div class="user-management-dialog-stack">
-        <AppFormField v-slot="{ id }" label="New Password" required>
-          <input :id="id" v-model="passwordResetForm.password" type="password" placeholder="Enter new password">
-        </AppFormField>
-        <AppFormField v-slot="{ id }" label="Confirm Password" required>
-          <input :id="id" v-model="passwordResetForm.confirmPassword" type="password" placeholder="Confirm new password">
-        </AppFormField>
-      </div>
-    </AppFormDialog>
-
-    <AppFormDialog
-      v-model="acEditDialog"
-      title="Edit Access"
-      :description="acEditingUser ? `Adjust the role and status for ${acEditingUser.username}.` : ''"
-      submit-label="Save Access"
-      :busy="acSaving"
-      persistent
-      @submit="saveUserAccess"
-    >
-      <div class="user-management-form-grid">
-        <AppFormField v-slot="{ id }" label="Role" required full>
-          <AppSelect :input-id="id" v-model="acEditForm.role" :options="accessRoleSelectOptions" :searchable="false" />
-        </AppFormField>
-
-        <label class="user-management-toggle">
-          <input v-model="acEditForm.is_active" type="checkbox">
-          <span>Active account</span>
-        </label>
-
-        <label class="user-management-toggle">
-          <input v-model="acEditForm.is_ptb_admin" type="checkbox">
-          <span>PTB Admin</span>
-        </label>
-      </div>
-    </AppFormDialog>
-
-    <AppFormDialog
-      v-model="permissionsDialog"
-      title="Menu Permissions"
-      :description="permissionsUser ? `Configure resource permissions for ${permissionsUser.username}.` : ''"
-      size="xl"
-      submit-label="Save Permissions"
-      :busy="acSaving"
-      persistent
-      @submit="savePermissions"
-    >
-      <template #footer-aside>
-        <span>{{ selectedPermissionCount }} of {{ totalPermissionCount }} permissions selected</span>
-      </template>
-
-      <div class="user-management-permissions-actions">
-        <button type="button" class="user-management-button user-management-button--secondary" @click="selectAllPermissions">
-          Select All
-        </button>
-        <button type="button" class="user-management-button user-management-button--secondary" @click="clearAllPermissions">
-          Clear All
-        </button>
-        <button type="button" class="user-management-button user-management-button--secondary" @click="applyDefaultPermissions">
-          Apply Defaults
-        </button>
-      </div>
-
-      <div class="user-management-permissions-table-wrap">
-        <DataTable :value="permissionMatrixRows" dataKey="resource" class="p-datatable-sm user-management-permissions-grid app-interactive-datatable">
-          <Column field="resource" header="Resource">
-            <template #body="slotProps">
-              <div class="user-management-resource-cell">
-                <Icon :icon="getResourceIcon(slotProps.data.resource)" />
-                <span>{{ formatResourceName(slotProps.data.resource) }}</span>
+      <!-- User Details Dialog -->
+      <AppFormDialog
+        v-model="detailsDialog"
+        title="User Profile Details"
+        :description="selectedUser ? `Review identity, role assignments, and timestamps for ${selectedUser.username}.` : ''"
+        size="lg"
+        submit-label="Edit Profile"
+        cancel-label="Close"
+        @submit="editUserFromDetails"
+      >
+        <div v-if="selectedUser" class="user-management-details-modal">
+          <div class="user-management-details-hero">
+            <div class="user-management-details-hero__avatar">
+              {{ getInitial(selectedUser.username) }}
+            </div>
+            <div class="user-management-details-hero__main">
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="user-management-details-hero__name">{{ selectedUser.username }}</h3>
+                <span class="user-management-badge" :class="getRoleBadgeClass(String(selectedUser.role || 'user'))">
+                  <Icon :icon="getRoleIcon(String(selectedUser.role || 'user'))" class="mr-1" />
+                  {{ String(selectedUser.role || 'user').toUpperCase() }}
+                </span>
+                <span class="user-management-badge" :class="selectedUser.is_active ? 'user-management-badge--success' : 'user-management-badge--danger'">
+                  <Icon :icon="selectedUser.is_active ? 'mdi:check-circle' : 'mdi:close-circle'" class="mr-1" />
+                  {{ selectedUser.is_active ? 'Active' : 'Inactive' }}
+                </span>
               </div>
-            </template>
-          </Column>
-          <Column v-for="action in acAvailableActions" :key="action" :field="action" :header="capitalize(action)">
-            <template #body="slotProps">
+              <p class="user-management-details-hero__email">{{ selectedUser.email || 'No email configured' }}</p>
+            </div>
+          </div>
+
+          <div class="user-management-dialog-grid">
+            <section class="user-management-dialog-card">
+              <div class="user-management-dialog-card__title">
+                <Icon icon="mdi:account-box-outline" />
+                <span>Account Identity</span>
+              </div>
+              <div class="user-management-detail-list">
+                <div class="user-management-detail-item">
+                  <span>Username</span>
+                  <strong>{{ selectedUser.username }}</strong>
+                </div>
+                <div class="user-management-detail-item">
+                  <span>Email Address</span>
+                  <strong>{{ selectedUser.email || 'Not provided' }}</strong>
+                </div>
+                <div class="user-management-detail-item">
+                  <span>Assigned Role</span>
+                  <strong>{{ String(selectedUser.role || 'user').toUpperCase() }}</strong>
+                </div>
+                <div class="user-management-detail-item">
+                  <span>Account Status</span>
+                  <strong :class="selectedUser.is_active ? 'text-[var(--app-success)]' : 'text-[var(--app-danger)]'">
+                    {{ selectedUser.is_active ? 'Active (Can login)' : 'Inactive (Access blocked)' }}
+                  </strong>
+                </div>
+              </div>
+            </section>
+
+            <section class="user-management-dialog-card">
+              <div class="user-management-dialog-card__title">
+                <Icon icon="mdi:timeline-clock-outline" />
+                <span>Activity & Lifecycle</span>
+              </div>
+              <div class="user-management-detail-list">
+                <div class="user-management-detail-item">
+                  <span>Last Login</span>
+                  <strong>{{ formatDateFull(selectedUser.last_login) }}</strong>
+                </div>
+                <div class="user-management-detail-item">
+                  <span>Created Date</span>
+                  <strong>{{ formatDateFull(selectedUser.created_at) }}</strong>
+                </div>
+                <div class="user-management-detail-item">
+                  <span>Last Updated</span>
+                  <strong>{{ formatDateFull(selectedUser.updated_at) }}</strong>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </AppFormDialog>
+
+      <!-- Delete User Dialog -->
+      <AppConfirmDialog
+        v-model="deleteDialog"
+        v-model:typed-value="deleteConfirmation"
+        title="Delete User Account"
+        description="The user account, authentication records, and permissions will be permanently removed."
+        :target="userToDelete ? `${userToDelete.username} · ${userToDelete.email || 'No email'} · ${userToDelete.role || 'user'}` : ''"
+        target-label="User to delete"
+        confirm-label="Delete User"
+        :busy="deleting"
+        require-typed
+        @confirm="handleDeleteUser"
+        @cancel="cancelDelete"
+      >
+        Deleting this user revokes active sessions immediately. This action cannot be undone.
+      </AppConfirmDialog>
+
+      <!-- Create / Edit User Dialog -->
+      <AppFormDialog
+        v-model="dialog"
+        :title="editMode ? 'Edit User Profile' : 'Create New User'"
+        :description="editMode ? 'Update account identity, system role, and access status.' : 'Register a new account credentials and system role.'"
+        size="lg"
+        :submit-label="editMode ? 'Save Changes' : 'Create User'"
+        busy-label="Saving…"
+        :busy="loading"
+        :submit-disabled="!currentUserFormValid"
+        @submit="saveUser"
+      >
+        <div v-if="editMode" class="user-management-modal-banner mb-4">
+          <div class="user-management-avatar user-management-avatar--small">
+            {{ getInitial(String(currentUser.username || 'U')) }}
+          </div>
+          <div>
+            <strong>Editing {{ currentUser.username }}</strong>
+            <p class="text-xs text-[var(--app-muted)]">Changes take effect immediately on next request.</p>
+          </div>
+        </div>
+
+        <div class="user-management-form-grid">
+          <AppFormField
+            v-slot="{ id }"
+            label="Username"
+            :required="!editMode"
+            :hint="editMode ? 'Username cannot be modified once created.' : 'Required for sign-in identification.'"
+          >
+            <div class="user-management-input-wrapper" :class="{ 'is-disabled': editMode }">
+              <Icon icon="mdi:account-outline" class="user-management-input-icon" />
               <input
-                class="user-management-permission-checkbox"
-                :aria-label="`${capitalize(action)} ${formatResourceName(slotProps.data.resource)}`"
-                :checked="hasPermission(slotProps.data.resource, action)"
-                type="checkbox"
-                @change="togglePermission(slotProps.data.resource, action, ($event.target as HTMLInputElement).checked)"
+                :id="id"
+                v-model="currentUser.username"
+                type="text"
+                :disabled="editMode"
+                placeholder="Enter username"
+                autocomplete="off"
               >
-            </template>
-          </Column>
-        </DataTable>
-      </div>
-    </AppFormDialog>
+              <Icon v-if="editMode" icon="mdi:lock" class="user-management-input-locked-icon" />
+            </div>
+          </AppFormField>
+
+          <AppFormField
+            v-slot="{ id }"
+            label="Email Address"
+            show-optional
+            hint="Used for notifications and account communications."
+          >
+            <div class="user-management-input-wrapper">
+              <Icon icon="mdi:email-outline" class="user-management-input-icon" />
+              <input
+                :id="id"
+                v-model="currentUser.email"
+                type="email"
+                placeholder="user@example.com"
+                autocomplete="off"
+              >
+            </div>
+          </AppFormField>
+
+          <AppFormField
+            v-slot="{ id, describedBy }"
+            :label="editMode ? 'New Password' : 'Password'"
+            :required="!editMode"
+            :show-optional="editMode"
+            :hint="editMode ? 'Leave blank to keep existing password unchanged.' : 'Set an initial secure password for first sign-in.'"
+            full
+          >
+            <div class="user-management-input-wrapper">
+              <Icon icon="mdi:lock-outline" class="user-management-input-icon" />
+              <input
+                :id="id"
+                v-model="currentUser.password"
+                :aria-describedby="describedBy"
+                :type="showUserPassword ? 'text' : 'password'"
+                :placeholder="editMode ? 'Leave blank to keep current password' : 'Enter a secure initial password'"
+                autocomplete="new-password"
+              >
+              <button
+                type="button"
+                class="user-management-input-eye"
+                :aria-label="showUserPassword ? 'Hide password' : 'Show password'"
+                @click="showUserPassword = !showUserPassword"
+              >
+                <Icon :icon="showUserPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'" />
+              </button>
+            </div>
+          </AppFormField>
+
+          <AppFormField
+            v-slot="{ id }"
+            label="System Role"
+            required
+            hint="Controls authorization levels and menu access."
+          >
+            <AppSelect
+              :input-id="id"
+              v-model="currentUser.role"
+              :options="userRoleSelectOptions"
+              :searchable="false"
+            />
+          </AppFormField>
+
+          <div class="user-management-switch-card">
+            <div class="user-management-switch-card__info">
+              <Icon icon="mdi:account-check-outline" class="user-management-switch-card__icon" />
+              <div>
+                <strong>Active Account Status</strong>
+                <p>Enable user to sign in and access authorized features.</p>
+              </div>
+            </div>
+            <label class="user-management-switch">
+              <input v-model="currentUser.is_active" type="checkbox">
+              <span class="user-management-switch__slider" />
+            </label>
+          </div>
+        </div>
+      </AppFormDialog>
+
+      <!-- Reset Password Dialog -->
+      <AppFormDialog
+        v-model="resetPasswordDialog"
+        title="Reset User Password"
+        :description="passwordResetUser ? `Set a new password for ${passwordResetUser.username}.` : ''"
+        submit-label="Reset Password"
+        busy-label="Resetting…"
+        :busy="resettingPassword"
+        :submit-disabled="!passwordResetValid"
+        :error="passwordResetMismatch ? 'Both passwords must match.' : ''"
+        @submit="submitPasswordReset"
+        @cancel="closeResetPasswordDialog"
+      >
+        <div v-if="passwordResetUser" class="user-management-modal-banner mb-4">
+          <div class="user-management-avatar user-management-avatar--small">
+            {{ getInitial(passwordResetUser.username) }}
+          </div>
+          <div>
+            <strong>{{ passwordResetUser.username }}</strong>
+            <p class="text-xs text-[var(--app-muted)]">{{ passwordResetUser.email || 'No email configured' }}</p>
+          </div>
+        </div>
+
+        <div class="user-management-dialog-stack">
+          <AppFormField v-slot="{ id }" label="New Password" required hint="At least 6 characters recommended.">
+            <div class="user-management-input-wrapper">
+              <Icon icon="mdi:lock-outline" class="user-management-input-icon" />
+              <input
+                :id="id"
+                v-model="passwordResetForm.password"
+                :type="showResetPassword ? 'text' : 'password'"
+                placeholder="Enter new password"
+                autocomplete="new-password"
+              >
+              <button
+                type="button"
+                class="user-management-input-eye"
+                :aria-label="showResetPassword ? 'Hide password' : 'Show password'"
+                @click="showResetPassword = !showResetPassword"
+              >
+                <Icon :icon="showResetPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'" />
+              </button>
+            </div>
+          </AppFormField>
+
+          <AppFormField v-slot="{ id }" label="Confirm New Password" required>
+            <div class="user-management-input-wrapper">
+              <Icon icon="mdi:lock-check-outline" class="user-management-input-icon" />
+              <input
+                :id="id"
+                v-model="passwordResetForm.confirmPassword"
+                :type="showResetConfirmPassword ? 'text' : 'password'"
+                placeholder="Confirm new password"
+                autocomplete="new-password"
+              >
+              <button
+                type="button"
+                class="user-management-input-eye"
+                :aria-label="showResetConfirmPassword ? 'Hide password' : 'Show password'"
+                @click="showResetConfirmPassword = !showResetConfirmPassword"
+              >
+                <Icon :icon="showResetConfirmPassword ? 'mdi:eye-off-outline' : 'mdi:eye-outline'" />
+              </button>
+            </div>
+          </AppFormField>
+
+          <div
+            v-if="passwordResetForm.password && passwordResetForm.confirmPassword"
+            class="user-management-match-badge"
+            :class="passwordResetMismatch ? 'is-mismatch' : 'is-match'"
+          >
+            <Icon :icon="passwordResetMismatch ? 'mdi:alert-circle-outline' : 'mdi:check-circle-outline'" />
+            <span>{{ passwordResetMismatch ? 'Passwords do not match' : 'Passwords match' }}</span>
+          </div>
+        </div>
+      </AppFormDialog>
+
+      <!-- Edit Access Dialog -->
+      <AppFormDialog
+        v-model="acEditDialog"
+        title="Edit Access & Role"
+        :description="acEditingUser ? `Adjust role and permission flags for ${acEditingUser.username}.` : ''"
+        submit-label="Save Access"
+        busy-label="Saving…"
+        :busy="acSaving"
+        persistent
+        @submit="saveUserAccess"
+      >
+        <div v-if="acEditingUser" class="user-management-modal-banner mb-4">
+          <div class="user-management-avatar user-management-avatar--small">
+            {{ getInitial(acEditingUser.username) }}
+          </div>
+          <div>
+            <strong>{{ acEditingUser.username }}</strong>
+            <p class="text-xs text-[var(--app-muted)]">{{ acEditingUser.email || 'No email' }} · Current role: {{ acEditingUser.role }}</p>
+          </div>
+        </div>
+
+        <div class="user-management-form-grid">
+          <AppFormField v-slot="{ id }" label="Assigned Role" required full hint="Controls authorization scope across all modules.">
+            <AppSelect
+              :input-id="id"
+              v-model="acEditForm.role"
+              :options="accessRoleSelectOptions"
+              :searchable="false"
+            />
+          </AppFormField>
+
+          <div class="user-management-switch-card">
+            <div class="user-management-switch-card__info">
+              <Icon icon="mdi:account-check-outline" class="user-management-switch-card__icon" />
+              <div>
+                <strong>Active Account</strong>
+                <p>User can authenticate and access system.</p>
+              </div>
+            </div>
+            <label class="user-management-switch">
+              <input v-model="acEditForm.is_active" type="checkbox">
+              <span class="user-management-switch__slider" />
+            </label>
+          </div>
+
+          <div class="user-management-switch-card">
+            <div class="user-management-switch-card__info">
+              <Icon icon="mdi:shield-star-outline" class="user-management-switch-card__icon text-[var(--app-info)]" />
+              <div>
+                <strong>PTB Admin Flag</strong>
+                <p>Grants administrative access to PTB management modules.</p>
+              </div>
+            </div>
+            <label class="user-management-switch">
+              <input v-model="acEditForm.is_ptb_admin" type="checkbox">
+              <span class="user-management-switch__slider" />
+            </label>
+          </div>
+        </div>
+      </AppFormDialog>
+
+      <!-- Menu Permissions Dialog -->
+      <AppFormDialog
+        v-model="permissionsDialog"
+        title="Menu Permissions"
+        :description="permissionsUser ? `Configure fine-grained resource permissions for ${permissionsUser.username}.` : ''"
+        size="xl"
+        submit-label="Save Permissions"
+        busy-label="Saving…"
+        :busy="acSaving"
+        persistent
+        @submit="savePermissions"
+      >
+        <template #footer-aside>
+          <div class="user-management-permission-counter">
+            <Icon icon="mdi:shield-check-outline" />
+            <span><strong>{{ selectedPermissionCount }}</strong> of {{ totalPermissionCount }} permissions assigned</span>
+          </div>
+        </template>
+
+        <div class="user-management-permissions-toolbar">
+          <div class="user-management-search user-management-search--compact">
+            <Icon icon="mdi:magnify" class="user-management-search__icon" />
+            <input
+              v-model="permissionMatrixSearch"
+              type="search"
+              placeholder="Filter resources..."
+            >
+          </div>
+
+          <div class="user-management-permissions-actions">
+            <button
+              type="button"
+              class="user-management-button user-management-button--secondary user-management-button--sm"
+              @click="selectAllPermissions"
+            >
+              <Icon icon="mdi:checkbox-multiple-marked-outline" />
+              <span>Select All</span>
+            </button>
+            <button
+              type="button"
+              class="user-management-button user-management-button--secondary user-management-button--sm"
+              @click="clearAllPermissions"
+            >
+              <Icon icon="mdi:checkbox-multiple-blank-outline" />
+              <span>Clear All</span>
+            </button>
+            <button
+              type="button"
+              class="user-management-button user-management-button--secondary user-management-button--sm"
+              @click="applyDefaultPermissions"
+            >
+              <Icon icon="mdi:restore" />
+              <span>Apply Defaults</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="user-management-permissions-table-wrap">
+          <DataTable
+            :value="filteredPermissionMatrixRows"
+            dataKey="resource"
+            class="p-datatable-sm user-management-permissions-grid app-interactive-datatable"
+          >
+            <Column field="resource" header="Resource">
+              <template #body="slotProps">
+                <div class="user-management-resource-cell">
+                  <div class="user-management-resource-cell__icon">
+                    <Icon :icon="getResourceIcon(slotProps.data.resource)" />
+                  </div>
+                  <span class="user-management-resource-cell__name">{{ formatResourceName(slotProps.data.resource) }}</span>
+                  <button
+                    type="button"
+                    class="user-management-row-toggle"
+                    title="Toggle all actions for this resource"
+                    @click="toggleRowPermissions(slotProps.data.resource)"
+                  >
+                    <Icon icon="mdi:toggle-switch-outline" />
+                  </button>
+                </div>
+              </template>
+            </Column>
+            <Column v-for="action in acAvailableActions" :key="action" :field="action" :header="capitalize(action)">
+              <template #body="slotProps">
+                <div class="flex justify-center">
+                  <label class="user-management-checkbox-wrapper">
+                    <input
+                      class="user-management-permission-checkbox"
+                      :aria-label="`${capitalize(action)} ${formatResourceName(slotProps.data.resource)}`"
+                      :checked="hasPermission(slotProps.data.resource, action)"
+                      type="checkbox"
+                      @change="togglePermission(slotProps.data.resource, action, ($event.target as HTMLInputElement).checked)"
+                    >
+                  </label>
+                </div>
+              </template>
+            </Column>
+          </DataTable>
+        </div>
+      </AppFormDialog>
     </section>
   </DefaultLayout>
 </template>
@@ -537,6 +940,11 @@ const editMode = ref(false)
 
 const detailsDialog = ref(false)
 const selectedUser = ref<User | null>(null)
+
+const showUserPassword = ref(false)
+const showResetPassword = ref(false)
+const showResetConfirmPassword = ref(false)
+const permissionMatrixSearch = ref('')
 
 const defaultStats: UserStats = {
   total_users: 0,
@@ -746,6 +1154,17 @@ const permissionMatrixRows = computed(() => {
   return acAvailableResources.value.map((resource) => ({ resource }))
 })
 
+const filteredPermissionMatrixRows = computed(() => {
+  const query = permissionMatrixSearch.value.trim().toLowerCase()
+  if (!query) return permissionMatrixRows.value
+
+  return permissionMatrixRows.value.filter(
+    (row) =>
+      row.resource.toLowerCase().includes(query) ||
+      formatResourceName(row.resource).toLowerCase().includes(query),
+  )
+})
+
 const currentUserFormValid = computed(() => {
   const username = currentUser.value.username?.trim() ?? ''
   const password = currentUser.value.password?.trim() ?? ''
@@ -754,7 +1173,7 @@ const currentUserFormValid = computed(() => {
 
 const passwordResetValid = computed(() => {
   return (
-    passwordResetForm.value.password.trim().length > 0 &&
+    passwordResetForm.value.password.trim().length >= 1 &&
     passwordResetForm.value.password === passwordResetForm.value.confirmPassword
   )
 })
@@ -786,6 +1205,7 @@ async function loadUsers() {
 
 function openCreateDialog() {
   editMode.value = false
+  showUserPassword.value = false
   currentUser.value = {
     username: '',
     email: '',
@@ -798,6 +1218,7 @@ function openCreateDialog() {
 
 function editUser(user: User) {
   editMode.value = true
+  showUserPassword.value = false
   currentUser.value = {
     ...user,
     password: '',
@@ -924,6 +1345,8 @@ function openResetPasswordDialog(user: User) {
     password: '',
     confirmPassword: '',
   }
+  showResetPassword.value = false
+  showResetConfirmPassword.value = false
   resetPasswordDialog.value = true
 }
 
@@ -997,6 +1420,7 @@ async function saveUserAccess() {
 
 function openPermissionsDialog(user: AccessControlUser) {
   permissionsUser.value = user
+  permissionMatrixSearch.value = ''
   permissionsForm.value = user.menu_permissions
     ? JSON.parse(JSON.stringify(user.menu_permissions))
     : {}
@@ -1024,6 +1448,18 @@ function togglePermission(resource: string, action: string, checked: unknown) {
   )
   if (permissionsForm.value[resource].length === 0) {
     delete permissionsForm.value[resource]
+  }
+}
+
+function toggleRowPermissions(resource: string) {
+  const currentlyAllSelected = acAvailableActions.value.every((action) =>
+    hasPermission(resource, action),
+  )
+
+  if (currentlyAllSelected) {
+    delete permissionsForm.value[resource]
+  } else {
+    permissionsForm.value[resource] = [...acAvailableActions.value]
   }
 }
 
@@ -1080,6 +1516,23 @@ function getRoleBadgeClass(role: string) {
       return 'user-management-badge--muted'
     default:
       return 'user-management-badge--muted'
+  }
+}
+
+function getRoleIcon(role: string): string {
+  switch (role) {
+    case 'developer':
+      return 'mdi:code-braces'
+    case 'superadmin':
+      return 'mdi:crown-outline'
+    case 'admin':
+      return 'mdi:shield-account-outline'
+    case 'user':
+      return 'mdi:account-outline'
+    case 'guest':
+      return 'mdi:account-badge-outline'
+    default:
+      return 'mdi:account-outline'
   }
 }
 
@@ -1186,38 +1639,15 @@ onMounted(() => {
   --user-management-danger-line: var(--app-danger-line);
 }
 
-.user-management-header,
-.user-management-header__copy,
-.user-management-header__actions,
-.user-management-notice,
-.user-management-panel__header,
-.user-management-dialog-footer,
-.user-management-user-cell,
-.user-management-user-inline,
-.user-management-actions,
-.user-management-permissions-actions,
-.user-management-resource-cell {
+.user-management-header {
   display: flex;
-}
-
-.user-management-header,
-.user-management-panel__header,
-.user-management-notice,
-.user-management-dialog-footer {
   justify-content: space-between;
+  align-items: flex-start;
+  gap: 1.5rem;
 }
 
-.user-management-header,
-.user-management-header__copy,
-.user-management-header__actions,
-.user-management-notice,
-.user-management-panel__header,
-.user-management-dialog-footer,
-.user-management-user-cell,
-.user-management-user-inline,
-.user-management-actions,
-.user-management-permissions-actions,
-.user-management-resource-cell {
+.user-management-header__copy {
+  display: flex;
   gap: 1rem;
   align-items: flex-start;
 }
@@ -1225,12 +1655,11 @@ onMounted(() => {
 .user-management-header__icon {
   display: grid;
   place-items: center;
-  width: 3.4rem;
-  height: 3.4rem;
-  border-radius: 1.1rem;
+  width: 3.25rem;
+  height: 3.25rem;
+  border-radius: 0.85rem;
   background: var(--user-management-accent-soft);
   color: var(--user-management-accent);
-  box-shadow: none;
 }
 
 .user-management-header__icon :deep(svg) {
@@ -1239,284 +1668,404 @@ onMounted(() => {
 }
 
 .user-management-header__actions {
+  display: flex;
+  gap: 0.75rem;
   flex-wrap: wrap;
   justify-content: flex-end;
-}
-
-.user-management-button,
-.user-management-status-toggle,
-.user-management-actions button {
-  border: 0;
-  cursor: pointer;
-  transition: transform 0.2s ease, box-shadow 0.2s ease, opacity 0.2s ease;
 }
 
 .user-management-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.55rem;
+  gap: 0.5rem;
+  min-height: 2.5rem;
+  padding: 0.55rem 1rem;
   border-radius: 0.65rem;
-  padding: 0.6rem 1rem;
   font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.15s ease;
+}
+
+.user-management-button--sm {
+  min-height: 2.15rem;
+  padding: 0.4rem 0.75rem;
+  font-size: 0.8rem;
 }
 
 .user-management-button :deep(svg) {
-  width: 1rem;
-  height: 1rem;
+  width: 1.1rem;
+  height: 1.1rem;
 }
 
 .user-management-button--primary {
   background: var(--user-management-accent);
-  color: white;
-  box-shadow: none;
+  color: #ffffff;
 }
 
 .user-management-button--primary:hover:not(:disabled) {
   background: var(--app-accent-strong);
 }
 
-.user-management-button--secondary,
-.user-management-button--ghost {
+.user-management-button--secondary {
   background: var(--app-panel-strong);
   color: var(--app-ink);
-  border: 1px solid var(--app-border);
-  box-shadow: none;
+  border-color: var(--app-border);
 }
 
-.user-management-button--danger {
-  background: var(--user-management-danger);
-  color: white;
-  box-shadow: none;
+.user-management-button--secondary:hover:not(:disabled) {
+  border-color: var(--user-management-accent);
+  color: var(--user-management-accent);
 }
 
-.user-management-button:hover:not(:disabled),
-.user-management-status-toggle:hover:not(:disabled),
-.user-management-actions button:hover:not(:disabled) {
-  transform: translateY(-1px);
-}
-
-.user-management-button:disabled,
-.user-management-status-toggle:disabled,
-.user-management-actions button:disabled {
+.user-management-button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-.user-management-notice,
-.user-management-panel,
-.user-management-stat-card,
-.user-management-dialog-card,
-.user-management-inline-warning,
-.user-management-empty-state {
-  border: 1px solid var(--app-border);
-  border-radius: 1.35rem;
-  background: var(--app-panel-strong);
-  box-shadow: var(--app-shadow-soft);
+.user-management-notice {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid transparent;
 }
 
-.user-management-notice,
-.user-management-panel,
-.user-management-stat-card,
-.user-management-dialog-card,
-.user-management-inline-warning,
-.user-management-empty-state {
-  padding: 1rem 1.1rem;
+.user-management-notice__content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-management-notice__icon {
+  font-size: 1.35rem;
+  flex-shrink: 0;
+}
+
+.user-management-notice strong {
+  display: block;
+  font-size: 0.875rem;
+}
+
+.user-management-notice p {
+  margin: 0;
+  font-size: 0.825rem;
+}
+
+.user-management-notice button {
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+  padding: 0.35rem;
+  border-radius: 0.4rem;
+  color: inherit;
+  opacity: 0.8;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.user-management-notice button:hover {
+  opacity: 1;
 }
 
 .user-management-notice--error {
   background: var(--user-management-danger-soft);
   border-color: var(--user-management-danger-line);
+  color: var(--user-management-danger);
 }
 
 .user-management-notice--success {
   background: var(--user-management-success-soft);
   border-color: var(--user-management-success-line);
+  color: var(--user-management-success);
 }
 
-.user-management-notice p,
-.user-management-stat-card small,
-.user-management-empty-state p,
-.user-management-inline-warning p,
-.user-management-user-cell small,
-.user-management-user-inline small,
-.user-management-inline-note,
-.user-management-field small {
-  color: var(--app-muted);
-  line-height: 1.55;
-}
-
-.user-management-notice button {
-  border: 0;
-  background: transparent;
-  color: var(--app-accent);
-  cursor: pointer;
-  font-weight: 700;
-}
-
-.user-management-tab-content,
-.user-management-stats-grid,
-.user-management-form-grid,
-.user-management-dialog-grid,
-.user-management-dialog-stack,
-.user-management-detail-list,
-.user-management-flag-list {
+.user-management-tab-content {
   display: grid;
-  gap: 1rem;
+  gap: 1.25rem;
 }
 
 .user-management-stats-grid {
-  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
 }
 
 .user-management-stat-card {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 0.35rem;
+  padding: 1.15rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
   background: var(--app-panel-strong);
 }
 
-.user-management-stat-card span,
-.user-management-dialog-card__eyebrow,
-.user-management-detail-list span,
-.user-management-field > span {
-  font-size: 0.76rem;
+.user-management-stat-card__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.user-management-stat-card__top span {
+  font-size: 0.78rem;
   font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
   color: var(--app-muted);
 }
 
+.user-management-stat-card__icon {
+  display: grid;
+  place-items: center;
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.5rem;
+  font-size: 1.1rem;
+}
+
+.user-management-stat-card__icon--primary {
+  background: var(--user-management-accent-soft);
+  color: var(--user-management-accent);
+}
+
+.user-management-stat-card__icon--success {
+  background: var(--user-management-success-soft);
+  color: var(--user-management-success);
+}
+
+.user-management-stat-card__icon--info {
+  background: var(--user-management-info-soft);
+  color: var(--user-management-info);
+}
+
+.user-management-stat-card__icon--warning {
+  background: var(--user-management-warning-soft);
+  color: var(--user-management-warning);
+}
+
 .user-management-stat-card strong {
+  font-size: 1.75rem;
   color: var(--app-ink);
-  font-size: 1.9rem;
+  line-height: 1.2;
+}
+
+.user-management-stat-card small {
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  line-height: 1.4;
+}
+
+.user-management-live-dot {
+  width: 0.5rem;
+  height: 0.5rem;
+  border-radius: 999px;
+  background: var(--user-management-success);
+  display: inline-block;
+  box-shadow: 0 0 0 2px var(--user-management-success-soft);
+  animation: user-management-pulse 2s infinite;
+}
+
+@keyframes user-management-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
 }
 
 .user-management-panel {
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 1rem;
+  padding: 1.25rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
   background: var(--app-panel-strong);
 }
 
-.user-management-panel__header--compact {
+.user-management-panel__header {
+  display: flex;
+  justify-content: space-between;
   align-items: center;
+  gap: 1rem;
+}
+
+.user-management-panel__header--compact {
+  flex-wrap: wrap;
 }
 
 .user-management-panel__eyebrow {
   margin: 0;
-  color: var(--app-accent);
-  font-size: 0.76rem;
+  color: var(--user-management-accent);
+  font-size: 0.72rem;
   font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
 }
 
 .user-management-panel__header h2 {
-  margin: 0.2rem 0 0;
+  margin: 0.15rem 0 0;
   color: var(--app-ink);
-  font-size: 1.1rem;
+  font-size: 1.15rem;
+  font-weight: 700;
+}
+
+.user-management-count-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  background: var(--app-canvas-strong);
+  color: var(--app-muted);
 }
 
 .user-management-search {
   display: inline-flex;
   align-items: center;
-  gap: 0.6rem;
-  min-width: min(100%, 20rem);
+  gap: 0.5rem;
+  min-width: min(100%, 22rem);
+  height: 2.75rem;
   border: 1px solid var(--app-border);
-  border-radius: 999px;
-  background: var(--app-panel-strong);
-  box-shadow: var(--app-shadow-soft);
-  padding: 0.8rem 1rem;
+  border-radius: 0.75rem;
+  background: var(--app-panel);
+  padding: 0 0.85rem;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
-.user-management-search input,
-.user-management-field input,
-.user-management-field select {
+.user-management-search--compact {
+  height: 2.35rem;
+  min-width: min(100%, 16rem);
+}
+
+.user-management-search:focus-within {
+  border-color: var(--user-management-accent);
+  box-shadow: 0 0 0 3px var(--user-management-accent-soft);
+}
+
+.user-management-search__icon {
+  font-size: 1.15rem;
+  color: var(--app-muted);
+  flex-shrink: 0;
+}
+
+.user-management-search input {
   width: 100%;
   border: 0;
   background: transparent;
   color: var(--app-ink);
+  font-size: 0.875rem;
+  outline: none;
 }
 
-.user-management-search input:focus,
-.user-management-field input:focus,
-.user-management-field select:focus {
-  outline: none;
+.user-management-search__clear {
+  border: 0;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  padding: 0.2rem;
+  font-size: 1rem;
+}
+
+.user-management-search__clear:hover {
+  color: var(--app-ink);
 }
 
 .user-management-user-cell,
 .user-management-user-inline {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
   border: 0;
   background: transparent;
   padding: 0;
   color: inherit;
   text-align: left;
+  cursor: pointer;
 }
 
-.user-management-user-cell span,
-.user-management-user-inline span {
-  display: grid;
-  gap: 0.2rem;
+.user-management-user-cell:hover .user-management-user-cell__name {
+  color: var(--user-management-accent);
 }
 
-.user-management-user-cell strong,
-.user-management-user-inline strong,
-.user-management-detail-list strong,
-.user-management-inline-warning strong,
-.user-management-empty-state strong {
+.user-management-user-cell__info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.user-management-user-cell__name {
+  font-size: 0.875rem;
   color: var(--app-ink);
+  transition: color 0.15s ease;
+}
+
+.user-management-user-cell__email {
+  font-size: 0.75rem;
+  color: var(--app-muted);
 }
 
 .user-management-avatar {
   display: grid;
   place-items: center;
-  width: 2.35rem;
-  height: 2.35rem;
+  width: 2.25rem;
+  height: 2.25rem;
   border-radius: 999px;
   background: var(--user-management-accent-soft);
   color: var(--user-management-accent);
   font-weight: 700;
+  font-size: 0.85rem;
+  flex-shrink: 0;
 }
 
 .user-management-avatar--small {
-  width: 2rem;
-  height: 2rem;
+  width: 1.9rem;
+  height: 1.9rem;
+  font-size: 0.75rem;
 }
 
 .user-management-badge {
   display: inline-flex;
   align-items: center;
   border-radius: 999px;
-  padding: 0.28rem 0.65rem;
+  padding: 0.25rem 0.6rem;
   background: var(--app-canvas-strong);
   color: var(--app-ink);
   font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0;
-  text-transform: none;
 }
 
 .user-management-badge--warning {
   background: var(--user-management-warning-soft);
+  color: var(--user-management-warning);
 }
 
 .user-management-badge--info {
   background: var(--user-management-info-soft);
+  color: var(--user-management-info);
 }
 
 .user-management-badge--teal {
   background: var(--user-management-accent-soft);
+  color: var(--user-management-accent);
 }
 
 .user-management-badge--purple {
   background: var(--user-management-info-soft);
+  color: var(--user-management-info);
 }
 
 .user-management-badge--success {
   background: var(--user-management-success-soft);
+  color: var(--user-management-success);
 }
 
 .user-management-badge--danger {
   background: var(--user-management-danger-soft);
+  color: var(--user-management-danger);
 }
 
 .user-management-badge--muted {
@@ -1525,135 +2074,148 @@ onMounted(() => {
 }
 
 .user-management-status-toggle {
+  display: inline-flex;
+  align-items: center;
   border-radius: 999px;
-  padding: 0.45rem 0.8rem;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.75rem;
   font-weight: 700;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .user-management-status-toggle.is-active {
   background: var(--user-management-success-soft);
   color: var(--user-management-success);
+  border-color: var(--user-management-success-line);
 }
 
 .user-management-status-toggle.is-inactive {
   background: var(--user-management-danger-soft);
   color: var(--user-management-danger);
+  border-color: var(--user-management-danger-line);
+}
+
+.user-management-status-toggle:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.user-management-status-toggle:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+}
+
+.user-management-time-cell {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: var(--app-muted);
+}
+
+.user-management-time-cell__icon {
+  font-size: 0.95rem;
 }
 
 .user-management-actions {
-  flex-wrap: wrap;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  justify-content: flex-end;
 }
 
 .user-management-actions button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 2.2rem;
-  height: 2.2rem;
-  border-radius: 999px;
-  background: var(--app-panel-strong);
-  color: var(--app-accent);
+  width: 2.15rem;
+  height: 2.15rem;
+  border-radius: 0.6rem;
+  background: var(--app-panel);
+  color: var(--app-ink);
   border: 1px solid var(--app-border);
-  box-shadow: var(--app-shadow-soft);
+  cursor: pointer;
+  transition: all 0.15s ease;
 }
 
-.user-management-actions button.is-danger {
+.user-management-actions button:hover:not(:disabled) {
+  border-color: var(--user-management-accent);
+  color: var(--user-management-accent);
+  background: var(--user-management-accent-soft);
+}
+
+.user-management-actions button.is-danger:hover:not(:disabled) {
+  border-color: var(--user-management-danger);
   color: var(--user-management-danger);
+  background: var(--user-management-danger-soft);
 }
 
-.user-management-actions button :deep(svg) {
-  width: 1rem;
-  height: 1rem;
+.user-management-actions button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .user-management-empty-state,
 .user-management-loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 3rem 1.5rem;
+  text-align: center;
+}
+
+.user-management-empty-state__icon {
   display: grid;
   place-items: center;
-  gap: 0.6rem;
-  min-height: 12rem;
-}
-
-.user-management-loading-state__spinner {
-  width: 2.6rem;
-  height: 2.6rem;
-  border: 3px solid var(--user-management-accent-soft);
-  border-top-color: var(--user-management-accent);
+  width: 3.5rem;
+  height: 3.5rem;
   border-radius: 999px;
-  animation: user-management-spin 0.9s linear infinite;
+  background: var(--app-canvas-strong);
+  color: var(--app-muted);
+  font-size: 1.75rem;
+  margin-bottom: 0.25rem;
 }
 
-.user-management-dialog-grid {
-  grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
-}
-
-.user-management-dialog-card {
-  display: grid;
-  gap: 0.9rem;
-}
-
-.user-management-detail-list div {
-  display: grid;
-  gap: 0.25rem;
-}
-
-.user-management-dialog-stack,
-.user-management-form-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.user-management-dialog-stack {
-  grid-template-columns: 1fr;
-}
-
-.user-management-field,
-.user-management-toggle {
-  display: grid;
-  gap: 0.45rem;
-}
-
-.user-management-field,
-.user-management-search,
-.user-management-toggle,
-.user-management-inline-warning,
-.user-management-dialog-card {
-  background: var(--app-panel-strong);
-}
-
-.user-management-field {
-  border: 1px solid var(--app-border);
-  border-radius: 1rem;
-  box-shadow: var(--app-shadow-soft);
-  padding: 0.85rem 0.95rem;
-}
-
-.user-management-field--full,
-.user-management-toggle--full {
-  grid-column: 1 / -1;
-}
-
-.user-management-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.7rem;
-  border: 1px solid var(--app-border);
-  border-radius: 1rem;
-  box-shadow: var(--app-shadow-soft);
-  padding: 0.95rem 1rem;
-  font-weight: 600;
+.user-management-empty-state strong,
+.user-management-loading-state strong {
+  font-size: 1rem;
   color: var(--app-ink);
 }
 
-.user-management-toggle input,
-.user-management-permission-checkbox {
-  width: 1rem;
-  height: 1rem;
-  accent-color: var(--app-accent);
+.user-management-empty-state p,
+.user-management-loading-state p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--app-muted);
 }
 
-.user-management-inline-warning {
-  display: grid;
-  gap: 0.3rem;
+.user-management-loading-state__spinner {
+  width: 2.5rem;
+  height: 2.5rem;
+  border: 3px solid var(--user-management-accent-soft);
+  border-top-color: var(--user-management-accent);
+  border-radius: 999px;
+  animation: user-management-spin 0.8s linear infinite;
+}
+
+@keyframes user-management-spin {
+  to { transform: rotate(360deg); }
+}
+
+.user-management-flag-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.user-management-inline-note {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.8rem;
+  color: var(--app-muted);
 }
 
 .user-management-inline-note--success {
@@ -1668,67 +2230,400 @@ onMounted(() => {
   color: var(--user-management-warning);
 }
 
-.user-management-flag-list {
-  grid-template-columns: repeat(auto-fit, minmax(5.5rem, max-content));
+.user-management-inline-note--primary {
+  color: var(--user-management-accent);
+  font-weight: 600;
+}
+
+/* Modal and Form Styles */
+.user-management-modal-banner {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+.user-management-details-modal {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.user-management-details-hero {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.25rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.85rem;
+  background: var(--app-surface);
+}
+
+.user-management-details-hero__avatar {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  border-radius: 999px;
+  background: var(--user-management-accent-soft);
+  color: var(--user-management-accent);
+  font-weight: 800;
+  font-size: 1.35rem;
+  flex-shrink: 0;
+}
+
+.user-management-details-hero__main {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.user-management-details-hero__name {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--app-ink);
+}
+
+.user-management-details-hero__email {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--app-muted);
+}
+
+.user-management-dialog-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.user-management-dialog-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+  padding: 1.15rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel);
+}
+
+.user-management-dialog-card__title {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--user-management-accent);
+}
+
+.user-management-dialog-card__title :deep(svg) {
+  font-size: 1.05rem;
+}
+
+.user-management-detail-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.user-management-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--app-border);
+}
+
+.user-management-detail-item:last-child {
+  border-bottom: 0;
+  padding-bottom: 0;
+}
+
+.user-management-detail-item span {
+  font-size: 0.75rem;
+  color: var(--app-muted);
+  font-weight: 500;
+}
+
+.user-management-detail-item strong {
+  font-size: 0.875rem;
+  color: var(--app-ink);
+}
+
+.user-management-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.user-management-dialog-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.user-management-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  height: 2.75rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel-strong);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.user-management-input-wrapper:focus-within {
+  border-color: var(--user-management-accent);
+  box-shadow: 0 0 0 3px var(--user-management-accent-soft);
+}
+
+.user-management-input-wrapper.is-disabled {
+  background: var(--app-canvas-strong);
+  opacity: 0.85;
+  cursor: not-allowed;
+}
+
+.user-management-input-icon {
+  font-size: 1.15rem;
+  color: var(--app-muted);
+  flex-shrink: 0;
+}
+
+.user-management-input-locked-icon {
+  font-size: 1rem;
+  color: var(--app-muted);
+  flex-shrink: 0;
+}
+
+.user-management-input-wrapper input {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--app-ink);
+  font-size: 0.875rem;
+  outline: none;
+}
+
+.user-management-input-eye {
+  border: 0;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.25rem;
+  font-size: 1.15rem;
+  border-radius: 0.4rem;
+}
+
+.user-management-input-eye:hover {
+  color: var(--app-ink);
+}
+
+.user-management-switch-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.95rem 1.1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel-strong);
+  grid-column: 1 / -1;
+}
+
+.user-management-switch-card__info {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.user-management-switch-card__icon {
+  font-size: 1.35rem;
+  color: var(--user-management-accent);
+  flex-shrink: 0;
+}
+
+.user-management-switch-card__info strong {
+  display: block;
+  font-size: 0.875rem;
+  color: var(--app-ink);
+}
+
+.user-management-switch-card__info p {
+  margin: 0.15rem 0 0;
+  font-size: 0.75rem;
+  color: var(--app-muted);
+}
+
+.user-management-switch {
+  position: relative;
+  display: inline-block;
+  width: 2.75rem;
+  height: 1.5rem;
+  flex-shrink: 0;
+}
+
+.user-management-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.user-management-switch__slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: var(--app-canvas-strong);
+  border: 1px solid var(--app-border);
+  transition: 0.2s;
+  border-radius: 999px;
+}
+
+.user-management-switch__slider:before {
+  position: absolute;
+  content: "";
+  height: 1.15rem;
+  width: 1.15rem;
+  left: 0.15rem;
+  bottom: 0.1rem;
+  background-color: white;
+  transition: 0.2s;
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
+}
+
+.user-management-switch input:checked + .user-management-switch__slider {
+  background-color: var(--user-management-accent);
+  border-color: var(--user-management-accent);
+}
+
+.user-management-switch input:checked + .user-management-switch__slider:before {
+  transform: translateX(1.2rem);
+}
+
+.user-management-match-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.5rem 0.85rem;
+  border-radius: 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.user-management-match-badge.is-match {
+  background: var(--user-management-success-soft);
+  color: var(--user-management-success);
+}
+
+.user-management-match-badge.is-mismatch {
+  background: var(--user-management-danger-soft);
+  color: var(--user-management-danger);
+}
+
+.user-management-permission-counter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.825rem;
+  color: var(--app-muted);
+}
+
+.user-management-permission-counter strong {
+  color: var(--user-management-accent);
+}
+
+.user-management-permissions-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 0.85rem;
+  flex-wrap: wrap;
+}
+
+.user-management-permissions-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .user-management-permissions-table-wrap {
   overflow-x: auto;
   border: 1px solid var(--app-border);
-  border-radius: 1.25rem;
-  background: var(--app-panel-strong);
-  box-shadow: var(--app-shadow-soft);
-}
-
-.user-management-permissions-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-
-.user-management-permissions-table th,
-.user-management-permissions-table td {
-  border-bottom: 1px solid var(--app-border);
-  padding: 0.85rem 0.9rem;
-  text-align: center;
-}
-
-.user-management-permissions-table th:first-child,
-.user-management-permissions-table td:first-child {
-  text-align: left;
-}
-
-.user-management-permissions-table th {
+  border-radius: 0.75rem;
   background: var(--app-panel);
-  color: var(--app-ink);
-  font-size: 0.76rem;
-  font-weight: 700;
-  letter-spacing: 0;
-  text-transform: none;
 }
 
 .user-management-resource-cell {
-  gap: 0.55rem;
+  display: flex;
   align-items: center;
+  gap: 0.55rem;
 }
 
-.user-management-resource-cell :deep(svg) {
-  width: 1rem;
-  height: 1rem;
-  color: var(--app-accent);
+.user-management-resource-cell__icon {
+  display: grid;
+  place-items: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 0.4rem;
+  background: var(--user-management-accent-soft);
+  color: var(--user-management-accent);
+  font-size: 1rem;
+  flex-shrink: 0;
 }
 
-@keyframes user-management-spin {
-  to {
-    transform: rotate(360deg);
-  }
+.user-management-resource-cell__name {
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: var(--app-ink);
+}
+
+.user-management-row-toggle {
+  border: 0;
+  background: transparent;
+  color: var(--app-muted);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem;
+  font-size: 1rem;
+  margin-left: auto;
+  opacity: 0.6;
+  transition: opacity 0.15s ease;
+}
+
+.user-management-row-toggle:hover {
+  opacity: 1;
+  color: var(--user-management-accent);
+}
+
+.user-management-checkbox-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.user-management-permission-checkbox {
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--user-management-accent);
+  cursor: pointer;
 }
 
 @media (max-width: 960px) {
-  .user-management-header,
-  .user-management-header__copy,
-  .user-management-panel__header,
-  .user-management-notice,
-  .user-management-dialog-footer {
+  .user-management-header {
     flex-direction: column;
   }
 
@@ -1742,8 +2637,18 @@ onMounted(() => {
     width: 100%;
   }
 
+  .user-management-stats-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .user-management-form-grid,
   .user-management-dialog-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .user-management-stats-grid {
     grid-template-columns: 1fr;
   }
 }

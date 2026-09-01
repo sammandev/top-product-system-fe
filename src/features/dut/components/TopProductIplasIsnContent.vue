@@ -163,17 +163,59 @@
         </section>
 
         <section v-if="isnProjectInfo" ref="lookupResultSection" class="top-product-iplas-isn-lookup-card">
-          <div class="top-product-iplas-isn-chip-row">
-            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--primary">{{ parsedIsns.length }}
-              ISN(s)</span>
-            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">Site: {{ isnProjectInfo.site
-              }}</span>
-            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">Project: {{ isnProjectInfo.project
-              }}</span>
-            <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--success">{{ availableStations.length }}
-              Stations</span>
+          <header class="top-product-iplas-isn-lookup-header">
+            <div class="top-product-iplas-isn-chip-row">
+              <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--primary">
+                <Icon icon="mdi:cellphone-link" />
+                {{ parsedIsns.length }} ISN(s)
+              </span>
+              <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">
+                <Icon icon="mdi:domain" />
+                Site: {{ distinctSites.join(', ') }}
+              </span>
+              <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">
+                <Icon icon="mdi:chip" />
+                {{ distinctProjects.length > 1 ? `${distinctProjects.length} Models: ${distinctProjects.join(', ')}` : `Model: ${distinctProjects[0] || isnProjectInfo.project}` }}
+              </span>
+              <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--success">
+                <Icon icon="mdi:factory" />
+                {{ availableStations.length }} Station(s)
+              </span>
+            </div>
+          </header>
+
+          <div v-if="resolvedProjectGroups.length > 0" class="top-product-iplas-isn-scope-grid">
+            <article v-for="scope in resolvedProjectGroups" :key="`${scope.site}-${scope.project}`" class="top-product-iplas-isn-scope-card">
+              <div class="top-product-iplas-isn-scope-card__header">
+                <div class="top-product-iplas-isn-scope-title-box">
+                  <Icon icon="mdi:chip" class="top-product-iplas-isn-scope-icon" />
+                  <div>
+                    <small>Site / Model</small>
+                    <strong>{{ scope.site }} / {{ scope.project }}</strong>
+                  </div>
+                </div>
+                <div class="top-product-iplas-isn-scope-meta">
+                  <span class="top-product-iplas-isn-scope-badge top-product-iplas-isn-scope-badge--dut">
+                    <Icon icon="mdi:devices" />
+                    <span>{{ scope.isns.length }} DUT{{ scope.isns.length === 1 ? '' : 's' }}</span>
+                  </span>
+                  <span class="top-product-iplas-isn-scope-badge top-product-iplas-isn-scope-badge--station">
+                    <Icon icon="mdi:factory" />
+                    <span>{{ scope.stations.length }} station{{ scope.stations.length === 1 ? '' : 's' }}</span>
+                  </span>
+                </div>
+              </div>
+              <div class="top-product-iplas-isn-scope-token-row">
+                <span v-for="isn in scope.isns" :key="isn" class="top-product-iplas-isn-scope-token">
+                  {{ isn }}
+                </span>
+              </div>
+            </article>
           </div>
-          <p>The lookup resolved a project scope. Configure stations next to refine device selection and scoring before ranking the returned records.</p>
+
+          <p class="top-product-iplas-isn-lookup-note">
+            The lookup resolved the scopes above. Configure stations next to refine device selection and scoring before ranking the returned records.
+          </p>
         </section>
 
         <div v-if="isnProjectInfo" class="top-product-iplas-isn-action-card">
@@ -256,13 +298,14 @@
       @save-to-db="handleSaveToDb" />
 
     <!-- Station Selection Dialog -->
-    <StationSelectionDialog v-model:show="showStationSelectionDialog" :stations="(availableStations as any)"
-      :site="isnProjectInfo?.site || ''" :project="isnProjectInfo?.project || ''" :selected-configs="stationConfigs"
+    <StationSelectionDialog v-model:show="showStationSelectionDialog" :stations="availableStations"
+      :site="isnProjectInfo?.site || ''" :project="distinctProjects.join(', ')" :selected-configs="stationConfigs"
       :loading="loadingStations" @station-click="handleStationClick" @confirm="handleStationSelectionConfirm" />
 
     <!-- Station Config Dialog -->
     <StationConfigDialog v-model:show="showStationConfigDialog" :station="selectedStationForConfig"
-      :site="isnProjectInfo?.site || ''" :project="isnProjectInfo?.project || ''"
+      :site="selectedStationForConfig?.site || isnProjectInfo?.site || ''"
+      :project="selectedStationForConfig?.project || isnProjectInfo?.project || ''"
       :existing-config="currentStationConfig" :available-device-ids="currentStationDeviceIds"
       :loading-devices="loadingCurrentStationDevices" :device-error="deviceError"
       :available-test-items="currentStationTestItems" test-item-source="iplas"
@@ -323,7 +366,10 @@ import { getApiErrorDetail } from '@/shared/utils/error'
 import { isStatusPass } from '@/shared/utils/helpers'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
-import StationSelectionDialog, { type StationConfig } from './StationSelectionDialog.vue'
+import StationSelectionDialog, {
+  type StationConfig,
+  type StationWithScope,
+} from './StationSelectionDialog.vue'
 import TopProductIplasDetailsDialog from './TopProductIplasDetailsDialog.vue'
 import TopProductIplasRanking from './TopProductIplasRanking.vue'
 
@@ -376,7 +422,7 @@ const isSfistspCollapsed = ref(false)
 const loadingStationLookup = ref(false)
 const lookupResultSection = ref<HTMLElement | null>(null)
 const isnProjectInfo = ref<IplasIsnProjectInfo | null>(null)
-const availableStations = ref<Station[]>([])
+const availableStations = ref<StationWithScope[]>([])
 const parsedIsns = ref<string[]>([])
 /** Raw ISN search records from the API - contains all test data */
 const isnSearchRecords = ref<IplasIsnSearchRecord[]>([])
@@ -389,7 +435,7 @@ const loadingStations = ref(false)
 const stationConfigs = ref<Record<string, StationConfig>>({})
 const showStationSelectionDialog = ref(false)
 const showStationConfigDialog = ref(false)
-const selectedStationForConfig = ref<Station | null>(null)
+const selectedStationForConfig = ref<StationWithScope | null>(null)
 const currentStationDeviceIds = ref<string[]>([])
 const loadingCurrentStationDevices = ref(false)
 const deviceError = ref<string | null>(null)
@@ -515,6 +561,57 @@ const multipleModeIdentifiers = computed(() =>
     multipleIsnSearchText.value,
   ]),
 )
+
+const distinctSites = computed(() => {
+  const sites = new Set<string>()
+  isnSearchRecords.value.forEach((r) => {
+    if (r.site) sites.add(r.site)
+  })
+  if (sites.size === 0 && isnProjectInfo.value?.site) {
+    sites.add(isnProjectInfo.value.site)
+  }
+  return Array.from(sites)
+})
+
+const distinctProjects = computed(() => {
+  const projects = new Set<string>()
+  isnSearchRecords.value.forEach((r) => {
+    if (r.project) projects.add(r.project)
+  })
+  if (projects.size === 0 && isnProjectInfo.value?.project) {
+    projects.add(isnProjectInfo.value.project)
+  }
+  return Array.from(projects)
+})
+
+const resolvedProjectGroups = computed(() => {
+  const groups = new Map<
+    string,
+    { site: string; project: string; isns: Set<string>; stations: Set<string> }
+  >()
+  for (const record of isnSearchRecords.value) {
+    const key = `${record.site}\u0000${record.project}`
+    if (!groups.has(key)) {
+      groups.set(key, {
+        site: record.site,
+        project: record.project,
+        isns: new Set(),
+        stations: new Set(),
+      })
+    }
+    const g = groups.get(key)
+    if (g) {
+      g.isns.add(record.isn)
+      g.stations.add(record.display_station_name)
+    }
+  }
+  return Array.from(groups.values()).map((g) => ({
+    site: g.site,
+    project: g.project,
+    isns: Array.from(g.isns),
+    stations: Array.from(g.stations),
+  }))
+})
 
 const currentStationConfig = computed(() => {
   if (!selectedStationForConfig.value) return undefined
@@ -789,27 +886,51 @@ async function searchIdentifiersInBatches(identifiers: string[]): Promise<{
 }
 
 async function refreshStationOrderingForLookup(
-  identifier: string,
+  identifiers: string[],
   records: IplasIsnSearchRecord[],
   requestId: number,
 ): Promise<void> {
   loadingStations.value = true
 
   try {
-    const stationsFromApi = await fetchStationListFromIsn(identifier)
+    const distinctISNs = Array.from(new Set(identifiers))
+    const apiStationLists = await Promise.all(
+      distinctISNs.map((isn) => fetchStationListFromIsn(isn).catch(() => [] as Station[])),
+    )
 
-    if (!isLookupRequestActive(requestId) || stationsFromApi.length === 0) {
+    if (!isLookupRequestActive(requestId)) {
       return
     }
 
-    const stationsWithRecords = new Set(records.map((record) => record.display_station_name))
-    availableStations.value = stationsFromApi
-      .filter((station) => stationsWithRecords.has(station.display_station_name))
-      .sort((stationA, stationB) => stationA.order - stationB.order)
+    const orderMap = new Map<string, number>()
+    apiStationLists.flat().forEach((st) => {
+      if (st.order && !orderMap.has(st.display_station_name)) {
+        orderMap.set(st.display_station_name, st.order)
+      }
+    })
 
-    console.info(`Using ${availableStations.value.length} stations from API list (ordered)`)
+    const extracted = extractStationsFromIsnRecords(records)
+    extracted.forEach((st) => {
+      if (orderMap.has(st.display_station_name)) {
+        st.order = orderMap.get(st.display_station_name) || 0
+      }
+    })
+
+    availableStations.value = extracted.sort((stationA, stationB) => {
+      const projA = stationA.project || ''
+      const projB = stationB.project || ''
+      if (projA !== projB) return projA.localeCompare(projB)
+      return (
+        (stationA.order || 0) - (stationB.order || 0) ||
+        stationA.display_station_name.localeCompare(stationB.display_station_name)
+      )
+    })
+
+    console.info(
+      `Using ${availableStations.value.length} stations across ${distinctISNs.length} identifiers`,
+    )
   } catch (err) {
-    console.warn(`Failed to refresh ordered station list for identifier ${identifier}:`, err)
+    console.warn('Failed to refresh ordered station list:', err)
   } finally {
     if (isLookupRequestActive(requestId)) {
       loadingStations.value = false
@@ -841,7 +962,7 @@ function transformIsnRecordToCsvData(record: IplasIsnSearchRecord): CsvTestItemD
     Project: record.project,
     station: record.display_station_name,
     TSP: record.station_name,
-    Model: '',
+    Model: record.project,
     MO: record.mo || '',
     Line: record.line,
     ISN: record.isn,
@@ -856,8 +977,8 @@ function transformIsnRecordToCsvData(record: IplasIsnSearchRecord): CsvTestItemD
 }
 
 /** Extract unique stations from ISN search records */
-function extractStationsFromIsnRecords(records: IplasIsnSearchRecord[]): Station[] {
-  const stationMap = new Map<string, Station>()
+function extractStationsFromIsnRecords(records: IplasIsnSearchRecord[]): StationWithScope[] {
+  const stationMap = new Map<string, StationWithScope>()
 
   for (const record of records) {
     if (!stationMap.has(record.display_station_name)) {
@@ -866,6 +987,8 @@ function extractStationsFromIsnRecords(records: IplasIsnSearchRecord[]): Station
         display_station_name: record.display_station_name,
         order: 0,
         data_source: 'ISN Search',
+        project: record.project,
+        site: record.site,
       })
     }
   }
@@ -1081,7 +1204,7 @@ async function handleLookupStations(): Promise<void> {
     // Store the raw ISN search records for later use (aggregated and deduplicated)
     isnSearchRecords.value = allRecords
 
-    // Extract project info from first record (assume same project for all)
+    // Extract project info from first record (fallback/primary)
     // biome-ignore lint/style/noNonNullAssertion: allRecords.length > 0 is checked above
     const firstRecord = allRecords[0]!
     isnProjectInfo.value = {
@@ -1097,8 +1220,9 @@ async function handleLookupStations(): Promise<void> {
     preCacheStationData(allRecords, isnProjectInfo.value)
     await scrollToLookupResults()
 
-    // STEP 3: Refresh station ordering in the background without blocking initial results
-    void refreshStationOrderingForLookup(firstRecord.isn, allRecords, requestId)
+    // STEP 3: Refresh station ordering in the background across all distinct ISNs
+    const distinctISNs = Array.from(new Set(allRecords.map((r) => r.isn)))
+    void refreshStationOrderingForLookup(distinctISNs, allRecords, requestId)
   } catch (err) {
     if (!isLookupRequestActive(requestId)) {
       return
@@ -1116,28 +1240,53 @@ async function handleLookupStations(): Promise<void> {
 /** Pre-cache test items and device IDs for all stations from ISN search data */
 function preCacheStationData(
   records: IplasIsnSearchRecord[],
-  projectInfo: IplasIsnProjectInfo,
+  _projectInfo: IplasIsnProjectInfo,
 ): void {
-  // Group records by station
-  const stationNames = new Set<string>()
   for (const record of records) {
-    stationNames.add(record.display_station_name)
-  }
+    const stationKey = record.display_station_name
+    const cacheKey = `${record.site}_${record.project}_${stationKey}`
 
-  // Pre-cache for each station
-  for (const stationName of stationNames) {
-    const cacheKey = `${projectInfo.site}_${projectInfo.project}_${stationName}`
+    // Pre-cache device ID
+    if (record.device_id) {
+      const existingDevices = deviceIdsCache.value.get(cacheKey) || []
+      if (!existingDevices.includes(record.device_id)) {
+        deviceIdsCache.value.set(cacheKey, [...existingDevices, record.device_id].sort())
+      }
+    }
 
-    // Cache test items (only if not already cached)
-    if (!testItemNamesCache.value.has(cacheKey)) {
-      const testItems = extractTestItemsFromRecords(records, stationName)
-      if (testItems.length > 0) {
-        testItemNamesCache.value.set(cacheKey, testItems)
+    // Pre-cache test items from this record
+    if (record.test_item && record.test_item.length > 0) {
+      const existingItems = testItemNamesCache.value.get(cacheKey) || []
+      const existingItemNames = new Set(existingItems.map((item) => item.name))
+
+      const newItems: TestItemInfo[] = []
+      for (const item of record.test_item) {
+        if (!existingItemNames.has(item.NAME)) {
+          const hasUcl = Boolean(item.UCL?.trim())
+          const hasLcl = Boolean(item.LCL?.trim())
+          const hasLimits = hasUcl || hasLcl
+          const binValues = ['PASS', 'FAIL', 'FAILURE', '1', '0', '-1']
+          const isBinValue = binValues.includes(String(item.VALUE).toUpperCase())
+          const isBin = !hasLimits && isBinValue
+
+          newItems.push({
+            name: item.NAME,
+            isValue: !isBin,
+            isBin,
+            hasUcl,
+            hasLcl,
+          })
+          existingItemNames.add(item.NAME)
+        }
+      }
+
+      if (newItems.length > 0) {
+        testItemNamesCache.value.set(cacheKey, [...existingItems, ...newItems])
       }
     }
   }
 
-  console.info(`Pre-cached data for ${stationNames.size} stations from ISN search`)
+  console.info(`Pre-cached data from ${records.length} ISN records`)
 }
 
 // ============================================================================
@@ -1148,15 +1297,17 @@ function openStationSelectionDialog(): void {
   showStationSelectionDialog.value = true
 }
 
-function handleStationClick(station: Station): void {
+function handleStationClick(station: StationWithScope): void {
   selectedStationForConfig.value = station
   showStationConfigDialog.value = true
   // Load device IDs and test items in parallel (performance optimization)
   Promise.all([loadDeviceIdsForStation(station), loadTestItemsForStation(station)])
 }
 
-async function loadDeviceIdsForStation(station: Station): Promise<void> {
-  if (!isnProjectInfo.value || isnSearchRecords.value.length === 0) return
+async function loadDeviceIdsForStation(station: StationWithScope): Promise<void> {
+  const site = station.site || isnProjectInfo.value?.site || ''
+  const project = station.project || isnProjectInfo.value?.project || ''
+  if (!site || !project || isnSearchRecords.value.length === 0) return
 
   loadingCurrentStationDevices.value = true
   deviceError.value = null
@@ -1181,10 +1332,15 @@ async function refreshCurrentStationDevices(): Promise<void> {
   }
 }
 
-async function loadTestItemsForStation(station: Station, forceRefresh = false): Promise<void> {
-  if (!isnProjectInfo.value) return
+async function loadTestItemsForStation(
+  station: StationWithScope,
+  forceRefresh = false,
+): Promise<void> {
+  const site = station.site || isnProjectInfo.value?.site || ''
+  const project = station.project || isnProjectInfo.value?.project || ''
+  if (!site || !project) return
 
-  const cacheKey = `${isnProjectInfo.value.site}_${isnProjectInfo.value.project}_${station.display_station_name}`
+  const cacheKey = `${site}_${project}_${station.display_station_name}`
 
   // Check in-memory cache first
   if (!forceRefresh) {
@@ -1217,8 +1373,8 @@ async function loadTestItemsForStation(station: Station, forceRefresh = false): 
 
     // Fallback: fetch from cached API if ISN records don't have data for this station
     const response = await fetchTestItemNamesCached(
-      isnProjectInfo.value.site,
-      isnProjectInfo.value.project,
+      site,
+      project,
       station.display_station_name,
       true, // Exclude BIN items
       forceRefresh,
@@ -1242,8 +1398,10 @@ async function loadTestItemsForStation(station: Station, forceRefresh = false): 
 }
 
 async function refreshCurrentStationTestItems(): Promise<void> {
-  if (selectedStationForConfig.value && isnProjectInfo.value) {
-    const cacheKey = `${isnProjectInfo.value.site}_${isnProjectInfo.value.project}_${selectedStationForConfig.value.display_station_name}`
+  if (selectedStationForConfig.value) {
+    const site = selectedStationForConfig.value.site || isnProjectInfo.value?.site || ''
+    const project = selectedStationForConfig.value.project || isnProjectInfo.value?.project || ''
+    const cacheKey = `${site}_${project}_${selectedStationForConfig.value.display_station_name}`
     testItemNamesCache.value.delete(cacheKey)
     await loadTestItemsForStation(selectedStationForConfig.value, true)
   }
@@ -2057,6 +2215,122 @@ onUnmounted(() => {
   border-radius: 0.8rem;
   border: 1px solid rgba(15, 118, 110, 0.12);
   background: var(--app-panel);
+}
+
+.top-product-iplas-isn-lookup-card {
+  padding: 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  display: grid;
+  gap: 0.85rem;
+}
+
+.top-product-iplas-isn-lookup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.top-product-iplas-isn-scope-grid {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: repeat(auto-fit, minmax(18rem, 1fr));
+}
+
+.top-product-iplas-isn-scope-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--app-border);
+  background: var(--app-panel);
+}
+
+.top-product-iplas-isn-scope-card__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.top-product-iplas-isn-scope-title-box {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.top-product-iplas-isn-scope-icon {
+  font-size: 1.4rem;
+  color: var(--app-accent, #0f766e);
+  flex-shrink: 0;
+}
+
+.top-product-iplas-isn-scope-title-box > div {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.top-product-iplas-isn-scope-title-box small {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+}
+
+.top-product-iplas-isn-scope-meta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.top-product-iplas-isn-scope-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.28rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--app-border);
+  font-size: 0.76rem;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.top-product-iplas-isn-scope-badge--dut {
+  background: var(--app-accent-soft, rgba(15, 118, 110, 0.08));
+  border-color: color-mix(in srgb, var(--app-accent) 20%, var(--app-border));
+  color: var(--app-accent, #0f766e);
+}
+
+.top-product-iplas-isn-scope-badge--station {
+  background: var(--app-info-soft, rgba(14, 165, 233, 0.08));
+  border-color: var(--app-info-line, rgba(14, 165, 233, 0.25));
+  color: var(--app-info, #0284c7);
+}
+
+.top-product-iplas-isn-scope-token-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.top-product-iplas-isn-scope-token {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.6rem;
+  border-radius: 999px;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  color: var(--app-ink);
+  font-size: 0.76rem;
+  font-family: var(--app-font-mono, monospace);
+}
+
+.top-product-iplas-isn-lookup-note {
+  font-size: 0.8rem;
 }
 
 .top-product-iplas-isn-loading-card {

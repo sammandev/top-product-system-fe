@@ -6,13 +6,34 @@
       <label class="station-selection-dialog__field">
         <span>Search Stations</span>
         <div class="station-selection-dialog__search-input">
-          <input v-model="searchQuery" type="text" placeholder="Search by station name or TSP name" />
+          <input v-model="searchQuery" type="text" placeholder="Search by station name, TSP name, or model" />
           <button v-if="searchQuery" type="button" class="station-selection-dialog__clear-button"
             @click="searchQuery = ''">
             Clear
           </button>
         </div>
       </label>
+
+      <div v-if="availableProjects.length > 1" class="station-selection-dialog__project-filter">
+        <button
+          type="button"
+          class="station-selection-dialog__toggle-chip"
+          :class="{ 'is-active': selectedProjectFilter === null }"
+          @click="selectedProjectFilter = null"
+        >
+          All Models ({{ stations.length }})
+        </button>
+        <button
+          v-for="proj in availableProjects"
+          :key="proj"
+          type="button"
+          class="station-selection-dialog__toggle-chip"
+          :class="{ 'is-active': selectedProjectFilter === proj }"
+          @click="selectedProjectFilter = proj"
+        >
+          {{ proj }} ({{ getStationCountForProject(proj) }})
+        </button>
+      </div>
 
       <div class="station-selection-dialog__list">
         <div v-for="station in filteredStations" :key="station.station_name" class="station-item"
@@ -22,7 +43,12 @@
           <span class="station-selection-dialog__checkmark"
             :class="{ 'is-active': isStationConfigured(station.display_station_name) }"></span>
           <div class="station-selection-dialog__station-copy">
-            <strong>{{ station.display_station_name }}</strong>
+            <div class="station-selection-dialog__station-title-row">
+              <strong>{{ station.display_station_name }}</strong>
+              <span v-if="getStationProject(station)" class="station-selection-dialog__pill station-selection-dialog__pill--project">
+                {{ getStationProject(station) }}
+              </span>
+            </div>
             <span>
               TSP: {{ station.station_name }}
               <span v-if="station.order"
@@ -86,6 +112,11 @@ export interface TestItemScoringConfig {
   maxDeviation?: number // Optional maximum allowed deviation before DUT is marked failed
 }
 
+export interface StationWithScope extends Station {
+  project?: string
+  site?: string
+}
+
 export interface StationConfig {
   displayName: string
   stationName: string
@@ -105,7 +136,7 @@ interface Props {
   show: boolean
   site: string
   project: string
-  stations: Station[]
+  stations: StationWithScope[]
   selectedConfigs: Record<string, StationConfig>
 }
 
@@ -113,7 +144,7 @@ const props = defineProps<Props>()
 
 const emit = defineEmits<{
   (e: 'update:show', value: boolean): void
-  (e: 'station-click', station: Station): void
+  (e: 'station-click', station: StationWithScope): void
   (e: 'confirm', configs: Record<string, StationConfig>): void
   (e: 'clear-all'): void
 }>()
@@ -124,15 +155,39 @@ const internalShow = computed({
 })
 
 const searchQuery = ref('')
+const selectedProjectFilter = ref<string | null>(null)
+
+const availableProjects = computed(() => {
+  const projects = new Set<string>()
+  props.stations.forEach((s) => {
+    if (s.project) projects.add(s.project)
+  })
+  return Array.from(projects)
+})
+
+function getStationProject(station: StationWithScope): string | undefined {
+  return station.project
+}
+
+function getStationCountForProject(proj: string): number {
+  return props.stations.filter((s) => s.project === proj).length
+}
 
 const filteredStations = computed(() => {
-  if (!searchQuery.value) return props.stations
+  let list = props.stations
+
+  if (selectedProjectFilter.value) {
+    list = list.filter((station) => station.project === selectedProjectFilter.value)
+  }
+
+  if (!searchQuery.value) return list
 
   const query = searchQuery.value.toLowerCase()
-  return props.stations.filter(
+  return list.filter(
     (station) =>
       station.display_station_name.toLowerCase().includes(query) ||
-      station.station_name.toLowerCase().includes(query),
+      station.station_name.toLowerCase().includes(query) ||
+      station.project?.toLowerCase().includes(query),
   )
 })
 
@@ -313,6 +368,46 @@ watch(
   color: var(--app-ink);
   padding: 0.72rem 0.82rem;
   font: inherit;
+}
+
+.station-selection-dialog__project-filter {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.station-selection-dialog__toggle-chip {
+  padding: 0.35rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-ink);
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.station-selection-dialog__toggle-chip:hover {
+  border-color: var(--app-accent);
+}
+
+.station-selection-dialog__toggle-chip.is-active {
+  background: var(--app-accent-soft);
+  border-color: var(--app-accent);
+  color: var(--app-accent);
+}
+
+.station-selection-dialog__station-title-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.station-selection-dialog__pill--project {
+  background: var(--app-info-soft, rgba(14, 165, 233, 0.1));
+  border-color: var(--app-info-line, rgba(14, 165, 233, 0.3));
+  color: var(--app-info, #0284c7);
 }
 
 .station-selection-dialog__list {
