@@ -41,9 +41,9 @@
         </div>
         <div class="dut-isn-input__token-row">
           <button v-for="(isn, index) in selectedISNs" :key="`${isn}-${index}`" type="button"
-            class="dut-isn-input__token" @click="removeISN(index)">
+            class="dut-isn-input__token" :aria-label="`Remove ${isn}`" @click="removeISN(index)">
             <span>{{ isn }}</span>
-            <span aria-hidden="true">x</span>
+            <Icon icon="mdi:close" aria-hidden="true" />
           </button>
         </div>
       </section>
@@ -78,6 +78,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 import AppMultiSelect from '@/shared/ui/forms/AppMultiSelect.vue'
 
@@ -486,6 +487,12 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   gap: 0.35rem;
+}
+
+.dut-isn-input__token svg {
+  width: 1rem;
+  height: 1rem;
+  flex: 0 0 auto;
 }
 
 .dut-isn-input__token--info {

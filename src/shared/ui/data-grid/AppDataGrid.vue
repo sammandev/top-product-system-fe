@@ -266,7 +266,7 @@ function resolveFieldValue(row: GridRow, field?: string) {
   transition: background-color 0.12s ease;
 }
 
-.app-data-grid :deep(.p-datatable-tbody > tr:hover) {
-  background: color-mix(in srgb, var(--app-accent) 5%, transparent);
+.app-data-grid :deep(.p-datatable-tbody > tr:hover > td) {
+  background: color-mix(in srgb, var(--app-accent) 5%, var(--app-panel));
 }
 </style>

@@ -13,18 +13,21 @@
         v-model:model-identifiers="modelIdentifier" :max-i-s-ns="20" :show-scope-editor="false" />
 
         <div v-if="dutISNs.length > 0" class="top-products-isn-resolved-scope">
-          <div>
-            <span>Site</span>
-            <strong>{{ loadingStations ? 'Resolving...' : siteIdentifierValue || 'Not found' }}</strong>
-          </div>
-          <div>
-            <span>Model</span>
-            <strong>{{ loadingStations ? 'Resolving...' : modelIdentifierValue || 'Not found' }}</strong>
-          </div>
-          <div>
-            <span>Available stations</span>
-            <strong>{{ loadingStations ? 'Resolving...' : availableStations.length }}</strong>
-          </div>
+          <header>
+            <span>{{ loadingStations ? 'Resolving DUT scopes...' : `${dutScopeGroups.length} site / model scope${dutScopeGroups.length === 1 ? '' : 's'}` }}</span>
+            <strong>{{ loadingStations ? '—' : `${availableStations.length} unique stations` }}</strong>
+          </header>
+          <article v-for="scope in dutScopeGroups" :key="scope.key">
+            <div>
+              <span>Site / Model</span>
+              <strong>{{ scope.site }} / {{ scope.model }}</strong>
+            </div>
+            <div>
+              <span>DUT identifiers</span>
+              <strong>{{ scope.isns.join(', ') }}</strong>
+            </div>
+            <span>{{ scope.stations.length }} station{{ scope.stations.length === 1 ? '' : 's' }}</span>
+          </article>
         </div>
       </div>
 
@@ -40,6 +43,7 @@
 
         <p v-if="loadingStations" class="top-products-isn-inline-note">Loading stations from DUT summaries...</p>
         <AppMultiSelect v-else v-model="selectedStations" :options="stationSelectOptions"
+          :option-groups="stationOptionGroups"
           placeholder="Select required station(s)" :disabled="dutISNs.length === 0 || availableStations.length === 0" />
         <div v-if="dutISNs.length > 0 && !loadingStations && availableStations.length === 0"
           class="top-products-isn-notice top-products-isn-notice--warning">
@@ -54,6 +58,7 @@
             <p>Analysis options</p>
             <span>Optional criteria and station-specific filters.</span>
           </div>
+          <Icon class="top-products-isn-disclosure-icon" icon="mdi:chevron-down" />
         </summary>
         <div class="top-products-isn-accordion__body top-products-isn-accordion__body--stacked">
           <section class="top-products-isn-option-group">
@@ -96,6 +101,7 @@
                     <strong>{{ station }}</strong>
                     <span>{{ getStationFilterSummary(station) }}</span>
                   </div>
+                  <Icon class="top-products-isn-disclosure-icon" icon="mdi:chevron-down" />
                 </summary>
                 <StationFilterConfig :station-identifier="station" :station-name="station"
                   :available-test-items="stationTestItems[station] || []"
@@ -141,6 +147,7 @@
 </template>
 
 <script setup lang="ts">
+import { Icon } from '@iconify/vue'
 import { computed, nextTick, provide, ref, watch } from 'vue'
 import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
 import AppMultiSelect from '@/shared/ui/forms/AppMultiSelect.vue'
@@ -161,6 +168,18 @@ import { downloadCriteriaJsonTemplate } from '../utils/criteriaTemplate'
 import DUTISNInput from './DUTISNInput.vue'
 import StationFilterConfig from './StationFilterConfig.vue'
 import TopProductISNResults from './TopProductISNResults.vue'
+
+interface LatestStationItemsResponse {
+  station_name?: string
+  station_id?: string | number
+  error?: unknown
+  value_test_items?: Array<{
+    name: string
+    usl: number | null
+    lsl: number | null
+    status?: unknown
+  }>
+}
 
 // Formula Selector (New approach)
 const {
@@ -193,9 +212,42 @@ const selectedStations = ref<string[]>([])
 const criteriaFile = ref<File[] | File | null>(null)
 const siteIdentifier = ref<string[]>([])
 const modelIdentifier = ref<string[]>([])
+const dutScopes = ref<Array<{ isn: string; site: string; model: string; stations: string[] }>>([])
 
 const stationSelectOptions = computed(() =>
   availableStations.value.map((station) => ({ label: station, value: station })),
+)
+
+const dutScopeGroups = computed(() => {
+  const groups = new Map<
+    string,
+    { key: string; site: string; model: string; isns: string[]; stations: string[] }
+  >()
+
+  dutScopes.value.forEach((scope) => {
+    const key = `${scope.site}\u0000${scope.model}`
+    const group = groups.get(key) || {
+      key,
+      site: scope.site,
+      model: scope.model,
+      isns: [],
+      stations: [],
+    }
+    group.isns.push(scope.isn)
+    group.stations = [...new Set([...group.stations, ...scope.stations])].sort((first, second) =>
+      first.localeCompare(second),
+    )
+    groups.set(key, group)
+  })
+
+  return [...groups.values()]
+})
+
+const stationOptionGroups = computed(() =>
+  dutScopeGroups.value.map((scope) => ({
+    label: `${scope.site} - ${scope.model}`,
+    items: scope.stations.map((station) => ({ label: station, value: station })),
+  })),
 )
 
 function getStationFilterSummary(station: string): string {
@@ -230,6 +282,7 @@ const stationTestItems = ref<Record<string, TestItem[]>>({})
 
 // Available devices per station
 const stationDevices = ref<Record<string, string[]>>({})
+let stationScopeRequestId = 0
 
 // Computed: Extract actual File from criteriaFile (handles both File and File[] formats)
 const criteriaFileActual = computed<File | undefined>(() => {
@@ -243,11 +296,11 @@ const criteriaFileActual = computed<File | undefined>(() => {
 // Computed: Convert site and model arrays to single values for API calls
 // If multiple values exist, use the first one
 const siteIdentifierValue = computed(() => {
-  return siteIdentifier.value.length > 0 ? siteIdentifier.value[0] : undefined
+  return siteIdentifier.value.length === 1 ? siteIdentifier.value[0] : undefined
 })
 
 const modelIdentifierValue = computed(() => {
-  return modelIdentifier.value.length > 0 ? modelIdentifier.value[0] : undefined
+  return modelIdentifier.value.length === 1 ? modelIdentifier.value[0] : undefined
 })
 
 // Helper function to fetch all test items for stations
@@ -269,12 +322,14 @@ async function fetchAllTestItems(stationIds: string[], targetMap: Record<string,
 watch(
   dutISNs,
   async (newISNs) => {
+    const requestId = ++stationScopeRequestId
     if (newISNs.length === 0) {
       availableStations.value = []
       selectedStations.value = []
       stationTestItems.value = {}
       stationDevices.value = {}
       stationFilterConfigs.value = {}
+      dutScopes.value = []
       // Clear site and model identifiers when all ISNs are removed
       siteIdentifier.value = []
       modelIdentifier.value = []
@@ -293,13 +348,15 @@ watch(
           }),
         ),
       )
+      if (requestId !== stationScopeRequestId) return
 
       // Extract unique station names, sites, and models
       const allStationNames: string[] = []
       const allSites: string[] = []
       const allModels: string[] = []
 
-      summaries.forEach((summary) => {
+      dutScopes.value = []
+      summaries.forEach((summary, index) => {
         if (!summary) return
         const s = summary as DUTTestSummary
 
@@ -311,10 +368,19 @@ watch(
         // Collect site and model names
         if (s.site_name) allSites.push(s.site_name)
         if (s.model_name) allModels.push(s.model_name)
+        dutScopes.value.push({
+          isn: newISNs[index] || s.dut_isn,
+          site: s.site_name || 'Unknown site',
+          model: s.model_name || 'Unknown model',
+          stations: [...new Set(s.stations.map((station) => station.station_name))],
+        })
       })
 
       // Set unique values
       availableStations.value = [...new Set(allStationNames)]
+      selectedStations.value = selectedStations.value.filter((station) =>
+        availableStations.value.includes(station),
+      )
 
       // Update sites and models in DUTISNInput component
       const uniqueSites = [...new Set(allSites)]
@@ -325,31 +391,15 @@ watch(
         dutISNInputRef.value.updateAvailableModels(uniqueModels)
       }
 
-      // Auto-fill site and model identifiers
-      // If sites or models are currently empty, auto-populate with first available values
-      if (siteIdentifier.value.length === 0 && uniqueSites.length > 0) {
-        const firstSite = uniqueSites[0]
-        if (firstSite) siteIdentifier.value = [firstSite]
-      } else {
-        // If sites or models have been removed from available list, update selected ones
-        // Remove sites that are no longer in the available list
-        siteIdentifier.value = siteIdentifier.value.filter((site) => uniqueSites.includes(site))
-      }
-
-      if (modelIdentifier.value.length === 0 && uniqueModels.length > 0) {
-        const firstModel = uniqueModels[0]
-        if (firstModel) modelIdentifier.value = [firstModel]
-      } else {
-        // Remove models that are no longer in the available list
-        modelIdentifier.value = modelIdentifier.value.filter((model) =>
-          uniqueModels.includes(model),
-        )
-      }
+      siteIdentifier.value = uniqueSites
+      modelIdentifier.value = uniqueModels
     } catch (err) {
+      if (requestId !== stationScopeRequestId) return
       console.warn('Could not fetch stations for DUT ISNs:', err)
       availableStations.value = []
+      dutScopes.value = []
     } finally {
-      loadingStations.value = false
+      if (requestId === stationScopeRequestId) loadingStations.value = false
     }
   },
   { immediate: false },
@@ -371,48 +421,48 @@ watch(
     loadingDevices.value = true
 
     try {
-      // Determine if we should use latest test items based on DUT ISN
-      const firstDutISN = dutISNs.value.length > 0 ? dutISNs.value[0] : null
-      const shouldUseLatestTestItems = firstDutISN !== null && firstDutISN !== undefined
+      const shouldUseLatestTestItems = dutISNs.value.length > 0
       let testItemsMap: Record<string, TestItem[]> = {}
 
-      if (shouldUseLatestTestItems && firstDutISN) {
+      if (shouldUseLatestTestItems) {
         // Fetch latest test items for the DUT ISN (more relevant for Per-Station Filter)
         try {
-          const latestItemsResponse = (await dutApi.getLatestTestItemsBatch(
-            firstDutISN,
-            newStations,
-          )) as { stations: Record<string, unknown>[] }
+          const latestItemsResponses = (await Promise.all(
+            dutISNs.value.map((dutISN) => dutApi.getLatestTestItemsBatch(dutISN, newStations)),
+          )) as Array<{ stations: LatestStationItemsResponse[] }>
 
           // Convert test item definitions to TestItem objects for compatibility
-          // biome-ignore lint/suspicious/noExplicitAny: dynamic station data from backend API
-          latestItemsResponse.stations.forEach((station: any) => {
-            const key = station.station_name || String(station.station_id)
-            if (station.error) {
-              console.warn(`Station ${key} returned error:`, station.error)
-            } else {
-              // Only include value test items (exclude nonvalue_bin and nonvalue for filter dropdown)
-              const valueTestItems: TestItem[] = []
+          latestItemsResponses
+            .flatMap((response) => response.stations)
+            .forEach((station) => {
+              const key = station.station_name || String(station.station_id)
+              if (station.error) {
+                console.warn(`Station ${key} returned error:`, station.error)
+              } else {
+                // Only include value test items (exclude nonvalue_bin and nonvalue for filter dropdown)
+                const valueTestItems: TestItem[] = []
 
-              // Add value test items only
-              if (station.value_test_items && station.value_test_items.length > 0) {
-                // biome-ignore lint/suspicious/noExplicitAny: dynamic test item data from backend API
-                station.value_test_items.forEach((item: any) => {
-                  valueTestItems.push({
-                    id: 0,
-                    name: item.name,
-                    upperlimit: item.usl,
-                    lowerlimit: item.lsl,
-                    status: item.status ? 1 : null,
+                // Add value test items only
+                if (station.value_test_items && station.value_test_items.length > 0) {
+                  station.value_test_items.forEach((item) => {
+                    valueTestItems.push({
+                      id: 0,
+                      name: item.name,
+                      upperlimit: item.usl,
+                      lowerlimit: item.lsl,
+                      status: item.status ? 1 : null,
+                    })
                   })
-                })
-              }
+                }
 
-              if (valueTestItems.length > 0) {
-                testItemsMap[key] = valueTestItems
+                if (valueTestItems.length > 0) {
+                  const mergedItems = [...(testItemsMap[key] || []), ...valueTestItems]
+                  testItemsMap[key] = [
+                    ...new Map(mergedItems.map((item) => [item.name, item])).values(),
+                  ]
+                }
               }
-            }
-          })
+            })
         } catch (err) {
           console.warn('Could not fetch latest test items, falling back to all test items:', err)
           // Fall back to fetching all test items
@@ -1036,19 +1086,39 @@ function formatFileSize(bytes: number): string {
 
 .top-products-isn-resolved-scope {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  border-block: 1px solid var(--app-border);
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
 }
 
-.top-products-isn-resolved-scope > div {
+.top-products-isn-resolved-scope > header,
+.top-products-isn-resolved-scope > article {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.top-products-isn-resolved-scope > header {
+  background: var(--app-surface);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.top-products-isn-resolved-scope > article {
+  display: grid;
+  grid-template-columns: minmax(10rem, 0.8fr) minmax(14rem, 1.2fr) auto;
+  border-top: 1px solid var(--app-border);
+}
+
+.top-products-isn-resolved-scope > article:first-of-type {
+  border-top: 0;
+}
+
+.top-products-isn-resolved-scope article > div {
   display: grid;
   gap: 0.2rem;
-  padding: 0.75rem;
-  border-left: 1px solid var(--app-border);
-}
-
-.top-products-isn-resolved-scope > div:first-child {
-  border-left: 0;
+  min-width: 0;
 }
 
 .top-products-isn-resolved-scope span {
@@ -1399,9 +1469,20 @@ function formatFileSize(bytes: number): string {
 
 .top-products-isn-options__summary {
   display: grid !important;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   justify-content: start !important;
   gap: 0.65rem !important;
+}
+
+.top-products-isn-disclosure-icon {
+  flex: 0 0 auto;
+  color: var(--app-muted);
+  transition: transform 160ms ease-out;
+}
+
+.top-products-isn-options[open] > summary .top-products-isn-disclosure-icon,
+.top-products-isn-station-config-card[open] > summary .top-products-isn-disclosure-icon {
+  transform: rotate(180deg);
 }
 
 .top-products-isn-options__summary > .top-products-isn-step__index {
@@ -1441,7 +1522,10 @@ function formatFileSize(bytes: number): string {
 }
 
 .top-products-isn-station-config-card > summary {
-  display: block;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
   min-height: 2.75rem;
   padding: 0.75rem 0.9rem;
   background: var(--app-surface);
@@ -1545,17 +1629,14 @@ function formatFileSize(bytes: number): string {
     flex-direction: column;
   }
 
-  .top-products-isn-resolved-scope {
+  .top-products-isn-resolved-scope > header,
+  .top-products-isn-resolved-scope > article {
+    align-items: flex-start;
     grid-template-columns: minmax(0, 1fr);
   }
 
-  .top-products-isn-resolved-scope > div {
-    border-top: 1px solid var(--app-border);
-    border-left: 0;
-  }
-
-  .top-products-isn-resolved-scope > div:first-child {
-    border-top: 0;
+  .top-products-isn-resolved-scope > header {
+    flex-direction: column;
   }
 }
 </style>

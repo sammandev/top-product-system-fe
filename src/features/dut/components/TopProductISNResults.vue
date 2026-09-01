@@ -39,7 +39,17 @@
             <div><dt>Test Date</dt><dd>{{ formatDate(selectedMeasurement.station.test_date) }}</dd></div>
             <div><dt>Duration</dt><dd>{{ selectedMeasurement.station.test_duration ? `${selectedMeasurement.station.test_duration.toFixed(2)}s` : 'N/A' }}</dd></div>
             <div><dt>Test Items</dt><dd>{{ selectedMeasurement.station.measurement_count || 0 }}</dd></div>
-            <div><dt>Overall Score</dt><dd>{{ selectedMeasurement.station.error_item ? 'N/A' : selectedMeasurement.station.overall_data_score.toFixed(2) }}</dd></div>
+            <div>
+              <dt>Overall Score</dt>
+              <dd>
+                <button v-if="!selectedMeasurement.station.error_item" type="button"
+                  class="top-product-isn-results__overall-score-button" @click="overallScoreDialog = true">
+                  {{ selectedMeasurement.station.overall_data_score.toFixed(2) }}
+                  <Icon icon="mdi:information-outline" />
+                </button>
+                <span v-else>N/A</span>
+              </dd>
+            </div>
           </dl>
 
           <footer class="top-product-isn-results__measurement-footer">
@@ -52,7 +62,10 @@
                   {{ selectedMeasurement.dutISN }}
                 </button>
                 <details v-if="otherLinkedISNs.length > 0" class="top-product-isn-results__linked-details">
-                  <summary>{{ allLinkedISNs.length }} linked</summary>
+                  <summary>
+                    <span>{{ allLinkedISNs.length }} linked</span>
+                    <Icon class="top-product-isn-results__linked-chevron" icon="mdi:chevron-down" />
+                  </summary>
                   <div class="top-product-isn-results__linked-list">
                     <button v-for="identifier in otherLinkedISNs" :key="identifier" type="button"
                       class="top-product-isn-results__token" @click="copyToClipboard(identifier)">
@@ -106,6 +119,7 @@
             :value="filteredMeasurements"
             paginator
             :rows="25"
+            :rowsPerPageOptions="tableRowsPerPageOptions"
             dataKey="test_item"
             scrollable
             :scrollHeight="measurementScrollHeight"
@@ -219,6 +233,61 @@
       </div>
     </AppDialog>
 
+    <AppDialog v-model="overallScoreDialog" width="min(94vw, 62rem)"
+      :breakpoints="{ '960px': '96vw', '640px': '100vw' }" title="Overall Score Breakdown"
+      description="How measurement scores produce this station's overall score."
+      :show-footer="false"
+      class="top-product-isn-results__dialog">
+      <div v-if="selectedMeasurement" class="top-product-isn-results__overall-breakdown">
+        <section class="top-product-isn-results__overall-explanation">
+          <div>
+            <small>Station</small>
+            <strong>{{ selectedMeasurement.station.station_name }}</strong>
+          </div>
+          <div class="top-product-isn-results__overall-formula">
+            <span>Overall Score</span>
+            <strong>Sum of included measurement scores / Included measurements</strong>
+          </div>
+          <p>
+            Backend includes every measurement remaining after criteria, include, and exclude filters.
+            Each measurement receives a score from 0 to 10. Scores are added, divided by included
+            measurement count, then rounded to two decimal places.
+          </p>
+        </section>
+
+        <dl class="top-product-isn-results__overall-metrics">
+          <div><dt>Score Sum</dt><dd>{{ overallScoreSum.toFixed(2) }}</dd></div>
+          <div><dt>Included Items</dt><dd>{{ overallScoreMeasurements.length }}</dd></div>
+          <div><dt>Calculated Mean</dt><dd>{{ calculatedOverallScore.toFixed(2) }}</dd></div>
+          <div><dt>Displayed Score</dt><dd>{{ selectedMeasurement.station.overall_data_score.toFixed(2) }}</dd></div>
+        </dl>
+
+        <div class="top-product-isn-results__calculation-line">
+          {{ overallScoreSum.toFixed(2) }} / {{ overallScoreMeasurements.length }} =
+          <strong>{{ calculatedOverallScore.toFixed(2) }}</strong>
+        </div>
+
+        <div class="top-product-isn-results__table-shell">
+          <DataTable :value="overallScoreMeasurements" paginator :rows="10"
+            :rowsPerPageOptions="tableRowsPerPageOptions" dataKey="test_item" stripedRows
+            class="top-product-isn-results__data-table app-interactive-datatable">
+            <Column field="test_item" header="Included Test Item" sortable />
+            <Column field="score" header="Score" sortable>
+              <template #body="slotProps">
+                <span class="top-product-isn-results__badge"
+                  :class="badgeToneClass(getScoreColor(slotProps.data.score))">
+                  {{ slotProps.data.score.toFixed(2) }}
+                </span>
+              </template>
+            </Column>
+            <Column field="breakdown.category" header="Category">
+              <template #body="slotProps">{{ slotProps.data.breakdown?.category || 'General' }}</template>
+            </Column>
+          </DataTable>
+        </div>
+      </div>
+    </AppDialog>
+
     <AppDialog
       v-model="comparisonFullscreen"
       width="min(96vw, 90rem)"
@@ -270,6 +339,7 @@
             :value="filteredComparisonData"
             paginator
             :rows="25"
+            :rowsPerPageOptions="tableRowsPerPageOptions"
             dataKey="test_item"
             scrollable
             scrollHeight="calc(100vh - 22rem)"
@@ -487,6 +557,7 @@
             :value="filteredComparisonData"
             paginator
             :rows="15"
+            :rowsPerPageOptions="tableRowsPerPageOptions"
             dataKey="test_item"
             scrollable
             scrollHeight="32rem"
@@ -732,6 +803,7 @@ const props = defineProps<Props>()
 defineEmits<(e: 'export') => void>()
 
 const measurementDialog = ref(false)
+const overallScoreDialog = ref(false)
 const isFullscreen = ref(false)
 const measurementContentReady = ref(false)
 const selectedMeasurement = ref<{ dutISN: string; station: TopProductStationResult } | null>(null)
@@ -767,6 +839,7 @@ const openDutPanels = ref<string[]>([])
 
 const measurementLockedColumns = ref<string[]>(['test_item', 'usl', 'lsl'])
 const comparisonLockedColumns = ref<string[]>(['test_item', 'usl', 'lsl', 'target'])
+const tableRowsPerPageOptions = [10, 25, 50, 100]
 
 const measurementDialogWidth = computed(() => (isFullscreen.value ? '96vw' : 'min(96vw, 78rem)'))
 
@@ -811,6 +884,7 @@ watch(measurementDialog, async (isOpen) => {
   if (isOpen && selectedMeasurement.value?.dutISN) {
     await fetchLinkedIdentifiers(selectedMeasurement.value.dutISN)
   } else if (!isOpen) {
+    overallScoreDialog.value = false
     measurementContentReady.value = false
     linkedIdentifiers.value = []
     measurementSearch.value = ''
@@ -1093,6 +1167,20 @@ const filteredMeasurements = computed(() => {
 
   return filtered
 })
+
+const overallScoreMeasurements = computed(
+  () => selectedMeasurement.value?.station.measurement || [],
+)
+
+const overallScoreSum = computed(() =>
+  overallScoreMeasurements.value.reduce((sum, measurement) => sum + measurement.score, 0),
+)
+
+const calculatedOverallScore = computed(() =>
+  overallScoreMeasurements.value.length > 0
+    ? overallScoreSum.value / overallScoreMeasurements.value.length
+    : 0,
+)
 
 const comparisonStationTitle = computed(() => {
   return (
@@ -1686,6 +1774,113 @@ function stationRowClass(row: Record<string, unknown>) {
   white-space: nowrap;
 }
 
+.top-product-isn-results__overall-score-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 2rem;
+  border: 0;
+  border-radius: 0.4rem;
+  padding: 0.25rem 0.5rem;
+  background: var(--app-info-soft);
+  color: var(--app-info);
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.top-product-isn-results__overall-score-button:focus-visible {
+  outline: 2px solid var(--app-accent);
+  outline-offset: 2px;
+}
+
+.top-product-isn-results__overall-breakdown {
+  display: grid;
+  gap: 1rem;
+}
+
+.top-product-isn-results__overall-explanation {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--app-border);
+  border-left: 3px solid var(--app-accent);
+  border-radius: 0.5rem;
+  background: var(--app-surface);
+}
+
+.top-product-isn-results__overall-explanation small,
+.top-product-isn-results__overall-explanation strong {
+  display: block;
+}
+
+.top-product-isn-results__overall-explanation small,
+.top-product-isn-results__overall-explanation p,
+.top-product-isn-results__overall-formula span,
+.top-product-isn-results__overall-metrics dt {
+  color: var(--app-muted);
+}
+
+.top-product-isn-results__overall-explanation strong {
+  margin-top: 0.15rem;
+  color: var(--app-ink);
+}
+
+.top-product-isn-results__overall-explanation p {
+  max-width: 75ch;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.55;
+}
+
+.top-product-isn-results__overall-formula {
+  display: grid;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.4rem;
+  background: var(--app-panel);
+}
+
+.top-product-isn-results__overall-metrics {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  overflow: hidden;
+}
+
+.top-product-isn-results__overall-metrics > div {
+  padding: 0.75rem 0.9rem;
+  border-left: 1px solid var(--app-border);
+}
+
+.top-product-isn-results__overall-metrics > div:first-child {
+  border-left: 0;
+}
+
+.top-product-isn-results__overall-metrics dt {
+  font-size: 0.75rem;
+}
+
+.top-product-isn-results__overall-metrics dd {
+  margin: 0.2rem 0 0;
+  color: var(--app-ink);
+  font-size: 1.1rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 800;
+}
+
+.top-product-isn-results__calculation-line {
+  padding: 0.75rem 0.9rem;
+  border-radius: 0.5rem;
+  background: var(--app-info-soft);
+  color: var(--app-info);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
 .top-product-isn-results__measurement-footer {
   align-items: flex-end;
   border-top: 1px solid var(--app-border);
@@ -1814,8 +2009,20 @@ function stationRowClass(row: Record<string, unknown>) {
 }
 
 .top-product-isn-results__linked-details summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
   cursor: pointer;
   font-weight: 600;
+}
+
+.top-product-isn-results__linked-chevron {
+  transition: transform 160ms ease-out;
+}
+
+.top-product-isn-results__linked-details[open] .top-product-isn-results__linked-chevron {
+  transform: rotate(180deg);
 }
 
 .top-product-isn-results__linked-list {
@@ -2219,6 +2426,18 @@ function stationRowClass(row: Record<string, unknown>) {
   .top-product-isn-results__measurement-facts,
   .top-product-isn-results__measurement-filters {
     grid-template-columns: minmax(0, 1fr);
+  }
+
+  .top-product-isn-results__overall-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .top-product-isn-results__overall-metrics > div:nth-child(odd) {
+    border-left: 0;
+  }
+
+  .top-product-isn-results__overall-metrics > div:nth-child(n + 3) {
+    border-top: 1px solid var(--app-border);
   }
 
   .top-product-isn-results__measurement-facts > div,

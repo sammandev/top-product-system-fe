@@ -125,8 +125,27 @@ body {
   transition: background-color 0.12s ease;
 }
 
-.app-interactive-datatable .p-datatable-tbody > tr:hover {
-  background: var(--app-accent-soft);
+.app-interactive-datatable .p-datatable-tbody > tr > td.p-datatable-frozen-column {
+  background: var(--app-panel);
+}
+
+.app-interactive-datatable .p-datatable-tbody > tr:hover > td {
+  background: color-mix(in srgb, var(--app-accent) 10%, var(--app-panel));
+}
+
+.app-interactive-datatable.p-datatable-striped
+  .p-datatable-tbody
+  > tr:nth-child(even)
+  > td.p-datatable-frozen-column {
+  background: var(--app-surface);
+}
+
+.app-interactive-datatable.p-datatable-striped
+  .p-datatable-tbody
+  > tr:hover
+  > td.p-datatable-frozen-column {
+  background: color-mix(in srgb, var(--app-accent) 10%, var(--app-panel));
+  z-index: 2;
 }
 
 .app-interactive-datatable .p-datatable-thead > tr > th,

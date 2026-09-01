@@ -2,7 +2,9 @@
   <Select
     v-bind="attrs"
     :modelValue="props.modelValue"
-    :options="props.options"
+    :options="resolvedOptions"
+    :optionGroupLabel="props.optionGroups ? 'label' : undefined"
+    :optionGroupChildren="props.optionGroups ? 'items' : undefined"
     :placeholder="props.placeholder"
     :filter="props.searchable"
     :filterPlaceholder="props.searchable ? 'Search...' : undefined"
@@ -31,12 +33,15 @@
         <span>{{ option.label }}</span>
       </span>
     </template>
+    <template v-if="props.optionGroups" #optiongroup="{ option }">
+      <span class="app-multi-select__group">{{ option.label }}</span>
+    </template>
   </Select>
 </template>
 
 <script setup lang="ts">
 import Select from 'primevue/select'
-import { useAttrs } from 'vue'
+import { computed, useAttrs } from 'vue'
 import type { SelectOption } from './AppSelect.vue'
 
 defineOptions({ inheritAttrs: false })
@@ -45,6 +50,7 @@ const props = withDefaults(
   defineProps<{
     modelValue: (string | number)[]
     options: SelectOption[]
+    optionGroups?: Array<{ label: string; items: SelectOption[] }>
     placeholder?: string
     searchable?: boolean
     disabled?: boolean
@@ -53,6 +59,7 @@ const props = withDefaults(
     placeholder: 'Select...',
     searchable: true,
     disabled: false,
+    optionGroups: undefined,
   },
 )
 
@@ -62,11 +69,15 @@ const emit = defineEmits<{
 }>()
 
 const attrs = useAttrs()
+const resolvedOptions = computed(() => props.optionGroups || props.options)
+const selectableOptions = computed(() =>
+  props.optionGroups ? props.optionGroups.flatMap((group) => group.items) : props.options,
+)
 
 function formatSelectedValue(value: unknown, valuePlaceholder: string): string {
   if (!Array.isArray(value) || value.length === 0) return valuePlaceholder
   if (value.length > 1) return `${value.length} selected`
-  const selected = props.options.find((option) => option.value === value[0])
+  const selected = selectableOptions.value.find((option) => option.value === value[0])
   return selected?.label || String(value[0])
 }
 
@@ -93,6 +104,14 @@ function handleChange(event: { value: (string | number)[] }) {
   align-items: center;
   gap: 0.65rem;
   min-width: 0;
+}
+
+.app-multi-select__group {
+  display: block;
+  width: 100%;
+  color: var(--app-ink);
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .app-multi-select__checkbox {
