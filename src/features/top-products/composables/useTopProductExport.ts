@@ -2,6 +2,7 @@
  * Composable for exporting Top Products data to various formats
  */
 
+import { useNotification } from '@/shared/composables/useNotification'
 import { addSheetFromRows, createWorkbook, downloadWorkbook } from '@/shared/utils/excel'
 
 export interface TopProductExportItem {
@@ -25,6 +26,7 @@ export interface TopProductExportItem {
 }
 
 export function useTopProductExport() {
+  const { showSuccess } = useNotification()
   /**
    * Export single product to Excel
    */
@@ -220,6 +222,7 @@ export function useTopProductExport() {
       }
 
       await navigator.clipboard.writeText(text)
+      showSuccess('Data copied to clipboard in TSV format')
     } catch (error) {
       console.error('Clipboard copy error:', error)
       throw new Error('Failed to copy to clipboard')

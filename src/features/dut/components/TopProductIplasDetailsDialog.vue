@@ -70,7 +70,6 @@
       <section class="iplas-details-dialog__metadata-grid">
         <article class="iplas-details-dialog__metadata-card">
           <button type="button" class="iplas-details-dialog__copy-row" @click="copyToClipboard(record.deviceId)">
-            <Icon icon="mdi:chip" />
             <span><strong>Device ID</strong> {{ record.deviceId }}</span>
           </button>
         </article>
@@ -199,13 +198,21 @@
   </AppDialog>
 
   <AppDialog v-model="showForcedFailDialog" title="Forced Fail Items"
-    description="Review items that fell below the minimum score or exceeded the configured deviation."
-    width="min(92vw, 56rem)">
+    description="Review items that fell below the minimum score threshold or exceeded configured deviation limits."
+    width="min(94vw, 56rem)">
     <div v-if="record" class="iplas-details-subdialog">
-      <section class="iplas-details-dialog__notice iplas-details-dialog__notice--warning">
-        <strong>
-          {{ record.forcedFailureDetails?.length || 0 }} scored item(s) triggered a forced-fail rule.
-        </strong>
+      <section class="forced-fail-overview-banner">
+        <div class="forced-fail-overview-banner__content">
+          <Icon icon="mdi:alert-octagon" class="forced-fail-overview-banner__icon" />
+          <div>
+            <strong>{{ record.forcedFailureDetails?.length || 0 }} scored item(s) triggered a forced-fail rule.</strong>
+            <p>{{ forcedFailureNoticeText }}</p>
+          </div>
+        </div>
+        <span v-if="record.forcedFailureMinimumScore !== null && record.forcedFailureMinimumScore !== undefined"
+          class="iplas-details-dialog__pill iplas-details-dialog__pill--warning">
+          Min Score: {{ record.forcedFailureMinimumScore.toFixed(1) }} / 10
+        </span>
       </section>
 
       <label class="iplas-details-dialog__field">
@@ -217,15 +224,24 @@
       </label>
 
       <section v-if="forcedFailRows.length > 0" class="iplas-details-dialog__data-grid-shell">
-        <AppDataGrid :columns="forcedFailColumns" :rows="forcedFailRows" data-key="rowKey" :paginator="false"
-          :rows-per-page="25" scroll-height="22rem" :table-style="{ minWidth: '38rem' }">
+        <AppDataGrid :columns="forcedFailColumns" :rows="forcedFailRows" data-key="rowKey" :paginator="forcedFailRows.length > 10"
+          :rows-per-page="10" :rows-per-page-options="[10, 25, 50]" scroll-height="22rem" :table-style="{ minWidth: '46rem' }">
           <template #cell-name="{ data }">
-            <button type="button" class="iplas-details-dialog__row-copy" @click="copyToClipboard(String(data.name))">
-              <span class="forced-fail-item__icon">
-                <Icon icon="mdi:alert-circle" />
-              </span>
-              <span class="forced-fail-item-title" :title="String(data.name)">{{ data.name }}</span>
+            <button type="button" class="forced-fail-row-title-button" title="Click to copy test item name" @click="copyToClipboard(String(data.name))">
+              <span class="forced-fail-item-title font-mono font-medium" :title="String(data.name)">{{ data.name }}</span>
             </button>
+          </template>
+
+          <template #cell-ucl="{ value }">
+            <span class="table-limit font-mono">{{ value || '-' }}</span>
+          </template>
+
+          <template #cell-lcl="{ value }">
+            <span class="table-limit font-mono">{{ value || '-' }}</span>
+          </template>
+
+          <template #cell-value="{ data }">
+            <span class="forced-fail-value font-mono font-medium">{{ data.value || '-' }}</span>
           </template>
 
           <template #cell-score="{ data }">
@@ -236,16 +252,9 @@
           </template>
 
           <template #cell-reasonLabel="{ value }">
-            <span class="status-text" :class="getStatusTextClass(String(value || ''))">
+            <span class="status-text font-medium" :class="getStatusTextClass(String(value || ''))">
               {{ value }}
             </span>
-          </template>
-
-          <template #cell-actions="{ data }">
-            <button type="button" class="iplas-details-dialog__icon-action" title="Copy test item"
-              @click="copyToClipboard(String(data.name))">
-              <Icon icon="mdi:content-copy" />
-            </button>
           </template>
         </AppDataGrid>
       </section>
@@ -333,8 +342,8 @@
     </div>
   </AppDialog>
 
-  <AppDialog v-model="showOverallScoreDialog" width="min(92vw, 40rem)" :show-footer="false"
-    class="iplas-details-dialog">
+  <AppDialog v-model="showOverallScoreDialog" width="min(94vw, 56rem)" :show-footer="false"
+    class="iplas-details-dialog iplas-overall-score-dialog">
     <template #header>
       <div class="iplas-details-dialog__dialog-title">
         <Icon icon="mdi:chart-line" />
@@ -343,69 +352,126 @@
     </template>
 
     <div v-if="record && scoreSummaryPrimary && overallScoreExplanation" class="iplas-details-subdialog">
-      <section v-if="record.isForcedFailure" class="iplas-details-dialog__notice iplas-details-dialog__notice--warning">
-        <strong>Forced Fail Override</strong>
-        <p>
-          {{ forcedFailureNoticeText }} That threshold rule is separate from the aggregate weighted-average score shown
-          above.
-        </p>
+      <!-- Forced Fail Override Notice -->
+      <section v-if="record.isForcedFailure" class="forced-fail-overview-banner">
+        <div class="forced-fail-overview-banner__content">
+          <Icon icon="mdi:alert-octagon" class="forced-fail-overview-banner__icon" />
+          <div>
+            <strong>Forced Fail Override Active</strong>
+            <p>
+              {{ forcedFailureNoticeText }} While the statistical weighted average produces {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}, this DUT's final result is forced to <strong>Min. Score Fail</strong> due to threshold violations.
+            </p>
+          </div>
+        </div>
       </section>
 
-      <div class="score-explanation-primary">
-        <div>
-          <div class="iplas-details-dialog__metric-label">{{ scoreSummaryLabel }}</div>
-          <div class="score-explanation-primary__score" :class="getScoreColorClass(scoreSummaryPrimary.score)">
-            {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}
-          </div>
-          <div class="iplas-details-dialog__metric-caption">Weighted average of all scored test items.</div>
-        </div>
+      <!-- Key Score Metrics Grid -->
+      <div class="score-overview-grid">
+        <article class="score-stat-card">
+          <small>Scored Test Items</small>
+          <strong>{{ overallScoreExplanation.scoredItemCount }}</strong>
+          <span>{{ overallScoreExplanation.valueItemCount }} value, {{ overallScoreExplanation.binaryItemCount }} binary</span>
+        </article>
+        <article class="score-stat-card">
+          <small>Weighted Sum (Numerator)</small>
+          <strong>{{ formatCompactNumber(overallScoreExplanation.weightedSum) }}</strong>
+          <span>&sum; (Item Score &times; Weight&sup2;)</span>
+        </article>
+        <article class="score-stat-card">
+          <small>Effective Weight (Denominator)</small>
+          <strong>{{ formatCompactNumber(overallScoreExplanation.totalEffectiveWeight) }}</strong>
+          <span>&sum; Weight&sup2;</span>
+        </article>
+        <article class="score-stat-card score-stat-card--score" :class="getScoreColorClass(scoreSummaryPrimary.score)">
+          <small>{{ scoreSummaryLabel }}</small>
+          <strong class="score-stat-card__score-value">{{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}</strong>
+          <span>{{ scoreSummarySecondaryText || 'Aggregated Weighted Average' }}</span>
+        </article>
       </div>
 
+      <!-- Formula & Step-by-Step Methodology -->
       <div class="score-formula-panel">
-        <div class="iplas-details-dialog__metric-label">Formula</div>
-        <div class="score-formula-equation">Aggregate = sum(item score * effective weight) / sum(effective weight)</div>
+        <div class="iplas-details-dialog__metric-label">Calculation Methodology</div>
+        <div class="score-formula-equation">
+          Overall Score = [ &sum; ( Item Score &times; Weight&sup2; ) / &sum; ( Weight&sup2; ) ] &times; 10
+        </div>
         <div class="score-formula-steps">
           <div class="score-formula-step">
             <div class="score-formula-step__index">1</div>
             <div>
-              <div>Convert each configured weight into an effective weight.</div>
-              <div class="iplas-details-dialog__muted">Effective weight = configured weight * configured weight.</div>
+              <strong>Weight Squared (w&sup2;) Amplification</strong>
+              <div class="iplas-details-dialog__muted">
+                Each item's configured weight <em>w</em> is squared (<em>w&sup2;</em>) to increase the statistical impact of critical test parameters.
+              </div>
             </div>
           </div>
           <div class="score-formula-step">
             <div class="score-formula-step__index">2</div>
             <div>
-              <div>Use only test items that actually have a score.</div>
-              <div class="iplas-details-dialog__muted">Each scored item contributes score * effective weight to the
-                numerator.</div>
+              <strong>Weighted Contribution</strong>
+              <div class="iplas-details-dialog__muted">
+                Each scored item's normalized score (0.0 – 1.0) is multiplied by its effective weight (<em>w&sup2;</em>).
+              </div>
             </div>
           </div>
           <div class="score-formula-step">
             <div class="score-formula-step__index">3</div>
             <div>
-              <div>Divide by the total effective weight, then display the result on a /10 scale.</div>
-              <div class="iplas-details-dialog__muted">The backend stores and averages scores on a 0-1 scale before the
-                UI
-                formats them as /10.</div>
+              <strong>Weighted Average Normalization</strong>
+              <div class="iplas-details-dialog__muted">
+                The total weighted contribution is divided by the sum of effective weights and scaled to a standard 0.00 – 10.00 range.
+              </div>
             </div>
           </div>
         </div>
       </div>
 
-      <div class="iplas-details-dialog__stats-row">
-        <div class="score-explanation-stat">
-          <div class="iplas-details-dialog__metric-label">Scored Test Items</div>
-          <div class="iplas-details-dialog__stat-value">{{ overallScoreExplanation.scoredItemCount }}</div>
-          <div class="iplas-details-dialog__muted">{{ overallScoreExplanation.valueItemCount }} value, {{
-            overallScoreExplanation.binaryItemCount }} binary</div>
+      <!-- Scored Item Contributions List -->
+      <section class="score-contributors-section">
+        <div class="score-contributors-header">
+          <div>
+            <strong>Item Contribution Details</strong>
+            <small>{{ overallScoreExplanation.contributors.length }} scored test items contributing to this result</small>
+          </div>
+          <div class="score-contributors-search">
+            <input v-model="contributorSearchQuery" class="app-themed-input" type="search" placeholder="Filter items..." />
+          </div>
         </div>
-        <div class="score-explanation-stat">
-          <div class="iplas-details-dialog__metric-label">Total Effective Weight</div>
-          <div class="iplas-details-dialog__stat-value">{{
-            formatCompactNumber(overallScoreExplanation.totalEffectiveWeight) }}</div>
-          <div class="iplas-details-dialog__muted">Based on squared per-item weights.</div>
-        </div>
-      </div>
+
+        <AppDataGrid
+          :columns="contributorColumns"
+          :rows="filteredContributors"
+          data-key="name"
+          :paginator="filteredContributors.length > 10"
+          :rows-per-page="10"
+          :rows-per-page-options="[10, 25, 50]"
+          scroll-height="20rem"
+          :table-style="{ minWidth: '44rem' }"
+        >
+          <template #cell-name="{ data }">
+            <span class="font-mono text-sm font-semibold" :title="data.name">{{ data.name }}</span>
+          </template>
+          <template #cell-value="{ data }">
+            <span class="font-mono text-sm">{{ data.value }}</span>
+          </template>
+          <template #cell-score="{ data }">
+            <span class="iplas-details-dialog__score-chip" :class="`iplas-details-dialog__score-chip--${scoreTone(data.score / 10)}`">
+              {{ data.score.toFixed(2) }} / 10
+            </span>
+          </template>
+          <template #cell-weight="{ data }">
+            <span class="text-sm font-mono">{{ data.weight.toFixed(1) }} (w&sup2;: {{ data.effectiveWeight.toFixed(2) }})</span>
+          </template>
+          <template #cell-weightedScore="{ data }">
+            <span class="text-sm font-mono font-medium">{{ data.weightedScore.toFixed(2) }}</span>
+          </template>
+          <template #cell-status="{ data }">
+            <span class="status-text" :class="getStatusTextClass(data.status)">
+              {{ data.status }}
+            </span>
+          </template>
+        </AppDataGrid>
+      </section>
     </div>
 
   </AppDialog>
@@ -444,19 +510,36 @@ interface ForcedFailSummary {
   clickable: boolean
 }
 
-interface OverallScoreExplanation {
-  scoredItemCount: number
-  valueItemCount: number
-  binaryItemCount: number
-  totalEffectiveWeight: number
-  failingItemCount: number
-}
-
 interface ForcedFailGridRow {
   rowKey: string
   name: string
   score: number
   reasonLabel: string
+  ucl: string
+  lcl: string
+  value: string
+}
+
+interface ScoredContributorItem {
+  name: string
+  value: string
+  score: number
+  weight: number
+  effectiveWeight: number
+  weightedScore: number
+  scoringType?: string
+  status: string
+  isForcedFail: boolean
+}
+
+interface OverallScoreExplanation {
+  scoredItemCount: number
+  valueItemCount: number
+  binaryItemCount: number
+  totalEffectiveWeight: number
+  weightedSum: number
+  failingItemCount: number
+  contributors: ScoredContributorItem[]
 }
 
 interface BreakdownGridRow {
@@ -544,18 +627,43 @@ const forcedFailColumns = [
     field: 'name',
     header: 'Failed Test Item',
     sortable: true,
-    style: { width: '34rem' },
+    style: { width: '18rem' },
   },
-  { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '10rem' } },
+  { key: 'ucl', field: 'ucl', header: 'USL', sortable: true, style: { width: '7rem' } },
+  { key: 'lcl', field: 'lcl', header: 'LSL', sortable: true, style: { width: '7rem' } },
+  { key: 'value', field: 'value', header: 'Value', sortable: true, style: { width: '8rem' } },
+  { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '8rem' } },
   {
     key: 'reasonLabel',
     field: 'reasonLabel',
     header: 'Rule',
     sortable: true,
-    style: { width: '12rem' },
+    style: { width: '10rem' },
   },
-  { key: 'actions', header: 'Actions', sortable: false, style: { width: '6rem' } },
 ]
+
+const contributorColumns = [
+  { key: 'name', field: 'name', header: 'Test Item', sortable: true, style: { width: '16rem' } },
+  { key: 'value', field: 'value', header: 'Value', sortable: true, style: { width: '7.5rem' } },
+  { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '8rem' } },
+  {
+    key: 'weight',
+    field: 'weight',
+    header: 'Weight (w²)',
+    sortable: true,
+    style: { width: '9.5rem' },
+  },
+  {
+    key: 'weightedScore',
+    field: 'weightedScore',
+    header: 'Weighted Score',
+    sortable: true,
+    style: { width: '9.5rem' },
+  },
+  { key: 'status', field: 'status', header: 'Status', sortable: true, style: { width: '8.5rem' } },
+]
+
+const contributorSearchQuery = ref('')
 
 const breakdownColumns = [
   { key: 'label', field: 'label', header: 'Metric', sortable: false, style: { width: '15rem' } },
@@ -788,21 +896,59 @@ const overallScoreExplanation = computed<OverallScoreExplanation | null>(() => {
     return null
   }
 
-  const scoredItems = record.testItems.filter((item: NormalizedTestItem) => hasScore(item.score))
+  const scoredItems = (record.testItems || []).filter((item: NormalizedTestItem) =>
+    hasScore(item.score),
+  )
   const binaryItemCount = scoredItems.filter((item: NormalizedTestItem) => isBinData(item)).length
   const valueItemCount = scoredItems.length - binaryItemCount
-  const totalEffectiveWeight = scoredItems.reduce((total: number, item: NormalizedTestItem) => {
+
+  let weightedSum = 0
+  let totalEffectiveWeight = 0
+
+  const contributors: ScoredContributorItem[] = scoredItems.map((item: NormalizedTestItem) => {
+    const rawScore = item.score ?? 0
     const weight = item.weight ?? 1.0
-    return total + weight * weight
-  }, 0)
+    const effectiveWeight = weight * weight
+    const weightedScore = rawScore * effectiveWeight
+
+    weightedSum += weightedScore
+    totalEffectiveWeight += effectiveWeight
+
+    const scoreFail = isItemBelowScoreThreshold(item)
+    const deviationFail = Boolean(item.exceedsMaxDeviation)
+
+    return {
+      name: item.NAME,
+      value: formatTableValue(item),
+      score: rawScore * 10,
+      weight,
+      effectiveWeight,
+      weightedScore: weightedScore * 10,
+      scoringType: formatScoringType(item.scoringType),
+      status: getItemStatusLabel(item),
+      isForcedFail: scoreFail || deviationFail,
+    }
+  })
+
+  // Sort lowest score first so problematic items appear at the top
+  contributors.sort((a, b) => a.score - b.score)
 
   return {
     scoredItemCount: scoredItems.length,
     valueItemCount,
     binaryItemCount,
     totalEffectiveWeight,
+    weightedSum: weightedSum * 10,
     failingItemCount: record.forcedFailureDetails?.length ?? 0,
+    contributors,
   }
+})
+
+const filteredContributors = computed(() => {
+  const list = overallScoreExplanation.value?.contributors || []
+  const query = contributorSearchQuery.value.trim().toLowerCase()
+  if (!query) return list
+  return list.filter((c) => c.name.toLowerCase().includes(query))
 })
 
 // Dynamic headers - add Score column if scores are available
@@ -854,12 +1000,25 @@ const filteredForcedFailureDetails = computed(() => {
 })
 
 const forcedFailRows = computed<ForcedFailGridRow[]>(() => {
-  return filteredForcedFailureDetails.value.map((item, index) => ({
-    rowKey: `${item.name}-${index}`,
-    name: item.name,
-    score: item.score,
-    reasonLabel: item.reasonLabel || 'Forced Fail',
-  }))
+  const testItemMap = new Map<string, NormalizedTestItem>()
+  props.record?.testItems?.forEach((ti: NormalizedTestItem) => {
+    if (ti.NAME) {
+      testItemMap.set(ti.NAME.toLowerCase(), ti)
+    }
+  })
+
+  return filteredForcedFailureDetails.value.map((item, index) => {
+    const matched = testItemMap.get(item.name.toLowerCase())
+    return {
+      rowKey: `${item.name}-${index}`,
+      name: item.name,
+      score: item.score,
+      reasonLabel: item.reasonLabel || 'Forced Fail',
+      ucl: matched?.UCL || '-',
+      lcl: matched?.LCL || '-',
+      value: matched ? formatTableValue(matched) : '-',
+    }
+  })
 })
 
 const breakdownRows = computed<BreakdownGridRow[]>(() => {
@@ -2577,6 +2736,152 @@ watch(
 
 .clickable-rows :deep(tbody tr:hover) {
   background-color: var(--iplas-panel-strong) !important;
+}
+
+.forced-fail-overview-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 0.85rem;
+  background: var(--app-warning-soft, rgba(234, 179, 8, 0.1));
+  border: 1px solid var(--app-warning-line, rgba(234, 179, 8, 0.3));
+}
+
+.forced-fail-overview-banner__content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.forced-fail-overview-banner__icon {
+  font-size: 1.5rem;
+  color: var(--app-warning, #eab308);
+  flex-shrink: 0;
+}
+
+.forced-fail-overview-banner__content strong {
+  display: block;
+  color: var(--iplas-ink);
+  font-size: 0.92rem;
+}
+
+.forced-fail-overview-banner__content p {
+  margin: 0.2rem 0 0;
+  color: var(--iplas-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.forced-fail-row-title-button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+}
+
+.forced-fail-row-title-button:hover .forced-fail-item-title {
+  color: var(--app-accent);
+  text-decoration: underline;
+}
+
+.forced-fail-value {
+  color: var(--iplas-ink);
+}
+
+.score-override-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.3rem;
+}
+
+.score-override-icon {
+  font-size: 1.25rem;
+  color: var(--app-warning, #eab308);
+}
+
+.score-overview-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr));
+  gap: 0.75rem;
+}
+
+.score-stat-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  padding: 0.85rem 1rem;
+  border-radius: 0.85rem;
+  border: 1px solid var(--app-border);
+  background: var(--iplas-panel-strong);
+}
+
+.score-stat-card small {
+  color: var(--iplas-muted);
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.score-stat-card strong {
+  color: var(--iplas-ink);
+  font-size: 1.25rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.score-stat-card span {
+  color: var(--iplas-muted);
+  font-size: 0.72rem;
+}
+
+.score-stat-card--score {
+  border-color: var(--app-success-line, rgba(34, 197, 94, 0.3));
+  background: var(--app-success-soft, rgba(34, 197, 94, 0.08));
+}
+
+.score-stat-card__score-value {
+  font-size: 1.35rem !important;
+}
+
+.score-contributors-section {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.score-contributors-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.score-contributors-header strong {
+  display: block;
+  color: var(--iplas-ink);
+  font-size: 0.95rem;
+}
+
+.score-contributors-header small {
+  color: var(--iplas-muted);
+  font-size: 0.78rem;
+}
+
+.score-contributors-search input {
+  padding: 0.45rem 0.75rem;
+  border-radius: 0.5rem;
+  font-size: 0.82rem;
+  width: 14rem;
 }
 
 .forced-fail-item :deep(.v-list-item__content) {

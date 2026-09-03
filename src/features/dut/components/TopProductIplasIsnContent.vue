@@ -165,20 +165,16 @@
         <section v-if="isnProjectInfo" ref="lookupResultSection" class="top-product-iplas-isn-lookup-card">
           <header class="top-product-iplas-isn-lookup-header">
             <div class="top-product-iplas-isn-chip-row">
-              <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--primary">
-                <Icon icon="mdi:cellphone-link" />
-                {{ parsedIsns.length }} ISN(s)
-              </span>
               <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">
-                <Icon icon="mdi:domain" />
                 Site: {{ distinctSites.join(', ') }}
               </span>
               <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">
-                <Icon icon="mdi:chip" />
                 {{ distinctProjects.length > 1 ? `${distinctProjects.length} Models: ${distinctProjects.join(', ')}` : `Model: ${distinctProjects[0] || isnProjectInfo.project}` }}
               </span>
+              <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--primary">
+                {{ parsedIsns.length }} ISN(s)
+              </span>
               <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--success">
-                <Icon icon="mdi:factory" />
                 {{ availableStations.length }} Station(s)
               </span>
             </div>
@@ -188,7 +184,6 @@
             <article v-for="scope in resolvedProjectGroups" :key="`${scope.site}-${scope.project}`" class="top-product-iplas-isn-scope-card">
               <div class="top-product-iplas-isn-scope-card__header">
                 <div class="top-product-iplas-isn-scope-title-box">
-                  <Icon icon="mdi:chip" class="top-product-iplas-isn-scope-icon" />
                   <div>
                     <small>Site / Model</small>
                     <strong>{{ scope.site }} / {{ scope.project }}</strong>

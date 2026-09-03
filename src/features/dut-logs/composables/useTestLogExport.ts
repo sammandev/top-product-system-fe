@@ -2,11 +2,13 @@
  * Composable for exporting test log results to various formats
  */
 
+import { useNotification } from '@/shared/composables/useNotification'
 import { addSheetFromRows, createWorkbook, downloadWorkbook } from '@/shared/utils/excel'
 import { sortTestItems } from '../utils/sorting'
 import type { CompareResponseEnhanced, TestLogParseResponseEnhanced } from './useTestLogUpload'
 
 export function useTestLogExport() {
+  const { showSuccess } = useNotification()
   /**
    * Export results to Excel format
    */
@@ -602,9 +604,7 @@ export function useTestLogExport() {
 
       // Copy to clipboard
       await navigator.clipboard.writeText(tsvContent)
-
-      // Show success notification (optional - could emit event instead)
-      console.log('Data copied to clipboard successfully')
+      showSuccess('Data copied to clipboard in TSV format')
     } catch (error) {
       console.error('Clipboard copy error:', error)
       throw new Error('Failed to copy to clipboard')

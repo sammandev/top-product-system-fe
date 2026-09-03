@@ -29,7 +29,6 @@
           <article v-for="scope in dutScopeGroups" :key="scope.key" class="top-product-isn-scope-card">
             <div class="top-product-isn-scope-card__header">
               <div class="top-product-isn-scope-title-box">
-                <Icon icon="mdi:chip" class="top-product-isn-scope-icon" />
                 <div>
                   <span>Site / Model</span>
                   <strong>{{ scope.site }} / {{ scope.model }}</strong>
@@ -37,11 +36,9 @@
               </div>
               <div class="top-product-isn-scope-meta">
                 <span class="top-product-isn-scope-badge top-product-isn-scope-badge--dut">
-                  <Icon icon="mdi:devices" />
                   <span>{{ scope.isns.length }} DUT{{ scope.isns.length === 1 ? '' : 's' }}</span>
                 </span>
                 <span class="top-product-isn-scope-badge top-product-isn-scope-badge--station">
-                  <Icon icon="mdi:factory" />
                   <span>{{ scope.stations.length }} station{{ scope.stations.length === 1 ? '' : 's' }}</span>
                 </span>
               </div>

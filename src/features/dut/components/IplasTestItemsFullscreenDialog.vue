@@ -49,7 +49,6 @@
       <section class="fullscreen-dialog__metadata-grid">
         <article class="fullscreen-dialog__metadata-card">
           <button type="button" class="fullscreen-dialog__copy-row" @click="copyToClipboard(record.deviceId)">
-            <Icon icon="mdi:chip" />
             <span><strong>Device ID</strong> {{ record.deviceId }}</span>
           </button>
         </article>

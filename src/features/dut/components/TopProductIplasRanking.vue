@@ -178,6 +178,7 @@ import { Icon } from '@iconify/vue'
 import { useDebounceFn } from '@vueuse/core'
 import { computed, ref, watch } from 'vue'
 import type { CsvTestItemData } from '@/features/dut-logs/composables/useIplasApi'
+import { useNotification } from '@/shared/composables/useNotification'
 import { AppMultiSelect, AppPanel, AppSelect, AppTabs } from '@/shared/ui'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import { adjustIplasDisplayTime, isStatusPass } from '@/shared/utils/helpers'
@@ -229,6 +230,8 @@ const emit = defineEmits<{
   (e: 'calculate-scores'): void
   (e: 'save-to-db', payload: { records: CsvTestItemData[]; scores: Record<string, number> }): void
 }>()
+
+const { showInfo: showInfoNotification } = useNotification()
 
 const selectedTab = ref<string>('')
 const searchQuery = ref<string>('')
@@ -725,24 +728,22 @@ async function copyToClipboard(text: string): Promise<void> {
   if (!text || text === '-') return
 
   try {
-    await navigator.clipboard.writeText(text)
-    console.log(`Copied to clipboard: ${text}`)
-  } catch (_err) {
-    // Fallback for browsers that don't support clipboard API or non-secure contexts
-    const textArea = document.createElement('textarea')
-    textArea.value = text
-    textArea.style.position = 'fixed'
-    textArea.style.opacity = '0'
-    document.body.appendChild(textArea)
-    textArea.focus()
-    textArea.select()
-    try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.opacity = '0'
+      document.body.appendChild(textArea)
+      textArea.focus()
+      textArea.select()
       document.execCommand('copy')
-      console.log(`Copied to clipboard (fallback): ${text}`)
-    } catch (e) {
-      console.error('Failed to copy to clipboard:', e)
+      document.body.removeChild(textArea)
     }
-    document.body.removeChild(textArea)
+    showInfoNotification('Copied to clipboard!')
+  } catch (e) {
+    console.error('Failed to copy to clipboard:', e)
   }
 }
 

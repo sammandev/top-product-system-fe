@@ -287,8 +287,8 @@ const hasResults = computed(() => results.value.length > 0)
 const resultTabItems = computed(() =>
   results.value.map((result) => ({
     value: result.dut_isn,
-    label: getDUTError(result.dut_isn) ? `DUT ${result.dut_isn} • Error` : `DUT ${result.dut_isn}`,
-    icon: 'mdi:chip',
+    label: getDUTError(result.dut_isn) ? `DUT ${result.dut_isn} • Error` : `DUT ${result.dut_isn}`
+    // icon: 'mdi:chip',
   })),
 )
 

@@ -215,7 +215,6 @@
                     </div>
                     <div class="analysis-view-station-focus__summary">
                       <span class="analysis-view-pill analysis-view-pill--cool">
-                        <Icon icon="mdi:chip" />
                         {{ getSelectedStation(result.dut_isn)?.device || 'Unknown device' }}
                       </span>
                       <span class="analysis-view-pill" :class="scoreToneClass(getSelectedStation(result.dut_isn)?.overall_data_score)">
@@ -378,8 +377,8 @@ const failedDutSummary = computed(() => {
 const resultTabItems = computed(() => {
   return results.value.map((result) => ({
     value: result.dut_isn,
-    label: result.dut_isn,
-    icon: 'mdi:chip',
+    label: result.dut_isn
+    // icon: 'mdi:chip',
   }))
 })
 

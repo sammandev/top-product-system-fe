@@ -923,6 +923,7 @@ import DataTable from 'primevue/datatable'
 import Row from 'primevue/row'
 import { computed, ref, watch } from 'vue'
 import ScoreBreakdownDialog from '@/features/dut-logs/components/ScoreBreakdownDialog.vue'
+import { useNotification } from '@/shared/composables/useNotification'
 import { AppDialog, AppMultiSelect, AppPanel, AppSelect } from '@/shared/ui'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import { formatDate } from '@/shared/utils/helpers'
@@ -949,6 +950,7 @@ interface Props {
 const props = defineProps<Props>()
 
 defineEmits<(e: 'export') => void>()
+const { showInfo } = useNotification()
 
 const measurementDialog = ref(false)
 const overallScoreDialog = ref(false)
@@ -1523,8 +1525,21 @@ async function fetchLinkedIdentifiers(isn: string) {
 }
 
 async function copyToClipboard(text: string) {
+  if (!text) return
   try {
-    await navigator.clipboard.writeText(text)
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-9999px'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+    }
+    showInfo('Copied to clipboard!')
   } catch (_error) {
     // Clipboard access is optional.
   }
