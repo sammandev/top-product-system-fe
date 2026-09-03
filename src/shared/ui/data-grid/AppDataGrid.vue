@@ -57,6 +57,8 @@
         :class="column.className"
         :headerStyle="column.headerStyle"
         :bodyStyle="column.bodyStyle"
+        :frozen="column.frozen"
+        :alignFrozen="column.alignFrozen || 'left'"
       >
         <template v-if="hasCellSlot(column.key)" #body="slotProps">
           <slot
@@ -91,16 +93,18 @@ defineOptions({ inheritAttrs: false })
 type GridRow = object
 type GridSelectionMode = 'single' | 'multiple'
 
-interface AppDataGridColumn {
+export interface AppDataGridColumn {
   key?: string
   header: string
   field?: string
   sortable?: boolean
   hidden?: boolean
-  style?: Record<string, string> | string
+  style?: Record<string, unknown> | string
   className?: string
-  headerStyle?: Record<string, string> | string
-  bodyStyle?: Record<string, string> | string
+  headerStyle?: Record<string, unknown> | string
+  bodyStyle?: Record<string, unknown> | string
+  frozen?: boolean
+  alignFrozen?: 'left' | 'right'
   body?: (row: GridRow, column: AppDataGridColumn, value: unknown) => unknown
 }
 

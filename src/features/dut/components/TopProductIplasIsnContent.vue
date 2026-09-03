@@ -190,10 +190,16 @@
                   </div>
                 </div>
                 <div class="top-product-iplas-isn-scope-meta">
-                  <span class="top-product-iplas-isn-scope-badge top-product-iplas-isn-scope-badge--dut">
+                  <button
+                    type="button"
+                    class="top-product-iplas-isn-scope-badge top-product-iplas-isn-scope-badge--dut top-product-iplas-isn-scope-badge--clickable"
+                    title="Click to view DUT references"
+                    @click="openScopeReferencesDialog(scope)"
+                  >
                     <Icon icon="mdi:devices" />
-                    <span>{{ scope.isns.length }} DUT{{ scope.isns.length === 1 ? '' : 's' }}</span>
-                  </span>
+                    <span>{{ scope.userIsns.length }} DUT{{ scope.userIsns.length === 1 ? '' : 's' }}</span>
+                    <Icon icon="mdi:open-in-new" class="top-product-iplas-isn-scope-badge__sub-icon" />
+                  </button>
                   <span class="top-product-iplas-isn-scope-badge top-product-iplas-isn-scope-badge--station">
                     <Icon icon="mdi:factory" />
                     <span>{{ scope.stations.length }} station{{ scope.stations.length === 1 ? '' : 's' }}</span>
@@ -201,7 +207,7 @@
                 </div>
               </div>
               <div class="top-product-iplas-isn-scope-token-row">
-                <span v-for="isn in scope.isns" :key="isn" class="top-product-iplas-isn-scope-token">
+                <span v-for="isn in scope.userIsns" :key="isn" class="top-product-iplas-isn-scope-token">
                   {{ isn }}
                 </span>
               </div>
@@ -312,6 +318,100 @@
     <!-- Details Dialog -->
     <TopProductIplasDetailsDialog v-model="showDetailsDialog" :record="detailsRecord" :downloading="detailsDownloading"
       @download="handleDownloadFromDetails" />
+
+    <!-- Scope References Dialog -->
+    <AppDialog
+      v-model="showScopeReferencesDialog"
+      width="min(94vw, 54rem)"
+      :show-footer="false"
+      :title="`DUT References: ${selectedScopeForReferences?.site || ''} / ${selectedScopeForReferences?.project || ''}`"
+      description="Review user-inputted serials and linked SFISTSP / iPLAS identifiers for this model."
+      class="top-product-iplas-isn-dialog"
+    >
+      <div v-if="selectedScopeForReferences" class="top-product-iplas-isn-references-dialog-body">
+        <div class="top-product-iplas-isn-references-dialog-summary">
+          <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">
+            Site: {{ selectedScopeForReferences.site }}
+          </span>
+          <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--info">
+            Model: {{ selectedScopeForReferences.project }}
+          </span>
+          <span class="top-product-iplas-isn-pill top-product-iplas-isn-pill--primary">
+            {{ selectedScopeForReferences.userIsns.length }} Inputted DUT{{ selectedScopeForReferences.userIsns.length === 1 ? '' : 's' }}
+          </span>
+        </div>
+
+        <div class="top-product-iplas-isn-reference-grid">
+          <article
+            v-for="item in selectedScopeForReferences.referenceDetails"
+            :key="item.searchedIsn"
+            class="top-product-iplas-isn-reference-card top-product-iplas-isn-reference-card--success"
+          >
+            <div class="top-product-iplas-isn-reference-card__topline">
+              <div>
+                <small>Inputted Serial</small>
+                <strong class="font-mono">{{ item.searchedIsn }}</strong>
+              </div>
+              <button
+                type="button"
+                class="top-product-iplas-isn-ref-copy-btn"
+                title="Copy inputted serial"
+                @click="copyToClipboard(item.searchedIsn)"
+              >
+                <Icon icon="mdi:content-copy" />
+                <span>Copy</span>
+              </button>
+            </div>
+
+            <div class="top-product-iplas-isn-reference-stack">
+              <div v-if="item.primaryIsn && item.primaryIsn !== item.searchedIsn" class="top-product-iplas-isn-reference-code">
+                <span>Primary ISN</span>
+                <strong class="font-mono">{{ item.primaryIsn }}</strong>
+                <button
+                  type="button"
+                  class="top-product-iplas-isn-ref-copy-btn top-product-iplas-isn-ref-copy-btn--icon"
+                  title="Copy Primary ISN"
+                  @click="copyToClipboard(item.primaryIsn)"
+                >
+                  <Icon icon="mdi:content-copy" />
+                </button>
+              </div>
+
+              <div v-if="item.ssn" class="top-product-iplas-isn-reference-code">
+                <span>SSN</span>
+                <strong class="font-mono">{{ item.ssn }}</strong>
+                <button
+                  type="button"
+                  class="top-product-iplas-isn-ref-copy-btn top-product-iplas-isn-ref-copy-btn--icon"
+                  title="Copy SSN"
+                  @click="copyToClipboard(item.ssn)"
+                >
+                  <Icon icon="mdi:content-copy" />
+                </button>
+              </div>
+
+              <div v-if="item.mac" class="top-product-iplas-isn-reference-code">
+                <span>MAC</span>
+                <strong class="font-mono">{{ item.mac }}</strong>
+                <button
+                  type="button"
+                  class="top-product-iplas-isn-ref-copy-btn top-product-iplas-isn-ref-copy-btn--icon"
+                  title="Copy MAC"
+                  @click="copyToClipboard(item.mac)"
+                >
+                  <Icon icon="mdi:content-copy" />
+                </button>
+              </div>
+
+              <div v-if="item.stations.length > 0" class="top-product-iplas-isn-reference-stations">
+                <span>Resolved Stations ({{ item.stations.length }})</span>
+                <small>{{ item.stations.join(', ') }}</small>
+              </div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </AppDialog>
   </div>
 </template>
 
@@ -355,7 +455,7 @@ import {
   type TopProductMeasurementCreate,
 } from '@/features/top-products/api/topProducts.api'
 import { useNotification } from '@/shared/composables/useNotification'
-import { AppPanel } from '@/shared/ui'
+import { AppDialog, AppPanel } from '@/shared/ui'
 import { getErrorMessage } from '@/shared/utils'
 import { getApiErrorDetail } from '@/shared/utils/error'
 import { isStatusPass } from '@/shared/utils/helpers'
@@ -558,6 +658,52 @@ const multipleModeIdentifiers = computed(() =>
   ]),
 )
 
+export interface ScopeDutReference {
+  searchedIsn: string
+  primaryIsn: string
+  ssn?: string | null
+  mac?: string | null
+  recordCount: number
+  stations: string[]
+}
+
+export interface ResolvedScopeGroup {
+  site: string
+  project: string
+  userIsns: string[]
+  stations: string[]
+  referenceDetails: ScopeDutReference[]
+}
+
+const showScopeReferencesDialog = ref(false)
+const selectedScopeForReferences = ref<ResolvedScopeGroup | null>(null)
+
+function openScopeReferencesDialog(scope: ResolvedScopeGroup): void {
+  selectedScopeForReferences.value = scope
+  showScopeReferencesDialog.value = true
+}
+
+async function copyToClipboard(text: string): Promise<void> {
+  if (!text) return
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(text)
+    } else {
+      const textArea = document.createElement('textarea')
+      textArea.value = text
+      textArea.style.position = 'fixed'
+      textArea.style.left = '-9999px'
+      document.body.appendChild(textArea)
+      textArea.select()
+      document.execCommand('copy')
+      document.body.removeChild(textArea)
+    }
+    showSuccess('Copied to clipboard!')
+  } catch (err) {
+    console.error('Failed to copy:', err)
+  }
+}
+
 const distinctSites = computed(() => {
   const sites = new Set<string>()
   isnSearchRecords.value.forEach((r) => {
@@ -580,33 +726,106 @@ const distinctProjects = computed(() => {
   return Array.from(projects)
 })
 
-const resolvedProjectGroups = computed(() => {
+const resolvedProjectGroups = computed<ResolvedScopeGroup[]>(() => {
+  if (isnSearchRecords.value.length === 0) {
+    return []
+  }
+
   const groups = new Map<
     string,
-    { site: string; project: string; isns: Set<string>; stations: Set<string> }
+    { site: string; project: string; records: IplasIsnSearchRecord[] }
   >()
+
   for (const record of isnSearchRecords.value) {
     const key = `${record.site}\u0000${record.project}`
     if (!groups.has(key)) {
       groups.set(key, {
         site: record.site,
         project: record.project,
-        isns: new Set(),
-        stations: new Set(),
+        records: [],
       })
     }
     const g = groups.get(key)
     if (g) {
-      g.isns.add(record.isn)
-      g.stations.add(record.display_station_name)
+      g.records.push(record)
     }
   }
-  return Array.from(groups.values()).map((g) => ({
-    site: g.site,
-    project: g.project,
-    isns: Array.from(g.isns),
-    stations: Array.from(g.stations),
-  }))
+
+  const sfistspMap = new Map<string, SfistspIsnReferenceResponse>()
+  for (const ref of sfistspReferences.value) {
+    if (ref.isn_searched) {
+      sfistspMap.set(ref.isn_searched.toLowerCase(), ref)
+    }
+  }
+
+  const result: ResolvedScopeGroup[] = []
+
+  for (const group of groups.values()) {
+    const recordsInScope = group.records
+    const allStationsInScope = Array.from(
+      new Set(recordsInScope.map((r) => r.display_station_name)),
+    )
+
+    const matchedUserIsns: string[] = []
+    const referenceDetails: ScopeDutReference[] = []
+
+    const userInputs =
+      parsedIsns.value.length > 0
+        ? parsedIsns.value
+        : Array.from(new Set(recordsInScope.map((r) => r.isn)))
+
+    for (const inputIsn of userInputs) {
+      const ref = sfistspMap.get(inputIsn.toLowerCase())
+      const associatedIdentifiers = new Set<string>([inputIsn.toLowerCase()])
+      if (ref?.isn) associatedIdentifiers.add(ref.isn.toLowerCase())
+      if (ref?.ssn) associatedIdentifiers.add(ref.ssn.toLowerCase())
+      if (ref?.mac) associatedIdentifiers.add(ref.mac.toLowerCase())
+
+      const matchingRecords = recordsInScope.filter((r) =>
+        associatedIdentifiers.has(r.isn.toLowerCase()),
+      )
+
+      if (matchingRecords.length > 0) {
+        matchedUserIsns.push(inputIsn)
+        const dutStations = Array.from(new Set(matchingRecords.map((r) => r.display_station_name)))
+        referenceDetails.push({
+          searchedIsn: inputIsn,
+          primaryIsn: ref?.isn || inputIsn,
+          ssn: ref?.ssn || null,
+          mac: ref?.mac || null,
+          recordCount: matchingRecords.length,
+          stations: dutStations,
+        })
+      }
+    }
+
+    const finalUserIsns =
+      matchedUserIsns.length > 0
+        ? matchedUserIsns
+        : Array.from(new Set(recordsInScope.map((r) => r.isn)))
+
+    result.push({
+      site: group.site,
+      project: group.project,
+      userIsns: finalUserIsns,
+      stations: allStationsInScope,
+      referenceDetails:
+        referenceDetails.length > 0
+          ? referenceDetails
+          : finalUserIsns.map((isn) => ({
+              searchedIsn: isn,
+              primaryIsn: isn,
+              recordCount: recordsInScope.filter((r) => r.isn === isn).length,
+              stations: Array.from(
+                new Set(
+                  recordsInScope.filter((r) => r.isn === isn).map((r) => r.display_station_name),
+                ),
+              ),
+            })),
+    })
+  }
+
+  return result
 })
 
 const currentStationConfig = computed(() => {
@@ -1058,17 +1277,12 @@ function extractTestItemsFromRecords(
  */
 async function lookupSfistspReferences(isnList: string[], showMatches = true): Promise<string[]> {
   loadingSfistsp.value = true
-  if (showMatches) {
-    sfistspReferences.value = []
-  }
-  isSfistspCollapsed.value = false
+  isSfistspCollapsed.value = !showMatches
 
   try {
     // Use batch lookup for efficiency
     const batchResponse = await lookupIsnsBatch(isnList)
-    if (showMatches) {
-      sfistspReferences.value = batchResponse.results
-    }
+    sfistspReferences.value = batchResponse.results
 
     // Collect only primary identifiers: isn (or isn_searched if isn not present), ssn, mac
     // Do NOT collect isn_references to avoid searching all related ISNs
@@ -2302,6 +2516,24 @@ onUnmounted(() => {
   color: var(--app-accent, #0f766e);
 }
 
+.top-product-iplas-isn-scope-badge--clickable {
+  cursor: pointer;
+  transition: all 120ms ease;
+  font: inherit;
+}
+
+.top-product-iplas-isn-scope-badge--clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+  filter: brightness(1.05);
+  border-color: var(--app-accent);
+}
+
+.top-product-iplas-isn-scope-badge__sub-icon {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
 .top-product-iplas-isn-scope-badge--station {
   background: var(--app-info-soft, rgba(14, 165, 233, 0.08));
   border-color: var(--app-info-line, rgba(14, 165, 233, 0.25));
@@ -2324,6 +2556,65 @@ onUnmounted(() => {
   color: var(--app-ink);
   font-size: 0.76rem;
   font-family: var(--app-font-mono, monospace);
+}
+
+.top-product-iplas-isn-references-dialog-body {
+  display: grid;
+  gap: 1rem;
+}
+
+.top-product-iplas-isn-references-dialog-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  align-items: center;
+}
+
+.top-product-iplas-isn-ref-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--app-border);
+  background: var(--app-surface);
+  color: var(--app-ink);
+  font-size: 0.76rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 120ms ease;
+}
+
+.top-product-iplas-isn-ref-copy-btn:hover {
+  border-color: var(--app-accent);
+  color: var(--app-accent);
+}
+
+.top-product-iplas-isn-ref-copy-btn--icon {
+  padding: 0.25rem 0.35rem;
+  border-radius: 0.35rem;
+  min-width: 1.5rem;
+  justify-content: center;
+}
+
+.top-product-iplas-isn-reference-stations {
+  display: grid;
+  gap: 0.2rem;
+  margin-top: 0.25rem;
+  padding-top: 0.4rem;
+  border-top: 1px dashed var(--app-border);
+}
+
+.top-product-iplas-isn-reference-stations span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--app-muted);
+}
+
+.top-product-iplas-isn-reference-stations small {
+  font-size: 0.75rem;
+  color: var(--app-ink);
+  line-height: 1.4;
 }
 
 .top-product-iplas-isn-lookup-note {

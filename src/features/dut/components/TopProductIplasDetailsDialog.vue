@@ -70,6 +70,7 @@
       <section class="iplas-details-dialog__metadata-grid">
         <article class="iplas-details-dialog__metadata-card">
           <button type="button" class="iplas-details-dialog__copy-row" @click="copyToClipboard(record.deviceId)">
+            <Icon icon="mdi:devices" />
             <span><strong>Device ID</strong> {{ record.deviceId }}</span>
           </button>
         </article>
@@ -215,13 +216,14 @@
         </span>
       </section>
 
-      <label class="iplas-details-dialog__field">
-        <span>Search Failed Items</span>
-        <div class="iplas-details-dialog__search-shell app-themed-input">
-          <Icon icon="mdi:magnify" />
-          <input v-model="forcedFailSearch" type="search" placeholder="Search by test item name..." />
-        </div>
-      </label>
+      <div class="forced-fail-search-shell">
+        <input
+          v-model="forcedFailSearch"
+          type="search"
+          class="app-themed-input forced-fail-search-input"
+          placeholder="Search failed test items..."
+        />
+      </div>
 
       <section v-if="forcedFailRows.length > 0" class="iplas-details-dialog__data-grid-shell">
         <AppDataGrid :columns="forcedFailColumns" :rows="forcedFailRows" data-key="rowKey" :paginator="forcedFailRows.length > 10"
@@ -245,10 +247,15 @@
           </template>
 
           <template #cell-score="{ data }">
-            <span class="iplas-details-dialog__score-chip"
-              :class="`iplas-details-dialog__score-chip--${scoreTone(data.score)}`">
+            <button
+              type="button"
+              class="iplas-details-dialog__score-chip iplas-details-dialog__score-chip--button"
+              :class="`iplas-details-dialog__score-chip--${scoreTone(data.score)}`"
+              title="Click to view Score Breakdown"
+              @click.stop="handleScoreCellClick(data.name)"
+            >
               {{ (data.score * 10).toFixed(2) }} / 10
-            </span>
+            </button>
           </template>
 
           <template #cell-reasonLabel="{ value }">
@@ -342,7 +349,8 @@
     </div>
   </AppDialog>
 
-  <AppDialog v-model="showOverallScoreDialog" width="min(94vw, 56rem)" :show-footer="false"
+  <AppDialog v-model="showOverallScoreDialog" v-model:fullscreen="isOverallScoreFullscreen" width="min(94vw, 56rem)"
+    fullscreen-width="98vw" fullscreenable :show-footer="false"
     class="iplas-details-dialog iplas-overall-score-dialog">
     <template #header>
       <div class="iplas-details-dialog__dialog-title">
@@ -351,7 +359,8 @@
       </div>
     </template>
 
-    <div v-if="record && scoreSummaryPrimary && overallScoreExplanation" class="iplas-details-subdialog">
+    <div v-if="record && scoreSummaryPrimary && overallScoreExplanation" class="iplas-details-subdialog"
+      :class="{ 'iplas-details-subdialog--fullscreen': isOverallScoreFullscreen }">
       <!-- Forced Fail Override Notice -->
       <section v-if="record.isForcedFailure" class="forced-fail-overview-banner">
         <div class="forced-fail-overview-banner__content">
@@ -359,7 +368,7 @@
           <div>
             <strong>Forced Fail Override Active</strong>
             <p>
-              {{ forcedFailureNoticeText }} While the statistical weighted average produces {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}, this DUT's final result is forced to <strong>Min. Score Fail</strong> due to threshold violations.
+              {{ forcedFailureNoticeText }} While the statistical weighted average produces {{ formatScoreOutOfTen(scoreSummaryPrimary.score) }}, this DUT's final result is forced to "<b>Min. Score Fail</b>" due to threshold violations.
             </p>
           </div>
         </div>
@@ -431,7 +440,7 @@
         <div class="score-contributors-header">
           <div>
             <strong>Item Contribution Details</strong>
-            <small>{{ overallScoreExplanation.contributors.length }} scored test items contributing to this result</small>
+            <small>{{ overallScoreExplanation.contributors.length }} scored test items contributing to this result (Pinned: Test Item, USL, LSL)</small>
           </div>
           <div class="score-contributors-search">
             <input v-model="contributorSearchQuery" class="app-themed-input" type="search" placeholder="Filter items..." />
@@ -445,19 +454,31 @@
           :paginator="filteredContributors.length > 10"
           :rows-per-page="10"
           :rows-per-page-options="[10, 25, 50]"
-          scroll-height="20rem"
-          :table-style="{ minWidth: '44rem' }"
+          :scroll-height="isOverallScoreFullscreen ? 'calc(100vh - 32rem)' : '20rem'"
+          :table-style="{ minWidth: '56rem' }"
         >
           <template #cell-name="{ data }">
             <span class="font-mono text-sm font-semibold" :title="data.name">{{ data.name }}</span>
+          </template>
+          <template #cell-ucl="{ value }">
+            <span class="table-limit font-mono text-sm">{{ value || '-' }}</span>
+          </template>
+          <template #cell-lcl="{ value }">
+            <span class="table-limit font-mono text-sm">{{ value || '-' }}</span>
           </template>
           <template #cell-value="{ data }">
             <span class="font-mono text-sm">{{ data.value }}</span>
           </template>
           <template #cell-score="{ data }">
-            <span class="iplas-details-dialog__score-chip" :class="`iplas-details-dialog__score-chip--${scoreTone(data.score / 10)}`">
+            <button
+              type="button"
+              class="iplas-details-dialog__score-chip iplas-details-dialog__score-chip--button"
+              :class="`iplas-details-dialog__score-chip--${scoreTone(data.score / 10)}`"
+              title="Click to view Score Breakdown"
+              @click.stop="handleScoreCellClick(data.name)"
+            >
               {{ data.score.toFixed(2) }} / 10
-            </span>
+            </button>
           </template>
           <template #cell-weight="{ data }">
             <span class="text-sm font-mono">{{ data.weight.toFixed(1) }} (w&sup2;: {{ data.effectiveWeight.toFixed(2) }})</span>
@@ -481,6 +502,7 @@
 import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
 import { useNotification } from '@/shared/composables/useNotification'
+import type { AppDataGridColumn } from '@/shared/ui'
 import AppDataGrid from '@/shared/ui/data-grid/AppDataGrid.vue'
 import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
 import AppSelect from '@/shared/ui/forms/AppSelect.vue'
@@ -586,6 +608,7 @@ const scoreFilterValue = ref<number | null>(null)
 const showBreakdownDialog = ref(false)
 const selectedTestItem = ref<NormalizedTestItem | null>(null)
 const showOverallScoreDialog = ref(false)
+const isOverallScoreFullscreen = ref(false)
 
 // Forced fail items dialog
 const showForcedFailDialog = ref(false)
@@ -621,7 +644,7 @@ const scoreFilterSelectOptions = [
   })),
 ]
 
-const forcedFailColumns = [
+const forcedFailColumns: AppDataGridColumn[] = [
   {
     key: 'name',
     field: 'name',
@@ -642,23 +665,49 @@ const forcedFailColumns = [
   },
 ]
 
-const contributorColumns = [
-  { key: 'name', field: 'name', header: 'Test Item', sortable: true, style: { width: '16rem' } },
+const contributorColumns: AppDataGridColumn[] = [
+  {
+    key: 'name',
+    field: 'name',
+    header: 'Test Item',
+    sortable: true,
+    frozen: true,
+    alignFrozen: 'left',
+    style: { width: '16rem', minWidth: '16rem' },
+  },
+  {
+    key: 'ucl',
+    field: 'ucl',
+    header: 'USL',
+    sortable: true,
+    frozen: true,
+    alignFrozen: 'left',
+    style: { width: '7rem', minWidth: '7rem' },
+  },
+  {
+    key: 'lcl',
+    field: 'lcl',
+    header: 'LSL',
+    sortable: true,
+    frozen: true,
+    alignFrozen: 'left',
+    style: { width: '7rem', minWidth: '7rem' },
+  },
   { key: 'value', field: 'value', header: 'Value', sortable: true, style: { width: '7.5rem' } },
-  { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '8rem' } },
+  { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '8.5rem' } },
   {
     key: 'weight',
     field: 'weight',
     header: 'Weight (w²)',
     sortable: true,
-    style: { width: '9.5rem' },
+    style: { width: '10rem' },
   },
   {
     key: 'weightedScore',
     field: 'weightedScore',
     header: 'Weighted Score',
     sortable: true,
-    style: { width: '9.5rem' },
+    style: { width: '10rem' },
   },
   { key: 'status', field: 'status', header: 'Status', sortable: true, style: { width: '8.5rem' } },
 ]
@@ -1660,6 +1709,15 @@ function handleRowClick(event: unknown): void {
 function showScoreBreakdown(item: NormalizedTestItem): void {
   selectedTestItem.value = item
   showBreakdownDialog.value = true
+}
+
+function handleScoreCellClick(testItemName: string): void {
+  const item = props.record?.testItems?.find(
+    (ti: NormalizedTestItem) => ti.NAME.toLowerCase() === testItemName.toLowerCase(),
+  )
+  if (item) {
+    showScoreBreakdown(item)
+  }
 }
 
 // Reset filters when record changes - always default to Show All
@@ -2736,6 +2794,42 @@ watch(
 
 .clickable-rows :deep(tbody tr:hover) {
   background-color: var(--iplas-panel-strong) !important;
+}
+
+.forced-fail-search-shell {
+  width: 100%;
+}
+
+.forced-fail-search-input {
+  width: 100%;
+}
+
+.iplas-details-dialog__score-chip--button {
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 120ms ease;
+}
+
+.iplas-details-dialog__score-chip--button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.12);
+  filter: brightness(1.05);
+}
+
+.iplas-details-subdialog--fullscreen {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.iplas-details-dialog__table-shell :deep(.p-datatable-frozen-column),
+.iplas-details-dialog :deep(.p-datatable-frozen-column) {
+  background: var(--iplas-panel, var(--app-panel)) !important;
+}
+
+.iplas-details-dialog__table-shell :deep(.p-datatable-thead > tr > th.p-datatable-frozen-column),
+.iplas-details-dialog :deep(.p-datatable-thead > tr > th.p-datatable-frozen-column) {
+  background: var(--iplas-panel-strong, var(--app-surface)) !important;
 }
 
 .forced-fail-overview-banner {
