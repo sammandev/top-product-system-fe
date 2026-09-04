@@ -593,104 +593,11 @@
       </div>
   </AppDialog>
 
-  <AppDialog
+  <UniversalScoreBreakdownDialog
     v-model="showBreakdownDialog"
-    v-model:fullscreen="breakdownFullscreen"
-    width="min(92vw, 36rem)"
-    fullscreen-width="96vw"
-    :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
-    fullscreenable
-    :showFooter="false"
-    title="Score Breakdown"
-    :description="breakdownItem?.test_item ?? 'Score Breakdown'"
-    class="iplas-details-dialog iplas-breakdown-dialog"
-  >
-    <template #header>
-      <div class="iplas-details-dialog__dialog-title">
-        <Icon icon="mdi:table-search" />
-        <h2>Score Breakdown</h2>
-      </div>
-    </template>
-
-    <div v-if="breakdownItem" class="iplas-details-subdialog">
-      <section class="iplas-breakdown__name-card">
-        <span class="iplas-breakdown__name-text">{{ breakdownItem.test_item }}</span>
-      </section>
-
-      <section class="iplas-breakdown__rows-container">
-        <div v-for="row in breakdownRows" :key="row.key" class="iplas-breakdown__row">
-          <div class="iplas-breakdown__row-left">
-            <span class="iplas-breakdown__row-icon" :class="getBreakdownIconClass(row)">
-              <Icon :icon="getBreakdownRowIcon(row)" />
-            </span>
-            <span class="iplas-breakdown__row-label">{{ row.label }}</span>
-          </div>
-          <div class="iplas-breakdown__row-right">
-            <span
-              v-if="row.valueTone === 'score'"
-              class="upload-log-score-chip"
-              :class="scoreChipClass(breakdownItem.score ?? 0)"
-            >
-              {{ row.value }}
-            </span>
-            <span
-              v-else-if="row.valueTone === 'scoring-type'"
-              class="iplas-breakdown__value-pill iplas-breakdown__value-pill--cool"
-            >
-              {{ row.value }}
-            </span>
-            <span
-              v-else-if="row.valueTone === 'policy'"
-              class="iplas-breakdown__value-pill iplas-breakdown__value-pill--neutral"
-            >
-              {{ row.value }}
-            </span>
-            <span
-              v-else
-              :class="[row.valueTone === 'warning' ? 'iplas-breakdown__value--warning' : '', 'iplas-breakdown__value-text']"
-            >
-              {{ row.value }}
-            </span>
-          </div>
-        </div>
-      </section>
-
-      <details class="iplas-details-dialog__explanation-card">
-        <summary>
-          <span>
-            <Icon icon="mdi:help-circle-outline" /> How is this score calculated?
-          </span>
-        </summary>
-        <div class="iplas-details-dialog__explanation-body">
-          <div class="score-formula-panel score-formula-panel--compact">
-            <div class="iplas-details-dialog__metric-label">Formula</div>
-            <div class="score-formula-equation">{{ getScoringFormula(breakdownItem.score_breakdown?.scoring_type) }}</div>
-            <dl class="score-formula-variable-list">
-              <template
-                v-for="variable in getScoringFormulaVariables(breakdownItem.score_breakdown?.scoring_type)"
-                :key="variable.key"
-              >
-                <dt>{{ variable.key }}</dt>
-                <dd>{{ variable.value }}</dd>
-              </template>
-            </dl>
-          </div>
-        </div>
-      </details>
-    </div>
-
-    <template #footer>
-      <div class="iplas-details-dialog__footer-actions">
-        <button
-          type="button"
-          class="iplas-details-dialog__button iplas-details-dialog__button--ghost"
-          @click="showBreakdownDialog = false"
-        >
-          Close
-        </button>
-      </div>
-    </template>
-  </AppDialog>
+    :item="breakdownItem"
+    source-title="Comparison"
+  />
 
   <!-- Criteria Builder Dialog -->
   <CriteriaBuilderDialog v-model="criteriaBuilderOpen" @criteria-created="handleCriteriaCreated" />
@@ -750,6 +657,7 @@ import {
 } from '../utils/topProductExcelExport'
 import CriteriaBuilderDialog from './CriteriaBuilderDialog.vue'
 import TopProductRankingUploadLog from './TopProductRankingUploadLog.vue'
+import UniversalScoreBreakdownDialog from './UniversalScoreBreakdownDialog.vue'
 import UploadScoringConfigDialog from './UploadScoringConfigDialog.vue'
 
 // File inputs
@@ -826,139 +734,7 @@ const isColumnVisible = (key: string) => comparisonVisibleColumns.value.includes
 
 // Score breakdown dialog (new universal scoring)
 const showBreakdownDialog = ref(false)
-const breakdownFullscreen = ref(false)
 const breakdownItem = ref<ParsedTestItemEnhanced | null>(null)
-
-const breakdownRows = computed(() => {
-  if (!breakdownItem.value) {
-    return []
-  }
-
-  const breakdown = breakdownItem.value.score_breakdown
-  const rows: Array<{
-    key: string
-    label: string
-    value: string
-    valueTone?: 'scoring-type' | 'policy' | 'score' | 'warning'
-  }> = [
-    {
-      key: 'scoring_type',
-      label: 'Scoring Type',
-      value: breakdown?.scoring_type ?? 'N/A',
-      valueTone: 'scoring-type',
-    },
-  ]
-
-  if (breakdown?.ucl !== null && breakdown?.ucl !== undefined) {
-    rows.push({ key: 'ucl', label: 'UCL (Upper Limit)', value: String(breakdown.ucl) })
-  }
-
-  if (breakdown?.lcl !== null && breakdown?.lcl !== undefined) {
-    rows.push({ key: 'lcl', label: 'LCL (Lower Limit)', value: String(breakdown.lcl) })
-  }
-
-  if (breakdown?.target !== null && breakdown?.target !== undefined) {
-    rows.push({ key: 'target', label: 'Target', value: breakdown.target.toFixed(2) })
-  }
-
-  if (breakdown?.actual !== null && breakdown?.actual !== undefined) {
-    rows.push({ key: 'actual', label: 'Actual Value', value: String(breakdown.actual) })
-  }
-
-  if (breakdown?.deviation !== null && breakdown?.deviation !== undefined) {
-    rows.push({
-      key: 'deviation',
-      label: 'Deviation',
-      value: breakdown.deviation.toFixed(2),
-      valueTone: Math.abs(breakdown.deviation ?? 0) > 1 ? 'warning' : undefined,
-    })
-  }
-
-  if (breakdown?.policy) {
-    rows.push({ key: 'policy', label: 'Policy', value: breakdown.policy, valueTone: 'policy' })
-  }
-
-  rows.push({ key: 'weight', label: 'Weight', value: String(breakdown?.weight ?? 1.0) })
-  rows.push({
-    key: 'score',
-    label: 'Score (0-10)',
-    value: breakdown?.score?.toFixed(2) ?? 'N/A',
-    valueTone: 'score',
-  })
-
-  return rows
-})
-
-function getBreakdownRowIcon(row: { key: string }): string {
-  const iconMap: Record<string, string> = {
-    scoring_type: 'mdi:function-variant',
-    ucl: 'mdi:arrow-collapse-up',
-    lcl: 'mdi:arrow-collapse-down',
-    target: 'mdi:crosshairs-gps',
-    actual: 'mdi:numeric',
-    deviation: 'mdi:delta',
-    policy: 'mdi:compass-outline',
-    weight: 'mdi:weight',
-    score: 'mdi:star',
-  }
-  return iconMap[row.key] || 'mdi:information-outline'
-}
-
-function getBreakdownIconClass(row: { key: string }): string {
-  const classMap: Record<string, string> = {
-    scoring_type: 'iplas-breakdown__row-icon--purple',
-    ucl: 'iplas-breakdown__row-icon--red',
-    lcl: 'iplas-breakdown__row-icon--orange',
-    target: 'iplas-breakdown__row-icon--green',
-    actual: 'iplas-breakdown__row-icon--blue',
-    deviation: 'iplas-breakdown__row-icon--amber',
-    policy: 'iplas-breakdown__row-icon--muted',
-    weight: 'iplas-breakdown__row-icon--muted',
-    score: 'iplas-breakdown__row-icon--star',
-  }
-  return classMap[row.key] || 'iplas-breakdown__row-icon--muted'
-}
-
-function getScoringFormula(scoringType?: string): string {
-  const type = (scoringType as ScoringType) || 'binary'
-  const latex = SCORING_TYPE_INFO[type]?.formulaLatex
-  if (latex) {
-    return latex
-      .replace(/\\cdot/g, 'x')
-      .replace(/\\frac\{L - \|x - T\|\}\{L\}/g, '(L - |x - T|) / L')
-      .replace(/\\frac\{L - d\}\{L\}/g, '(L - d) / L')
-      .replace(/\\frac\{UCL - x\}\{UCL\}/g, '(UCL - x) / UCL')
-      .replace(
-        /\\left\(1 - \\frac\{x - ref\}\{UCL - ref\}\\right\)\^\{0\.25\}/g,
-        '(1 - (x - ref) / (UCL - ref))^0.25',
-      )
-      .replace(
-        /\\begin\{cases\} 10\.0 & \\text\{STATUS\} = \\text\{PASS\} \\\\ 0\.0 & \\text\{STATUS\} = \\text\{FAIL\} \\end\{cases\}/g,
-        '10.0 if STATUS = PASS, 0.0 if STATUS = FAIL',
-      )
-  }
-  const formulas: Record<string, string> = {
-    symmetrical: 'Score = 1 + 9 x (L - |x - T|) / L',
-    asymmetrical: 'Score = 1 + 9 x (L - d) / L',
-    per_mask: 'Score = 1 + 9 x (UCL - x) / UCL',
-    evm: 'Score = 1 + 9 x (1 - (x - ref) / (UCL - ref))^0.25',
-    throughput: 'Score = 1 + 9 x (x - LCL) / (UCL - LCL)',
-    binary: '10.0 if PASS, 0.0 if FAIL',
-  }
-  return formulas[type] || 'Score calculation based on criteria limits'
-}
-
-function getScoringFormulaVariables(scoringType?: string): Array<{ key: string; value: string }> {
-  const type = (scoringType as ScoringType) || 'binary'
-  const variables = SCORING_TYPE_INFO[type]?.variables
-  if (!variables) {
-    return []
-  }
-  return Object.entries(variables).map(([key, value]) => ({
-    key,
-    value: value.replace(/\\frac\{UCL \+ LCL\}\{2\}/g, '(UCL + LCL) / 2'),
-  }))
-}
 
 function openScoreBreakdownForComparison(
   row: Record<string, unknown>,

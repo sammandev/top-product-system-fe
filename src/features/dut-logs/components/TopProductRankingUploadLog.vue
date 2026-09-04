@@ -467,166 +467,22 @@
       :included-test-item-names="props.includedTestItemNames"
     />
 
-    <AppDialog
+    <UniversalOverallScoreDialog
       v-model="showOverallScoreDialog"
-      width="min(92vw, 52rem)"
-      :breakpoints="{ '960px': '96vw', '640px': '100vw' }"
-      :showFooter="false"
-      title="Overall Score Formula"
-      description="Review how the weighted average was calculated for this DUT."
-      class="top-product-ranking-upload-log__dialog"
-    >
-      <div v-if="overallScoreDetails" class="top-product-ranking-upload-log__breakdown-shell">
-        <section v-if="hasSelectedForcedFail" class="top-product-ranking-upload-log__notice top-product-ranking-upload-log__notice--danger">
-          <strong>Forced Fail DUT:</strong>
-          <span>{{ forcedFailSummaryText }}. The displayed overall score is kept for ranking context, but the test result is forced to Min. Score Fail.</span>
-        </section>
+      title="Overall Score Breakdown"
+      :description="selectedRankingItem ? `Station: ${selectedRankingItem.station} | ISN: ${selectedRankingItem.isn || 'N/A'}` : 'Overall Score'"
+      :source-name="selectedRankingItem ? `DUT ISN: ${selectedRankingItem.isn || 'N/A'} (Station: ${selectedRankingItem.station})` : 'Uploaded Log Measurements'"
+      :score="selectedRankingItem?.score"
+      :items="rankingOverallScoreItems"
+      :has-forced-fail="hasSelectedForcedFail"
+      @click-item="handleOverallScoreItemClick"
+    />
 
-        <section class="top-product-ranking-upload-log__summary-grid top-product-ranking-upload-log__overall-summary-grid">
-          <article class="top-product-ranking-upload-log__summary-card">
-            <small>Eligible Items</small>
-            <strong>{{ overallScoreDetails.includedCount }}</strong>
-          </article>
-          <article class="top-product-ranking-upload-log__summary-card">
-            <small>Weighted Sum</small>
-            <strong>{{ overallScoreDetails.weightedSum.toFixed(2) }}</strong>
-          </article>
-          <article class="top-product-ranking-upload-log__summary-card">
-            <small>Total Weight</small>
-            <strong>{{ overallScoreDetails.totalWeight.toFixed(2) }}</strong>
-          </article>
-          <article class="top-product-ranking-upload-log__summary-card top-product-ranking-upload-log__summary-card--score"
-            :class="[
-              overallScoreSummaryClass(overallScoreDetails.scoreValue),
-              { 'top-product-ranking-upload-log__summary-card--forced-fail': hasSelectedForcedFail },
-            ]">
-            <small>{{ hasSelectedForcedFail ? 'Overall Score (Forced Fail)' : 'Overall Score' }}</small>
-            <strong class="top-product-ranking-upload-log__score-with-icon">
-              <Icon v-if="hasSelectedForcedFail" icon="mdi:alert-octagon" />
-              <span>{{ overallScoreDetails.displayScore }}</span>
-            </strong>
-          </article>
-        </section>
-
-        <div class="top-product-ranking-upload-log__detail-table">
-          <div class="top-product-ranking-upload-log__detail-row top-product-ranking-upload-log__detail-row--highlight">
-            <span>Formula Used</span>
-            <strong>Overall Score = Sum(Item Score x Weight) / Sum(Weight)</strong>
-          </div>
-          <div class="top-product-ranking-upload-log__detail-row">
-            <span>Calculated Result</span>
-            <strong>{{ overallScoreDetails.weightedSum.toFixed(2) }} / {{ overallScoreDetails.totalWeight.toFixed(2) }} = {{ overallScoreDetails.displayScore }}</strong>
-          </div>
-        </div>
-
-        <div class="top-product-ranking-upload-log__detail-table top-product-ranking-upload-log__contribution-table">
-          <div class="top-product-ranking-upload-log__detail-row top-product-ranking-upload-log__detail-row--highlight">
-            <span>Item Contribution</span>
-            <strong>Status</strong>
-          </div>
-          <div v-for="contributor in overallScoreDetails.contributors" :key="contributor.test_item" class="top-product-ranking-upload-log__detail-row">
-            <span class="top-product-ranking-upload-log__contribution-copy">
-              <strong :title="contributor.test_item">{{ contributor.test_item }}</strong>
-              <small>Score {{ contributor.scoreLabel }} x Weight {{ contributor.weight.toFixed(2) }} = {{ contributor.weightedScoreLabel }}</small>
-            </span>
-            <strong class="top-product-ranking-upload-log__badge" :class="contributor.statusClass">{{ contributor.reason }}</strong>
-          </div>
-        </div>
-      </div>
-    </AppDialog>
-
-    <AppDialog
+    <UniversalScoreBreakdownDialog
       v-model="showBreakdownDialog"
-      width="min(92vw, 34rem)"
-      :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
-      :showFooter="false"
-      sticky-header
-      title="Score Breakdown"
-      :description="selectedTestItem?.test_item || 'Test Item'"
-      class="top-product-ranking-upload-log__dialog top-product-ranking-upload-log__dialog--breakdown"
-    >
-
-      <div v-if="selectedTestItem?.score_breakdown" class="top-product-ranking-upload-log__breakdown-shell">
-        <section class="top-product-ranking-upload-log__breakdown-name-card">
-          <span class="top-product-ranking-upload-log__breakdown-name-text">{{ selectedTestItem.test_item }}</span>
-        </section>
-
-        <section class="top-product-ranking-upload-log__breakdown-rows-container">
-          <div v-for="row in breakdownRows" :key="row.key" class="top-product-ranking-upload-log__breakdown-row">
-            <div class="top-product-ranking-upload-log__breakdown-row-left">
-              <span class="top-product-ranking-upload-log__breakdown-row-icon" :class="getBreakdownIconClass(row)">
-                <Icon :icon="getBreakdownRowIcon(row)" />
-              </span>
-              <span class="top-product-ranking-upload-log__breakdown-row-label">{{ row.label }}</span>
-            </div>
-            <div class="top-product-ranking-upload-log__breakdown-row-right">
-              <span
-                v-if="row.valueTone === 'score'"
-                class="top-product-ranking-upload-log__score-chip"
-                :class="scoreBadgeClass(selectedTestItem.score ?? 0)"
-              >
-                {{ row.value }}
-              </span>
-              <span
-                v-else-if="row.valueTone === 'algorithm'"
-                class="top-product-ranking-upload-log__breakdown-value-pill top-product-ranking-upload-log__breakdown-value-pill--cool"
-              >
-                {{ row.value }}
-              </span>
-              <span
-                v-else-if="row.valueTone === 'policy'"
-                class="top-product-ranking-upload-log__breakdown-value-pill top-product-ranking-upload-log__breakdown-value-pill--neutral"
-              >
-                {{ row.value }}
-              </span>
-              <span
-                v-else
-                class="top-product-ranking-upload-log__breakdown-value-text"
-                :class="{ 'top-product-ranking-upload-log__breakdown-value--warning': row.valueTone === 'warning' }"
-              >
-                {{ row.value }}
-              </span>
-            </div>
-          </div>
-        </section>
-
-        <details class="top-product-ranking-upload-log__explanation-card">
-          <summary>
-            <span>
-              <Icon icon="mdi:help-circle-outline" /> How is this score calculated?
-            </span>
-          </summary>
-          <div class="top-product-ranking-upload-log__explanation-body">
-            <div class="top-product-ranking-upload-log__formula-panel top-product-ranking-upload-log__formula-panel--compact">
-              <div class="top-product-ranking-upload-log__metric-label">Formula</div>
-              <div class="top-product-ranking-upload-log__formula-equation">{{ getUploadScoringFormula(selectedTestItem.score_breakdown.scoring_type) }}</div>
-              <dl class="score-formula-variable-list">
-                <template
-                  v-for="variable in getScoringFormulaVariables(selectedTestItem.score_breakdown.scoring_type)"
-                  :key="variable.key"
-                >
-                  <dt>{{ variable.key }}</dt>
-                  <dd>{{ variable.value }}</dd>
-                </template>
-              </dl>
-            </div>
-            <p>{{ getUploadScoringExplanation(selectedTestItem.score_breakdown.scoring_type) }}</p>
-          </div>
-        </details>
-      </div>
-
-      <template #footer>
-        <div class="iplas-details-dialog__footer-actions">
-          <button
-            type="button"
-            class="top-product-ranking-upload-log__ghost-button"
-            @click="showBreakdownDialog = false"
-          >
-            Close
-          </button>
-        </div>
-      </template>
-    </AppDialog>
+      :item="selectedTestItem"
+      source-title="Uploaded"
+    />
 
     <AppPanel
       class="top-product-ranking-upload-log__panel"
@@ -844,6 +700,10 @@ import {
   type TopProductExcelRecord,
 } from '../utils/topProductExcelExport'
 import IplasCompareDialog from './IplasCompareDialog.vue'
+import UniversalOverallScoreDialog, {
+  type OverallScoreContributorItem,
+} from './UniversalOverallScoreDialog.vue'
+import UniversalScoreBreakdownDialog from './UniversalScoreBreakdownDialog.vue'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -880,13 +740,6 @@ interface ForcedFailItemRow {
   value?: string
   rawItem: ParsedTestItemEnhanced
   reasonLabel: string
-}
-
-interface BreakdownGridRow {
-  key: string
-  label: string
-  value: string
-  valueTone?: 'score' | 'algorithm' | 'policy' | 'warning'
 }
 
 const dialogBreakpoints = {
@@ -1082,7 +935,8 @@ const rankings = computed<RankingItem[]>(() => {
   if (props.parseResult?.metadata) {
     const isn = props.parseResult.isn || 'unknown'
     const station = props.parseResult.station || 'Unknown'
-    const result = hasRankingForcedFail(props.parseResult.parsed_items_enhanced)
+    const testItems = getTestItemsForIsn(props.parseResult.isn)
+    const result = hasRankingForcedFail(testItems)
       ? 'Min. Score Fail'
       : props.parseResult.metadata.result
     items.push({
@@ -1094,13 +948,14 @@ const rankings = computed<RankingItem[]>(() => {
       device: props.parseResult.metadata.device,
       status: props.parseResult.metadata.sfis_status || 'Unknown',
       result,
-      score: props.parseResult.avg_score || 0,
+      score: computeRankingScore(testItems),
     })
   } else if (props.compareResult?.file_summaries) {
     props.compareResult.file_summaries.forEach((fileSummary) => {
       const isn = fileSummary.isn || 'unknown'
-      const station = fileSummary.metadata.station || 'Unknown'
-      const result = hasRankingForcedFail(getTestItemsForIsn(fileSummary.isn))
+      const station = fileSummary.station || fileSummary.metadata.station || 'Unknown'
+      const testItems = getTestItemsForIsn(fileSummary.isn)
+      const result = hasRankingForcedFail(testItems)
         ? 'Min. Score Fail'
         : fileSummary.metadata.result
       items.push({
@@ -1112,7 +967,7 @@ const rankings = computed<RankingItem[]>(() => {
         device: fileSummary.metadata.device,
         status: fileSummary.metadata.sfis_status || 'Unknown',
         result,
-        score: fileSummary.avg_score || 0,
+        score: computeRankingScore(testItems),
       })
     })
   }
@@ -1304,136 +1159,59 @@ function hasRankingForcedFail(testItems: ParsedTestItemEnhanced[]): boolean {
   return testItems.some((item) => isTestItemScoreFail(item))
 }
 
-const overallScoreDetails = computed(() => {
-  if (!selectedRankingItem.value) {
-    return null
-  }
-
-  const contributors = selectedTestItems.value.map((item) => {
+const rankingOverallScoreItems = computed<OverallScoreContributorItem[]>(() => {
+  return selectedTestItems.value.map((item) => {
     const config = scoringConfigMap.value.get(item.test_item)
-    const weight = config?.weight ?? item.score_breakdown?.weight ?? 1
+    const weight = config?.weight ?? item.score_breakdown?.weight ?? 1.0
     const enabled = config?.enabled !== false
     const hasScore = item.score !== null && item.score !== undefined
     const passesMinScore =
       config?.min_score === undefined || config?.min_score === null || !hasScore
         ? true
         : (item.score as number) >= config.min_score * 10
-    const included = enabled && hasScore && passesMinScore
-    const weightedScore = included ? (item.score as number) * weight : 0
-
-    let reason = 'Included in weighted average'
-    if (!enabled) {
-      reason = 'Excluded by scope'
-    } else if (!hasScore) {
-      reason = 'No score returned'
-    } else if (!passesMinScore) {
-      reason = 'Below configured minimum score'
-    }
-
-    const statusClass = included
-      ? 'top-product-ranking-upload-log__badge--success'
-      : !passesMinScore
-        ? 'top-product-ranking-upload-log__badge--error'
-        : 'top-product-ranking-upload-log__badge--warning'
+    const isBinary = (item.score_breakdown?.scoring_type || config?.scoring_type) === 'binary'
+    const included = enabled && hasScore && passesMinScore && !isBinary
 
     return {
       test_item: item.test_item,
+      value: item.value,
+      usl: item.usl,
+      lsl: item.lsl,
       weight,
-      weightedScore,
-      weightedScoreLabel: weightedScore.toFixed(2),
-      scoreLabel: hasScore ? (item.score as number).toFixed(2) : 'N/A',
-      included,
-      reason,
-      statusClass,
+      score: included ? item.score : null,
+      rawItem: item,
     }
   })
-
-  const includedContributors = contributors.filter((contributor) => contributor.included)
-  const weightedSum = includedContributors.reduce(
-    (sum, contributor) => sum + contributor.weightedScore,
-    0,
-  )
-  const totalWeight = includedContributors.reduce((sum, contributor) => sum + contributor.weight, 0)
-
-  return {
-    contributors,
-    includedCount: includedContributors.length,
-    weightedSum,
-    totalWeight,
-    scoreValue: selectedRankingItem.value.score,
-    displayScore: selectedRankingItem.value.score.toFixed(2),
-  }
 })
 
-const breakdownRows = computed<BreakdownGridRow[]>(() => {
-  const item = selectedTestItem.value
+function computeRankingScore(testItems: ParsedTestItemEnhanced[]): number {
+  let weightedSum = 0
+  let totalWeight = 0
 
-  if (!item?.score_breakdown) {
-    return []
+  for (const item of testItems) {
+    const config = scoringConfigMap.value.get(item.test_item)
+    if (config && !config.enabled) continue
+    if (item.score === null || item.score === undefined) continue
+    const minScore = config?.min_score
+    if (minScore !== null && minScore !== undefined && item.score < minScore * 10) continue
+    const scoringType = item.score_breakdown?.scoring_type || config?.scoring_type
+    if (scoringType === 'binary') continue
+
+    const weight = config?.weight ?? item.score_breakdown?.weight ?? 1.0
+    const effWeight = weight * weight
+    weightedSum += item.score * effWeight
+    totalWeight += effWeight
   }
 
-  const breakdown = item.score_breakdown
-  const rows: BreakdownGridRow[] = [
-    {
-      key: 'ucl',
-      label: 'Upper Criteria Limit (UCL)',
-      value: formatBreakdownNumber(breakdown.ucl ?? item.usl),
-    },
-    {
-      key: 'lcl',
-      label: 'Lower Criteria Limit (LCL)',
-      value: formatBreakdownNumber(breakdown.lcl ?? item.lsl),
-    },
-    {
-      key: 'actual',
-      label: 'Measured Value',
-      value: formatBreakdownNumber(breakdown.actual ?? item.numeric_value, item.value),
-    },
-    {
-      key: 'target',
-      label: `Target (${getTargetLabel(breakdown.policy)})`,
-      value: formatBreakdownNumber(breakdown.target ?? item.target),
-    },
-    {
-      key: 'scoringType',
-      label: 'Scoring Algorithm',
-      value: formatScoringAlgorithm(breakdown.scoring_type),
-      valueTone: 'algorithm',
-    },
-    {
-      key: 'weight',
-      label: 'Score Weight',
-      value: formatBreakdownNumber(breakdown.weight ?? 1),
-    },
-  ]
+  return totalWeight > 0 ? Number((weightedSum / totalWeight).toFixed(2)) : 0
+}
 
-  if (breakdown.deviation !== null && breakdown.deviation !== undefined) {
-    rows.push({
-      key: 'deviation',
-      label: 'Deviation from Target',
-      value: formatBreakdownNumber(breakdown.deviation),
-      valueTone: Math.abs(breakdown.deviation) > 1 ? 'warning' : undefined,
-    })
+function handleOverallScoreItemClick(contributor: OverallScoreContributorItem) {
+  const item = selectedTestItems.value.find((it) => it.test_item === contributor.test_item)
+  if (item) {
+    showScoreBreakdown(item)
   }
-
-  if (breakdown.policy) {
-    rows.push({
-      key: 'policy',
-      label: 'Policy',
-      value: formatPolicyLabel(breakdown.policy),
-      valueTone: 'policy',
-    })
-  }
-
-  rows.push({
-    key: 'score',
-    label: 'Final Score',
-    value: formatUploadScore(item.score ?? breakdown.score),
-    valueTone: 'score',
-  })
-
-  return rows
-})
+}
 
 function getConfiguredMinScore(item: ParsedTestItemEnhanced): number | null {
   const minScore = scoringConfigMap.value.get(item.test_item)?.min_score
@@ -1611,6 +1389,11 @@ const selectRankingItem = (item: RankingItem) => {
 
     selectedTestItems.value = isnTestItems
   }
+
+  selectedRankingItem.value = {
+    ...item,
+    score: computeRankingScore(selectedTestItems.value),
+  }
 }
 
 const openRankingItem = (item: RankingItem) => {
@@ -1639,16 +1422,14 @@ const handleTestItemRowClick = (event: unknown) => {
       ? ((event as { data?: ParsedTestItemEnhanced }).data ?? null)
       : null
 
-  if (item?.score_breakdown) {
+  if (item) {
     showScoreBreakdown(item)
   }
 }
 
 const showScoreBreakdown = (item: ParsedTestItemEnhanced) => {
-  if (item.score_breakdown) {
-    selectedTestItem.value = item
-    showBreakdownDialog.value = true
-  }
+  selectedTestItem.value = item
+  showBreakdownDialog.value = true
 }
 
 const showScoreBreakdownForIsn = (item: RankingItem) => {
@@ -1875,106 +1656,6 @@ function resetRankingFilters() {
 function formatUploadScore(score: number | null | undefined): string {
   if (score === null || score === undefined) return '-'
   return score.toFixed(2)
-}
-
-function formatBreakdownNumber(value: number | null | undefined, fallback = '-'): string {
-  if (value === null || value === undefined || Number.isNaN(value)) return fallback
-  return Number.isInteger(value) ? String(value) : value.toFixed(2)
-}
-
-function formatScoringAlgorithm(type: string | undefined): string {
-  switch (type) {
-    case 'symmetrical':
-      return 'Symmetrical'
-    case 'asymmetrical':
-      return 'Asymmetrical'
-    case 'per_mask':
-      return 'Near-Zero'
-    case 'evm':
-      return 'EVM'
-    case 'throughput':
-      return 'Throughput'
-    case 'binary':
-      return 'Binary'
-    default:
-      return type || 'System Default'
-  }
-}
-
-function formatPolicyLabel(policy: string): string {
-  if (policy === 'higher') return 'Higher is better'
-  if (policy === 'lower') return 'Lower is better'
-  return 'Symmetrical'
-}
-
-function getTargetLabel(policy: string | null | undefined): string {
-  if (policy === 'higher') return 'higher is better'
-  if (policy === 'lower') return 'lower is better'
-  return 'centered'
-}
-
-function getBreakdownRowIcon(row: BreakdownGridRow): string {
-  const iconMap: Record<string, string> = {
-    ucl: 'mdi:arrow-up-bold',
-    lcl: 'mdi:arrow-down-bold',
-    actual: 'mdi:speedometer',
-    target: 'mdi:crosshairs-gps',
-    scoringType: 'mdi:function-variant',
-    weight: 'mdi:weight',
-    deviation: 'mdi:delta',
-    policy: 'mdi:shield-check-outline',
-    score: 'mdi:star',
-  }
-  return iconMap[row.key] ?? 'mdi:information-outline'
-}
-
-function getBreakdownIconClass(row: BreakdownGridRow): string {
-  const classMap: Record<string, string> = {
-    ucl: 'top-product-ranking-upload-log__breakdown-row-icon--red',
-    lcl: 'top-product-ranking-upload-log__breakdown-row-icon--orange',
-    actual: 'top-product-ranking-upload-log__breakdown-row-icon--blue',
-    target: 'top-product-ranking-upload-log__breakdown-row-icon--green',
-    scoringType: 'top-product-ranking-upload-log__breakdown-row-icon--purple',
-    weight: 'top-product-ranking-upload-log__breakdown-row-icon--muted',
-    deviation: 'top-product-ranking-upload-log__breakdown-row-icon--amber',
-    policy: 'top-product-ranking-upload-log__breakdown-row-icon--muted',
-    score: 'top-product-ranking-upload-log__breakdown-row-icon--star',
-  }
-  return classMap[row.key] ?? ''
-}
-
-function getUploadScoringFormula(scoringType: string | undefined): string {
-  switch (scoringType) {
-    case 'asymmetrical':
-      return 'Score = directional distance from target, adjusted by policy'
-    case 'per_mask':
-      return 'Score = 10 when value is near zero, then decreases toward UCL'
-    case 'evm':
-      return 'Score = 10 when EVM is low, then decreases as it approaches UCL'
-    case 'throughput':
-      return 'Score = 10 when throughput is high, with LCL as the minimum bound'
-    case 'binary':
-      return 'Score = PASS ? 10 : 0'
-    default:
-      return 'Score = 10 x (1 - distance from target / allowed distance)'
-  }
-}
-
-function getUploadScoringExplanation(scoringType: string | undefined): string {
-  switch (scoringType) {
-    case 'asymmetrical':
-      return 'This item uses a configured target and policy, so the score favors values on the preferred side of the target while still respecting the available limits.'
-    case 'per_mask':
-      return 'Near-zero items are best when the measured value is closest to zero. Higher values reduce the score as they approach the upper limit.'
-    case 'evm':
-      return 'EVM items favor lower measured values. The score drops as the value moves toward the upper criteria limit.'
-    case 'throughput':
-      return 'Throughput items favor higher measured values. Values below the lower criteria limit receive a lower score.'
-    case 'binary':
-      return 'Binary items are scored directly from their PASS or FAIL result.'
-    default:
-      return 'Symmetrical scoring uses the midpoint between limits as the target and lowers the score as the measurement moves away from that center.'
-  }
 }
 
 function resultBadgeClass(result: string | null): string {
