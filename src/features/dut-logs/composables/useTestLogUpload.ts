@@ -21,7 +21,7 @@ export interface TestLogMetadata {
 export interface ScoreBreakdown {
   // UPDATED: Universal scoring fields (used by Upload Log tab)
   scoring_type?: string // symmetrical, asymmetrical, per_mask, evm, binary, throughput
-  score?: number // 0-10 score
+  score?: number | null // 0-10 score
   target?: number | null
   deviation?: number | null
   weight?: number

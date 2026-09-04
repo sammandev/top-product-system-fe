@@ -362,8 +362,10 @@ interface Props {
   stations?: string[]
   devices?: string[]
   testItemStations?: Map<string, Set<string>> // Maps test item name -> stations it appears in
+  stationDevices?: Map<string, Set<string>> // Maps station -> devices in that station
   defaultStation?: string | null // Initial station to filter by when dialog opens
   initialDeviceScope?: string[]
+  initialIncludedTestItems?: string[]
 }
 
 interface Emits {
@@ -377,6 +379,7 @@ const props = withDefaults(defineProps<Props>(), {
   devices: () => [],
   defaultStation: null,
   initialDeviceScope: () => [],
+  initialIncludedTestItems: () => [],
 })
 
 const emit = defineEmits<Emits>()
@@ -430,12 +433,24 @@ const stationSelectOptions = computed(() => [
   })),
 ])
 
-const deviceSelectOptions = computed(() =>
-  (props.devices || []).map((device) => ({
+const deviceSelectOptions = computed(() => {
+  if (selectedStation.value && props.stationDevices) {
+    const stationDevs = props.stationDevices.get(selectedStation.value)
+    if (stationDevs && stationDevs.size > 0) {
+      return Array.from(stationDevs)
+        .sort()
+        .map((device) => ({
+          label: device,
+          value: device,
+        }))
+    }
+  }
+
+  return (props.devices || []).map((device) => ({
     label: device,
     value: device,
-  })),
-)
+  }))
+})
 
 // Single item scoring dialog (popup from clicking scoring type button)
 const singleItemScoringDialog = ref(false)
@@ -544,10 +559,22 @@ function buildAppliedConfigs(): RescoreScoringConfig[] {
 
 const appliedConfigCount = computed(() => buildAppliedConfigs().length)
 
+function syncSelectedItemsFromScope() {
+  const currentMode = activeSelectionMode.value
+  const names = new Set<string>()
+  for (const [name, mode] of itemScopeModes.value.entries()) {
+    if (mode === currentMode) {
+      names.add(name)
+    }
+  }
+  selectedItemNames.value = names
+}
+
 // Initialize scoring configs from test items - preserving original order
 function initializeConfigs() {
   const existingMap = new Map<string, RescoreScoringConfig>()
   props.existingConfigs.forEach((cfg) => existingMap.set(cfg.test_item_name, cfg))
+  const initialIncludedSet = new Set(props.initialIncludedTestItems || [])
 
   // Use array to preserve original order from props.testItems
   const seen = new Set<string>()
@@ -568,12 +595,17 @@ function initializeConfigs() {
       scopeModes.set(name, existingConfig.enabled === false ? 'excluded' : 'included')
       return existingConfig
     }
+    if (initialIncludedSet.has(name)) {
+      scopeModes.set(name, 'included')
+      return { ...defaultConfig, enabled: true }
+    }
     scopeModes.set(name, 'auto')
     return defaultConfig
   })
   itemScopeModes.value = scopeModes
   selectedDevices.value = [...props.initialDeviceScope]
   globalMinScore.value = getCommonMinScore(props.existingConfigs) ?? 0.65
+  syncSelectedItemsFromScope()
 }
 
 function getCommonMinScore(configs: RescoreScoringConfig[]): number | undefined {
@@ -784,7 +816,7 @@ function getItemStatusClass(name: string): string {
 
 function setActiveSelectionMode(mode: ActiveSelectionMode) {
   activeSelectionMode.value = mode
-  selectedItemNames.value = new Set()
+  syncSelectedItemsFromScope()
 }
 
 function toggleItemSelection(name: string) {
@@ -1154,9 +1186,8 @@ watch(
   () => props.modelValue,
   (isOpen) => {
     if (isOpen) {
-      initializeConfigs()
-      selectedItemNames.value = new Set()
       activeSelectionMode.value = 'included'
+      initializeConfigs()
       dialogFullscreen.value = false
       searchQuery.value = ''
       // Set default station filter if provided

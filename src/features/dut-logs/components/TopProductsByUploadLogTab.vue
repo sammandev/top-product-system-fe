@@ -105,10 +105,28 @@
         </button>
       </div>
 
-      <div v-if="appliedScoringConfigs.length > 0" class="upload-log-shell__notice upload-log-shell__notice--success">
-        <div>
-          <strong>Scoring configured</strong>
-          <p>{{ appliedScoringConfigs.length }} item{{ appliedScoringConfigs.length === 1 ? '' : 's' }} currently use custom scoring rules.</p>
+      <div v-if="appliedScoringConfigs.length > 0" class="upload-log-shell__notice upload-log-shell__notice--success upload-log-shell__notice--configured">
+        <div class="upload-log-shell__configured-content">
+          <div class="upload-log-shell__configured-header">
+            <strong>Scoring configured</strong>
+            <span class="upload-log-comparison__pill upload-log-comparison__pill--success">
+              {{ appliedScoringConfigs.length }} total item{{ appliedScoringConfigs.length === 1 ? '' : 's' }}
+            </span>
+          </div>
+          <div v-if="configuredStationBreakdown.length > 0" class="upload-log-shell__configured-stations">
+            <div
+              v-for="item in configuredStationBreakdown"
+              :key="item.station"
+              class="upload-log-shell__station-pill"
+            >
+              <span class="upload-log-shell__station-pill-name">{{ item.station }}:</span>
+              <strong>{{ item.configuredCount }}</strong>
+              <small v-if="item.totalStationItems > 0">/ {{ item.totalStationItems }} items</small>
+            </div>
+          </div>
+          <p v-else>
+            {{ appliedScoringConfigs.length }} item{{ appliedScoringConfigs.length === 1 ? '' : 's' }} currently use custom scoring rules.
+          </p>
         </div>
 
         <button type="button" class="upload-log-shell__link" @click="clearScoringConfigs">
@@ -196,6 +214,16 @@
           <span>Search Test Items</span>
           <input v-model="searchQuery" type="text" placeholder="Search by test item name">
         </label>
+
+        <label class="upload-log-comparison__field">
+          <span>Pin Columns</span>
+          <AppMultiSelect v-model="comparisonLockedColumns" :options="pinColumnSelectOptions" placeholder="Pin columns" />
+        </label>
+
+        <label class="upload-log-comparison__field">
+          <span>Show Columns</span>
+          <AppMultiSelect v-model="comparisonVisibleColumns" :options="visibleColumnSelectOptions" placeholder="All columns" />
+        </label>
       </div>
 
       <div v-if="iplasLoading" class="upload-log-comparison__notice">
@@ -222,54 +250,99 @@
       >
         <ColumnGroup type="header">
           <Row>
-            <Column header="Test Item" :rowspan="2" />
-            <Column header="UCL" :rowspan="2" />
-            <Column header="LCL" :rowspan="2" />
             <Column
-              v-for="isn in displayedIsns"
-              :key="`group-${isn}`"
-              :header="isn"
-              :colspan="2"
+              header="Test Item"
+              :rowspan="2"
+              :frozen="isColumnLocked('test_item')"
+              alignFrozen="left"
+              :class="{ 'upload-log-comparison__frozen-header': isColumnLocked('test_item') }"
             />
-            <Column v-if="displayedIsns.length > 0" header="Score" :colspan="displayedIsns.length * 2" />
+            <Column
+              v-if="isColumnVisible('usl')"
+              header="UCL"
+              :rowspan="2"
+              :frozen="isColumnLocked('usl')"
+              alignFrozen="left"
+              :class="{ 'upload-log-comparison__frozen-header': isColumnLocked('usl') }"
+            />
+            <Column
+              v-if="isColumnVisible('lsl')"
+              header="LCL"
+              :rowspan="2"
+              :frozen="isColumnLocked('lsl')"
+              alignFrozen="left"
+              :class="{ 'upload-log-comparison__frozen-header': isColumnLocked('lsl') }"
+            />
+            <template v-for="isn in displayedIsns" :key="`group-${isn}`">
+              <Column
+                v-if="isColumnVisible('uploaded_val') || isColumnVisible('iplas_val')"
+                :header="isn"
+                :colspan="(isColumnVisible('uploaded_val') ? 1 : 0) + (isColumnVisible('iplas_val') ? 1 : 0)"
+              />
+            </template>
+            <Column
+              v-if="displayedIsns.length > 0 && (isColumnVisible('uploaded_score') || isColumnVisible('iplas_score'))"
+              header="Score"
+              :colspan="displayedIsns.length * ((isColumnVisible('uploaded_score') ? 1 : 0) + (isColumnVisible('iplas_score') ? 1 : 0))"
+            />
           </Row>
           <Row>
             <template v-for="(isn, idx) in displayedIsns" :key="`value-row-${isn}`">
-              <Column header="Uploaded" />
-              <Column header="iPLAS" />
+              <Column v-if="isColumnVisible('uploaded_val')" header="Uploaded" />
+              <Column v-if="isColumnVisible('iplas_val')" header="iPLAS" />
             </template>
             <template v-for="(isn, idx) in displayedIsns" :key="`score-row-${isn}`">
-              <Column :header="`${shortIsnLabel(isn)} (Upl)`" />
-              <Column :header="`${shortIsnLabel(isn)} (iPLAS)`" />
+              <Column v-if="isColumnVisible('uploaded_score')" :header="`${shortIsnLabel(isn)} (Upl)`" />
+              <Column v-if="isColumnVisible('iplas_score')" :header="`${shortIsnLabel(isn)} (iPLAS)`" />
             </template>
           </Row>
         </ColumnGroup>
 
-        <Column field="test_item" sortable>
+        <Column
+          field="test_item"
+          sortable
+          :frozen="isColumnLocked('test_item')"
+          alignFrozen="left"
+          :class="{ 'upload-log-comparison__frozen-cell': isColumnLocked('test_item') }"
+        >
           <template #body="slotProps">
             <span class="upload-log-comparison__strong">{{ slotProps.data.test_item }}</span>
           </template>
         </Column>
 
-        <Column field="usl" sortable>
+        <Column
+          v-if="isColumnVisible('usl')"
+          field="usl"
+          sortable
+          :frozen="isColumnLocked('usl')"
+          alignFrozen="left"
+          :class="{ 'upload-log-comparison__frozen-cell': isColumnLocked('usl') }"
+        >
           <template #body="slotProps">
             <span class="upload-log-comparison__muted">{{ slotProps.data.usl ?? '-' }}</span>
           </template>
         </Column>
 
-        <Column field="lsl" sortable>
+        <Column
+          v-if="isColumnVisible('lsl')"
+          field="lsl"
+          sortable
+          :frozen="isColumnLocked('lsl')"
+          alignFrozen="left"
+          :class="{ 'upload-log-comparison__frozen-cell': isColumnLocked('lsl') }"
+        >
           <template #body="slotProps">
             <span class="upload-log-comparison__muted">{{ slotProps.data.lsl ?? '-' }}</span>
           </template>
         </Column>
 
         <template v-for="(isn, idx) in displayedIsns" :key="`uploaded-${isn}`">
-          <Column :field="`uploaded_val_${idx}`" sortable>
+          <Column v-if="isColumnVisible('uploaded_val')" :field="`uploaded_val_${idx}`" sortable>
             <template #body="slotProps">
               {{ slotProps.data[`uploaded_val_${idx}`] ?? '-' }}
             </template>
           </Column>
-          <Column :field="`iplas_val_${idx}`" sortable>
+          <Column v-if="isColumnVisible('iplas_val')" :field="`iplas_val_${idx}`" sortable>
             <template #body="slotProps">
               {{ slotProps.data[`iplas_val_${idx}`] ?? '-' }}
             </template>
@@ -277,25 +350,33 @@
         </template>
 
         <template v-for="(isn, idx) in displayedIsns" :key="`score-${isn}`">
-          <Column :field="`uploaded_score_${idx}`" sortable>
+          <Column v-if="isColumnVisible('uploaded_score')" :field="`uploaded_score_${idx}`" sortable>
             <template #body="slotProps">
-              <span
+              <button
                 v-if="slotProps.data[`uploaded_score_${idx}`] != null"
+                type="button"
+                class="cursor-pointer border-0"
                 :class="scoreChipClass(Number(slotProps.data[`uploaded_score_${idx}`]))"
+                title="Click to view score breakdown"
+                @click="openScoreBreakdownForComparison(slotProps.data, idx, 'uploaded')"
               >
                 {{ Number(slotProps.data[`uploaded_score_${idx}`]).toFixed(2) }}
-              </span>
+              </button>
               <span v-else class="upload-log-comparison__muted">-</span>
             </template>
           </Column>
-          <Column :field="`iplas_score_${idx}`" sortable>
+          <Column v-if="isColumnVisible('iplas_score')" :field="`iplas_score_${idx}`" sortable>
             <template #body="slotProps">
-              <span
+              <button
                 v-if="slotProps.data[`iplas_score_${idx}`] != null"
+                type="button"
+                class="cursor-pointer border-0"
                 :class="scoreChipClass(Number(slotProps.data[`iplas_score_${idx}`]))"
+                title="Click to view score breakdown"
+                @click="openScoreBreakdownForComparison(slotProps.data, idx, 'iplas')"
               >
                 {{ Number(slotProps.data[`iplas_score_${idx}`]).toFixed(2) }}
-              </span>
+              </button>
               <span v-else class="upload-log-comparison__muted">-</span>
             </template>
           </Column>
@@ -348,6 +429,16 @@
           <span>Search Test Items</span>
           <input v-model="searchQuery" type="text" placeholder="Search by test item name">
         </label>
+
+        <label class="upload-log-comparison__field">
+          <span>Pin Columns</span>
+          <AppMultiSelect v-model="comparisonLockedColumns" :options="pinColumnSelectOptions" placeholder="Pin columns" />
+        </label>
+
+        <label class="upload-log-comparison__field">
+          <span>Show Columns</span>
+          <AppMultiSelect v-model="comparisonVisibleColumns" :options="visibleColumnSelectOptions" placeholder="All columns" />
+        </label>
       </div>
 
       <div class="upload-log-comparison__table-wrap">
@@ -367,54 +458,99 @@
         >
           <ColumnGroup type="header">
             <Row>
-              <Column header="Test Item" :rowspan="2" />
-              <Column header="UCL" :rowspan="2" />
-              <Column header="LCL" :rowspan="2" />
               <Column
-                v-for="isn in displayedIsns"
-                :key="`overlay-group-${isn}`"
-                :header="isn"
-                :colspan="2"
+                header="Test Item"
+                :rowspan="2"
+                :frozen="isColumnLocked('test_item')"
+                alignFrozen="left"
+                :class="{ 'upload-log-comparison__frozen-header': isColumnLocked('test_item') }"
               />
-              <Column v-if="displayedIsns.length > 0" header="Score" :colspan="displayedIsns.length * 2" />
+              <Column
+                v-if="isColumnVisible('usl')"
+                header="UCL"
+                :rowspan="2"
+                :frozen="isColumnLocked('usl')"
+                alignFrozen="left"
+                :class="{ 'upload-log-comparison__frozen-header': isColumnLocked('usl') }"
+              />
+              <Column
+                v-if="isColumnVisible('lsl')"
+                header="LCL"
+                :rowspan="2"
+                :frozen="isColumnLocked('lsl')"
+                alignFrozen="left"
+                :class="{ 'upload-log-comparison__frozen-header': isColumnLocked('lsl') }"
+              />
+              <template v-for="isn in displayedIsns" :key="`overlay-group-${isn}`">
+                <Column
+                  v-if="isColumnVisible('uploaded_val') || isColumnVisible('iplas_val')"
+                  :header="isn"
+                  :colspan="(isColumnVisible('uploaded_val') ? 1 : 0) + (isColumnVisible('iplas_val') ? 1 : 0)"
+                />
+              </template>
+              <Column
+                v-if="displayedIsns.length > 0 && (isColumnVisible('uploaded_score') || isColumnVisible('iplas_score'))"
+                header="Score"
+                :colspan="displayedIsns.length * ((isColumnVisible('uploaded_score') ? 1 : 0) + (isColumnVisible('iplas_score') ? 1 : 0))"
+              />
             </Row>
             <Row>
               <template v-for="(isn, idx) in displayedIsns" :key="`overlay-value-${isn}`">
-                <Column header="Uploaded" />
-                <Column header="iPLAS" />
+                <Column v-if="isColumnVisible('uploaded_val')" header="Uploaded" />
+                <Column v-if="isColumnVisible('iplas_val')" header="iPLAS" />
               </template>
               <template v-for="(isn, idx) in displayedIsns" :key="`overlay-score-${isn}`">
-                <Column :header="`${shortIsnLabel(isn)} (Upl)`" />
-                <Column :header="`${shortIsnLabel(isn)} (iPLAS)`" />
+                <Column v-if="isColumnVisible('uploaded_score')" :header="`${shortIsnLabel(isn)} (Upl)`" />
+                <Column v-if="isColumnVisible('iplas_score')" :header="`${shortIsnLabel(isn)} (iPLAS)`" />
               </template>
             </Row>
           </ColumnGroup>
 
-          <Column field="test_item" sortable>
+          <Column
+            field="test_item"
+            sortable
+            :frozen="isColumnLocked('test_item')"
+            alignFrozen="left"
+            :class="{ 'upload-log-comparison__frozen-cell': isColumnLocked('test_item') }"
+          >
             <template #body="slotProps">
               <span class="upload-log-comparison__strong">{{ slotProps.data.test_item }}</span>
             </template>
           </Column>
 
-          <Column field="usl" sortable>
+          <Column
+            v-if="isColumnVisible('usl')"
+            field="usl"
+            sortable
+            :frozen="isColumnLocked('usl')"
+            alignFrozen="left"
+            :class="{ 'upload-log-comparison__frozen-cell': isColumnLocked('usl') }"
+          >
             <template #body="slotProps">
               <span class="upload-log-comparison__muted">{{ slotProps.data.usl ?? '-' }}</span>
             </template>
           </Column>
 
-          <Column field="lsl" sortable>
+          <Column
+            v-if="isColumnVisible('lsl')"
+            field="lsl"
+            sortable
+            :frozen="isColumnLocked('lsl')"
+            alignFrozen="left"
+            :class="{ 'upload-log-comparison__frozen-cell': isColumnLocked('lsl') }"
+          >
             <template #body="slotProps">
               <span class="upload-log-comparison__muted">{{ slotProps.data.lsl ?? '-' }}</span>
             </template>
           </Column>
 
           <template v-for="(isn, idx) in displayedIsns" :key="`overlay-uploaded-${isn}`">
-            <Column :field="`uploaded_val_${idx}`" sortable>
+            <Column v-if="isColumnVisible('uploaded_val')" :field="`uploaded_val_${idx}`" sortable>
               <template #body="slotProps">
                 {{ slotProps.data[`uploaded_val_${idx}`] ?? '-' }}
               </template>
             </Column>
-            <Column :field="`iplas_val_${idx}`" sortable>
+            <Column v-if="isColumnVisible('iplas_val')" :field="`iplas_val_${idx}`" sortable>
               <template #body="slotProps">
                 {{ slotProps.data[`iplas_val_${idx}`] ?? '-' }}
               </template>
@@ -422,25 +558,33 @@
           </template>
 
           <template v-for="(isn, idx) in displayedIsns" :key="`overlay-score-col-${isn}`">
-            <Column :field="`uploaded_score_${idx}`" sortable>
+            <Column v-if="isColumnVisible('uploaded_score')" :field="`uploaded_score_${idx}`" sortable>
               <template #body="slotProps">
-                <span
+                <button
                   v-if="slotProps.data[`uploaded_score_${idx}`] != null"
+                  type="button"
+                  class="cursor-pointer border-0"
                   :class="scoreChipClass(Number(slotProps.data[`uploaded_score_${idx}`]))"
+                  title="Click to view score breakdown"
+                  @click="openScoreBreakdownForComparison(slotProps.data, idx, 'uploaded')"
                 >
                   {{ Number(slotProps.data[`uploaded_score_${idx}`]).toFixed(2) }}
-                </span>
+                </button>
                 <span v-else class="upload-log-comparison__muted">-</span>
               </template>
             </Column>
-            <Column :field="`iplas_score_${idx}`" sortable>
+            <Column v-if="isColumnVisible('iplas_score')" :field="`iplas_score_${idx}`" sortable>
               <template #body="slotProps">
-                <span
+                <button
                   v-if="slotProps.data[`iplas_score_${idx}`] != null"
+                  type="button"
+                  class="cursor-pointer border-0"
                   :class="scoreChipClass(Number(slotProps.data[`iplas_score_${idx}`]))"
+                  title="Click to view score breakdown"
+                  @click="openScoreBreakdownForComparison(slotProps.data, idx, 'iplas')"
                 >
                   {{ Number(slotProps.data[`iplas_score_${idx}`]).toFixed(2) }}
-                </span>
+                </button>
                 <span v-else class="upload-log-comparison__muted">-</span>
               </template>
             </Column>
@@ -452,78 +596,99 @@
   <AppDialog
     v-model="showBreakdownDialog"
     v-model:fullscreen="breakdownFullscreen"
-    width="min(92vw, 40rem)"
+    width="min(92vw, 36rem)"
     fullscreen-width="96vw"
+    :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
     fullscreenable
+    :showFooter="false"
     title="Score Breakdown"
-    description="Universal Scoring"
-    class="upload-log-breakdown-dialog"
+    :description="breakdownItem?.test_item ?? 'Score Breakdown'"
+    class="iplas-details-dialog iplas-breakdown-dialog"
   >
+    <template #header>
+      <div class="iplas-details-dialog__dialog-title">
+        <Icon icon="mdi:table-search" />
+        <h2>Score Breakdown</h2>
+      </div>
+    </template>
 
-    <div v-if="breakdownItem" class="upload-log-breakdown">
-      <section class="upload-log-breakdown__summary-card">
-        <div>
-          <p class="upload-log-breakdown__eyebrow">Test Item</p>
-          <h3>{{ breakdownItem.test_item }}</h3>
-        </div>
+    <div v-if="breakdownItem" class="iplas-details-subdialog">
+      <section class="iplas-breakdown__name-card">
+        <span class="iplas-breakdown__name-text">{{ breakdownItem.test_item }}</span>
+      </section>
 
-        <div class="upload-log-breakdown__summary-grid">
-          <article>
-            <span>Actual Value</span>
-            <strong>{{ breakdownItem.value }}</strong>
-          </article>
-          <article>
-            <span>Score</span>
-            <strong>
-              <span :class="scoreChipClass(breakdownItem.score ?? 0)">
-                {{ breakdownItem.score?.toFixed(2) ?? 'N/A' }}
-              </span>
-            </strong>
-          </article>
-          <article>
-            <span>Scoring Type</span>
-            <strong>
-              <span :class="scoringTypeChipClass(breakdownItem.score_breakdown?.scoring_type ?? '')">
-                {{ breakdownItem.score_breakdown?.scoring_type ?? 'N/A' }}
-              </span>
-            </strong>
-          </article>
+      <section class="iplas-breakdown__rows-container">
+        <div v-for="row in breakdownRows" :key="row.key" class="iplas-breakdown__row">
+          <div class="iplas-breakdown__row-left">
+            <span class="iplas-breakdown__row-icon" :class="getBreakdownIconClass(row)">
+              <Icon :icon="getBreakdownRowIcon(row)" />
+            </span>
+            <span class="iplas-breakdown__row-label">{{ row.label }}</span>
+          </div>
+          <div class="iplas-breakdown__row-right">
+            <span
+              v-if="row.valueTone === 'score'"
+              class="upload-log-score-chip"
+              :class="scoreChipClass(breakdownItem.score ?? 0)"
+            >
+              {{ row.value }}
+            </span>
+            <span
+              v-else-if="row.valueTone === 'scoring-type'"
+              class="iplas-breakdown__value-pill iplas-breakdown__value-pill--cool"
+            >
+              {{ row.value }}
+            </span>
+            <span
+              v-else-if="row.valueTone === 'policy'"
+              class="iplas-breakdown__value-pill iplas-breakdown__value-pill--neutral"
+            >
+              {{ row.value }}
+            </span>
+            <span
+              v-else
+              :class="[row.valueTone === 'warning' ? 'iplas-breakdown__value--warning' : '', 'iplas-breakdown__value-text']"
+            >
+              {{ row.value }}
+            </span>
+          </div>
         </div>
       </section>
 
-      <div class="upload-log-breakdown__table-wrap upload-log-breakdown__grid">
-        <DataTable :value="breakdownRows" class="p-datatable-sm app-interactive-datatable" dataKey="key">
-          <Column field="label" header="Metric">
-            <template #body="slotProps">
-              <span class="upload-log-breakdown__metric-label">{{ slotProps.data.label }}</span>
-            </template>
-          </Column>
-          <Column field="value" header="Value">
-            <template #body="slotProps">
-              <span v-if="slotProps.data.valueType === 'scoring-type'"
-                :class="scoringTypeChipClass(breakdownItem?.score_breakdown?.scoring_type ?? '')">
-                {{ slotProps.data.value }}
-              </span>
-              <span v-else-if="slotProps.data.valueType === 'policy'" class="upload-log-comparison__pill">
-                {{ slotProps.data.value }}
-              </span>
-              <span v-else-if="slotProps.data.valueType === 'score'"
-                :class="scoreChipClass(breakdownItem?.score_breakdown?.score ?? 0)">
-                {{ slotProps.data.value }}
-              </span>
-              <span v-else :class="slotProps.data.valueType === 'warning' ? 'upload-log-breakdown__deviation-warning' : ''">
-                {{ slotProps.data.value }}
-              </span>
-            </template>
-          </Column>
-        </DataTable>
-      </div>
+      <details class="iplas-details-dialog__explanation-card">
+        <summary>
+          <span>
+            <Icon icon="mdi:help-circle-outline" /> How is this score calculated?
+          </span>
+        </summary>
+        <div class="iplas-details-dialog__explanation-body">
+          <div class="score-formula-panel score-formula-panel--compact">
+            <div class="iplas-details-dialog__metric-label">Formula</div>
+            <div class="score-formula-equation">{{ getScoringFormula(breakdownItem.score_breakdown?.scoring_type) }}</div>
+            <dl class="score-formula-variable-list">
+              <template
+                v-for="variable in getScoringFormulaVariables(breakdownItem.score_breakdown?.scoring_type)"
+                :key="variable.key"
+              >
+                <dt>{{ variable.key }}</dt>
+                <dd>{{ variable.value }}</dd>
+              </template>
+            </dl>
+          </div>
+        </div>
+      </details>
     </div>
 
     <template #footer>
-      <button type="button" class="upload-log-comparison__ghost-button" @click="showBreakdownDialog = false">
-        Close
-      </button>
+      <div class="iplas-details-dialog__footer-actions">
+        <button
+          type="button"
+          class="iplas-details-dialog__button iplas-details-dialog__button--ghost"
+          @click="showBreakdownDialog = false"
+        >
+          Close
+        </button>
+      </div>
     </template>
   </AppDialog>
 
@@ -533,8 +698,9 @@
   <!-- UPDATED: Upload Scoring Config Dialog -->
   <UploadScoringConfigDialog v-model="showScoringConfigDialog" :test-items="extractedTestItems"
     :existing-configs="appliedScoringConfigs" :stations="extractedStations" :devices="extractedDevices"
-    :test-item-stations="testItemStationsMap" :default-station="selectedUploadedStation"
-    :initial-device-scope="selectedDeviceScope" @apply="handleScoringConfigApply" />
+    :test-item-stations="testItemStationsMap" :station-devices="stationDevicesMap"
+    :default-station="selectedUploadedStation" :initial-device-scope="selectedDeviceScope"
+    :initial-included-test-items="includedTestItemNames" @apply="handleScoringConfigApply" />
 </template>
 
 <script setup lang="ts">
@@ -544,6 +710,7 @@ import ColumnGroup from 'primevue/columngroup'
 import DataTable from 'primevue/datatable'
 import Row from 'primevue/row'
 import { computed, ref, watch } from 'vue'
+import { SCORING_TYPE_INFO, type ScoringType } from '@/features/dut/types/scoring.types'
 import type { IplasIsnSearchRecord } from '@/features/dut-logs/api/iplasProxyApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
 import {
@@ -556,6 +723,7 @@ import {
   type PerIsnData,
   type RescoreItemResult,
   type RescoreScoringConfig,
+  type ScoreBreakdown,
   type TestLogParseResponseEnhanced,
   type UploadLogScopeMode,
   type UploadScoringConfigApplyPayload,
@@ -621,10 +789,40 @@ const extractedTestItems = ref<ParsedTestItemEnhanced[]>([])
 const extractedStations = ref<string[]>([])
 const extractedDevices = ref<string[]>([])
 const testItemStationsMap = ref<Map<string, Set<string>>>(new Map()) // Maps test item -> stations
+const stationDevicesMap = ref<Map<string, Set<string>>>(new Map()) // Maps station -> devices
 const appliedScoringConfigs = ref<RescoreScoringConfig[]>([])
 const selectedDeviceScope = ref<string[]>([])
 const scoringScopeMode = ref<UploadLogScopeMode>('default')
 const includedTestItemNames = ref<string[]>([])
+
+// Table column configuration (pinning & visibility)
+const comparisonLockedColumns = ref<string[]>(['test_item'])
+const comparisonVisibleColumns = ref<string[]>([
+  'usl',
+  'lsl',
+  'uploaded_val',
+  'iplas_val',
+  'uploaded_score',
+  'iplas_score',
+])
+
+const pinColumnSelectOptions = [
+  { label: 'Test Item', value: 'test_item' },
+  { label: 'UCL', value: 'usl' },
+  { label: 'LCL', value: 'lsl' },
+]
+
+const visibleColumnSelectOptions = [
+  { label: 'UCL', value: 'usl' },
+  { label: 'LCL', value: 'lsl' },
+  { label: 'Uploaded Value', value: 'uploaded_val' },
+  { label: 'iPLAS Value', value: 'iplas_val' },
+  { label: 'Uploaded Score', value: 'uploaded_score' },
+  { label: 'iPLAS Score', value: 'iplas_score' },
+]
+
+const isColumnLocked = (key: string) => comparisonLockedColumns.value.includes(key)
+const isColumnVisible = (key: string) => comparisonVisibleColumns.value.includes(key)
 
 // Score breakdown dialog (new universal scoring)
 const showBreakdownDialog = ref(false)
@@ -641,13 +839,13 @@ const breakdownRows = computed(() => {
     key: string
     label: string
     value: string
-    valueType?: 'scoring-type' | 'policy' | 'score' | 'warning'
+    valueTone?: 'scoring-type' | 'policy' | 'score' | 'warning'
   }> = [
     {
       key: 'scoring_type',
       label: 'Scoring Type',
       value: breakdown?.scoring_type ?? 'N/A',
-      valueType: 'scoring-type',
+      valueTone: 'scoring-type',
     },
   ]
 
@@ -672,12 +870,12 @@ const breakdownRows = computed(() => {
       key: 'deviation',
       label: 'Deviation',
       value: breakdown.deviation.toFixed(2),
-      valueType: Math.abs(breakdown.deviation ?? 0) > 1 ? 'warning' : undefined,
+      valueTone: Math.abs(breakdown.deviation ?? 0) > 1 ? 'warning' : undefined,
     })
   }
 
   if (breakdown?.policy) {
-    rows.push({ key: 'policy', label: 'Policy', value: breakdown.policy, valueType: 'policy' })
+    rows.push({ key: 'policy', label: 'Policy', value: breakdown.policy, valueTone: 'policy' })
   }
 
   rows.push({ key: 'weight', label: 'Weight', value: String(breakdown?.weight ?? 1.0) })
@@ -685,10 +883,175 @@ const breakdownRows = computed(() => {
     key: 'score',
     label: 'Score (0-10)',
     value: breakdown?.score?.toFixed(2) ?? 'N/A',
-    valueType: 'score',
+    valueTone: 'score',
   })
 
   return rows
+})
+
+function getBreakdownRowIcon(row: { key: string }): string {
+  const iconMap: Record<string, string> = {
+    scoring_type: 'mdi:function-variant',
+    ucl: 'mdi:arrow-collapse-up',
+    lcl: 'mdi:arrow-collapse-down',
+    target: 'mdi:crosshairs-gps',
+    actual: 'mdi:numeric',
+    deviation: 'mdi:delta',
+    policy: 'mdi:compass-outline',
+    weight: 'mdi:weight',
+    score: 'mdi:star',
+  }
+  return iconMap[row.key] || 'mdi:information-outline'
+}
+
+function getBreakdownIconClass(row: { key: string }): string {
+  const classMap: Record<string, string> = {
+    scoring_type: 'iplas-breakdown__row-icon--purple',
+    ucl: 'iplas-breakdown__row-icon--red',
+    lcl: 'iplas-breakdown__row-icon--orange',
+    target: 'iplas-breakdown__row-icon--green',
+    actual: 'iplas-breakdown__row-icon--blue',
+    deviation: 'iplas-breakdown__row-icon--amber',
+    policy: 'iplas-breakdown__row-icon--muted',
+    weight: 'iplas-breakdown__row-icon--muted',
+    score: 'iplas-breakdown__row-icon--star',
+  }
+  return classMap[row.key] || 'iplas-breakdown__row-icon--muted'
+}
+
+function getScoringFormula(scoringType?: string): string {
+  const type = (scoringType as ScoringType) || 'binary'
+  const latex = SCORING_TYPE_INFO[type]?.formulaLatex
+  if (latex) {
+    return latex
+      .replace(/\\cdot/g, 'x')
+      .replace(/\\frac\{L - \|x - T\|\}\{L\}/g, '(L - |x - T|) / L')
+      .replace(/\\frac\{L - d\}\{L\}/g, '(L - d) / L')
+      .replace(/\\frac\{UCL - x\}\{UCL\}/g, '(UCL - x) / UCL')
+      .replace(
+        /\\left\(1 - \\frac\{x - ref\}\{UCL - ref\}\\right\)\^\{0\.25\}/g,
+        '(1 - (x - ref) / (UCL - ref))^0.25',
+      )
+      .replace(
+        /\\begin\{cases\} 10\.0 & \\text\{STATUS\} = \\text\{PASS\} \\\\ 0\.0 & \\text\{STATUS\} = \\text\{FAIL\} \\end\{cases\}/g,
+        '10.0 if STATUS = PASS, 0.0 if STATUS = FAIL',
+      )
+  }
+  const formulas: Record<string, string> = {
+    symmetrical: 'Score = 1 + 9 x (L - |x - T|) / L',
+    asymmetrical: 'Score = 1 + 9 x (L - d) / L',
+    per_mask: 'Score = 1 + 9 x (UCL - x) / UCL',
+    evm: 'Score = 1 + 9 x (1 - (x - ref) / (UCL - ref))^0.25',
+    throughput: 'Score = 1 + 9 x (x - LCL) / (UCL - LCL)',
+    binary: '10.0 if PASS, 0.0 if FAIL',
+  }
+  return formulas[type] || 'Score calculation based on criteria limits'
+}
+
+function getScoringFormulaVariables(scoringType?: string): Array<{ key: string; value: string }> {
+  const type = (scoringType as ScoringType) || 'binary'
+  const variables = SCORING_TYPE_INFO[type]?.variables
+  if (!variables) {
+    return []
+  }
+  return Object.entries(variables).map(([key, value]) => ({
+    key,
+    value: value.replace(/\\frac\{UCL \+ LCL\}\{2\}/g, '(UCL + LCL) / 2'),
+  }))
+}
+
+function openScoreBreakdownForComparison(
+  row: Record<string, unknown>,
+  idx: number,
+  source: 'uploaded' | 'iplas',
+) {
+  const testItemName = String(row.test_item || '')
+  const usl = row.usl !== null && row.usl !== undefined ? Number(row.usl) : null
+  const lsl = row.lsl !== null && row.lsl !== undefined ? Number(row.lsl) : null
+  const value = String(row[`${source}_val_${idx}`] ?? '-')
+  const scoreVal = row[`${source}_score_${idx}`]
+  const score = scoreVal !== null && scoreVal !== undefined ? Number(scoreVal) : null
+
+  const compareItem = [
+    ...(compareResult.value?.comparison_value_items || []),
+    ...(compareResult.value?.comparison_non_value_items || []),
+  ].find((it) => it.test_item === testItemName)
+  const perIsn = compareItem?.per_isn_data?.[idx]
+
+  const appliedConfig = appliedScoringConfigs.value.find(
+    (c) => c.test_item_name.toLowerCase() === testItemName.toLowerCase(),
+  )
+  const scoringType =
+    appliedConfig?.scoring_type || perIsn?.score_breakdown?.scoring_type || 'symmetrical'
+
+  const fallbackBreakdown: ScoreBreakdown = {
+    scoring_type: scoringType,
+    ucl: usl,
+    lcl: lsl,
+    target: appliedConfig?.target ?? (usl !== null && lsl !== null ? (usl + lsl) / 2 : null),
+    actual: parseFloat(value) || null,
+    deviation: perIsn?.score_breakdown?.deviation ?? perIsn?.deviation ?? null,
+    weight: appliedConfig?.weight ?? 1.0,
+    score: score ?? undefined,
+    policy: appliedConfig?.policy ?? 'symmetrical',
+  }
+
+  breakdownItem.value = {
+    test_item: testItemName,
+    value,
+    usl,
+    lsl,
+    is_value_type: true,
+    numeric_value: parseFloat(value) || null,
+    is_hex: false,
+    hex_decimal: null,
+    matched_criteria: Boolean(compareItem?.matched_criteria),
+    target: appliedConfig?.target ?? perIsn?.score_breakdown?.target ?? null,
+    score,
+    score_breakdown: perIsn?.score_breakdown ?? fallbackBreakdown,
+  }
+  showBreakdownDialog.value = true
+}
+
+const configuredStationBreakdown = computed(() => {
+  if (appliedScoringConfigs.value.length === 0) return []
+
+  const breakdown: Array<{
+    station: string
+    configuredCount: number
+    totalStationItems: number
+  }> = []
+
+  const stationList =
+    extractedStations.value.length > 0
+      ? extractedStations.value
+      : Array.from(
+          new Set(Array.from(testItemStationsMap.value.values()).flatMap((set) => Array.from(set))),
+        ).sort()
+
+  const configuredNames = new Set(appliedScoringConfigs.value.map((c) => c.test_item_name))
+
+  stationList.forEach((st) => {
+    let count = 0
+    let total = 0
+    testItemStationsMap.value.forEach((stationsSet, itemName) => {
+      if (stationsSet.has(st)) {
+        total++
+        if (configuredNames.has(itemName)) {
+          count++
+        }
+      }
+    })
+    if (count > 0 || (stationList.length === 1 && total > 0)) {
+      breakdown.push({
+        station: st,
+        configuredCount: count,
+        totalStationItems: total,
+      })
+    }
+  })
+
+  return breakdown
 })
 
 // Comparison section fullscreen
@@ -738,9 +1101,19 @@ const allCompareIsns = computed<string[]>(() => {
   if (!compareResult.value?.file_summaries) return []
   return compareResult.value.file_summaries
     .filter((summary: FileSummaryEnhanced) => {
-      if (selectedDeviceScope.value.length === 0) return true
-      const device = summary.metadata?.device
-      return !!device && selectedDeviceScope.value.includes(device)
+      if (selectedDeviceScope.value.length > 0) {
+        const device = summary.metadata?.device
+        if (!device || !selectedDeviceScope.value.includes(device)) {
+          return false
+        }
+      }
+      if (selectedUploadedStation.value) {
+        const station = summary.station || summary.metadata?.station
+        if (station !== selectedUploadedStation.value) {
+          return false
+        }
+      }
+      return true
     })
     .map((s: FileSummaryEnhanced) => s.isn)
     .filter((isn: string | null): isn is string => isn !== null)
@@ -782,8 +1155,11 @@ const uploadedStationSelectOptions = computed(() => [
 
 // ISNs currently displayed in the table columns (with station filter support)
 const displayedIsns = computed(() => {
-  // Start with manually selected ISNs, or all ISNs
-  let isns = selectedCompareIsns.value.length > 0 ? selectedCompareIsns.value : allCompareIsns.value
+  const availableSet = new Set(allCompareIsns.value)
+  let isns =
+    selectedCompareIsns.value.length > 0
+      ? selectedCompareIsns.value.filter((isn) => availableSet.has(isn))
+      : allCompareIsns.value
 
   // Filter by uploaded station if selected
   if (selectedUploadedStation.value && compareResult.value?.file_summaries) {
@@ -805,13 +1181,16 @@ const displayedIsns = computed(() => {
 // Available iPLAS stations across all fetched ISN data
 const iplasStationOptions = computed(() => {
   const stations = new Set<string>()
-  for (const [, records] of iplasDataByIsn.value) {
-    records.forEach((r) => {
-      const name = r.display_station_name || r.station_name
-      if (name) stations.add(name)
-    })
+  const isnsToInclude = new Set(displayedIsns.value)
+  for (const [isn, records] of iplasDataByIsn.value) {
+    if (isnsToInclude.size === 0 || isnsToInclude.has(isn)) {
+      records.forEach((r) => {
+        const name = r.display_station_name || r.station_name
+        if (name) stations.add(name)
+      })
+    }
   }
-  return Array.from(stations)
+  return Array.from(stations).sort()
 })
 
 const iplasStationSelectOptions = computed(() => [
@@ -830,6 +1209,28 @@ const comparisonTableItems = computed(() => {
     ...(compareResult.value.comparison_value_items || []),
     ...(compareResult.value.comparison_non_value_items || []),
   ]
+
+  // Filter to items that belong to the selected station if a station is selected
+  if (selectedUploadedStation.value) {
+    const targetStation = selectedUploadedStation.value
+    items = items.filter((item) => {
+      if (testItemStationsMap.value.get(item.test_item)?.has(targetStation)) {
+        return true
+      }
+      return item.per_isn_data.some((d) => {
+        if (d.station === targetStation) return true
+        if (d.filename) {
+          const s = compareResult.value?.file_summaries?.find((fs) => fs.filename === d.filename)
+          if ((s?.station || s?.metadata?.station) === targetStation) return true
+        }
+        if (d.isn) {
+          const s = compareResult.value?.file_summaries?.find((fs) => fs.isn === d.isn)
+          if ((s?.station || s?.metadata?.station) === targetStation) return true
+        }
+        return false
+      })
+    })
+  }
 
   const isns = displayedIsns.value
 
@@ -918,6 +1319,7 @@ const extractTestItems = async (): Promise<void> => {
   try {
     const stations = new Set<string>()
     const devices = new Set<string>()
+    const stDevices = new Map<string, Set<string>>()
     const itemsMap = new Map<string, ParsedTestItemEnhanced>()
     const itemStationsMap = new Map<string, Set<string>>() // Track which items appear in which stations
 
@@ -944,6 +1346,10 @@ const extractTestItems = async (): Promise<void> => {
           }
           if (summary.metadata?.device) {
             devices.add(summary.metadata.device)
+            if (!stDevices.has(station)) {
+              stDevices.set(station, new Set())
+            }
+            stDevices.get(station)?.add(summary.metadata.device)
           }
         })
 
@@ -1011,6 +1417,10 @@ const extractTestItems = async (): Promise<void> => {
           stations.add(station)
           if (result.metadata?.device) {
             devices.add(result.metadata.device)
+            if (!stDevices.has(station)) {
+              stDevices.set(station, new Set())
+            }
+            stDevices.get(station)?.add(result.metadata.device)
           }
 
           // Track items and their stations
@@ -1035,6 +1445,7 @@ const extractTestItems = async (): Promise<void> => {
     extractedStations.value = Array.from(stations).sort()
     extractedDevices.value = Array.from(devices).sort()
     testItemStationsMap.value = itemStationsMap
+    stationDevicesMap.value = stDevices
   } catch (err: unknown) {
     // If quick-parse fails, we can still open config dialog with empty items
     console.warn('Failed to extract test items for scoring config:', getErrorMessage(err))
@@ -1042,6 +1453,7 @@ const extractTestItems = async (): Promise<void> => {
     extractedStations.value = []
     extractedDevices.value = []
     testItemStationsMap.value = new Map()
+    stationDevicesMap.value = new Map()
   } finally {
     extractingItems.value = false
   }
@@ -1272,6 +1684,7 @@ const handleAnalyze = async () => {
       // Sync extracted test items and stations from compareLogs result
       const stations = new Set<string>()
       const devices = new Set<string>()
+      const stDevices = new Map<string, Set<string>>()
       const itemsMap = new Map<string, ParsedTestItemEnhanced>()
       const itemStationsMap = new Map<string, Set<string>>()
 
@@ -1284,6 +1697,10 @@ const handleAnalyze = async () => {
         }
         if (summary.metadata?.device) {
           devices.add(summary.metadata.device)
+          if (!stDevices.has(station)) {
+            stDevices.set(station, new Set())
+          }
+          stDevices.get(station)?.add(summary.metadata.device)
         }
       })
 
@@ -1341,6 +1758,7 @@ const handleAnalyze = async () => {
       extractedStations.value = Array.from(stations).sort()
       extractedDevices.value = Array.from(devices).sort()
       testItemStationsMap.value = itemStationsMap
+      stationDevicesMap.value = stDevices
     }
   } catch (error: unknown) {
     showErrorNotification(getErrorMessage(error) || 'Analysis failed. Please try again.')
@@ -1360,6 +1778,8 @@ const handleReset = () => {
   extractedTestItems.value = []
   extractedStations.value = []
   extractedDevices.value = []
+  testItemStationsMap.value = new Map()
+  stationDevicesMap.value = new Map()
   appliedScoringConfigs.value = []
   selectedDeviceScope.value = []
   scoringScopeMode.value = 'default'
@@ -1480,7 +1900,21 @@ watch(logFiles, () => {
   extractedStations.value = []
   extractedDevices.value = []
   testItemStationsMap.value = new Map()
+  stationDevicesMap.value = new Map()
   selectedDeviceScope.value = []
+})
+
+// Prune selected ISNs if they do not belong to the newly selected station
+watch(selectedUploadedStation, (newStation) => {
+  if (newStation && compareResult.value?.file_summaries) {
+    const validIsns = new Set(
+      compareResult.value.file_summaries
+        .filter((s) => (s.station || s.metadata?.station) === newStation)
+        .map((s) => s.isn)
+        .filter(Boolean),
+    )
+    selectedCompareIsns.value = selectedCompareIsns.value.filter((isn) => validIsns.has(isn))
+  }
 })
 
 // UPDATED: Auto-fetch iPLAS data when comparison results are available
@@ -2064,6 +2498,247 @@ watch(selectedDeviceScope, async () => {
   .upload-log-comparison__ghost-button {
     width: 100%;
   }
+}
 
+.upload-log-shell__notice--configured {
+  align-items: flex-start;
+}
+
+.upload-log-shell__configured-content {
+  display: grid;
+  gap: 0.5rem;
+  flex: 1;
+}
+
+.upload-log-shell__configured-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.upload-log-shell__configured-stations {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.upload-log-shell__station-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+  font-size: 0.8rem;
+  color: var(--app-ink);
+}
+
+.upload-log-shell__station-pill-name {
+  color: var(--app-muted);
+}
+
+.upload-log-shell__station-pill small {
+  color: var(--app-muted);
+  font-size: 0.72rem;
+}
+
+.upload-log-comparison__frozen-header,
+.upload-log-comparison__frozen-cell {
+  background-color: var(--app-bg-surface, var(--app-panel)) !important;
+}
+
+/* ── Score Breakdown shared styles matching iPLAS details dialog ── */
+.iplas-details-subdialog {
+  display: grid;
+  gap: 1rem;
+}
+
+.iplas-details-dialog__dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.iplas-details-dialog__dialog-title h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--app-ink);
+}
+
+.iplas-breakdown__name-card {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+}
+
+.iplas-breakdown__name-text {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--app-ink);
+}
+
+.iplas-breakdown__rows-container {
+  display: grid;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.iplas-breakdown__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--app-border);
+  gap: 1rem;
+}
+
+.iplas-breakdown__row:last-child {
+  border-bottom: 0;
+}
+
+.iplas-breakdown__row-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.iplas-breakdown__row-right {
+  display: flex;
+  align-items: center;
+}
+
+.iplas-breakdown__row-label {
+  font-size: 0.85rem;
+  color: var(--app-muted);
+}
+
+.iplas-breakdown__row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.95rem;
+}
+
+.iplas-breakdown__row-icon--red { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+.iplas-breakdown__row-icon--orange { color: #f97316; background: rgba(249, 115, 22, 0.1); }
+.iplas-breakdown__row-icon--blue { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+.iplas-breakdown__row-icon--green { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+.iplas-breakdown__row-icon--purple { color: #8b5cf6; background: rgba(139, 92, 246, 0.1); }
+.iplas-breakdown__row-icon--amber { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+.iplas-breakdown__row-icon--muted { color: var(--app-muted); background: var(--app-surface); }
+.iplas-breakdown__row-icon--star { color: #eab308; background: rgba(234, 179, 8, 0.1); }
+
+.iplas-breakdown__value-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--app-ink);
+}
+
+.iplas-breakdown__value--warning {
+  color: #ef4444;
+}
+
+.iplas-breakdown__value-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.iplas-breakdown__value-pill--cool {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.iplas-breakdown__value-pill--neutral {
+  background: var(--app-surface);
+  color: var(--app-muted);
+}
+
+.iplas-details-dialog__explanation-card {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+}
+
+.iplas-details-dialog__explanation-card summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--app-accent);
+  font-size: 0.85rem;
+}
+
+.iplas-details-dialog__explanation-body {
+  margin-top: 0.75rem;
+}
+
+.score-formula-panel--compact {
+  padding: 0.75rem;
+  border-radius: 0.35rem;
+  background: var(--app-surface);
+}
+
+.iplas-details-dialog__metric-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--app-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.score-formula-equation {
+  font-family: monospace;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--app-ink);
+  margin-bottom: 0.5rem;
+}
+
+.score-formula-variable-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.score-formula-variable-list dt {
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--app-accent);
+}
+
+.score-formula-variable-list dd {
+  margin: 0;
+  color: var(--app-muted);
+}
+
+.iplas-details-dialog__footer-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.iplas-details-dialog__button {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  border: 1px solid var(--app-border);
+  background: var(--app-panel);
+  color: var(--app-ink);
 }
 </style>

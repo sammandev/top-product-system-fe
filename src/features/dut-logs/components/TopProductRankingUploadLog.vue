@@ -353,45 +353,108 @@
 
     <AppDialog
       v-model="showForcedFailDialog"
-      width="min(92vw, 52rem)"
+      width="min(94vw, 56rem)"
       :breakpoints="dialogBreakpoints"
       :showFooter="false"
       title="Forced Fail Items"
-      description="Review test items below the configured minimum score."
+      description="Review items that fell below the minimum score threshold or exceeded configured deviation limits."
       class="top-product-ranking-upload-log__dialog"
     >
-      <div class="top-product-ranking-upload-log__breakdown-shell">
-        <section class="top-product-ranking-upload-log__notice top-product-ranking-upload-log__notice--warning">
-          <strong>{{ forcedFailSummaryText }}</strong>
+      <div v-if="selectedRankingItem" class="iplas-details-subdialog">
+        <section class="forced-fail-overview-banner">
+          <div class="forced-fail-overview-banner__content">
+            <Icon icon="mdi:alert-octagon" class="forced-fail-overview-banner__icon" />
+            <div>
+              <strong>{{ filteredForcedFailItems.length }} scored item(s) triggered a forced-fail rule.</strong>
+              <p>{{ forcedFailSummaryText }}</p>
+            </div>
+          </div>
+          <span
+            v-if="selectedForcedFailItems[0]?.threshold"
+            class="top-product-ranking-upload-log__badge top-product-ranking-upload-log__badge--warning"
+          >
+            Min Score: {{ selectedForcedFailItems[0].threshold.toFixed(1) }} / 10
+          </span>
         </section>
-        <label class="top-product-ranking-upload-log__field">
-          <span>Search Forced Fail Items</span>
-          <input v-model="forcedFailSearch" class="app-themed-input" type="text" placeholder="Search by test item name">
-        </label>
-        <AppDataGrid
-          :columns="forcedFailGridColumns"
-          :rows="filteredForcedFailItems"
-          dataKey="test_item"
-          :paginator="filteredForcedFailItems.length > 10"
-          :rowsPerPage="10"
-          :rowsPerPageOptions="[10, 25, 50]"
-          scrollHeight="24rem"
-          emptyMessage="No forced-fail items."
-        >
-          <template #cell-test_item="{ data }">
-            <span class="top-product-ranking-upload-log__strong">{{ data.test_item }}</span>
-          </template>
-          <template #cell-score="{ data }">
-            <span class="top-product-ranking-upload-log__score-button" :class="scoreBadgeClass(data.score)">
-              {{ data.score.toFixed(2) }}
-            </span>
-          </template>
-          <template #cell-threshold="{ data }">
-            <span class="top-product-ranking-upload-log__badge top-product-ranking-upload-log__badge--warning">
-              {{ data.threshold.toFixed(1) }} / 10
-            </span>
-          </template>
-        </AppDataGrid>
+
+        <div class="forced-fail-search-shell">
+          <input
+            v-model="forcedFailSearch"
+            type="search"
+            class="app-themed-input forced-fail-search-input"
+            placeholder="Search failed test items..."
+          />
+        </div>
+
+        <section v-if="filteredForcedFailItems.length > 0" class="top-product-ranking-upload-log__data-grid-shell">
+          <AppDataGrid
+            :columns="forcedFailGridColumns"
+            :rows="filteredForcedFailItems"
+            dataKey="test_item"
+            :paginator="filteredForcedFailItems.length > 10"
+            :rowsPerPage="10"
+            :rowsPerPageOptions="[10, 25, 50]"
+            scrollHeight="22rem"
+          >
+            <template #cell-test_item="{ data }">
+              <button
+                type="button"
+                class="forced-fail-row-title-button"
+                title="Click to copy test item name"
+                @click="copyToClipboard(String(data.test_item))"
+              >
+                <span class="forced-fail-item-title font-mono font-medium" :title="String(data.test_item)">
+                  {{ data.test_item }}
+                </span>
+              </button>
+            </template>
+
+            <template #cell-ucl="{ value }">
+              <span class="table-limit font-mono">{{ value ?? '-' }}</span>
+            </template>
+
+            <template #cell-lcl="{ value }">
+              <span class="table-limit font-mono">{{ value ?? '-' }}</span>
+            </template>
+
+            <template #cell-value="{ data }">
+              <span class="forced-fail-value font-mono font-medium">{{ data.value ?? '-' }}</span>
+            </template>
+
+            <template #cell-score="{ data }">
+              <button
+                type="button"
+                class="top-product-ranking-upload-log__score-button cursor-pointer"
+                :class="scoreBadgeClass(data.score)"
+                title="Click to view Score Breakdown"
+                @click.stop="showScoreBreakdown(data.rawItem)"
+              >
+                {{ data.score.toFixed(2) }}
+              </button>
+            </template>
+
+            <template #cell-reasonLabel="{ value }">
+              <span class="top-product-ranking-upload-log__badge top-product-ranking-upload-log__badge--error">
+                {{ value }}
+              </span>
+            </template>
+          </AppDataGrid>
+        </section>
+
+        <div v-else class="iplas-details-dialog__empty-state">
+          <Icon icon="mdi:database-search-outline" />
+          <p>No failed items match the current search.</p>
+        </div>
+
+        <div class="iplas-details-dialog__footer-actions">
+          <button
+            type="button"
+            class="top-product-ranking-upload-log__ghost-button"
+            @click="showForcedFailDialog = false"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </AppDialog>
 
@@ -537,11 +600,32 @@
             <div class="top-product-ranking-upload-log__formula-panel top-product-ranking-upload-log__formula-panel--compact">
               <div class="top-product-ranking-upload-log__metric-label">Formula</div>
               <div class="top-product-ranking-upload-log__formula-equation">{{ getUploadScoringFormula(selectedTestItem.score_breakdown.scoring_type) }}</div>
+              <dl class="score-formula-variable-list">
+                <template
+                  v-for="variable in getScoringFormulaVariables(selectedTestItem.score_breakdown.scoring_type)"
+                  :key="variable.key"
+                >
+                  <dt>{{ variable.key }}</dt>
+                  <dd>{{ variable.value }}</dd>
+                </template>
+              </dl>
             </div>
             <p>{{ getUploadScoringExplanation(selectedTestItem.score_breakdown.scoring_type) }}</p>
           </div>
         </details>
       </div>
+
+      <template #footer>
+        <div class="iplas-details-dialog__footer-actions">
+          <button
+            type="button"
+            class="top-product-ranking-upload-log__ghost-button"
+            @click="showBreakdownDialog = false"
+          >
+            Close
+          </button>
+        </div>
+      </template>
     </AppDialog>
 
     <AppPanel
@@ -736,6 +820,7 @@ import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone'
 import utc from 'dayjs/plugin/utc'
 import { computed, ref, watch } from 'vue'
+import { SCORING_TYPE_INFO, type ScoringType } from '@/features/dut/types/scoring.types'
 import type {
   CompareResponseEnhanced,
   ParsedTestItemEnhanced,
@@ -790,6 +875,11 @@ interface ForcedFailItemRow {
   test_item: string
   score: number
   threshold: number
+  ucl?: number | null
+  lcl?: number | null
+  value?: string
+  rawItem: ParsedTestItemEnhanced
+  reasonLabel: string
 }
 
 interface BreakdownGridRow {
@@ -958,9 +1048,9 @@ const testItemGridColumns = [
     sortable: true,
     style: { width: '18rem' },
   },
-  { key: 'value', field: 'value', header: 'Value', sortable: true, style: { width: '8rem' } },
   { key: 'usl', field: 'usl', header: 'UCL', sortable: true, style: { width: '7rem' } },
   { key: 'lsl', field: 'lsl', header: 'LCL', sortable: true, style: { width: '7rem' } },
+  { key: 'value', field: 'value', header: 'Value', sortable: true, style: { width: '8rem' } },
   { key: 'status', field: 'status', header: 'Status', sortable: false, style: { width: '10rem' } },
   { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '9rem' } },
 ]
@@ -971,13 +1061,16 @@ const forcedFailGridColumns = [
     field: 'test_item',
     header: 'Test Item',
     sortable: true,
-    style: { width: '24rem' },
+    style: { width: '18rem' },
   },
-  { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '10rem' } },
+  { key: 'ucl', field: 'ucl', header: 'UCL', sortable: true, style: { width: '7rem' } },
+  { key: 'lcl', field: 'lcl', header: 'LCL', sortable: true, style: { width: '7rem' } },
+  { key: 'value', field: 'value', header: 'Value', sortable: true, style: { width: '8rem' } },
+  { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '9rem' } },
   {
-    key: 'threshold',
-    field: 'threshold',
-    header: 'Minimum',
+    key: 'reasonLabel',
+    field: 'reasonLabel',
+    header: 'Reason',
     sortable: true,
     style: { width: '10rem' },
   },
@@ -1129,24 +1222,56 @@ function hasUploadLogLimitValue(limit: number | null | undefined): boolean {
   return limit !== null && limit !== undefined
 }
 
+function copyToClipboard(text: string): void {
+  navigator.clipboard.writeText(text).catch(() => {})
+}
+
+function getScoringFormulaVariables(scoringType?: string): Array<{ key: string; value: string }> {
+  const type = (scoringType as ScoringType) || 'binary'
+  const variables = SCORING_TYPE_INFO[type]?.variables
+  if (!variables) {
+    return []
+  }
+  return Object.entries(variables).map(([key, value]) => ({
+    key,
+    value: value.replace(/\\frac\{UCL \+ LCL\}\{2\}/g, '(UCL + LCL) / 2'),
+  }))
+}
+
 const selectedForcedFailItems = computed<ForcedFailItemRow[]>(() => {
   return selectedTestItems.value.flatMap((item) => {
     const minScore = getConfiguredMinScore(item)
+    const config = scoringConfigMap.value.get(item.test_item)
+    const maxDev = config?.max_deviation
 
-    if (
-      minScore === null ||
-      item.score === null ||
-      item.score === undefined ||
-      item.score >= minScore
-    ) {
+    const isMinFail =
+      minScore !== null && item.score !== null && item.score !== undefined && item.score < minScore
+
+    const isDevFail =
+      maxDev !== undefined &&
+      maxDev !== null &&
+      item.score_breakdown?.deviation !== undefined &&
+      item.score_breakdown?.deviation !== null &&
+      Math.abs(item.score_breakdown.deviation) > maxDev
+
+    if (!isMinFail && !isDevFail) {
       return []
     }
+
+    const reasons: string[] = []
+    if (isMinFail) reasons.push('Min. Score Fail')
+    if (isDevFail) reasons.push('Deviation Fail')
 
     return [
       {
         test_item: item.test_item,
-        score: item.score,
-        threshold: minScore,
+        score: item.score ?? 0,
+        threshold: minScore ?? 0,
+        ucl: item.usl,
+        lcl: item.lsl,
+        value: item.value,
+        rawItem: item,
+        reasonLabel: reasons.join(', '),
       },
     ]
   })
@@ -2615,5 +2740,113 @@ function rankingRowClass(row: Record<string, unknown>) {
   .top-product-ranking-upload-log__breakdown-row-right {
     justify-content: flex-start;
   }
+}
+
+.forced-fail-overview-banner {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.9rem 1.1rem;
+  border-radius: 0.85rem;
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.forced-fail-overview-banner__content {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-width: 0;
+}
+
+.forced-fail-overview-banner__icon {
+  font-size: 1.5rem;
+  color: #eab308;
+  flex-shrink: 0;
+}
+
+.forced-fail-overview-banner__content strong {
+  display: block;
+  color: var(--app-ink);
+  font-size: 0.92rem;
+}
+
+.forced-fail-overview-banner__content p {
+  margin: 0.2rem 0 0;
+  color: var(--app-muted);
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.forced-fail-search-shell {
+  margin-top: 0.5rem;
+}
+
+.forced-fail-search-input {
+  width: 100%;
+}
+
+.forced-fail-row-title-button {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  text-align: left;
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+}
+
+.forced-fail-row-title-button:hover .forced-fail-item-title {
+  color: var(--app-accent);
+  text-decoration: underline;
+}
+
+.forced-fail-item-title {
+  color: var(--app-ink);
+}
+
+.forced-fail-value {
+  color: var(--app-ink);
+}
+
+.table-limit {
+  color: var(--app-muted);
+}
+
+.score-formula-variable-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  margin: 0.5rem 0 0;
+}
+
+.score-formula-variable-list dt {
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--app-accent);
+}
+
+.score-formula-variable-list dd {
+  margin: 0;
+  color: var(--app-muted);
+}
+
+.iplas-details-dialog__empty-state {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 2.5rem 1rem;
+  color: var(--app-muted);
+}
+
+.iplas-details-dialog__footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>

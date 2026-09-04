@@ -89,14 +89,32 @@
         </section>
 
         <section class="iplas-compare-dialog__summary-grid">
-          <article class="iplas-compare-dialog__summary-card iplas-compare-dialog__summary-card--primary">
-            <small>Uploaded Overall Score</small>
+          <button
+            type="button"
+            class="iplas-compare-dialog__summary-card iplas-compare-dialog__summary-card--primary iplas-compare-dialog__summary-card--clickable"
+            title="Click to view Uploaded Overall Score explanation"
+            @click="openOverallScoreBreakdown('upload')"
+          >
+            <div class="iplas-compare-dialog__summary-card-header">
+              <small>Uploaded Overall Score</small>
+              <Icon icon="mdi:information-outline" class="iplas-compare-dialog__info-icon" />
+            </div>
             <strong>{{ formatOverallScore(uploadOverallScore) }}</strong>
-          </article>
-          <article class="iplas-compare-dialog__summary-card iplas-compare-dialog__summary-card--secondary">
-            <small>iPLAS Overall Score</small>
+            <span class="iplas-compare-dialog__summary-hint">Click for calculation details</span>
+          </button>
+          <button
+            type="button"
+            class="iplas-compare-dialog__summary-card iplas-compare-dialog__summary-card--secondary iplas-compare-dialog__summary-card--clickable"
+            title="Click to view iPLAS Overall Score explanation"
+            @click="openOverallScoreBreakdown('iplas')"
+          >
+            <div class="iplas-compare-dialog__summary-card-header">
+              <small>iPLAS Overall Score</small>
+              <Icon icon="mdi:information-outline" class="iplas-compare-dialog__info-icon" />
+            </div>
             <strong>{{ formatOverallScore(iplasOverallScore) }}</strong>
-          </article>
+            <span class="iplas-compare-dialog__summary-hint">Click for calculation details</span>
+          </button>
         </section>
 
         <AppDataGrid
@@ -168,6 +186,122 @@
   </AppDialog>
 
   <AppDialog
+    v-model="showOverallScoreDialog"
+    width="min(94vw, 56rem)"
+    :breakpoints="dialogBreakpoints"
+    :showFooter="false"
+    :title="`${overallScoreSource === 'upload' ? 'Uploaded' : 'iPLAS'} Overall Score Breakdown`"
+    description="Detailed explanation of how the overall score is aggregated across all scored test items."
+    class="iplas-compare-dialog__overall-dialog"
+  >
+    <div class="iplas-details-subdialog">
+      <section class="overall-score-explanation-card">
+        <div class="overall-formula-header">
+          <small>Source</small>
+          <strong>{{ overallScoreSource === 'upload' ? 'Uploaded Log Measurements' : 'iPLAS Database Records' }}</strong>
+        </div>
+        <div class="top-product-ranking-upload-log__formula-panel">
+          <div class="top-product-ranking-upload-log__metric-label">Weighted Average Formula</div>
+          <div class="top-product-ranking-upload-log__formula-equation">
+            Overall Score = &Sigma;(Score_i &times; Weight_i&sup2;) / &Sigma;(Weight_i&sup2;)
+          </div>
+          <p class="overall-formula-note">
+            Each scored test item receives a score from 0.0 to 10.0. Items with custom weights contribute proportionally.
+            Items without limits or disabled items are excluded from the aggregate.
+          </p>
+        </div>
+      </section>
+
+      <dl class="top-product-ranking-upload-log__overall-metrics">
+        <div>
+          <dt>Total Scored Items</dt>
+          <dd>{{ overallScoreContributingItems.length }}</dd>
+        </div>
+        <div>
+          <dt>Total Score Sum</dt>
+          <dd>{{ overallScoreStats.scoreSum.toFixed(2) }}</dd>
+        </div>
+        <div>
+          <dt>Weighted Sum</dt>
+          <dd>{{ overallScoreStats.weightedSum.toFixed(2) }}</dd>
+        </div>
+        <div>
+          <dt>Total Weight</dt>
+          <dd>{{ overallScoreStats.weightSum.toFixed(2) }}</dd>
+        </div>
+        <div class="metric-highlight">
+          <dt>Overall Score</dt>
+          <dd>{{ formatOverallScore(overallScoreSource === 'upload' ? uploadOverallScore : iplasOverallScore) }}</dd>
+        </div>
+      </dl>
+
+      <div class="top-product-ranking-upload-log__calculation-line">
+        {{ overallScoreStats.weightedSum.toFixed(2) }} / {{ overallScoreStats.weightSum.toFixed(2) }} =
+        <strong>{{ formatOverallScore(overallScoreSource === 'upload' ? uploadOverallScore : iplasOverallScore) }}</strong>
+      </div>
+
+      <div class="forced-fail-search-shell">
+        <input
+          v-model="overallScoreSearch"
+          type="search"
+          class="app-themed-input forced-fail-search-input"
+          placeholder="Search scored test items..."
+        />
+      </div>
+
+      <AppDataGrid
+        :columns="overallScoreGridColumns"
+        :rows="filteredOverallScoreItems"
+        dataKey="test_item"
+        paginator
+        :rowsPerPage="10"
+        :rowsPerPageOptions="[10, 25, 50]"
+        scrollHeight="20rem"
+        emptyMessage="No test items found."
+      >
+        <template #cell-test_item="{ data }">
+          <span class="font-mono font-medium">{{ data.test_item }}</span>
+        </template>
+        <template #cell-value="{ data }">
+          <span class="font-mono">{{ data.value ?? '-' }}</span>
+        </template>
+        <template #cell-usl="{ data }">
+          <span class="font-mono text-muted">{{ data.usl ?? '-' }}</span>
+        </template>
+        <template #cell-lsl="{ data }">
+          <span class="font-mono text-muted">{{ data.lsl ?? '-' }}</span>
+        </template>
+        <template #cell-weight="{ data }">
+          <span class="font-mono">{{ data.weight?.toFixed(2) ?? '1.00' }}</span>
+        </template>
+        <template #cell-score="{ data }">
+          <button
+            v-if="data.score !== null && data.score !== undefined"
+            type="button"
+            class="iplas-compare-dialog__score-pill cursor-pointer border-0"
+            :class="scorePillClass(getScoreColor(data.score))"
+            title="Click to view score breakdown"
+            @click="showScoreBreakdown(data.rawItem, overallScoreSource)"
+          >
+            {{ Number(data.score).toFixed(2) }}
+          </button>
+          <span v-else class="text-muted">-</span>
+        </template>
+      </AppDataGrid>
+
+      <div class="iplas-details-dialog__footer-actions">
+        <button
+          type="button"
+          class="iplas-compare-dialog__button iplas-compare-dialog__button--ghost"
+          @click="showOverallScoreDialog = false"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  </AppDialog>
+
+  <AppDialog
     v-model="showBreakdownDialog"
     v-model:fullscreen="breakdownFullscreen"
     width="min(94vw, 42rem)"
@@ -175,50 +309,103 @@
     :breakpoints="{ '960px': '98vw', '640px': '100vw' }"
     fullscreenable
     :showFooter="false"
-    :title="`${breakdownSource === 'upload' ? 'Uploaded' : 'iPLAS'} Score`"
+    :title="`${breakdownSource === 'upload' ? 'Uploaded' : 'iPLAS'} Score Breakdown`"
     :description="breakdownItem?.test_item ?? 'Score Breakdown'"
-    class="iplas-compare-dialog__breakdown-dialog"
+    class="iplas-details-dialog iplas-breakdown-dialog"
   >
-
-    <div v-if="breakdownItem" class="iplas-compare-dialog__breakdown-grid">
-      <article class="iplas-compare-dialog__summary-card">
-        <small>Measured Value</small>
-        <strong>{{ breakdownSource === 'upload' ? breakdownItem.upload_value : breakdownItem.iplas_value }}</strong>
-      </article>
-      <article class="iplas-compare-dialog__summary-card">
-        <small>Score</small>
-        <strong>
-          {{ (breakdownSource === 'upload' ? breakdownItem.upload_score : breakdownItem.iplas_score)?.toFixed(2) }}
-        </strong>
-      </article>
-      <article class="iplas-compare-dialog__summary-card">
-        <small>Scoring Type</small>
-        <strong>{{ breakdownScoringType }}</strong>
-      </article>
-
-      <div class="iplas-compare-dialog__detail-table">
-        <div class="iplas-compare-dialog__detail-row">
-          <span>Test Item</span>
-          <strong>{{ breakdownItem.test_item }}</strong>
-        </div>
-        <div class="iplas-compare-dialog__detail-row">
-          <span>UCL</span>
-          <strong>{{ breakdownItem.usl ?? '-' }}</strong>
-        </div>
-        <div class="iplas-compare-dialog__detail-row">
-          <span>LCL</span>
-          <strong>{{ breakdownItem.lsl ?? '-' }}</strong>
-        </div>
-        <div class="iplas-compare-dialog__detail-row">
-          <span>Target</span>
-          <strong>{{ breakdownTarget !== null ? breakdownTarget.toFixed(4) : '-' }}</strong>
-        </div>
-        <div class="iplas-compare-dialog__detail-row">
-          <span>Deviation</span>
-          <strong>{{ breakdownDeviation !== null ? breakdownDeviation.toFixed(4) : '-' }}</strong>
-        </div>
+    <template #header>
+      <div class="iplas-details-dialog__dialog-title">
+        <Icon icon="mdi:table-search" />
+        <h2>{{ breakdownSource === 'upload' ? 'Uploaded' : 'iPLAS' }} Score Breakdown</h2>
       </div>
+    </template>
+
+    <div v-if="breakdownItem" class="iplas-details-subdialog">
+      <section class="iplas-breakdown__name-card">
+        <span class="iplas-breakdown__name-text">{{ breakdownItem.test_item }}</span>
+      </section>
+
+      <section class="iplas-breakdown__rows-container">
+        <div v-for="row in singleItemBreakdownRows" :key="row.key" class="iplas-breakdown__row">
+          <div class="iplas-breakdown__row-left">
+            <span class="iplas-breakdown__row-icon" :class="getBreakdownIconClass(row)">
+              <Icon :icon="getBreakdownRowIcon(row)" />
+            </span>
+            <span class="iplas-breakdown__row-label">{{ row.label }}</span>
+          </div>
+          <div class="iplas-breakdown__row-right">
+            <span
+              v-if="row.valueTone === 'score'"
+              class="iplas-compare-dialog__score-pill"
+              :class="scorePillClass(getScoreColor(Number(row.value) || 0))"
+            >
+              {{ row.value }}
+            </span>
+            <span
+              v-else-if="row.valueTone === 'algorithm'"
+              class="iplas-breakdown__value-pill iplas-breakdown__value-pill--cool"
+            >
+              {{ row.value }}
+            </span>
+            <span
+              v-else-if="row.valueTone === 'policy'"
+              class="iplas-breakdown__value-pill iplas-breakdown__value-pill--neutral"
+            >
+              {{ row.value }}
+            </span>
+            <span
+              v-else
+              :class="[row.valueTone === 'warning' ? 'iplas-breakdown__value--warning' : '', 'iplas-breakdown__value-text']"
+            >
+              {{ row.value }}
+            </span>
+          </div>
+        </div>
+      </section>
+
+      <details class="iplas-details-dialog__explanation-card" open>
+        <summary>
+          <span>
+            <Icon icon="mdi:help-circle-outline" /> Detailed Score Calculation
+          </span>
+        </summary>
+        <div class="iplas-details-dialog__explanation-body">
+          <div class="score-formula-panel score-formula-panel--compact">
+            <div class="iplas-details-dialog__metric-label">Algorithm: {{ breakdownScoringTypeLabel }}</div>
+            <div class="score-formula-equation">{{ getScoringFormula(breakdownScoringType) }}</div>
+            
+            <div v-if="calculationSteps.length > 0" class="score-calculation-steps">
+              <div class="score-calculation-step-title">Step-by-Step Calculation:</div>
+              <ul class="score-calculation-step-list">
+                <li v-for="(step, idx) in calculationSteps" :key="idx">
+                  <code>{{ step }}</code>
+                </li>
+              </ul>
+            </div>
+
+            <dl class="score-formula-variable-list">
+              <template v-for="variable in getScoringFormulaVariables(breakdownScoringType)" :key="variable.key">
+                <dt>{{ variable.key }}</dt>
+                <dd>{{ variable.value }}</dd>
+              </template>
+            </dl>
+          </div>
+          <p class="score-algorithm-desc">{{ getScoringTypeDescription(breakdownScoringType) }}</p>
+        </div>
+      </details>
     </div>
+
+    <template #footer>
+      <div class="iplas-details-dialog__footer-actions">
+        <button
+          type="button"
+          class="iplas-details-dialog__button iplas-details-dialog__button--ghost"
+          @click="showBreakdownDialog = false"
+        >
+          Close
+        </button>
+      </div>
+    </template>
   </AppDialog>
 
   <UploadScoringConfigDialog
@@ -232,6 +419,7 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { computed, ref, watch } from 'vue'
+import { SCORING_TYPE_INFO, type ScoringType } from '@/features/dut/types/scoring.types'
 import type { IplasIsnTestItem } from '@/features/dut-logs/api/iplasProxyApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
 import type {
@@ -311,6 +499,16 @@ const uploadScoredMap = ref<Map<string, RescoreItemResult>>(new Map())
 const iplasScoredMap = ref<Map<string, RescoreItemResult>>(new Map())
 const uploadOverallScore = ref<number | null>(null)
 const iplasOverallScore = ref<number | null>(null)
+
+const showOverallScoreDialog = ref(false)
+const overallScoreSource = ref<'upload' | 'iplas'>('upload')
+const overallScoreSearch = ref('')
+
+function openOverallScoreBreakdown(source: 'upload' | 'iplas') {
+  overallScoreSource.value = source
+  overallScoreSearch.value = ''
+  showOverallScoreDialog.value = true
+}
 
 const showScoringConfig = ref(false)
 const localScoringConfigs = ref<RescoreScoringConfig[]>([])
@@ -459,7 +657,7 @@ const comparisonGridColumns = [
 ]
 
 const breakdownScoringType = computed(() => {
-  if (!breakdownItem.value) return 'N/A'
+  if (!breakdownItem.value) return 'symmetrical'
   return breakdownSource.value === 'upload'
     ? breakdownItem.value.upload_scoring_type || 'symmetrical'
     : breakdownItem.value.iplas_scoring_type || 'symmetrical'
@@ -481,6 +679,268 @@ const breakdownDeviation = computed<number | null>(() => {
       ? breakdownItem.value.upload_deviation
       : breakdownItem.value.iplas_deviation) ?? null
   )
+})
+
+function formatScoringTypeLabel(type: string): string {
+  switch (type) {
+    case 'symmetrical':
+      return 'Target Centered (Symmetrical)'
+    case 'asymmetrical':
+      return 'Custom Target (Asymmetrical)'
+    case 'per_mask':
+      return 'Near Zero (PER/MASK)'
+    case 'evm':
+      return 'EVM (Decay)'
+    case 'throughput':
+      return 'Throughput (Higher is Better)'
+    case 'binary':
+      return 'Binary (PASS/FAIL)'
+    default:
+      return type
+  }
+}
+
+const breakdownScoringTypeLabel = computed(() => {
+  return formatScoringTypeLabel(breakdownScoringType.value)
+})
+
+const singleItemBreakdownRows = computed(() => {
+  if (!breakdownItem.value) return []
+  const item = breakdownItem.value
+  const isUpload = breakdownSource.value === 'upload'
+
+  const score = isUpload ? item.upload_score : item.iplas_score
+  const value = isUpload ? item.upload_value : item.iplas_value
+  const scoringType = isUpload
+    ? item.upload_scoring_type || 'symmetrical'
+    : item.iplas_scoring_type || 'symmetrical'
+  const target = isUpload ? item.upload_target : item.iplas_target
+  const deviation = isUpload ? item.upload_deviation : item.iplas_deviation
+  const weight = isUpload ? item.upload_weight : item.iplas_weight
+
+  const rows: Array<{
+    key: string
+    label: string
+    value: string
+    valueTone?: 'score' | 'algorithm' | 'policy' | 'warning'
+  }> = [
+    {
+      key: 'scoring_type',
+      label: 'Scoring Algorithm',
+      value: formatScoringTypeLabel(scoringType),
+      valueTone: 'algorithm',
+    },
+  ]
+
+  if (item.usl !== null && item.usl !== undefined) {
+    rows.push({ key: 'ucl', label: 'UCL (Upper Limit)', value: String(item.usl) })
+  }
+  if (item.lsl !== null && item.lsl !== undefined) {
+    rows.push({ key: 'lcl', label: 'LCL (Lower Limit)', value: String(item.lsl) })
+  }
+  if (target !== null && target !== undefined) {
+    rows.push({ key: 'target', label: 'Target', value: target.toFixed(4) })
+  }
+  if (value !== null && value !== undefined) {
+    rows.push({ key: 'actual', label: 'Measured Value', value: String(value) })
+  }
+  if (deviation !== null && deviation !== undefined) {
+    rows.push({
+      key: 'deviation',
+      label: 'Deviation',
+      value: deviation.toFixed(4),
+      valueTone: Math.abs(deviation) > 1 ? 'warning' : undefined,
+    })
+  }
+
+  rows.push({ key: 'weight', label: 'Weight', value: String(weight ?? 1.0) })
+  rows.push({
+    key: 'score',
+    label: 'Score (0-10)',
+    value: score !== null && score !== undefined ? score.toFixed(2) : 'N/A',
+    valueTone: 'score',
+  })
+
+  return rows
+})
+
+function getBreakdownRowIcon(row: { key: string }): string {
+  const iconMap: Record<string, string> = {
+    scoring_type: 'mdi:function-variant',
+    ucl: 'mdi:arrow-collapse-up',
+    lcl: 'mdi:arrow-collapse-down',
+    target: 'mdi:crosshairs-gps',
+    actual: 'mdi:numeric',
+    deviation: 'mdi:delta',
+    policy: 'mdi:compass-outline',
+    weight: 'mdi:weight',
+    score: 'mdi:star',
+  }
+  return iconMap[row.key] || 'mdi:information-outline'
+}
+
+function getBreakdownIconClass(row: { key: string }): string {
+  const classMap: Record<string, string> = {
+    scoring_type: 'iplas-breakdown__row-icon--purple',
+    ucl: 'iplas-breakdown__row-icon--red',
+    lcl: 'iplas-breakdown__row-icon--orange',
+    target: 'iplas-breakdown__row-icon--green',
+    actual: 'iplas-breakdown__row-icon--blue',
+    deviation: 'iplas-breakdown__row-icon--amber',
+    policy: 'iplas-breakdown__row-icon--muted',
+    weight: 'iplas-breakdown__row-icon--muted',
+    score: 'iplas-breakdown__row-icon--star',
+  }
+  return classMap[row.key] || 'iplas-breakdown__row-icon--muted'
+}
+
+function getScoringFormula(scoringType?: string): string {
+  const type = (scoringType as ScoringType) || 'binary'
+  const latex = SCORING_TYPE_INFO[type]?.formulaLatex
+  if (latex) {
+    return latex
+      .replace(/\\cdot/g, 'x')
+      .replace(/\\frac\{L - \|x - T\|\}\{L\}/g, '(L - |x - T|) / L')
+      .replace(/\\frac\{L - d\}\{L\}/g, '(L - d) / L')
+      .replace(/\\frac\{UCL - x\}\{UCL\}/g, '(UCL - x) / UCL')
+      .replace(
+        /\\left\(1 - \\frac\{x - ref\}\{UCL - ref\}\\right\)\^\{0\.25\}/g,
+        '(1 - (x - ref) / (UCL - ref))^0.25',
+      )
+      .replace(
+        /\\begin\{cases\} 10\.0 & \\text\{STATUS\} = \\text\{PASS\} \\\\ 0\.0 & \\text\{STATUS\} = \\text\{FAIL\} \\end\{cases\}/g,
+        '10.0 if STATUS = PASS, 0.0 if STATUS = FAIL',
+      )
+  }
+  const formulas: Record<string, string> = {
+    symmetrical: 'Score = 1 + 9 x (L - |x - T|) / L',
+    asymmetrical: 'Score = 1 + 9 x (L - d) / L',
+    per_mask: 'Score = 1 + 9 x (UCL - x) / UCL',
+    evm: 'Score = 1 + 9 x (1 - (x - ref) / (UCL - ref))^0.25',
+    throughput: 'Score = 1 + 9 x (x - LCL) / (UCL - LCL)',
+    binary: '10.0 if PASS, 0.0 if FAIL',
+  }
+  return formulas[type] || 'Score calculation based on criteria limits'
+}
+
+function getScoringFormulaVariables(scoringType?: string): Array<{ key: string; value: string }> {
+  const type = (scoringType as ScoringType) || 'binary'
+  const variables = SCORING_TYPE_INFO[type]?.variables
+  if (!variables) {
+    return []
+  }
+  return Object.entries(variables).map(([key, value]) => ({
+    key,
+    value: value.replace(/\\frac\{UCL \+ LCL\}\{2\}/g, '(UCL + LCL) / 2'),
+  }))
+}
+
+function getScoringTypeDescription(type: string): string {
+  switch (type) {
+    case 'symmetrical':
+      return 'Target is centered midpoint between UCL and LCL. Score is 10 at target and scales down to 1 at limits.'
+    case 'asymmetrical':
+      return 'Custom user target with policy (higher/lower/symmetrical). Deviation is measured from target toward limit.'
+    case 'per_mask':
+      return 'Near-zero scoring for PER/MASK test items where 0 is ideal and higher values toward UCL decrease the score.'
+    case 'evm':
+      return 'EVM scoring with exponential decay curve from reference best (-35 dB) toward UCL limit.'
+    case 'throughput':
+      return 'Throughput scoring where higher values above LCL yield higher scores.'
+    case 'binary':
+      return 'Simple status check: PASS gives 10.0, FAIL gives 0.0.'
+    default:
+      return 'Standard criteria-based scoring algorithm.'
+  }
+}
+
+const calculationSteps = computed<string[]>(() => {
+  if (!breakdownItem.value) return []
+  const item = breakdownItem.value
+  const isUpload = breakdownSource.value === 'upload'
+  const type = (breakdownScoringType.value as ScoringType) || 'symmetrical'
+  const valStr = isUpload ? item.upload_value : item.iplas_value
+  const x = valStr !== null ? parseFloat(valStr) : null
+  const usl = item.usl
+  const lsl = item.lsl
+  const target = breakdownTarget.value
+  const dev = breakdownDeviation.value
+  const score = isUpload ? item.upload_score : item.iplas_score
+
+  if (x === null || Number.isNaN(x)) {
+    return ['Non-numeric value: Binary PASS/FAIL rules apply']
+  }
+
+  const steps: string[] = []
+
+  if (type === 'symmetrical') {
+    if (usl !== null && lsl !== null) {
+      const T = target ?? (usl + lsl) / 2
+      const L = (usl - lsl) / 2
+      const d = dev !== null ? Math.abs(dev) : Math.abs(x - T)
+      const raw = L > 0 ? 1 + 9 * ((L - d) / L) : 10
+      steps.push(`Target T = (${usl} + ${lsl}) / 2 = ${T.toFixed(4)}`)
+      steps.push(`Distance to limit L = (${usl} - ${lsl}) / 2 = ${L.toFixed(4)}`)
+      steps.push(`Distance to target d = |${x} - ${T.toFixed(4)}| = ${d.toFixed(4)}`)
+      steps.push(
+        `Raw Score = 1 + 9 x (${L.toFixed(4)} - ${d.toFixed(4)}) / ${L.toFixed(4)} = ${raw.toFixed(4)}`,
+      )
+      steps.push(
+        `Final Score (clamped 0-10) = ${score !== null && score !== undefined ? score.toFixed(2) : Math.max(0, Math.min(10, raw)).toFixed(2)}`,
+      )
+    }
+  } else if (type === 'per_mask') {
+    if (usl !== null && usl > 0) {
+      const raw = 1 + 9 * ((usl - x) / usl)
+      steps.push(`UCL = ${usl}, Measured value x = ${x}`)
+      steps.push(`Raw Score = 1 + 9 x (${usl} - ${x}) / ${usl} = ${raw.toFixed(4)}`)
+      steps.push(
+        `Final Score (clamped 0-10) = ${score !== null && score !== undefined ? score.toFixed(2) : Math.max(0, Math.min(10, raw)).toFixed(2)}`,
+      )
+    }
+  } else if (type === 'evm') {
+    if (usl !== null) {
+      const ref = -35
+      const ratio = (x - ref) / (usl - ref)
+      steps.push(`Reference best = ${ref} dB, UCL = ${usl} dB, Measured x = ${x} dB`)
+      if (ratio >= 0 && ratio <= 1) {
+        const decay = (1 - ratio) ** 0.25
+        const raw = 1 + 9 * decay
+        steps.push(
+          `Normalized ratio = (${x} - (${ref})) / (${usl} - (${ref})) = ${ratio.toFixed(4)}`,
+        )
+        steps.push(`Decay = (1 - ${ratio.toFixed(4)})^0.25 = ${decay.toFixed(4)}`)
+        steps.push(`Score = 1 + 9 x ${decay.toFixed(4)} = ${raw.toFixed(4)}`)
+      }
+      steps.push(
+        `Final Score = ${score !== null && score !== undefined ? score.toFixed(2) : '10.00'}`,
+      )
+    }
+  } else if (type === 'asymmetrical') {
+    if (target !== null && (usl !== null || lsl !== null)) {
+      const T = target
+      const d = dev !== null ? Math.abs(dev) : Math.abs(x - T)
+      steps.push(`User Target T = ${T.toFixed(4)}, Measured value x = ${x}`)
+      steps.push(`Deviation d = |${x} - ${T.toFixed(4)}| = ${d.toFixed(4)}`)
+      steps.push(
+        `Final Score = ${score !== null && score !== undefined ? score.toFixed(2) : '10.00'}`,
+      )
+    }
+  } else if (type === 'throughput') {
+    if (usl !== null && lsl !== null && usl > lsl) {
+      const raw = 1 + 9 * ((x - lsl) / (usl - lsl))
+      steps.push(`LCL = ${lsl}, UCL = ${usl}, Measured x = ${x}`)
+      steps.push(`Score = 1 + 9 x (${x} - ${lsl}) / (${usl} - ${lsl}) = ${raw.toFixed(4)}`)
+      steps.push(
+        `Final Score = ${score !== null && score !== undefined ? score.toFixed(2) : Math.max(0, Math.min(10, raw)).toFixed(2)}`,
+      )
+    }
+  } else {
+    steps.push('Binary check: Status = PASS gives 10.0, FAIL gives 0.0')
+    steps.push(`Final Score = ${score !== null && score !== undefined ? score.toFixed(2) : '0.00'}`)
+  }
+
+  return steps
 })
 
 const comparisonItems = computed<ComparisonItem[]>(() => {
@@ -643,6 +1103,75 @@ const comparisonFilterOptions = computed(() => [
   { title: 'iPLAS Items', value: 'iplas-only' as const, count: iplasOnlyCount.value },
   { title: 'All Items', value: 'all' as const, count: comparisonItems.value.length },
 ])
+
+const overallScoreContributingItems = computed(() => {
+  const isUpload = overallScoreSource.value === 'upload'
+  return filteredComparisonItems.value
+    .filter((item) => {
+      const score = isUpload ? item.upload_score : item.iplas_score
+      return score !== null && score !== undefined
+    })
+    .map((item) => ({
+      test_item: item.test_item,
+      value: isUpload ? item.upload_value : item.iplas_value,
+      usl: item.usl,
+      lsl: item.lsl,
+      weight: isUpload ? (item.upload_weight ?? 1.0) : (item.iplas_weight ?? 1.0),
+      score: isUpload ? item.upload_score : item.iplas_score,
+      rawItem: item,
+    }))
+})
+
+const filteredOverallScoreItems = computed(() => {
+  const query = overallScoreSearch.value.trim().toLowerCase()
+  if (!query) {
+    return overallScoreContributingItems.value
+  }
+  return overallScoreContributingItems.value.filter((item) =>
+    item.test_item.toLowerCase().includes(query),
+  )
+})
+
+const overallScoreStats = computed(() => {
+  const items = overallScoreContributingItems.value
+  if (items.length === 0) {
+    return { scoreSum: 0, weightedSum: 0, weightSum: 0 }
+  }
+
+  let scoreSum = 0
+  let weightedSum = 0
+  let weightSum = 0
+
+  items.forEach((item) => {
+    const score = item.score ?? 0
+    const w = item.weight ?? 1.0
+    const effWeight = w * w
+    scoreSum += score
+    weightedSum += score * effWeight
+    weightSum += effWeight
+  })
+
+  return {
+    scoreSum,
+    weightedSum,
+    weightSum: weightSum > 0 ? weightSum : 1,
+  }
+})
+
+const overallScoreGridColumns = [
+  {
+    key: 'test_item',
+    field: 'test_item',
+    header: 'Test Item',
+    sortable: true,
+    style: { width: '18rem' },
+  },
+  { key: 'value', field: 'value', header: 'Value', sortable: true, style: { width: '8rem' } },
+  { key: 'usl', field: 'usl', header: 'UCL', sortable: true, style: { width: '7rem' } },
+  { key: 'lsl', field: 'lsl', header: 'LCL', sortable: true, style: { width: '7rem' } },
+  { key: 'weight', field: 'weight', header: 'Weight', sortable: true, style: { width: '6rem' } },
+  { key: 'score', field: 'score', header: 'Score', sortable: true, style: { width: '8rem' } },
+]
 
 function showScoreBreakdown(item: ComparisonItem, source: 'upload' | 'iplas') {
   breakdownItem.value = item
@@ -1122,5 +1651,342 @@ function comparisonRowClass(row: Record<string, unknown>) {
   .iplas-compare-dialog__detail-row {
     grid-template-columns: 1fr;
   }
+}
+
+.iplas-compare-dialog__summary-card--clickable {
+  cursor: pointer;
+  text-align: left;
+  border-width: 1px;
+  transition: transform 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
+}
+
+.iplas-compare-dialog__summary-card--clickable:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  border-color: var(--app-accent);
+}
+
+.iplas-compare-dialog__summary-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.iplas-compare-dialog__info-icon {
+  font-size: 1.1rem;
+  color: var(--app-muted);
+}
+
+.iplas-compare-dialog__summary-hint {
+  font-size: 0.72rem;
+  color: var(--app-accent);
+  margin-top: 0.2rem;
+}
+
+.overall-score-explanation-card {
+  display: grid;
+  gap: 0.5rem;
+}
+
+.overall-formula-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.overall-formula-header small {
+  color: var(--app-muted);
+  font-size: 0.8rem;
+}
+
+.overall-formula-header strong {
+  color: var(--app-ink);
+}
+
+.overall-formula-note {
+  margin: 0.4rem 0 0;
+  font-size: 0.8rem;
+  color: var(--app-muted);
+  line-height: 1.4;
+}
+
+.top-product-ranking-upload-log__overall-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr));
+  gap: 0.75rem;
+  margin: 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-surface);
+}
+
+.top-product-ranking-upload-log__overall-metrics dt {
+  font-size: 0.72rem;
+  color: var(--app-muted);
+  text-transform: uppercase;
+}
+
+.top-product-ranking-upload-log__overall-metrics dd {
+  margin: 0.25rem 0 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--app-ink);
+}
+
+.top-product-ranking-upload-log__overall-metrics .metric-highlight dd {
+  color: var(--app-accent);
+}
+
+.top-product-ranking-upload-log__calculation-line {
+  padding: 0.6rem 0.8rem;
+  border-radius: 0.35rem;
+  background: var(--app-surface);
+  font-family: monospace;
+  font-size: 0.85rem;
+  color: var(--app-ink);
+  text-align: center;
+  border: 1px solid var(--app-border);
+}
+
+.forced-fail-search-shell {
+  margin-top: 0.5rem;
+}
+
+.forced-fail-search-input {
+  width: 100%;
+}
+
+.score-calculation-steps {
+  margin: 0.6rem 0;
+  padding: 0.6rem;
+  background: var(--app-panel);
+  border-radius: 0.35rem;
+  border: 1px solid var(--app-border);
+}
+
+.score-calculation-step-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--app-ink);
+  margin-bottom: 0.35rem;
+}
+
+.score-calculation-step-list {
+  margin: 0;
+  padding-left: 1.25rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.score-calculation-step-list li {
+  font-size: 0.82rem;
+}
+
+.score-calculation-step-list code {
+  color: var(--app-accent);
+  font-family: monospace;
+}
+
+.score-algorithm-desc {
+  margin: 0.5rem 0 0;
+  font-size: 0.82rem;
+  color: var(--app-muted);
+  line-height: 1.4;
+}
+
+/* ── Score Breakdown shared styles ── */
+.iplas-details-subdialog {
+  display: grid;
+  gap: 1rem;
+}
+
+.iplas-details-dialog__dialog-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.iplas-details-dialog__dialog-title h2 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--app-ink);
+}
+
+.iplas-breakdown__name-card {
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+  border: 1px solid var(--app-border);
+}
+
+.iplas-breakdown__name-text {
+  font-family: monospace;
+  font-weight: 700;
+  font-size: 0.95rem;
+  color: var(--app-ink);
+}
+
+.iplas-breakdown__rows-container {
+  display: grid;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.iplas-breakdown__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.65rem 1rem;
+  border-bottom: 1px solid var(--app-border);
+  gap: 1rem;
+}
+
+.iplas-breakdown__row:last-child {
+  border-bottom: 0;
+}
+
+.iplas-breakdown__row-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+}
+
+.iplas-breakdown__row-right {
+  display: flex;
+  align-items: center;
+}
+
+.iplas-breakdown__row-label {
+  font-size: 0.85rem;
+  color: var(--app-muted);
+}
+
+.iplas-breakdown__row-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.5rem;
+  height: 1.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.95rem;
+}
+
+.iplas-breakdown__row-icon--red { color: #ef4444; background: rgba(239, 68, 68, 0.1); }
+.iplas-breakdown__row-icon--orange { color: #f97316; background: rgba(249, 115, 22, 0.1); }
+.iplas-breakdown__row-icon--blue { color: #3b82f6; background: rgba(59, 130, 246, 0.1); }
+.iplas-breakdown__row-icon--green { color: #10b981; background: rgba(16, 185, 129, 0.1); }
+.iplas-breakdown__row-icon--purple { color: #8b5cf6; background: rgba(139, 92, 246, 0.1); }
+.iplas-breakdown__row-icon--amber { color: #f59e0b; background: rgba(245, 158, 11, 0.1); }
+.iplas-breakdown__row-icon--muted { color: var(--app-muted); background: var(--app-surface); }
+.iplas-breakdown__row-icon--star { color: #eab308; background: rgba(234, 179, 8, 0.1); }
+
+.iplas-breakdown__value-text {
+  font-size: 0.88rem;
+  font-weight: 600;
+  color: var(--app-ink);
+}
+
+.iplas-breakdown__value--warning {
+  color: #ef4444;
+}
+
+.iplas-breakdown__value-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+.iplas-breakdown__value-pill--cool {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.iplas-breakdown__value-pill--neutral {
+  background: var(--app-surface);
+  color: var(--app-muted);
+}
+
+.iplas-details-dialog__explanation-card {
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+  background: var(--app-panel);
+}
+
+.iplas-details-dialog__explanation-card summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--app-accent);
+  font-size: 0.85rem;
+}
+
+.iplas-details-dialog__explanation-body {
+  margin-top: 0.75rem;
+}
+
+.score-formula-panel--compact {
+  padding: 0.75rem;
+  border-radius: 0.35rem;
+  background: var(--app-surface);
+}
+
+.top-product-ranking-upload-log__formula-panel {
+  display: grid;
+  gap: 0.35rem;
+  padding: 0.8rem;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  border-radius: 0.5rem;
+}
+
+.top-product-ranking-upload-log__metric-label,
+.iplas-details-dialog__metric-label {
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--app-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.25rem;
+}
+
+.top-product-ranking-upload-log__formula-equation,
+.score-formula-equation {
+  font-family: monospace;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--app-ink);
+  margin-bottom: 0.5rem;
+}
+
+.score-formula-variable-list {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
+.score-formula-variable-list dt {
+  font-family: monospace;
+  font-weight: 700;
+  color: var(--app-accent);
+}
+
+.score-formula-variable-list dd {
+  margin: 0;
+  color: var(--app-muted);
+}
+
+.iplas-details-dialog__footer-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
 }
 </style>
