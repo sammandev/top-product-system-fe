@@ -985,6 +985,8 @@ const comparisonTableItems = computed(() => {
     ...(compareResult.value.comparison_value_items || []),
     ...(compareResult.value.comparison_non_value_items || []),
   ]
+  // Preserve default or original sequence from uploaded test log
+  items.sort((a, b) => (a.source_order ?? 0) - (b.source_order ?? 0))
 
   // Filter to items that belong to the selected station if a station is selected
   if (selectedUploadedStation.value) {
@@ -1134,6 +1136,8 @@ const extractTestItems = async (): Promise<void> => {
           ...(result.comparison_value_items || []),
           ...(result.comparison_non_value_items || []),
         ]
+        // Preserve default or original sequence from uploaded test log
+        allItems.sort((a, b) => (a.source_order ?? 0) - (b.source_order ?? 0))
 
         // Build itemsMap and itemStationsMap from per_isn_data
         allItems.forEach((item: CompareItemEnhanced) => {
@@ -1141,6 +1145,7 @@ const extractTestItems = async (): Promise<void> => {
             const firstData = item.per_isn_data?.[0]
             itemsMap.set(item.test_item, {
               test_item: item.test_item,
+              source_order: item.source_order,
               value: firstData?.value || '',
               usl: item.usl,
               lsl: item.lsl,
@@ -1484,12 +1489,15 @@ const handleAnalyze = async () => {
         ...(result.comparison_value_items || []),
         ...(result.comparison_non_value_items || []),
       ]
+      // Preserve default or original sequence from uploaded test log
+      allItems.sort((a, b) => (a.source_order ?? 0) - (b.source_order ?? 0))
 
       allItems.forEach((item: CompareItemEnhanced) => {
         if (!itemsMap.has(item.test_item)) {
           const firstData = item.per_isn_data?.[0]
           itemsMap.set(item.test_item, {
             test_item: item.test_item,
+            source_order: item.source_order,
             value: firstData?.value || '',
             usl: item.usl,
             lsl: item.lsl,

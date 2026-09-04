@@ -62,6 +62,7 @@ export interface ParsedTestItemEnhanced {
   score: number | null
   score_breakdown: ScoreBreakdown | null
   is_calculated?: boolean
+  source_order?: number
 }
 
 export interface TestLogParseResponseEnhanced {
@@ -103,6 +104,7 @@ export interface CompareItemEnhanced {
   avg_score: number | null
   median_score: number | null
   matched_criteria: boolean
+  source_order?: number
 }
 
 export interface FileSummaryEnhanced {
@@ -162,7 +164,7 @@ export interface UploadScoringConfigApplyPayload {
 }
 
 export function hasMeaningfulUploadLogLimit(limit: number | null | undefined): boolean {
-  return limit !== null && limit !== undefined && limit !== 0 && !Number.isNaN(limit)
+  return limit !== null && limit !== undefined && !Number.isNaN(limit)
 }
 
 export function hasMeaningfulUploadLogCriteria(

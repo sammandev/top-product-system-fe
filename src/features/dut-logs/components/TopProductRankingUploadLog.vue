@@ -1074,7 +1074,7 @@ function isIncludedTestItem(name: string): boolean {
 }
 
 function hasUploadLogLimitValue(limit: number | null | undefined): boolean {
-  return limit !== null && limit !== undefined
+  return limit !== null && limit !== undefined && !Number.isNaN(limit)
 }
 
 function copyToClipboard(text: string): void {
@@ -1336,60 +1336,7 @@ const copyIsnToClipboard = async (isn: string | null) => {
 }
 
 const selectRankingItem = (item: RankingItem) => {
-  selectedRankingItem.value = item
-
-  if (props.parseResult?.parsed_items_enhanced) {
-    selectedTestItems.value = props.parseResult.parsed_items_enhanced.filter((testItem) =>
-      isIncludedTestItem(testItem.test_item),
-    )
-  } else if (props.compareResult) {
-    const isnTestItems: ParsedTestItemEnhanced[] = []
-
-    props.compareResult.comparison_value_items?.forEach((compareItem) => {
-      if (!isIncludedTestItem(compareItem.test_item)) return
-      const perIsnData = compareItem.per_isn_data.find((data) => data.isn === item.isn)
-      if (perIsnData) {
-        isnTestItems.push({
-          test_item: compareItem.test_item,
-          usl: compareItem.usl,
-          lsl: compareItem.lsl,
-          value: perIsnData.value,
-          is_value_type: perIsnData.is_value_type,
-          numeric_value: perIsnData.numeric_value,
-          is_hex: perIsnData.is_hex,
-          hex_decimal: perIsnData.hex_decimal,
-          matched_criteria: compareItem.matched_criteria,
-          target: null,
-          score: perIsnData.score,
-          score_breakdown: perIsnData.score_breakdown,
-        })
-      }
-    })
-
-    props.compareResult.comparison_non_value_items?.forEach((compareItem) => {
-      if (!isIncludedTestItem(compareItem.test_item)) return
-      const perIsnData = compareItem.per_isn_data.find((data) => data.isn === item.isn)
-      if (perIsnData) {
-        isnTestItems.push({
-          test_item: compareItem.test_item,
-          usl: compareItem.usl,
-          lsl: compareItem.lsl,
-          value: perIsnData.value,
-          is_value_type: perIsnData.is_value_type,
-          numeric_value: perIsnData.numeric_value,
-          is_hex: perIsnData.is_hex,
-          hex_decimal: perIsnData.hex_decimal,
-          matched_criteria: compareItem.matched_criteria,
-          target: null,
-          score: perIsnData.score,
-          score_breakdown: perIsnData.score_breakdown,
-        })
-      }
-    })
-
-    selectedTestItems.value = isnTestItems
-  }
-
+  selectedTestItems.value = getTestItemsForIsn(item.isn)
   selectedRankingItem.value = {
     ...item,
     score: computeRankingScore(selectedTestItems.value),
@@ -1477,7 +1424,9 @@ async function exportRankingToExcel() {
       const sourceItems = [
         ...props.compareResult.comparison_value_items,
         ...props.compareResult.comparison_non_value_items,
-      ].filter((item) => isIncludedTestItem(item.test_item))
+      ]
+        .filter((item) => isIncludedTestItem(item.test_item))
+        .sort((a, b) => (a.source_order ?? 0) - (b.source_order ?? 0))
       records = createTopProductExcelRecordsFromComparison(
         props.compareResult,
         sourceItems,
@@ -1536,33 +1485,18 @@ function getTestItemsForIsn(isn: string | null): ParsedTestItemEnhanced[] {
   if (props.compareResult) {
     const items: ParsedTestItemEnhanced[] = []
 
-    props.compareResult.comparison_value_items?.forEach((compareItem) => {
-      if (!isIncludedTestItem(compareItem.test_item)) return
-      const perIsnData = compareItem.per_isn_data.find((data) => data.isn === isn)
-      if (perIsnData) {
-        items.push({
-          test_item: compareItem.test_item,
-          usl: compareItem.usl,
-          lsl: compareItem.lsl,
-          value: perIsnData.value,
-          is_value_type: perIsnData.is_value_type,
-          numeric_value: perIsnData.numeric_value,
-          is_hex: perIsnData.is_hex,
-          hex_decimal: perIsnData.hex_decimal,
-          matched_criteria: compareItem.matched_criteria,
-          target: null,
-          score: perIsnData.score,
-          score_breakdown: perIsnData.score_breakdown,
-        })
-      }
-    })
+    const allCompareItems = [
+      ...(props.compareResult.comparison_value_items || []),
+      ...(props.compareResult.comparison_non_value_items || []),
+    ].sort((a, b) => (a.source_order ?? 0) - (b.source_order ?? 0))
 
-    props.compareResult.comparison_non_value_items?.forEach((compareItem) => {
+    allCompareItems.forEach((compareItem) => {
       if (!isIncludedTestItem(compareItem.test_item)) return
       const perIsnData = compareItem.per_isn_data.find((data) => data.isn === isn)
       if (perIsnData) {
         items.push({
           test_item: compareItem.test_item,
+          source_order: compareItem.source_order,
           usl: compareItem.usl,
           lsl: compareItem.lsl,
           value: perIsnData.value,

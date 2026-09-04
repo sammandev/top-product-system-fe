@@ -345,9 +345,9 @@ const formulaText = computed(() => {
   const formulas: Record<string, string> = {
     symmetrical: 'Score = 1 + 9 x (L - |x - T|) / L',
     asymmetrical: 'Score = 1 + 9 x (L - d) / L',
-    per_mask: 'Score = 1 + 9 x (UCL - x) / UCL',
-    evm: 'Score = 1 + 9 x (1 - (x - ref) / (UCL - ref))^0.25',
-    throughput: 'Score = 1 + 9 x (x - LCL) / (UCL - LCL)',
+    per_mask: 'Score = 1 + 9 x (UCL - x) / UCL (Perfect 10 at 0)',
+    evm: 'Score = 1 + 9 x (UCL - x) / (UCL - (-42)) [Linear, ~9.0 at -40]',
+    throughput: 'Score = 1 + 9 x (x - LCL) / (UCL - LCL) [Perfect 10 at UCL]',
     binary: '10.0 if PASS, 0.0 if FAIL',
   }
   return formulas[type] || 'Score calculation based on criteria limits'
@@ -371,11 +371,11 @@ const scoringTypeDescription = computed(() => {
     case 'asymmetrical':
       return 'Custom user target with policy (higher/lower/symmetrical). Deviation is measured from target toward limit.'
     case 'per_mask':
-      return 'Near-zero scoring for PER/MASK test items where 0 is ideal and higher values toward UCL decrease the score.'
+      return 'Near-zero scoring for PER/MASK test items where 0 or close to 0 receives a perfect score (10), decreasing toward UCL.'
     case 'evm':
-      return 'EVM scoring with exponential decay curve from reference best (-35 dB) toward UCL limit.'
+      return 'Linear scoring for EVM test items where lower dB values are better, values close to -40 dB or lower are considered good (~9.0), decreasing toward UCL.'
     case 'throughput':
-      return 'Throughput scoring where higher values above LCL yield higher scores.'
+      return 'Throughput scoring where higher values are better and perfect score is achieved as value approaches or exceeds UCL.'
     case 'binary':
       return 'Simple status check: PASS gives 10.0, FAIL gives 0.0.'
     default:
@@ -418,26 +418,36 @@ const calculationSteps = computed<string[]>(() => {
     }
   } else if (type === 'per_mask') {
     if (usl !== null && usl > 0) {
-      const raw = 1 + 9 * ((usl - x) / usl)
-      steps.push(`UCL = ${usl}, Measured value x = ${x}`)
-      steps.push(`Raw Score = 1 + 9 x (${usl} - ${x}) / ${usl} = ${raw.toFixed(4)}`)
+      steps.push(`UCL = ${usl}, Ideal Target = 0, Measured x = ${x}`)
+      if (x <= 0) {
+        steps.push(`Measured value x <= 0: Perfect score = 10.00`)
+      } else if (x > usl) {
+        steps.push(`Measured value x > UCL (${usl}): Exceeds upper limit, score = 0.00`)
+      } else {
+        const frac = (usl - x) / usl
+        const raw = 1 + 9 * frac
+        steps.push(`Fraction = (${usl} - ${x}) / ${usl} = ${frac.toFixed(4)}`)
+        steps.push(`Linear Score = 1 + 9 x ${frac.toFixed(4)} = ${raw.toFixed(4)}`)
+      }
       steps.push(
-        `Final Score (clamped 0-10) = ${score !== null && score !== undefined ? score.toFixed(2) : Math.max(0, Math.min(10, raw)).toFixed(2)}`,
+        `Final Score (clamped 0-10) = ${score !== null && score !== undefined ? score.toFixed(2) : x <= 0 ? '10.00' : '1.00'}`,
       )
     }
   } else if (type === 'evm') {
     if (usl !== null) {
-      const ref = -35
-      const ratio = (x - ref) / (usl - ref)
+      const ref = -42.0
       steps.push(`Reference best = ${ref} dB, UCL = ${usl} dB, Measured x = ${x} dB`)
-      if (ratio >= 0 && ratio <= 1) {
-        const decay = (1 - ratio) ** 0.25
-        const raw = 1 + 9 * decay
+      if (x <= ref) {
+        steps.push(`Measured x <= Reference best (${ref} dB): Perfect score = 10.00`)
+      } else if (x > usl) {
+        steps.push(`Measured x > UCL (${usl} dB): Exceeds upper limit, score = 0.00`)
+      } else {
+        const dist = (x - ref) / (usl - ref)
+        const raw = 1 + 9 * (1 - dist)
         steps.push(
-          `Normalized ratio = (${x} - (${ref})) / (${usl} - (${ref})) = ${ratio.toFixed(4)}`,
+          `Normalized distance = (${x} - (${ref})) / (${usl} - (${ref})) = ${dist.toFixed(4)}`,
         )
-        steps.push(`Decay = (1 - ${ratio.toFixed(4)})^0.25 = ${decay.toFixed(4)}`)
-        steps.push(`Score = 1 + 9 x ${decay.toFixed(4)} = ${raw.toFixed(4)}`)
+        steps.push(`Linear Score = 1 + 9 x (1 - ${dist.toFixed(4)}) = ${raw.toFixed(4)}`)
       }
       steps.push(
         `Final Score = ${score !== null && score !== undefined ? score.toFixed(2) : '10.00'}`,
@@ -454,14 +464,21 @@ const calculationSteps = computed<string[]>(() => {
       )
     }
   } else if (type === 'throughput') {
-    if (usl !== null && lsl !== null && usl > lsl) {
-      const raw = 1 + 9 * ((x - lsl) / (usl - lsl))
-      steps.push(`UCL = ${usl}, LCL = ${lsl}, Measured x = ${x}`)
-      steps.push(`Score = 1 + 9 x (${x} - ${lsl}) / (${usl} - ${lsl}) = ${raw.toFixed(4)}`)
-      steps.push(
-        `Final Score = ${score !== null && score !== undefined ? score.toFixed(2) : Math.max(0, Math.min(10, raw)).toFixed(2)}`,
-      )
+    const lower = lsl ?? 0
+    steps.push(`UCL (Target) = ${usl ?? 'N/A'}, LCL = ${lower}, Measured x = ${x}`)
+    if (usl !== null && x >= usl) {
+      steps.push(`Measured x >= UCL: Approaches/exceeds upper limit, perfect score = 10.00`)
+    } else if (x < lower) {
+      steps.push(`Measured x < LCL: Below lower limit, score = 0.00`)
+    } else if (usl !== null && usl > lower) {
+      const frac = (x - lower) / (usl - lower)
+      const raw = 1 + 9 * frac
+      steps.push(`Fraction = (${x} - ${lower}) / (${usl} - ${lower}) = ${frac.toFixed(4)}`)
+      steps.push(`Score = 1 + 9 x ${frac.toFixed(4)} = ${raw.toFixed(4)}`)
     }
+    steps.push(
+      `Final Score = ${score !== null && score !== undefined ? score.toFixed(2) : '10.00'}`,
+    )
   } else if (type === 'binary') {
     steps.push(`Status rule: PASS = 10.00, FAIL = 0.00`)
     steps.push(

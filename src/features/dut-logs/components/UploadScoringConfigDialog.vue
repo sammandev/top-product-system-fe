@@ -624,7 +624,8 @@ function getCommonMinScore(configs: RescoreScoringConfig[]): number | undefined 
 // Auto-detect scoring type by test item name patterns
 function detectScoringType(name: string): string {
   const upper = name.toUpperCase()
-  if (upper.includes('PER_') || upper.includes('_PER') || upper.includes('MASK')) return 'per_mask'
+  if (upper.includes('PER') || (upper.includes('MASK') && !upper.includes('MARGIN')))
+    return 'per_mask'
   if (upper.includes('EVM')) return 'evm'
   if (upper.includes('THROUGHPUT') || upper.includes('THRUPUT') || upper.includes('TPUT'))
     return 'throughput'
@@ -669,7 +670,7 @@ const filteredConfigs = computed(() => {
 
 // Helper: check if item is criteria (has UCL or LCL)
 function hasUploadLogLimitValue(limit: number | null | undefined): boolean {
-  return limit !== null && limit !== undefined
+  return limit !== null && limit !== undefined && !Number.isNaN(limit)
 }
 
 function isItemCriteria(name: string): boolean {
