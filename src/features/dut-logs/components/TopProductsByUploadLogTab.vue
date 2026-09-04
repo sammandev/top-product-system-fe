@@ -789,7 +789,10 @@ const displayedIsns = computed(() => {
   if (selectedUploadedStation.value && compareResult.value?.file_summaries) {
     const isnsFromStation = new Set(
       compareResult.value.file_summaries
-        .filter((s: FileSummaryEnhanced) => (s.station || s.metadata?.station) === selectedUploadedStation.value)
+        .filter(
+          (s: FileSummaryEnhanced) =>
+            (s.station || s.metadata?.station) === selectedUploadedStation.value,
+        )
         .map((s: FileSummaryEnhanced) => s.isn)
         .filter((isn: string | null): isn is string => isn !== null),
     )
@@ -993,108 +996,6 @@ const extractTestItems = async (): Promise<void> => {
               if (st && st !== 'Unknown') {
                 itemStationsMap.get(item.test_item)?.add(st)
               }
-            }
-          })
-        })
-      } catch (err: unknown) {
-        console.warn(`Failed to compare files:`, getErrorMessage(err))
-      }
-    } else {
-      // Single .txt file - use parseLog
-      for (const file of logFiles.value) {
-        try {
-          const result = await parseLog(file, criteriaFile.value, showOnlyCriteria.value)
-          const station = result.station || 'Unknown'
-          stations.add(station)
-          if (result.metadata?.device) {
-            devices.add(result.metadata.device)
-          }
-
-          // Track items and their stations
-          for (const item of result.parsed_items_enhanced || []) {
-            // Keep first occurrence of each item
-            if (!itemsMap.has(item.test_item)) {
-              itemsMap.set(item.test_item, item)
-            }
-            // Track which stations have this item
-            if (!itemStationsMap.has(item.test_item)) {
-              itemStationsMap.set(item.test_item, new Set())
-            }
-            itemStationsMap.get(item.test_item)?.add(station)
-          }
-        } catch (err: unknown) {
-          console.warn(`Failed to parse file ${file.name}:`, getErrorMessage(err))
-        }
-      }
-    }
-
-    extractedTestItems.value = Array.from(itemsMap.values())
-    extractedStations.value = Array.from(stations).sort()
-    extractedDevices.value = Array.from(devices).sort()
-    testItemStationsMap.value = itemStationsMap
-  } catch (err: unknown) {
-    // If quick-parse fails, we can still open config dialog with empty items
-    console.warn('Failed to extract test items for scoring config:', getErrorMessage(err))
-    extractedTestItems.value = []
-    extractedStations.value = []
-    extractedDevices.value = []
-    testItemStationsMap.value = new Map()
-  } finally {
-    extractingItems.value = false
-  }
-}
-
-    if (hasArchive || logFiles.value.length > 1) {
-      // Use compareLogs for archives or multiple files
-      try {
-        const result = await compareLogs(logFiles.value, criteriaFile.value, showOnlyCriteria.value)
-
-        // Extract stations from file_summaries
-        result.file_summaries?.forEach((summary: FileSummaryEnhanced) => {
-          const station = summary.metadata?.station || 'Unknown'
-          stations.add(station)
-          if (summary.metadata?.device) {
-            devices.add(summary.metadata.device)
-          }
-        })
-
-        // Extract items from comparison_value_items and comparison_non_value_items
-        const allItems = [
-          ...(result.comparison_value_items || []),
-          ...(result.comparison_non_value_items || []),
-        ]
-
-        // Build itemsMap and itemStationsMap from per_isn_data
-        allItems.forEach((item: CompareItemEnhanced) => {
-          if (!itemsMap.has(item.test_item)) {
-            const firstData = item.per_isn_data?.[0]
-            itemsMap.set(item.test_item, {
-              test_item: item.test_item,
-              value: firstData?.value || '',
-              usl: item.usl,
-              lsl: item.lsl,
-              is_value_type: firstData?.is_value_type ?? false,
-              numeric_value: firstData?.numeric_value ?? null,
-              is_hex: firstData?.is_hex ?? false,
-              hex_decimal: firstData?.hex_decimal ?? null,
-              matched_criteria: item.matched_criteria || false,
-              target: item.baseline,
-              score: item.avg_score,
-              score_breakdown: firstData?.score_breakdown ?? null,
-            } as ParsedTestItemEnhanced)
-          }
-
-          // Track stations per item from file_summaries + per_isn_data
-          if (!itemStationsMap.has(item.test_item)) {
-            itemStationsMap.set(item.test_item, new Set())
-          }
-          item.per_isn_data?.forEach((data: PerIsnData) => {
-            // Find the station for this ISN from file_summaries
-            const summary = result.file_summaries?.find(
-              (s: FileSummaryEnhanced) => s.isn === data.isn,
-            )
-            if (summary?.metadata?.station) {
-              itemStationsMap.get(item.test_item)?.add(summary.metadata.station)
             }
           })
         })
