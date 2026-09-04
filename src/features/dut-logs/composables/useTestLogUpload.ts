@@ -80,6 +80,8 @@ export interface TestLogParseResponseEnhanced {
 
 export interface PerIsnData {
   isn: string | null
+  station?: string | null
+  filename?: string | null
   value: string
   is_value_type: boolean
   numeric_value: number | null
@@ -106,6 +108,7 @@ export interface CompareItemEnhanced {
 export interface FileSummaryEnhanced {
   filename: string
   isn: string | null
+  station?: string | null
   metadata: TestLogMetadata
   parsed_count: number
   avg_score: number | null
@@ -159,7 +162,7 @@ export interface UploadScoringConfigApplyPayload {
 }
 
 export function hasMeaningfulUploadLogLimit(limit: number | null | undefined): boolean {
-  return limit !== null && limit !== undefined && limit !== 0
+  return limit !== null && limit !== undefined && limit !== 0 && !Number.isNaN(limit)
 }
 
 export function hasMeaningfulUploadLogCriteria(

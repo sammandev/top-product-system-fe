@@ -570,6 +570,7 @@ import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import { getErrorMessage } from '@/shared/utils'
 import { downloadUploadLogCriteriaTemplate } from '../utils/criteriaTemplate'
 import {
+  findIplasItemForIsn,
   findIplasTestItem,
   getIplasRecordsForIsn,
   resolveIplasStationRecord,
@@ -763,8 +764,9 @@ const uploadedStationOptions = computed(() => {
         return
       }
     }
-    if (s.metadata?.station) {
-      stations.add(s.metadata.station)
+    const station = s.station || s.metadata?.station
+    if (station && station !== 'Unknown') {
+      stations.add(station)
     }
   })
   return Array.from(stations).sort()
@@ -787,7 +789,7 @@ const displayedIsns = computed(() => {
   if (selectedUploadedStation.value && compareResult.value?.file_summaries) {
     const isnsFromStation = new Set(
       compareResult.value.file_summaries
-        .filter((s: FileSummaryEnhanced) => s.metadata?.station === selectedUploadedStation.value)
+        .filter((s: FileSummaryEnhanced) => (s.station || s.metadata?.station) === selectedUploadedStation.value)
         .map((s: FileSummaryEnhanced) => s.isn)
         .filter((isn: string | null): isn is string => isn !== null),
     )
@@ -872,14 +874,21 @@ const comparisonTableItems = computed(() => {
       row[`uploaded_val_${idx}`] = perIsn?.value ?? null
       row[`uploaded_score_${idx}`] = perIsn?.score ?? null
 
+      // Preferred uploaded station for this ISN
+      const uploadedSummary = compareResult.value?.file_summaries?.find((s) => s.isn === isn)
+      const preferredStation =
+        perIsn?.station || uploadedSummary?.station || uploadedSummary?.metadata?.station
+
       // iPLAS data from fetched records
       const iplasRecords = getIplasRecordsForIsn(iplasDataByIsn.value, isn)
       if (iplasRecords && iplasRecords.length > 0) {
-        const stationRecord = resolveIplasStationRecord(iplasRecords, selectedIplasStation.value)
-        if (stationRecord) {
-          const iplasItem = findIplasTestItem(stationRecord, item.test_item)
-          row[`iplas_val_${idx}`] = iplasItem?.VALUE ?? null
-        }
+        const iplasItem = findIplasItemForIsn(
+          iplasRecords,
+          item.test_item,
+          selectedIplasStation.value,
+          preferredStation,
+        )
+        row[`iplas_val_${idx}`] = iplasItem?.VALUE ?? null
       }
 
       // iPLAS score from rescored data
@@ -916,6 +925,124 @@ const extractTestItems = async (): Promise<void> => {
     }
 
     const hasArchive = logFiles.value.some(isArchiveFile)
+
+    if (hasArchive || logFiles.value.length > 1) {
+      // Use compareLogs for archives or multiple files
+      try {
+        const result = await compareLogs(logFiles.value, criteriaFile.value, showOnlyCriteria.value)
+
+        // Extract stations from file_summaries
+        result.file_summaries?.forEach((summary: FileSummaryEnhanced) => {
+          const station = summary.station || summary.metadata?.station || 'Unknown'
+          if (station && station !== 'Unknown') {
+            stations.add(station)
+          } else if (stations.size === 0) {
+            stations.add('Unknown')
+          }
+          if (summary.metadata?.device) {
+            devices.add(summary.metadata.device)
+          }
+        })
+
+        // Extract items from comparison_value_items and comparison_non_value_items
+        const allItems = [
+          ...(result.comparison_value_items || []),
+          ...(result.comparison_non_value_items || []),
+        ]
+
+        // Build itemsMap and itemStationsMap from per_isn_data
+        allItems.forEach((item: CompareItemEnhanced) => {
+          if (!itemsMap.has(item.test_item)) {
+            const firstData = item.per_isn_data?.[0]
+            itemsMap.set(item.test_item, {
+              test_item: item.test_item,
+              value: firstData?.value || '',
+              usl: item.usl,
+              lsl: item.lsl,
+              is_value_type: firstData?.is_value_type ?? false,
+              numeric_value: firstData?.numeric_value ?? null,
+              is_hex: firstData?.is_hex ?? false,
+              hex_decimal: firstData?.hex_decimal ?? null,
+              matched_criteria: item.matched_criteria || false,
+              target: item.baseline,
+              score: item.avg_score,
+              score_breakdown: firstData?.score_breakdown ?? null,
+            } as ParsedTestItemEnhanced)
+          }
+
+          // Track stations per item from per_isn_data
+          if (!itemStationsMap.has(item.test_item)) {
+            itemStationsMap.set(item.test_item, new Set())
+          }
+          item.per_isn_data?.forEach((data: PerIsnData) => {
+            if (data.station && data.station !== 'Unknown') {
+              itemStationsMap.get(item.test_item)?.add(data.station)
+            } else if (data.filename) {
+              const summary = result.file_summaries?.find(
+                (s: FileSummaryEnhanced) => s.filename === data.filename,
+              )
+              const st = summary?.station || summary?.metadata?.station
+              if (st && st !== 'Unknown') {
+                itemStationsMap.get(item.test_item)?.add(st)
+              }
+            } else if (data.isn) {
+              const summary = result.file_summaries?.find(
+                (s: FileSummaryEnhanced) => s.isn === data.isn,
+              )
+              const st = summary?.station || summary?.metadata?.station
+              if (st && st !== 'Unknown') {
+                itemStationsMap.get(item.test_item)?.add(st)
+              }
+            }
+          })
+        })
+      } catch (err: unknown) {
+        console.warn(`Failed to compare files:`, getErrorMessage(err))
+      }
+    } else {
+      // Single .txt file - use parseLog
+      for (const file of logFiles.value) {
+        try {
+          const result = await parseLog(file, criteriaFile.value, showOnlyCriteria.value)
+          const station = result.station || 'Unknown'
+          stations.add(station)
+          if (result.metadata?.device) {
+            devices.add(result.metadata.device)
+          }
+
+          // Track items and their stations
+          for (const item of result.parsed_items_enhanced || []) {
+            // Keep first occurrence of each item
+            if (!itemsMap.has(item.test_item)) {
+              itemsMap.set(item.test_item, item)
+            }
+            // Track which stations have this item
+            if (!itemStationsMap.has(item.test_item)) {
+              itemStationsMap.set(item.test_item, new Set())
+            }
+            itemStationsMap.get(item.test_item)?.add(station)
+          }
+        } catch (err: unknown) {
+          console.warn(`Failed to parse file ${file.name}:`, getErrorMessage(err))
+        }
+      }
+    }
+
+    extractedTestItems.value = Array.from(itemsMap.values())
+    extractedStations.value = Array.from(stations).sort()
+    extractedDevices.value = Array.from(devices).sort()
+    testItemStationsMap.value = itemStationsMap
+  } catch (err: unknown) {
+    // If quick-parse fails, we can still open config dialog with empty items
+    console.warn('Failed to extract test items for scoring config:', getErrorMessage(err))
+    extractedTestItems.value = []
+    extractedStations.value = []
+    extractedDevices.value = []
+    testItemStationsMap.value = new Map()
+  } finally {
+    extractingItems.value = false
+  }
+}
 
     if (hasArchive || logFiles.value.length > 1) {
       // Use compareLogs for archives or multiple files
@@ -1080,58 +1207,102 @@ const fetchIplasForComparison = async () => {
   }
 }
 
+function parseLimitNumber(val: string | number | null | undefined): number | null {
+  if (val === null || val === undefined) return null
+  if (typeof val === 'number') return Number.isFinite(val) ? val : null
+  const str = String(val).trim()
+  if (!str || str.toLowerCase() === 'n/a' || str.toLowerCase() === 'null') return null
+  const parsed = parseFloat(str)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 /**
  * Rescore iPLAS data for all ISNs using the applied scoring configs
- */
-/**
- * Rescore iPLAS data for all ISNs using the applied scoring configs
- * UPDATED: Only score criteria items (with UCL or LCL) by default
+ * UPDATED: Score criteria items across all matching records for each ISN
  */
 const rescoreIplasData = async () => {
   const isns = allCompareIsns.value
-  iplasScoredByIsn.value = new Map()
+  const nextIplasScoredByIsn = new Map<string, Map<string, { score: number }>>()
 
   // Build set of explicitly configured item names
   const explicitlyConfigured = new Set(appliedScoringConfigs.value.map((c) => c.test_item_name))
 
+  // Build lookup of comparison items to use fallback USL/LSL if iPLAS item is missing limits
+  const allComparisonItems = [
+    ...(compareResult.value?.comparison_value_items || []),
+    ...(compareResult.value?.comparison_non_value_items || []),
+  ]
+  const comparisonLimitsMap = new Map<string, { usl: number | null; lsl: number | null }>()
+  for (const item of allComparisonItems) {
+    comparisonLimitsMap.set(item.test_item.trim().toLowerCase(), {
+      usl: item.usl,
+      lsl: item.lsl,
+    })
+  }
+
   for (const isn of isns) {
     const records = getIplasRecordsForIsn(iplasDataByIsn.value, isn)
-    const stationRecord = resolveIplasStationRecord(records, selectedIplasStation.value)
+    if (!records || records.length === 0) continue
 
-    if (!stationRecord?.test_item.length) continue
+    let targetRecords: IplasIsnSearchRecord[] = []
+    if (selectedIplasStation.value) {
+      const stationRecord = resolveIplasStationRecord(records, selectedIplasStation.value)
+      if (stationRecord) {
+        targetRecords = [stationRecord]
+      }
+    } else {
+      targetRecords = records
+    }
 
-    // UPDATED: Filter to only criteria items (with limits) or explicitly configured items
-    const testItems = stationRecord.test_item
-      .filter((t) => {
-        const hasLimits =
-          hasMeaningfulUploadLogLimit(t.UCL ? parseFloat(t.UCL) : null) ||
-          hasMeaningfulUploadLogLimit(t.LCL ? parseFloat(t.LCL) : null)
-        return hasLimits || explicitlyConfigured.has(t.NAME)
-      })
-      .map((t) => ({
-        test_item: t.NAME,
-        value: t.VALUE,
-        usl: t.UCL ? parseFloat(t.UCL) : null,
-        lsl: t.LCL ? parseFloat(t.LCL) : null,
-        status: t.STATUS || 'PASS',
-      }))
+    if (targetRecords.length === 0) continue
 
+    const testItemMap = new Map<
+      string,
+      { test_item: string; value: string; usl: number | null; lsl: number | null; status: string }
+    >()
+
+    for (const record of targetRecords) {
+      for (const t of record.test_item || []) {
+        const key = t.NAME.trim().toLowerCase()
+        if (!testItemMap.has(key)) {
+          const rawUcl = parseLimitNumber(t.UCL)
+          const rawLcl = parseLimitNumber(t.LCL)
+          const fallbackLimits = comparisonLimitsMap.get(key)
+          const usl = rawUcl ?? fallbackLimits?.usl ?? null
+          const lsl = rawLcl ?? fallbackLimits?.lsl ?? null
+
+          const hasLimits = hasMeaningfulUploadLogLimit(usl) || hasMeaningfulUploadLogLimit(lsl)
+          if (hasLimits || explicitlyConfigured.has(t.NAME)) {
+            testItemMap.set(key, {
+              test_item: t.NAME,
+              value: t.VALUE,
+              usl,
+              lsl,
+              status: t.STATUS || 'PASS',
+            })
+          }
+        }
+      }
+    }
+
+    const testItems = Array.from(testItemMap.values())
     if (testItems.length === 0) continue
 
     try {
       const result = await rescoreItems(testItems, appliedScoringConfigs.value)
       const scoreMap = new Map<string, { score: number }>()
       result.test_item_scores.forEach((score: RescoreItemResult) => {
-        // Only add to map if score is not null
-        if (score.score !== null) {
-          scoreMap.set(score.test_item.toLowerCase(), { score: score.score })
+        if (score.score !== null && score.score !== undefined) {
+          scoreMap.set(score.test_item.trim().toLowerCase(), { score: score.score })
         }
       })
-      iplasScoredByIsn.value.set(isn, scoreMap)
+      nextIplasScoredByIsn.set(isn, scoreMap)
     } catch (err: unknown) {
       console.error(`Failed to rescore iPLAS data for ${isn}:`, err)
     }
   }
+
+  iplasScoredByIsn.value = nextIplasScoredByIsn
 }
 
 /**
@@ -1196,6 +1367,79 @@ const handleAnalyze = async () => {
       )
       compareResult.value = result
       parsingResult.value = null
+
+      // Sync extracted test items and stations from compareLogs result
+      const stations = new Set<string>()
+      const devices = new Set<string>()
+      const itemsMap = new Map<string, ParsedTestItemEnhanced>()
+      const itemStationsMap = new Map<string, Set<string>>()
+
+      result.file_summaries?.forEach((summary: FileSummaryEnhanced) => {
+        const station = summary.station || summary.metadata?.station || 'Unknown'
+        if (station && station !== 'Unknown') {
+          stations.add(station)
+        } else if (stations.size === 0) {
+          stations.add('Unknown')
+        }
+        if (summary.metadata?.device) {
+          devices.add(summary.metadata.device)
+        }
+      })
+
+      const allItems = [
+        ...(result.comparison_value_items || []),
+        ...(result.comparison_non_value_items || []),
+      ]
+
+      allItems.forEach((item: CompareItemEnhanced) => {
+        if (!itemsMap.has(item.test_item)) {
+          const firstData = item.per_isn_data?.[0]
+          itemsMap.set(item.test_item, {
+            test_item: item.test_item,
+            value: firstData?.value || '',
+            usl: item.usl,
+            lsl: item.lsl,
+            is_value_type: firstData?.is_value_type ?? false,
+            numeric_value: firstData?.numeric_value ?? null,
+            is_hex: firstData?.is_hex ?? false,
+            hex_decimal: firstData?.hex_decimal ?? null,
+            matched_criteria: item.matched_criteria || false,
+            target: item.baseline,
+            score: item.avg_score,
+            score_breakdown: firstData?.score_breakdown ?? null,
+          } as ParsedTestItemEnhanced)
+        }
+
+        if (!itemStationsMap.has(item.test_item)) {
+          itemStationsMap.set(item.test_item, new Set())
+        }
+        item.per_isn_data?.forEach((data: PerIsnData) => {
+          if (data.station && data.station !== 'Unknown') {
+            itemStationsMap.get(item.test_item)?.add(data.station)
+          } else if (data.filename) {
+            const summary = result.file_summaries?.find(
+              (s: FileSummaryEnhanced) => s.filename === data.filename,
+            )
+            const st = summary?.station || summary?.metadata?.station
+            if (st && st !== 'Unknown') {
+              itemStationsMap.get(item.test_item)?.add(st)
+            }
+          } else if (data.isn) {
+            const summary = result.file_summaries?.find(
+              (s: FileSummaryEnhanced) => s.isn === data.isn,
+            )
+            const st = summary?.station || summary?.metadata?.station
+            if (st && st !== 'Unknown') {
+              itemStationsMap.get(item.test_item)?.add(st)
+            }
+          }
+        })
+      })
+
+      extractedTestItems.value = Array.from(itemsMap.values())
+      extractedStations.value = Array.from(stations).sort()
+      extractedDevices.value = Array.from(devices).sort()
+      testItemStationsMap.value = itemStationsMap
     }
   } catch (error: unknown) {
     showErrorNotification(getErrorMessage(error) || 'Analysis failed. Please try again.')
@@ -1351,6 +1595,17 @@ watch(selectedIplasStation, async () => {
     await rescoreIplasData()
   }
 })
+
+// When scoring configs change, rescore iPLAS data
+watch(
+  appliedScoringConfigs,
+  async () => {
+    if (iplasDataByIsn.value.size > 0) {
+      await rescoreIplasData()
+    }
+  },
+  { deep: true },
+)
 
 watch(selectedDeviceScope, async () => {
   if (compareResult.value) {
