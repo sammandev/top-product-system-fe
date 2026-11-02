@@ -33,7 +33,39 @@ export function createPrimeVueOptions(license = APP_CONFIG.ui.primeUiLicense) {
 
 export const primeVueOptions = createPrimeVueOptions()
 
+export const PRIMEUI_LICENSE_STORAGE_KEY = 'primeui-license-cache'
+
+function readCachedLicense(): string | null {
+  try {
+    const value = window.localStorage.getItem(PRIMEUI_LICENSE_STORAGE_KEY)
+    return value && value.trim() ? value.trim() : null
+  } catch {
+    return null
+  }
+}
+
+function writeCachedLicense(license: string) {
+  try {
+    window.localStorage.setItem(PRIMEUI_LICENSE_STORAGE_KEY, license)
+  } catch {
+    // Storage unavailable (private mode/quota); the next load simply fetches again.
+  }
+}
+
+/**
+ * Returns the cached license immediately when available (refreshing it in the
+ * background for the next load), so app startup is not blocked on the API.
+ */
 export async function resolvePrimeUiLicense(): Promise<string> {
+  const cached = readCachedLicense()
+  if (cached) {
+    void fetchPrimeUiLicense()
+    return cached
+  }
+  return fetchPrimeUiLicense()
+}
+
+async function fetchPrimeUiLicense(): Promise<string> {
   const baseUrl = APP_CONFIG.api.baseURL.replace(/\/$/, '')
   const controller = new AbortController()
   const timeoutId = window.setTimeout(() => controller.abort(), 1500)
@@ -47,7 +79,9 @@ export async function resolvePrimeUiLicense(): Promise<string> {
     if (response.ok) {
       const payload = (await response.json()) as { license?: unknown }
       if (typeof payload.license === 'string' && payload.license.trim()) {
-        return payload.license.trim()
+        const license = payload.license.trim()
+        writeCachedLicense(license)
+        return license
       }
     }
   } catch {
