@@ -8,7 +8,7 @@ export default defineConfig({
     globals: true,
     environment: 'happy-dom',
     setupFiles: ['./src/test/setup.ts'],
-    exclude: ['e2e/**', 'node_modules/**'],
+    exclude: ['e2e/**', 'node_modules/**', '.agents/**'],
     css: false, // Disable CSS processing in tests
     coverage: {
       provider: 'v8',

@@ -35,7 +35,7 @@ function manualChunks(id: string): string | undefined {
     return 'vendor-query'
   }
 
-  if (/^(?:axios|dayjs|lodash-es|zod)\//.test(pkgPath) || pkgPath.startsWith('@vueuse/')) {
+  if (/^(?:axios|dayjs)\//.test(pkgPath) || pkgPath.startsWith('@vueuse/')) {
     return 'vendor-utils'
   }
 

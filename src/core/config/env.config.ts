@@ -15,9 +15,6 @@ class EnvironmentConfig {
   // Feature Flags
   readonly enableAnalytics: boolean
 
-  // External Services
-  readonly sentryDsn?: string
-
   // Environment
   readonly isDevelopment: boolean
   readonly isProduction: boolean
@@ -36,7 +33,6 @@ class EnvironmentConfig {
     this.appTitle = env.VITE_APP_TITLE || 'Top Product'
     this.appVersion = env.VITE_APP_VERSION || '1.0.0'
     this.enableAnalytics = env.VITE_ENABLE_ANALYTICS === 'true'
-    this.sentryDsn = env.VITE_SENTRY_DSN
 
     this.isDevelopment = env.DEV
     this.isProduction = env.PROD
@@ -53,7 +49,6 @@ class EnvironmentConfig {
       appTitle: this.appTitle,
       appVersion: this.appVersion,
       enableAnalytics: this.enableAnalytics,
-      sentryDsn: this.sentryDsn,
       isDevelopment: this.isDevelopment,
       isProduction: this.isProduction,
       isTest: this.isTest,

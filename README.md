@@ -65,10 +65,6 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 ### Document & Excel Processing
 - **ExcelJS 4.4.0** — Excel file creation and manipulation
 - **jsPDF 4.2.1** + **jspdf-autotable 5.0.7** — PDF generation with tables
-- **JSZip 3.10.1** — ZIP file handling
-
-### Monitoring
-- **@sentry/vue 10.45.0** — Error monitoring and performance tracing
 
 ### Testing
 - **Vitest 4.1.0** — Unit testing framework (Vite-native)

@@ -26,8 +26,6 @@ interface ImportMetaEnv {
   readonly VITE_IPLAS_API_TOKEN_PTY?: string
   readonly VITE_IPLAS_V1_API_BASE_URL?: string
   readonly VITE_IPLAS_V2_API_BASE_URL?: string
-  readonly VITE_SENTRY_DSN?: string
-  readonly VITE_SENTRY_TRACES_SAMPLE_RATE?: string
   readonly MODE: string
   readonly DEV: boolean
   readonly PROD: boolean

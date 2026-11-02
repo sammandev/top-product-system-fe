@@ -1,6 +1,5 @@
 import { createApp, defineAsyncComponent } from 'vue'
 import { installAppProviders, resolvePrimeUiLicense } from '@/app/providers'
-import { envConfig } from '@/core/config/env.config'
 import router from '@/core/router'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
@@ -19,32 +18,6 @@ import './app/styles/index.css'
 import './assets/main.css'
 
 const DefaultLayout = defineAsyncComponent(() => import('@/layouts/DefaultLayout.vue'))
-let sentryProviderPromise: Promise<typeof import('@/app/providers/sentry')> | null = null
-
-function loadSentryProvider() {
-  sentryProviderPromise ??= import('@/app/providers/sentry')
-  return sentryProviderPromise
-}
-
-function initializeErrorTracking(app: ReturnType<typeof createApp>) {
-  if (!envConfig.sentryDsn) {
-    return
-  }
-
-  void loadSentryProvider().then(({ initializeSentry }) => {
-    initializeSentry(app, router)
-  })
-}
-
-function captureRuntimeException(error: unknown) {
-  if (!envConfig.sentryDsn) {
-    return
-  }
-
-  void loadSentryProvider().then(({ captureFrontendException }) => {
-    captureFrontendException(error)
-  })
-}
 
 function initializeRuntimeStores() {
   void useAuthStore().initialize()
@@ -56,23 +29,19 @@ async function bootstrap() {
   const app = createApp(App)
 
   app.component('DefaultLayout', DefaultLayout)
-  initializeErrorTracking(app)
   installAppProviders(app, router, primeUiLicense)
   applyThemePreferences(getStoredThemePreferences(), { persist: false })
 
   app.config.errorHandler = (error, _instance, info) => {
     console.error('Vue error:', error, info)
-    captureRuntimeException(error)
   }
 
   window.addEventListener('unhandledrejection', (event) => {
     console.error('Unhandled promise rejection:', event.reason)
-    captureRuntimeException(event.reason)
   })
 
   window.addEventListener('error', (event) => {
     console.error('Window error:', event.error || event.message)
-    captureRuntimeException(event.error || event.message)
   })
 
   app.mount('#app')
