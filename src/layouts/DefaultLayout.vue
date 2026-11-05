@@ -204,7 +204,7 @@
 import { Icon } from '@iconify/vue'
 import { storeToRefs } from 'pinia'
 import SelectButton from 'primevue/selectbutton'
-import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
+import { computed, onActivated, onBeforeUnmount, onDeactivated, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { prefetchRoute } from '@/core/router/prefetch'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
@@ -248,7 +248,7 @@ const {
   themePreferences,
 } = useThemeState()
 const { appName, appVersion, error: appConfigError } = storeToRefs(appConfigStore)
-const { drawer, rail } = useDrawerState(true, false)
+const { drawer, rail, loadState: loadDrawerState } = useDrawerState(true, false)
 
 const searchQuery = ref('')
 const dynamicMenusLoaded = ref(false)
@@ -602,23 +602,45 @@ function handleSystemThemeChange() {
   applyThemePreferences(themePreferences.value, { persist: false })
 }
 
-onMounted(() => {
-  syncThemeState()
-  applyShellTheme()
-  if (typeof window !== 'undefined') {
+function addGlobalListeners() {
+  if (typeof window === 'undefined') return
+  if (!systemThemeMediaQuery) {
     systemThemeMediaQuery = window.matchMedia('(prefers-color-scheme: dark)')
-    systemThemeMediaQuery.addEventListener('change', handleSystemThemeChange)
-    document.addEventListener('click', handleClickOutside)
-    window.addEventListener('resize', handleResize)
   }
-  void syncMenus()
-})
+  systemThemeMediaQuery.addEventListener('change', handleSystemThemeChange)
+  document.addEventListener('click', handleClickOutside)
+  window.addEventListener('resize', handleResize)
+}
 
-onBeforeUnmount(() => {
+function removeGlobalListeners() {
   systemThemeMediaQuery?.removeEventListener('change', handleSystemThemeChange)
   document.removeEventListener('click', handleClickOutside)
   window.removeEventListener('resize', handleResize)
+}
+
+onMounted(() => {
+  syncThemeState()
+  applyShellTheme()
+  addGlobalListeners()
+  void syncMenus()
 })
+
+// Each page embeds its own layout; pages cached by <KeepAlive> in App.vue must not keep
+// listening while hidden, and must pick up drawer/viewport changes made elsewhere.
+onActivated(() => {
+  addGlobalListeners()
+  loadDrawerState()
+  handleResize()
+})
+
+onDeactivated(() => {
+  removeGlobalListeners()
+  hoverExpanded.value = false
+  themeDropdownOpen.value = false
+  userDropdownOpen.value = false
+})
+
+onBeforeUnmount(removeGlobalListeners)
 
 watch(
   isDark,

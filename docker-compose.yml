@@ -1,7 +1,7 @@
 # Docker Compose for Frontend Only
 # Use this if you want to deploy frontend separately
 
-version: '3.8'
+version: "3.8"
 
 services:
   frontend:
@@ -21,6 +21,6 @@ services:
     healthcheck:
       test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
       interval: 30s
-      timeout=10s
+      timeout: 10s
       retries: 3
       start_period: 10s

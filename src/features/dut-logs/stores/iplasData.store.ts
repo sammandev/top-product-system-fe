@@ -29,7 +29,12 @@ import {
   type StreamMetadata,
   type StreamProgress,
 } from '../api/streamReader'
-import { fetchIplasIsnSearchQuery, getIplasTokenQueryScope } from '../composables/useIplasQueries'
+import {
+  fetchIplasDevicesQuery,
+  fetchIplasIsnSearchQuery,
+  fetchIplasSiteProjectsQuery,
+  fetchIplasStationsQuery,
+} from '../composables/useIplasQueries'
 import { useIplasSettings } from '../composables/useIplasSettings'
 import {
   clearAllRecords,
@@ -178,10 +183,6 @@ export const useIplasDataStore = defineStore('iplasData', () => {
   const stations = ref<IplasStation[]>([])
   const deviceIds = ref<string[]>([])
 
-  // Cache status
-  let siteProjectsCached = false
-  const stationsCache = new Map<string, IplasStation[]>()
-
   // ============================================================================
   // Data States (using shallowRef for large arrays)
   // ============================================================================
@@ -240,18 +241,13 @@ export const useIplasDataStore = defineStore('iplasData', () => {
   // ============================================================================
 
   async function fetchSiteProjects(forceRefresh = false): Promise<SiteProject[]> {
-    if (siteProjectsCached && !forceRefresh && siteProjects.value.length > 0) {
-      return siteProjects.value
-    }
-
     loading.value = true
     error.value = null
 
     try {
-      const response = await iplasProxyApi.getSiteProjects('simple', forceRefresh)
-      siteProjects.value = response.data
-      siteProjectsCached = true
-      return response.data
+      const data = await fetchIplasSiteProjectsQuery(forceRefresh)
+      siteProjects.value = data
+      return data
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to fetch site projects'
       throw err
@@ -265,27 +261,16 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     project: string,
     forceRefresh = false,
   ): Promise<IplasStation[]> {
-    const token = getUserToken()
-    const cacheKey = `${site}::${project}::${getIplasTokenQueryScope(token)}`
-
-    if (!forceRefresh && stationsCache.has(cacheKey)) {
-      // biome-ignore lint/style/noNonNullAssertion: checked via stationsCache.has(cacheKey) above
-      stations.value = stationsCache.get(cacheKey)!
-      return stations.value
-    }
-
     loadingStations.value = true
     error.value = null
 
     try {
-      const response = await iplasProxyApi.getStations({
-        site,
-        project,
-        token,
-      })
-      stations.value = response.data
-      stationsCache.set(cacheKey, response.data)
-      return response.data
+      const data = await fetchIplasStationsQuery(
+        { site, project, token: getUserToken() },
+        forceRefresh,
+      )
+      stations.value = data
+      return data
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to fetch stations'
       throw err
@@ -305,16 +290,16 @@ export const useIplasDataStore = defineStore('iplasData', () => {
     error.value = null
 
     try {
-      const response = await iplasProxyApi.getDevices({
+      const data = await fetchIplasDevicesQuery({
         site,
         project,
         station,
-        start_time: iplasProxyApi.formatDateForRequest(startTime),
-        end_time: iplasProxyApi.formatDateForRequest(endTime),
+        startTime,
+        endTime,
         token: getUserToken(),
       })
-      deviceIds.value = response.data
-      return response.data
+      deviceIds.value = data
+      return data
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to fetch device IDs'
       throw err

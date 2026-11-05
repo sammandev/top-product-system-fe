@@ -1,14 +1,12 @@
 import {
   definePreset,
+  type Preset,
   palette,
   updatePrimaryPalette,
   updateSurfacePalette,
   usePreset,
 } from '@primeuix/themes'
 import Aura from '@primeuix/themes/aura'
-import Lara from '@primeuix/themes/lara'
-import Material from '@primeuix/themes/material'
-import Nora from '@primeuix/themes/nora'
 import { ref } from 'vue'
 
 export type ThemeMode = 'light' | 'dark' | 'system'
@@ -329,8 +327,8 @@ export const THEME_SURFACE_OPTIONS: ThemeOption<ThemeSurfaceName>[] = [
   },
 ]
 
-const PRIMEVUE_PRESETS = {
-  aura: definePreset(Aura, {
+const PRIMEVUE_PRESET_EXTENSIONS = {
+  aura: {
     components: {
       select: {
         root: {
@@ -382,8 +380,8 @@ const PRIMEVUE_PRESETS = {
         },
       },
     },
-  }),
-  lara: definePreset(Lara, {
+  },
+  lara: {
     components: {
       select: {
         root: {
@@ -451,8 +449,8 @@ const PRIMEVUE_PRESETS = {
         },
       },
     },
-  }),
-  material: definePreset(Material, {
+  },
+  material: {
     components: {
       select: {
         root: {
@@ -500,8 +498,8 @@ const PRIMEVUE_PRESETS = {
         },
       },
     },
-  }),
-  nora: definePreset(Nora, {
+  },
+  nora: {
     components: {
       select: {
         root: {
@@ -578,8 +576,46 @@ const PRIMEVUE_PRESETS = {
         },
       },
     },
-  }),
-} as const
+  },
+} satisfies Record<ThemePresetName, Preset>
+
+// Only the default preset is bundled eagerly; the others are fetched on first use.
+const PRIMEVUE_PRESET_BASE_LOADERS: Record<
+  Exclude<ThemePresetName, 'aura'>,
+  () => Promise<Preset>
+> = {
+  lara: () => import('@primeuix/themes/lara').then((module) => module.default),
+  material: () => import('@primeuix/themes/material').then((module) => module.default),
+  nora: () => import('@primeuix/themes/nora').then((module) => module.default),
+}
+
+const DEFAULT_PRIMEVUE_PRESET = definePreset(Aura, PRIMEVUE_PRESET_EXTENSIONS.aura)
+const loadedPrimeVuePresets: Partial<Record<ThemePresetName, Preset>> = {
+  aura: DEFAULT_PRIMEVUE_PRESET,
+}
+const pendingPrimeVuePresets: Partial<Record<ThemePresetName, Promise<Preset>>> = {}
+let latestPrimeVuePreferences: ThemePreferences | null = null
+
+export function loadPrimeVuePreset(name: ThemePresetName): Promise<Preset> {
+  const loadedPreset = loadedPrimeVuePresets[name]
+  if (loadedPreset) return Promise.resolve(loadedPreset)
+
+  let pendingPreset = pendingPrimeVuePresets[name]
+  if (!pendingPreset) {
+    pendingPreset = PRIMEVUE_PRESET_BASE_LOADERS[name as Exclude<ThemePresetName, 'aura'>]()
+      .then((basePreset) => {
+        const preset = definePreset(basePreset, PRIMEVUE_PRESET_EXTENSIONS[name])
+        loadedPrimeVuePresets[name] = preset
+        return preset
+      })
+      .finally(() => {
+        delete pendingPrimeVuePresets[name]
+      })
+    pendingPrimeVuePresets[name] = pendingPreset
+  }
+
+  return pendingPreset
+}
 
 const PRIMARY_PALETTE_SOURCES: Record<Exclude<ThemePrimaryName, 'preset'>, string> = {
   emerald: '{emerald}',
@@ -967,7 +1003,13 @@ export function getStoredThemePreferences(): ThemePreferences {
 }
 
 export function getPrimeVuePreset(preferences = getStoredThemePreferences()) {
-  return PRIMEVUE_PRESETS[normalizeThemePreferences(preferences).preset]
+  const { preset } = normalizeThemePreferences(preferences)
+  const loadedPreset = loadedPrimeVuePresets[preset]
+  if (loadedPreset) return loadedPreset
+
+  // Start fetching early so the real preset is often ready before the app mounts.
+  loadPrimeVuePreset(preset).catch(() => undefined)
+  return DEFAULT_PRIMEVUE_PRESET
 }
 
 function applyDocumentThemeVariables(preferences: ThemePreferences) {
@@ -1039,18 +1081,39 @@ export function applyDocumentThemePreferences(preferences: ThemePreferences) {
   return applyDocumentThemeVariables(normalizedPreferences)
 }
 
+function applyPrimeVuePalettes(preferences: ThemePreferences) {
+  if (preferences.primary !== 'preset') {
+    updatePrimaryPalette(PRIMARY_PALETTES[preferences.primary])
+  }
+
+  if (preferences.surface !== 'preset') {
+    updateSurfacePalette(SURFACE_PALETTES[preferences.surface] as never)
+  }
+}
+
 export function applyPrimeVueThemePreferences(preferences: ThemePreferences) {
   const normalizedPreferences = normalizeThemePreferences(preferences)
+  latestPrimeVuePreferences = normalizedPreferences
 
-  usePreset(PRIMEVUE_PRESETS[normalizedPreferences.preset])
-
-  if (normalizedPreferences.primary !== 'preset') {
-    updatePrimaryPalette(PRIMARY_PALETTES[normalizedPreferences.primary])
+  const preset = loadedPrimeVuePresets[normalizedPreferences.preset]
+  if (preset) {
+    usePreset(preset)
+    applyPrimeVuePalettes(normalizedPreferences)
+    return normalizedPreferences
   }
 
-  if (normalizedPreferences.surface !== 'preset') {
-    updateSurfacePalette(SURFACE_PALETTES[normalizedPreferences.surface] as never)
-  }
+  // Keep the active preset (default at startup) until the selected one is fetched,
+  // but apply palettes right away so accent/surface colors do not flash.
+  applyPrimeVuePalettes(normalizedPreferences)
+  loadPrimeVuePreset(normalizedPreferences.preset)
+    .then(() => {
+      if (latestPrimeVuePreferences === normalizedPreferences) {
+        applyPrimeVueThemePreferences(normalizedPreferences)
+      }
+    })
+    .catch((error) => {
+      console.warn(`Failed to load the "${normalizedPreferences.preset}" theme preset:`, error)
+    })
 
   return normalizedPreferences
 }

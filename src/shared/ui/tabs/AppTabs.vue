@@ -3,7 +3,7 @@
     v-bind="attrs"
     :value="modelValue"
     class="app-tabs"
-    @update:value="emit('update:modelValue', $event)"
+    @update:value="onTabChange"
   >
     <TabList>
       <Tab
@@ -21,7 +21,8 @@
 
     <TabPanels>
       <TabPanel v-for="item in items" :key="item.value" :value="item.value">
-        <slot :name="panelSlotName(item.value)" :item="item" />
+        <!-- Render a panel on first activation, then keep it mounted (hidden via v-show). -->
+        <slot v-if="visitedValues.has(item.value)" :name="panelSlotName(item.value)" :item="item" />
       </TabPanel>
     </TabPanels>
   </Tabs>
@@ -34,7 +35,7 @@ import TabList from 'primevue/tablist'
 import TabPanel from 'primevue/tabpanel'
 import TabPanels from 'primevue/tabpanels'
 import Tabs from 'primevue/tabs'
-import { useAttrs } from 'vue'
+import { reactive, useAttrs, watch } from 'vue'
 
 defineOptions({ inheritAttrs: false })
 
@@ -45,7 +46,7 @@ interface AppTabItem {
   disabled?: boolean
 }
 
-withDefaults(
+const props = withDefaults(
   defineProps<{
     modelValue: string | number
     items: readonly AppTabItem[]
@@ -59,6 +60,33 @@ withDefaults(
 const emit = defineEmits<(event: 'update:modelValue', value: string | number) => void>()
 
 const attrs = useAttrs()
+
+const visitedValues = reactive(new Set<string | number>())
+
+watch(
+  () => props.modelValue,
+  (value) => {
+    visitedValues.add(value)
+  },
+  { immediate: true },
+)
+
+// Forget visited panels whose tab no longer exists (e.g. dynamic per-result tabs).
+watch(
+  () => props.items,
+  (items) => {
+    const values = new Set(items.map((item) => item.value))
+    for (const value of visitedValues) {
+      if (value !== props.modelValue && !values.has(value)) visitedValues.delete(value)
+    }
+  },
+)
+
+function onTabChange(value: string | number) {
+  // PrimeVue switches its internal value immediately, even if the parent ignores the update.
+  visitedValues.add(value)
+  emit('update:modelValue', value)
+}
 
 function normalizeIcon(icon: string) {
   return icon.startsWith('mdi-') ? `mdi:${icon.slice(4)}` : icon

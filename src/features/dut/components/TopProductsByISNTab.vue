@@ -185,12 +185,8 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, nextTick, provide, ref, watch } from 'vue'
-import {
-  buildTopProductWorkbook,
-  downloadTopProductWorkbook,
-  type TopProductExcelRecord,
-} from '@/features/dut-logs/utils/topProductExcelExport'
+import { computed, defineAsyncComponent, nextTick, provide, ref, watch } from 'vue'
+import type { TopProductExcelRecord } from '@/features/dut-logs/utils/topProductExcelExport'
 import AppFilePicker from '@/shared/ui/forms/AppFilePicker.vue'
 import AppMultiSelect from '@/shared/ui/forms/AppMultiSelect.vue'
 import { getApiErrorDetail, getErrorMessage } from '@/shared/utils'
@@ -214,7 +210,10 @@ import { downloadCriteriaJsonTemplate } from '../utils/criteriaTemplate'
 // biome-ignore lint/style/useImportType: value import required for template component resolution
 import DUTISNInput from './DUTISNInput.vue'
 import StationFilterConfig from './StationFilterConfig.vue'
-import TopProductISNResults from './TopProductISNResults.vue'
+
+// Results (DataTable grid, score dialogs) render only after an analysis; load on demand.
+const loadTopProductISNResults = () => import('./TopProductISNResults.vue')
+const TopProductISNResults = defineAsyncComponent(loadTopProductISNResults)
 
 interface LatestStationItemsResponse {
   station_name?: string
@@ -327,6 +326,11 @@ const loadingDevices = ref(false)
 const attemptedAnalysis = ref(false)
 const error = ref<string | null>(null)
 const results = ref<TopProductBatchResponse | null>(null)
+
+// Warm the results chunk in parallel with the analysis request.
+watch(loading, (isLoading) => {
+  if (isLoading) void loadTopProductISNResults().catch(() => undefined)
+})
 
 // Provide results to child components (e.g., CustomScoringDialogV2)
 provide('topProductResults', results)
@@ -869,6 +873,9 @@ async function handleExport() {
       })
     })
 
+    const { buildTopProductWorkbook, downloadTopProductWorkbook } = await import(
+      '@/features/dut-logs/utils/topProductExcelExport'
+    )
     const workbook = await buildTopProductWorkbook(records)
     const filename = `top-products-analysis-${formatDate(new Date(), 'YYYY-MM-DD_HHmmss')}.xlsx`
     await downloadTopProductWorkbook(workbook, filename)

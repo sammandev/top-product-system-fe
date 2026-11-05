@@ -1,8 +1,13 @@
 import { QueryClient, VueQueryPlugin } from '@tanstack/vue-query'
 import type { App } from 'vue'
+import { queryKeys } from '@/core/query'
+
+function hasKeyPrefix(queryKey: readonly unknown[], prefix: readonly unknown[]): boolean {
+  return prefix.every((part, index) => queryKey[index] === part)
+}
 
 export function createAppQueryClient() {
-  return new QueryClient({
+  const client = new QueryClient({
     defaultOptions: {
       queries: {
         retry: 1,
@@ -14,6 +19,19 @@ export function createAppQueryClient() {
       },
     },
   })
+
+  // Admin iPLAS token edits invalidate the token list; drop iPLAS lookups fetched with old tokens.
+  client.getQueryCache().subscribe((event) => {
+    if (
+      event.type === 'updated' &&
+      event.action.type === 'invalidate' &&
+      hasKeyPrefix(event.query.queryKey, queryKeys.appConfig.iplasTokens())
+    ) {
+      client.removeQueries({ queryKey: queryKeys.iplas.all })
+    }
+  })
+
+  return client
 }
 
 export const queryClient = createAppQueryClient()

@@ -33,11 +33,13 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 ## 🚀 Tech Stack
 
 ### Core Framework
+
 - **Vue 3.5.30** — Progressive JavaScript framework with Composition API (`<script setup>`)
 - **TypeScript 5.9.3** — Type-safe JavaScript with strict mode enabled
 - **Vite 7.3.1** — Next-generation frontend build tool with HMR
 
 ### UI & Styling
+
 - **PrimeVue 4.5.5** — Component foundation with four built-in presets (Aura, Material, Lara, Nora)
 - **@primeuix/themes 2.0.3** — Runtime theme presets, `usePreset()`, palette integration
 - **@iconify/vue 5.0.0** — Icon system used across navigation and result states
@@ -45,10 +47,12 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 - **Sass 1.98.0** — CSS preprocessor for custom styling where needed
 
 ### State & Routing
+
 - **Vue Router 4.6.4** — Official routing solution with navigation guards
 - **Pinia 3.0.4** — Official state management with TypeScript support
 
 ### HTTP & Data
+
 - **Axios 1.13.6** — HTTP client with request/response interceptors and automatic token refresh
 - **@tanstack/vue-query 5.99.2** — Server state management
 - **Day.js 1.11.20** — Lightweight date manipulation
@@ -56,6 +60,7 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 - **vee-validate 4.15.1** — Form validation composables
 
 ### Visualization & Utilities
+
 - **ECharts 6.0.0** + **vue-echarts 8.0.1** — Professional data visualization
 - **VueUse 14.2.1** — Essential Vue composition utilities (`@vueuse/core`, `@vueuse/motion 3.0.3`)
 - **KaTeX 0.16.40** — Fast LaTeX math rendering
@@ -63,10 +68,12 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 - **idb 8.0.3** — IndexedDB wrapper for client-side storage
 
 ### Document & Excel Processing
+
 - **ExcelJS 4.4.0** — Excel file creation and manipulation
 - **jsPDF 4.2.1** + **jspdf-autotable 5.0.7** — PDF generation with tables
 
 ### Testing
+
 - **Vitest 4.1.0** — Unit testing framework (Vite-native)
   - **@vitest/ui 4.1.0** — Interactive test UI
   - **@vitest/coverage-v8 4.1.0** — Coverage reporting with V8
@@ -76,9 +83,11 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 - **MSW 2.12.14** — Mock Service Worker for API mocking in tests
 
 ### Code Quality
+
 - **Biome 2.4.8** — Fast, unified linter and formatter (replaces ESLint + Prettier)
 
 ### Build & Package Management
+
 - **pnpm 10.32.1** — Fast, disk space efficient package manager (required)
 
 ---
@@ -86,6 +95,7 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 ## ✨ Features
 
 ### Authentication & Authorization
+
 - **Dual Login System**: Local database authentication and external DUT API authentication
 - **JWT Token Management**: Automatic token refresh on 401 responses
 - **Token Versioning**: Instant token revocation capability
@@ -93,12 +103,14 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 - **Guest Access**: Limited read-only mode for unauthenticated users
 
 ### File Processing
+
 - **CSV/Excel Parsing**: Upload and parse wireless test data files
 - **Format Comparison**: Compare MasterControl vs DVT format files
 - **Data Visualization**: Interactive charts and tables for test results
 - **Export Functionality**: Download processed data as XLSX
 
 ### DUT Management Integration
+
 - **Site/Model/Station Navigation**: Hierarchical DUT data browsing
 - **Top Products Analysis**: Score-based product ranking with date ranges
   - **Standard Analysis**: Fast analysis without PA trend data
@@ -109,6 +121,7 @@ Modern Vue 3 single-page application (SPA) for wireless test data analysis, file
 - **Flexible Identifiers**: Every `site_*`, `model_*`, `station_*` parameter accepts numeric ID or descriptive string
 
 ### User Experience
+
 - **Responsive Design**: Mobile, tablet, and desktop layouts
 - **Adaptive Theming**: 4 PrimeVue presets × 17 primary swatches × 8 surface swatches × 3 modes (light/dark/system)
 - **Custom `--app-*` Token System**: Runtime CSS variable theming independent of Tailwind's dark: variants
@@ -247,22 +260,22 @@ Application available at `http://localhost:3000`.
 
 ### Available Scripts
 
-| Command | Description |
-|---------|-------------|
-| `pnpm dev` | Start dev server with HMR |
-| `pnpm build` | Type-check + build for production |
-| `pnpm preview` | Preview production build locally |
-| `pnpm lint` | Run Biome lint checks |
-| `pnpm lint:fix` | Apply Biome auto-fixes |
-| `pnpm format` | Check formatting with Biome |
-| `pnpm format:fix` | Apply Biome format fixes |
-| `pnpm type-check` | TypeScript validation (`vue-tsc --noEmit`) |
-| `pnpm test` | Run unit tests in watch mode |
-| `pnpm test:run` | Run unit tests once |
-| `pnpm test:ui` | Interactive test UI |
-| `pnpm test:coverage` | Unit tests with V8 coverage |
-| `pnpm test:e2e` | Run Playwright E2E tests |
-| `pnpm test:e2e:ui` | E2E tests with interactive UI |
+| Command              | Description                                |
+| -------------------- | ------------------------------------------ |
+| `pnpm dev`           | Start dev server with HMR                  |
+| `pnpm build`         | Type-check + build for production          |
+| `pnpm preview`       | Preview production build locally           |
+| `pnpm lint`          | Run Biome lint checks                      |
+| `pnpm lint:fix`      | Apply Biome auto-fixes                     |
+| `pnpm format`        | Check formatting with Biome                |
+| `pnpm format:fix`    | Apply Biome format fixes                   |
+| `pnpm type-check`    | TypeScript validation (`vue-tsc --noEmit`) |
+| `pnpm test`          | Run unit tests in watch mode               |
+| `pnpm test:run`      | Run unit tests once                        |
+| `pnpm test:ui`       | Interactive test UI                        |
+| `pnpm test:coverage` | Unit tests with V8 coverage                |
+| `pnpm test:e2e`      | Run Playwright E2E tests                   |
+| `pnpm test:e2e:ui`   | E2E tests with interactive UI              |
 
 ### Development Workflow
 
@@ -299,12 +312,12 @@ pnpm test:ui                                              # interactive UI
 
 **Coverage**:
 
-| Suite | Tests | Status |
-|-------|-------|--------|
-| Auth Store | 26 | ✅ |
-| Error Interceptor | 21 | ✅ |
-| useAuth Composable | 18 | ✅ |
-| **Total** | **65** | ✅ |
+| Suite              | Tests  | Status |
+| ------------------ | ------ | ------ |
+| Auth Store         | 26     | ✅     |
+| Error Interceptor  | 21     | ✅     |
+| useAuth Composable | 18     | ✅     |
+| **Total**          | **65** | ✅     |
 
 ### E2E Tests
 
@@ -340,10 +353,10 @@ e2e/
 
 ### Environment Variables
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `VITE_API_BASE_URL` | `http://127.0.0.1:8001` | Backend API base URL |
-| `VITE_APP_TITLE` | `AST Tools` | Application name shown in UI |
+| Variable            | Default                 | Description                  |
+| ------------------- | ----------------------- | ---------------------------- |
+| `VITE_API_BASE_URL` | `http://127.0.0.1:8001` | Backend API base URL         |
+| `VITE_APP_TITLE`    | `AST Tools`             | Application name shown in UI |
 
 Files: `.env`, `.env.development`, `.env.production`, `.env.local` (gitignored).
 
@@ -362,8 +375,10 @@ import { useAuthStore } from '@/features/auth/stores'
 
 const authStore = useAuthStore()
 
-await authStore.login({ username, password })   // local login
-if (authStore.isAuthenticated) { /* ... */ }
+await authStore.login({ username, password }) // local login
+if (authStore.isAuthenticated) {
+  /* ... */
+}
 authStore.logout()
 ```
 
@@ -403,18 +418,18 @@ console.log(dutStore.sites)
 
 ## 🧭 Routes
 
-| Path | View | Access |
-|------|------|--------|
-| `/login` | LoginView | Public |
-| `/dashboard` | DashboardView | Authenticated |
-| `/parsing` | ParseView | User+ |
-| `/parsing/download-format` | DownloadFormatView | User+ |
-| `/compare` | CompareView | User+ |
-| `/compare/dvt-mc2` | DVTCompareView | User+ |
-| `/dut/top-products/analysis` | TopProductsView | Guest+ |
-| `/dut/top-products/data` | TopProductDatabaseView | User+ |
-| `/dut/data-explorer` | DataExplorerView | Guest+ |
-| `/admin/*` | Admin views | Admin+ |
+| Path                         | View                   | Access        |
+| ---------------------------- | ---------------------- | ------------- |
+| `/login`                     | LoginView              | Public        |
+| `/dashboard`                 | DashboardView          | Authenticated |
+| `/parsing`                   | ParseView              | User+         |
+| `/parsing/download-format`   | DownloadFormatView     | User+         |
+| `/compare`                   | CompareView            | User+         |
+| `/compare/dvt-mc2`           | DVTCompareView         | User+         |
+| `/dut/top-products/analysis` | TopProductsView        | Guest+        |
+| `/dut/top-products/data`     | TopProductDatabaseView | User+         |
+| `/dut/data-explorer`         | DataExplorerView       | Guest+        |
+| `/admin/*`                   | Admin views            | Admin+        |
 
 Route guards enforce authentication and role checks via `meta.requiresAuth`.
 
@@ -424,14 +439,14 @@ Route guards enforce authentication and role checks via `meta.requiresAuth`.
 
 Shared primitives in `src/shared/ui/`:
 
-| Component | Purpose |
-|-----------|---------|
-| `AppPanel` | Titled section card with optional tone (warm/cool/success) |
-| `AppDialog` | Modal wrapper around PrimeVue Dialog |
-| `AppDataGrid` | Table with sorting, pagination, and column config |
-| `AppTabs` | Tab interface with lazy slot loading |
-| `AppProgress` | Themed progress bar with label |
-| `AppSelect` | Custom dropdown with Teleport-based overlay |
+| Component     | Purpose                                                    |
+| ------------- | ---------------------------------------------------------- |
+| `AppPanel`    | Titled section card with optional tone (warm/cool/success) |
+| `AppDialog`   | Modal wrapper around PrimeVue Dialog                       |
+| `AppDataGrid` | Table with sorting, pagination, and column config          |
+| `AppTabs`     | Tab interface with lazy slot loading                       |
+| `AppProgress` | Themed progress bar with label                             |
+| `AppSelect`   | Custom dropdown with Teleport-based overlay                |
 
 Usage:
 
@@ -499,13 +514,13 @@ import { useAuthStore } from '../../../features/auth/stores'
 
 ### Naming Conventions
 
-| Type | Convention | Example |
-|------|------------|---------|
-| Components | PascalCase | `AppPanel.vue`, `TopProductsView.vue` |
-| Composables | `use` prefix | `useAuth`, `useThemeState` |
-| Stores | camelCase | `authStore`, `dutStore` |
-| Constants | UPPER_SNAKE_CASE | `API_BASE_URL`, `MAX_FILE_SIZE` |
-| Types/Interfaces | PascalCase | `User`, `ScoreBreakdown` |
+| Type             | Convention       | Example                               |
+| ---------------- | ---------------- | ------------------------------------- |
+| Components       | PascalCase       | `AppPanel.vue`, `TopProductsView.vue` |
+| Composables      | `use` prefix     | `useAuth`, `useThemeState`            |
+| Stores           | camelCase        | `authStore`, `dutStore`               |
+| Constants        | UPPER_SNAKE_CASE | `API_BASE_URL`, `MAX_FILE_SIZE`       |
+| Types/Interfaces | PascalCase       | `User`, `ScoreBreakdown`              |
 
 ---
 
@@ -574,7 +589,9 @@ Use native elements for local interactions — don't wrap a `<button>` in a Prim
 
 ```typescript
 // vite.config.ts
-server: { port: 3001 }
+server: {
+  port: 3001
+}
 ```
 
 ### Backend not reachable

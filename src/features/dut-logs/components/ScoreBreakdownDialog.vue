@@ -159,7 +159,6 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import katex from 'katex'
 import { computed, nextTick, onMounted, ref, watch } from 'vue'
 import type {
   CategoryFormulaSelections,
@@ -167,7 +166,12 @@ import type {
 } from '@/features/dut/composables/useFormulaSelector'
 import type { ParsedTestItemEnhanced } from '@/features/dut-logs/composables/useTestLogUpload'
 import { AppDialog } from '@/shared'
-import 'katex/dist/katex.min.css'
+
+// KaTeX (~235 kB JS + CSS) is only needed when a breakdown is shown; load it on demand.
+const loadKatex = () =>
+  Promise.all([import('katex'), import('katex/dist/katex.min.css')]).then(
+    ([katexModule]) => katexModule.default,
+  )
 
 const props = defineProps<{
   modelValue: boolean
@@ -311,23 +315,23 @@ const getFormulaLatexByType = (type: string): string => {
 watch([() => props.modelValue, () => props.item, () => hasCustomFormula.value], async () => {
   if (props.modelValue && props.item?.score_breakdown) {
     await nextTick()
-    renderFormula()
+    void renderFormula()
     if (hasCustomFormula.value) {
-      renderCustomFormula()
+      void renderCustomFormula()
     }
   }
 })
 
 onMounted(() => {
   if (props.modelValue && props.item?.score_breakdown) {
-    renderFormula()
+    void renderFormula()
     if (hasCustomFormula.value) {
-      renderCustomFormula()
+      void renderCustomFormula()
     }
   }
 })
 
-const renderFormula = () => {
+const renderFormula = async () => {
   if (!formulaEl.value || !props.item?.score_breakdown) return
 
   const stripMathDelimiters = (latex: string): string => {
@@ -342,6 +346,8 @@ const renderFormula = () => {
     const rawLatex = props.item.score_breakdown.formula_latex || ''
     const latexBody = stripMathDelimiters(rawLatex)
     const formula = latexBody || '\\text{No formula available}'
+    const katex = await loadKatex()
+    if (!formulaEl.value) return
 
     katex.render(formula, formulaEl.value, {
       displayMode: true,
@@ -352,12 +358,12 @@ const renderFormula = () => {
     console.error('KaTeX rendering error:', error)
     if (formulaEl.value) {
       formulaEl.value.textContent =
-        props.item.score_breakdown.formula_latex || 'Error rendering formula'
+        props.item?.score_breakdown?.formula_latex || 'Error rendering formula'
     }
   }
 }
 
-const renderCustomFormula = () => {
+const renderCustomFormula = async () => {
   if (!customFormulaEl.value || !hasCustomFormula.value) return
 
   const stripMathDelimiters = (latex: string): string => {
@@ -371,6 +377,8 @@ const renderCustomFormula = () => {
     const rawLatex = getSelectedFormulaLatex()
     const latexBody = stripMathDelimiters(rawLatex)
     const formula = latexBody || '\\text{No custom formula available}'
+    const katex = await loadKatex()
+    if (!customFormulaEl.value) return
 
     katex.render(formula, customFormulaEl.value, {
       displayMode: true,

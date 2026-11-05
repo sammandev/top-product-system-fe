@@ -13,8 +13,9 @@
       :selection="selection"
       :selectionMode="selectionMode && !showSelectionColumn ? selectionMode : undefined"
       :metaKeySelection="metaKeySelection"
-      :scrollable="scrollable"
+      :scrollable="scrollable || isVirtualScroll"
       :scrollHeight="scrollHeight"
+      :virtualScrollerOptions="virtualScrollerOptions"
       :sortField="sortField"
       :sortOrder="sortOrder ?? undefined"
       :tableStyle="tableStyle"
@@ -137,6 +138,11 @@ const props = withDefaults(
     emptyMessage?: string
     stickyHeader?: boolean
     rowClass?: (row: never) => string | Record<string, boolean> | undefined
+    /** `'auto'` virtualizes large non-paginated grids with a bounded scrollHeight. */
+    virtualScroll?: boolean | 'auto'
+    virtualScrollThreshold?: number
+    /** Row height (px) assumed by the virtual scroller; keep at or below the real row height. */
+    virtualItemSize?: number
   }>(),
   {
     loading: false,
@@ -153,6 +159,9 @@ const props = withDefaults(
     tableStyle: () => ({ minWidth: '100%' }),
     emptyMessage: 'No records found.',
     stickyHeader: false,
+    virtualScroll: 'auto',
+    virtualScrollThreshold: 200,
+    virtualItemSize: 40,
   },
 )
 
@@ -165,6 +174,27 @@ const emit = defineEmits<{
 
 const attrs = useAttrs()
 const slots = useSlots()
+
+const isVirtualScroll = computed(() => {
+  if (props.paginator || props.lazy || props.virtualScroll === false) {
+    return false
+  }
+
+  if (props.virtualScroll === true) {
+    return true
+  }
+
+  // 'flex' needs a height-constrained parent; without one the scroller would render every row anyway.
+  return (
+    props.scrollable &&
+    props.scrollHeight !== 'flex' &&
+    props.rows.length > props.virtualScrollThreshold
+  )
+})
+
+const virtualScrollerOptions = computed(() =>
+  isVirtualScroll.value ? { itemSize: props.virtualItemSize } : undefined,
+)
 
 const dataTableRowClass = computed(
   () => props.rowClass as ((data: unknown) => string | object | undefined) | undefined,

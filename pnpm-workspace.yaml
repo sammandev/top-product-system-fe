@@ -1,5 +1,5 @@
 allowBuilds:
-  '@parcel/watcher': false
+  "@parcel/watcher": false
   core-js: false
   esbuild: false
   msw: false
@@ -11,10 +11,10 @@ minimumReleaseAgeExclude:
   - vue-echarts@8.2.0
 
 overrides:
-  'exceljs>uuid': ^11.1.1
+  "exceljs>uuid": ^11.1.1
   glob: ^14.0.2
   minimatch: ^11.0.1
-  dompurify: '>=3.4.17'
-  brace-expansion: '>=5.0.12'
-  source-map-js: '>=1.2.2'
-  follow-redirects: '>=1.16.1'
+  dompurify: ">=3.4.17"
+  brace-expansion: ">=5.0.12"
+  source-map-js: ">=1.2.2"
+  follow-redirects: ">=1.16.1"

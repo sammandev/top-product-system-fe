@@ -33,6 +33,7 @@ import {
   type TestItem,
 } from '../api/iplasProxyApi'
 import {
+  fetchIplasCachedTestItemNamesQuery,
   fetchIplasCsvTestItemsQuery,
   fetchIplasDevicesQuery,
   fetchIplasIsnSearchBatchQuery,
@@ -41,6 +42,7 @@ import {
   fetchIplasRecordTestItemsQuery,
   fetchIplasSiteProjectsQuery,
   fetchIplasStationsQuery,
+  fetchIplasTestItemNamesQuery,
 } from './useIplasQueries'
 import { useIplasSettings } from './useIplasSettings'
 
@@ -990,18 +992,17 @@ export function useIplasApi() {
     error.value = null
 
     try {
-      const response = await iplasProxyApi.getTestItemNames({
+      return await fetchIplasTestItemNamesQuery({
         site,
         project,
         station,
-        device_id: deviceId,
-        begin_time: iplasProxyApi.formatDateForRequest(beginTime),
-        end_time: iplasProxyApi.formatDateForRequest(endTime),
-        test_status: testStatus,
+        deviceId,
+        startTime: beginTime,
+        endTime,
+        testStatus,
         token: getUserToken(),
-        exclude_bin: excludeBin,
+        excludeBin,
       })
-      return response.test_items
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to fetch test item names'
       throw err
@@ -1038,17 +1039,18 @@ export function useIplasApi() {
     error.value = null
 
     try {
-      const response = await iplasProxyApi.getTestItemNamesCached({
-        site,
-        project,
-        station,
-        token: getUserToken(),
-        exclude_bin: excludeBin,
-        force_refresh: forceRefresh,
-        begin_time: beginTime ? iplasProxyApi.formatDateForRequest(beginTime) : undefined,
-        end_time: endTime ? iplasProxyApi.formatDateForRequest(endTime) : undefined,
-      })
-      return response
+      return await fetchIplasCachedTestItemNamesQuery(
+        {
+          site,
+          project,
+          station,
+          token: getUserToken(),
+          excludeBin,
+          beginTime,
+          endTime,
+        },
+        forceRefresh,
+      )
     } catch (err: unknown) {
       error.value = getErrorMessage(err) || 'Failed to fetch cached test item names'
       throw err

@@ -1,4 +1,4 @@
-import { onMounted, type Ref, ref, watch } from 'vue'
+import { onActivated, onMounted, type Ref, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 
 /**
@@ -15,6 +15,8 @@ export function useTabPersistence<T extends string | number>(
 ): Ref<T> {
   const route = useRoute()
   const router = useRouter()
+  // Views cached by <KeepAlive> stay alive on other routes; only react to this view's URL.
+  const ownerPath = route.path
 
   // Initialize from URL or default
   const getInitialValue = (): T => {
@@ -56,6 +58,7 @@ export function useTabPersistence<T extends string | number>(
   watch(
     () => route.query[tabKey],
     (newValue) => {
+      if (route.path !== ownerPath) return
       if (newValue !== undefined && newValue !== null) {
         if (typeof defaultValue === 'number') {
           const numValue = parseInt(newValue as string, 10)
@@ -70,7 +73,7 @@ export function useTabPersistence<T extends string | number>(
   )
 
   // Sync on mount in case route changed before component mounted
-  onMounted(() => {
+  function syncFromUrl() {
     const urlValue = route.query[tabKey]
     if (urlValue !== undefined && urlValue !== null) {
       if (typeof defaultValue === 'number') {
@@ -80,7 +83,11 @@ export function useTabPersistence<T extends string | number>(
         tabValue.value = urlValue as T
       }
     }
-  })
+  }
+
+  onMounted(syncFromUrl)
+  // Re-read the URL when a KeepAlive-cached view is shown again (e.g. browser back/forward).
+  onActivated(syncFromUrl)
 
   return tabValue
 }

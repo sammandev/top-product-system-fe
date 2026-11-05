@@ -41,7 +41,8 @@ describe('iPLAS comparison lookup', () => {
     const selected = resolveIplasStationRecord(records, 'rf_test')
 
     expect(selected).toBe(stationRecord)
-    expect(findIplasTestItem(selected!, 'wifi_tx_pow')?.VALUE).toBe('18.2')
+    if (!selected) throw new Error('Expected the matching station record')
+    expect(findIplasTestItem(selected, 'wifi_tx_pow')?.VALUE).toBe('18.2')
   })
 
   it('finds test item across multiple records in Auto mode using preferred station or fallback', () => {

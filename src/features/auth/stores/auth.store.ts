@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
+import { queryClient } from '@/app/providers/query-client'
 import type { ExternalLoginRequest, LoginRequest, User } from '@/core/types'
 import { getApiErrorDetail, getErrorStatus } from '@/shared/utils/error'
 import { authApi } from '../api/auth.api'
@@ -302,6 +303,9 @@ export const useAuthStore = defineStore('auth', () => {
     localStorage.removeItem('dut_refresh_token')
     localStorage.removeItem('login_type')
     localStorage.removeItem('is_guest_mode')
+
+    // Cached queries may be user- or token-scoped; never leak them to the next session.
+    queryClient.clear()
   }
 
   // Track initialization state to prevent duplicate fetches

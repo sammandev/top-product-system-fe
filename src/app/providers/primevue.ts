@@ -38,7 +38,7 @@ export const PRIMEUI_LICENSE_STORAGE_KEY = 'primeui-license-cache'
 function readCachedLicense(): string | null {
   try {
     const value = window.localStorage.getItem(PRIMEUI_LICENSE_STORAGE_KEY)
-    return value && value.trim() ? value.trim() : null
+    return value?.trim() || null
   } catch {
     return null
   }

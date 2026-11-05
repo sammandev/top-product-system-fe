@@ -6,6 +6,7 @@ import { queryKeys } from '@/core/query'
 import {
   type CompactCsvTestItemData,
   type CsvTestItemData,
+  type IplasCachedTestItemNamesResponse,
   type IplasCsvTestItemRequest,
   type IplasCsvTestItemResponse,
   type IplasIsnSearchBatchRequest,
@@ -21,6 +22,7 @@ import {
   type IplasStationsFromIsnBatchResponse,
   type IplasStationsFromIsnRequest,
   type IplasStationsFromIsnResponse,
+  type IplasTestItemInfo,
   iplasProxyApi,
   type RecordTestItemsRequest,
   type SiteProject,
@@ -35,6 +37,8 @@ const CSV_TEST_ITEMS_STALE_TIME = 2 * 60 * 1000
 const ISN_SEARCH_STALE_TIME = 5 * 60 * 1000
 const RECORD_TEST_ITEMS_STALE_TIME = 10 * 60 * 1000
 const PAGINATED_TEST_ITEMS_STALE_TIME = 30 * 1000
+const TEST_ITEM_NAMES_STALE_TIME = 5 * 60 * 1000
+const CACHED_TEST_ITEM_NAMES_STALE_TIME = 10 * 60 * 1000
 const EMPTY_RESULT_STALE_TIME = 15 * 1000
 
 export interface IplasStationsQueryParams {
@@ -217,6 +221,27 @@ async function refreshQuery(
   }
 }
 
+async function requestSiteProjects(forceRefresh = false): Promise<SiteProject[]> {
+  const response = await iplasProxyApi.getSiteProjects('simple', forceRefresh)
+  return response.data
+}
+
+async function requestStations(params: IplasStationsQueryParams): Promise<IplasStation[]> {
+  const response = await iplasProxyApi.getStations({
+    site: params.site,
+    project: params.project,
+    token: params.token,
+  })
+  return sortStations(
+    response.data.map((station) => ({
+      display_station_name: station.display_station_name,
+      station_name: station.station_name,
+      order: station.order,
+      data_source: station.data_source,
+    })),
+  )
+}
+
 export async function fetchIplasSiteProjectsQuery(
   forceRefresh = false,
   client = queryClient,
@@ -226,10 +251,7 @@ export async function fetchIplasSiteProjectsQuery(
 
   return client.fetchQuery({
     queryKey,
-    queryFn: async () => {
-      const response = await iplasProxyApi.getSiteProjects('simple', forceRefresh)
-      return response.data
-    },
+    queryFn: () => requestSiteProjects(forceRefresh),
     staleTime: SITE_PROJECT_STALE_TIME,
   })
 }
@@ -248,22 +270,91 @@ export async function fetchIplasStationsQuery(
 
   return client.fetchQuery({
     queryKey,
-    queryFn: async () => {
-      const response = await iplasProxyApi.getStations({
-        site: params.site,
-        project: params.project,
-        token: params.token,
-      })
-      return sortStations(
-        response.data.map((station) => ({
-          display_station_name: station.display_station_name,
-          station_name: station.station_name,
-          order: station.order,
-          data_source: station.data_source,
-        })),
-      )
-    },
+    queryFn: () => requestStations(params),
     staleTime: STATION_STALE_TIME,
+  })
+}
+
+export interface IplasTestItemNamesQueryParams extends IplasDevicesQueryParams {
+  deviceId: string
+  testStatus?: 'ALL' | 'PASS' | 'FAIL'
+  excludeBin?: boolean
+}
+
+export interface IplasCachedTestItemNamesQueryParams extends IplasStationsQueryParams {
+  station: string
+  excludeBin?: boolean
+  beginTime?: string | Date
+  endTime?: string | Date
+}
+
+export async function fetchIplasTestItemNamesQuery(
+  params: IplasTestItemNamesQueryParams,
+  client = queryClient,
+): Promise<IplasTestItemInfo[]> {
+  const normalizedParams = {
+    ...normalizeDeviceParams(params),
+    deviceId: params.deviceId,
+    testStatus: params.testStatus ?? 'ALL',
+    excludeBin: params.excludeBin ?? false,
+  }
+
+  return client.fetchQuery({
+    queryKey: [...queryKeys.iplas.all, 'test-item-names', normalizedParams],
+    queryFn: async () => {
+      const response = await iplasProxyApi.getTestItemNames({
+        site: normalizedParams.site,
+        project: normalizedParams.project,
+        station: normalizedParams.station,
+        device_id: normalizedParams.deviceId,
+        begin_time: normalizedParams.startTime,
+        end_time: normalizedParams.endTime,
+        test_status: normalizedParams.testStatus,
+        token: params.token,
+        exclude_bin: normalizedParams.excludeBin,
+      })
+      return response.test_items
+    },
+    staleTime: (query) => getIplasResultStaleTime(query.state.data, TEST_ITEM_NAMES_STALE_TIME),
+  })
+}
+
+export async function fetchIplasCachedTestItemNamesQuery(
+  params: IplasCachedTestItemNamesQueryParams,
+  forceRefresh = false,
+  client = queryClient,
+): Promise<IplasCachedTestItemNamesResponse> {
+  // With a user token the backend fetches the given range, so the range is part of the key.
+  const normalizedParams = {
+    site: params.site,
+    project: params.project,
+    station: params.station,
+    excludeBin: params.excludeBin ?? false,
+    beginTime: params.beginTime ? formatQueryDate(params.beginTime) : undefined,
+    endTime: params.endTime ? formatQueryDate(params.endTime) : undefined,
+    credentialScope: getIplasTokenQueryScope(params.token),
+  }
+  const queryKey = [...queryKeys.iplas.all, 'test-item-names-cached', normalizedParams]
+  await refreshQuery(client, queryKey, forceRefresh)
+
+  return client.fetchQuery({
+    queryKey,
+    queryFn: () =>
+      iplasProxyApi.getTestItemNamesCached({
+        site: normalizedParams.site,
+        project: normalizedParams.project,
+        station: normalizedParams.station,
+        token: params.token,
+        exclude_bin: normalizedParams.excludeBin,
+        force_refresh: forceRefresh,
+        begin_time: normalizedParams.beginTime,
+        end_time: normalizedParams.endTime,
+      }),
+    staleTime: (query) =>
+      getIplasResultStaleTime(
+        (query.state.data as IplasCachedTestItemNamesResponse | undefined)?.test_items,
+        CACHED_TEST_ITEM_NAMES_STALE_TIME,
+      ),
   })
 }
 
@@ -278,7 +369,7 @@ export async function fetchIplasDevicesQuery(
 
   return client.fetchQuery({
     queryKey,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const response = await iplasProxyApi.getDevices(
         {
           site: normalizedParams.site,
@@ -288,7 +379,7 @@ export async function fetchIplasDevicesQuery(
           end_time: normalizedParams.endTime,
           token: params.token,
         },
-        { cancelPrevious: false },
+        { cancelPrevious: false, signal },
       )
       return response.data
     },
@@ -309,7 +400,7 @@ export async function fetchIplasCsvTestItemsQuery<
 
   return client.fetchQuery({
     queryKey,
-    queryFn: () => iplasProxyApi.getCsvTestItems<TRecord>(request),
+    queryFn: ({ signal }) => iplasProxyApi.getCsvTestItems<TRecord>(request, { signal }),
     staleTime: (query) => getIplasResultStaleTime(query.state.data, CSV_TEST_ITEMS_STALE_TIME),
   })
 }
@@ -457,22 +548,25 @@ export async function fetchIplasPaginatedTestItemsQuery(
 
   return client.fetchQuery({
     queryKey,
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       const offset = (normalizedParams.page - 1) * normalizedParams.itemsPerPage
-      const response = await iplasProxyApi.getCsvTestItemsCompact({
-        site: normalizedParams.site,
-        project: normalizedParams.project,
-        station: normalizedParams.station,
-        device_id: normalizedParams.deviceId,
-        begin_time: normalizedParams.startTime,
-        end_time: normalizedParams.endTime,
-        test_status: normalizedParams.testStatus,
-        limit: normalizedParams.itemsPerPage,
-        offset,
-        sort_by: normalizedParams.sortBy,
-        sort_desc: normalizedParams.sortDesc,
-        token: params.token,
-      })
+      const response = await iplasProxyApi.getCsvTestItemsCompact(
+        {
+          site: normalizedParams.site,
+          project: normalizedParams.project,
+          station: normalizedParams.station,
+          device_id: normalizedParams.deviceId,
+          begin_time: normalizedParams.startTime,
+          end_time: normalizedParams.endTime,
+          test_status: normalizedParams.testStatus,
+          limit: normalizedParams.itemsPerPage,
+          offset,
+          sort_by: normalizedParams.sortBy,
+          sort_desc: normalizedParams.sortDesc,
+          token: params.token,
+        },
+        { signal },
+      )
 
       const progress =
         response.chunks_fetched && response.total_chunks
@@ -498,7 +592,8 @@ export async function fetchIplasPaginatedTestItemsQuery(
 export function useIplasSiteProjectsQuery(enabled: MaybeRefOrGetter<boolean> = true) {
   return useQuery({
     queryKey: queryKeys.iplas.siteProjects(),
-    queryFn: () => fetchIplasSiteProjectsQuery(),
+    // Call the raw request: fetchQuery on the same key inside queryFn would await itself.
+    queryFn: () => requestSiteProjects(),
     enabled,
     staleTime: SITE_PROJECT_STALE_TIME,
   })
@@ -517,7 +612,7 @@ export function useIplasStationsQuery(params: MaybeRefOrGetter<IplasStationsQuer
     queryFn: () => {
       const value = toValue(params)
       if (!value) throw new Error('Missing iPLAS station query params')
-      return fetchIplasStationsQuery(value)
+      return requestStations(value)
     },
     enabled: computed(() => Boolean(toValue(params))),
     placeholderData: keepPreviousData,

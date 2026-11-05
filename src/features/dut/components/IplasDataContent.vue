@@ -185,11 +185,11 @@
                 <p class="iplas-section__eyebrow">Regular Mode</p>
                 <h2>Test Results</h2>
                 <p class="iplas-section__description">
-                  {{ regularModeRecordCount }} records are available from the station/device query. Use station tabs to review results.
+                  {{ regularModeRecordCount }} records are available from the station/device query<template v-if="stationSearchInProgress"> so far; more are still loading</template>. Use station tabs to review results.
                 </p>
               </div>
               <div class="iplas-result-toolbar">
-                <span class="iplas-pill iplas-pill--cool">{{ regularModeRecordCount }} records</span>
+                <span class="iplas-pill iplas-pill--cool">{{ regularModeRecordCount }} records{{ stationSearchInProgress ? ' (partial)' : '' }}</span>
                 <button v-if="selectedRecordIndices.length > 0" type="button"
                   class="iplas-button iplas-button--secondary" :disabled="downloading || downloadingCsv"
                   @click="downloadAllSelectedRecords">
@@ -218,9 +218,12 @@
                   <div>
                     <strong>{{ stationGroup.displayName }}</strong>
                     <p>{{ stationGroup.totalRecords }} records ready for review.</p>
+                    <p v-if="getStationLoadingLabel(stationGroup.displayName)" role="status">
+                      {{ getStationLoadingLabel(stationGroup.displayName) }}
+                    </p>
                   </div>
                   <span class="iplas-pill iplas-pill--cool">{{ stationGroup.totalRecords }}
-                    visible</span>
+                    {{ stationSearchInProgress ? 'loaded (partial)' : 'visible' }}</span>
                 </div>
               </template>
             </AppTabs>
@@ -287,8 +290,8 @@
 
               <IplasRecordTable :items="currentStationGroup.records"
                 :total-items="currentStationGroup.records.length"
-                :loading="stationSearchRunLoading"
-                :downloading-record="downloadingKey" :downloading-csv-record="downloadingCsvKey" :selectable="true"
+                :loading="stationSearchRunLoading && currentStationGroup.records.length === 0"
+                :downloading-record="downloadingKey" :downloading-csv-record="downloadingCsvKey" :selectable="!stationSearchInProgress"
                 :selected-keys="getSelectedKeysForStation(currentStationGroup.stationName)" :server-side="false"
                 @update:selected-keys="handleTableSelectionChange(currentStationGroup.stationName, $event)"
                 @row-click="openFullscreen" @download="downloadSingleRecord($event, currentStationGroup.stationName, 0)"
@@ -325,7 +328,22 @@
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
 import { useDebounceFn } from '@vueuse/core'
-import { computed, defineAsyncComponent, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import {
+  computed,
+  defineAsyncComponent,
+  nextTick,
+  onMounted,
+  onUnmounted,
+  ref,
+  shallowRef,
+  watch,
+} from 'vue'
+import {
+  createProgressiveRecordMerger,
+  fetchStationSearchProgressively,
+  type ProgressivePageInfo,
+  type ProgressiveRecordMerger,
+} from '@/features/dut/utils/progressiveStationSearch'
 import type {
   CsvTestItemData,
   DownloadAttachmentInfo,
@@ -336,6 +354,7 @@ import type { CompactCsvTestItemData } from '@/features/dut-logs/api/iplasProxyA
 import { iplasProxyApi } from '@/features/dut-logs/api/iplasProxyApi'
 import type { DownloadCsvLogInfo } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
+import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { useNotification } from '@/shared/composables/useNotification'
 import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 import AppPanel from '@/shared/ui/panel/AppPanel.vue'
@@ -390,13 +409,15 @@ const {
   fetchSiteProjects,
   fetchStations,
   fetchDeviceIds,
-  fetchTestItemsCompact,
   fetchRecordTestItems,
   downloadAttachments,
   downloadCsvLogs,
   batchDownloadLogs,
   clearTestItemData,
 } = useIplasApi()
+const { apiToken } = useIplasSettings()
+
+const STATION_SEARCH_FIRST_PAGE_SIZE = 200
 
 const stationSearchRecords = computed(() => [...testItemData.value, ...compactTestItemData.value])
 
@@ -450,6 +471,24 @@ const stationTestStatus = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
 const stationSearchResultsSection = ref<HTMLElement | null>(null)
 const stationSearchInProgress = ref(false)
 const stationSearchProgress = ref({ processed: 0, total: 0 })
+// Per-station background loading state keyed by display station name
+const stationLoadState = shallowRef<
+  Record<string, { loaded: number; total: number; pending: number }>
+>({})
+let stationSearchController: AbortController | null = null
+
+function abortStationSearch(): void {
+  stationSearchController?.abort()
+  stationSearchController = null
+  stationSearchInProgress.value = false
+  stationLoadState.value = {}
+}
+
+function getStationLoadingLabel(displayName: string): string | null {
+  const state = stationLoadState.value[displayName]
+  if (!stationSearchInProgress.value || !state || state.pending === 0) return null
+  return `Loading more… ${state.loaded} of ${state.total || '?'}`
+}
 const lastStationSearchRequestSummary = ref<{
   site: string
   project: string
@@ -1018,6 +1057,19 @@ const regularStationTabItems = computed(() => {
 const currentStationGroup = computed(() => {
   return groupedByStation.value[activeStationTab.value] || null
 })
+
+// Tabs are index-keyed; keep the viewed station selected when progressive loading inserts earlier stations.
+watch(
+  () => groupedByStation.value.map((group) => group.stationName),
+  (names, previousNames) => {
+    const activeName = previousNames?.[activeStationTab.value]
+    if (!activeName) return
+    const nextIndex = names.indexOf(activeName)
+    if (nextIndex >= 0 && nextIndex !== activeStationTab.value) {
+      activeStationTab.value = nextIndex
+    }
+  },
+)
 
 // Helper functions for station sub-tabs and device ID filtering
 function getUniqueDeviceIdsForStation(stationGroup: StationGroup): string[] {
@@ -1597,6 +1649,7 @@ function handleSiteChange() {
   deviceIdsByStation.value = {}
   loadingDevicesByStation.value = {}
   stations.value = []
+  abortStationSearch()
   clearTestItemData()
   selectedRecordKeys.value.clear()
   selectedRecordStationMap.value.clear()
@@ -1613,6 +1666,7 @@ async function handleProjectChange() {
   loadingDevicesByStation.value = {}
   stationDeviceRequestPromises.value.clear()
   stationTestStatus.value = {}
+  abortStationSearch()
   clearTestItemData()
   selectedRecordKeys.value.clear()
   selectedRecordStationMap.value.clear()
@@ -1623,6 +1677,7 @@ async function handleProjectChange() {
 }
 
 function handleStationChange() {
+  abortStationSearch()
   clearTestItemData()
   activeStationTab.value = 0
   selectedRecordKeys.value.clear()
@@ -1656,6 +1711,13 @@ async function runStationSearch() {
     error.value = 'Please select a valid Station Search time range before running the query.'
     return
   }
+
+  abortStationSearch()
+  const controller = new AbortController()
+  stationSearchController = controller
+  const { signal } = controller
+  const isCurrentRun = () => stationSearchController === controller && !signal.aborted
+  let merger: ProgressiveRecordMerger<CompactCsvTestItemData> | null = null
 
   clearTestItemData()
   error.value = null
@@ -1710,6 +1772,7 @@ async function runStationSearch() {
       return entry
     })
     const resolvedStations = await Promise.all(deviceIdPromises)
+    if (!isCurrentRun()) return
 
     if (resolvedStations.length === 0) {
       error.value =
@@ -1752,39 +1815,106 @@ async function runStationSearch() {
     let nextSearchIndex = 0
     let hasSearchError = false
     let searchError: unknown
+    let scrolledToResults = false
+    const searchLoad = searches.map(() => ({ loaded: 0, total: 0, done: false }))
+    const publishStationLoad = () => {
+      const next: Record<string, { loaded: number; total: number; pending: number }> = {}
+      searches.forEach((search, index) => {
+        const load = searchLoad[index]
+        if (!load) return
+        const entry = next[search.station] ?? { loaded: 0, total: 0, pending: 0 }
+        next[search.station] = entry
+        entry.loaded += load.loaded
+        entry.total += load.total
+        if (!load.done) entry.pending += 1
+      })
+      stationLoadState.value = next
+    }
+    publishStationLoad()
+
+    const activeMerger = createProgressiveRecordMerger<CompactCsvTestItemData>({
+      getCurrent: () => compactTestItemData.value,
+      commit: (next) => {
+        if (!isCurrentRun()) return
+        compactTestItemData.value = next
+        if (!scrolledToResults) {
+          scrolledToResults = true
+          void scrollToStationSearchResults()
+        }
+      },
+    })
+    merger = activeMerger
+    const userToken = apiToken.value?.trim() ? apiToken.value : undefined
 
     const fetchNextSearch = async () => {
-      while (!hasSearchError) {
-        const search = searches[nextSearchIndex]
+      while (!hasSearchError && isCurrentRun()) {
+        const searchIndex = nextSearchIndex
+        const search = searches[searchIndex]
         if (!search) return
         nextSearchIndex += 1
 
         try {
-          await fetchTestItemsCompact(
-            site,
-            project,
-            search.station,
-            search.deviceId,
-            begintime,
-            endtime,
-            search.testStatus,
+          await fetchStationSearchProgressively<CompactCsvTestItemData>(
+            async (offset, limit) => {
+              const response = await iplasProxyApi.getCsvTestItemsCompact(
+                {
+                  site,
+                  project,
+                  station: search.station,
+                  device_id: search.deviceId,
+                  begin_time: iplasProxyApi.formatDateForRequest(begintime),
+                  end_time: iplasProxyApi.formatDateForRequest(endtime),
+                  test_status: search.testStatus,
+                  token: userToken,
+                  offset: offset > 0 ? offset : undefined,
+                  limit,
+                },
+                { signal },
+              )
+              if (response.possibly_truncated && isCurrentRun()) possiblyTruncated.value = true
+              return response
+            },
+            (page, info: ProgressivePageInfo) => {
+              if (!isCurrentRun()) return
+              activeMerger.push(page.data)
+              searchLoad[searchIndex] = info
+              publishStationLoad()
+            },
+            { firstPageSize: STATION_SEARCH_FIRST_PAGE_SIZE, signal },
           )
         } catch (err) {
-          if (!hasSearchError) {
+          if (!hasSearchError && !signal.aborted) {
             hasSearchError = true
             searchError = err
           }
         } finally {
-          stationSearchProgress.value = {
-            ...stationSearchProgress.value,
-            processed: stationSearchProgress.value.processed + 1,
+          if (isCurrentRun()) {
+            const load = searchLoad[searchIndex]
+            if (load) load.done = true
+            publishStationLoad()
+            stationSearchProgress.value = {
+              ...stationSearchProgress.value,
+              processed: stationSearchProgress.value.processed + 1,
+            }
           }
         }
       }
     }
 
     await Promise.all(Array.from({ length: concurrency }, fetchNextSearch))
-    if (hasSearchError) throw searchError
+    if (!isCurrentRun()) return
+    activeMerger.flush()
+    if (hasSearchError) {
+      const loadedCount = stationSearchRecords.value.length
+      const message =
+        searchError instanceof Error ? searchError.message : 'Data Explorer Station Search failed.'
+      // Keep already-loaded rows; only report that the remainder failed.
+      throw loadedCount > 0
+        ? new Error(
+            `Loaded ${loadedCount} records, but the remaining data failed to load: ${message}`,
+          )
+        : searchError
+    }
 
     if (stationSearchRecords.value.length === 0) {
       const stationSummary = lastStationSearchRequestSummary.value?.selections
@@ -1799,14 +1929,18 @@ async function runStationSearch() {
       return
     }
 
-    await nextTick()
-    activeStationTab.value = 0
-    await scrollToStationSearchResults()
+    if (!scrolledToResults) await scrollToStationSearchResults()
   } catch (err) {
+    if (!isCurrentRun()) return
     console.error('Data Explorer Station Search failed:', err)
     error.value = err instanceof Error ? err.message : 'Data Explorer Station Search failed.'
   } finally {
-    stationSearchInProgress.value = false
+    merger?.dispose()
+    if (stationSearchController === controller) {
+      stationSearchController = null
+      stationSearchInProgress.value = false
+      stationLoadState.value = {}
+    }
   }
 }
 
@@ -1823,6 +1957,7 @@ onMounted(async () => {
 
 // Cleanup on unmount to free memory
 onUnmounted(() => {
+  abortStationSearch()
   clearTestItemData()
   lazyLoadedTestItems.value.clear()
   loadingTestItemsForRecord.value.clear()

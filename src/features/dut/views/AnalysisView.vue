@@ -301,7 +301,7 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { computed, ref, watch } from 'vue'
+import { computed, defineAsyncComponent, ref, watch } from 'vue'
 import type {
   GroupScores,
   HierarchicalDUTResult,
@@ -313,8 +313,11 @@ import AppDialog from '@/shared/ui/dialog/AppDialog.vue'
 import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
 import HierarchicalScoreTree from '../components/HierarchicalScoreTree.vue'
-import SubgroupComparisonChart from '../components/SubgroupComparisonChart.vue'
 import { useHierarchicalStore } from '../stores'
+
+// ECharts (~565 kB) is only needed once a station is selected; keep it out of the route chunk.
+const loadSubgroupComparisonChart = () => import('../components/SubgroupComparisonChart.vue')
+const SubgroupComparisonChart = defineAsyncComponent(loadSubgroupComparisonChart)
 
 type TokenField = 'dut' | 'station'
 
@@ -377,7 +380,7 @@ const failedDutSummary = computed(() => {
 const resultTabItems = computed(() => {
   return results.value.map((result) => ({
     value: result.dut_isn,
-    label: result.dut_isn
+    label: result.dut_isn,
     // icon: 'mdi:chip',
   }))
 })
@@ -492,6 +495,8 @@ async function handleAnalyze() {
     request.exclude_test_item_filters = [...excludeFilters.value]
   }
 
+  // Warm the chart chunk in parallel with the analysis request.
+  void loadSubgroupComparisonChart().catch(() => undefined)
   await hierarchicalStore.fetchHierarchicalAnalysis(request)
 }
 

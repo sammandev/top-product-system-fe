@@ -38,9 +38,7 @@ export function findIplasTestItem(
   testItemName: string,
 ): IplasIsnTestItem | undefined {
   const normalizedName = normalizeLookupValue(testItemName)
-  return (record.test_item || []).find(
-    (item) => normalizeLookupValue(item.NAME) === normalizedName,
-  )
+  return (record.test_item || []).find((item) => normalizeLookupValue(item.NAME) === normalizedName)
 }
 
 export function findIplasItemForIsn(
