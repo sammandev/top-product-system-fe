@@ -384,18 +384,21 @@ const {
   possiblyTruncated,
   stations,
   testItemData,
+  compactTestItemData,
   uniqueSites,
   projectsBySite,
   fetchSiteProjects,
   fetchStations,
   fetchDeviceIds,
-  fetchTestItemsFull: fetchTestItemsApi,
+  fetchTestItemsCompact,
   fetchRecordTestItems,
   downloadAttachments,
   downloadCsvLogs,
   batchDownloadLogs,
   clearTestItemData,
 } = useIplasApi()
+
+const stationSearchRecords = computed(() => [...testItemData.value, ...compactTestItemData.value])
 
 // Selection state
 const selectedSite = ref<string | null>(null)
@@ -434,12 +437,12 @@ const stationDeviceRequestPromises = ref<Map<string, Promise<string[]>>>(new Map
 
 // Computed: Check if the backend search run has records available.
 const hasRegularModeData = computed(() => {
-  return testItemData.value.length > 0
+  return stationSearchRecords.value.length > 0
 })
 
 // Computed: Get the total count of regular mode records
 const regularModeRecordCount = computed(() => {
-  return testItemData.value.length
+  return stationSearchRecords.value.length
 })
 
 const showStationSelectionDialog = ref(false)
@@ -930,7 +933,7 @@ const activeStationTabKey = computed({
 const groupedByStation = computed<StationGroup[]>(() => {
   const groups: Record<string, StationGroup> = {}
 
-  for (const record of testItemData.value) {
+  for (const record of stationSearchRecords.value) {
     const stationName = record.TSP || record.station
     if (!groups[stationName]) {
       const stationInfo = stations.value.find(
@@ -996,7 +999,12 @@ const groupedByStation = computed<StationGroup[]>(() => {
     })
   }
 
-  return Object.values(groups)
+  const stationOrder = new Map(selectedStations.value.map((station, index) => [station, index]))
+  return Object.values(groups).sort(
+    (left, right) =>
+      (stationOrder.get(left.displayName) ?? Number.MAX_SAFE_INTEGER) -
+      (stationOrder.get(right.displayName) ?? Number.MAX_SAFE_INTEGER),
+  )
 })
 
 const regularStationTabItems = computed(() => {
@@ -1404,8 +1412,8 @@ async function downloadSelectedRecords(): Promise<void> {
   try {
     const attachments: DownloadAttachmentInfo[] = []
 
-    const recordMap = new Map<string, CsvTestItemData>()
-    for (const record of testItemData.value) {
+    const recordMap = new Map<string, CsvTestItemData | CompactCsvTestItemData>()
+    for (const record of stationSearchRecords.value) {
       const recordKey = `${record.ISN}_${record['Test Start Time']}`
       recordMap.set(recordKey, record)
     }
@@ -1731,18 +1739,41 @@ async function runStationSearch() {
       ),
     }
 
-    for (const { stationInfo, deviceIds } of resolvedStations) {
-      for (const deviceId of deviceIds.length > 0 ? deviceIds : ['ALL']) {
+    const searches = resolvedStations.flatMap(({ stationInfo, deviceIds }) =>
+      (deviceIds.length > 0 ? deviceIds : ['ALL']).map((deviceId) => ({
+        station: stationInfo.display_station_name,
+        deviceId,
+        testStatus: stationTestStatus.value[stationInfo.display_station_name] || 'ALL',
+      })),
+    )
+    const concurrency = searches.some((search) => search.deviceId === 'ALL')
+      ? 1
+      : Math.min(3, searches.length)
+    let nextSearchIndex = 0
+    let hasSearchError = false
+    let searchError: unknown
+
+    const fetchNextSearch = async () => {
+      while (!hasSearchError) {
+        const search = searches[nextSearchIndex]
+        if (!search) return
+        nextSearchIndex += 1
+
         try {
-          await fetchTestItemsApi(
+          await fetchTestItemsCompact(
             site,
             project,
-            stationInfo.display_station_name,
-            deviceId,
+            search.station,
+            search.deviceId,
             begintime,
             endtime,
-            stationTestStatus.value[stationInfo.display_station_name] || 'ALL',
+            search.testStatus,
           )
+        } catch (err) {
+          if (!hasSearchError) {
+            hasSearchError = true
+            searchError = err
+          }
         } finally {
           stationSearchProgress.value = {
             ...stationSearchProgress.value,
@@ -1752,7 +1783,10 @@ async function runStationSearch() {
       }
     }
 
-    if (testItemData.value.length === 0) {
+    await Promise.all(Array.from({ length: concurrency }, fetchNextSearch))
+    if (hasSearchError) throw searchError
+
+    if (stationSearchRecords.value.length === 0) {
       const stationSummary = lastStationSearchRequestSummary.value?.selections
         .map(
           (selection) =>

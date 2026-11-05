@@ -1,10 +1,8 @@
 /**
  * Route chunk prefetching.
  *
- * Every route is code-split, so the first navigation to a view pays for a
- * network round trip before anything renders. Warming the chunk while the user
- * is still deciding (hover/focus on a nav item, or browser idle time) removes
- * that delay from the click.
+ * Warm route chunks when the user shows navigation intent. Avoid preloading
+ * every route during idle time so unused views do not consume bandwidth.
  */
 
 import router from './index'
@@ -38,19 +36,4 @@ export function prefetchRoute(path: string | undefined | null): void {
       warmRecordComponents(component)
     }
   }
-}
-
-type IdleCallback = (callback: () => void, options?: { timeout?: number }) => number
-
-export function prefetchRoutesWhenIdle(paths: (string | undefined | null)[]): void {
-  const run = () => {
-    for (const path of paths) prefetchRoute(path)
-  }
-
-  const idle = (window as unknown as { requestIdleCallback?: IdleCallback }).requestIdleCallback
-  if (idle) {
-    idle(run, { timeout: 4000 })
-    return
-  }
-  setTimeout(run, 1500)
 }

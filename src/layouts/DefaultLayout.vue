@@ -206,7 +206,7 @@ import { storeToRefs } from 'pinia'
 import SelectButton from 'primevue/selectbutton'
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { prefetchRoute, prefetchRoutesWhenIdle } from '@/core/router/prefetch'
+import { prefetchRoute } from '@/core/router/prefetch'
 import { useAppConfigStore } from '@/core/stores/appConfig.store'
 import { useMenuAccessStore } from '@/features/admin/stores/menuAccess.store'
 import { useAuthStore } from '@/features/auth/stores/auth.store'
@@ -613,18 +613,6 @@ onMounted(() => {
   }
   void syncMenus()
 })
-
-watch(
-  navigationSections,
-  (sections) => {
-    prefetchRoutesWhenIdle(
-      sections.flatMap((section) =>
-        section.items.flatMap((item) => [item.path, ...(item.children ?? []).map((c) => c.path)]),
-      ),
-    )
-  },
-  { immediate: true },
-)
 
 onBeforeUnmount(() => {
   systemThemeMediaQuery?.removeEventListener('change', handleSystemThemeChange)
