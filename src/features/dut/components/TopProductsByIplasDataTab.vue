@@ -49,6 +49,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useIplasRecordDownload } from '../composables/useIplasRecordDownload'
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { useTabPersistence } from '@/shared/composables/useTabPersistence'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
@@ -69,7 +70,7 @@ const tabItems = [
 const showSettingsDialog = ref(false)
 const showDetailsDialog = ref(false)
 const selectedRecord = ref<NormalizedRecord | null>(null)
-const downloadingDetails = ref(false)
+const { downloading: downloadingDetails, downloadRecord } = useIplasRecordDownload()
 
 function handleShowDetails(record: NormalizedRecord) {
   selectedRecord.value = record
@@ -77,13 +78,7 @@ function handleShowDetails(record: NormalizedRecord) {
 }
 
 async function handleDownloadFromDialog() {
-  downloadingDetails.value = true
-
-  try {
-    // Download handling remains delegated to the existing dialog workflow.
-  } finally {
-    downloadingDetails.value = false
-  }
+  await downloadRecord(selectedRecord.value)
 }
 </script>
 

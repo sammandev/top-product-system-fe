@@ -35,12 +35,12 @@
             <header class="ranking-filter-header">
               <div>
                 <strong>Filter station records</strong>
-                <span>{{ filteredRanking.length }} of {{ rankingByStation[String(item.value)]?.length || 0 }} records shown</span>
               </div>
               <div class="ranking-filter-actions">
                 <span class="ranking-pill ranking-pill--muted">
                   {{ getUniqueDevices(String(item.value)).length }} device IDs
                 </span>
+                <span class="ranking-pill ranking-pill--muted">{{ filteredRanking.length }} records</span>
                 <button v-if="hasActiveFilters" type="button" class="ranking-button ranking-button--ghost"
                   @click="clearAllFilters">
                   Clear Filters
@@ -902,19 +902,12 @@ function scoreTone(score: number) {
   background: var(--app-surface);
 }
 
-.ranking-filter-header strong,
-.ranking-filter-header > div > span {
+.ranking-filter-header strong {
   display: block;
 }
 
 .ranking-filter-header strong {
   color: var(--app-ink);
-}
-
-.ranking-filter-header > div > span {
-  margin-top: 0.15rem;
-  color: var(--app-muted);
-  font-size: 0.76rem;
 }
 
 .ranking-filter-grid {

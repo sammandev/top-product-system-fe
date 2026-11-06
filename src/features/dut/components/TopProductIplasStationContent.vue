@@ -617,9 +617,11 @@ function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
     deviceId: record.DeviceId || '-',
     stationName: record.station,
     displayStationName: record.TSP || record.station,
+    tsp: record.TSP,
     site: record.Site || '-',
     project: record.Project || '-',
     line: record.Line || '-',
+    model: record.Model,
     errorCode: record.ErrorCode || '-',
     errorName: record.ErrorName || '-',
     testStatus: record['Test Status'] || '-',
@@ -660,7 +662,7 @@ async function handleDownloadRecord(payload: {
     const time =
       (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
     const deviceid = record.DeviceId
-    const station = record.TSP || record.station
+    const station = record.station
 
     // Download TXT attachments
     await downloadAttachments(selectedSite.value, selectedProject.value, [
@@ -677,7 +679,7 @@ async function handleDownloadRecord(payload: {
     const csvLogInfo: DownloadCsvLogInfo = {
       site: selectedSite.value,
       project: selectedProject.value,
-      station,
+      station: record.TSP || record.station,
       line: record.Line || 'NA',
       model: record.Model || 'ALL',
       deviceid,
@@ -707,7 +709,7 @@ async function handleBulkDownloadRecords(payload: {
     const time =
       (record['Test end Time'] || '').replace('T', ' ').replace(/-/g, '/').split('.')[0] || ''
     const deviceid = record.DeviceId
-    const station = record.TSP || record.station
+    const station = record.station
     return { isn, time, deviceid, station }
   })
 

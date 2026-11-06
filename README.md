@@ -585,6 +585,20 @@ Use native elements for local interactions — don't wrap a `<button>` in a Prim
 
 ## 🐛 Troubleshooting
 
+### iPLAS record filters, score limits, and downloads
+
+- In Data Explorer's Station Search results, **Filter station records** shows device
+  and filtered-record counts. **Search Records** and **Device Filter** support checkbox
+  selection; typing a search and pressing Enter selects all matching options and applies
+  the filter immediately.
+- **How This Score Is Calculated** displays each contributing item's original UCL/USL
+  and LCL/LSL. Missing limits remain `-`; zero is a valid limit.
+- Station Search details in Data Explorer and Top Products download both TXT attachments
+  and CSV logs using the original local test end time. TXT attachments require the raw
+  station name (for example, `NFT_TEST`); CSV logs require TSP/display station (`NFT TEST`).
+- Data Explorer's ISN Search details provide the same Download action. Search, Data Type,
+  and Status share one row on desktop and stack on narrow screens.
+
 ### Docker build fails during icon generation
 
 `pnpm run build` first runs `scripts/build-icons.mjs`, which formats the generated

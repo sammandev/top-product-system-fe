@@ -1213,8 +1213,8 @@ function createAttachmentInfo(record: IsnSearchData): DownloadAttachmentInfo {
     // CRITICAL: Use test_end_time with timezone adjustment based on site
     time: formatTimeForDownloadWithTimezone(record.test_end_time, record.site),
     deviceid: record.device_id || '',
-    // Prefer raw station_name — display_station_name may not be recognized by iPLAS download API
-    station: record.station_name || record.display_station_name,
+    // TXT attachments use the API-facing station, not the internal station_name/TSP.
+    station: record.display_station_name || record.station_name,
   }
 }
 

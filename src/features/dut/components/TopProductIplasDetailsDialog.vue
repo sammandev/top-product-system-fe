@@ -351,7 +351,8 @@
     </div>
   </AppDialog>
 
-  <AppDialog v-model="showOverallScoreDialog" v-model:fullscreen="isOverallScoreFullscreen" width="min(94vw, 56rem)"
+  <AppDialog v-model="showOverallScoreDialog" v-model:fullscreen="isOverallScoreFullscreen" width="min(96vw, 72rem)"
+    :breakpoints="{ '1200px': '96vw', '768px': '98vw' }"
     fullscreen-width="98vw" fullscreenable :show-footer="false"
     class="iplas-details-dialog iplas-overall-score-dialog">
     <template #header>
@@ -546,6 +547,8 @@ interface ForcedFailGridRow {
 
 interface ScoredContributorItem {
   name: string
+  ucl: string
+  lcl: string
   value: string
   score: number
   weight: number
@@ -970,6 +973,8 @@ const overallScoreExplanation = computed<OverallScoreExplanation | null>(() => {
 
     return {
       name: item.NAME,
+      ucl: item.UCL,
+      lcl: item.LCL,
       value: formatTableValue(item),
       score: rawScore * 10,
       weight,

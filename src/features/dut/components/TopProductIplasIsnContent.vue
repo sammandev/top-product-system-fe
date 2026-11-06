@@ -2008,8 +2008,8 @@ async function handleDownloadRecord(payload: {
     // Just need to convert dashes to slashes for the download attachment API
     const time = formatTimeForDownload(record['Test end Time'] || '')
     const deviceid = record.DeviceId
-    // Prefer raw station name (TSP) — display_station_name may not be recognized by iPLAS download API
-    const station = record.TSP || record.station
+    // TXT attachments require the raw station name, not the TSP/display label.
+    const station = record.station
 
     await downloadAttachments(isnProjectInfo.value.site, isnProjectInfo.value.project, [
       { isn, time, deviceid, station },
@@ -2021,7 +2021,7 @@ async function handleDownloadRecord(payload: {
     const csvLogInfo: IplasDownloadCsvLogInfo = {
       site: isnProjectInfo.value.site,
       project: isnProjectInfo.value.project,
-      station,
+      station: record.TSP || record.station,
       line: record.Line || 'NA',
       model: record.Model || 'ALL',
       deviceid,
@@ -2048,8 +2048,8 @@ async function handleBulkDownloadRecords(payload: {
     // UPDATED: Time is already in local time format from transformIsnRecordToCsvData
     const time = formatTimeForDownload(record['Test end Time'] || '')
     const deviceid = record.DeviceId
-    // Prefer raw station name (TSP) — display_station_name may not be recognized by iPLAS download API
-    const station = record.TSP || record.station
+    // TXT attachments require the raw station name, not the TSP/display label.
+    const station = record.station
     return { isn, time, deviceid, station }
   })
 
@@ -2058,7 +2058,7 @@ async function handleBulkDownloadRecords(payload: {
   const csvLogInfos: IplasDownloadCsvLogInfo[] = payload.records.map((record) => {
     const isn = record.ISN && record.ISN.trim() !== '' ? record.ISN : record.DeviceId
     const deviceid = record.DeviceId
-    // Prefer raw station name (TSP)
+    // CSV logs use TSP/display station.
     const station = record.TSP || record.station
     const apiEndTime = formatTimeForCsvDownload(record['Test end Time'] || '')
 

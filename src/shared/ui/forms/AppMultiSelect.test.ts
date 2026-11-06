@@ -1,10 +1,12 @@
 // @vitest-environment happy-dom
 
-import { mount } from '@vue/test-utils'
+import { enableAutoUnmount, mount } from '@vue/test-utils'
 import PrimeVue from 'primevue/config'
 import Select from 'primevue/select'
-import { describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import AppMultiSelect from './AppMultiSelect.vue'
+
+enableAutoUnmount(afterEach)
 
 describe('AppMultiSelect', () => {
   const options = [
@@ -43,5 +45,30 @@ describe('AppMultiSelect', () => {
     { value: ['unknown'], expected: 'unknown' },
   ])('formats selected value $value', ({ value, expected }) => {
     expect(mountSelect(value).text()).toContain(expected)
+  })
+
+  it('applies all matching options with Enter when enabled, without checkbox clicks', async () => {
+    const wrapper = mount(AppMultiSelect, {
+      props: {
+        modelValue: ['beta'],
+        options: [
+          { label: 'Alpha 1', value: 'alpha-1' },
+          { label: 'Alpha 2', value: 'alpha-2' },
+          { label: 'Beta', value: 'beta' },
+        ],
+        selectMatchesOnEnter: true,
+        appendTo: 'self',
+      },
+      global: { plugins: [[PrimeVue, { license: 'test-license' }]] },
+    })
+    await wrapper.get('[role="combobox"]').trigger('click')
+    const search = wrapper.get('[role="searchbox"]')
+    await search.setValue('alpha')
+    await search.trigger('keydown', { key: 'Enter', code: 'Enter' })
+    expect(wrapper.emitted('update:modelValue')?.at(-1)).toEqual([['alpha-1', 'alpha-2']])
+    expect(wrapper.emitted('change')?.at(-1)).toEqual([['alpha-1', 'alpha-2']])
+    await vi.waitFor(() =>
+      expect(wrapper.get('[role="combobox"]').attributes('aria-expanded')).toBe('false'),
+    )
   })
 })

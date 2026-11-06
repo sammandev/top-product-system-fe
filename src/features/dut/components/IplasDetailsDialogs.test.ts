@@ -35,7 +35,9 @@ const record: NormalizedRecord = {
 const options = {
   props: { modelValue: true, record },
   global: {
-    stubs: { AppDialog: { template: '<div><slot /></div>' } },
+    stubs: {
+      AppDialog: { template: '<div><slot name="header-actions" /><slot /></div>' },
+    },
   },
 }
 
@@ -79,4 +81,47 @@ describe.each([
     await wrapper.vm.$nextTick()
     expect(grid.props('rows')).toHaveLength(2)
   })
+
+  it('emits downloads and disables the button while downloading', async () => {
+    const wrapper = mountDialog()
+    const button = wrapper.get('button[title="Download"]')
+    await button.trigger('click')
+    expect(wrapper.emitted('download')).toHaveLength(1)
+    await wrapper.setProps({ downloading: true })
+    expect(wrapper.get('button[title="Downloading..."]').attributes('disabled')).toBeDefined()
+  })
+})
+
+it('retains specification limits in overall score contributions, including zero and missing limits', async () => {
+  const wrapper = shallowMount(TopProductIplasDetailsDialog, {
+    ...options,
+    props: {
+      modelValue: true,
+      record: {
+        ...record,
+        overallScore: 0.8,
+        testItems: record.testItems.map((item, index) => ({
+          ...item,
+          score: index === 0 ? 0.8 : 1,
+          UCL: index === 0 ? '0' : '',
+        })),
+      },
+    },
+  })
+  await wrapper.get('.summary-stat-button').trigger('click')
+  const grid = wrapper.find('.score-contributors-section').findComponent(AppDataGrid)
+  expect(grid.props('rows')).toEqual(
+    expect.arrayContaining([
+      expect.objectContaining({ name: 'Signal strength', ucl: '0', lcl: '-80' }),
+      expect.objectContaining({ name: 'Connection', ucl: '', lcl: '' }),
+    ]),
+  )
+})
+
+it('keeps ISN test-item filters together without a Clear Filters action', async () => {
+  const wrapper = shallowMount(IplasTestItemsFullscreenDialog, options)
+  await wrapper.get('input[type="search"]').setValue('Signal')
+  const filters = wrapper.get('.fullscreen-dialog__filters')
+  expect(filters.findAll('label')).toHaveLength(3)
+  expect(filters.text()).not.toContain('Clear Filters')
 })

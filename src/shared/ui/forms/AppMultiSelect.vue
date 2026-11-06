@@ -1,5 +1,6 @@
 <template>
   <Select
+    ref="select"
     v-bind="attrs"
     :modelValue="props.modelValue"
     :options="resolvedOptions"
@@ -18,6 +19,7 @@
     optionValue="value"
     appendTo="body"
     resetFilterOnHide
+    :pt="props.selectMatchesOnEnter ? { pcFilter: { root: { onKeydownCapture: handleFilterEnter } } } : undefined"
     class="app-multi-select w-full"
     @update:modelValue="handleUpdate"
     @change="handleChange"
@@ -40,8 +42,8 @@
 </template>
 
 <script setup lang="ts">
-import Select from 'primevue/select'
-import { computed, useAttrs } from 'vue'
+import Select, { type SelectMethods } from 'primevue/select'
+import { computed, ref, useAttrs } from 'vue'
 import type { SelectOption } from './AppSelect.vue'
 
 defineOptions({ inheritAttrs: false })
@@ -54,11 +56,13 @@ const props = withDefaults(
     placeholder?: string
     searchable?: boolean
     disabled?: boolean
+    selectMatchesOnEnter?: boolean
   }>(),
   {
     placeholder: 'Select...',
     searchable: true,
     disabled: false,
+    selectMatchesOnEnter: false,
     optionGroups: undefined,
   },
 )
@@ -69,6 +73,7 @@ const emit = defineEmits<{
 }>()
 
 const attrs = useAttrs()
+const select = ref<SelectMethods | null>(null)
 const resolvedOptions = computed(() => props.optionGroups || props.options)
 const selectableOptions = computed(() =>
   props.optionGroups ? props.optionGroups.flatMap((group) => group.items) : props.options,
@@ -87,6 +92,27 @@ function handleUpdate(value: (string | number)[]) {
 
 function handleChange(event: { value: (string | number)[] }) {
   emit('change', event.value)
+}
+
+function handleFilterEnter(event: KeyboardEvent) {
+  if (event.key !== 'Enter' || event.isComposing || !(event.target instanceof HTMLInputElement))
+    return
+  const query = event.target.value.trim().toLocaleLowerCase()
+  if (!query) return
+
+  event.preventDefault()
+  event.stopPropagation()
+  const matches = selectableOptions.value
+    .filter((option) => option.label.toLocaleLowerCase().includes(query))
+    .map((option) => option.value)
+    .filter(
+      (value): value is string | number => typeof value === 'string' || typeof value === 'number',
+    )
+  if (matches.length === 0) return
+
+  emit('update:modelValue', matches)
+  emit('change', matches)
+  select.value?.hide(true)
 }
 </script>
 

@@ -126,11 +126,6 @@
             :searchable="false" />
         </label>
 
-        <div class="fullscreen-dialog__filter-actions">
-          <button v-if="hasActiveFilters" type="button" class="fullscreen-dialog__button fullscreen-dialog__button--ghost" @click="clearFilters">
-            Clear Filters
-          </button>
-        </div>
       </section>
 
       <section class="fullscreen-dialog__table-shell">
@@ -225,6 +220,7 @@ export interface NormalizedRecord {
   site: string
   project: string
   line: string
+  model?: string
   // Test result
   errorCode: string
   errorName: string
@@ -313,14 +309,6 @@ const dialogWidth = computed(() => (isFullscreen.value ? '98vw' : 'min(96vw, 88r
 const dialogBreakpoints = computed<Record<string, string>>(() =>
   isFullscreen.value ? FULLSCREEN_DIALOG_BREAKPOINTS : STANDARD_DIALOG_BREAKPOINTS,
 )
-
-const hasActiveFilters = computed(() => {
-  return (
-    searchEntry.value.trim().length > 0 ||
-    testStatusFilter.value !== 'ALL' ||
-    testItemFilter.value !== 'all'
-  )
-})
 
 // Helper functions
 function isValueData(item: NormalizedTestItem): boolean {
@@ -816,7 +804,7 @@ watch(
 }
 
 .fullscreen-dialog__filters {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: minmax(0, 2fr) repeat(2, minmax(0, 1fr));
   align-items: end;
   gap: 1rem;
   padding: 0.75rem;

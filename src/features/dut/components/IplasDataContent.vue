@@ -217,7 +217,15 @@
               <p v-if="getStationLoadingLabel(currentStationGroup.displayName)" role="status">
                 {{ getStationLoadingLabel(currentStationGroup.displayName) }}
               </p>
-              <div class="iplas-filter-grid">
+              <section class="iplas-record-filters">
+                <header class="iplas-record-filters__header">
+                  <strong>Filter station records</strong>
+                  <div class="iplas-record-filters__counts" aria-live="polite">
+                    <span class="iplas-pill">{{ currentStationGroup.deviceIds.length }} device IDs</span>
+                    <span class="iplas-pill">{{ currentStationGroup.records.length }} records</span>
+                  </div>
+                </header>
+                <div class="iplas-filter-grid">
                 <label class="iplas-field">
                   <span>Search Records</span>
                   <AppMultiSelect
@@ -226,6 +234,7 @@
                     :virtual-scroller-options="currentStationIsnOptions.length > 100 ? { itemSize: 38 } : undefined"
                     placeholder="All ISNs"
                     aria-label="Search Records"
+                    select-matches-on-enter
                     @update:model-value="handleStationIsnChange(currentStationGroup.stationName, $event)"
                   />
                 </label>
@@ -248,10 +257,12 @@
                     :options="currentStationDeviceOptions"
                     placeholder="All device IDs"
                     aria-label="Device Filter"
+                    select-matches-on-enter
                     @update:model-value="handleStationDeviceChange(currentStationGroup.stationName, $event)"
                   />
                 </label>
-              </div>
+                </div>
+              </section>
 
               <IplasRecordTable :items="currentStationGroup.records"
                 :total-items="currentStationGroup.records.length"
@@ -308,6 +319,7 @@ import {
   type ProgressivePageInfo,
   type ProgressiveRecordMerger,
 } from '@/features/dut/utils/progressiveStationSearch'
+import { useIplasRecordDownload } from '@/features/dut/composables/useIplasRecordDownload'
 import type {
   CsvTestItemData,
   DownloadAttachmentInfo,
@@ -843,8 +855,7 @@ const downloadingCsv = ref(false)
 // Fullscreen dialog controls
 const showFullscreenDialog = ref(false)
 const fullscreenRecord = ref<NormalizedRecord | null>(null)
-const fullscreenOriginalRecord = ref<CsvTestItemData | null>(null)
-const fullscreenDownloading = ref(false)
+const { downloading: fullscreenDownloading, downloadRecord } = useIplasRecordDownload()
 const loadingFullscreenTestItems = ref(false)
 
 // Computed
@@ -1160,6 +1171,7 @@ function normalizeStationRecord(record: CsvTestItemData): NormalizedRecord {
     site: record.Site,
     project: record.Project,
     line: record.Line,
+    model: record.Model,
     errorCode: record.ErrorCode,
     errorName: record.ErrorName,
     testStatus: record['Test Status'],
@@ -1184,7 +1196,6 @@ async function openFullscreen(record: CsvTestItemData | CompactCsvTestItemData):
         ...record,
         TestItem: [],
       } as CsvTestItemData)
-      fullscreenOriginalRecord.value = null
 
       try {
         // Fetch test items from server
@@ -1215,29 +1226,14 @@ async function openFullscreen(record: CsvTestItemData | CompactCsvTestItemData):
       ...record,
       TestItem: testItems || [],
     }
-    fullscreenOriginalRecord.value = fullRecord
     fullscreenRecord.value = normalizeStationRecord(fullRecord)
   } else {
-    fullscreenOriginalRecord.value = record
     fullscreenRecord.value = normalizeStationRecord(record)
   }
 }
 
 async function downloadFromFullscreen(): Promise<void> {
-  if (!fullscreenOriginalRecord.value || !selectedSite.value || !selectedProject.value) {
-    showErrorNotification('Missing site or project information for download')
-    return
-  }
-  fullscreenDownloading.value = true
-  try {
-    const attachmentInfo = createAttachmentInfo(fullscreenOriginalRecord.value)
-    await downloadAttachments(selectedSite.value, selectedProject.value, [attachmentInfo])
-  } catch (err) {
-    console.error('Failed to download test log:', err)
-    showErrorNotification(err instanceof Error ? err.message : 'Failed to download test log')
-  } finally {
-    fullscreenDownloading.value = false
-  }
+  await downloadRecord(fullscreenRecord.value)
 }
 
 /**
@@ -1261,8 +1257,8 @@ function createAttachmentInfo(
   // CRITICAL: Use 'Test end Time' for download_attachment API
   const time = formatTimeForDownload(record['Test end Time'])
   const deviceid = record.DeviceId
-  // Use TSP as per API documentation - TSP corresponds to display_station_name
-  const station = record.TSP || record.station
+  // Downloads require the raw station name, not the display label in TSP.
+  const station = record.station
 
   return { isn, time, deviceid, station }
 }
@@ -1978,6 +1974,35 @@ onUnmounted(() => {
   gap: 1rem;
   grid-template-columns: minmax(0, 1.5fr) minmax(9rem, 0.65fr) minmax(0, 1fr);
   align-items: end;
+}
+
+.iplas-record-filters {
+  border: 1px solid var(--app-border);
+  border-radius: 0.75rem;
+  background: var(--app-panel);
+  overflow: hidden;
+}
+
+.iplas-record-filters__header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.85rem 1rem;
+  border-bottom: 1px solid var(--app-border);
+  background: var(--app-surface);
+}
+
+.iplas-record-filters__counts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.iplas-record-filters .iplas-filter-grid {
+  padding: 1rem;
 }
 
 .iplas-filter-grid > .iplas-field {
