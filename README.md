@@ -585,6 +585,16 @@ Use native elements for local interactions — don't wrap a `<button>` in a Prim
 
 ## 🐛 Troubleshooting
 
+### Docker build fails during icon generation
+
+`pnpm run build` first runs `scripts/build-icons.mjs`, which formats the generated
+offline icon data with Biome. Docker contexts exclude `.git` and `.gitignore`, so
+this formatter invocation disables VCS integration while retaining the project's
+formatting settings. Formatter errors are printed directly in the build log.
+
+Run the regression check with `pnpm exec vitest run scripts/build-icons.spec.ts`.
+It runs icon generation in a temporary directory without Git metadata or an ignore file.
+
 ### Port in use
 
 ```typescript

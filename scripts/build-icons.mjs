@@ -106,8 +106,10 @@ ${collections.map((_, i) => `  addCollection(collection${i})`).join('\n')}
 `
 
 writeFileSync(outFile, header + body + register)
-// Match the committed Biome style so builds leave no format diff.
-execFileSync(process.execPath, [require.resolve('@biomejs/biome/bin/biome'), 'format', '--write', outFile], {
-  stdio: 'ignore',
-})
+// Docker build contexts omit .git and .gitignore; formatting must not depend on them.
+execFileSync(
+  process.execPath,
+  [require.resolve('@biomejs/biome/bin/biome'), 'format', '--write', '--vcs-enabled=false', outFile],
+  { stdio: 'inherit' },
+)
 console.log(`[icons] wrote ${outFile}`)
