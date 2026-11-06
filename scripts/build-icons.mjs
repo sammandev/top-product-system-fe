@@ -5,10 +5,14 @@
  *
  * Run: pnpm icons:build
  */
+import { execFileSync } from 'node:child_process'
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { getIcons } from '@iconify/utils'
+
+const require = createRequire(import.meta.url)
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..')
 const srcDir = join(root, 'src')
@@ -102,4 +106,8 @@ ${collections.map((_, i) => `  addCollection(collection${i})`).join('\n')}
 `
 
 writeFileSync(outFile, header + body + register)
+// Match the committed Biome style so builds leave no format diff.
+execFileSync(process.execPath, [require.resolve('@biomejs/biome/bin/biome'), 'format', '--write', outFile], {
+  stdio: 'ignore',
+})
 console.log(`[icons] wrote ${outFile}`)

@@ -27,11 +27,13 @@
     <div v-if="record" class="fullscreen-dialog__body" :class="{ 'fullscreen-dialog__body--fullscreen': isFullscreen }">
       <section class="fullscreen-dialog__summary-grid">
         <article class="fullscreen-dialog__summary-card fullscreen-dialog__summary-card--highlight">
-          <button type="button" class="fullscreen-dialog__info-button" @click="copyToClipboard(record.isn)">
+          <button type="button" class="fullscreen-dialog__info-button" aria-label="Copy DUT ISN" @click="copyToClipboard(record.isn)">
+            <span class="fullscreen-dialog__info-icon"><Icon icon="mdi:barcode" /></span>
             <span>
               <small>DUT ISN</small>
               <strong>{{ record.isn || '-' }}</strong>
             </span>
+            <Icon icon="mdi:content-copy" class="fullscreen-dialog__copy-icon" />
           </button>
         </article>
 
@@ -48,20 +50,22 @@
 
       <section class="fullscreen-dialog__metadata-grid">
         <article class="fullscreen-dialog__metadata-card">
-          <button type="button" class="fullscreen-dialog__copy-row" @click="copyToClipboard(record.deviceId)">
-            <span><strong>Device ID</strong> {{ record.deviceId }}</span>
+          <button type="button" class="fullscreen-dialog__copy-row" aria-label="Copy Device ID" @click="copyToClipboard(record.deviceId)">
+            <Icon icon="mdi:devices" />
+            <span><small>Device ID</small><strong>{{ record.deviceId || '-' }}</strong></span>
+            <Icon icon="mdi:content-copy" class="fullscreen-dialog__copy-icon" />
           </button>
         </article>
         <article class="fullscreen-dialog__metadata-card">
           <div class="fullscreen-dialog__copy-row fullscreen-dialog__copy-row--static">
             <Icon icon="mdi:map-marker" />
-            <span><strong>Site</strong> {{ record.site }}</span>
+            <span><small>Site</small><strong>{{ record.site || '-' }}</strong></span>
           </div>
         </article>
         <article class="fullscreen-dialog__metadata-card">
           <div class="fullscreen-dialog__copy-row fullscreen-dialog__copy-row--static">
             <Icon icon="mdi:folder" />
-            <span><strong>Project</strong> {{ record.project }}</span>
+            <span><small>Project</small><strong>{{ record.project || '-' }}</strong></span>
           </div>
         </article>
       </section>
@@ -113,7 +117,7 @@
         <label class="fullscreen-dialog__field">
           <span>Data Type</span>
           <AppSelect v-model="testItemFilter" :options="testItemFilterSelectOptions" placeholder="Show All"
-            :searchable="false" />
+            :searchable="false" aria-label="Data Type" />
         </label>
 
         <label class="fullscreen-dialog__field">
@@ -504,6 +508,7 @@ watch(
   flex-direction: column;
   gap: 0.75rem;
   min-height: 0;
+  min-width: 0;
   height: 100%;
 }
 
@@ -669,15 +674,17 @@ watch(
 }
 
 .fullscreen-dialog__summary-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 0.75rem;
+  align-items: stretch;
 }
 
 .fullscreen-dialog__summary-card,
 .fullscreen-dialog__metadata-card {
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  padding: 0;
+  border: 1px solid var(--app-border);
+  border-radius: 1rem;
+  background: var(--app-panel);
+  padding: 0.75rem;
 }
 
 .fullscreen-dialog__summary-card--highlight {
@@ -690,6 +697,31 @@ watch(
   justify-content: flex-start;
 }
 
+.fullscreen-dialog__info-button,
+.fullscreen-dialog__metadata-card .fullscreen-dialog__copy-row {
+  border: 0;
+  border-radius: 0;
+  padding: 0;
+  background: transparent;
+  min-width: 0;
+  max-width: none;
+  min-height: 2.75rem;
+  text-align: left;
+}
+
+.fullscreen-dialog__info-button:focus-visible,
+.fullscreen-dialog__copy-row:focus-visible,
+.fullscreen-dialog__field input:focus-visible {
+  outline: 2px solid var(--app-ring);
+  outline-offset: 3px;
+}
+
+.fullscreen-dialog__copy-icon {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--app-muted);
+}
+
 .fullscreen-dialog__info-button--static,
 .fullscreen-dialog__copy-row--static {
   cursor: default;
@@ -698,33 +730,51 @@ watch(
 .fullscreen-dialog__info-button span,
 .fullscreen-dialog__copy-row span {
   display: grid;
-  gap: 0.2rem;
+  gap: 0.25rem;
   min-width: 0;
 }
 
 .fullscreen-dialog__info-button small {
   color: var(--app-muted);
-  font-size: 0.72rem;
+  font-size: 0.875rem;
   letter-spacing: 0;
   text-transform: none;
 }
 
+.fullscreen-dialog__summary-card .fullscreen-dialog__info-icon {
+  display: inline-flex;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
+  border-radius: 0.55rem;
+  font-size: 1.1rem;
+}
+
+.fullscreen-dialog__info-button strong {
+  font-size: 1.125rem;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
 .fullscreen-dialog__metadata-grid {
-  grid-template-columns: repeat(3, minmax(8rem, max-content));
-  justify-content: start;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 0.75rem;
 }
 
 .fullscreen-dialog__metadata-card .fullscreen-dialog__copy-row {
-  min-width: 8rem;
-  max-width: 13rem;
-  min-height: 3.25rem;
-  padding: 0.72rem 0.9rem;
-  border-radius: 0.8rem;
+  width: 100%;
+  font-size: 0.875rem;
+  line-height: 1.5;
 }
 
-.fullscreen-dialog__metadata-card:first-child .fullscreen-dialog__copy-row {
-  min-width: 11rem;
+.fullscreen-dialog__copy-row small {
+  color: var(--app-muted);
+  font-size: 0.875rem;
+}
+
+.fullscreen-dialog__copy-row strong {
+  overflow-wrap: anywhere;
 }
 
 .fullscreen-dialog__meta-pills {
@@ -766,25 +816,39 @@ watch(
 }
 
 .fullscreen-dialog__filters {
-  grid-template-columns: minmax(0, 1.5fr) minmax(0, 1.2fr) minmax(0, 0.8fr) auto;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   align-items: end;
-  padding: 0.82rem 0.9rem;
+  gap: 1rem;
+  padding: 0.75rem;
   border: 1px solid var(--app-border);
-  border-radius: 0.82rem;
+  border-radius: 0.75rem;
   background: var(--app-panel);
 }
 
 .fullscreen-dialog__field {
   display: grid;
-  gap: 0.55rem;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
-.fullscreen-dialog__field span {
+.fullscreen-dialog__field > span {
   color: var(--app-ink);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.05em;
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0;
   text-transform: none;
+}
+
+.fullscreen-dialog__filters input,
+.fullscreen-dialog__filters :deep(.p-select) {
+  height: 2.75rem;
+  min-width: 0;
+  font-size: 1rem;
+}
+
+.fullscreen-dialog__filters :deep(.p-select-label) {
+  align-self: center;
+  min-width: 0;
 }
 
 .fullscreen-dialog__field input,
@@ -816,6 +880,7 @@ watch(
 
 .fullscreen-dialog__table-shell {
   min-height: 0;
+  min-width: 0;
   flex: 1;
   display: flex;
   padding: 0.55rem 0.55rem 0;
@@ -886,6 +951,17 @@ watch(
   .fullscreen-dialog__header-actions,
   .fullscreen-dialog__filter-actions {
     justify-content: flex-start;
+  }
+}
+
+@media (max-width: 640px) {
+  .fullscreen-dialog__download-button span {
+    display: none;
+  }
+
+  .fullscreen-dialog__dialog-title h2 {
+    font-size: 1rem;
+    line-height: 1.3;
   }
 }
 </style>

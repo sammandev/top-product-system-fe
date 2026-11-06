@@ -21,7 +21,7 @@
       :class="{ 'iplas-details-dialog__body--fullscreen': isFullscreen }">
       <section class="iplas-details-dialog__summary-grid">
         <article class="iplas-details-dialog__summary-card iplas-details-dialog__summary-card--highlight">
-          <button type="button" class="iplas-details-dialog__info-button" @click="copyToClipboard(record.isn)">
+          <button type="button" class="iplas-details-dialog__info-button" aria-label="Copy DUT ISN" @click="copyToClipboard(record.isn)">
             <span class="iplas-details-dialog__info-icon">
               <Icon icon="mdi:barcode" />
             </span>
@@ -29,6 +29,7 @@
               <small>DUT ISN</small>
               <strong>{{ record.isn || '-' }}</strong>
             </span>
+            <Icon icon="mdi:content-copy" class="iplas-details-dialog__copy-icon" />
           </button>
         </article>
 
@@ -69,21 +70,22 @@
 
       <section class="iplas-details-dialog__metadata-grid">
         <article class="iplas-details-dialog__metadata-card">
-          <button type="button" class="iplas-details-dialog__copy-row" @click="copyToClipboard(record.deviceId)">
+          <button type="button" class="iplas-details-dialog__copy-row" aria-label="Copy Device ID" @click="copyToClipboard(record.deviceId)">
             <Icon icon="mdi:devices" />
-            <span><strong>Device ID</strong> {{ record.deviceId }}</span>
+            <span><small>Device ID</small><strong>{{ record.deviceId || '-' }}</strong></span>
+            <Icon icon="mdi:content-copy" class="iplas-details-dialog__copy-icon" />
           </button>
         </article>
         <article class="iplas-details-dialog__metadata-card">
           <div class="iplas-details-dialog__copy-row iplas-details-dialog__copy-row--static">
             <Icon icon="mdi:map-marker" />
-            <span><strong>Site</strong> {{ record.site }}</span>
+            <span><small>Site</small><strong>{{ record.site || '-' }}</strong></span>
           </div>
         </article>
         <article class="iplas-details-dialog__metadata-card">
           <div class="iplas-details-dialog__copy-row iplas-details-dialog__copy-row--static">
             <Icon icon="mdi:folder" />
-            <span><strong>Project</strong> {{ record.project }}</span>
+            <span><small>Project</small><strong>{{ record.project || '-' }}</strong></span>
           </div>
         </article>
       </section>
@@ -142,7 +144,7 @@
         <label class="iplas-details-dialog__field">
           <span>Data Type</span>
           <AppSelect v-model="testItemFilter" :options="testItemFilterSelectOptions" placeholder="Show All"
-            :searchable="false" />
+            :searchable="false" aria-label="Data Type" />
         </label>
 
         <label v-if="hasScores" class="iplas-details-dialog__field">
@@ -1869,14 +1871,14 @@ watch(
 }
 
 .iplas-details-dialog__summary-grid {
-  grid-template-columns: minmax(0, 1.2fr) repeat(2, minmax(0, 1fr));
-  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 0.75rem;
   align-items: stretch;
 }
 
 .iplas-details-dialog__metadata-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 0.55rem;
+  gap: 0.75rem;
 }
 
 .iplas-details-dialog__stats-grid,
@@ -1889,6 +1891,7 @@ watch(
   flex-direction: column;
   gap: 0.75rem;
   min-height: 0;
+  min-width: 0;
   height: 100%;
 }
 
@@ -1932,11 +1935,13 @@ watch(
 }
 
 .iplas-details-dialog__summary-card {
-  padding: 0.68rem 0.8rem;
+  display: flex;
+  align-items: center;
+  padding: 0.75rem;
 }
 
 .iplas-details-dialog__metadata-card {
-  padding: 0.52rem 0.65rem;
+  padding: 0.75rem;
 }
 
 .iplas-details-dialog__table-shell {
@@ -2011,6 +2016,28 @@ watch(
   align-items: center;
   text-align: left;
   cursor: pointer;
+  min-width: 0;
+  min-height: 2.75rem;
+}
+
+.iplas-details-dialog__info-button > span:last-of-type,
+.iplas-details-dialog__copy-row > span {
+  display: grid;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.iplas-details-dialog__copy-icon {
+  margin-left: auto;
+  flex-shrink: 0;
+  color: var(--app-muted);
+}
+
+.iplas-details-dialog__info-button:focus-visible,
+.iplas-details-dialog__copy-row:focus-visible,
+.iplas-details-dialog__field input:focus-visible {
+  outline: 2px solid var(--app-ring);
+  outline-offset: 3px;
 }
 
 .iplas-details-dialog__info-button--static,
@@ -2037,19 +2064,22 @@ watch(
 }
 
 .iplas-details-dialog__summary-card .iplas-details-dialog__info-button small {
-  font-size: 0.72rem;
+  color: var(--app-muted);
+  font-size: 0.875rem;
 }
 
 .iplas-details-dialog__summary-card .iplas-details-dialog__info-icon {
-  width: 1.85rem;
-  height: 1.85rem;
+  width: 2.25rem;
+  height: 2.25rem;
+  flex-shrink: 0;
   border-radius: 0.55rem;
-  font-size: 0.9rem;
+  font-size: 1.1rem;
 }
 
 .iplas-details-dialog__summary-card .iplas-details-dialog__info-button strong {
-  font-size: clamp(1rem, 0.95rem + 0.35vw, 1.28rem);
-  line-height: 1.15;
+  font-size: 1.125rem;
+  line-height: 1.3;
+  font-variant-numeric: tabular-nums;
 }
 
 .iplas-details-dialog__metric-value,
@@ -2060,8 +2090,17 @@ watch(
 }
 
 .iplas-details-dialog__metadata-card .iplas-details-dialog__copy-row {
-  min-height: 1.9rem;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.iplas-details-dialog__copy-row small {
+  color: var(--app-muted);
+  font-size: 0.875rem;
+}
+
+.iplas-details-dialog__copy-row strong {
+  overflow-wrap: anywhere;
 }
 
 .iplas-details-dialog__metadata-card .iplas-details-dialog__copy-row :deep(svg) {
@@ -2090,16 +2129,17 @@ watch(
 }
 
 .iplas-details-dialog__filters {
-  grid-template-columns: minmax(0, 1.9fr) minmax(0, 0.95fr);
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   align-items: end;
-  padding: 0.82rem 0.9rem;
+  gap: 1rem;
+  padding: 0.75rem;
   border: 1px solid var(--iplas-border-strong);
-  border-radius: 1rem;
+  border-radius: 0.75rem;
   background: var(--iplas-panel);
 }
 
 .iplas-details-dialog__filters--has-scores {
-  grid-template-columns: minmax(0, 1.9fr) minmax(0, 0.95fr) minmax(0, 0.95fr) minmax(0, 0.8fr);
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .iplas-details-dialog__pill--cool {
@@ -2138,12 +2178,30 @@ watch(
 
 .iplas-details-dialog__field {
   display: grid;
-  gap: 0.45rem;
+  gap: 0.5rem;
+  min-width: 0;
 }
 
 .iplas-details-dialog__field>span {
   color: var(--iplas-ink);
-  font-size: 0.74rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.iplas-details-dialog__filters input,
+.iplas-details-dialog__filters :deep(.p-select) {
+  width: 100%;
+  height: 2.75rem;
+  min-height: 2.75rem;
+  min-width: 0;
+  box-sizing: border-box;
+  border-radius: 0.7rem;
+  font-size: 1rem;
+}
+
+.iplas-details-dialog__filters :deep(.p-select-label) {
+  align-self: center;
+  min-width: 0;
 }
 
 .iplas-details-dialog__field input:not(.app-themed-input),
@@ -2167,6 +2225,7 @@ watch(
 .iplas-details-dialog__field input:not(.app-themed-input),
 .iplas-details-dialog__field select:not(.app-themed-input) {
   padding: 0.68rem 0.8rem;
+  font: inherit;
 }
 
 .iplas-details-dialog__search-shell,
@@ -2192,7 +2251,7 @@ watch(
 }
 
 .iplas-details-dialog__search-shell input:focus,
-.iplas-details-dialog__field input:focus,
+.iplas-details-dialog__field input:focus:not(:focus-visible),
 .iplas-details-dialog__field select:focus {
   outline: none;
 }
@@ -2264,6 +2323,7 @@ watch(
 
 .iplas-details-dialog__table-shell {
   flex: 1;
+  min-width: 0;
   min-height: 23rem;
   max-height: min(58vh, 36rem);
 }
@@ -3111,6 +3171,17 @@ watch(
 
   .iplas-details-dialog__breakdown-hero-score {
     justify-items: start;
+  }
+}
+
+@media (max-width: 640px) {
+  .iplas-details-dialog__download-button span {
+    display: none;
+  }
+
+  .iplas-details-dialog__dialog-title h2 {
+    font-size: 1rem;
+    line-height: 1.3;
   }
 }
 </style>

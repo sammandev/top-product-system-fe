@@ -211,81 +211,46 @@
               </div>
             </div>
 
-            <AppTabs v-model="activeStationTabKey" :items="regularStationTabItems">
-              <template v-for="(stationGroup, stationIndex) in groupedByStation" :key="stationGroup.stationName"
-                #[`panel-station-${stationIndex}`]>
-                <div class="iplas-result-summary-card">
-                  <div>
-                    <strong>{{ stationGroup.displayName }}</strong>
-                    <p>{{ stationGroup.totalRecords }} records ready for review.</p>
-                    <p v-if="getStationLoadingLabel(stationGroup.displayName)" role="status">
-                      {{ getStationLoadingLabel(stationGroup.displayName) }}
-                    </p>
-                  </div>
-                  <span class="iplas-pill iplas-pill--cool">{{ stationGroup.totalRecords }}
-                    {{ stationSearchInProgress ? 'loaded (partial)' : 'visible' }}</span>
-                </div>
-              </template>
-            </AppTabs>
+            <AppTabs v-model="activeStationTabKey" :items="regularStationTabItems" />
 
             <div v-if="currentStationGroup" class="iplas-result-pane">
+              <p v-if="getStationLoadingLabel(currentStationGroup.displayName)" role="status">
+                {{ getStationLoadingLabel(currentStationGroup.displayName) }}
+              </p>
               <div class="iplas-filter-grid">
                 <label class="iplas-field">
                   <span>Search Records</span>
-                  <div class="iplas-input-with-icon">
-                    <Icon icon="mdi:magnify" />
-                    <input :value="recordSearchQueries[currentStationGroup.stationName] || ''" class="app-themed-input" type="text"
-                      placeholder="Search ISN, Device ID, Error Code, Error Name..."
-                      @input="handleStationSearchInput(currentStationGroup.stationName, $event)">
-                  </div>
+                  <AppMultiSelect
+                    :model-value="recordSearchQueries[currentStationGroup.stationName] || []"
+                    :options="currentStationIsnOptions"
+                    :virtual-scroller-options="currentStationIsnOptions.length > 100 ? { itemSize: 38 } : undefined"
+                    placeholder="All ISNs"
+                    aria-label="Search Records"
+                    @update:model-value="handleStationIsnChange(currentStationGroup.stationName, $event)"
+                  />
                 </label>
 
                 <label class="iplas-field">
                   <span>Status</span>
-                  <AppSelect
-                    :model-value="stationStatusFilters[currentStationGroup.stationName] || 'ALL'"
+                  <AppMultiSelect
+                    :model-value="stationStatusFilters[currentStationGroup.stationName] || []"
                     :options="stationStatusSelectOptions"
-                    :searchable="false"
-                    @update:model-value="handleStationStatusChange(currentStationGroup.stationName, $event as 'ALL' | 'PASS' | 'FAIL')"
+                    placeholder="All results"
+                    aria-label="Status"
+                    @update:model-value="handleStationStatusChange(currentStationGroup.stationName, $event)"
                   />
                 </label>
 
-                <div class="iplas-field iplas-field--device-filter">
-                  <div class="iplas-field__row">
-                    <span>Device Filter</span>
-                    <button v-if="(selectedFilterDeviceIds[currentStationGroup.stationName] || []).length > 0"
-                      type="button" class="iplas-inline-action"
-                      @click="clearStationDeviceFilters(currentStationGroup.stationName)">
-                      Clear
-                    </button>
-                  </div>
-                  <div class="iplas-device-filter-shell">
-                    <p>
-                      {{ (selectedFilterDeviceIds[currentStationGroup.stationName] || []).length }} selected of
-                      {{ getUniqueDeviceIdsForStation(currentStationGroup).length }} devices.
-                    </p>
-                    <div class="iplas-device-filter-list">
-                      <button v-for="deviceId in getUniqueDeviceIdsForStation(currentStationGroup)" :key="deviceId"
-                        type="button" class="iplas-device-chip" :class="{
-                          'iplas-device-chip--active': isStationDeviceSelected(currentStationGroup.stationName, deviceId),
-                        }" @click="toggleStationDeviceFilter(currentStationGroup.stationName, deviceId)">
-                        <Icon
-                          :icon="isStationDeviceSelected(currentStationGroup.stationName, deviceId) ? 'mdi:checkbox-marked-circle' : 'mdi:checkbox-blank-circle-outline'" />
-                        <span>{{ deviceId }}</span>
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div class="iplas-result-summary-card">
-                <div>
-                  <strong>Server-side result page</strong>
-                  <p>
-                    Showing {{ currentStationGroup.records.length }} of {{ currentStationGroup.totalRecords }} matching rows.
-                  </p>
-                </div>
-                <span class="iplas-pill iplas-pill--cool">Client-side table</span>
+                <label class="iplas-field">
+                  <span>Device Filter</span>
+                  <AppMultiSelect
+                    :model-value="selectedFilterDeviceIds[currentStationGroup.stationName] || []"
+                    :options="currentStationDeviceOptions"
+                    placeholder="All device IDs"
+                    aria-label="Device Filter"
+                    @update:model-value="handleStationDeviceChange(currentStationGroup.stationName, $event)"
+                  />
+                </label>
               </div>
 
               <IplasRecordTable :items="currentStationGroup.records"
@@ -327,7 +292,6 @@
 
 <script setup lang="ts">
 import { Icon } from '@iconify/vue'
-import { useDebounceFn } from '@vueuse/core'
 import {
   computed,
   defineAsyncComponent,
@@ -356,6 +320,7 @@ import type { DownloadCsvLogInfo } from '@/features/dut-logs/composables/useIpla
 import { useIplasApi } from '@/features/dut-logs/composables/useIplasApi'
 import { useIplasSettings } from '@/features/dut-logs/composables/useIplasSettings'
 import { useNotification } from '@/shared/composables/useNotification'
+import AppMultiSelect from '@/shared/ui/forms/AppMultiSelect.vue'
 import AppSelect from '@/shared/ui/forms/AppSelect.vue'
 import AppPanel from '@/shared/ui/panel/AppPanel.vue'
 import AppTabs from '@/shared/ui/tabs/AppTabs.vue'
@@ -382,6 +347,7 @@ interface StationGroup {
   records: (CsvTestItemData | CompactCsvTestItemData)[]
   totalRecords: number
   deviceIds: string[]
+  isns: string[]
 }
 
 // Search mode tab - persisted in URL
@@ -447,7 +413,6 @@ const dateRangePresetSelectOptions = dateRangePresets.map((preset) => ({
 }))
 
 const stationStatusSelectOptions = [
-  { label: 'All Results', value: 'ALL' },
   { label: 'PASS', value: 'PASS' },
   { label: 'FAIL', value: 'FAIL' },
 ]
@@ -662,7 +627,7 @@ const startTime = ref('')
 const endTime = ref('')
 
 // Per-station status filters (for filtering records within each station tab)
-const stationStatusFilters = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
+const stationStatusFilters = ref<Record<string, ('PASS' | 'FAIL')[]>>({})
 
 // Per-record test item filters (default to 'value') - supports multiple selections
 const testItemFilters = ref<Record<string, ('all' | 'value' | 'non-value' | 'bin')[]>>({})
@@ -671,24 +636,8 @@ const testItemStatusFilters = ref<Record<string, 'ALL' | 'PASS' | 'FAIL'>>({})
 // Per-record multi-search terms (array of patterns)
 const testItemSearchTerms = ref<Record<string, string[]>>({})
 
-// Record search queries (for searching ISN, Device ID, Error Code, Error Name)
-const recordSearchQueries = ref<Record<string, string>>({})
-// Debounced search queries for performance
-const debouncedRecordSearchQueries = ref<Record<string, string>>({})
-
-// Debounce search query updates (300ms delay)
-const updateDebouncedSearch = useDebounceFn((stationName: string, value: string) => {
-  debouncedRecordSearchQueries.value = {
-    ...debouncedRecordSearchQueries.value,
-    [stationName]: value,
-  }
-}, 300)
-
-function setRecordSearchQuery(stationName: string, value: string | null): void {
-  const normalizedValue = value ?? ''
-  recordSearchQueries.value[stationName] = normalizedValue
-  updateDebouncedSearch(stationName, normalizedValue)
-}
+// Per-station selected ISNs (empty = all records)
+const recordSearchQueries = ref<Record<string, string[]>>({})
 
 const { showError: showErrorNotification, showInfo: showInfoNotification } = useNotification()
 
@@ -809,11 +758,6 @@ function updateSelectedStations(nextSelectedStations: string[]): void {
   )
   recordSearchQueries.value = Object.fromEntries(
     Object.entries(recordSearchQueries.value).filter(([stationValue]) =>
-      nextStationSet.has(stationValue),
-    ),
-  )
-  debouncedRecordSearchQueries.value = Object.fromEntries(
-    Object.entries(debouncedRecordSearchQueries.value).filter(([stationValue]) =>
       nextStationSet.has(stationValue),
     ),
   )
@@ -971,6 +915,7 @@ const activeStationTabKey = computed({
 
 const groupedByStation = computed<StationGroup[]>(() => {
   const groups: Record<string, StationGroup> = {}
+  const seenIsns: Record<string, Set<string>> = {}
 
   for (const record of stationSearchRecords.value) {
     const stationName = record.TSP || record.station
@@ -987,18 +932,24 @@ const groupedByStation = computed<StationGroup[]>(() => {
         records: [],
         totalRecords: 0,
         deviceIds: [],
+        isns: [],
       }
+      seenIsns[stationName] = new Set()
     }
 
     groups[stationName].totalRecords += 1
     if (record.DeviceId && !groups[stationName].deviceIds.includes(record.DeviceId)) {
       groups[stationName].deviceIds.push(record.DeviceId)
     }
+    if (record.ISN && !seenIsns[stationName].has(record.ISN)) {
+      seenIsns[stationName].add(record.ISN)
+      groups[stationName].isns.push(record.ISN)
+    }
 
-    const statusFilter = stationStatusFilters.value[stationName] || 'ALL'
-    if (statusFilter !== 'ALL') {
+    const statusFilter = stationStatusFilters.value[stationName] || []
+    if (statusFilter.length === 1) {
       const passes = isStatusPass(String(record.ErrorCode || record['Test Status'] || ''))
-      if ((statusFilter === 'PASS' && !passes) || (statusFilter === 'FAIL' && passes)) {
+      if (statusFilter[0] !== (passes ? 'PASS' : 'FAIL')) {
         continue
       }
     }
@@ -1008,22 +959,9 @@ const groupedByStation = computed<StationGroup[]>(() => {
       continue
     }
 
-    const search = (debouncedRecordSearchQueries.value[stationName] || '').trim().toLowerCase()
-    if (search) {
-      const searchableText = [
-        record.ISN,
-        record.DeviceId,
-        record.ErrorCode,
-        record.ErrorName,
-        record.station,
-        record.TSP,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase()
-      if (!searchableText.includes(search)) {
-        continue
-      }
+    const selectedIsns = recordSearchQueries.value[stationName] || []
+    if (selectedIsns.length > 0 && !selectedIsns.includes(record.ISN)) {
+      continue
     }
 
     groups[stationName].records.push(record)
@@ -1072,39 +1010,37 @@ watch(
 )
 
 // Helper functions for station sub-tabs and device ID filtering
-function getUniqueDeviceIdsForStation(stationGroup: StationGroup): string[] {
-  return stationGroup.deviceIds
-}
+const currentStationDeviceOptions = computed(() =>
+  (currentStationGroup.value?.deviceIds || []).map((deviceId) => ({
+    label: deviceId,
+    value: deviceId,
+  })),
+)
 
-function handleStationSearchInput(stationName: string, event: Event): void {
-  const target = event.target as HTMLInputElement | null
-  setRecordSearchQuery(stationName, target?.value ?? '')
-}
+const currentStationIsnOptions = computed(() =>
+  (currentStationGroup.value?.isns || []).map((isn) => ({ label: isn, value: isn })),
+)
 
-function handleStationStatusChange(stationName: string, value: 'ALL' | 'PASS' | 'FAIL'): void {
-  stationStatusFilters.value[stationName] = value
-}
-
-function isStationDeviceSelected(stationName: string, deviceId: string): boolean {
-  return (selectedFilterDeviceIds.value[stationName] || []).includes(deviceId)
-}
-
-function toggleStationDeviceFilter(stationName: string, deviceId: string): void {
-  const selectedIds = selectedFilterDeviceIds.value[stationName] || []
-  const nextSelectedIds = selectedIds.includes(deviceId)
-    ? selectedIds.filter((value) => value !== deviceId)
-    : [...selectedIds, deviceId]
-
-  selectedFilterDeviceIds.value = {
-    ...selectedFilterDeviceIds.value,
-    [stationName]: nextSelectedIds,
+function handleStationIsnChange(stationName: string, isns: (string | number)[]): void {
+  recordSearchQueries.value = {
+    ...recordSearchQueries.value,
+    [stationName]: isns.map(String),
   }
 }
 
-function clearStationDeviceFilters(stationName: string): void {
+function handleStationStatusChange(stationName: string, statuses: (string | number)[]): void {
+  stationStatusFilters.value = {
+    ...stationStatusFilters.value,
+    [stationName]: statuses.filter(
+      (status): status is 'PASS' | 'FAIL' => status === 'PASS' || status === 'FAIL',
+    ),
+  }
+}
+
+function handleStationDeviceChange(stationName: string, deviceIds: (string | number)[]): void {
   selectedFilterDeviceIds.value = {
     ...selectedFilterDeviceIds.value,
-    [stationName]: [],
+    [stationName]: deviceIds.map(String),
   }
 }
 
@@ -1731,7 +1667,6 @@ async function runStationSearch() {
   stationStatusFilters.value = {}
   selectedFilterDeviceIds.value = {}
   recordSearchQueries.value = {}
-  debouncedRecordSearchQueries.value = {}
 
   // STEP 1: Collect all stations and identify which need device ID fetching
   const stationInfoList: {
@@ -1962,7 +1897,6 @@ onUnmounted(() => {
   lazyLoadedTestItems.value.clear()
   loadingTestItemsForRecord.value.clear()
   recordSearchQueries.value = {}
-  debouncedRecordSearchQueries.value = {}
   testItemFilters.value = {}
   testItemStatusFilters.value = {}
   testItemSearchTerms.value = {}
@@ -2042,7 +1976,18 @@ onUnmounted(() => {
 .iplas-filter-grid {
   display: grid;
   gap: 1rem;
-  grid-template-columns: minmax(0, 1.2fr) minmax(11rem, 0.5fr) minmax(0, 1.4fr);
+  grid-template-columns: minmax(0, 1.5fr) minmax(9rem, 0.65fr) minmax(0, 1fr);
+  align-items: end;
+}
+
+.iplas-filter-grid > .iplas-field {
+  min-width: 0;
+}
+
+.iplas-filter-grid :deep(.p-select),
+.iplas-filter-grid .iplas-input-with-icon {
+  height: 2.75rem;
+  min-width: 0;
 }
 
 .iplas-control-grid--two {
@@ -2056,10 +2001,6 @@ onUnmounted(() => {
 .iplas-field {
   display: grid;
   gap: 0.45rem;
-}
-
-.iplas-field--device-filter {
-  align-content: start;
 }
 
 .iplas-field__row {
@@ -2307,46 +2248,6 @@ onUnmounted(() => {
 
 .iplas-result-summary-card strong {
   color: var(--app-ink);
-}
-
-.iplas-device-filter-shell {
-  display: grid;
-  gap: 0.85rem;
-  border: 1px solid var(--app-border);
-  border-radius: 0.8rem;
-  padding: 0.85rem 0.9rem;
-  background: var(--app-panel);
-}
-
-.iplas-device-filter-shell p {
-  margin: 0;
-  color: var(--app-muted);
-  line-height: 1.55;
-}
-
-.iplas-device-filter-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem;
-}
-
-.iplas-device-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
-  border: 1px solid var(--app-border);
-  border-radius: 999px;
-  padding: 0.45rem 0.8rem;
-  background: var(--app-panel);
-  color: var(--app-ink);
-  font: inherit;
-  cursor: pointer;
-}
-
-.iplas-device-chip--active {
-  border-color: var(--app-accent);
-  background: var(--app-accent-soft);
-  color: var(--app-accent);
 }
 
 .iplas-summary-item {
