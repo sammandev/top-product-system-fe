@@ -598,6 +598,8 @@ Use native elements for local interactions — don't wrap a `<button>` in a Prim
   station name (for example, `NFT_TEST`); CSV logs require TSP/display station (`NFT TEST`).
 - Data Explorer's ISN Search details provide the same Download action. Search, Data Type,
   and Status share one row on desktop and stack on narrow screens.
+- Both details dialogs use theme-aware Download buttons and bordered test-item tables
+  with sticky headers inside their scroll containers.
 
 ### Docker build fails during icon generation
 

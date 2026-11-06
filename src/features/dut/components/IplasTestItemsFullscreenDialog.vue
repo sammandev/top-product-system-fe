@@ -647,14 +647,35 @@ watch(
 }
 
 .fullscreen-dialog__download-button {
-  font-weight: 700;
-  border-radius: 0.5rem;
-  border: 1.5px solid #fff;
-  background: transparent;
-  color: #fff;
+  gap: 0.45rem;
+  justify-content: center;
+  height: 1.95rem;
+  min-width: 1.95rem;
+  padding: 0 0.65rem;
+  border: 1px solid var(--app-border);
+  border-radius: 0.65rem;
+  background: var(--app-panel-strong);
+  color: var(--app-ink);
   font-size: 0.78rem;
-  letter-spacing: 0;
+  font-weight: 700;
+  letter-spacing: 0.04em;
   white-space: nowrap;
+  box-shadow: none;
+}
+
+.fullscreen-dialog__download-button:hover {
+  background: var(--app-panel);
+  border-color: var(--app-info-line);
+}
+
+.fullscreen-dialog__download-button:disabled {
+  cursor: wait;
+  color: var(--app-muted);
+}
+
+.fullscreen-dialog__download-button :deep(svg) {
+  width: 1rem;
+  height: 1rem;
 }
 
 .fullscreen-dialog__button--ghost {
@@ -943,6 +964,11 @@ watch(
 }
 
 @media (max-width: 640px) {
+  .fullscreen-dialog__download-button {
+    width: 1.95rem;
+    padding: 0;
+  }
+
   .fullscreen-dialog__download-button span {
     display: none;
   }

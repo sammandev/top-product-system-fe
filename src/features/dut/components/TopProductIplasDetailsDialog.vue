@@ -1950,9 +1950,11 @@ watch(
 }
 
 .iplas-details-dialog__table-shell {
-  padding: 0;
-  border: 0;
-  background: var(--iplas-panel);
+  padding: 0.55rem 0.55rem 0;
+  border: 1px solid var(--app-border);
+  border-radius: 0.82rem;
+  background: var(--app-panel);
+  overflow: hidden;
 }
 
 .iplas-details-dialog__summary-card--highlight,
@@ -1974,10 +1976,12 @@ watch(
   display: inline-flex;
   align-items: center;
   gap: 0.45rem;
-  min-height: 2.2rem;
-  padding: 0.4rem 0.9rem;
+  justify-content: center;
+  height: 1.95rem;
+  min-width: 1.95rem;
+  padding: 0 0.65rem;
   border: 1px solid var(--app-border);
-  border-radius: 0.5rem;
+  border-radius: 0.65rem;
   background: var(--app-panel-strong);
   color: var(--app-ink);
   font: inherit;
@@ -1998,6 +2002,11 @@ watch(
 .iplas-details-dialog__download-button:disabled {
   cursor: wait;
   color: var(--app-muted);
+}
+
+.iplas-details-dialog__download-button :deep(svg) {
+  width: 1rem;
+  height: 1rem;
 }
 
 .iplas-details-dialog__info-button,
@@ -2570,14 +2579,14 @@ watch(
   touch-action: pan-x pan-y;
 }
 
-:deep(.iplas-details-dialog.app-dialog--fullscreen .p-dialog-content) {
+:global(.iplas-details-dialog.app-dialog--fullscreen .p-dialog-content) {
   display: flex;
   flex-direction: column;
   min-height: 0;
   overflow: hidden;
 }
 
-:deep(.iplas-details-dialog.app-dialog--fullscreen .app-dialog__body) {
+:global(.iplas-details-dialog.app-dialog--fullscreen .app-dialog__body) {
   flex: 1;
   min-height: 0;
   overflow: hidden;
@@ -3180,6 +3189,11 @@ watch(
 }
 
 @media (max-width: 640px) {
+  .iplas-details-dialog__download-button {
+    width: 1.95rem;
+    padding: 0;
+  }
+
   .iplas-details-dialog__download-button span {
     display: none;
   }
