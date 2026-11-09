@@ -340,6 +340,7 @@ npx playwright show-report                    # HTML report
 ```
 
 **Test structure**:
+
 ```
 e2e/
 ├── auth.spec.ts         # 24 authentication flow tests
@@ -554,12 +555,14 @@ src/features/my-feature/
 ### Data Fetching Patterns
 
 **Current pattern** (Pinia store + Axios):
+
 ```typescript
 const dutStore = useDUTStore()
 await dutStore.fetchSites()
 ```
 
 **Planned pattern** (TanStack Query — `@tanstack/vue-query` is installed):
+
 ```typescript
 const { data, isLoading } = useQuery({
   queryKey: ['sites'],

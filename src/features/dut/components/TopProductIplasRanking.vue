@@ -83,7 +83,7 @@
 
           <div class="ranking-table-shell">
             <AppDataGrid :columns="gridColumns" :rows="filteredRanking" data-key="key" :selection="selectedItems"
-              selection-mode="multiple" :show-selection-column="true" :loading="loading" :paginator="true"
+              selection-mode="multiple" :show-selection-column="true" :loading="loading && !showRowsWhileLoading" :paginator="true"
               :rows-per-page="25" scroll-height="40rem" :row-class="getRankingRowClass"
               :table-style="{ minWidth: '72rem' }" @update:selection="selectedItems = ($event as RankingItem[])"
               @row-click="handleGridRowClick($event, String(item.value))">
@@ -197,6 +197,7 @@ interface Props {
   >
   calculatingScores?: boolean
   loading?: boolean // Whether data is still being fetched
+  showRowsWhileLoading?: boolean // Keep fetched rows visible instead of the grid loading overlay
   exportingAll?: boolean // Whether export all is in progress (controlled by parent)
 }
 

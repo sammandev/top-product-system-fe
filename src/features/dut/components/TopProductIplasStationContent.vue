@@ -131,8 +131,8 @@
             Clear All
           </button>
           <button type="button" class="top-product-iplas-station-button top-product-iplas-station-button--primary"
-            :disabled="!canFetchData" @click="fetchTestItems">
-            {{ loadingTestItems ? 'Searching...' : 'Search' }}
+            :disabled="!canFetchData || isSearching" @click="fetchTestItems">
+            {{ isSearching ? 'Searching...' : 'Search' }}
           </button>
         </div>
       </div>
@@ -149,16 +149,19 @@
           Searching iPLAS
         </span>
         <strong>Building the station ranking dataset...</strong>
-        <p>Fetching records for the selected station scope, device filters, and time range.</p>
+        <p>Fetching records for the selected station scope, device filters, and time range. Rows appear as each device finishes.</p>
+        <small v-if="deviceFetchProgress" data-testid="device-fetch-progress">
+          {{ deviceFetchProgress.completed }} of {{ deviceFetchProgress.total }} device request{{ deviceFetchProgress.total === 1 ? '' : 's' }} complete.
+        </small>
         <small>
-          {{ configuredStationsCount }} station{{ configuredStationsCount === 1 ? '' : 's' }} queued. Ranking and test-item scores continue as soon as the fetch completes.
+          {{ configuredStationsCount }} station{{ configuredStationsCount === 1 ? '' : 's' }} queued. Test-item scores are calculated after all devices finish.
         </small>
       </div>
     </div>
 
     <Teleport v-if="props.rankingTarget && props.isActive && testItemData.length > 0" :to="props.rankingTarget">
       <TopProductIplasRanking :records="testItemData" :scores="recordScores" :forced-failures="forcedFailures"
-        :calculating-scores="calculatingScores" :loading="loadingTestItems" :exporting-all="exportingAll"
+        :calculating-scores="calculatingScores" :loading="loadingTestItems" show-rows-while-loading :exporting-all="exportingAll"
         @row-click="handleRowClick" @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords"
         @export="handleExportRecords" @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores"
         @save-to-db="handleSaveToDb" />
@@ -166,7 +169,7 @@
 
     <TopProductIplasRanking v-else-if="!props.rankingTarget && testItemData.length > 0" :records="testItemData"
       :scores="recordScores" :forced-failures="forcedFailures" :calculating-scores="calculatingScores"
-      :loading="loadingTestItems" :exporting-all="exportingAll" @row-click="handleRowClick"
+      :loading="loadingTestItems" show-rows-while-loading :exporting-all="exportingAll" @row-click="handleRowClick"
       @download="handleDownloadRecord" @bulk-download="handleBulkDownloadRecords" @export="handleExportRecords"
       @export-all="handleExportAllRecords" @calculate-scores="handleCalculateScores" @save-to-db="handleSaveToDb" />
 
@@ -216,6 +219,7 @@ import { getApiErrorDetail } from '@/shared/utils/error'
 import { isStatusPass } from '@/shared/utils/helpers'
 import { dutApi } from '../api/dut.api'
 import { useScoring } from '../composables/useScoring'
+import type { RecordScoreResult } from '../types/scoring.types'
 import { evaluateForcedFailure, type ForcedFailureItemDetail } from '../utils/iplasForcedFailure'
 import type { NormalizedRecord, NormalizedTestItem } from './IplasTestItemsFullscreenDialog.vue'
 import StationConfigDialog, { type TestItemInfo } from './StationConfigDialog.vue'
@@ -256,8 +260,20 @@ const recordScores = ref<Record<string, number>>({})
 const forcedFailures = ref<
   Record<string, { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }>
 >({})
+const scoredRecordsByKey = ref<Record<string, RecordScoreResult>>({})
+const fetchedStationSignatures = new Map<string, string>()
+const scoredStationSignatures = new Map<string, string>()
+const STATION_DEVICE_FETCH_CONCURRENCY = 6
+const STATION_DEVICE_BATCH_SIZE = 5
+// Devices already loaded for a station whose fetch has not fully succeeded yet.
+// Keyed by station; only reused while the station fetch signature is unchanged.
+const stationDeviceProgress = new Map<string, { fetchSig: string; completed: Set<string> }>()
+const deviceFetchProgress = ref<{ completed: number; total: number } | null>(null)
 const calculatingScores = ref(false)
 const exportingAll = ref(false)
+const isSearching = ref(false)
+let activeSearch: Promise<void> | null = null
+let autoFetchQueue: Promise<void> = Promise.resolve()
 
 const {
   loading,
@@ -275,6 +291,7 @@ const {
   fetchTestItemsFull: fetchTestItemsApi,
   fetchTestItemNamesCached,
   fetchTestItemsFiltered,
+  fetchTestItemsBatch,
   downloadAttachments,
   downloadCsvLogs,
   clearTestItemData,
@@ -571,17 +588,144 @@ function generateExportFilename(): string {
   return `${site}_${project}_${dateStr}_${timeStr}`
 }
 
+function getRecordScoreKey(record: CsvTestItemData): string {
+  const isn = record.ISN || record.DeviceId || '-'
+  const station = record.station
+  const testEndTime = record['Test end Time'] || ''
+  return `${isn}_${station}_${testEndTime}`
+}
+
+function recordBelongsToStation(record: CsvTestItemData, stationDisplayName: string): boolean {
+  return record.station === stationDisplayName || record.TSP === stationDisplayName
+}
+
+function getStationFetchSignature(config: StationConfig): string {
+  const sortedDevices = [...config.deviceIds].sort()
+  const sortedIncluded = [...(config.includedTestItems ?? [])].sort()
+  const sortedExcluded = [...(config.excludedTestItems ?? [])].sort()
+  return JSON.stringify({
+    site: selectedSite.value ?? '',
+    project: selectedProject.value ?? '',
+    startTime: startTime.value,
+    endTime: endTime.value,
+    station: config.displayName,
+    deviceIds: sortedDevices,
+    testStatus: config.testStatus,
+    includedTestItems: sortedIncluded,
+    excludedTestItems: sortedExcluded,
+  })
+}
+
+function getStationScoreSignature(config: StationConfig): string {
+  const scoringEntries = Object.entries(config.testItemScoringConfigs ?? {})
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([name, cfg]) => [
+      name,
+      cfg.scoringType,
+      cfg.target ?? null,
+      cfg.policy ?? null,
+      cfg.weight ?? null,
+      cfg.maxDeviation ?? null,
+    ])
+  return JSON.stringify({
+    fetch: getStationFetchSignature(config),
+    minimumItemScoreEnabled: config.minimumItemScoreEnabled ?? true,
+    minimumItemScore: config.minimumItemScore ?? 6.5,
+    scoringConfigs: scoringEntries,
+  })
+}
+
+function syncScoredRecordsList(): void {
+  scoredRecords.value = testItemData.value
+    .map((record) => scoredRecordsByKey.value[getRecordScoreKey(record)])
+    .filter((entry): entry is RecordScoreResult => entry !== undefined)
+}
+
+function pruneStationScores(stationNames: ReadonlySet<string>): void {
+  if (stationNames.size === 0) return
+
+  const keysToRemove = new Set<string>()
+  for (const record of testItemData.value) {
+    if (stationNames.has(record.station) || (record.TSP && stationNames.has(record.TSP))) {
+      const key = getRecordScoreKey(record)
+      if (
+        key in recordScores.value ||
+        key in forcedFailures.value ||
+        key in scoredRecordsByKey.value
+      ) {
+        keysToRemove.add(key)
+      }
+    }
+  }
+
+  for (const stationName of stationNames) {
+    scoredStationSignatures.delete(stationName)
+    const suffix = `_${stationName}_`
+    for (const key of Object.keys(recordScores.value)) {
+      if (key.includes(suffix)) keysToRemove.add(key)
+    }
+    for (const key of Object.keys(forcedFailures.value)) {
+      if (key.includes(suffix)) keysToRemove.add(key)
+    }
+    for (const key of Object.keys(scoredRecordsByKey.value)) {
+      if (key.includes(suffix)) keysToRemove.add(key)
+    }
+  }
+
+  if (keysToRemove.size > 0) {
+    const nextScores = { ...recordScores.value }
+    const nextForced = { ...forcedFailures.value }
+    const nextScoredByKey = { ...scoredRecordsByKey.value }
+    for (const key of keysToRemove) {
+      delete nextScores[key]
+      delete nextForced[key]
+      delete nextScoredByKey[key]
+    }
+    recordScores.value = nextScores
+    forcedFailures.value = nextForced
+    scoredRecordsByKey.value = nextScoredByKey
+    syncScoredRecordsList()
+  }
+}
+
+function pruneStationsDataAndScores(stationNames: ReadonlySet<string>): void {
+  if (stationNames.size === 0) return
+
+  pruneStationScores(stationNames)
+  for (const stationName of stationNames) {
+    fetchedStationSignatures.delete(stationName)
+    stationDeviceProgress.delete(stationName)
+  }
+
+  testItemData.value = testItemData.value.filter(
+    (record) => !stationNames.has(record.station) && !(record.TSP && stationNames.has(record.TSP)),
+  )
+  syncScoredRecordsList()
+}
+
+function resetAllFetchedAndScoredState(): void {
+  clearTestItemData()
+  recordScores.value = {}
+  forcedFailures.value = {}
+  scoredRecordsByKey.value = {}
+  scoredRecords.value = []
+  fetchedStationSignatures.clear()
+  scoredStationSignatures.clear()
+  stationDeviceProgress.clear()
+}
+
 // Normalize record for dialog - includes scoring data if available
 function normalizeRecord(record: CsvTestItemData): NormalizedRecord {
-  // Find matching scored record (by index in original data)
+  const forcedFailureKey = getRecordScoreKey(record)
   const recordIndex = testItemData.value.findIndex(
     (r) =>
       (r.ISN === record.ISN || r.DeviceId === record.DeviceId) &&
       r.station === record.station &&
       r['Test end Time'] === record['Test end Time'],
   )
-  const scoredRecord = recordIndex >= 0 ? scoredRecords.value[recordIndex] : null
-  const forcedFailureKey = `${record.ISN || record.DeviceId || '-'}_${record.station}_${record['Test end Time'] || ''}`
+  const scoredRecord =
+    scoredRecordsByKey.value[forcedFailureKey] ??
+    (recordIndex >= 0 ? scoredRecords.value[recordIndex] : null)
   const forcedFailure = forcedFailures.value[forcedFailureKey]
 
   // Build test items with scoring data
@@ -781,6 +925,7 @@ async function handleExportAllRecords(payload: {
 
 function buildScoredExportRecords(records: CsvTestItemData[]) {
   return records.map((record, sourceOrder) => {
+    const scoreKey = getRecordScoreKey(record)
     const recordIndex = testItemData.value.findIndex(
       (candidate) =>
         candidate === record ||
@@ -791,7 +936,8 @@ function buildScoredExportRecords(records: CsvTestItemData[]) {
 
     return createTopProductExcelRecordFromIplas(
       record,
-      recordIndex >= 0 ? scoredRecords.value[recordIndex] : undefined,
+      scoredRecordsByKey.value[scoreKey] ??
+        (recordIndex >= 0 ? scoredRecords.value[recordIndex] : undefined),
       sourceOrder,
     )
   })
@@ -869,15 +1015,50 @@ async function handleSaveToDb(payload: {
 }
 
 // Handle calculate scores request from ranking table
-async function handleCalculateScores(): Promise<void> {
+async function handleCalculateScores(onlyUnscored = false): Promise<void> {
   // Prevent calculation while data is still loading
   if (loadingTestItems.value) return
   if (testItemData.value.length === 0) return
 
+  const configuredStations = Object.values(stationConfigs.value)
+  let stationsToScore = configuredStations.filter((config) => {
+    const stationRecords = testItemData.value.filter((record) =>
+      recordBelongsToStation(record, config.displayName),
+    )
+    if (stationRecords.length === 0) return false
+
+    const expectedScoreSig = getStationScoreSignature(config)
+    if (scoredStationSignatures.get(config.displayName) !== expectedScoreSig) {
+      return true
+    }
+
+    return stationRecords.some(
+      (record) => recordScores.value[getRecordScoreKey(record)] === undefined,
+    )
+  })
+
+  if (stationsToScore.length === 0) {
+    if (onlyUnscored) {
+      return
+    }
+    stationsToScore = configuredStations.filter((config) =>
+      testItemData.value.some((record) => recordBelongsToStation(record, config.displayName)),
+    )
+    if (stationsToScore.length === 0) {
+      return
+    }
+  }
+
+  const stationNamesToScore = new Set(stationsToScore.map((config) => config.displayName))
+  const targetRecords = testItemData.value.filter((record) =>
+    stationsToScore.some((config) => recordBelongsToStation(record, config.displayName)),
+  )
+  if (targetRecords.length === 0) return
+
   calculatingScores.value = true
   try {
-    // Convert iPLAS records to format expected by scoring API
-    const records = testItemData.value.map((record) => ({
+    // Convert target iPLAS records to format expected by scoring API
+    const records = targetRecords.map((record) => ({
       ISN: record.ISN || record.DeviceId,
       DeviceId: record.DeviceId,
       station: record.station,
@@ -886,38 +1067,47 @@ async function handleCalculateScores(): Promise<void> {
       TestItem: record.TestItem || [],
     }))
 
-    // Initialize scoring configs from first record's test items if needed
-    const firstRecord = testItemData.value[0]
-    if (firstRecord?.TestItem && firstRecord.TestItem.length > 0) {
-      initializeConfigs(firstRecord.TestItem)
+    // Initialize scoring configs from sample records of each station being scored
+    const sampleItems: TestItem[] = []
+    for (const config of stationsToScore) {
+      const sampleRecord = targetRecords.find(
+        (record) =>
+          recordBelongsToStation(record, config.displayName) &&
+          record.TestItem &&
+          record.TestItem.length > 0,
+      )
+      if (sampleRecord?.TestItem) {
+        sampleItems.push(...sampleRecord.TestItem)
+      }
+    }
+    if (sampleItems.length > 0) {
+      initializeConfigs(sampleItems)
     }
 
     // Apply user-selected scoring configs from station configurations
-    applyUserScoringConfigs()
+    applyUserScoringConfigs(stationsToScore)
 
-    // Calculate scores via backend API
+    // Calculate scores via backend API only for stations needing calculation
     await calculateScores(records)
+    const batchScoredResults = [...scoredRecords.value]
 
-    // Map scored records back to our score map
-    // Ranking component uses key: `${ISN}_${station}_${Test end Time}`
-    // We need to match scored records back to original records by index
-    // since scoring order is preserved
-    const newScores: Record<string, number> = {}
+    // Clear previous score entries only for stations being recalculated
+    pruneStationScores(stationNamesToScore)
+
+    const newScores: Record<string, number> = { ...recordScores.value }
     const nextForcedFailures: Record<
       string,
       { minimumItemScore: number | null; failingItems: ForcedFailureItemDetail[] }
-    > = {}
+    > = { ...forcedFailures.value }
+    const nextScoredByKey: Record<string, RecordScoreResult> = { ...scoredRecordsByKey.value }
 
-    testItemData.value.forEach((record, index) => {
-      const isn = record.ISN || record.DeviceId || '-'
-      const station = record.station
-      const testEndTime = record['Test end Time'] || ''
-      const key = `${isn}_${station}_${testEndTime}`
-
-      // Get score by index (order is preserved from backend)
-      const scoredRecord = scoredRecords.value[index]
+    targetRecords.forEach((record, index) => {
+      const key = getRecordScoreKey(record)
+      const scoredRecord = batchScoredResults[index]
       if (scoredRecord) {
-        const stationConfig = stationConfigs.value[record.TSP || record.station]
+        nextScoredByKey[key] = scoredRecord
+        const stationConfig =
+          stationConfigs.value[record.TSP || record.station] ?? stationConfigs.value[record.station]
         const forcedFailure = evaluateForcedFailure(scoredRecord, stationConfig)
 
         if (forcedFailure.isForcedFailure) {
@@ -932,8 +1122,14 @@ async function handleCalculateScores(): Promise<void> {
       }
     })
 
+    for (const config of stationsToScore) {
+      scoredStationSignatures.set(config.displayName, getStationScoreSignature(config))
+    }
+
     recordScores.value = newScores
     forcedFailures.value = nextForcedFailures
+    scoredRecordsByKey.value = nextScoredByKey
+    syncScoredRecordsList()
   } catch (err) {
     console.error('Failed to calculate scores:', err)
     error.value = scoringError.value || 'Failed to calculate scores'
@@ -943,9 +1139,11 @@ async function handleCalculateScores(): Promise<void> {
 }
 
 // Apply user-selected scoring configurations from station configs
-function applyUserScoringConfigs(): void {
-  // Iterate through all station configs and apply custom scoring settings
-  for (const config of Object.values(stationConfigs.value)) {
+function applyUserScoringConfigs(
+  configs: StationConfig[] = Object.values(stationConfigs.value),
+): void {
+  // Iterate through station configs and apply custom scoring settings
+  for (const config of configs) {
     if (!config.testItemScoringConfigs) continue
 
     for (const [testItemName, scoringConfig] of Object.entries(config.testItemScoringConfigs)) {
@@ -1260,37 +1458,48 @@ async function handleStationConfigSave(config: StationConfig): Promise<void> {
 
 /** Automatically fetch data and calculate scores */
 async function autoFetchAndScore(): Promise<void> {
-  // Only auto-fetch if we have all required fields
-  if (
-    !selectedSite.value ||
-    !selectedProject.value ||
-    configuredStationsCount.value === 0 ||
-    !startTime.value ||
-    !endTime.value
-  ) {
-    return
-  }
+  if (!hasAutoFetchInputs()) return
 
-  try {
-    // First, fetch the test item data
+  const queuedFetch = autoFetchQueue.then(async () => {
+    while (activeSearch) {
+      try {
+        await activeSearch
+      } catch (err) {
+        console.error('Previous station search failed:', err)
+      }
+    }
+
+    if (!hasAutoFetchInputs()) return
     await fetchTestItems()
 
-    // Then calculate scores if we have data
     if (testItemData.value.length > 0) {
-      await handleCalculateScores()
+      await handleCalculateScores(true)
     }
-  } catch (err) {
+  })
+  autoFetchQueue = queuedFetch.catch((err: unknown) => {
     console.error('Auto-fetch and score failed:', err)
-    // Don't show error - user can manually retry
-  }
+  })
+  await autoFetchQueue
+}
+
+function hasAutoFetchInputs(): boolean {
+  return Boolean(
+    selectedSite.value &&
+      selectedProject.value &&
+      configuredStationsCount.value > 0 &&
+      startTime.value &&
+      endTime.value,
+  )
 }
 
 function handleStationConfigRemove(displayName: string): void {
   delete stationConfigs.value[displayName]
+  pruneStationsDataAndScores(new Set([displayName]))
 }
 
 function clearAllStations(): void {
   stationConfigs.value = {}
+  resetAllFetchedAndScoredState()
 }
 
 function editStationConfig(displayName: string): void {
@@ -1302,6 +1511,7 @@ function editStationConfig(displayName: string): void {
 
 function removeStationConfig(displayName: string): void {
   delete stationConfigs.value[displayName]
+  pruneStationsDataAndScores(new Set([displayName]))
 }
 
 // Handlers
@@ -1309,21 +1519,19 @@ function handleSiteChange(): void {
   selectedProject.value = null
   stationConfigs.value = {}
   stations.value = []
-  clearTestItemData()
+  resetAllFetchedAndScoredState()
   defaultLatestTestItemsCache.value.clear()
   iplasTestItemNamesCache.value.clear()
   selectedRecordKeys.value.clear()
-  forcedFailures.value = {}
 }
 
 async function handleProjectChange(): Promise<void> {
   stationConfigs.value = {}
   stations.value = []
-  clearTestItemData()
+  resetAllFetchedAndScoredState()
   defaultLatestTestItemsCache.value.clear()
   iplasTestItemNamesCache.value.clear()
   selectedRecordKeys.value.clear()
-  forcedFailures.value = {}
 
   if (selectedSite.value && selectedProject.value) {
     await fetchStations(selectedSite.value, selectedProject.value)
@@ -1345,85 +1553,263 @@ async function handleClearAll(): Promise<void> {
   applyDefaultSite(true)
   selectedProject.value = null
   stationConfigs.value = {}
-  clearTestItemData()
+  resetAllFetchedAndScoredState()
   selectedRecordKeys.value.clear()
-  forcedFailures.value = {}
   defaultLatestTestItemsCache.value.clear()
   iplasTestItemNamesCache.value.clear()
 }
 
+async function runWithConcurrency<T>(
+  tasks: Array<() => Promise<T>>,
+  concurrency: number,
+): Promise<T[]> {
+  if (tasks.length === 0) return []
+  const limit = Math.max(1, Math.min(concurrency, tasks.length))
+  const results = new Array<T>(tasks.length)
+  const failures: unknown[] = []
+  let nextIndex = 0
+
+  async function worker(): Promise<void> {
+    while (nextIndex < tasks.length) {
+      const currentIndex = nextIndex
+      nextIndex += 1
+      const task = tasks[currentIndex]
+      if (task) {
+        try {
+          results[currentIndex] = await task()
+        } catch (err) {
+          failures.push(err)
+          return
+        }
+      }
+    }
+  }
+
+  await Promise.all(Array.from({ length: limit }, () => worker()))
+  if (failures.length > 0) throw failures[0]
+  return results
+}
+
 async function fetchTestItems(): Promise<void> {
-  if (!selectedSite.value || !selectedProject.value || configuredStationsCount.value === 0) {
+  if (
+    isSearching.value ||
+    !selectedSite.value ||
+    !selectedProject.value ||
+    configuredStationsCount.value === 0
+  ) {
     return
   }
 
-  clearTestItemData()
-  // Clear scores when fetching new data
-  recordScores.value = {}
-  forcedFailures.value = {}
+  isSearching.value = true
+  const search = fetchTestItemsForCurrentSelection()
+  activeSearch = search
+  try {
+    await search
+  } finally {
+    activeSearch = null
+    isSearching.value = false
+  }
+}
 
-  // Iterate through each configured station
-  for (const config of Object.values(stationConfigs.value)) {
-    let deviceIds = config.deviceIds
+async function fetchTestItemsForCurrentSelection(): Promise<void> {
+  const site = selectedSite.value
+  const project = selectedProject.value
+  if (!site || !project) {
+    return
+  }
+  const startDate = new Date(startTime.value)
+  const endDate = new Date(endTime.value)
+  const configuredStationMap = Object.fromEntries(
+    Object.entries(stationConfigs.value).map(([name, config]) => [
+      name,
+      {
+        ...config,
+        deviceIds: [...config.deviceIds],
+        includedTestItems: config.includedTestItems ? [...config.includedTestItems] : undefined,
+        excludedTestItems: config.excludedTestItems ? [...config.excludedTestItems] : undefined,
+      },
+    ]),
+  )
+  const configuredStationNames = new Set(Object.keys(configuredStationMap))
 
-    // UPDATED: When user leaves device ID empty, fetch all available device IDs
-    // instead of using 'ALL' which is slower on the iPLAS API side
-    if (deviceIds.length === 0) {
-      try {
-        deviceIds = await fetchDeviceIds(
-          selectedSite.value,
-          selectedProject.value,
-          config.displayName,
-          new Date(startTime.value),
-          new Date(endTime.value),
-        )
-      } catch (_err) {
-        console.warn(`Failed to fetch device IDs for ${config.displayName}, falling back to ALL`)
-        deviceIds = ['ALL']
+  // Remove records and scores for stations that were removed from configuration
+  const removedStations = new Set<string>()
+  for (const existingStation of fetchedStationSignatures.keys()) {
+    if (!configuredStationNames.has(existingStation)) {
+      removedStations.add(existingStation)
+    }
+  }
+  pruneStationsDataAndScores(removedStations)
+
+  // Determine which stations need fetching vs which can reuse existing data/scores
+  const stationsToFetch: StationConfig[] = []
+  const stationsToRefetchSet = new Set<string>()
+  const resumableStations = new Set<string>()
+  const stationsWithScoreConfigChange = new Set<string>()
+  const fetchSignatures = new Map<string, string>()
+
+  for (const config of Object.values(configuredStationMap)) {
+    const fetchSig = getStationFetchSignature(config)
+    fetchSignatures.set(config.displayName, fetchSig)
+    const scoreSig = getStationScoreSignature(config)
+    const hasExistingRecords = testItemData.value.some((record) =>
+      recordBelongsToStation(record, config.displayName),
+    )
+
+    if (fetchedStationSignatures.get(config.displayName) !== fetchSig || !hasExistingRecords) {
+      stationsToFetch.push(config)
+      if (stationDeviceProgress.get(config.displayName)?.fetchSig === fetchSig) {
+        // Same scope as a partially failed fetch: keep loaded devices, fetch the rest.
+        resumableStations.add(config.displayName)
+      } else {
+        stationsToRefetchSet.add(config.displayName)
+      }
+    } else if (scoredStationSignatures.get(config.displayName) !== scoreSig) {
+      stationsWithScoreConfigChange.add(config.displayName)
+    }
+  }
+
+  pruneStationsDataAndScores(stationsToRefetchSet)
+  pruneStationScores(new Set([...stationsWithScoreConfigChange, ...resumableStations]))
+
+  if (testItemData.value.length === 0 && stationsToFetch.length > 0) {
+    clearTestItemData()
+  }
+
+  if (stationsToFetch.length > 0) {
+    const tasks: Array<() => Promise<void>> = []
+    let totalDeviceRequests = 0
+
+    for (const config of stationsToFetch) {
+      const fetchSig = fetchSignatures.get(config.displayName) ?? ''
+      let progress = stationDeviceProgress.get(config.displayName)
+      if (!progress || progress.fetchSig !== fetchSig) {
+        progress = { fetchSig, completed: new Set<string>() }
+        stationDeviceProgress.set(config.displayName, progress)
+      }
+      const stationProgress = progress
+      // When deviceIds is empty ("All"), pass 'ALL' directly so the backend
+      // uses its hybrid V1/V2 parallel strategy instead of N sequential requests.
+      const deviceIds = config.deviceIds.length > 0 ? config.deviceIds : ['ALL']
+      const pendingDeviceIds = deviceIds.filter(
+        (deviceId) => !stationProgress.completed.has(deviceId),
+      )
+      const includeFilters = config.includedTestItems?.length ? config.includedTestItems : undefined
+      const excludeFilters = config.excludedTestItems?.length ? config.excludedTestItems : undefined
+      const hasTestItemFilters = !!(includeFilters?.length || excludeFilters?.length)
+      totalDeviceRequests += pendingDeviceIds.length
+
+      const markCompleted = (deviceId: string): void => {
+        stationProgress.completed.add(deviceId)
+        if (deviceFetchProgress.value) {
+          deviceFetchProgress.value = {
+            ...deviceFetchProgress.value,
+            completed: deviceFetchProgress.value.completed + 1,
+          }
+        }
       }
 
-      // An empty list would skip the fetch loop entirely and look like "no data".
-      if (deviceIds.length === 0) {
-        deviceIds = ['ALL']
+      for (let index = 0; index < pendingDeviceIds.length; index += STATION_DEVICE_BATCH_SIZE) {
+        const group = pendingDeviceIds.slice(index, index + STATION_DEVICE_BATCH_SIZE)
+        const [singleDeviceId] = group
+        if (group.length === 1 && singleDeviceId !== undefined) {
+          tasks.push(async () => {
+            if (hasTestItemFilters) {
+              await fetchTestItemsFiltered(
+                site,
+                project,
+                config.displayName,
+                singleDeviceId,
+                startDate,
+                endDate,
+                config.testStatus,
+                includeFilters,
+                excludeFilters,
+              )
+            } else {
+              await fetchTestItemsApi(
+                site,
+                project,
+                config.displayName,
+                singleDeviceId,
+                startDate,
+                endDate,
+                config.testStatus,
+              )
+            }
+            markCompleted(singleDeviceId)
+          })
+          continue
+        }
+
+        tasks.push(async () => {
+          const results = await fetchTestItemsBatch(
+            site,
+            project,
+            config.displayName,
+            group,
+            startDate,
+            endDate,
+            config.testStatus,
+            includeFilters,
+            excludeFilters,
+          )
+          const failures: string[] = []
+          for (const result of results) {
+            if (result.response) {
+              markCompleted(result.device_id)
+            } else {
+              failures.push(`${result.device_id}: ${result.error ?? 'Unknown error'}`)
+            }
+          }
+          if (failures.length > 0) {
+            throw new Error(
+              `Failed to load ${failures.length} of ${group.length} device(s) for ${config.displayName}: ${failures.join('; ')}`,
+            )
+          }
+        })
       }
     }
 
-    const includeFilters = config.includedTestItems?.length ? config.includedTestItems : undefined
-    const excludeFilters = config.excludedTestItems?.length ? config.excludedTestItems : undefined
-    const hasTestItemFilters = !!(includeFilters?.length || excludeFilters?.length)
+    deviceFetchProgress.value = { completed: 0, total: totalDeviceRequests }
+    try {
+      await runWithConcurrency(tasks, STATION_DEVICE_FETCH_CONCURRENCY)
 
-    // Fetch data for each device ID
-    for (const deviceId of deviceIds) {
-      if (hasTestItemFilters) {
-        // Use the filtered backend proxy endpoint (server-side filtering + caching)
-        await fetchTestItemsFiltered(
-          selectedSite.value,
-          selectedProject.value,
-          config.displayName,
-          deviceId,
-          new Date(startTime.value),
-          new Date(endTime.value),
-          config.testStatus,
-          includeFilters,
-          excludeFilters,
-        )
-      } else {
-        // Use the direct API endpoint (no filtering needed)
-        // Pass Date objects - the composable handles ISO format conversion
-        await fetchTestItemsApi(
-          selectedSite.value,
-          selectedProject.value,
-          config.displayName,
-          deviceId,
-          new Date(startTime.value),
-          new Date(endTime.value),
-          config.testStatus,
-        )
+      for (const config of stationsToFetch) {
+        const fetchSig = fetchSignatures.get(config.displayName)
+        if (fetchSig !== undefined) {
+          fetchedStationSignatures.set(config.displayName, fetchSig)
+        }
+        stationDeviceProgress.delete(config.displayName)
+      }
+    } catch (err) {
+      // Concurrent requests reset the shared error, so restore the first failure.
+      error.value = getErrorMessage(err) || 'Failed to fetch station test items'
+      throw err
+    } finally {
+      deviceFetchProgress.value = null
+      const scopeChanged = selectedSite.value !== site || selectedProject.value !== project
+      const currentStationNames = new Set(Object.keys(stationConfigs.value))
+      const obsoleteStations = new Set(
+        [...configuredStationNames].filter(
+          (stationName) => scopeChanged || !currentStationNames.has(stationName),
+        ),
+      )
+      if (obsoleteStations.size > 0) {
+        pruneStationsDataAndScores(obsoleteStations)
+        if (testItemData.value.length === 0) {
+          clearTestItemData()
+        }
       }
     }
   }
 
-  if (testItemData.value.length === 0) {
+  if (
+    testItemData.value.length === 0 &&
+    selectedSite.value === site &&
+    selectedProject.value === project &&
+    configuredStationsCount.value > 0
+  ) {
     error.value =
       'No iPLAS data was returned for the selected station configuration, device IDs, and time range.'
   }
@@ -1439,8 +1825,7 @@ onMounted(async () => {
 
 // Cleanup on unmount to free memory
 onUnmounted(() => {
-  clearTestItemData()
-  recordScores.value = {}
+  resetAllFetchedAndScoredState()
   stationConfigs.value = {}
 })
 </script>

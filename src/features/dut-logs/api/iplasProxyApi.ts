@@ -107,6 +107,31 @@ export interface IplasCsvTestItemResponse<
   bucket_stats?: IplasStationSearchBucketStat[] | null
 }
 
+export interface IplasCsvTestItemBatchRequest
+  extends Omit<
+    IplasCsvTestItemRequest,
+    'device_id' | 'limit' | 'offset' | 'sort_by' | 'sort_desc'
+  > {
+  device_ids: string[]
+}
+
+export interface IplasCsvTestItemBatchResult<
+  TRecord extends CsvTestItemData | CompactCsvTestItemData = CompactCsvTestItemData,
+> {
+  device_id: string
+  response: IplasCsvTestItemResponse<TRecord> | null
+  error: string | null
+  status_code: number | null
+}
+
+export interface IplasCsvTestItemBatchResponse<
+  TRecord extends CsvTestItemData | CompactCsvTestItemData = CompactCsvTestItemData,
+> {
+  results: IplasCsvTestItemBatchResult<TRecord>[]
+  succeeded: number
+  failed: number
+}
+
 export interface IplasStationSearchBucketStat {
   bucket_start: string
   bucket_end: string
@@ -697,6 +722,24 @@ class IplasProxyApi {
   ): Promise<IplasCsvTestItemResponse<TRecord>> {
     const response = await apiClient.post<IplasCsvTestItemResponse<TRecord>>(
       `${this.baseUrl}/csv-test-items`,
+      request,
+      { signal: options?.signal },
+    )
+    return response.data
+  }
+
+  /**
+   * Get CSV test items for several devices of one station in one HTTP request.
+   * Failed devices are reported per result so callers can retry only those devices.
+   */
+  async getCsvTestItemsBatch<
+    TRecord extends CsvTestItemData | CompactCsvTestItemData = CompactCsvTestItemData,
+  >(
+    request: IplasCsvTestItemBatchRequest,
+    options?: { signal?: AbortSignal },
+  ): Promise<IplasCsvTestItemBatchResponse<TRecord>> {
+    const response = await apiClient.post<IplasCsvTestItemBatchResponse<TRecord>>(
+      `${this.baseUrl}/csv-test-items/batch`,
       request,
       { signal: options?.signal },
     )

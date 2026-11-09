@@ -20,6 +20,7 @@ import {
   type CsvTestItemData,
   type IplasBatchDownloadResponse,
   type IplasCachedTestItemNamesResponse,
+  type IplasCsvTestItemBatchResult,
   type IplasCsvTestItemResponse,
   type IplasDownloadAttachmentInfo,
   type IplasDownloadCsvLogInfo,
@@ -262,6 +263,17 @@ export function useIplasApi() {
   const loadingStations = ref(false)
   const loadingDevices = ref(false)
   const loadingTestItems = ref(false)
+  let activeTestItemsRequests = 0
+
+  function beginTestItemsRequest(): void {
+    activeTestItemsRequests += 1
+    loadingTestItems.value = true
+  }
+
+  function endTestItemsRequest(): void {
+    activeTestItemsRequests = Math.max(0, activeTestItemsRequests - 1)
+    loadingTestItems.value = activeTestItemsRequests > 0
+  }
   const loadingIsnSearch = ref(false)
   const downloading = ref(false)
   const loadingRecordTestItems = ref(false)
@@ -440,7 +452,7 @@ export function useIplasApi() {
     endtime: string | Date,
     testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
   ): Promise<CompactCsvTestItemData[]> {
-    loadingTestItems.value = true
+    beginTestItemsRequest()
     error.value = null
     chunkProgress.value = null
 
@@ -488,7 +500,7 @@ export function useIplasApi() {
       error.value = getErrorMessage(err) || 'Failed to fetch test items'
       throw err
     } finally {
-      loadingTestItems.value = false
+      endTestItemsRequest()
     }
   }
 
@@ -505,7 +517,7 @@ export function useIplasApi() {
     endtime: string | Date,
     testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
   ): Promise<CsvTestItemData[]> {
-    loadingTestItems.value = true
+    beginTestItemsRequest()
     error.value = null
     chunkProgress.value = null
 
@@ -550,7 +562,7 @@ export function useIplasApi() {
       error.value = getErrorMessage(err) || 'Failed to fetch full test items'
       throw err
     } finally {
-      loadingTestItems.value = false
+      endTestItemsRequest()
     }
   }
 
@@ -570,7 +582,7 @@ export function useIplasApi() {
     endtime: string | Date,
     testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
   ): Promise<CompactCsvTestItemData[]> {
-    loadingTestItems.value = true
+    beginTestItemsRequest()
     error.value = null
     chunkProgress.value = null
 
@@ -614,7 +626,7 @@ export function useIplasApi() {
       error.value = getErrorMessage(err) || 'Failed to fetch compact test items'
       throw err
     } finally {
-      loadingTestItems.value = false
+      endTestItemsRequest()
     }
   }
 
@@ -634,7 +646,7 @@ export function useIplasApi() {
     testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
     options: PaginationOptions = { page: 1, itemsPerPage: 25 },
   ): Promise<PaginatedResult<CompactCsvTestItemData>> {
-    loadingTestItems.value = true
+    beginTestItemsRequest()
     error.value = null
     chunkProgress.value = null
 
@@ -664,7 +676,7 @@ export function useIplasApi() {
       error.value = getErrorMessage(err) || 'Failed to fetch paginated test items'
       throw err
     } finally {
-      loadingTestItems.value = false
+      endTestItemsRequest()
     }
   }
 
@@ -1076,7 +1088,7 @@ export function useIplasApi() {
     limit?: number,
     offset?: number,
   ): Promise<IplasCsvTestItemResponse<CsvTestItemData>> {
-    loadingTestItems.value = true
+    beginTestItemsRequest()
     error.value = null
 
     try {
@@ -1125,7 +1137,83 @@ export function useIplasApi() {
       error.value = getErrorMessage(err) || 'Failed to fetch filtered test items'
       throw err
     } finally {
-      loadingTestItems.value = false
+      endTestItemsRequest()
+    }
+  }
+
+  /**
+   * Fetch full test items for several devices of one station in one HTTP request.
+   * Successful devices are merged immediately; failed devices are returned so the
+   * caller can retry only those devices.
+   */
+  async function fetchTestItemsBatch(
+    site: string,
+    project: string,
+    station: string,
+    deviceIds: string[],
+    beginTime: string | Date,
+    endTime: string | Date,
+    testStatus: 'PASS' | 'FAIL' | 'ALL' = 'ALL',
+    testItemFilters?: string[],
+    excludeTestItemFilters?: string[],
+  ): Promise<IplasCsvTestItemBatchResult<CsvTestItemData>[]> {
+    beginTestItemsRequest()
+    error.value = null
+
+    try {
+      const response = await iplasProxyApi.getCsvTestItemsBatch<CsvTestItemData>({
+        site,
+        project,
+        station,
+        device_ids: deviceIds,
+        begin_time: iplasProxyApi.formatDateForRequest(beginTime),
+        end_time: iplasProxyApi.formatDateForRequest(endTime),
+        test_status: testStatus,
+        test_item_filters: testItemFilters,
+        exclude_test_item_filters: excludeTestItemFilters,
+        include_test_items: true,
+        token: getUserToken(),
+      })
+      const results = ensureArrayResponse(
+        response.results,
+        'No iPLAS batch results were returned',
+        'iPLAS API returned an invalid batch test-item response',
+        true,
+      )
+
+      let mergedRecords = testItemData.value
+      const failures: string[] = []
+      for (const result of results) {
+        if (!result.response) {
+          failures.push(`${result.device_id}: ${result.error ?? 'Unknown error'}`)
+          continue
+        }
+        const responseData = ensureArrayResponse(
+          result.response.data as CsvTestItemData[] | undefined,
+          'No iPLAS data was returned for the selected device',
+          'iPLAS API returned an invalid batch test-item response',
+          true,
+        )
+        if (result.response.possibly_truncated) {
+          possiblyTruncated.value = true
+        }
+        stationSearchCacheMetadata.value = mergeStationSearchMetadata(
+          stationSearchCacheMetadata.value,
+          result.response,
+        )
+        mergedRecords = deduplicateRecords(mergedRecords, responseData)
+      }
+      testItemData.value = mergedRecords
+
+      if (failures.length > 0) {
+        error.value = `Failed to load ${failures.length} of ${results.length} device(s): ${failures.join('; ')}`
+      }
+      return results
+    } catch (err: unknown) {
+      error.value = getErrorMessage(err) || 'Failed to fetch test items for devices'
+      throw err
+    } finally {
+      endTestItemsRequest()
     }
   }
 
@@ -1178,6 +1266,7 @@ export function useIplasApi() {
     fetchTestItemNames,
     fetchTestItemNamesCached,
     fetchTestItemsFiltered,
+    fetchTestItemsBatch,
     searchByIsn,
     searchByIsnBatch,
     downloadAttachments,
