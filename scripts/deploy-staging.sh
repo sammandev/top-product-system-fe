@@ -12,8 +12,7 @@ cd "${PROJECT_ROOT}"
 
 echo "🚀 Deploying frontend (staging)..."
 
-docker compose -f docker-compose.staging.yml up -d --build
-
+docker compose -f docker-compose.staging.yml up -d --pull always --build
 echo "⏳ Waiting for nginx..."
 if command -v curl >/dev/null 2>&1; then
   timeout 60 bash -c 'until curl -fsS http://localhost:9090/ > /dev/null 2>&1; do sleep 2; done'

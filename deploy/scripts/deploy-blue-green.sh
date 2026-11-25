@@ -334,7 +334,7 @@ echo "Backend API URL for this build: ${VITE_API_BASE_URL:-http://10.176.2.139:7
 ensure_edge_network
 
 if [ "$SKIP_BUILD" = false ]; then
-  docker compose -f "$COMPOSE_FILE" build "$TARGET_SERVICE"
+  docker compose -f "$COMPOSE_FILE" build --pull "$TARGET_SERVICE"
 fi
 
 prepare_target_slot

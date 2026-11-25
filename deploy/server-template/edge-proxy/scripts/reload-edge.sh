@@ -10,6 +10,7 @@ TOP_PRODUCT_EDGE_SUBNET="${TOP_PRODUCT_EDGE_SUBNET:-172.19.0.0/16}" \
 	bash "$SCRIPT_DIR/ensure-network.sh"
 
 echo "Ensuring edge proxy container matches current compose config"
+docker compose -f "$COMPOSE_FILE" pull edge-proxy
 docker compose -f "$COMPOSE_FILE" up -d edge-proxy
 
 docker compose -f "$COMPOSE_FILE" exec -T edge-proxy nginx -t

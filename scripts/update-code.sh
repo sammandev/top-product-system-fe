@@ -28,7 +28,7 @@ fi
 
 echo ""
 echo "♻️  Rebuilding and restarting frontend containers..."
-docker compose -f docker-compose.staging.yml up -d --build frontend nginx
+docker compose -f docker-compose.staging.yml up -d --pull always --build frontend nginx
 
 echo ""
 echo "⏳ Waiting for nginx..."
