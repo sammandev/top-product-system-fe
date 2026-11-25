@@ -2,7 +2,7 @@ name: top-product-edge-proxy
 
 services:
   edge-proxy:
-    image: nginx:1.27-alpine
+    image: nginx:alpine
     container_name: ast-tools-edge-proxy
     restart: unless-stopped
     ports:
